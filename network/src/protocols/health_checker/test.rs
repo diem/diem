@@ -11,6 +11,7 @@ use crate::{
 };
 use channel::{libra_channel, message_queues::QueueStyle};
 use futures::sink::SinkExt;
+use libra_config::{config::RoleType, network_id::NetworkId};
 use libra_network_address::NetworkAddress;
 use std::{num::NonZeroUsize, str::FromStr};
 use tokio::runtime::Runtime;
@@ -42,8 +43,10 @@ fn setup_permissive_health_checker(
         ConnectionRequestSender::new(connection_reqs_tx),
     );
     let hc_network_rx = HealthCheckerNetworkEvents::new(network_notifs_rx, connection_notifs_rx);
-
+    let network_context =
+        NetworkContext::new(NetworkId::Validator, RoleType::Validator, PeerId::default());
     let health_checker = HealthChecker::new(
+        network_context,
         ticker_rx,
         hc_network_tx,
         hc_network_rx,

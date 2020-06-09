@@ -36,6 +36,7 @@ use futures::{
     future::{BoxFuture, FutureExt},
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
+use libra_config::network_id::NetworkContext;
 use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
@@ -54,8 +55,7 @@ mod test;
 
 /// The ConnectivityManager actor.
 pub struct ConnectivityManager<TTicker, TBackoff> {
-    /// PeerId of this node.
-    self_peer_id: PeerId,
+    network_context: NetworkContext,
     /// Nodes which are eligible to join the network.
     eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
     /// PeerId and address of remote peers to which this peer is connected.
@@ -139,7 +139,7 @@ where
 {
     /// Creates a new instance of the [`ConnectivityManager`] actor.
     pub fn new(
-        self_peer_id: PeerId,
+        network_context: NetworkContext,
         eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
         seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
         ticker: TTicker,
@@ -154,7 +154,7 @@ where
         let peer_addresses = PeerAddresses(
             seed_peers
                 .into_iter()
-                .filter(|(peer_id, _)| peer_id != &self_peer_id)
+                .filter(|(peer_id, _)| peer_id != &network_context.peer_id())
                 .map(|(peer_id, seed_addrs)| {
                     (
                         peer_id,
@@ -165,14 +165,14 @@ where
         );
 
         info!(
-            "[{}] ConnectivityManager init: num_seed_peers: {}, peer addresses: {}",
-            self_peer_id.short_str(),
+            "{} ConnectivityManager init: num_seed_peers: {}, peer addresses: {}",
+            network_context,
             peer_addresses.0.len(),
             peer_addresses,
         );
 
         Self {
-            self_peer_id,
+            network_context,
             eligible,
             connected: HashMap::new(),
             peer_addresses,
@@ -201,28 +201,28 @@ where
         // When we first startup, let's attempt to connect with our seed peers.
         self.check_connectivity(&mut pending_dials).await;
 
-        trace!("Starting connection manager");
+        trace!("{} Starting connection manager", self.network_context);
         loop {
             self.event_id = self.event_id.wrapping_add(1);
             ::futures::select! {
                 _ = self.ticker.select_next_some() => {
-                    trace!("Event Id: {}, type: Tick", self.event_id);
+                    trace!("{} Event Id: {}, type: Tick", self.network_context, self.event_id);
                     self.check_connectivity(&mut pending_dials).await;
                 },
                 req = self.requests_rx.select_next_some() => {
-                    trace!("Event Id: {}, type: ConnectivityRequest, req: {:?}", self.event_id, req);
+                    trace!("{} Event Id: {}, type: ConnectivityRequest, req: {:?}", self.network_context, self.event_id, req);
                     self.handle_request(req);
                 },
                 notif = self.connection_notifs_rx.select_next_some() => {
-                    trace!("Event Id: {}, type: peer_manager::ConnectionNotification, notif: {:?}", self.event_id, notif);
+                    trace!("{} Event Id: {}, type: peer_manager::ConnectionNotification, notif: {:?}", self.network_context, self.event_id, notif);
                     self.handle_control_notification(notif);
                 },
                 peer_id = pending_dials.select_next_some() => {
-                    trace!("Event Id: {}, type: Dial complete, peer: {}", self.event_id, peer_id.short_str());
+                    trace!("{} Event Id: {}, type: Dial complete, peer: {}", self.network_context, self.event_id, peer_id.short_str());
                     self.dial_queue.remove(&peer_id);
                 },
                 complete => {
-                    crit!("Connectivity manager actor terminated");
+                    crit!("{} Connectivity manager actor terminated", self.network_context);
                     break;
                 }
             }
@@ -243,11 +243,16 @@ where
             .cloned()
             .collect();
         for p in stale_connections.into_iter() {
-            info!("Should no longer be connected to peer: {}", p.short_str());
+            info!(
+                "{} Should no longer be connected to peer: {}",
+                self.network_context,
+                p.short_str()
+            );
             // Close existing connection.
             if let Err(e) = self.connection_reqs_tx.disconnect_peer(p).await {
                 info!(
-                    "Failed to disconnect from peer: {}. Error: {:?}",
+                    "{} Failed to disconnect from peer: {}. Error: {:?}",
+                    self.network_context,
                     p.short_str(),
                     e
                 );
@@ -329,17 +334,20 @@ where
             let (cancel_tx, cancel_rx) = oneshot::channel();
 
             info!(
-                "Create dial future: peer: {}, at address: {}, after delay: {:?}",
+                "{} Create dial future: peer: {}, at address: {}, after delay: {:?}",
+                self.network_context,
                 peer_id.short_str(),
                 addr,
                 dial_delay,
             );
 
+            let network_context = self.network_context.clone();
             // Create future which completes by either dialing after calculated
             // delay or on cancellation.
             let f = async move {
                 info!(
-                    "Dial future: dialing peer: {}, at address: {}, after delay: {:?}",
+                    "{} Dial future: dialing peer: {}, at address: {}, after delay: {:?}",
+                    network_context,
                     peer_id.short_str(),
                     addr,
                     f_delay
@@ -350,7 +358,7 @@ where
                 // `cancel_rx`.
                 let dial_result = ::futures::select! {
                     _ = f_delay.fuse() => {
-                        info!("Dialing peer: {}, at addr: {}", peer_id.short_str(), addr);
+                        info!("{} Dialing peer: {}, at addr: {}", network_context, peer_id.short_str(), addr);
                         match connction_reqs_tx.dial_peer(peer_id, addr.clone()).await {
                             Ok(_) => DialResult::Success,
                             Err(e) => DialResult::Failed(e),
@@ -360,7 +368,7 @@ where
                         DialResult::Cancelled
                     },
                 };
-                log_dial_result(peer_id, addr, dial_result);
+                log_dial_result(network_context, peer_id, addr, dial_result);
                 // Send peer_id as future result so it can be removed from dial queue.
                 peer_id
             };
@@ -391,12 +399,12 @@ where
                 // Keep track of if any peer's addresses have actually changed, so
                 // we can log without too much spam.
                 let mut have_any_changed = false;
-                let self_peer_id = self.self_peer_id.short_str();
+                let self_peer_id = self.network_context.peer_id();
 
                 for (peer_id, addrs) in address_map {
                     // Do not include self_peer_id in the address list for dialing
                     // to avoid pointless self-dials.
-                    if peer_id == self.self_peer_id {
+                    if peer_id == self_peer_id {
                         continue;
                     }
 
@@ -416,8 +424,8 @@ where
                         let peer_id = peer_id.short_str();
                         let addrs = curr_addrs;
                         info!(
-                            "[{}] addresses updated for peer: {}, update src: {:?}, addrs: {}",
-                            self_peer_id, peer_id, src, addrs,
+                            "{} addresses updated for peer: {}, update src: {:?}, addrs: {}",
+                            self.network_context, peer_id, src, addrs,
                         );
                     }
                 }
@@ -426,13 +434,16 @@ where
                 if have_any_changed {
                     let peer_addresses = &self.peer_addresses;
                     info!(
-                        "[{}] current addresses: update src: {:?}, all peer addresses: {}",
-                        self_peer_id, src, peer_addresses,
+                        "{} current addresses: update src: {:?}, all peer addresses: {}",
+                        self.network_context, src, peer_addresses,
                     );
                 }
             }
             ConnectivityRequest::UpdateEligibleNodes(nodes) => {
-                trace!("Received updated list of eligible nodes",);
+                trace!(
+                    "{} Received updated list of eligible nodes",
+                    self.network_context
+                );
                 *self.eligible.write().unwrap() = nodes;
             }
             ConnectivityRequest::GetDialQueueSize(sender) => {
@@ -457,7 +468,8 @@ where
                     }
                     _ => {
                         debug!(
-                            "Ignoring stale lost peer event for peer: {}, addr: {}",
+                            "{} Ignoring stale lost peer event for peer: {}, addr: {}",
+                            self.network_context,
                             peer_id.short_str(),
                             addr
                         );
@@ -468,29 +480,41 @@ where
     }
 }
 
-fn log_dial_result(peer_id: PeerId, addr: NetworkAddress, dial_result: DialResult) {
+fn log_dial_result(
+    network_context: NetworkContext,
+    peer_id: PeerId,
+    addr: NetworkAddress,
+    dial_result: DialResult,
+) {
     match dial_result {
         DialResult::Success => {
             info!(
-                "Successfully connected to peer: {} at address: {}",
+                "{} Successfully connected to peer: {} at address: {}",
+                network_context,
                 peer_id.short_str(),
                 addr
             );
         }
         DialResult::Cancelled => {
-            info!("Cancelled pending dial to peer: {}", peer_id.short_str());
+            info!(
+                "{} Cancelled pending dial to peer: {}",
+                network_context,
+                peer_id.short_str()
+            );
         }
         DialResult::Failed(err) => match err {
             PeerManagerError::AlreadyConnected(a) => {
                 info!(
-                    "Already connected to peer: {} at address: {}",
+                    "{} Already connected to peer: {} at address: {}",
+                    network_context,
                     peer_id.short_str(),
                     a
                 );
             }
             e => {
                 info!(
-                    "Failed to connect to peer: {} at address: {}; error: {}",
+                    "{} Failed to connect to peer: {} at address: {}; error: {}",
+                    network_context,
                     peer_id.short_str(),
                     addr,
                     e

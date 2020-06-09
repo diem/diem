@@ -34,6 +34,7 @@ use futures::{
     channel::oneshot,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
+use libra_config::network_id::NetworkContext;
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
@@ -128,6 +129,7 @@ pub struct Pong(u32);
 
 /// The actor performing health checks by running the Ping protocol
 pub struct HealthChecker<TTicker> {
+    network_context: NetworkContext,
     /// Ticker to trigger ping to a random peer. In production, the ticker is likely to be
     /// fixed duration interval timer.
     ticker: TTicker,
@@ -156,6 +158,7 @@ where
 {
     /// Create new instance of the [`HealthChecker`] actor.
     pub fn new(
+        network_context: NetworkContext,
         ticker: TTicker,
         network_tx: HealthCheckerNetworkSender,
         network_rx: HealthCheckerNetworkEvents,
@@ -163,6 +166,7 @@ where
         ping_failures_tolerated: u64,
     ) -> Self {
         HealthChecker {
+            network_context,
             ticker,
             network_tx,
             network_rx,
@@ -213,15 +217,16 @@ where
                 }
                 _ = self.ticker.select_next_some() => {
                     self.round += 1;
-                    debug!("Tick: Round number: {}", self.round);
+                    debug!("{} Tick: Round number: {}", self.network_context, self.round);
                     match self.sample_random_peer() {
                         Some(peer_id) => {
-                            debug!("Will ping: {}", peer_id.short_str());
+                            debug!("{} Will ping: {}", self.network_context, peer_id.short_str());
 
                             let nonce = self.sample_nonce();
 
                             tick_handlers.push(
                                 Self::ping_peer(
+                                    self.network_context.clone(),
                                     self.network_tx.clone(),
                                     peer_id,
                                     self.round,
@@ -229,7 +234,7 @@ where
                                     self.ping_timeout.clone()));
                         }
                         None => {
-                            debug!("No connected peer to ping");
+                            debug!("{} No connected peer to ping", self.network_context);
                         }
                     }
                 }
@@ -242,7 +247,7 @@ where
                 }
             }
         }
-        crit!("Health checker actor terminated");
+        crit!("{} Health checker actor terminated", self.network_context,);
     }
 
     fn handle_ping_request(
@@ -254,12 +259,16 @@ where
         let message = match lcs::to_bytes(&HealthCheckerMsg::Pong(Pong(ping.0))) {
             Ok(msg) => msg,
             Err(e) => {
-                warn!("Unable to serialize pong response: {}", e);
+                warn!(
+                    "{} Unable to serialize pong response: {}",
+                    self.network_context, e
+                );
                 return;
             }
         };
         debug!(
-            "Sending Pong response to peer: {} with nonce: {}",
+            "{} Sending Pong response to peer: {} with nonce: {}",
+            self.network_context,
             peer_id.short_str(),
             ping.0,
         );
@@ -273,11 +282,18 @@ where
         req_nonce: u32,
         ping_result: Result<Pong, RpcError>,
     ) {
-        debug!("Got result for ping round: {}", round);
+        debug!(
+            "{} Got result for ping round: {}",
+            self.network_context, round
+        );
         match ping_result {
             Ok(pong) => {
                 if pong.0 == req_nonce {
-                    debug!("Ping successful for peer: {}", peer_id.short_str());
+                    debug!(
+                        "{} Ping successful for peer: {}",
+                        self.network_context,
+                        peer_id.short_str()
+                    );
                     // Update last successful ping to current round.
                     self.connected
                         .entry(peer_id)
@@ -299,7 +315,8 @@ where
             }
             Err(err) => {
                 warn!(
-                    "Ping failed for peer: {} with error: {:?}",
+                    "{} Ping failed for peer: {} with error: {:?}",
+                    self.network_context,
                     peer_id.short_str(),
                     err
                 );
@@ -319,10 +336,15 @@ where
                         // ConnectivityManager or the remote peer to re-establish the connection.
                         *failures += 1;
                         if *failures > self.ping_failures_tolerated {
-                            info!("Disconnecting from peer: {}", peer_id.short_str());
+                            info!(
+                                "{} Disconnecting from peer: {}",
+                                self.network_context,
+                                peer_id.short_str()
+                            );
                             if let Err(err) = self.network_tx.disconnect_peer(peer_id).await {
                                 warn!(
-                                    "Failed to disconnect from peer: {} with error: {:?}",
+                                    "{} Failed to disconnect from peer: {} with error: {:?}",
+                                    self.network_context,
                                     peer_id.short_str(),
                                     err
                                 );
@@ -335,6 +357,7 @@ where
     }
 
     async fn ping_peer(
+        network_context: NetworkContext,
         mut network_tx: HealthCheckerNetworkSender,
         peer_id: PeerId,
         round: u64,
@@ -342,7 +365,8 @@ where
         ping_timeout: Duration,
     ) -> (PeerId, u64, u32, Result<Pong, RpcError>) {
         debug!(
-            "Sending Ping request to peer: {} with nonce: {}",
+            "{} Sending Ping request to peer: {} with nonce: {}",
+            network_context,
             peer_id.short_str(),
             nonce
         );

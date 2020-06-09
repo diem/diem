@@ -15,7 +15,7 @@ use futures::{
     sink::SinkExt,
     stream::{FusedStream, Stream, StreamExt},
 };
-use libra_config::config::RoleType;
+use libra_config::network_id::NetworkContext;
 use libra_logger::prelude::*;
 use libra_types::{
     on_chain_config::ValidatorSet,
@@ -35,10 +35,8 @@ use storage_interface::DbReader;
 /// Actor for querying various sources (remote peers, local storage) for the
 /// latest discovery set and notifying the `ConnectivityManager` of updates.
 pub struct OnchainDiscovery<TTicker> {
-    /// Our node's PeerId.
-    peer_id: PeerId,
-    /// Our node's role (validator || fullnode).
-    role: RoleType,
+    /// Network Context, includes all information about this node in it's network
+    network_context: NetworkContext,
     /// The current trusted state, which keeps track of the latest verified
     /// ledger version and validator set. This version can be ahead of other
     /// components (e.g., state sync) since we only rely on syncing epoch change
@@ -79,8 +77,7 @@ where
     TTicker: Stream + FusedStream + Unpin,
 {
     pub fn new(
-        self_peer_id: PeerId,
-        role: RoleType,
+        network_context: NetworkContext,
         waypoint: Waypoint,
         network_tx: OnchainDiscoveryNetworkSender,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
@@ -93,8 +90,7 @@ where
         let trusted_state = waypoint.into();
 
         Self {
-            peer_id: self_peer_id,
-            role,
+            network_context,
             trusted_state,
             latest_discovery_set: DiscoverySetInternal::empty(),
             connected_peers: HashSet::new(),
@@ -120,16 +116,16 @@ where
         let f_query_storage = self.handle_storage_query_tick().boxed();
         let mut pending_storage_query = OptionFuture::new(Some(f_query_storage));
 
-        debug!("starting onchain discovery");
+        debug!("{} starting onchain discovery", self.network_context);
         loop {
             self.event_id = self.event_id.wrapping_add(1);
             futures::select! {
                 notif = self.conn_notifs_rx.select_next_some() => {
-                    trace!("event id: {}, type: ConnectionNotification", self.event_id);
+                    trace!("{} event id: {}, type: ConnectionNotification", self.network_context, self.event_id);
                     self.handle_connection_notif(notif);
                 },
                 _ = self.peer_query_ticker.select_next_some() => {
-                    trace!("event id: {}, type: PeerQueryTick", self.event_id);
+                    trace!("{} event id: {}, type: PeerQueryTick", self.network_context, self.event_id);
                     pending_outbound_rpc
                         .or_insert_with(|| {
                             self.handle_peer_query_tick()
@@ -137,20 +133,20 @@ where
                         });
                 },
                 query_res = pending_outbound_rpc => {
-                    trace!("event id: {}, type: QueryResponse", self.event_id);
+                    trace!("{} event id: {}, type: QueryResponse", self.network_context, self.event_id);
                     self.handle_outbound_query_res(query_res).await;
                 },
                 _ = self.storage_query_ticker.select_next_some() => {
-                    trace!("event id: {}, type: StorageQueryTick", self.event_id);
+                    trace!("{} event id: {}, type: StorageQueryTick", self.network_context, self.event_id);
                     pending_storage_query
                         .or_insert_with(|| Some(self.handle_storage_query_tick().boxed()));
                 },
                 query_res = pending_storage_query => {
-                    trace!("event id: {}, type: QueryResponse", self.event_id);
+                    trace!("{} event id: {}, type: QueryResponse", self.network_context, self.event_id);
                     self.handle_outbound_query_res(query_res).await;
                 }
                 complete => {
-                    crit!("onchain discovery terminated");
+                    crit!("{} onchain discovery terminated", self.network_context);
                     break;
                 }
             }
@@ -160,12 +156,20 @@ where
     fn handle_connection_notif(&mut self, notif: ConnectionNotification) {
         match notif {
             ConnectionNotification::NewPeer(peer_id, _addr) => {
-                trace!("connected to new peer: {}", peer_id.short_str());
+                trace!(
+                    "{} connected to new peer: {}",
+                    self.network_context,
+                    peer_id.short_str()
+                );
                 // Add peer to connected peer list.
                 self.connected_peers.insert(peer_id);
             }
             ConnectionNotification::LostPeer(peer_id, _addr, _reason) => {
-                trace!("disconnected from peer: {}", peer_id.short_str());
+                trace!(
+                    "{} disconnected from peer: {}",
+                    self.network_context,
+                    peer_id.short_str()
+                );
                 // Remove peer from connected peer list.
                 self.connected_peers.remove(&peer_id);
             }
@@ -191,12 +195,14 @@ where
             let peer_id_short = peer_id.short_str();
 
             trace!(
-                "handle_peer_query_tick: querying peer: {}, trusted version: {}",
+                "{} handle_peer_query_tick: querying peer: {}, trusted version: {}",
+                self.network_context,
                 peer_id_short,
                 req_msg.known_version,
             );
 
             peer_query_discovery_set(
+                self.network_context.clone(),
                 peer_id,
                 req_msg,
                 self.outbound_rpc_timeout,
@@ -216,13 +222,17 @@ where
         match query_res {
             Ok((peer_id, req_msg, res_msg)) => {
                 debug!(
-                    "received query response: peer: {}, their version: {}",
+                    "{} received query response: peer: {}, their version: {}",
+                    self.network_context,
                     peer_id.short_str(),
                     res_msg.latest_li.ledger_info().version(),
                 );
                 self.handle_query_response(peer_id, req_msg, res_msg).await;
             }
-            Err(err) => warn!("query to remote peer failed: {:?}", err),
+            Err(err) => warn!(
+                "{} query to remote peer failed: {:?}",
+                self.network_context, err
+            ),
         }
     }
 
@@ -237,13 +247,14 @@ where
     > {
         let trusted_version = self.trusted_state.latest_version();
         trace!(
-            "handle_storage_query_tick: querying self storage, trusted version: {}",
+            "{} handle_storage_query_tick: querying self storage, trusted version: {}",
+            self.network_context,
             trusted_version,
         );
         let req_msg = QueryDiscoverySetRequest {
             known_version: trusted_version,
         };
-        let self_peer_id = self.peer_id;
+        let self_peer_id = self.network_context.peer_id();
         let libra_db = Arc::clone(&self.libra_db);
         storage_query_discovery_set_async(libra_db, req_msg).map(move |res| {
             // add peer_id context
@@ -262,7 +273,8 @@ where
                 Ok(res) => res,
                 Err(err) => {
                     warn!(
-                        "invalid query response: peer: {}, request_version: {}, err: {:?}",
+                        "{} invalid query response: peer: {}, request_version: {}, err: {:?}",
+                        self.network_context,
                         peer_id.short_str(),
                         req_msg.known_version,
                         err
@@ -277,8 +289,9 @@ where
                 latest_epoch_change_li,
             } => {
                 info!(
-                    "successfully ratcheted to new epoch: \
+                    "{} successfully ratcheted to new epoch: \
                      peer: {}, epoch: {}, version: {}",
+                    self.network_context,
                     peer_id.short_str(),
                     latest_epoch_change_li.ledger_info().epoch(),
                     new_state.latest_version(),
@@ -292,8 +305,9 @@ where
             }
             TrustedStateChange::Version { new_state } => {
                 debug!(
-                    "successfully ratcheted to new version: \
+                    "{} successfully ratcheted to new version: \
                      peer: {}, version: {}",
+                    self.network_context,
                     peer_id.short_str(),
                     new_state.latest_version(),
                 );
@@ -305,7 +319,7 @@ where
 
     async fn handle_new_discovery_set_event(&mut self, validator_set: ValidatorSet) {
         let latest_discovery_set =
-            DiscoverySetInternal::from_validator_set(self.role, validator_set);
+            DiscoverySetInternal::from_validator_set(self.network_context.role(), validator_set);
 
         let prev_discovery_set =
             mem::replace(&mut self.latest_discovery_set, latest_discovery_set.clone());
@@ -353,6 +367,7 @@ where
 /// Query a remote peer for their latest discovery set and a epoch change
 /// proof.
 async fn peer_query_discovery_set(
+    network_context: NetworkContext,
     peer_id: PeerId,
     req_msg: QueryDiscoverySetRequest,
     outbound_rpc_timeout: Duration,
@@ -368,7 +383,8 @@ async fn peer_query_discovery_set(
         .await
         .with_context(|| {
             format!(
-                "failed to query peer discovery set: peer: {}, latest_version: {}",
+                "{} failed to query peer discovery set: peer: {}, latest_version: {}",
+                network_context,
                 peer_id.short_str(),
                 our_latest_version,
             )

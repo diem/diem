@@ -14,7 +14,7 @@ use crate::{
 use anyhow::anyhow;
 use channel::{libra_channel, message_queues::QueueStyle};
 use futures::channel::oneshot;
-use libra_config::config::RoleType;
+use libra_config::{config::RoleType, network_id::NetworkId};
 use libra_network_address::NetworkAddress;
 use std::{num::NonZeroUsize, str::FromStr};
 use tokio::runtime::Runtime;
@@ -53,11 +53,9 @@ fn setup_discovery(
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
     let (ticker_tx, ticker_rx) = channel::new_test(0);
-    let role = RoleType::Validator;
     let discovery = {
         Discovery::new(
-            peer_id,
-            role,
+            NetworkContext::new(NetworkId::Validator, RoleType::Validator, peer_id),
             addrs,
             ticker_rx,
             DiscoveryNetworkSender::new(

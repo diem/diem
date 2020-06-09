@@ -7,8 +7,8 @@ use crate::{
     service::OnchainDiscoveryService,
 };
 use futures::stream::{Fuse, StreamExt};
-use libra_config::config::RoleType;
-use libra_types::{waypoint::Waypoint, PeerId};
+use libra_config::network_id::NetworkContext;
+use libra_types::waypoint::Waypoint;
 use network::connectivity_manager::ConnectivityRequest;
 use std::{sync::Arc, time::Duration};
 use storage_interface::DbReader;
@@ -30,8 +30,7 @@ impl OnchainDiscoveryBuilder {
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         network_tx: OnchainDiscoveryNetworkSender,
         discovery_events: OnchainDiscoveryNetworkEvents,
-        peer_id: PeerId,
-        role: RoleType,
+        network_context: NetworkContext,
         libra_db: Arc<dyn DbReader>,
         waypoint: Waypoint,
         executor: &Handle,
@@ -55,8 +54,7 @@ impl OnchainDiscoveryBuilder {
             let storage_query_ticker = interval(Duration::from_secs(30)).fuse();
 
             OnchainDiscovery::new(
-                peer_id,
-                role,
+                network_context,
                 waypoint,
                 network_tx,
                 conn_mgr_reqs_tx,
