@@ -30,23 +30,19 @@ pub struct SafetyRules {
     persistent_storage: PersistentSafetyStorage,
     validator_signer: Option<ValidatorSigner>,
     validator_verifier: Option<ValidatorVerifier>,
+    author: Author,
 }
 
 impl SafetyRules {
     /// Constructs a new instance of SafetyRules with the given persistent storage and the
     /// consensus private keys
     /// @TODO replace this with an API that takes in a SafetyRulesConfig
-    /// @TODO change the constructor to fit Option<validator_signer> and address the circular
-    /// dependency with reconcile_key() during initializationg
     pub fn new(author: Author, persistent_storage: PersistentSafetyStorage) -> Self {
-        let consensus_key = persistent_storage
-            .consensus_key()
-            .expect("Unable to retrieve consensus private key");
-        let validator_signer = Some(ValidatorSigner::new(author, consensus_key));
         Self {
             persistent_storage,
-            validator_signer,
+            validator_signer: None,
             validator_verifier: None,
+            author,
         }
     }
 
@@ -103,30 +99,28 @@ impl SafetyRules {
 
     /// This reconciles the key pair of a validator signer with a given validator set
     /// during epoch changes.
-    /// @TODO Given we cannot panic, we must handle the following two error cases:
+    /// Current impl of consensus does not expect key reconciliation to panic or fail.
+    /// Instead, we signal debug messages indicating following error causes:
     ///     1. Validator not in the set
     ///     2. Validator in the set, but no matching key found in storage
     fn reconcile_key(&mut self, epoch_state: &EpochState) -> Result<(), Error> {
-        let signer = self.signer()?;
-        if let Some(expected_key) = epoch_state.verifier.get_public_key(&signer.author()) {
-            let curr_key = signer.public_key();
-            if curr_key != expected_key {
+        if let Some(expected_key) = epoch_state.verifier.get_public_key(&self.author) {
+            let curr_key = self.signer().ok().map(|s| s.public_key());
+            if curr_key != Some(expected_key.clone()) {
+                debug!(
+                    "Reconciled pub key for signer {} [{:#?} -> {:#?}]",
+                    self.author, curr_key, expected_key
+                );
                 let consensus_key = self
                     .persistent_storage
-                    .consensus_key_for_version(expected_key.clone())
+                    .consensus_key_for_version(expected_key)
                     .expect("Unable to retrieve consensus private key");
-                debug!(
-                    "Reconciled pub key for signer {} [{} -> {}]",
-                    signer.author(),
-                    curr_key,
-                    expected_key
-                );
-                self.validator_signer = Some(ValidatorSigner::new(signer.author(), consensus_key));
+                self.validator_signer = Some(ValidatorSigner::new(self.author, consensus_key));
             } else {
                 debug!("Validator key matches the key in validator set.");
             }
         } else {
-            debug!("The validator is not in the validator set!");
+            debug!("The validator key is not in store!");
         }
         Ok(())
     }
