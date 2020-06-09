@@ -221,7 +221,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         network_configs.push((RoleType::Validator, network_config));
     }
 
-    let mut validator_count = 0;
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (role, network_config) in network_configs {
         // Perform common instantiation steps
@@ -244,9 +243,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         match role {
             // Perform steps relevant specifically to Validator networks.
             RoleType::Validator => {
-                validator_count += 1;
-                // A valid config is allowed to have exactly one ValidatorNetwork
-                assert_eq!(1, validator_count);
+                // A valid config is allowed to have at most one ValidatorNetwork
+                // TODO:  `expect_none` would be perfect here, once it is stable.
+                if consensus_network_handles.is_some() {
+                    panic!("There can be at most one validator network!");
+                }
+
                 // Set up to listen for network configuration changes from StateSync.
                 // TODO:  move this inside network_builder.
                 if let Some(conn_mgr_reqs_tx) = network_builder.conn_mgr_reqs_tx() {
