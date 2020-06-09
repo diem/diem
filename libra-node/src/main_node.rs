@@ -133,8 +133,9 @@ pub fn setup_network(
                 .add_gossip_discovery();
         }
         DiscoveryMethod::Onchain => {
-            let (network_tx, discovery_events) =
-                onchain_discovery::network_interface::add_to_network(&mut network_builder);
+            let (network_tx, discovery_events) = network_builder.add_protocol_handler(
+                onchain_discovery::network_interface::network_endpoint_config(),
+            );
             let onchain_discovery_builder = OnchainDiscoveryBuilder::build(
                 network_builder
                     .conn_mgr_reqs_tx()
