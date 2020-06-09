@@ -5,12 +5,12 @@
 
 use crate::counters;
 use channel::message_queues::QueueStyle;
+use libra_metrics::IntCounterVec;
 use libra_types::{transaction::SignedTransaction, PeerId};
 use network::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NetworkEvents, NetworkSender, NewNetworkSender},
-    validator_network::network_builder::NetworkBuilder,
     ProtocolId,
 };
 use serde::{Deserialize, Serialize};
@@ -62,17 +62,22 @@ pub struct MempoolNetworkSender {
 
 /// Create a new Sender that only sends for the `MEMPOOL_DIRECT_SEND_PROTOCOL` ProtocolId and a
 /// Receiver (Events) that explicitly returns only said ProtocolId.
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
+pub fn network_endpoint_config(
     max_broadcasts_per_peer: usize,
-) -> (MempoolNetworkSender, MempoolNetworkEvents) {
-    network.add_protocol_handler((
+) -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static IntCounterVec>,
+) {
+    (
         vec![],
         vec![ProtocolId::MempoolDirectSend],
         QueueStyle::KLAST,
         max_broadcasts_per_peer,
         Some(&counters::PENDING_MEMPOOL_NETWORK_EVENTS),
-    ))
+    )
 }
 
 impl NewNetworkSender for MempoolNetworkSender {
