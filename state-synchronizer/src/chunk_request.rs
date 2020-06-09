@@ -15,7 +15,16 @@ pub enum TargetType {
     /// The value specifies the timeout in ms to wait for an available response.
     /// This "long poll" approach allows an upstream node to add the request to the list of its
     /// subscriptions for the duration of a timeout until some new information becomes available.
-    HighestAvailable { timeout_ms: u64 },
+    HighestAvailable {
+        /// Sometimes if the sync requester is lagging too much behind the sync responder, the requester will
+        /// want to sync to a version earlier than the highest LI version on the sync responder.
+        /// While it is catching up, it will want to ask all the intermediary highest ledger infos
+        /// on the responder as the responder continues to advance in committing blocks
+        /// so that as the sync requester is catching up, it will use these intermediary highest LIs
+        /// to commit with the synced txns, so that they show up as actually committed, not just synced.
+        target_li: Option<LedgerInfoWithSignatures>,
+        timeout_ms: u64,
+    },
     /// The response is built relative to a LedgerInfo at a given version.
     Waypoint(Version),
 }

@@ -15,6 +15,10 @@ pub enum ResponseLedgerInfo {
     /// A typical response carries a LedgerInfo with signatures that should be verified using the
     /// local trusted validator set.
     VerifiableLedgerInfo(LedgerInfoWithSignatures),
+    IntermediateLedgerInfo{
+        target_li: LedgerInfoWithSignatures,
+        highest_li: LedgerInfoWithSignatures,
+    },
     /// During the initial catchup upon startup the chunks carry LedgerInfo that is verified
     /// using the local waypoint.
     LedgerInfoForWaypoint {
@@ -30,6 +34,7 @@ impl ResponseLedgerInfo {
     pub fn version(&self) -> Version {
         match self {
             ResponseLedgerInfo::VerifiableLedgerInfo(li) => li.ledger_info().version(),
+            ResponseLedgerInfo::IntermediateLedgerInfo {target_li, .. } => target_li.ledger_info().version(),
             ResponseLedgerInfo::LedgerInfoForWaypoint { waypoint_li, .. } => {
                 waypoint_li.ledger_info().version()
             }
@@ -78,9 +83,9 @@ impl fmt::Display for GetChunkResponse {
             ),
         };
         let response_li_repr = match &self.response_li {
-            ResponseLedgerInfo::VerifiableLedgerInfo(li) => {
-                format!("[verifiable LI {}]", li.ledger_info())
-            }
+            ResponseLedgerInfo::VerifiableLedgerInfo(li) => format!("[verifiable LI {}]", li.ledger_info()),
+            ResponseLedgerInfo::IntermediateLedgerInfo {target_li, highest_li} =>
+                format!("[intermediate LI - target LI {}, highest LI {}]", target_li.ledger_info(), highest_li.ledger_info()),
             ResponseLedgerInfo::LedgerInfoForWaypoint {
                 waypoint_li,
                 end_of_epoch_li,

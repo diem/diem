@@ -32,6 +32,8 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::time::{interval, timeout};
+use std::collections::BTreeMap;
+use std::ops::Bound::Included;
 
 pub(crate) struct SyncRequest {
     // The Result value returned to the caller is Error in case the StateSynchronizer failed to
@@ -98,6 +100,8 @@ pub(crate) struct SyncCoordinator<T> {
     peer_manager: PeerManager,
     // Optional sync request to be called when the target sync is reached
     sync_request: Option<SyncRequest>,
+    // In-memory store of ledger infos that are pending commits
+    pending_ledger_infos: BTreeMap<Version, LedgerInfoWithSignatures>,
     // Option initialization listener to be called when the coordinator is caught up with
     // its waypoint.
     initialization_listener: Option<oneshot::Sender<Result<()>>>,
@@ -128,6 +132,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             client_events,
             state_sync_to_mempool_sender,
             local_state: initial_state,
+            pending_ledger_infos: BTreeMap::new(),
             retry_timeout: Duration::from_millis(retry_timeout_val),
             config,
             role,
@@ -248,6 +253,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             );
         }
         self.local_state = new_state;
+
+        // prune any pending LIs that were successfully committed
+        self.pending_ledger_infos = self.pending_ledger_infos.split_off(&(self.local_state.highest_local_li.ledger_info().version() + 1));
         Ok(())
     }
 
@@ -444,8 +452,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
         match request.target().clone() {
             TargetType::TargetLedgerInfo(li) => self.process_request_target_li(peer, request, li),
-            TargetType::HighestAvailable { timeout_ms } => {
-                self.process_request_highest_available(peer, request, timeout_ms)
+            TargetType::HighestAvailable { target_li, timeout_ms } => {
+                self.process_request_highest_available(peer, request, target_li, timeout_ms)
             }
             TargetType::Waypoint(waypoint_version) => {
                 self.process_request_waypoint(peer, request, waypoint_version)
@@ -484,16 +492,18 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         &mut self,
         peer: PeerNetworkId,
         request: GetChunkRequest,
+        target_li: Option<LedgerInfoWithSignatures>,
         timeout_ms: u64,
     ) -> Result<()> {
         let limit = std::cmp::min(request.limit, self.config.max_chunk_limit);
         let timeout = std::cmp::min(timeout_ms, self.config.max_timeout_ms);
 
-        let response_li =
-            self.choose_response_li(request.known_version, request.current_epoch, None)?;
+        let target_li =
+            self.choose_response_li(request.known_version, request.current_epoch, target_li)?;
+        let highest_li = self.local_state.highest_local_li.clone();
         // If there is nothing a node can help with, and the request supports long polling,
         // add it to the subscriptions.
-        if self.local_state.highest_local_li.ledger_info().version() <= request.known_version
+        if highest_li.ledger_info().version() <= request.known_version
             && timeout > 0
         {
             let expiration_time = SystemTime::now().checked_add(Duration::from_millis(timeout));
@@ -513,7 +523,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         self.deliver_chunk(
             peer,
             request.known_version,
-            ResponseLedgerInfo::VerifiableLedgerInfo(response_li),
+//            ResponseLedgerInfo::VerifiableLedgerInfo(response_li),
+            ResponseLedgerInfo::IntermediateLedgerInfo {target_li, highest_li},
             limit,
         )
     }
@@ -649,6 +660,18 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             ResponseLedgerInfo::VerifiableLedgerInfo(li) => {
                 self.process_response_with_verifiable_li(txn_list_with_proof, li)
             }
+            ResponseLedgerInfo::IntermediateLedgerInfo { target_li, highest_li } => {
+                // update pending_ledgers if target_li.version < highest_li.version
+                let target_version = target_li.ledger_info().version();
+                let highest_version = highest_li.ledger_info().version();
+                ensure!(target_version <= highest_version, "Intermediate ledger info received target LI {} higher than highest LI {}", target_li, highest_li);
+                if target_version <= highest_version {
+                    // save the highest LI at this point to commit for later
+                    self.pending_ledger_infos.insert(highest_version, highest_li);
+                }
+
+                self.process_response_with_verifiable_li(txn_list_with_proof, target_li)
+            }
             ResponseLedgerInfo::LedgerInfoForWaypoint {
                 waypoint_li,
                 end_of_epoch_li,
@@ -718,9 +741,15 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             // Remain in the current epoch
             self.local_state.epoch()
         };
-        self.send_chunk_request(new_version, new_epoch)?;
+
+//        self.send_chunk_request(new_version, new_epoch)?;
         self.local_state.trusted_epoch.verify(&response_li)?;
-        self.validate_and_store_chunk(txn_list_with_proof, response_li, None)
+        self.validate_and_store_chunk(txn_list_with_proof, response_li, None)?;
+
+        // need to sync with local storage to see which LI
+        self.sync_state_with_local_storage()?;
+        let new_version = self.local_state.highest_version_in_local_storage();
+        self.send_chunk_request(new_version, new_epoch)
     }
 
     /// Processing chunk responses that carry a LedgerInfo corresponding to the waypoint.
@@ -837,8 +866,24 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             TargetType::Waypoint(waypoint_version)
         } else {
             match self.sync_request.as_ref() {
-                None => TargetType::HighestAvailable {
-                    timeout_ms: self.config.long_poll_timeout_ms,
+                None => {
+                    // if there are any pending LI, target them first
+                    // this assumed at this point, the pending_ledger_infos has already been synced with local storage
+                    // TODO be smarter about picking pending LI
+//                    let pending_li = self.pending_ledger_infos.iter().next()
+//                        .map(|(_version, ledger_info)| ledger_info.clone());
+
+                    // first, try to find biggest pending LI s.t. pending LI's version is the largest
+//                    let highest_li_version = self.local_state.highest_local_li.ledger_info().version();
+                    let pending_li = if let Some((_version, ledger_info)) = self.pending_ledger_infos.range((Included(0), Included(known_version + self.config.chunk_limit))).rev().next() {
+                        Some(ledger_info.clone())
+                    } else {
+                        self.pending_ledger_infos.iter().next().map(|(_version, ledger_info)| ledger_info.clone())
+                    };
+                    TargetType::HighestAvailable {
+                        target_li: pending_li,
+                        timeout_ms: self.config.long_poll_timeout_ms,
+                    }
                 },
                 Some(sync_req) => {
                     if sync_req.target.ledger_info().version() <= known_version {
