@@ -5,12 +5,12 @@
 
 use crate::{chunk_request::GetChunkRequest, chunk_response::GetChunkResponse, counters};
 use channel::message_queues::QueueStyle;
+use libra_metrics::IntCounterVec;
 use libra_types::PeerId;
 use network::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{NetworkEvents, NetworkSender, NewNetworkSender},
-    validator_network::network_builder::NetworkBuilder,
     ProtocolId,
 };
 use serde::{Deserialize, Serialize};
@@ -43,16 +43,22 @@ pub struct StateSynchronizerSender {
     inner: NetworkSender<StateSynchronizerMsg>,
 }
 
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
-) -> (StateSynchronizerSender, StateSynchronizerEvents) {
-    network.add_protocol_handler((
+/// Configuration for the network endpoints to support StateSynchronizer.
+pub fn network_endpoint_config() -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static IntCounterVec>,
+) {
+    (
         vec![],
         vec![ProtocolId::StateSynchronizerDirectSend],
         QueueStyle::LIFO,
+        // TODO:  Name this as a constant.
         1,
         Some(&counters::PENDING_STATE_SYNCHRONIZER_NETWORK_EVENTS),
-    ))
+    )
 }
 
 impl NewNetworkSender for StateSynchronizerSender {
