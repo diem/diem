@@ -29,7 +29,7 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::stream::StreamExt;
 use libra_config::{
     config::{RoleType, HANDSHAKE_VERSION},
-    network_id::NetworkId,
+    network_id::{NetworkContext, NetworkId},
 };
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
@@ -101,9 +101,7 @@ impl AuthenticationMode {
 // pretty tangled.
 pub struct NetworkBuilder {
     executor: Handle,
-    network_id: NetworkId,
-    peer_id: PeerId,
-    role: RoleType,
+    network_context: NetworkContext,
     // TODO(philiphayes): better support multiple listening addrs
     listen_address: NetworkAddress,
     advertised_address: Option<NetworkAddress>,
@@ -154,9 +152,7 @@ impl NetworkBuilder {
         );
         NetworkBuilder {
             executor,
-            network_id,
-            peer_id,
-            role,
+            network_context: NetworkContext::new(network_id, role, peer_id),
             listen_address,
             advertised_address: None,
             seed_peers: HashMap::new(),
@@ -183,8 +179,12 @@ impl NetworkBuilder {
         }
     }
 
+    pub fn network_context(&self) -> &NetworkContext {
+        &self.network_context
+    }
+
     pub fn peer_id(&self) -> PeerId {
-        self.peer_id
+        self.network_context.peer_id()
     }
 
     /// Set network authentication mode.
@@ -302,7 +302,6 @@ impl NetworkBuilder {
             &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
         );
         self.conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx);
-        let peer_id = self.peer_id;
         let trusted_peers = self.trusted_peers.clone();
         let seed_peers = self.seed_peers.clone();
         let max_connection_delay_ms = self.max_connection_delay_ms;
@@ -310,7 +309,7 @@ impl NetworkBuilder {
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
         let conn_mgr = self.executor.enter(|| {
             ConnectivityManager::new(
-                peer_id,
+                self.network_context.clone(),
                 trusted_peers,
                 seed_peers,
                 interval(Duration::from_millis(connectivity_check_interval_ms)).fuse(),
@@ -333,7 +332,6 @@ impl NetworkBuilder {
     ///
     /// This is for testing purposes only and should not be used in production networks.
     pub fn add_gossip_discovery(&mut self) -> &mut Self {
-        let peer_id = self.peer_id;
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager not enabled");
@@ -363,12 +361,10 @@ impl NetworkBuilder {
         let advertised_address = advertised_address.append_prod_protos(pubkey, HANDSHAKE_VERSION);
 
         let addrs = vec![advertised_address];
-        let role = self.role;
         let discovery_interval_ms = self.discovery_interval_ms;
         let discovery = self.executor.enter(|| {
             Discovery::new(
-                peer_id,
-                role,
+                self.network_context.clone(),
                 addrs,
                 interval(Duration::from_millis(discovery_interval_ms)).fuse(),
                 discovery_network_tx,
@@ -377,7 +373,7 @@ impl NetworkBuilder {
             )
         });
         self.executor.spawn(discovery.start());
-        debug!("Started discovery protocol actor");
+        debug!("{} Started discovery protocol actor", self.network_context);
         self
     }
 
@@ -389,6 +385,7 @@ impl NetworkBuilder {
         let ping_failures_tolerated = self.ping_failures_tolerated;
         let health_checker = self.executor.enter(|| {
             HealthChecker::new(
+                self.network_context.clone(),
                 interval(Duration::from_millis(ping_interval_ms)).fuse(),
                 hc_network_tx,
                 hc_network_rx,
@@ -397,7 +394,7 @@ impl NetworkBuilder {
             )
         });
         self.executor.spawn(health_checker.start());
-        debug!("Started health checker");
+        debug!("{} Started health checker", self.network_context);
         self
     }
 
@@ -406,7 +403,7 @@ impl NetworkBuilder {
     pub fn build(mut self) -> NetworkAddress {
         use libra_network_address::Protocol::*;
 
-        let network_id = self.network_id.clone();
+        let network_id = self.network_context.network_id().clone();
         let protos = self.supported_protocols();
 
         let authentication_mode = self
@@ -416,17 +413,21 @@ impl NetworkBuilder {
 
         let (key, maybe_trusted_peers, peer_id) = match authentication_mode {
             // validator-operated full node
-            AuthenticationMode::ServerOnly(key) if self.peer_id == PeerId::default() => {
+            AuthenticationMode::ServerOnly(key)
+                if self.network_context.peer_id() == PeerId::default() =>
+            {
                 let public_key = key.public_key();
                 let peer_id = PeerId::from_identity_public_key(public_key);
                 (key, None, peer_id)
             }
             // full node
-            AuthenticationMode::ServerOnly(key) => (key, None, self.peer_id),
+            AuthenticationMode::ServerOnly(key) => (key, None, self.network_context.peer_id()),
             // validator
-            AuthenticationMode::Mutual(key) => {
-                (key, Some(self.trusted_peers.clone()), self.peer_id)
-            }
+            AuthenticationMode::Mutual(key) => (
+                key,
+                Some(self.trusted_peers.clone()),
+                self.network_context.peer_id(),
+            ),
         };
 
         match self.listen_address.as_slice() {
@@ -451,9 +452,9 @@ impl NetworkBuilder {
                 protos,
             )),
             _ => panic!(
-                "Unsupported listen_address: '{}', expected '/memory/<port>', \
+                "{} Unsupported listen_address: '{}', expected '/memory/<port>', \
                  '/ip4/<addr>/tcp/<port>', or '/ip6/<addr>/tcp/<port>'.",
-                self.listen_address
+                self.network_context, self.listen_address
             ),
         }
     }
@@ -468,8 +469,7 @@ impl NetworkBuilder {
         let peer_mgr = PeerManager::new(
             self.executor.clone(),
             transport,
-            self.peer_id,
-            self.role,
+            self.network_context.clone(),
             // TODO(philiphayes): peer manager should take `Vec<NetworkAddress>`
             // (which could be empty, like in client use case)
             self.listen_address,
@@ -484,7 +484,7 @@ impl NetworkBuilder {
         let listen_addr = peer_mgr.listen_addr().clone();
 
         self.executor.spawn(peer_mgr.start());
-        debug!("Started peer manager");
+        debug!("{} Started peer manager", self.network_context);
 
         listen_addr
     }

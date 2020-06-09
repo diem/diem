@@ -9,6 +9,7 @@ use crate::{
 use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::SinkExt;
+use libra_config::{config::RoleType, network_id::NetworkId};
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use libra_logger::info;
 use libra_network_address::NetworkAddress;
@@ -27,7 +28,8 @@ fn setup_conn_mgr(
     channel::Sender<ConnectivityRequest>,
     channel::Sender<()>,
 ) {
-    let self_peer_id = PeerId::random();
+    let network_context =
+        NetworkContext::new(NetworkId::Validator, RoleType::Validator, PeerId::random());
     let (connection_reqs_tx, connection_reqs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
@@ -48,7 +50,7 @@ fn setup_conn_mgr(
 
     let conn_mgr = {
         ConnectivityManager::new(
-            self_peer_id,
+            network_context,
             Arc::new(RwLock::new(eligible_peers)),
             seed_peers,
             ticker_rx,

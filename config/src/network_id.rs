@@ -1,10 +1,61 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+use crate::config::RoleType;
+use libra_types::PeerId;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use std::fmt;
+
+/// A grouping of common information between all networking code for logging.
+/// This should greatly reduce the groupings between these given everywhere, and will allow
+/// for logging accordingly.  TODO: Figure out how to split these as structured logging
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct NetworkContext {
+    network_id: NetworkId,
+    role: RoleType,
+    peer_id: PeerId,
+}
+
+impl fmt::Display for NetworkContext {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            formatter,
+            "[{},{},{}]",
+            self.network_id,
+            self.role,
+            self.peer_id.short_str()
+        )
+    }
+}
+
+impl NetworkContext {
+    pub fn new(network_id: NetworkId, role: RoleType, peer_id: PeerId) -> NetworkContext {
+        NetworkContext {
+            network_id,
+            role,
+            peer_id,
+        }
+    }
+
+    pub fn network_id(&self) -> &NetworkId {
+        &self.network_id
+    }
+    pub fn peer_id(&self) -> PeerId {
+        self.peer_id
+    }
+    pub fn role(&self) -> RoleType {
+        self.role
+    }
+}
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct NetworkInfo {
     name: String,
+}
+
+impl fmt::Display for NetworkInfo {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "{}", self.name)
+    }
 }
 
 /// A representation of the network being used in communication.
@@ -22,6 +73,16 @@ pub enum NetworkId {
 impl Default for NetworkId {
     fn default() -> NetworkId {
         NetworkId::Public
+    }
+}
+
+impl fmt::Display for NetworkId {
+    fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            NetworkId::Validator => write!(formatter, "Validator"),
+            NetworkId::Public => write!(formatter, "Public"),
+            NetworkId::Private(info) => write!(formatter, "Private({})", info),
+        }
     }
 }
 

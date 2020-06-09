@@ -13,7 +13,10 @@ use super::{
 use channel::{libra_channel, message_queues::QueueStyle};
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use futures::{channel::oneshot, sink::SinkExt, stream::StreamExt};
-use libra_config::config::{NodeConfig, RoleType};
+use libra_config::{
+    config::{NodeConfig, RoleType},
+    network_id::{NetworkContext, NetworkId},
+};
 use libra_network_address::NetworkAddress;
 use libra_types::{
     account_config,
@@ -214,10 +217,9 @@ fn setup_onchain_discovery(
 
     let outbound_rpc_timeout = Duration::from_secs(30);
     let max_concurrent_inbound_rpcs = 8;
-
+    let network_context = NetworkContext::new(NetworkId::Validator, role, peer_id);
     let onchain_discovery = OnchainDiscovery::new(
-        peer_id,
-        role,
+        network_context,
         waypoint,
         network_reqs_tx,
         conn_mgr_reqs_tx,

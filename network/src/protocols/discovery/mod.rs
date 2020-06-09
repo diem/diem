@@ -48,7 +48,7 @@ use futures::{
     sink::SinkExt,
     stream::{FusedStream, Stream, StreamExt},
 };
-use libra_config::config::RoleType;
+use libra_config::network_id::NetworkContext;
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
@@ -129,10 +129,7 @@ pub struct Discovery<TTicker> {
     /// Note for self, which is prefixed with an underscore as this is not used but is in
     /// preparation for logic that changes the advertised Note while the validator is running.
     note: Note,
-    /// PeerId for self.
-    peer_id: PeerId,
-    /// Our node type.
-    role: RoleType,
+    network_context: NetworkContext,
     /// The DNS domain name other public full nodes should query to get this
     /// validator's list of full nodes.
     dns_seed_addr: Bytes,
@@ -158,8 +155,7 @@ where
     TTicker: Stream + FusedStream + Unpin,
 {
     pub fn new(
-        self_peer_id: PeerId,
-        role: RoleType,
+        network_context: NetworkContext,
         self_addrs: Vec<NetworkAddress>,
         ticker: TTicker,
         network_reqs_tx: DiscoveryNetworkSender,
@@ -168,7 +164,7 @@ where
     ) -> Self {
         // TODO(philiphayes): wire through config
         let dns_seed_addr = b"example.com";
-
+        let self_peer_id = network_context.peer_id();
         let epoch = get_unix_epoch();
         let self_note = Note::new(self_peer_id, self_addrs, dns_seed_addr, epoch);
 
@@ -178,8 +174,7 @@ where
 
         Self {
             note: self_note,
-            peer_id: self_peer_id,
-            role,
+            network_context,
             dns_seed_addr: Bytes::from_static(dns_seed_addr),
             known_peers,
             connected_peers: HashSet::new(),
@@ -201,7 +196,10 @@ where
         // Ensure our metrics counter has an initial value.
         self.record_num_discovery_notes();
 
-        debug!("Starting Discovery actor event loop");
+        debug!(
+            "{} Starting Discovery actor event loop",
+            self.network_context
+        );
         loop {
             futures::select! {
                 notif = self.network_notifs_rx.select_next_some() => {
@@ -211,7 +209,7 @@ where
                     self.handle_tick();
                 }
                 complete => {
-                    crit!("Discovery actor terminated");
+                    crit!("{} Discovery actor terminated", self.network_context);
                     break;
                 }
             }
@@ -223,7 +221,7 @@ where
     // 2. Compose the msg to send.
     // 3. Spawn off a new task to push the msg to the peer.
     fn handle_tick(&mut self) {
-        debug!("Discovery interval tick");
+        debug!("{} Discovery interval tick", self.network_context);
         // On each tick, we choose a random neighbor and push our state to it.
         if let Some(peer) = self.choose_random_neighbor() {
             // We clone `peer_mgr_reqs_tx` member of Self, since using `self` inside fut below
@@ -233,7 +231,8 @@ where
             let msg = self.compose_discovery_msg();
             if let Err(err) = sender.send_to(peer, msg) {
                 warn!(
-                    "Failed to send discovery msg to {}; error: {:?}",
+                    "{} Failed to send discovery msg to {}; error: {:?}",
+                    self.network_context,
                     peer.short_str(),
                     err
                 );
@@ -242,7 +241,7 @@ where
     }
 
     async fn handle_network_event(&mut self, event: Result<Event<DiscoveryMsg>, NetworkError>) {
-        trace!("Network event::{:?}", event);
+        trace!("{} Network event::{:?}", self.network_context, event);
         match event {
             Ok(e) => {
                 match e {
@@ -259,13 +258,16 @@ where
                         self.record_num_discovery_notes();
                     }
                     Event::RpcRequest(req) => {
-                        warn!("Unexpected notification from network: {:?}", req);
+                        warn!(
+                            "{} Unexpected notification from network: {:?}",
+                            self.network_context, req
+                        );
                         debug_assert!(false);
                     }
                 }
             }
             Err(err) => {
-                info!("Received error: {}", err);
+                info!("{} Received error: {}", self.network_context, err);
             }
         }
     }
@@ -299,7 +301,8 @@ where
                 Some(ref curr_note) if note.epoch() <= curr_note.epoch() => {
                     if note.epoch() < curr_note.epoch() {
                         debug!(
-                            "Received stale note for peer: {} from peer: {}",
+                            "{} Received stale note for peer: {} from peer: {}",
+                            self.network_context,
                             note.peer_id.short_str(),
                             remote_peer
                         );
@@ -308,7 +311,8 @@ where
                 }
                 _ => {
                     info!(
-                        "Received updated note for peer: {} from peer: {}",
+                        "{} Received updated note for peer: {} from peer: {}",
+                        self.network_context,
                         note.peer_id.short_str(),
                         remote_peer.short_str()
                     );
@@ -318,10 +322,11 @@ where
                     // with clock behind the previous node. In such scenarios, it's best to issue a
                     // newer note with an epoch number higher than what we observed (unless the
                     // issued epoch number is u64::MAX).
-                    if note.peer_id == self.peer_id {
+                    if note.peer_id == self.network_context.peer_id() {
                         info!(
-                            "Received an older note for self, but with higher epoch. \
+                            "{} Received an older note for self, but with higher epoch. \
                              Previous epoch: {}, current epoch: {}",
+                            self.network_context,
                             note.epoch(),
                             self.note.epoch()
                         );
@@ -332,7 +337,7 @@ where
                             continue;
                         }
                         note = Note::new(
-                            self.peer_id,
+                            self.network_context.peer_id(),
                             self.note.addrs().clone(),
                             &self.dns_seed_addr,
                             max(note.epoch() + 1, get_unix_epoch()),
@@ -369,12 +374,12 @@ where
         let num_other_notes = self
             .known_peers
             .iter()
-            .filter(|(peer_id, _)| *peer_id != &self.peer_id)
+            .filter(|(peer_id, _)| *peer_id != &self.network_context.peer_id())
             .count();
         let num_other_notes: i64 = num_other_notes.try_into().unwrap_or(0);
 
         counters::LIBRA_NETWORK_DISCOVERY_NOTES
-            .with_label_values(&[self.role.as_str()])
+            .with_label_values(&[self.network_context.role().as_str()])
             .set(num_other_notes);
     }
 }

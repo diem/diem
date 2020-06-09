@@ -17,7 +17,10 @@ use crate::{
 };
 use channel::{libra_channel, message_queues::QueueStyle};
 use futures::{channel::oneshot, io::AsyncWriteExt, sink::SinkExt, stream::StreamExt};
-use libra_config::config::RoleType;
+use libra_config::{
+    config::RoleType,
+    network_id::{NetworkContext, NetworkId},
+};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use memsocket::MemorySocket;
@@ -92,8 +95,7 @@ fn build_test_peer_manager(
     let peer_manager = PeerManager::new(
         executor,
         build_test_transport(),
-        peer_id,
-        RoleType::Validator,
+        NetworkContext::new(NetworkId::Validator, RoleType::Validator, peer_id),
         "/memory/0".parse().unwrap(),
         peer_manager_request_rx,
         connection_reqs_rx,
