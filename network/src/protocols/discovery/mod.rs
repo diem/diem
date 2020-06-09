@@ -39,7 +39,7 @@ use crate::{
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
-    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
+    validator_network::network_builder::NETWORK_CHANNEL_SIZE,
     ProtocolId,
 };
 use bytes::Bytes;
@@ -51,6 +51,7 @@ use futures::{
 use libra_config::network_id::NetworkContext;
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_logger::prelude::*;
+use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
@@ -87,18 +88,21 @@ pub struct DiscoveryNetworkSender {
     inner: NetworkSender<DiscoveryMsg>,
 }
 
-/// Register the discovery sender and event handler with network and return interfaces for those
-/// actors.
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
-) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
-    network.add_protocol_handler((
+/// Configuration for the network endpoints to support Discovery.
+pub fn network_endpoint_config() -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static IntCounterVec>,
+) {
+    (
         vec![],
         vec![ProtocolId::DiscoveryDirectSend],
         QueueStyle::LIFO,
         NETWORK_CHANNEL_SIZE,
         Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
-    ))
+    )
 }
 
 impl NewNetworkSender for DiscoveryNetworkSender {
