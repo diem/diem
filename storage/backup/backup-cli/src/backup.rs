@@ -262,9 +262,8 @@ impl StateSnapshotBackupController {
         chunks: Vec<StateSnapshotChunk>,
     ) -> Result<FileHandle> {
         let proof_bytes = self.client.get_state_root_proof(self.version).await?;
-        let (txn_info, ledger_info): (TransactionInfoWithProof, LedgerInfoWithSignatures) =
+        let (txn_info, _): (TransactionInfoWithProof, LedgerInfoWithSignatures) =
             lcs::from_bytes(&proof_bytes)?;
-        assert_eq!(ledger_info.ledger_info().version(), self.version);
 
         let (proof_handle, mut proof_file) = self
             .storage
