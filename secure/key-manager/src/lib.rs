@@ -137,7 +137,14 @@ where
                         Error::LivenessError(last_value, current_value).to_string()
                     );
                 }
-                Err(e) => return Err(e), // Unexpected error that we can't handle -- throw!
+                Err(e) => {
+                    // Unexpected error that we can't handle -- throw!
+                    error!(
+                        "Encountered error, cannot continue to operate: {}",
+                        e.to_string()
+                    );
+                    return Err(e);
+                }
             };
 
             info!("Going to sleep for {} seconds.", self.sleep_period_secs);
