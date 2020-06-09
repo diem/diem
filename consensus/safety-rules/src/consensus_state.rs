@@ -15,6 +15,7 @@ pub struct ConsensusState {
     last_voted_round: Round,
     preferred_round: Round,
     waypoint: Waypoint,
+    in_validator_set: bool,
 }
 
 impl Display for ConsensusState {
@@ -26,8 +27,13 @@ impl Display for ConsensusState {
              \tlast_voted_round = {},\n\
              \tpreferred_round = {}\n\
              \twaypoint = {}\n\
+             \tin_validator_set = {}\n\
              ]",
-            self.epoch, self.last_voted_round, self.preferred_round, self.waypoint,
+            self.epoch,
+            self.last_voted_round,
+            self.preferred_round,
+            self.waypoint,
+            self.in_validator_set,
         )
     }
 }
@@ -38,12 +44,14 @@ impl ConsensusState {
         last_voted_round: Round,
         preferred_round: Round,
         waypoint: Waypoint,
+        in_validator_set: bool,
     ) -> Self {
         Self {
             epoch,
             last_voted_round,
             preferred_round,
             waypoint,
+            in_validator_set,
         }
     }
 
@@ -66,5 +74,10 @@ impl ConsensusState {
     /// Last known checkpoint this should map to a LedgerInfo that contains a new ValidatorSet
     pub fn waypoint(&self) -> Waypoint {
         self.waypoint
+    }
+
+    /// Indicating whether the validator is validator set
+    pub fn in_validator_set(&self) -> bool {
+        self.in_validator_set
     }
 }

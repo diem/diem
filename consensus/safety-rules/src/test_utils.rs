@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, persistent_safety_storage::PersistentSafetyStorage};
+use crate::persistent_safety_storage::PersistentSafetyStorage;
 use consensus_types::{
     block::Block,
     common::{Payload, Round},

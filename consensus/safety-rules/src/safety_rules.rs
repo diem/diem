@@ -107,20 +107,28 @@ impl SafetyRules {
         if let Some(expected_key) = epoch_state.verifier.get_public_key(&self.author) {
             let curr_key = self.signer().ok().map(|s| s.public_key());
             if curr_key != Some(expected_key.clone()) {
-                debug!(
-                    "Reconciled pub key for signer {} [{:#?} -> {:#?}]",
-                    self.author, curr_key, expected_key
-                );
                 let consensus_key = self
                     .persistent_storage
-                    .consensus_key_for_version(expected_key)
-                    .expect("Unable to retrieve consensus private key");
+                    .consensus_key_for_version(expected_key.clone())
+                    .ok()
+                    .ok_or_else(|| {
+                        debug!("Validator key not found!");
+                        self.validator_signer = None;
+                        Error::InternalError {
+                            error: "Validator key not found".into(),
+                        }
+                    })?;
+                debug!(
+                    "Reconciled pub key for signer {} [{:#?} -> {}]",
+                    self.author, curr_key, expected_key
+                );
                 self.validator_signer = Some(ValidatorSigner::new(self.author, consensus_key));
             } else {
                 debug!("Validator key matches the key in validator set.");
             }
         } else {
-            debug!("The validator key is not in store!");
+            debug!("The validator is not in set!");
+            self.validator_signer = None;
         }
         Ok(())
     }
@@ -186,6 +194,7 @@ impl TSafetyRules for SafetyRules {
             self.persistent_storage.last_voted_round()?,
             self.persistent_storage.preferred_round()?,
             self.persistent_storage.waypoint()?,
+            self.signer().is_ok(),
         ))
     }
 

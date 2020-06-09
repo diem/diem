@@ -10,6 +10,7 @@ use consensus_types::{
     vote_proposal::VoteProposal,
 };
 use libra_crypto::hash::{CryptoHash, HashValue};
+use libra_global_constants::CONSENSUS_KEY;
 use libra_types::{
     epoch_change::EpochChangeProof,
     epoch_state::EpochState,
@@ -72,7 +73,7 @@ pub fn run_test_suite(func: Callback) {
     test_uninitialized_signer(func);
     test_reconcile_key(func);
     test_validator_not_in_set(func);
-    // test_key_not_in_store(func);
+    test_key_not_in_store(func);
 }
 
 fn test_bad_execution_output(func: Callback) {
@@ -623,44 +624,10 @@ fn test_uninitialized_signer(func: Callback) {
     safety_rules.update(a1.block().quorum_cert()).unwrap();
 }
 
-// Tests for fetching a missing validator key from persistent storage.
-// Ideally under this circumstance, safety rules should panic. However,
-// at current stage of implementation the upper layer (i.e. RoundManager) is
-// unable to handle such failure (actually it is unable ANY failure
-// during key reconciliation!). For more fail cases, refer to debug messages in
-// reconcile_key()
-#[allow(dead_code)]
-fn test_key_not_in_store(func: Callback) {
-    let (mut safety_rules, signer) = func();
-    let (proof, genesis_qc) = make_genesis(&signer);
-    let round = genesis_qc.certified_block().round();
-
-    safety_rules.initialize(&proof).unwrap();
-
-    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
-
-    let mut next_epoch_state = EpochState::empty();
-    next_epoch_state.epoch = 1;
-    let rand_signer = ValidatorSigner::random([0xfu8; 32]);
-    next_epoch_state.verifier =
-        ValidatorVerifier::new_single(signer.author(), rand_signer.public_key());
-    let a2 = test_utils::make_proposal_with_parent_and_overrides(
-        vec![],
-        round + 2,
-        &a1,
-        Some(&a1),
-        &signer,
-        Some(1),
-        Some(next_epoch_state),
-    );
-    safety_rules.update(a2.block().quorum_cert()).unwrap_err();
-}
-
 fn test_validator_not_in_set(func: Callback) {
     // Testing for a validator missing from the validator set
     // It does so by updating the safey rule to an epoch state, which does not contain the
-    // current validator. The validator later fails to verify QC since it is no longer in the
-    // validator set.
+    // current validator and check the consensus state
 
     let (mut safety_rules, signer) = func();
 
@@ -669,8 +636,13 @@ fn test_validator_not_in_set(func: Callback) {
 
     safety_rules.initialize(&proof).unwrap();
 
+    // validator_signer is set during initialization
+    let state = safety_rules.consensus_state().unwrap();
+    assert_eq!(state.in_validator_set(), true);
+
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
 
+    // remove the validator_signer in next epoch
     let mut next_epoch_state = EpochState::empty();
     next_epoch_state.epoch = 1;
     let rand_signer = ValidatorSigner::random([0xfu8; 32]);
@@ -687,20 +659,8 @@ fn test_validator_not_in_set(func: Callback) {
     );
     safety_rules.update(a2.block().quorum_cert()).unwrap();
 
-    let a3 = test_utils::make_proposal_with_parent_and_overrides(
-        vec![],
-        round + 3,
-        &a2,
-        Some(&a2),
-        &signer,
-        Some(1),
-        None,
-    );
-    let err = safety_rules.update(a3.block().quorum_cert()).unwrap_err();
-    assert_eq!(
-        err,
-        Error::InvalidQuorumCertificate("Fail to verify QuorumCert".into())
-    );
+    let state = safety_rules.consensus_state().unwrap();
+    assert_eq!(state.in_validator_set(), false);
 }
 
 fn test_reconcile_key(_func: Callback) {
@@ -712,7 +672,7 @@ fn test_reconcile_key(_func: Callback) {
     // Initialize the storage with two versions of signer keys
     let signer = ValidatorSigner::from_int(0);
     let mut storage = test_utils::test_storage(&signer);
-    let new_pub_key = test_utils::rotate_consensus_key(&mut storage).unwrap();
+    let new_pub_key = storage.internal_store().rotate_key(CONSENSUS_KEY).unwrap();
     let mut safety_rules = Box::new(SafetyRules::new(signer.author(), storage));
 
     let (proof, genesis_qc) = make_genesis(&signer);
@@ -754,4 +714,42 @@ fn test_reconcile_key(_func: Callback) {
         err,
         Error::InvalidQuorumCertificate("Fail to verify QuorumCert".into())
     );
+}
+
+// Tests for fetching a missing validator key from persistent storage.
+fn test_key_not_in_store(func: Callback) {
+    let (mut safety_rules, signer) = func();
+    let (proof, genesis_qc) = make_genesis(&signer);
+    let round = genesis_qc.certified_block().round();
+
+    safety_rules.initialize(&proof).unwrap();
+
+    let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
+
+    // Update to an epoch where the validator fails to retrive the respective key
+    // from persistent storage
+    let mut next_epoch_state = EpochState::empty();
+    next_epoch_state.epoch = 1;
+    let rand_signer = ValidatorSigner::random([0xfu8; 32]);
+    next_epoch_state.verifier =
+        ValidatorVerifier::new_single(signer.author(), rand_signer.public_key());
+    let a2 = test_utils::make_proposal_with_parent_and_overrides(
+        vec![],
+        round + 2,
+        &a1,
+        Some(&a1),
+        &signer,
+        Some(1),
+        Some(next_epoch_state),
+    );
+    let err = safety_rules.update(a2.block().quorum_cert()).unwrap_err();
+    assert_eq!(
+        err,
+        Error::InternalError {
+            error: "Validator key not found".into()
+        }
+    );
+
+    let state = safety_rules.consensus_state().unwrap();
+    assert_eq!(state.in_validator_set(), false);
 }

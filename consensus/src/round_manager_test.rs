@@ -334,7 +334,10 @@ fn vote_on_successful_proposal() {
         assert_eq!(vote_msg.vote().vote_data().proposed().id(), proposal_id);
         let consensus_state = node.round_manager.consensus_state();
         let waypoint = consensus_state.waypoint();
-        assert_eq!(consensus_state, ConsensusState::new(1, 1, 0, waypoint));
+        assert_eq!(
+            consensus_state,
+            ConsensusState::new(1, 1, 0, waypoint, true)
+        );
     });
 }
 
@@ -668,7 +671,7 @@ fn recover_on_restart() {
     let waypoint = consensus_state.waypoint();
     assert_eq!(
         consensus_state,
-        ConsensusState::new(1, num_proposals, 0, waypoint)
+        ConsensusState::new(1, num_proposals, 0, waypoint, true)
     );
     for (block, _) in data {
         assert_eq!(node.block_store.block_exists(block.id()), true);
