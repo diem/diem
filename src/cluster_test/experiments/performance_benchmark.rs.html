@@ -211,18 +211,12 @@
 <span id="211">211</span>
 <span id="212">212</span>
 <span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
-<span id="216">216</span>
-<span id="217">217</span>
-<span id="218">218</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">cluster</span>::<span class="ident">Cluster</span>,
-    <span class="ident">cluster_swarm</span>::<span class="ident">ClusterSwarm</span>,
     <span class="ident">experiments</span>::{<span class="ident">Context</span>, <span class="ident">Experiment</span>, <span class="ident">ExperimentParam</span>},
     <span class="ident">instance</span>,
     <span class="ident">instance</span>::<span class="ident">Instance</span>,
@@ -316,11 +310,7 @@
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">futures</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">down_validators</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">instance</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">cluster_swarm</span>.<span class="ident">delete_node</span>(<span class="ident">instance</span>))
-            .<span class="ident">collect</span>();
+        <span class="kw">let</span> <span class="ident">futures</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">down_validators</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="ident">Instance</span>::<span class="ident">stop</span>).<span class="ident">collect</span>();
         <span class="ident">try_join_all</span>(<span class="ident">futures</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">60</span>);
         <span class="kw">let</span> <span class="ident">window</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">duration</span> <span class="op">+</span> <span class="ident">buffer</span> <span class="op">*</span> <span class="number">2</span>;
@@ -382,10 +372,10 @@
             <span class="string">&quot;Tx status from client side: txn {}, avg latency {}&quot;</span>,
             <span class="ident">stats</span>.<span class="ident">committed</span> <span class="kw">as</span> <span class="ident">u64</span>, <span class="ident">avg_latency_client</span>
         );
-        <span class="kw">let</span> <span class="ident">instance_configs</span> <span class="op">=</span> <span class="ident">instance</span>::<span class="ident">instance_configs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">down_validators</span>);
-        <span class="kw">let</span> <span class="ident">futures</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">instance_configs</span>
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ic</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">cluster_swarm</span>.<span class="ident">upsert_node</span>(<span class="ident">ic</span>.<span class="ident">clone</span>(), <span class="bool-val">false</span>))
+        <span class="kw">let</span> <span class="ident">futures</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">down_validators</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ic</span><span class="op">|</span> <span class="ident">ic</span>.<span class="ident">start</span>(<span class="bool-val">false</span>))
             .<span class="ident">collect</span>();
         <span class="ident">try_join_all</span>(<span class="ident">futures</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">submitted_txn</span> <span class="op">=</span> <span class="ident">stats</span>.<span class="ident">submitted</span>;

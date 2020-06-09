@@ -610,6 +610,9 @@
 <span id="610">610</span>
 <span id="611">611</span>
 <span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -651,6 +654,7 @@
 
 <span class="kw">const</span> <span class="ident">ERROR_NOT_FOUND</span>: <span class="ident">u16</span> <span class="op">=</span> <span class="number">404</span>;
 
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ClusterSwarmKube</span> {
     <span class="ident">client</span>: <span class="ident">Client</span>,
     <span class="ident">node_map</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">InstanceConfig</span>, <span class="ident">Instance</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
@@ -990,7 +994,7 @@
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">instance</span>: <span class="kw-2">&amp;</span><span class="ident">Instance</span>,
+        <span class="ident">k8s_node</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">docker_image</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">command</span>: <span class="ident">String</span>,
         <span class="ident">job_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
@@ -1007,7 +1011,7 @@
             <span class="ident">name</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">job_full_name</span>,
             <span class="ident">label</span> <span class="op">=</span> <span class="ident">job_name</span>,
             <span class="ident">image</span> <span class="op">=</span> <span class="ident">docker_image</span>,
-            <span class="ident">node_name</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">k8s_node</span>(),
+            <span class="ident">node_name</span> <span class="op">=</span> <span class="ident">k8s_node</span>,
             <span class="ident">command</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">command</span>,
             <span class="ident">back_off_limit</span> <span class="op">=</span> <span class="ident">back_off_limit</span>,
         );
@@ -1015,7 +1019,7 @@
         <span class="kw">let</span> <span class="ident">job_spec</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">value</span>::<span class="ident">to_value</span>(<span class="ident">job_spec</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">job_spec</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_value</span>(<span class="ident">job_spec</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;serde_json::from_value failed: {}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>;
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Running job {} for instance {}&quot;</span>, <span class="ident">job_name</span>, <span class="ident">instance</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Running job {} for node {}&quot;</span>, <span class="ident">job_name</span>, <span class="ident">k8s_node</span>);
         <span class="self">self</span>.<span class="ident">run_jobs</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">job_spec</span>], <span class="ident">back_off_limit</span>).<span class="kw">await</span>
     }
 
@@ -1036,6 +1040,7 @@
             <span class="self">self</span>.<span class="ident">delete_resource</span>::<span class="op">&lt;</span><span class="ident">Pod</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">pod_name</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         }
         <span class="kw">let</span> <span class="ident">node_name</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">instance</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_map</span>.<span class="ident">lock</span>().<span class="kw">await</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">instance_config</span>) {
+            <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">deprecated</span>)]</span>
             <span class="ident">instance</span>.<span class="ident">k8s_node</span>().<span class="ident">to_string</span>()
         } <span class="kw">else</span> {
             <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>()
@@ -1121,6 +1126,7 @@
             <span class="ident">node_name</span>.<span class="ident">clone</span>(),
             <span class="ident">instance_config</span>.<span class="ident">clone</span>(),
             <span class="self">self</span>.<span class="ident">http_client</span>.<span class="ident">clone</span>(),
+            <span class="self">self</span>.<span class="ident">clone</span>(),
         );
         <span class="self">self</span>.<span class="ident">node_map</span>
             .<span class="ident">lock</span>()
@@ -1129,8 +1135,8 @@
         <span class="prelude-val">Ok</span>(<span class="ident">instance</span>)
     }
 
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">delete_node</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">instance</span>: <span class="kw-2">&amp;</span><span class="ident">Instance</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">pod_name</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">instance</span>.<span class="ident">instance_config</span>() {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">delete_node</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">instance_config</span>: <span class="kw-2">&amp;</span><span class="ident">InstanceConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">pod_name</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">instance_config</span> {
             <span class="ident">Validator</span>(<span class="kw-2">ref</span> <span class="ident">validator_config</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;val-{}&quot;</span>, <span class="ident">validator_config</span>.<span class="ident">index</span>),
             <span class="ident">Fullnode</span>(<span class="kw-2">ref</span> <span class="ident">fullnode_config</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(
                 <span class="string">&quot;fn-{}-{}&quot;</span>,
