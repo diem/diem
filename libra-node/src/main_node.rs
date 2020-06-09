@@ -268,9 +268,10 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                         .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
                 };
 
-                consensus_network_handles = Some(consensus::network_interface::add_to_network(
-                    &mut network_builder,
-                ));
+                consensus_network_handles =
+                    Some(network_builder.add_protocol_handler(
+                        consensus::network_interface::network_endpoint_config(),
+                    ));
             }
             // Currently no FullNode network specific steps.
             RoleType::FullNode => (),
