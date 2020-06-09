@@ -109,21 +109,6 @@
 <span id="109">109</span>
 <span id="110">110</span>
 <span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -142,7 +127,6 @@
     <span class="ident">instance</span>::<span class="ident">Instance</span>,
     <span class="ident">tx_emitter</span>::<span class="ident">EmitJobRequest</span>,
 };
-<span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">format_err</span>;
 <span class="kw">use</span> <span class="ident">async_trait</span>::<span class="ident">async_trait</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">info</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Instant</span>;
@@ -193,25 +177,11 @@
             )
             .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Stopping {}&quot;</span>, <span class="self">self</span>.<span class="ident">instance</span>);
-        <span class="ident">context</span>
-            .<span class="ident">cluster_swarm</span>
-            .<span class="ident">delete_node</span>(
-                <span class="self">self</span>.<span class="ident">instance</span>
-                    .<span class="ident">instance_config</span>()
-                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Failed to find instance_config&quot;</span>))<span class="question-mark">?</span>
-                    .<span class="ident">clone</span>(),
-            )
-            .<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="ident">context</span>.<span class="ident">cluster_swarm</span>.<span class="ident">delete_node</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">instance</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Deleting db and restarting node for {}&quot;</span>, <span class="self">self</span>.<span class="ident">instance</span>);
         <span class="ident">context</span>
             .<span class="ident">cluster_swarm</span>
-            .<span class="ident">upsert_node</span>(
-                <span class="self">self</span>.<span class="ident">instance</span>
-                    .<span class="ident">instance_config</span>()
-                    .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Failed to find instance_config&quot;</span>))<span class="question-mark">?</span>
-                    .<span class="ident">clone</span>(),
-                <span class="bool-val">true</span>,
-            )
+            .<span class="ident">upsert_node</span>(<span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">instance_config</span>().<span class="ident">clone</span>(), <span class="bool-val">true</span>)
             .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Waiting for instance to be up: {}&quot;</span>, <span class="self">self</span>.<span class="ident">instance</span>);
         <span class="kw">while</span> <span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">try_json_rpc</span>().<span class="kw">await</span>.<span class="ident">is_err</span>() {

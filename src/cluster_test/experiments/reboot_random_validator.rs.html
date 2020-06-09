@@ -144,13 +144,13 @@
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">instance_configs</span> <span class="op">=</span> <span class="ident">instance</span>::<span class="ident">instance_configs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">instances</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">futures</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">instance_configs</span>
-            .<span class="ident">clone</span>()
-            .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ic</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">cluster_swarm</span>.<span class="ident">delete_node</span>(<span class="ident">ic</span>.<span class="ident">clone</span>()))
+        <span class="kw">let</span> <span class="ident">futures</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">instances</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">instance</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">cluster_swarm</span>.<span class="ident">delete_node</span>(<span class="ident">instance</span>))
             .<span class="ident">collect</span>();
         <span class="ident">try_join_all</span>(<span class="ident">futures</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">instance_configs</span> <span class="op">=</span> <span class="ident">instance</span>::<span class="ident">instance_configs</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">instances</span>);
         <span class="kw">let</span> <span class="ident">futures</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">instance_configs</span>
             .<span class="ident">into_iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ic</span><span class="op">|</span> <span class="ident">context</span>.<span class="ident">cluster_swarm</span>.<span class="ident">upsert_node</span>(<span class="ident">ic</span>.<span class="ident">clone</span>(), <span class="bool-val">false</span>))
