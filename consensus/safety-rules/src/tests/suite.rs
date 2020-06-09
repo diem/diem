@@ -71,8 +71,8 @@ pub fn run_test_suite(func: Callback) {
     test_sign_proposal_with_early_preferred_round(func);
     test_uninitialized_signer(func);
     test_reconcile_key(func);
-    test_a_missing_validator(func);
-    // test_a_missing_validator_key(func);
+    test_validator_not_in_set(func);
+    // test_key_not_in_store(func);
 }
 
 fn test_bad_execution_output(func: Callback) {
@@ -630,7 +630,7 @@ fn test_uninitialized_signer(func: Callback) {
 // during key reconciliation!). For more fail cases, refer to debug messages in
 // reconcile_key()
 #[allow(dead_code)]
-fn test_a_missing_validator_key(func: Callback) {
+fn test_key_not_in_store(func: Callback) {
     let (mut safety_rules, signer) = func();
     let (proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
@@ -656,8 +656,8 @@ fn test_a_missing_validator_key(func: Callback) {
     safety_rules.update(a2.block().quorum_cert()).unwrap_err();
 }
 
-fn test_a_missing_validator(func: Callback) {
-    // Testing for an validator missing from the validator set
+fn test_validator_not_in_set(func: Callback) {
+    // Testing for a validator missing from the validator set
     // It does so by updating the safey rule to an epoch state, which does not contain the
     // current validator. The validator later fails to verify QC since it is no longer in the
     // validator set.

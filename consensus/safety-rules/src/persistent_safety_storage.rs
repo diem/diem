@@ -55,12 +55,6 @@ impl PersistentSafetyStorage {
         Self { internal_store }
     }
 
-    pub fn consensus_key(&self) -> Result<Ed25519PrivateKey> {
-        self.internal_store
-            .export_private_key(CONSENSUS_KEY)
-            .map_err(|e| e.into())
-    }
-
     pub fn consensus_key_for_version(
         &self,
         version: Ed25519PublicKey,
