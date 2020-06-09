@@ -9,7 +9,21 @@
 //! authentication -- a network end-point running with remote authentication enabled will
 //! connect to or accept connections from an end-point running in authenticated mode as
 //! long as the latter is in its trusted peers set.
-use crate::{
+use channel::{self, libra_channel, message_queues::QueueStyle};
+use futures::stream::StreamExt;
+use libra_config::{
+    chain_id::ChainId,
+    config::{DiscoveryMethod, NetworkConfig, RoleType, HANDSHAKE_VERSION},
+    network_id::{NetworkContext, NetworkId},
+};
+use libra_crypto::x25519;
+use libra_logger::prelude::*;
+use libra_metrics::IntCounterVec;
+use libra_network_address::NetworkAddress;
+use libra_secure_storage::config;
+use libra_types::{waypoint::Waypoint, PeerId};
+use netcore::transport::{memory, Transport};
+use network::{
     connectivity_manager::{ConnectivityManager, ConnectivityRequest},
     constants, counters,
     peer_manager::{
@@ -25,19 +39,7 @@ use crate::{
     transport::{self, Connection, LibraNetTransport, LIBRA_TCP_TRANSPORT},
     ProtocolId,
 };
-use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::stream::StreamExt;
-use libra_config::{
-    chain_id::ChainId,
-    config::{RoleType, HANDSHAKE_VERSION},
-    network_id::{NetworkContext, NetworkId},
-};
-use libra_crypto::x25519;
-use libra_logger::prelude::*;
-use libra_metrics::IntCounterVec;
-use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
-use netcore::transport::{memory, Transport};
+use onchain_discovery::builder::OnchainDiscoveryBuilder;
 use std::{
     clone::Clone,
     collections::HashMap,
@@ -45,7 +47,11 @@ use std::{
     sync::{Arc, RwLock},
     time::Duration,
 };
-use tokio::{runtime::Handle, time::interval};
+use storage_interface::DbReader;
+use tokio::{
+    runtime::{Builder, Handle, Runtime},
+    time::interval,
+};
 use tokio_retry::strategy::ExponentialBackoff;
 
 #[derive(Debug)]
@@ -509,4 +515,97 @@ impl NetworkBuilder {
             EventT::new(peer_mgr_reqs_rx, connection_notifs_rx),
         )
     }
+}
+
+pub fn setup_network(
+    chain_id: &ChainId,
+    role: RoleType,
+    config: &mut NetworkConfig,
+    libra_db: Arc<dyn DbReader>,
+    waypoint: Waypoint,
+) -> (Runtime, NetworkBuilder) {
+    let runtime = Builder::new()
+        .thread_name("network-")
+        .threaded_scheduler()
+        .enable_all()
+        .build()
+        .expect("Failed to start runtime. Won't be able to start networking.");
+
+    let identity_key = config::identity_key(config);
+    let peer_id = config::peer_id(config);
+
+    let mut network_builder = NetworkBuilder::new(
+        runtime.handle().clone(),
+        chain_id.clone(),
+        config.network_id.clone(),
+        role,
+        peer_id,
+        config.listen_address.clone(),
+    );
+    network_builder.add_connection_monitoring();
+
+    // Sanity check seed peer addresses.
+    config
+        .verify_seed_peer_addrs()
+        .expect("Seed peer addresses must be well-formed");
+    let seed_peers = config.seed_peers.clone();
+
+    if config.mutual_authentication {
+        let network_peers = config.network_peers.clone();
+        let trusted_peers = if role == RoleType::Validator {
+            // for validators, trusted_peers is empty will be populated from consensus
+            HashMap::new()
+        } else {
+            network_peers
+        };
+
+        info!(
+            "network setup: role: {}, seed_peers: {:?}, trusted_peers: {:?}",
+            role, seed_peers, trusted_peers,
+        );
+
+        network_builder
+            .authentication_mode(AuthenticationMode::Mutual(identity_key))
+            .trusted_peers(trusted_peers)
+            .seed_peers(seed_peers)
+            .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
+            .add_connectivity_manager();
+    } else {
+        // Enforce the outgoing connection (dialer) verifies the identity of the listener (server)
+        network_builder.authentication_mode(AuthenticationMode::ServerOnly(identity_key));
+        if !seed_peers.is_empty() {
+            network_builder
+                .seed_peers(seed_peers)
+                .add_connectivity_manager();
+        }
+    }
+
+    match &config.discovery_method {
+        DiscoveryMethod::Gossip(gossip_config) => {
+            network_builder
+                .advertised_address(gossip_config.advertised_address.clone())
+                .discovery_interval_ms(gossip_config.discovery_interval_ms)
+                .add_gossip_discovery();
+        }
+        DiscoveryMethod::Onchain => {
+            let (network_tx, discovery_events) = network_builder.add_protocol_handler(
+                onchain_discovery::network_interface::network_endpoint_config(),
+            );
+            let onchain_discovery_builder = OnchainDiscoveryBuilder::build(
+                network_builder
+                    .conn_mgr_reqs_tx()
+                    .expect("ConnectivityManager must be installed"),
+                network_tx,
+                discovery_events,
+                network_builder.network_context().clone(),
+                libra_db,
+                waypoint,
+                runtime.handle(),
+            );
+            onchain_discovery_builder.start(runtime.handle());
+        }
+        DiscoveryMethod::None => {}
+    }
+
+    (runtime, network_builder)
 }

@@ -3,17 +3,7 @@
 
 //! Integration tests for validator_network.
 
-use crate::{
-    constants::NETWORK_CHANNEL_SIZE,
-    error::NetworkError,
-    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
-    protocols::{
-        network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
-        rpc::error::RpcError,
-    },
-    validator_network::network_builder::{AuthenticationMode, NetworkBuilder},
-    ProtocolId,
-};
+use crate::builder::{AuthenticationMode, NetworkBuilder};
 use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
 use libra_config::{chain_id::ChainId, config::RoleType, network_id::NetworkId};
@@ -21,6 +11,16 @@ use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
+use network::{
+    constants::NETWORK_CHANNEL_SIZE,
+    error::NetworkError,
+    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
+    protocols::{
+        network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
+        rpc::error::RpcError,
+    },
+    ProtocolId,
+};
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
