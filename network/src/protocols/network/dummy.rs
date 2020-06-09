@@ -19,6 +19,7 @@ use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
 use libra_config::{chain_id::ChainId, config::RoleType, network_id::NetworkId};
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
+use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use rand::{rngs::StdRng, SeedableRng};
@@ -32,14 +33,20 @@ const TEST_DIRECT_SEND_PROTOCOL: ProtocolId = ProtocolId::ConsensusDirectSend;
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct DummyMsg(pub Vec<u8>);
 
-fn add_to_network(network: &mut NetworkBuilder) -> (DummyNetworkSender, DummyNetworkEvents) {
-    network.add_protocol_handler((
+pub fn network_endpoint_config() -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static IntCounterVec>,
+) {
+    (
         vec![TEST_RPC_PROTOCOL],
         vec![TEST_DIRECT_SEND_PROTOCOL],
         QueueStyle::LIFO,
         NETWORK_CHANNEL_SIZE,
         None,
-    ))
+    )
 }
 
 /// TODO(davidiw): In DummyNetwork, replace DummyMsg with a Serde compatible type once migration
@@ -133,7 +140,8 @@ pub fn setup_network() -> DummyNetwork {
         .authentication_mode(AuthenticationMode::Mutual(listener_identity_private_key))
         .trusted_peers(trusted_peers.clone())
         .add_connectivity_manager();
-    let (listener_sender, mut listener_events) = add_to_network(&mut network_builder);
+    let (listener_sender, mut listener_events) = network_builder
+        .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
     let listener_addr = network_builder.build();
 
     // Set up the dialer network
@@ -155,7 +163,8 @@ pub fn setup_network() -> DummyNetwork {
                 .collect(),
         )
         .add_connectivity_manager();
-    let (dialer_sender, mut dialer_events) = add_to_network(&mut network_builder);
+    let (dialer_sender, mut dialer_events) = network_builder
+        .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
     let _dialer_addr = network_builder.build();
 
     // Wait for establishing connection
