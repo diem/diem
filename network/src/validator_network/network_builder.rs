@@ -340,7 +340,8 @@ impl NetworkBuilder {
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager not enabled");
         // Get handles for network events and sender.
-        let (discovery_network_tx, discovery_network_rx) = discovery::add_to_network(self);
+        let (discovery_network_tx, discovery_network_rx) =
+            self.add_protocol_handler(discovery::network_endpoint_config());
 
         // TODO(philiphayes): the current setup for gossip discovery doesn't work
         // when we don't have an `advertised_address` set, since it uses the
