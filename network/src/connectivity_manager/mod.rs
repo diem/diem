@@ -391,6 +391,7 @@ where
                 // Keep track of if any peer's addresses have actually changed, so
                 // we can log without too much spam.
                 let mut have_any_changed = false;
+                let self_peer_id = self.self_peer_id.short_str();
 
                 for (peer_id, addrs) in address_map {
                     // Do not include self_peer_id in the address list for dialing
@@ -410,18 +411,23 @@ where
                         if let Some(dial_state) = self.dial_states.get_mut(&peer_id) {
                             dial_state.reset_addr();
                         }
+
+                        // Log the change to this peer's addresses.
+                        let peer_id = peer_id.short_str();
+                        let addrs = curr_addrs;
+                        info!(
+                            "[{}] addresses updated for peer: {}, update src: {:?}, addrs: {}",
+                            self_peer_id, peer_id, src, addrs,
+                        );
                     }
                 }
 
-                // Only log if a peer's addresses have actually changed.
+                // Only log the total state if anything has actually changed.
                 if have_any_changed {
-                    let self_peer_id = self.self_peer_id.short_str();
                     let peer_addresses = &self.peer_addresses;
                     info!(
-                        "[{}] Received updated addresses from discovery: {:?}. All peer addresses: {}",
-                        self_peer_id,
-                        src,
-                        peer_addresses,
+                        "[{}] current addresses: update src: {:?}, all peer addresses: {}",
+                        self_peer_id, src, peer_addresses,
                     );
                 }
             }
