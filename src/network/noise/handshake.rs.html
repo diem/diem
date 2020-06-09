@@ -438,6 +438,13 @@
 <span id="438">438</span>
 <span id="439">439</span>
 <span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -730,7 +737,8 @@
             }
         }
 
-        <span class="comment">// if mutual auth mode, verify this handshake is not a replay</span>
+        <span class="comment">// if on a mutually authenticated network,</span>
+        <span class="comment">// the payload should contain a u64 client timestamp</span>
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">anti_replay_timestamps</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">auth_mode</span>.<span class="ident">anti_replay_timestamps</span>() {
             <span class="comment">// check that the payload received as the client timestamp (in seconds)</span>
             <span class="kw">if</span> <span class="ident">payload</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">PAYLOAD_SIZE</span> {
@@ -752,7 +760,7 @@
                 )
             })<span class="question-mark">?</span>;
             <span class="kw">if</span> <span class="ident">anti_replay_timestamps</span>.<span class="ident">is_replay</span>(<span class="ident">their_public_key</span>, <span class="ident">client_timestamp</span>) {
-                <span class="comment">// TODO: security logging the ip + blocking the ip? (mimoo)</span>
+                <span class="comment">// TODO: security logging</span>
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
                     <span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">InvalidData</span>,
                     <span class="macro">format</span><span class="macro">!</span>(
@@ -764,6 +772,12 @@
 
             <span class="comment">// store the timestamp</span>
             <span class="ident">anti_replay_timestamps</span>.<span class="ident">store_timestamp</span>(<span class="ident">their_public_key</span>, <span class="ident">client_timestamp</span>);
+        } <span class="kw">else</span> <span class="kw">if</span> <span class="op">!</span><span class="ident">payload</span>.<span class="ident">is_empty</span>() {
+            <span class="comment">// TODO: security logging</span>
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
+                <span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">InvalidData</span>,
+                <span class="string">&quot;noise: received an unexpected handshake payload on a public-facing full-node network&quot;</span>,
+            ));
         }
 
         <span class="comment">// construct the response</span>
