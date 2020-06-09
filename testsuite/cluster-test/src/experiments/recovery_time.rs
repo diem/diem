@@ -10,7 +10,6 @@ use tokio::time;
 
 use crate::{
     cluster::Cluster,
-    cluster_swarm::ClusterSwarm,
     experiments::{Context, Experiment, ExperimentParam},
     instance::Instance,
     tx_emitter::EmitJobRequest,
@@ -65,12 +64,9 @@ impl Experiment for RecoveryTime {
             )
             .await?;
         info!("Stopping {}", self.instance);
-        context.cluster_swarm.delete_node(&self.instance).await?;
+        self.instance.stop().await?;
         info!("Deleting db and restarting node for {}", self.instance);
-        context
-            .cluster_swarm
-            .upsert_node(self.instance.instance_config().clone(), true)
-            .await?;
+        self.instance.start(true).await?;
         info!("Waiting for instance to be up: {}", self.instance);
         while self.instance.try_json_rpc().await.is_err() {
             time::delay_for(Duration::from_secs(1)).await;

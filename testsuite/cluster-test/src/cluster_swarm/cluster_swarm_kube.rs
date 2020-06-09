@@ -38,6 +38,7 @@ const CFG_FULLNODE_SEED: &str = "26742674267426742674267426742674267426742674267
 
 const ERROR_NOT_FOUND: u16 = 404;
 
+#[derive(Clone)]
 pub struct ClusterSwarmKube {
     client: Client,
     node_map: Arc<Mutex<HashMap<InstanceConfig, Instance>>>,
@@ -377,7 +378,7 @@ impl ClusterSwarm for ClusterSwarmKube {
 
     async fn run(
         &self,
-        instance: &Instance,
+        k8s_node: &str,
         docker_image: &str,
         command: String,
         job_name: &str,
@@ -394,7 +395,7 @@ impl ClusterSwarm for ClusterSwarmKube {
             name = &job_full_name,
             label = job_name,
             image = docker_image,
-            node_name = instance.k8s_node(),
+            node_name = k8s_node,
             command = &command,
             back_off_limit = back_off_limit,
         );
@@ -402,7 +403,7 @@ impl ClusterSwarm for ClusterSwarmKube {
         let job_spec = serde_json::value::to_value(job_spec)?;
         let job_spec = serde_json::from_value(job_spec)
             .map_err(|e| format_err!("serde_json::from_value failed: {}", e))?;
-        debug!("Running job {} for instance {}", job_name, instance);
+        debug!("Running job {} for node {}", job_name, k8s_node);
         self.run_jobs(vec![job_spec], back_off_limit).await
     }
 
@@ -423,6 +424,7 @@ impl ClusterSwarm for ClusterSwarmKube {
             self.delete_resource::<Pod>(&pod_name).await?;
         }
         let node_name = if let Some(instance) = self.node_map.lock().await.get(&instance_config) {
+            #[allow(deprecated)]
             instance.k8s_node().to_string()
         } else {
             "".to_string()
@@ -508,6 +510,7 @@ impl ClusterSwarm for ClusterSwarmKube {
             node_name.clone(),
             instance_config.clone(),
             self.http_client.clone(),
+            self.clone(),
         );
         self.node_map
             .lock()
@@ -516,8 +519,8 @@ impl ClusterSwarm for ClusterSwarmKube {
         Ok(instance)
     }
 
-    async fn delete_node(&self, instance: &Instance) -> Result<()> {
-        let pod_name = match instance.instance_config() {
+    async fn delete_node(&self, instance_config: &InstanceConfig) -> Result<()> {
+        let pod_name = match instance_config {
             Validator(ref validator_config) => format!("val-{}", validator_config.index),
             Fullnode(ref fullnode_config) => format!(
                 "fn-{}-{}",

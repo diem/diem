@@ -23,7 +23,7 @@ pub struct PacketLossRandomValidators {
     percent: f32,
     duration: Duration,
 }
-use crate::{cluster_swarm::cluster_swarm_kube::ClusterSwarmKube, experiments::ExperimentParam};
+use crate::experiments::ExperimentParam;
 use tokio::time;
 
 #[derive(StructOpt, Debug)]
@@ -69,7 +69,7 @@ impl ExperimentParam for PacketLossRandomValidatorsParams {
 impl Experiment for PacketLossRandomValidators {
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
         for instance in self.instances.iter() {
-            add_packet_delay(instance.clone(), self.percent, &context.cluster_swarm).await?;
+            add_packet_delay(instance.clone(), self.percent).await?;
         }
         time::delay_for(self.duration).await;
         context.cluster_swarm.remove_all_network_effects().await?;
@@ -81,23 +81,12 @@ impl Experiment for PacketLossRandomValidators {
     }
 }
 
-async fn add_packet_delay(
-    instance: Instance,
-    percent: f32,
-    cluster_swarm: &ClusterSwarmKube,
-) -> Result<()> {
+async fn add_packet_delay(instance: Instance, percent: f32) -> Result<()> {
     let command = format!(
         "tc qdisc delete dev eth0 root; tc qdisc add dev eth0 root netem loss {:.*}%",
         2, percent
     );
-    cluster_swarm
-        .run(
-            &instance,
-            "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
-            command,
-            "add-packet-loss",
-        )
-        .await
+    instance.util_cmd(command, "add-packet-loss").await
 }
 
 impl fmt::Display for PacketLossRandomValidators {

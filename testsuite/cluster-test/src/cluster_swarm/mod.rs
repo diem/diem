@@ -19,7 +19,7 @@ pub trait ClusterSwarm {
     /// Runs the given command in a container against the given Instance
     async fn run(
         &self,
-        instance: &Instance,
+        k8s_node: &str,
         docker_image: &str,
         command: String,
         job_name: &str,
@@ -34,7 +34,7 @@ pub trait ClusterSwarm {
     ) -> Result<Instance>;
 
     /// Deletes a node from the ClusterSwarm
-    async fn delete_node(&self, instance: &Instance) -> Result<()>;
+    async fn delete_node(&self, instance_config: &InstanceConfig) -> Result<()>;
 
     /// Creates a set of validators with the given `image_tag`
     async fn create_validator_set(

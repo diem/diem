@@ -9,7 +9,6 @@ use rand::Rng;
 
 use crate::{
     cluster::Cluster,
-    cluster_swarm::ClusterSwarm,
     experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
@@ -55,18 +54,10 @@ impl Experiment for RebootRandomValidators {
         instance::instancelist_to_set(&self.instances)
     }
 
-    async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
-        let futures: Vec<_> = self
-            .instances
-            .iter()
-            .map(|instance| context.cluster_swarm.delete_node(instance))
-            .collect();
+    async fn run(&mut self, _context: &mut Context<'_>) -> anyhow::Result<()> {
+        let futures: Vec<_> = self.instances.iter().map(Instance::stop).collect();
         try_join_all(futures).await?;
-        let instance_configs = instance::instance_configs(&self.instances);
-        let futures: Vec<_> = instance_configs
-            .into_iter()
-            .map(|ic| context.cluster_swarm.upsert_node(ic.clone(), false))
-            .collect();
+        let futures: Vec<_> = self.instances.iter().map(|ic| ic.start(false)).collect();
         try_join_all(futures).await?;
         Ok(())
     }

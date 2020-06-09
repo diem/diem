@@ -3,7 +3,7 @@
 
 use crate::{
     cluster::Cluster,
-    cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
+    cluster_swarm::ClusterSwarm,
     experiments::{Context, Experiment, ExperimentParam},
     instance::Instance,
     tx_emitter::EmitJobRequest,
@@ -53,7 +53,6 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
                 Duration::from_millis(95), // us_west<->eu one way delay
                 Duration::from_millis(40), // us_west<->us_east one way delay
             ),
-            context.cluster_swarm,
         )
         .await?;
 
@@ -111,7 +110,6 @@ impl Display for PerformanceBenchmarkThreeRegionSimulation {
 async fn add_network_delay_k8s(
     instance: Instance,
     configuration: Vec<(Vec<Instance>, Duration)>,
-    cluster_swarm: &ClusterSwarmKube,
 ) -> Result<()> {
     let mut command = "".to_string();
     command += "tc qdisc delete dev eth0 root; ";
@@ -143,20 +141,12 @@ async fn add_network_delay_k8s(
         .as_str();
     }
 
-    cluster_swarm
-        .run(
-            &instance,
-            "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
-            command,
-            "add-network-delay",
-        )
-        .await
+    instance.util_cmd(command, "add-network-delay").await
 }
 
 async fn three_region_simulation_effects_k8s(
     regions: (Vec<Instance>, Vec<Instance>, Vec<Instance>),
     delays_bw_regions: (Duration, Duration, Duration),
-    cluster_swarm: &ClusterSwarmKube,
 ) -> Result<()> {
     let mut futures = vec![];
     for instance in &regions.0 {
@@ -164,33 +154,21 @@ async fn three_region_simulation_effects_k8s(
             (regions.1.clone(), delays_bw_regions.2),
             (regions.2.clone(), delays_bw_regions.1),
         ];
-        futures.push(add_network_delay_k8s(
-            instance.clone(),
-            configuration,
-            cluster_swarm,
-        ));
+        futures.push(add_network_delay_k8s(instance.clone(), configuration));
     }
     for instance in &regions.1 {
         let configuration = vec![
             (regions.0.clone(), delays_bw_regions.2),
             (regions.2.clone(), delays_bw_regions.0),
         ];
-        futures.push(add_network_delay_k8s(
-            instance.clone(),
-            configuration,
-            cluster_swarm,
-        ));
+        futures.push(add_network_delay_k8s(instance.clone(), configuration));
     }
     for instance in &regions.2 {
         let configuration = vec![
             (regions.1.clone(), delays_bw_regions.0),
             (regions.0.clone(), delays_bw_regions.1),
         ];
-        futures.push(add_network_delay_k8s(
-            instance.clone(),
-            configuration,
-            cluster_swarm,
-        ));
+        futures.push(add_network_delay_k8s(instance.clone(), configuration));
     }
     try_join_all(futures).await.map(|_| ())
 }
