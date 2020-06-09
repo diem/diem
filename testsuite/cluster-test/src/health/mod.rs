@@ -11,7 +11,7 @@ mod log_tail;
 use crate::{cluster::Cluster, util::unix_timestamp_now};
 use anyhow::{bail, Result};
 pub use commit_check::CommitHistoryHealthCheck;
-pub use debug_interface_log_tail::DebugPortLogThread;
+pub use debug_interface_log_tail::DebugPortLogWorker;
 use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
 pub use log_tail::{LogTail, TraceTail};

@@ -19,7 +19,7 @@ use cluster_test::{
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
     experiments::{get_experiment, Context, Experiment},
     github::GitHub,
-    health::{DebugPortLogThread, HealthCheckRunner, LogTail, PrintFailures, TraceTail},
+    health::{DebugPortLogWorker, HealthCheckRunner, LogTail, PrintFailures, TraceTail},
     instance::Instance,
     prometheus::Prometheus,
     report::SuiteReport,
@@ -151,8 +151,9 @@ pub fn main() {
             return;
         }
     } else if args.health_check && args.swarm {
+        let rt = Runtime::new().unwrap();
         let util = BasicSwarmUtil::setup(&args);
-        let logs = DebugPortLogThread::spawn_new(&util.cluster).0;
+        let logs = DebugPortLogWorker::spawn_new(&util.cluster, &rt).0;
         let mut health_check_runner = HealthCheckRunner::new_all(util.cluster);
         let duration = Duration::from_secs(args.duration);
         exit_on_error(run_health_check(&logs, &mut health_check_runner, duration));
@@ -504,8 +505,15 @@ impl ClusterTestRunner {
         let util = ClusterUtil::setup(args);
         let cluster = util.cluster;
         let cluster_swarm = util.cluster_swarm;
+        let runtime = Builder::new()
+            .threaded_scheduler()
+            .core_threads(num_cpus::get())
+            .thread_name("ct-tokio")
+            .enable_all()
+            .build()
+            .expect("Failed to create tokio runtime");
         let log_tail_started = Instant::now();
-        let (logs, trace_tail) = DebugPortLogThread::spawn_new(&cluster);
+        let (logs, trace_tail) = DebugPortLogWorker::spawn_new(&cluster, &runtime);
         let log_tail_startup_time = Instant::now() - log_tail_started;
         info!(
             "Log tail thread started in {} ms",
@@ -525,13 +533,6 @@ impl ClusterTestRunner {
         let prometheus = util.prometheus;
         let github = GitHub::new();
         let report = SuiteReport::new();
-        let runtime = Builder::new()
-            .threaded_scheduler()
-            .core_threads(num_cpus::get())
-            .thread_name("ct-tokio")
-            .enable_all()
-            .build()
-            .expect("Failed to create tokio runtime");
         let global_emit_job_request = EmitJobRequest {
             instances: vec![],
             accounts_per_client: args.accounts_per_client,
