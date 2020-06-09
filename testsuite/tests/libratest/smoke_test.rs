@@ -1299,7 +1299,6 @@ fn test_key_manager_consensus_rotation() {
     // Bootstrap secure storage by initializing the keys required by the key manager.
     // TODO(joshlind): set these keys using config manager when initialization is supported.
     let mut storage: BoxedStorage = (&key_manager_config.secure_backend).try_into().unwrap();
-    storage.create_key("consensus_previous").unwrap();
     let operator_private = node_config
         .test
         .unwrap()
