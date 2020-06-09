@@ -379,10 +379,10 @@ module Libra {
         preburn_address: address,
         _capability: &BurnCapability<CoinType>
     ) acquires CurrencyInfo {
+        let currency_code = currency_code<CoinType>();
         // destroy the coin at the head of the preburn queue
         let Libra { value } = Vector::remove(&mut preburn.requests, 0);
         // update the market cap
-        let currency_code = currency_code<CoinType>();
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         info.total_value = info.total_value - (value as u128);
         info.preburn_value = info.preburn_value - value;
@@ -676,71 +676,119 @@ module Libra {
         Transaction::assert(is_currency<CoinType>(), 1);
     }
 
-    // **************** SPECIFICATIONS ****************
-    // Only a few of the specifications appear at this time. More to come.
+    /// **************** SPECIFICATIONS ****************
+    /// Only a few of the specifications appear at this time. More to come.
 
-    // Verify this module
+    /// # Module specifications
+
     spec module {
-
-        // Verification is disabled because of an invariant in association.move that
-        // causes a violated precondition here.  And "invariant module" in association.move
-        // gets an error for some reason.
-
-        pragma verify = false;
+        pragma verify = true;
     }
-
-    // ## Currency registration
 
     spec module {
         // Address at which currencies should be registered (mirrors CoreAddresses::CURRENCY_INFO_ADDRESS)
         define spec_currency_addr(): address { 0xA550C18 }
 
-        // Checks whether currency is registered.
-        // Mirrors is_currency<CoinType> in Move, above.
+        /// Checks whether currency is registered.
+        /// Mirrors `Self::is_currency<CoinType>` in Move, above.
         define spec_is_currency<CoinType>(): bool {
             exists<CurrencyInfo<CoinType>>(spec_currency_addr())
         }
     }
 
-    // Sanity check -- after register_currency is called, currency should be registered.
-    spec fun register_currency {
-        // This doesn't verify because:
-        //  1. is_registered assumes the currency is registered at the fixed
-        //     CoreAddresses::CURRENCY_INFO_ADDRESS()  (CoreAddresses::CURRENCY_INFO_ADDRESS).
-        //  2. The address where the CurrencyInfo<CoinType>> is stored is
-        //     determined in Association::initialize()
-        //     (address of AddCurrency privilege) and
-        //     Genesis::initialize_association(association_root_addr).
-        // If the AddCurrency privilege is on an address different from
-        // CoreAddresses::CURRENCY_INFO_ADDRESS(), the currency will appear not to be registered.
-        // If you change next to "true", prover will report an error.
-        pragma verify = false;
+    /// ## Management of capabilities
 
-        // SPEC: After register_currency, the currency is an official currency.
-        ensures spec_is_currency<CoinType>();
+    spec schema OnlyAssocHasMintCapabilityInvariant {
+        /// Before a currency is registered, there is no mint capability for that currency.
+        invariant module forall coin_type: type, addr1: address:
+            !spec_is_currency<coin_type>() ==> !exists<MintCapability<coin_type>>(addr1);
+
+        /// After a currency is registered, only accounts with association privilege
+        /// have the mint capability for that currency.
+        invariant module forall coin_type: type, addr1: address
+            where spec_is_currency<coin_type>():
+                exists<MintCapability<coin_type>>(addr1)
+                    ==> Association::spec_addr_is_association(addr1);
     }
 
-    spec fun is_currency {
-        ensures result == spec_is_currency<CoinType>();
-    }
-
-    // Move code
-    spec fun assert_is_coin {
-        aborts_if !spec_is_currency<CoinType>();
-    }
-
-    // Maintain a ghost variable representing the sum of
-    // all coins of a currency type.
     spec module {
+        apply OnlyAssocHasMintCapabilityInvariant to *, *<CoinType>;
+    }
+
+    spec schema OnlyAssocHasBurnCapabilityInvariant {
+        /// Before a currency is registered, there is no burn capability for that currency.
+        invariant module forall coin_type: type, addr1: address:
+            !spec_is_currency<coin_type>() ==> !exists<BurnCapability<coin_type>>(addr1);
+
+        /// After a currency is registered, only accounts with association privileges
+        /// has the burn capability for that currency.
+        invariant module forall coin_type: type, addr1: address
+            where spec_is_currency<coin_type>():
+                exists<BurnCapability<coin_type>>(addr1)
+                    ==> Association::spec_addr_is_association(addr1);
+    }
+
+    spec module {
+        apply OnlyAssocHasBurnCapabilityInvariant to *, *<CoinType>;
+    }
+
+    /// ## Conservation of currency
+
+    spec module {
+        /// Maintain a spec variable representing the sum of
+        /// all coins of a currency type.
         global sum_of_coin_values<CoinType>: num;
     }
+
     spec struct Libra {
         invariant pack sum_of_coin_values<CoinType> = sum_of_coin_values<CoinType> + value;
         invariant unpack sum_of_coin_values<CoinType> = sum_of_coin_values<CoinType> - value;
     }
 
+    spec schema TotalValueRemainsSame<CoinType> {
+        /// The total amount of currency stays constant.
+        ensures sum_of_coin_values<CoinType> == old(sum_of_coin_values<CoinType>);
+    }
+
+    spec module {
+        /// Only mint and burn functions can change the total amount of currency.
+        apply TotalValueRemainsSame<CoinType> to *<CoinType>
+            except mint<CoinType>, mint_with_capability<CoinType>,
+            burn<CoinType>, burn_with_capability<CoinType>, burn_with_resource_cap<CoinType>;
+    }
+
+    spec schema SumOfCoinValuesInvariant<CoinType> {
+        /// The sum of value of coins is consistent with
+        /// the total_value CurrencyInfo keeps track of.
+        invariant module !spec_is_currency<CoinType>() ==> sum_of_coin_values<CoinType> == 0;
+        invariant module spec_is_currency<CoinType>()
+                    ==> sum_of_coin_values<CoinType>
+                        == global<CurrencyInfo<CoinType>>(spec_currency_addr()).total_value;
+    }
+
+    spec module {
+        apply SumOfCoinValuesInvariant<CoinType> to *<CoinType>;
+    }
+
+    spec module {
+        /// Apply invariant from `RegisteredCurrencies` to functions
+        /// that call functions in `RegisteredCurrencies`.
+        apply RegisteredCurrencies::OnlySingletonHasRegisteredCurrencies to
+            initialize, register_currency<CoinType>;
+    }
+
+    /*
+    TODO: specify the following:
+
+          sum of coin values in preburn + sum of account balances == total value
+
+          This is false right now because in `cancel_burn`, we return the coin
+          directly instead of depositing it into an account. However, even after
+          this has been fixed, we will likely need to coordinate with the account
+          module and maybe add a spec variable representing the sum of account
+          balances.
+    */
+
     // TODO: What happens to the CurrencyRegistrationCapability?
-
-
 }
 }
