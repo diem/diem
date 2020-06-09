@@ -42,7 +42,7 @@ use libra_types::PeerId;
 use num_variants::NumVariants;
 use std::{
     cmp::min,
-    collections::{hash_map, HashMap},
+    collections::HashMap,
     fmt,
     sync::{Arc, RwLock},
     time::{Duration, Instant},
@@ -151,7 +151,7 @@ where
     ) -> Self {
         // Ensure seed peers doesn't contain our own address (we want to avoid
         // pointless self-dials).
-        let peer_addresses = PeerAddresses::new(
+        let peer_addresses = PeerAddresses(
             seed_peers
                 .into_iter()
                 .filter(|(peer_id, _)| peer_id != &self_peer_id)
@@ -167,7 +167,7 @@ where
         info!(
             "[{}] ConnectivityManager init: num_seed_peers: {}, peer addresses: {}",
             self_peer_id.short_str(),
-            peer_addresses.len(),
+            peer_addresses.0.len(),
             peer_addresses,
         );
 
@@ -280,6 +280,7 @@ where
         let eligible = self.eligible.read().unwrap().clone();
         let to_connect: Vec<_> = self
             .peer_addresses
+            .0
             .iter()
             .filter(|(peer_id, addrs)| {
                 eligible.contains_key(peer_id)  // The node is eligible to be dialed.
@@ -298,7 +299,7 @@ where
                     - ((self.dial_queue.len() + to_connect.len()) as f64
                         / eligible
                             .iter()
-                            .filter(|(peer_id, _)| self.peer_addresses.contains_peer(&peer_id))
+                            .filter(|(peer_id, _)| self.peer_addresses.0.contains_key(&peer_id))
                             .count() as f64))) as u64,
         );
 
@@ -389,7 +390,7 @@ where
             ConnectivityRequest::UpdateAddresses(src, address_map) => {
                 // Keep track of if any peer's addresses have actually changed, so
                 // we can log without too much spam.
-                let mut has_changed = false;
+                let mut have_any_changed = false;
 
                 for (peer_id, addrs) in address_map {
                     // Do not include self_peer_id in the address list for dialing
@@ -398,9 +399,11 @@ where
                         continue;
                     }
 
-                    if self.peer_addresses.update(peer_id, src, addrs) {
+                    // Update peer's addresses
+                    let curr_addrs = self.peer_addresses.0.entry(peer_id).or_default();
+                    if curr_addrs.update(src, addrs) {
                         // At least one peer's addresses have actually changed.
-                        has_changed = true;
+                        have_any_changed = true;
 
                         // Ensure that the next dial attempt starts from the first
                         // address if the addresses have actually changed.
@@ -411,7 +414,7 @@ where
                 }
 
                 // Only log if a peer's addresses have actually changed.
-                if has_changed {
+                if have_any_changed {
                     let self_peer_id = self.self_peer_id.short_str();
                     let peer_addresses = &self.peer_addresses;
                     info!(
@@ -491,42 +494,14 @@ fn log_dial_result(peer_id: PeerId, addr: NetworkAddress, dial_result: DialResul
     }
 }
 
-impl PeerAddresses {
-    fn new(peer_addresses: HashMap<PeerId, Addresses>) -> Self {
-        Self(peer_addresses)
-    }
-
-    fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    fn iter(&self) -> hash_map::Iter<PeerId, Addresses> {
-        self.0.iter()
-    }
-
-    fn contains_peer(&self, peer_id: &PeerId) -> bool {
-        self.0.contains_key(&peer_id)
-    }
-
-    /// Update our view of a peer's addresses from a particular `DiscoverySource`.
-    /// If the peer's addresses have actually changed, return `true` else `false`.
-    fn update(
-        &mut self,
-        peer_id: PeerId,
-        src: DiscoverySource,
-        addrs: Vec<NetworkAddress>,
-    ) -> bool {
-        self.0.entry(peer_id).or_default().update(src, addrs)
-    }
-}
-
 impl fmt::Display for PeerAddresses {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // Write the normal HashMap-style debug format, but shorten the peer_id's
         // so the output isn't as noisy.
         f.debug_map()
             .entries(
-                self.iter()
+                self.0
+                    .iter()
                     .map(|(peer_id, addrs)| (peer_id.short_str(), addrs)),
             )
             .finish()
