@@ -36,6 +36,8 @@ fn main() {
         .is_async(key_manager_config.logger.is_async)
         .level(key_manager_config.logger.level)
         .init();
+    libra_logger::init_struct_log_from_env().expect("Failed to initialize structured logging");
+
     MetricsPusher::new(COUNTERS.clone()).start();
 
     create_and_execute_key_manager(key_manager_config).unwrap_or_else(|e| {

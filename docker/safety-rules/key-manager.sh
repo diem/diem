@@ -3,10 +3,11 @@
 # SPDX-License-Identifier: Apache-2.0
 set -e
 
+# Parse parameters and execute config builder
 declare -a params
-if [ -n "${CFG_BASE_CONFIG}" ]; then # Path to base config
-    echo "${CFG_BASE_CONFIG}" > /opt/libra/etc/base.config.toml
-    params+="--template /opt/libra/etc/base.config.toml "
+if [ -n "${KEY_MANAGER_CONFIG}" ]; then # Path to key manager config
+    echo "${KEY_MANAGER_CONFIG}" > /opt/libra/etc/key_manager.config.toml
+    params+="--template /opt/libra/etc/key_manager.config.toml "
 fi
 if [ -n "${JSON_RPC_ENDPOINT}" ]; then
     params+="--json-rpc-endpoint ${JSON_RPC_ENDPOINT} "
@@ -35,4 +36,15 @@ fi
     --output-dir /opt/libra/etc/ \
     ${params[@]}
 
-exec /opt/libra/bin/libra-key-manager /opt/libra/etc/key_manager.config.toml
+# Parse logger environment variables and execute the key manager
+declare logger
+if [ -n "${STRUCT_LOGGER}" ]; then
+    if [ -n "${STRUCT_LOGGER_LOCATION}" ]; then
+      logger="env ${STRUCT_LOGGER}=${STRUCT_LOGGER_LOCATION}"
+    else
+      echo "STRUCT_LOGGER has been set but STRUCT_LOGGER_LOCATION is not set!"
+      exit 1
+    fi
+fi
+
+exec ${logger} /opt/libra/bin/libra-key-manager /opt/libra/etc/key_manager.config.toml
