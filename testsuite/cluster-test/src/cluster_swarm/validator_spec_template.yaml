@@ -11,13 +11,13 @@ metadata:
 spec:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
-  serviceAccountName: validator
+  serviceAccountName: clustertest
   nodeSelector:
     nodeType: validators
   nodeName: "{node_name}"
   initContainers:
   - name: init
-    image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_init:master
+    image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_init:{image_tag}
     volumeMounts:
     - mountPath: /opt/libra/data
       name: data
@@ -83,6 +83,16 @@ spec:
           Retry_Limit     False
           Logstash_Prefix kubernetes_cluster
       EOF
+      touch /opt/libra/data/safety_rules_addr
+      if [[ {enable_lsr} = true ]]; then
+        CFG_LSR_IP=$(kubectl get pod/lsr-{index} -o=jsonpath='{{.status.podIP}}');
+        while [ -z "${{CFG_LSR_IP}}" ]; do
+          sleep 5;
+          CFG_LSR_IP=$(kubectl get pod/lsr-{index} -o=jsonpath='{{.status.podIP}}');
+          echo "Waiting for pod/lsr-{index} IP Address";
+        done;
+        echo "${{CFG_LSR_IP}}:6185" > /opt/libra/data/safety_rules_addr
+      fi
       CFG_SEED_PEER_IP=$(kubectl get pod/val-0 -o=jsonpath='{{.status.podIP}}');
       while [ -z "${{CFG_SEED_PEER_IP}}" ]; do
         sleep 5;
@@ -149,6 +159,9 @@ spec:
         set -x;
         export CFG_LISTEN_ADDR=$MY_POD_IP;
         export CFG_SEED_PEER_IP=$(cat /opt/libra/data/seed_peer_ip);
+        if [[ {enable_lsr} = true ]]; then
+          export CFG_SAFETY_RULES_ADDR=$(cat /opt/libra/data/safety_rules_addr);
+        fi
         exec bash /docker-run-dynamic.sh &> /opt/libra/data/libra.log
   volumes:
   - name: data

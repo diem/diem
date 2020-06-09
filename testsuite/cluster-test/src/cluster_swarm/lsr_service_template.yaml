@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lsr-{validator_index}
+  labels:
+    app: libra-lsr
+    libra-node: "true"
+    peer_id: lsr-{validator_index}
+spec:
+  type: ClusterIP
+  publishNotReadyAddresses: true
+  selector:
+    app: libra-lsr
+    libra-node: "true"
+    peer_id: lsr-{validator_index}
+  ports:
+  - name: safety-rules
+    protocol: TCP
+    port: 6185

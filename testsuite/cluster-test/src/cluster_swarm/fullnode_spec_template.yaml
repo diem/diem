@@ -11,13 +11,13 @@ metadata:
 spec:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
-  serviceAccountName: fullnode
+  serviceAccountName: clustertest
   nodeSelector:
     nodeType: validators
   nodeName: "{node_name}"
   initContainers:
   - name: init
-    image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_init:master
+    image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_init:{image_tag}
     volumeMounts:
     - mountPath: /opt/libra/data
       name: data

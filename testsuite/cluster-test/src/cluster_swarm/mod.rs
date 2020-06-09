@@ -5,12 +5,15 @@ pub mod cluster_swarm_kube;
 
 use crate::instance::{
     FullnodeConfig, Instance, InstanceConfig,
-    InstanceConfig::{Fullnode, Validator},
-    ValidatorConfig,
+    InstanceConfig::{Fullnode, Validator, Vault, LSR},
+    LSRConfig, ValidatorConfig, VaultConfig,
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::{future::try_join_all, try_join};
+use futures::{
+    future::{join, try_join_all},
+    try_join,
+};
 
 #[async_trait]
 pub trait ClusterSwarm {
@@ -24,21 +27,45 @@ pub trait ClusterSwarm {
         &self,
         num_validators: u32,
         num_fullnodes_per_validator: u32,
+        enable_lsr: bool,
         image_tag: &str,
         config_overrides: Vec<String>,
     ) -> Result<Vec<Instance>> {
+        let mut lsrs = vec![];
+        if enable_lsr {
+            let mut vault_instances: Vec<_> = (0..num_validators)
+                .map(|i| {
+                    let vault_config = VaultConfig { index: i };
+                    self.spawn_new_instance(Vault(vault_config))
+                })
+                .collect();
+            lsrs.append(&mut vault_instances);
+            let mut lsr_instances: Vec<_> = (0..num_validators)
+                .map(|i| {
+                    let lsr_config = LSRConfig {
+                        index: i,
+                        num_validators,
+                        image_tag: image_tag.to_string(),
+                    };
+                    self.spawn_new_instance(LSR(lsr_config))
+                })
+                .collect();
+            lsrs.append(&mut lsr_instances);
+        }
         let validators = (0..num_validators).map(|i| {
             let validator_config = ValidatorConfig {
                 index: i,
                 num_validators,
                 num_fullnodes: num_fullnodes_per_validator,
+                enable_lsr,
                 image_tag: image_tag.to_string(),
                 config_overrides: config_overrides.clone(),
             };
             self.spawn_new_instance(Validator(validator_config))
         });
-        let validators = try_join_all(validators).await?;
-        Ok(validators)
+        let (lsrs, validators) = join(try_join_all(lsrs), try_join_all(validators)).await;
+        lsrs?;
+        validators
     }
 
     /// Creates a set of fullnodes with the given `image_tag`
@@ -72,12 +99,14 @@ pub trait ClusterSwarm {
         &self,
         num_validators: u32,
         num_fullnodes_per_validator: u32,
+        enable_lsr: bool,
         image_tag: &str,
     ) -> Result<(Vec<Instance>, Vec<Instance>)> {
         try_join!(
             self.spawn_validator_set(
                 num_validators,
                 num_fullnodes_per_validator,
+                enable_lsr,
                 image_tag,
                 vec![],
             ),

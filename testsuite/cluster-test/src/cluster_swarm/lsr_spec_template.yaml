@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: lsr-{validator_index}
+  labels:
+    app: libra-lsr
+    libra-node: "true"
+    peer_id: lsr-{validator_index}
+spec:
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
+  serviceAccountName: clustertest
+  nodeSelector:
+    nodeType: validators
+  nodeName: "{node_name}"
+  initContainers:
+    - name: init
+      image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_init:{image_tag}
+      imagePullPolicy: Always
+      command:
+        - bash
+        - -c
+        - |
+          set -x
+          while true; do
+            health_out=$(wget --content-on-error -O- http://vault-{validator_index}.default.svc.cluster.local:8200/v1/sys/health)
+            if [[ "$health_out" != *'"initialized":true'* ]] || [[ "$health_out" != *'"sealed":false'* ]]; then
+              echo "healthcheck failed for vault. healthcheck msg: $health_out. Retrying in 5 secs"
+              sleep 5
+            else
+              echo "healthcheck passed for vault"
+              break
+            fi
+          done
+          while true; do
+            transit_keys=$(wget --content-on-error --method LIST -O- --header 'X-Vault-Token: root' http://vault-{validator_index}.default.svc.cluster.local:8200/v1/transit/keys)
+            if [[ "$transit_keys" == *'no handler for route'* ]]; then
+              echo "transit_keys not yet enabled for vault. transit_keys msg: $transit_keys. Retrying in 5 secs"
+              sleep 5
+            else
+              echo "transit_keys enabled for vault"
+              break
+            fi
+          done
+          /opt/libra/bin/config-builder safety-rules -n "{num_validators}" -g "{num_validators}" -i "{validator_index}" -s "$VALIDATOR_SEED" -o built/ --safety-rules-addr "0.0.0.0:6185" --safety-rules-backend=vault --safety-rules-host=http://vault-{validator_index}.default.svc.cluster.local:8200 --safety-rules-token=root -d /opt/libra/data
+      workingDir: /opt/libra/etc
+      volumeMounts:
+        - name: config-built
+          mountPath: /opt/libra/etc/built
+        - name: libra-data
+          mountPath: /opt/libra/data
+        - name: tmp
+          mountPath: /tmp
+      env:
+        - name: VALIDATOR_SEED
+          value: "{cfg_seed}"
+        - name: RUST_BACKTRACE
+          value: "1"
+      securityContext:
+        readOnlyRootFilesystem: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+  containers:
+    - name: safety-rules
+      image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_safety_rules:{image_tag}
+      imagePullPolicy: Always
+      command: ["/opt/libra/bin/safety-rules", "/opt/libra/etc/node.config.toml"]
+      ports:
+        - containerPort: 6185
+      volumeMounts:
+        - name: config-built
+          mountPath: /opt/libra/etc
+          readOnly: true
+        - name: libra-data
+          mountPath: /opt/libra/data
+        - name: vault-token
+          mountPath: /opt/vault
+      env:
+        - name: RUST_LOG
+          value: debug
+        - name: RUST_BACKTRACE
+          value: "1"
+      securityContext:
+        readOnlyRootFilesystem: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 6180
+    runAsGroup: 6180
+    fsGroup: 6180
+  volumes:
+    - name: config-built
+      emptyDir: {{}}
+    - name: libra-data
+      hostPath:
+        path: /data
+        type: DirectoryOrCreate
+    - name: tmp
+      emptyDir: {{}}
+    - name: vault-token
+      emptyDir:
+        medium: Memory
+  affinity:
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+              - key: libra-node
+                operator: Exists
+          topologyKey: "kubernetes.io/hostname"
+  terminationGracePeriodSeconds: 5
+  tolerations:
+    - key: "validators"
+      operator: "Exists"
+      effect: "NoSchedule"
+    - key: "node.kubernetes.io/not-ready"
+      operator: "Exists"
+      effect: "NoSchedule"
