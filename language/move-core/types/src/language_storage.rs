@@ -46,7 +46,7 @@ pub struct StructTag {
     pub address: AccountAddress,
     pub module: Identifier,
     pub name: Identifier,
-    // TODO: rename to "type_args"
+    // TODO: rename to "type_args" (or better "ty_args"?)
     pub type_params: Vec<TypeTag>,
 }
 
