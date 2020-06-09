@@ -235,8 +235,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         let peer_id = network_builder.peer_id();
 
         // Create the endpoints to connect the Network to StateSynchronizer.
-        let (state_sync_sender, state_sync_events) =
-            state_synchronizer::network::add_to_network(&mut network_builder);
+        let (state_sync_sender, state_sync_events) = network_builder
+            .add_protocol_handler(state_synchronizer::network::network_endpoint_config());
         state_sync_network_handles.push((peer_id, state_sync_sender, state_sync_events));
 
         // Create the endpoints to connect the network to MemPool.

@@ -269,7 +269,8 @@ impl SynchronizerEnv {
             .add_connectivity_manager()
             .add_gossip_discovery();
 
-        let (sender, events) = crate::network::add_to_network(&mut network_builder);
+        let (sender, events) =
+            network_builder.add_protocol_handler(crate::network::network_endpoint_config());
         let peer_addr = network_builder.build();
 
         let mut config = config_builder::test_config().0;
