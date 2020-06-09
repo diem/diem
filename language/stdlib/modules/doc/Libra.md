@@ -57,10 +57,10 @@
 -  [Function `assert_assoc_and_currency`](#0x0_Libra_assert_assoc_and_currency)
 -  [Function `assert_is_coin`](#0x0_Libra_assert_is_coin)
 -  [Specification](#0x0_Libra_Specification)
+    -  [Module specifications](#0x0_Libra_@Module_specifications)
+        -  [Management of capabilities](#0x0_Libra_@Management_of_capabilities)
+        -  [Conservation of currency](#0x0_Libra_@Conservation_of_currency)
     -  [Struct `Libra`](#0x0_Libra_Specification_Libra)
-    -  [Function `register_currency`](#0x0_Libra_Specification_register_currency)
-    -  [Function `is_currency`](#0x0_Libra_Specification_is_currency)
-    -  [Function `assert_is_coin`](#0x0_Libra_Specification_assert_is_coin)
 
 
 
@@ -1190,10 +1190,10 @@ resource under
     preburn_address: address,
     _capability: &<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 ) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <b>let</b> currency_code = <a href="#0x0_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
     // destroy the coin at the head of the preburn queue
     <b>let</b> <a href="#0x0_Libra">Libra</a> { value } = <a href="Vector.md#0x0_Vector_remove">Vector::remove</a>(&<b>mut</b> preburn.requests, 0);
     // <b>update</b> the market cap
-    <b>let</b> currency_code = <a href="#0x0_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     info.total_value = info.total_value - (value <b>as</b> u128);
     info.preburn_value = info.preburn_value - value;
@@ -2062,9 +2062,16 @@ Asserts that
 
 ## Specification
 
+**************** SPECIFICATIONS ****************
+Only a few of the specifications appear at this time. More to come.
+
+<a name="0x0_Libra_@Module_specifications"></a>
+
+### Module specifications
 
 
-<pre><code>pragma verify = <b>false</b>;
+
+<pre><code>pragma verify = <b>true</b>;
 </code></pre>
 
 
@@ -2074,10 +2081,108 @@ Asserts that
 
 
 <pre><code><b>define</b> <a href="#0x0_Libra_spec_currency_addr">spec_currency_addr</a>(): address { 0xA550C18 }
+</code></pre>
+
+
+Checks whether currency is registered.
+Mirrors
+<code><a href="#0x0_Libra_is_currency">Self::is_currency</a>&lt;CoinType&gt;</code> in Move, above.
+
+
 <a name="0x0_Libra_spec_is_currency"></a>
-<b>define</b> <a href="#0x0_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;(): bool {
+
+
+<pre><code><b>define</b> <a href="#0x0_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;(): bool {
     exists&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x0_Libra_spec_currency_addr">spec_currency_addr</a>())
 }
+</code></pre>
+
+
+
+<a name="0x0_Libra_@Management_of_capabilities"></a>
+
+#### Management of capabilities
+
+
+
+<a name="0x0_Libra_OnlyAssocHasMintCapabilityInvariant"></a>
+
+Before a currency is registered, there is no mint capability for that currency.
+
+
+<pre><code><b>schema</b> <a href="#0x0_Libra_OnlyAssocHasMintCapabilityInvariant">OnlyAssocHasMintCapabilityInvariant</a> {
+    <b>invariant</b> <b>module</b> forall coin_type: type, addr1: address:
+        !<a href="#0x0_Libra_spec_is_currency">spec_is_currency</a>&lt;coin_type&gt;() ==&gt; !exists&lt;<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1);
+}
+</code></pre>
+
+
+After a currency is registered, only accounts with association privilege
+have the mint capability for that currency.
+
+
+<pre><code><b>schema</b> <a href="#0x0_Libra_OnlyAssocHasMintCapabilityInvariant">OnlyAssocHasMintCapabilityInvariant</a> {
+    <b>invariant</b> <b>module</b> forall coin_type: type, addr1: address
+        where <a href="#0x0_Libra_spec_is_currency">spec_is_currency</a>&lt;coin_type&gt;():
+            exists&lt;<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1)
+                ==&gt; <a href="Association.md#0x0_Association_spec_addr_is_association">Association::spec_addr_is_association</a>(addr1);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x0_Libra_OnlyAssocHasMintCapabilityInvariant">OnlyAssocHasMintCapabilityInvariant</a> <b>to</b> *, *&lt;CoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x0_Libra_OnlyAssocHasBurnCapabilityInvariant"></a>
+
+Before a currency is registered, there is no burn capability for that currency.
+
+
+<pre><code><b>schema</b> <a href="#0x0_Libra_OnlyAssocHasBurnCapabilityInvariant">OnlyAssocHasBurnCapabilityInvariant</a> {
+    <b>invariant</b> <b>module</b> forall coin_type: type, addr1: address:
+        !<a href="#0x0_Libra_spec_is_currency">spec_is_currency</a>&lt;coin_type&gt;() ==&gt; !exists&lt;<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;coin_type&gt;&gt;(addr1);
+}
+</code></pre>
+
+
+After a currency is registered, only accounts with association privileges
+has the burn capability for that currency.
+
+
+<pre><code><b>schema</b> <a href="#0x0_Libra_OnlyAssocHasBurnCapabilityInvariant">OnlyAssocHasBurnCapabilityInvariant</a> {
+    <b>invariant</b> <b>module</b> forall coin_type: type, addr1: address
+        where <a href="#0x0_Libra_spec_is_currency">spec_is_currency</a>&lt;coin_type&gt;():
+            exists&lt;<a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;coin_type&gt;&gt;(addr1)
+                ==&gt; <a href="Association.md#0x0_Association_spec_addr_is_association">Association::spec_addr_is_association</a>(addr1);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x0_Libra_OnlyAssocHasBurnCapabilityInvariant">OnlyAssocHasBurnCapabilityInvariant</a> <b>to</b> *, *&lt;CoinType&gt;;
+</code></pre>
+
+
+
+<a name="0x0_Libra_@Conservation_of_currency"></a>
+
+#### Conservation of currency
+
+
+Maintain a spec variable representing the sum of
+all coins of a currency type.
+
+
+<a name="0x0_Libra_sum_of_coin_values"></a>
+
+
+<pre><code><b>global</b> <a href="#0x0_Libra_sum_of_coin_values">sum_of_coin_values</a>&lt;CoinType&gt;: num;
 </code></pre>
 
 
@@ -2111,58 +2216,58 @@ Asserts that
 
 
 
-<a name="0x0_Libra_Specification_register_currency"></a>
 
-### Function `register_currency`
+<a name="0x0_Libra_TotalValueRemainsSame"></a>
+
+The total amount of currency stays constant.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(account: &signer, to_lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="#0x0_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, <a href="#0x0_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
+<pre><code><b>schema</b> <a href="#0x0_Libra_TotalValueRemainsSame">TotalValueRemainsSame</a>&lt;CoinType&gt; {
+    <b>ensures</b> <a href="#0x0_Libra_sum_of_coin_values">sum_of_coin_values</a>&lt;CoinType&gt; == <b>old</b>(<a href="#0x0_Libra_sum_of_coin_values">sum_of_coin_values</a>&lt;CoinType&gt;);
+}
+</code></pre>
+
+
+
+Only mint and burn functions can change the total amount of currency.
+
+
+<pre><code><b>apply</b> <a href="#0x0_Libra_TotalValueRemainsSame">TotalValueRemainsSame</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;
+    <b>except</b> <a href="#0x0_Libra_mint">mint</a>&lt;CoinType&gt;, <a href="#0x0_Libra_mint_with_capability">mint_with_capability</a>&lt;CoinType&gt;,
+    <a href="#0x0_Libra_burn">burn</a>&lt;CoinType&gt;, <a href="#0x0_Libra_burn_with_capability">burn_with_capability</a>&lt;CoinType&gt;, <a href="#0x0_Libra_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;;
 </code></pre>
 
 
 
 
-<pre><code>pragma verify = <b>false</b>;
-<b>ensures</b> <a href="#0x0_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
-</code></pre>
+<a name="0x0_Libra_SumOfCoinValuesInvariant"></a>
+
+The sum of value of coins is consistent with
+the total_value CurrencyInfo keeps track of.
 
 
-
-<a name="0x0_Libra_Specification_is_currency"></a>
-
-### Function `is_currency`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(): bool
-</code></pre>
-
-
-
-
-<pre><code><b>ensures</b> result == <a href="#0x0_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
-</code></pre>
-
-
-
-<a name="0x0_Libra_Specification_assert_is_coin"></a>
-
-### Function `assert_is_coin`
-
-
-<pre><code><b>fun</b> <a href="#0x0_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;()
+<pre><code><b>schema</b> <a href="#0x0_Libra_SumOfCoinValuesInvariant">SumOfCoinValuesInvariant</a>&lt;CoinType&gt; {
+    <b>invariant</b> <b>module</b> !<a href="#0x0_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;() ==&gt; <a href="#0x0_Libra_sum_of_coin_values">sum_of_coin_values</a>&lt;CoinType&gt; == 0;
+    <b>invariant</b> <b>module</b> <a href="#0x0_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;()
+                ==&gt; <a href="#0x0_Libra_sum_of_coin_values">sum_of_coin_values</a>&lt;CoinType&gt;
+                    == <b>global</b>&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x0_Libra_spec_currency_addr">spec_currency_addr</a>()).total_value;
+}
 </code></pre>
 
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x0_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
+<pre><code><b>apply</b> <a href="#0x0_Libra_SumOfCoinValuesInvariant">SumOfCoinValuesInvariant</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;;
 </code></pre>
 
 
 
+Apply invariant from
+<code><a href="RegisteredCurrencies.md#0x0_RegisteredCurrencies">RegisteredCurrencies</a></code> to functions
+that call functions in
+<code><a href="RegisteredCurrencies.md#0x0_RegisteredCurrencies">RegisteredCurrencies</a></code>.
 
-<a name="0x0_Libra_sum_of_coin_values"></a>
 
-
-<pre><code><b>global</b> <a href="#0x0_Libra_sum_of_coin_values">sum_of_coin_values</a>&lt;CoinType&gt;: num;
+<pre><code><b>apply</b> <a href="RegisteredCurrencies.md#0x0_RegisteredCurrencies_OnlySingletonHasRegisteredCurrencies">RegisteredCurrencies::OnlySingletonHasRegisteredCurrencies</a> <b>to</b>
+    initialize, <a href="#0x0_Libra_register_currency">register_currency</a>&lt;CoinType&gt;;
 </code></pre>
