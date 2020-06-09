@@ -436,15 +436,6 @@
 <span id="436">436</span>
 <span id="437">437</span>
 <span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -639,18 +630,15 @@
     <span class="kw">where</span>
         <span class="ident">TSocket</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="ident">Unpin</span>,
     {
-        <span class="comment">// in mutual authenticated networks, send a payload of the current timestamp (in milliseconds)</span>
-        <span class="kw">let</span> <span class="ident">payload</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">auth_mode</span> {
-            <span class="ident">HandshakeAuthMode</span>::<span class="ident">Mutual</span> { .. } <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">now</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">time</span>::<span class="ident">SystemTime</span>::<span class="ident">now</span>()
-                    .<span class="ident">duration_since</span>(<span class="ident">time</span>::<span class="ident">UNIX_EPOCH</span>)
-                    .<span class="ident">expect</span>(<span class="string">&quot;system clock should work&quot;</span>)
-                    .<span class="ident">as_millis</span>() <span class="kw">as</span> <span class="ident">u64</span>;
-                <span class="comment">// e.g. [157, 126, 253, 97, 114, 1, 0, 0]</span>
-                <span class="kw">let</span> <span class="ident">now</span> <span class="op">=</span> <span class="ident">now</span>.<span class="ident">to_le_bytes</span>().<span class="ident">to_vec</span>();
-                <span class="prelude-val">Some</span>(<span class="ident">now</span>)
-            }
-            <span class="ident">HandshakeAuthMode</span>::<span class="ident">ServerOnly</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+        <span class="comment">// send a payload of the current timestamp (in milliseconds)</span>
+        <span class="kw">let</span> <span class="ident">payload</span> <span class="op">=</span> {
+            <span class="kw">let</span> <span class="ident">now</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">time</span>::<span class="ident">SystemTime</span>::<span class="ident">now</span>()
+                .<span class="ident">duration_since</span>(<span class="ident">time</span>::<span class="ident">UNIX_EPOCH</span>)
+                .<span class="ident">expect</span>(<span class="string">&quot;system clock should work&quot;</span>)
+                .<span class="ident">as_millis</span>() <span class="kw">as</span> <span class="ident">u64</span>;
+            <span class="comment">// e.g. [157, 126, 253, 97, 114, 1, 0, 0]</span>
+            <span class="kw">let</span> <span class="ident">now</span> <span class="op">=</span> <span class="ident">now</span>.<span class="ident">to_le_bytes</span>().<span class="ident">to_vec</span>();
+            <span class="prelude-val">Some</span>(<span class="ident">now</span>)
         };
 
         <span class="comment">// create first handshake message  (-&gt; e, es, s, ss)</span>
@@ -772,12 +760,6 @@
 
             <span class="comment">// store the timestamp</span>
             <span class="ident">anti_replay_timestamps</span>.<span class="ident">store_timestamp</span>(<span class="ident">their_public_key</span>, <span class="ident">client_timestamp</span>);
-        } <span class="kw">else</span> <span class="kw">if</span> <span class="op">!</span><span class="ident">payload</span>.<span class="ident">is_empty</span>() {
-            <span class="comment">// TODO: security logging</span>
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
-                <span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">InvalidData</span>,
-                <span class="string">&quot;noise: received an unexpected handshake payload on a public-facing full-node network&quot;</span>,
-            ));
         }
 
         <span class="comment">// construct the response</span>
