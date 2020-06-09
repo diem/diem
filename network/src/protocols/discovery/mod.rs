@@ -35,11 +35,11 @@
 
 use crate::{
     connectivity_manager::{ConnectivityRequest, DiscoverySource},
+    constants::NETWORK_CHANNEL_SIZE,
     counters,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
-    validator_network::network_builder::NETWORK_CHANNEL_SIZE,
     ProtocolId,
 };
 use bytes::Bytes;

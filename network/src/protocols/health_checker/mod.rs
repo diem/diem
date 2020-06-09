@@ -18,6 +18,7 @@
 //! - Use successful inbound pings as a sign of remote note being healthy
 //! - Ping a peer only in periods of no application-level communication with the peer
 use crate::{
+    constants::NETWORK_CHANNEL_SIZE,
     counters,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
@@ -25,7 +26,6 @@ use crate::{
         network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::NETWORK_CHANNEL_SIZE,
     ProtocolId,
 };
 use bytes::Bytes;
