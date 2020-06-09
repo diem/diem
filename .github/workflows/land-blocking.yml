@@ -50,15 +50,40 @@ jobs:
         if: steps.check_ks.outputs.should_run == 'true'
         # NOTE Remember to update PR comment payload if cti cmd is updated.
         run: |
+          set +e
           export CTI_OUTPUT_LOG=$(mktemp)
           echo "::set-env name=CTI_OUTPUT_LOG::$CTI_OUTPUT_LOG"
           ./scripts/cti \
             --tag ${TEST_TAG} \
             --report report.json \
             --run bench
-          echo "report.json start"
-          cat report.json
-          echo "report.json end"
+          return_code=$?
+          if [ $return_code != 0 ]; then
+            jq -n \
+              --arg msg "*${{ github.job }}* job in ${{ github.workflow }} workflow failed.
+          $(tail -5 $CTI_OUTPUT_LOG)" \
+              --arg url "https://github.com/${{ github.repository }}/actions/runs/${{github.run_id}}" \
+            '{
+              "attachments": [
+                {
+                  "text": $msg,
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "Visit Job",
+                      "url": $url
+                    }
+                  ]
+                }
+              ]
+            }' > /tmp/payload
+            curl -X POST -H 'Content-type: application/json' -d @/tmp/payload ${{ secrets.WEBHOOK_FLAKY_LAND_BLOCKING_CT }}
+          fi
+          if [ -e "report.json" ]; then
+            echo "report.json start"
+            cat report.json
+            echo "report.json end"
+          fi
       - name: Post test results on PR
         if: steps.check_ks.outputs.should_run == 'true'
         uses: actions/github-script@0.4.0
