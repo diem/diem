@@ -685,8 +685,7 @@ module LibraAccount {
         let new_dd_account = create_signer(new_account_address);
         Event::publish_generator(&new_dd_account);
         Libra::publish_preburn_to_account<CoinType>(blessed, &new_dd_account);
-        let dealer =
-            DesignatedDealer::create_designated_dealer();
+        let dealer = DesignatedDealer::create_designated_dealer();
         make_account<CoinType, DesignatedDealer::Dealer>(new_dd_account, auth_key_prefix, dealer, false)
     }
 

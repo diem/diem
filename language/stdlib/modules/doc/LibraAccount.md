@@ -1984,8 +1984,7 @@ Creates Preburn resource under account 'new_account_address'
     <b>let</b> new_dd_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_dd_account);
     <a href="Libra.md#0x0_Libra_publish_preburn_to_account">Libra::publish_preburn_to_account</a>&lt;CoinType&gt;(blessed, &new_dd_account);
-    <b>let</b> dealer =
-        <a href="DesignatedDealer.md#0x0_DesignatedDealer_create_designated_dealer">DesignatedDealer::create_designated_dealer</a>();
+    <b>let</b> dealer = <a href="DesignatedDealer.md#0x0_DesignatedDealer_create_designated_dealer">DesignatedDealer::create_designated_dealer</a>();
     <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;CoinType, <a href="DesignatedDealer.md#0x0_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>&gt;(new_dd_account, auth_key_prefix, dealer, <b>false</b>)
 }
 </code></pre>
