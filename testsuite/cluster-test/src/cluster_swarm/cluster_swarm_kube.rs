@@ -22,7 +22,7 @@ use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use crate::instance::{
     InstanceConfig,
-    InstanceConfig::{Fullnode, Validator},
+    InstanceConfig::{Fullnode, Validator, Vault, LSR},
 };
 use itertools::Itertools;
 use k8s_openapi::api::batch::v1::Job;
@@ -86,11 +86,63 @@ impl ClusterSwarmKube {
             .unwrap()
     }
 
+    fn lsr_spec(
+        &self,
+        validator_index: u32,
+        num_validators: u32,
+        node_name: &str,
+        image_tag: &str,
+    ) -> Result<(Pod, Service)> {
+        let pod_yaml = format!(
+            include_str!("lsr_spec_template.yaml"),
+            validator_index = validator_index,
+            num_validators = num_validators,
+            image_tag = image_tag,
+            node_name = node_name,
+            cfg_seed = CFG_SEED,
+        );
+        let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
+        let pod_spec = serde_json::value::to_value(pod_spec)?;
+        let pod_spec = serde_json::from_value(pod_spec)
+            .map_err(|e| format_err!("serde_json::from_value failed: {}", e))?;
+        let service_yaml = format!(
+            include_str!("lsr_service_template.yaml"),
+            validator_index = validator_index,
+        );
+        let service_spec: serde_yaml::Value = serde_yaml::from_str(&service_yaml).unwrap();
+        let service_spec = serde_json::value::to_value(service_spec).unwrap();
+        let service_spec = serde_json::from_value(service_spec)
+            .map_err(|e| format_err!("serde_json::from_value failed: {}", e))?;
+        Ok((pod_spec, service_spec))
+    }
+
+    fn vault_spec(&self, validator_index: u32, node_name: &str) -> Result<(Pod, Service)> {
+        let pod_yaml = format!(
+            include_str!("vault_spec_template.yaml"),
+            validator_index = validator_index,
+            node_name = node_name,
+        );
+        let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
+        let pod_spec = serde_json::value::to_value(pod_spec)?;
+        let pod_spec = serde_json::from_value(pod_spec)
+            .map_err(|e| format_err!("serde_json::from_value failed: {}", e))?;
+        let service_yaml = format!(
+            include_str!("vault_service_template.yaml"),
+            validator_index = validator_index,
+        );
+        let service_spec: serde_yaml::Value = serde_yaml::from_str(&service_yaml).unwrap();
+        let service_spec = serde_json::value::to_value(service_spec).unwrap();
+        let service_spec = serde_json::from_value(service_spec)
+            .map_err(|e| format_err!("serde_json::from_value failed: {}", e))?;
+        Ok((pod_spec, service_spec))
+    }
+
     fn validator_spec(
         &self,
         index: u32,
         num_validators: u32,
         num_fullnodes: u32,
+        enable_lsr: bool,
         node_name: &str,
         image_tag: &str,
         cfg_overrides: &str,
@@ -107,6 +159,7 @@ impl ClusterSwarmKube {
             index = index,
             num_validators = num_validators,
             num_fullnodes = num_fullnodes,
+            enable_lsr = enable_lsr,
             image_tag = image_tag,
             node_name = node_name,
             cfg_overrides = cfg_overrides,
@@ -233,7 +286,7 @@ impl ClusterSwarmKube {
                             .ok_or_else(|| format_err!("status not found for pod {}, spec: {:?}", pod_name, o))?
                             .pod_ip
                             .as_ref()
-                            .ok_or_else(|| format_err!("pod_ip not found for pod {}, spec: {:?}", pod_name, o))?;
+                            .ok_or_else(|| format_err!("pod_ip not found for pod {}", pod_name))?;
                         if node_name.is_empty() || pod_ip.is_empty() {
                             bail!(
                                 "Either node_name or pod_ip was empty string for pod {}, spec: {:?}",
@@ -408,6 +461,8 @@ impl ClusterSwarmKube {
                 "fn-{}-{}",
                 fullnode_config.validator_index, fullnode_config.fullnode_index
             ),
+            LSR(lsr_config) => format!("lsr-{}", lsr_config.index),
+            Vault(vault_config) => format!("vault-{}", vault_config.index),
         };
         let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         if pod_api.get(&pod_name).await.is_ok() {
@@ -427,6 +482,7 @@ impl ClusterSwarmKube {
                     validator_config.index,
                     validator_config.num_validators,
                     validator_config.num_fullnodes,
+                    validator_config.enable_lsr,
                     &node_name,
                     &validator_config.image_tag,
                     &validator_config.config_overrides.iter().join(","),
@@ -450,6 +506,13 @@ impl ClusterSwarmKube {
                     fullnode_config.validator_index, fullnode_config.fullnode_index
                 )),
             ),
+            Vault(vault_config) => self.vault_spec(vault_config.index, &node_name)?,
+            LSR(lsr_config) => self.lsr_spec(
+                lsr_config.index,
+                lsr_config.num_validators,
+                &node_name,
+                &lsr_config.image_tag,
+            )?,
         };
         match pod_api.create(&PostParams::default(), &p).await {
             Ok(o) => {
@@ -517,6 +580,8 @@ impl ClusterSwarmKube {
                 "fn-{}-{}",
                 fullnode_config.validator_index, fullnode_config.fullnode_index
             ),
+            LSR(lsr_config) => format!("lsr-{}", lsr_config.index),
+            Vault(vault_config) => format!("vault-{}", vault_config.index),
         };
         let service_name = pod_name.clone();
         self.delete_resource::<Pod>(&pod_name).await?;

@@ -41,34 +41,45 @@ pub async fn set_asg_size(
     libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10_000, 30), || {
         let asc_clone = asc.clone();
         Box::pin(async move {
-            let auto_scaling_group_names_type = AutoScalingGroupNamesType {
-                auto_scaling_group_names: Some(vec![asg_name.to_string()]),
-                max_records: Some(min_desired_capacity),
-                next_token: None,
-            };
-            let asgs = asc_clone
-                .describe_auto_scaling_groups(auto_scaling_group_names_type)
-                .await?;
-            if asgs.auto_scaling_groups.is_empty() {
-                bail!("asgs.auto_scaling_groups.is_empty()");
+            let mut total = 0;
+            let mut current_token = None;
+            loop {
+                let current_token_clone = current_token.clone();
+                let auto_scaling_group_names_type = AutoScalingGroupNamesType {
+                    auto_scaling_group_names: Some(vec![asg_name.to_string()]),
+                    // https://docs.aws.amazon.com/autoscaling/ec2/APIReference/API_DescribeAutoScalingGroups.html
+                    // max value is 100
+                    max_records: Some(100),
+                    next_token: current_token_clone,
+                };
+                let asgs = asc_clone
+                    .describe_auto_scaling_groups(auto_scaling_group_names_type)
+                    .await?;
+                if asgs.auto_scaling_groups.is_empty() {
+                    bail!("asgs.auto_scaling_groups.is_empty()");
+                }
+                let asg = &asgs.auto_scaling_groups[0];
+                total += asg
+                    .instances
+                    .clone()
+                    .ok_or_else(|| format_err!("instances not found for auto_scaling_group"))?
+                    .iter()
+                    .filter(|instance| instance.lifecycle_state == "InService")
+                    .count() as i64;
+                if asgs.next_token.is_none() {
+                    break;
+                }
+                current_token = asgs.next_token;
             }
-            let asg = &asgs.auto_scaling_groups[0];
-            let count = asg
-                .instances
-                .clone()
-                .ok_or_else(|| format_err!("instances not found for auto_scaling_group"))?
-                .iter()
-                .filter(|instance| instance.lifecycle_state == "InService")
-                .count() as i64;
             info!(
                 "Waiting for scale-up to complete. Current size: {}, Min Desired Size: {}",
-                count, min_desired_capacity
+                total, min_desired_capacity
             );
 
-            if count < min_desired_capacity {
+            if total < min_desired_capacity {
                 bail!(
                     "Waiting for scale-up to complete. Current size: {}, Min Desired Size: {}",
-                    count,
+                    total,
                     min_desired_capacity
                 );
             } else {

@@ -104,6 +104,8 @@ struct Args {
     pub k8s_fullnodes_per_validator: u32,
     #[structopt(long, parse(try_from_str), default_value = "30")]
     pub k8s_num_validators: u32,
+    #[structopt(long)]
+    pub enable_lsr: bool,
 }
 
 pub fn main() {
@@ -440,20 +442,19 @@ impl ClusterUtil {
                     .await
                     .expect("Failed to get workspace")
             );
-            aws::set_asg_size(
-                (args.k8s_num_validators
-                    + (args.k8s_fullnodes_per_validator * args.k8s_num_validators))
-                    as i64,
-                5.0,
-                &asg_name,
-                true,
-            )
-            .await
-            .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
+            let mut instance_count = args.k8s_num_validators
+                + (args.k8s_fullnodes_per_validator * args.k8s_num_validators);
+            if args.enable_lsr {
+                instance_count += args.k8s_num_validators * 2;
+            }
+            aws::set_asg_size(instance_count as i64, 5.0, &asg_name, true)
+                .await
+                .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
             let (validators, fullnodes) = cluster_swarm
                 .spawn_validator_and_fullnode_set(
                     args.k8s_num_validators,
                     args.k8s_fullnodes_per_validator,
+                    args.enable_lsr,
                     &image_tag,
                 )
                 .await

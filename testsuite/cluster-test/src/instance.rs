@@ -20,6 +20,20 @@ static FULLNODE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"fn-(\d+)").unwrap
 pub enum InstanceConfig {
     Validator(ValidatorConfig),
     Fullnode(FullnodeConfig),
+    LSR(LSRConfig),
+    Vault(VaultConfig),
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct VaultConfig {
+    pub index: u32,
+}
+
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct LSRConfig {
+    pub index: u32,
+    pub num_validators: u32,
+    pub image_tag: String,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]
@@ -27,6 +41,7 @@ pub struct ValidatorConfig {
     pub index: u32,
     pub num_validators: u32,
     pub num_fullnodes: u32,
+    pub enable_lsr: bool,
     pub image_tag: String,
     pub config_overrides: Vec<String>,
 }
