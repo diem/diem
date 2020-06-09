@@ -11,7 +11,8 @@ import json
 import os
 import re
 from subprocess import check_call, check_output, DEVNULL, CalledProcessError
-
+from pyhelpers.cli import execute_cmd_with_text_output, execute_cmd_with_json_output
+from pyhelpers.aws import list_tasks, describe_tasks
 
 def gen_tf_var_str(var_name: str, val: str) -> str:
     return f'{var_name} = "{val}"'
@@ -21,16 +22,6 @@ def gen_tf_var_list(var_name: str, vals: list) -> str:
     list_str = ','.join(f'"{v}"' for v in vals)
     return f'{var_name} = [{list_str}]'
 
-def execute_cmd_with_text_output(cmd: list, wdir: str, err: str) -> str:
-    try:
-        return check_output(cmd, cwd=wdir, stderr=DEVNULL)
-    except CalledProcessError:
-        print(f"ERROR: {err}")
-        raise
-
-def execute_cmd_with_json_output(cmd: list, wdir: str, err: str) -> dict:
-    out = execute_cmd_with_text_output(cmd, wdir, err)
-    return json.loads(out)
 
 parser = argparse.ArgumentParser(
     description='Record state from a terraform workspace for replay in another.')
@@ -115,18 +106,10 @@ safetyrules_version = None
 # from the corresponding task instance
 validator_image_map = {}
 
-ecs_tasks = execute_cmd_with_json_output(
-    ['aws', 'ecs', 'list-tasks', '--cluster', args.source, '--no-paginate'],
-    tf_dir,
-    "could not get the list of ecs tasks"
-)
+ecs_tasks = list_tasks(args.source, dir=tf_dir)
 
 for task in ecs_tasks.get('taskArns'):
-    task_details = execute_cmd_with_json_output(
-        ['aws', 'ecs', 'describe-tasks', '--cluster', args.source, '--task', task],
-        tf_dir,
-        f"could not get details of task {task}"
-    )
+    task_details = describe_tasks(args.source, task, dir=tf_dir)
     extract_image_tag = lambda container: (
         re.split('[@:]', container.get("image"))[0],
         container.get("imageDigest")
