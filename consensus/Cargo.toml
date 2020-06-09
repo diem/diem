@@ -55,7 +55,6 @@ storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
 
 [dev-dependencies]
-cached = "0.13.1"
 proptest = "0.10.0"
 tempfile = "3.1.0"
 
