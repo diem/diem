@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use crate::cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm};
+use crate::cluster_swarm::cluster_swarm_kube::ClusterSwarmKube;
 use anyhow::{format_err, Result};
 use libra_config::config::NodeConfig;
 use libra_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch};
@@ -169,11 +169,6 @@ impl Instance {
 
     pub fn json_rpc_url(&self) -> Url {
         Url::from_str(&format!("http://{}:{}", self.ip(), self.ac_port())).expect("Invalid URL.")
-    }
-
-    #[deprecated(note = "Avoid using this method as it expose backend details outside of Instance")]
-    pub fn k8s_node(&self) -> &str {
-        &self.k8s_backend().k8s_node
     }
 
     fn k8s_backend(&self) -> &K8sInstanceInfo {
