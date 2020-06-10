@@ -8,4 +8,5 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/address_quant.move:46:5: multiple_copy_incorrect (entry)
     =     at tests/sources/functional/address_quant.move:47:9: multiple_copy_incorrect
+    =         sndr = <redacted>
     =     at tests/sources/functional/address_quant.move:46:5: multiple_copy_incorrect (exit)

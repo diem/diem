@@ -30,11 +30,11 @@ module TestTypeValues {
         }
     }
 
-    public fun add_R<T>() {
-        move_to_sender(R<T>{x: 1})
+    public fun add_R<T>(account: &signer) {
+        move_to(account, R<T>{x: 1})
     }
 
-    public fun add_R_incorrect<T>() {
-        move_to_sender(R<T>{x: 0})
+    public fun add_R_incorrect<T>(account: &signer) {
+        move_to(account, R<T>{x: 0})
     }
 }

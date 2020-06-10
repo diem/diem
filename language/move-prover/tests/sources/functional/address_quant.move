@@ -1,6 +1,6 @@
 // Tests of quantification over addresses.
 module AddressQuant {
-    use 0x1::Transaction;
+    use 0x1::Signer;
 
     resource struct R {
         x: u64
@@ -20,9 +20,9 @@ module AddressQuant {
         }
     }
 
-    public fun initialize(special_addr: address) {
-        assert(Transaction::sender() == special_addr, 0);
-        move_to_sender<R>(R{x:1});
+    public fun initialize(sndr: &signer, special_addr: address) {
+        assert(Signer::address_of(sndr) == special_addr, 0);
+        move_to<R>(sndr, R{x:1});
     }
     spec fun initialize {
         requires forall a: address : !exists<R>(a);
@@ -43,8 +43,8 @@ module AddressQuant {
 
     // sender() might be different from special_addr,
     // so this should violate the invariant.
-    public fun multiple_copy_incorrect() {
-        move_to_sender<R>(R{x:1});
+    public fun multiple_copy_incorrect(sndr: &signer) {
+        move_to<R>(sndr, R{x:1});
     }
 
     // This asserts that there is at must one address with an R.
