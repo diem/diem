@@ -52,6 +52,11 @@
 <span id="52">52</span>
 <span id="53">53</span>
 <span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -67,6 +72,8 @@
 <span class="kw">mod</span> <span class="ident">consensus</span>;
 <span class="doccomment">/// Libra transactions.</span>
 <span class="kw">mod</span> <span class="ident">libra</span>;
+<span class="doccomment">/// Move ABI.</span>
+<span class="kw">mod</span> <span class="ident">move_abi</span>;
 <span class="doccomment">/// Network messages.</span>
 <span class="kw">mod</span> <span class="ident">network</span>;
 
@@ -77,6 +84,7 @@
     <span class="ident">Libra</span>,
     <span class="ident">Consensus</span>,
     <span class="ident">Network</span>,
+    <span class="ident">MoveABI</span>,
 }
 }
 
@@ -95,6 +103,7 @@
             <span class="ident">Corpus</span>::<span class="ident">Libra</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">libra</span>::<span class="ident">get_registry</span>().<span class="ident">unwrap</span>(),
             <span class="ident">Corpus</span>::<span class="ident">Consensus</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">consensus</span>::<span class="ident">get_registry</span>().<span class="ident">unwrap</span>(),
             <span class="ident">Corpus</span>::<span class="ident">Network</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">network</span>::<span class="ident">get_registry</span>().<span class="ident">unwrap</span>(),
+            <span class="ident">Corpus</span>::<span class="ident">MoveABI</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">move_abi</span>::<span class="ident">get_registry</span>().<span class="ident">unwrap</span>(),
         }
     }
 
@@ -104,6 +113,7 @@
             <span class="ident">Corpus</span>::<span class="ident">Libra</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">libra</span>::<span class="ident">output_file</span>(),
             <span class="ident">Corpus</span>::<span class="ident">Consensus</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">consensus</span>::<span class="ident">output_file</span>(),
             <span class="ident">Corpus</span>::<span class="ident">Network</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">network</span>::<span class="ident">output_file</span>(),
+            <span class="ident">Corpus</span>::<span class="ident">MoveABI</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">move_abi</span>::<span class="ident">output_file</span>(),
         }
     }
 }
