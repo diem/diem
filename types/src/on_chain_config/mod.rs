@@ -16,12 +16,14 @@ use move_core_types::{
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc};
 
+mod dual_attestation_limit;
 mod libra_version;
 mod registered_currencies;
 mod validator_set;
 mod vm_config;
 
 pub use self::{
+    dual_attestation_limit::DualAttestationLimit,
     libra_version::LibraVersion,
     registered_currencies::RegisteredCurrencies,
     validator_set::ValidatorSet,
@@ -54,6 +56,7 @@ pub const ON_CHAIN_CONFIG_REGISTRY: &[ConfigID] = &[
     LibraVersion::CONFIG_ID,
     ValidatorSet::CONFIG_ID,
     RegisteredCurrencies::CONFIG_ID,
+    DualAttestationLimit::CONFIG_ID,
 ];
 
 #[derive(Clone, Debug, PartialEq)]

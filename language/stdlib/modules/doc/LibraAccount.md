@@ -686,13 +686,10 @@
     // Check that the `to_deposit` coin is non-zero
     <b>let</b> deposit_value = <a href="Libra.md#0x1_Libra_value">Libra::value</a>(&to_deposit);
     <b>assert</b>(deposit_value &gt; 0, 7);
-
-    // TODO: on-chain config for travel rule limit instead of hardcoded value
-    // TODO: nail down details of limit (specified in <a href="LBR.md#0x1_LBR">LBR</a>? is 1 <a href="LBR.md#0x1_LBR">LBR</a> a milliLibra or microLibra?)
-    <b>let</b> travel_rule_limit = 1000;
+    <b>let</b> travel_rule_limit_microlibra = <a href="DualAttestationLimit.md#0x1_DualAttestationLimit_get_cur_microlibra_limit">DualAttestationLimit::get_cur_microlibra_limit</a>();
     // travel rule only applies for payments over a threshold
-    <b>let</b> above_threshold =
-        <a href="Libra.md#0x1_Libra_approx_lbr_for_value">Libra::approx_lbr_for_value</a>&lt;Token&gt;(deposit_value) &gt;= travel_rule_limit;
+    <b>let</b> approx_lbr_microlibra_value = <a href="Libra.md#0x1_Libra_approx_lbr_for_value">Libra::approx_lbr_for_value</a>&lt;Token&gt;(deposit_value);
+    <b>let</b> above_threshold = approx_lbr_microlibra_value &gt;= travel_rule_limit_microlibra;
     // travel rule only applies <b>if</b> the sender and recipient are both VASPs
     <b>let</b> both_vasps = <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(sender) && <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee);
     // Don't check the travel rule <b>if</b> we're on testnet and sender

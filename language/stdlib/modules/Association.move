@@ -100,7 +100,7 @@ module Association {
         assert(Signer::address_of(sender_account) == treasury_compliance_account(), 0)
     }
 
-    fun treasury_compliance_account(): address {
+    public fun treasury_compliance_account(): address {
         CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()
     }
 
