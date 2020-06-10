@@ -550,7 +550,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::noise::{HandshakeAuthMode, NoiseUpgrader};
+    use crate::noise::{AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader};
     use futures::{
         executor::block_on,
         future::join,
@@ -602,7 +602,7 @@ mod test {
 
         // perform the handshake
         let (client_session, server_session) = block_on(join(
-            client.upgrade_outbound(dialer_socket, server_public_key),
+            client.upgrade_outbound(dialer_socket, server_public_key, AntiReplayTimestamps::now),
             server.upgrade_inbound(listener_socket),
         ));
 

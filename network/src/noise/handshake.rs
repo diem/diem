@@ -40,7 +40,18 @@ impl AntiReplayTimestamps {
     /// The timestamp is sent as a payload, so that it is encrypted.
     /// Note that a millisecond value is a 16-byte value in rust,
     /// but as we use it to store a duration since UNIX_EPOCH we will never use more than 8 bytes.
-    const TIMESTAMP_SIZE: usize = 8;
+    pub const TIMESTAMP_SIZE: usize = 8;
+
+    /// obtain the current timestamp
+    pub fn now() -> [u8; Self::TIMESTAMP_SIZE] {
+        let now: u64 = time::SystemTime::now()
+            .duration_since(time::UNIX_EPOCH)
+            .expect("system clock should work")
+            .as_millis() as u64; // (TIMESTAMP_SIZE)
+
+        // e.g. [157, 126, 253, 97, 114, 1, 0, 0]
+        now.to_le_bytes()
+    }
 
     /// Returns true if the timestamp has already been observed for this peer
     /// or if it's an old timestamp
@@ -169,7 +180,8 @@ impl NoiseUpgrader {
                         ));
                     }
                 };
-                self.upgrade_outbound(socket, remote_public_key).await?
+                self.upgrade_outbound(socket, remote_public_key, AntiReplayTimestamps::now)
+                    .await?
             }
             ConnectionOrigin::Inbound => {
                 let (socket, _peer_id) = self.upgrade_inbound(socket).await?;
@@ -199,13 +211,15 @@ impl NoiseUpgrader {
     /// In mutual auth scenarios, we will also include an anti replay attack counter in the
     /// Noise handshake payload. Currently this counter is always a millisecond-
     /// granularity unix epoch timestamp.
-    pub async fn upgrade_outbound<TSocket>(
+    pub async fn upgrade_outbound<TSocket, F>(
         &self,
         mut socket: TSocket,
         remote_public_key: x25519::PublicKey,
+        time_provider: F,
     ) -> io::Result<NoiseStream<TSocket>>
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
+        F: Fn() -> [u8; AntiReplayTimestamps::TIMESTAMP_SIZE],
     {
         // buffer to hold prologue + first noise handshake message
         let mut client_message = [0; Self::CLIENT_MESSAGE_SIZE];
@@ -218,15 +232,7 @@ impl NoiseUpgrader {
         let (prologue_msg, mut client_noise_msg) = client_message.split_at_mut(Self::PROLOGUE_SIZE);
 
         // craft 8-byte payload as current timestamp (in milliseconds)
-        let payload = {
-            let now: u64 = time::SystemTime::now()
-                .duration_since(time::UNIX_EPOCH)
-                .expect("system clock should work")
-                .as_millis() as u64; // (TIMESTAMP_SIZE)
-
-            // e.g. [157, 126, 253, 97, 114, 1, 0, 0]
-            now.to_le_bytes()
-        };
+        let payload = time_provider();
 
         // craft first handshake message  (-> e, es, s, ss)
         let mut rng = rand::rngs::OsRng;
@@ -493,7 +499,7 @@ mod test {
 
         // perform the handshake
         let (client_session, server_session) = block_on(join(
-            client.upgrade_outbound(dialer_socket, server_public_key),
+            client.upgrade_outbound(dialer_socket, server_public_key, AntiReplayTimestamps::now),
             server.upgrade_inbound(listener_socket),
         ));
 
@@ -517,5 +523,57 @@ mod test {
     #[test]
     fn test_handshake_mutual_auth() {
         test_handshake_success(true /* is_mutual_auth */);
+    }
+
+    /// provide a function that will return the same given value as a timestamp
+    fn bad_timestamp(value: u64) -> impl Fn() -> [u8; AntiReplayTimestamps::TIMESTAMP_SIZE] {
+        move || value.to_le_bytes()
+    }
+
+    #[test]
+    fn test_timestamp_replay() {
+        // 1. generate peers
+        let ((client, _client_public), (server, server_public)) =
+            build_peers(true /* is_mutual_auth */);
+
+        // 2. perform the handshake with some timestamp, it should work
+        let (dialer_socket, listener_socket) = MemorySocket::new_pair();
+        let (client_session, server_session) = block_on(join(
+            client.upgrade_outbound(dialer_socket, server_public, bad_timestamp(1)),
+            server.upgrade_inbound(listener_socket),
+        ));
+
+        client_session.unwrap();
+        server_session.unwrap();
+
+        // 3. perform the handshake again with timestamp in the past, it should fail
+        let (dialer_socket, listener_socket) = MemorySocket::new_pair();
+        let (client_session, server_session) = block_on(join(
+            client.upgrade_outbound(dialer_socket, server_public, bad_timestamp(0)),
+            server.upgrade_inbound(listener_socket),
+        ));
+
+        assert!(client_session.is_err());
+        assert!(server_session.is_err());
+
+        // 4. perform the handshake again with the same timestamp, it should fail
+        let (dialer_socket, listener_socket) = MemorySocket::new_pair();
+        let (client_session, server_session) = block_on(join(
+            client.upgrade_outbound(dialer_socket, server_public, bad_timestamp(1)),
+            server.upgrade_inbound(listener_socket),
+        ));
+
+        assert!(client_session.is_err());
+        assert!(server_session.is_err());
+
+        // 5. perform the handshake again with a valid timestamp in the future, it should work
+        let (dialer_socket, listener_socket) = MemorySocket::new_pair();
+        let (client_session, server_session) = block_on(join(
+            client.upgrade_outbound(dialer_socket, server_public, bad_timestamp(2)),
+            server.upgrade_inbound(listener_socket),
+        ));
+
+        client_session.unwrap();
+        server_session.unwrap();
     }
 }

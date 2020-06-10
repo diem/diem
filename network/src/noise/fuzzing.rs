@@ -8,7 +8,7 @@
 // This fuzzes the wrappers we have around our Noise library.
 //
 
-use crate::noise::{HandshakeAuthMode, NoiseUpgrader};
+use crate::noise::{AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader};
 use futures::{
     executor::block_on,
     future::join,
@@ -107,7 +107,7 @@ fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
 
     // perform the handshake
     let (client_session, server_session) = block_on(join(
-        initiator.upgrade_outbound(dialer_socket, public_key),
+        initiator.upgrade_outbound(dialer_socket, public_key, fake_timestamp),
         responder.upgrade_inbound(listener_socket),
     ));
 
@@ -181,6 +181,11 @@ impl<'a> AsyncRead for FakeSocket<'a> {
     }
 }
 
+/// let's provide the same timestamp everytime, faster
+fn fake_timestamp() -> [u8; AntiReplayTimestamps::TIMESTAMP_SIZE] {
+    [0u8; AntiReplayTimestamps::TIMESTAMP_SIZE]
+}
+
 pub fn fuzz_initiator(data: &[u8]) {
     // setup initiator
     let (private_key, public_key) = KEYPAIR.clone();
@@ -191,7 +196,7 @@ pub fn fuzz_initiator(data: &[u8]) {
     let fake_socket = FakeSocket { content: data };
 
     // send a message, then read fuzz data
-    let _ = block_on(initiator.upgrade_outbound(fake_socket, public_key));
+    let _ = block_on(initiator.upgrade_outbound(fake_socket, public_key, fake_timestamp));
 }
 
 pub fn fuzz_responder(data: &[u8]) {

@@ -12,7 +12,7 @@
 //!
 //! ```
 //! use network::{
-//!     noise::{HandshakeAuthMode, NoiseUpgrader},
+//!     noise::{HandshakeAuthMode, NoiseUpgrader, AntiReplayTimestamps},
 //! };
 //! use futures::{executor, future, io::{AsyncReadExt, AsyncWriteExt}};
 //! use memsocket::MemorySocket;
@@ -50,7 +50,7 @@
 //!
 //! // perform the handshake
 //! let (client_session, server_session) = executor::block_on(future::join(
-//!    client.upgrade_outbound(dialer_socket, server_public),
+//!    client.upgrade_outbound(dialer_socket, server_public, AntiReplayTimestamps::now),
 //!    server.upgrade_inbound(listener_socket),
 //! ));
 //!
