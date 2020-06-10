@@ -18,6 +18,7 @@ use libra_metrics::metric_server;
 use libra_secure_storage::config;
 use libra_vm::LibraVM;
 use libradb::LibraDB;
+use network_builder::builder::NetworkBuilder;
 use network_simple_onchain_discovery::{
     gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
 };
@@ -127,12 +128,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (role, network_config) in network_configs {
         // Perform common instantiation steps
-        let (runtime, mut network_builder) = network_builder::builder::setup_network(
-            network_config,
-            role,
-            Arc::clone(&db_rw.reader),
-            waypoint,
-        );
+        let (runtime, mut network_builder) =
+            NetworkBuilder::create(network_config, role, Arc::clone(&db_rw.reader), waypoint);
         let peer_id = network_builder.peer_id();
 
         // Create the endpoints to connect the Network to StateSynchronizer.
