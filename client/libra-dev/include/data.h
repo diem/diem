@@ -159,6 +159,30 @@ enum LibraStatus libra_TransactionP2PScript_from(const uint8_t receiver[LIBRA_AD
 */
 enum LibraStatus libra_TransactionAddCurrencyScript_from(const char* identifier, uint8_t **ptr_buf, size_t *ptr_len);
 
+/*!
+ *  Get script bytes for rotating compliance public key of VASP
+ *  Encode a program that rotates `vasp_root_addr`'s compliance public key to `new_key`
+ *
+ * To get the serialized script in a memory safe manner, the client needs to pass in a pointer to a pointer to the allocated memory in rust
+ * and call free on the memory address with `libra_free_bytes_buffer`.
+ * @param[in] new_key_bytes is the bytes of new compliance public key.
+ * @param[out] ptr_buf is the pointer that will be filled with the memory address of the script allocated in rust. User takes ownership of pointer returned by *buf, which needs to be freed using libra_free_bytes_buffer
+ * @param[out] ptr_len is the length of the script memory buffer.
+*/
+enum LibraStatus libra_TransactionRotateCompliancePublicKeyScript_from(const uint8_t new_key_bytes[LIBRA_PUBKEY_SIZE], uint8_t **ptr_buf, size_t *ptr_len);
+
+/*!
+ *  Get script bytes for rotating base url of VASP
+ *  Encode a program that rotates `vasp_root_addr`'s base URL to `new_url`.
+ *
+ * To get the serialized script in a memory safe manner, the client needs to pass in a pointer to a pointer to the allocated memory in rust
+ * and call free on the memory address with `libra_free_bytes_buffer`.
+ * @param[in] new_url_bytes is the bytes of new base URL for the VASP.
+ * @param[in] new_url_len is the length of new_key_bytes array.
+ * @param[out] ptr_buf is the pointer that will be filled with the memory address of the script allocated in rust. User takes ownership of pointer returned by *buf, which needs to be freed using libra_free_bytes_buffer
+ * @param[out] ptr_len is the length of the script memory buffer.
+*/
+enum LibraStatus libra_TransactionRotateBaseURLScript_from(const uint8_t* new_url_bytes, size_t new_url_len, uint8_t **ptr_buf, size_t *ptr_len);
 
 /*!
  * Function to free the allocation memory in rust for bytes

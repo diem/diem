@@ -11,7 +11,7 @@ use crate::{
 };
 use lcs::{from_bytes, to_bytes};
 use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PUBLIC_KEY_LENGTH},
     test_utils::KeyPair,
     PrivateKey,
 };
@@ -27,7 +27,8 @@ use libra_types::{
 };
 use std::{convert::TryFrom, ffi::CStr, slice, time::Duration};
 use transaction_builder::{
-    encode_add_currency_to_account_script, encode_transfer_with_metadata_script,
+    encode_add_currency_to_account_script, encode_rotate_base_url_script,
+    encode_rotate_compliance_public_key_script, encode_transfer_with_metadata_script,
     get_transaction_name,
 };
 
@@ -227,6 +228,90 @@ pub unsafe extern "C" fn libra_TransactionAddCurrencyScript_from(
         Err(e) => {
             update_last_error(format!(
                 "Error serializing add currency to account Script: {}",
+                e.to_string()
+            ));
+            return LibraStatus::InternalError;
+        }
+    };
+
+    let script_buf: *mut u8 = libc::malloc(script_bytes.len()).cast();
+    script_buf.copy_from(script_bytes.as_ptr(), script_bytes.len());
+
+    *ptr_buf = script_buf;
+    *ptr_len = script_bytes.len();
+
+    LibraStatus::Ok
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn libra_TransactionRotateCompliancePublicKeyScript_from(
+    new_key_bytes: *const u8,
+    ptr_buf: *mut *mut u8,
+    ptr_len: *mut usize,
+) -> LibraStatus {
+    clear_error();
+
+    if new_key_bytes.is_null() {
+        update_last_error("new_key_bytes parameter must not be null.".to_string());
+        return LibraStatus::InvalidArgument;
+    }
+    let new_key_buf: &[u8] = slice::from_raw_parts(new_key_bytes, ED25519_PUBLIC_KEY_LENGTH);
+    let new_compliance_public_key = match Ed25519PublicKey::try_from(new_key_buf) {
+        Ok(result) => result,
+        Err(e) => {
+            update_last_error(format!(
+                "Invalid compliance public key bytes: {}",
+                e.to_string()
+            ));
+            return LibraStatus::InvalidArgument;
+        }
+    };
+
+    let script =
+        encode_rotate_compliance_public_key_script(new_compliance_public_key.to_bytes().to_vec());
+
+    let script_bytes = match to_bytes(&script) {
+        Ok(result) => result,
+        Err(e) => {
+            update_last_error(format!(
+                "Error serializing rotate compliance public key Script: {}",
+                e.to_string()
+            ));
+            return LibraStatus::InternalError;
+        }
+    };
+
+    let script_buf: *mut u8 = libc::malloc(script_bytes.len()).cast();
+    script_buf.copy_from(script_bytes.as_ptr(), script_bytes.len());
+
+    *ptr_buf = script_buf;
+    *ptr_len = script_bytes.len();
+
+    LibraStatus::Ok
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn libra_TransactionRotateBaseURLScript_from(
+    new_url_bytes: *const u8,
+    new_url_len: usize,
+    ptr_buf: *mut *mut u8,
+    ptr_len: *mut usize,
+) -> LibraStatus {
+    clear_error();
+
+    let new_url = if new_url_bytes.is_null() {
+        vec![]
+    } else {
+        slice::from_raw_parts(new_url_bytes, new_url_len).to_vec()
+    };
+
+    let script = encode_rotate_base_url_script(new_url);
+
+    let script_bytes = match to_bytes(&script) {
+        Ok(result) => result,
+        Err(e) => {
+            update_last_error(format!(
+                "Error serializing rotate base URL Script: {}",
                 e.to_string()
             ));
             return LibraStatus::InternalError;
@@ -858,6 +943,76 @@ mod test {
 
         if let TypeTag::Struct(struct_tag) = deserialized_script.ty_args()[0].clone() {
             assert_eq!(identifier, struct_tag.module);
+        } else {
+            unreachable!()
+        }
+
+        unsafe {
+            libra_free_bytes_buffer(script_buf);
+        };
+    }
+
+    /// Generate a Rotate Compliance Public Key Script and deserialize
+    #[test]
+    fn test_lcs_rotate_compliance_public_key_transaction_script() {
+        let private_key = Ed25519PrivateKey::generate_for_testing();
+        let new_compliance_public_key = private_key.public_key();
+
+        let mut script_buf: *mut u8 = std::ptr::null_mut();
+        let script_buf_ptr = &mut script_buf;
+        let mut script_len: usize = 0;
+
+        let script_result = unsafe {
+            libra_TransactionRotateCompliancePublicKeyScript_from(
+                new_compliance_public_key.to_bytes().as_ptr(),
+                script_buf_ptr,
+                &mut script_len,
+            )
+        };
+
+        assert_eq!(script_result, LibraStatus::Ok);
+
+        let script_bytes: &[u8] = unsafe { slice::from_raw_parts(script_buf, script_len) };
+        let deserialized_script: Script = from_bytes(script_bytes)
+            .expect("LCS deserialization failed for rotate compliance public key Script");
+
+        if let TransactionArgument::U8Vector(val) = deserialized_script.args()[0].clone() {
+            assert_eq!(val, new_compliance_public_key.to_bytes().to_vec());
+        } else {
+            unreachable!()
+        }
+
+        unsafe {
+            libra_free_bytes_buffer(script_buf);
+        };
+    }
+
+    /// Generate a Rotate Base URL Script and deserialize
+    #[test]
+    fn test_lcs_rotate_base_url_transaction_script() {
+        let new_url = b"new_name".to_vec();
+
+        let mut script_buf: *mut u8 = std::ptr::null_mut();
+        let script_buf_ptr = &mut script_buf;
+        let mut script_len: usize = 0;
+
+        let script_result = unsafe {
+            libra_TransactionRotateBaseURLScript_from(
+                new_url.as_ptr(),
+                new_url.len(),
+                script_buf_ptr,
+                &mut script_len,
+            )
+        };
+
+        assert_eq!(script_result, LibraStatus::Ok);
+
+        let script_bytes: &[u8] = unsafe { slice::from_raw_parts(script_buf, script_len) };
+        let deserialized_script: Script = from_bytes(script_bytes)
+            .expect("LCS deserialization failed for rotate base URL Script");
+
+        if let TransactionArgument::U8Vector(val) = deserialized_script.args()[0].clone() {
+            assert_eq!(val, new_url);
         } else {
             unreachable!()
         }
