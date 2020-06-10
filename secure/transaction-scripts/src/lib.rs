@@ -8,14 +8,14 @@ use include_dir::{include_dir, Dir};
 use once_cell::sync::Lazy;
 use std::path::PathBuf;
 
-const STAGED_EXTENSION: &str = "mv";
-const STAGED_TXN_SCRIPTS_DIR: Dir =
-    include_dir!("../../language/stdlib/staged/transaction_scripts");
+const COMPILED_EXTENSION: &str = "mv";
+const COMPILED_TXN_SCRIPTS_DIR: Dir =
+    include_dir!("../../language/stdlib/compiled/transaction_scripts");
 
 fn script(script_name: &str) -> Vec<u8> {
     let mut path = PathBuf::from(script_name);
-    path.set_extension(STAGED_EXTENSION);
-    STAGED_TXN_SCRIPTS_DIR
+    path.set_extension(COMPILED_EXTENSION);
+    COMPILED_TXN_SCRIPTS_DIR
         .get_file(path)
         .unwrap()
         .contents()

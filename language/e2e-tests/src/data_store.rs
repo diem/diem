@@ -5,6 +5,7 @@
 
 use crate::account::AccountData;
 use anyhow::Result;
+use compiled_stdlib::StdLibOptions;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
@@ -16,13 +17,12 @@ use move_core_types::language_storage::ModuleId;
 use move_vm_runtime::data_cache::RemoteCache;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use stdlib::StdLibOptions;
 use vm::{errors::*, CompiledModule};
 use vm_genesis::generate_genesis_change_set_for_testing;
 
 /// Dummy genesis ChangeSet for testing
 pub static GENESIS_CHANGE_SET: Lazy<ChangeSet> =
-    Lazy::new(|| generate_genesis_change_set_for_testing(StdLibOptions::Staged));
+    Lazy::new(|| generate_genesis_change_set_for_testing(StdLibOptions::Compiled));
 
 pub static GENESIS_CHANGE_SET_FRESH: Lazy<ChangeSet> =
     Lazy::new(|| generate_genesis_change_set_for_testing(StdLibOptions::Fresh));

@@ -33,4 +33,4 @@ proptest-derive = "0.2.0"
 libra-proptest-helpers = { path = "../../common/proptest-helpers", version = "0.1.0" }
 libra-config =  { path = "../../config", version = "0.1.0" }
 libra-logger = { path = "../../common/logger", version = "0.1.0" }
-stdlib = { path = "../stdlib", version = "0.1.0" }
+compiled-stdlib = { path = "../stdlib/compiled",  version = "0.1.0" }

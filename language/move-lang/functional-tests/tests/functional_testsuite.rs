@@ -92,7 +92,7 @@ impl Compiler for MoveSourceCompiler {
         })
     }
 
-    fn use_staged_genesis(&self) -> bool {
+    fn use_compiled_genesis(&self) -> bool {
         false
     }
 }

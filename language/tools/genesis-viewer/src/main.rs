@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use compiled_stdlib::StdLibOptions;
 use libra_types::{
     access_path::AccessPath,
     contract_event::ContractEvent,
@@ -9,7 +10,6 @@ use libra_types::{
 };
 use resource_viewer::{MoveValueAnnotator, NullStateView};
 use std::collections::{BTreeMap, BTreeSet};
-use stdlib::StdLibOptions;
 use structopt::StructOpt;
 use vm::CompiledModule;
 
@@ -70,7 +70,7 @@ pub fn main() {
     // we default to `all`
     let arg_count = std::env::args().len();
     let args = Args::from_args();
-    let ws = vm_genesis::generate_genesis_change_set_for_testing(StdLibOptions::Staged);
+    let ws = vm_genesis::generate_genesis_change_set_for_testing(StdLibOptions::Compiled);
     if args.all || arg_count == 3 {
         print_all(&ws);
     } else {

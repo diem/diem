@@ -11,6 +11,7 @@ use crate::{
     genesis_gas_schedule::INITIAL_GAS_SCHEDULE,
 };
 use bytecode_verifier::VerifiedModule;
+use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use libra_config::config::{NodeConfig, HANDSHAKE_VERSION};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
@@ -29,7 +30,6 @@ use move_vm_types::{data_store::DataStore, loaded_data::types::FatStructType, va
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use std::{collections::btree_map::BTreeMap, convert::TryFrom};
-use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::access::ModuleAccess;
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
@@ -54,7 +54,7 @@ pub fn encode_genesis_transaction_with_validator(
     encode_genesis_transaction(
         public_key,
         validators,
-        stdlib_modules(StdLibOptions::Staged), // Must use staged stdlib
+        stdlib_modules(StdLibOptions::Compiled), // Must use compiled stdlib
         vm_publishing_option
             .unwrap_or_else(|| VMPublishingOption::Locked(StdlibScript::whitelist())),
     )
@@ -284,7 +284,7 @@ pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) ->
 
 /// Generate an artificial genesis `ChangeSet` for testing
 pub fn generate_genesis_type_mapping() -> BTreeMap<Vec<u8>, FatStructType> {
-    let stdlib_modules = stdlib_modules(StdLibOptions::Staged);
+    let stdlib_modules = stdlib_modules(StdLibOptions::Compiled);
     let swarm = libra_config::generator::validator_swarm_for_testing(10);
 
     encode_genesis_change_set(

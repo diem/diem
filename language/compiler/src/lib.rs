@@ -11,6 +11,7 @@ mod unit_tests;
 use anyhow::Result;
 use bytecode_source_map::source_map::SourceMap;
 use bytecode_verifier::VerifiedModule;
+use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::{parse_module, parse_script},
@@ -18,7 +19,6 @@ use ir_to_bytecode::{
 use libra_types::account_address::AccountAddress;
 use move_ir_types::location::Loc;
 use std::mem;
-use stdlib::{stdlib_modules, StdLibOptions};
 use vm::file_format::{CompiledModule, CompiledScript};
 
 /// An API for the compiler. Supports setting custom options.
@@ -104,7 +104,7 @@ impl Compiler {
         if self.skip_stdlib_deps {
             extra_deps
         } else {
-            let mut deps = stdlib_modules(StdLibOptions::Staged).to_vec();
+            let mut deps = stdlib_modules(StdLibOptions::Compiled).to_vec();
             deps.extend(extra_deps);
             deps
         }

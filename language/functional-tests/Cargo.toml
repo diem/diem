@@ -27,4 +27,4 @@ termcolor = "1.1.0"
 datatest-stable = { path = "../../common/datatest-stable", version = "0.1.0" }
 mirai-annotations = "1.8.0"
 move-core-types = { path = "../move-core/types", version = "0.1.0" }
-stdlib = { path = "../stdlib", version = "0.1.0" }
+compiled-stdlib = { path = "../stdlib/compiled",  version = "0.1.0" }

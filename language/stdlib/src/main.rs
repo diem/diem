@@ -6,18 +6,17 @@
 use clap::{App, Arg};
 use rayon::prelude::*;
 use std::{
-    fs::File,
     io::Write,
     path::{Path, PathBuf},
     time::Instant,
 };
 use stdlib::{
     build_stdlib, build_stdlib_doc, build_transaction_script_doc, compile_script,
-    filter_move_files, STAGED_EXTENSION, STAGED_OUTPUT_PATH, STAGED_STDLIB_NAME,
+    filter_move_files, save_binary, COMPILED_EXTENSION, COMPILED_OUTPUT_PATH, COMPILED_STDLIB_NAME,
     TRANSACTION_SCRIPTS,
 };
 
-// Generates the staged stdlib and transaction scripts. Until this is run changes to the source
+// Generates the compiled stdlib and transaction scripts. Until this is run changes to the source
 // modules/scripts, and changes in the Move compiler will not be reflected in the stdlib used for
 // genesis, and everywhere else across the code-base unless otherwise specified.
 fn main() {
@@ -43,16 +42,16 @@ fn main() {
         println!("NOTE: run this program in --release mode for better speed");
     }
 
-    let mut scripts_path = PathBuf::from(STAGED_OUTPUT_PATH);
+    let mut scripts_path = PathBuf::from(COMPILED_OUTPUT_PATH);
     scripts_path.push(TRANSACTION_SCRIPTS);
 
     std::fs::create_dir_all(&scripts_path).unwrap();
 
     if !doc_only {
         time_it("Creating stdlib blob", || {
-            let mut module_path = PathBuf::from(STAGED_OUTPUT_PATH);
-            module_path.push(STAGED_STDLIB_NAME);
-            module_path.set_extension(STAGED_EXTENSION);
+            let mut module_path = PathBuf::from(COMPILED_OUTPUT_PATH);
+            module_path.push(COMPILED_STDLIB_NAME);
+            module_path.set_extension(COMPILED_EXTENSION);
             let modules: Vec<Vec<u8>> = build_stdlib()
                 .into_iter()
                 .map(|verified_module| {
@@ -62,8 +61,9 @@ fn main() {
                 })
                 .collect();
             let bytes = lcs::to_bytes(&modules).unwrap();
-            let mut module_file = File::create(module_path).unwrap();
-            module_file.write_all(&bytes).unwrap();
+            if save_binary(&module_path, &bytes) {
+                println!("Compiled module binary has changed");
+            };
         });
     }
 
@@ -76,13 +76,12 @@ fn main() {
         time_it("Staging transaction scripts", || {
             transaction_files.par_iter().for_each(|txn_file| {
                 let compiled_script = compile_script(txn_file.clone());
-                let mut txn_path = PathBuf::from(STAGED_OUTPUT_PATH);
+                let mut txn_path = PathBuf::from(COMPILED_OUTPUT_PATH);
                 txn_path.push(txn_file.clone());
-                txn_path.set_extension(STAGED_EXTENSION);
-                File::create(txn_path)
-                    .unwrap()
-                    .write_all(&compiled_script)
-                    .unwrap()
+                txn_path.set_extension(COMPILED_EXTENSION);
+                if save_binary(&txn_path, &compiled_script) {
+                    println!("Compiled script binary {} has changed", txn_file);
+                }
             })
         });
     }

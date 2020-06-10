@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{account::Account, executor::FakeExecutor, gas_costs::TXN_RESERVED};
+use compiled_stdlib::transaction_scripts::StdlibScript;
 use libra_types::{
     account_config::LBR_NAME, on_chain_config::LibraVersion, transaction::TransactionArgument,
 };
 use libra_vm::LibraVM;
-use stdlib::transaction_scripts::StdlibScript;
 
 #[test]
 fn initial_libra_version() {

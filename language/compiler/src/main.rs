@@ -8,6 +8,7 @@ use bytecode_verifier::{
     verifier::{verify_module_dependencies, VerifiedScript},
     VerifiedModule,
 };
+use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use compiler::{util, Compiler};
 use ir_to_bytecode::parser::{parse_module, parse_script};
 use libra_types::{access_path::AccessPath, account_address::AccountAddress, vm_error::VMStatus};
@@ -17,7 +18,6 @@ use std::{
     io::Write,
     path::{Path, PathBuf},
 };
-use stdlib::{stdlib_modules, StdLibOptions};
 use structopt::StructOpt;
 use vm::file_format::CompiledModule;
 
@@ -135,7 +135,7 @@ fn main() {
         } else if args.no_stdlib {
             vec![]
         } else {
-            stdlib_modules(StdLibOptions::Staged).to_vec()
+            stdlib_modules(StdLibOptions::Compiled).to_vec()
         }
     };
 

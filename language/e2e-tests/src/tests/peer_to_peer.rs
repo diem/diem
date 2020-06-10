@@ -7,6 +7,7 @@ use crate::{
     executor::FakeExecutor,
     gas_costs, transaction_status_eq,
 };
+use compiled_stdlib::transaction_scripts::StdlibScript;
 use libra_types::{
     account_config::{self, ReceivedPaymentEvent, SentPaymentEvent, LBR_NAME},
     on_chain_config::VMPublishingOption,
@@ -17,7 +18,6 @@ use libra_types::{
     vm_error::{StatusCode, VMStatus},
 };
 use std::{convert::TryFrom, time::Instant};
-use stdlib::transaction_scripts::StdlibScript;
 use vm::file_format::{Bytecode, CompiledScript};
 
 #[test]

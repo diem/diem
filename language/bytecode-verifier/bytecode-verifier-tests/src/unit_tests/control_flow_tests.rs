@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::control_flow;
+use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use libra_types::vm_error::StatusCode;
-use stdlib::{stdlib_modules, StdLibOptions};
 use vm::{
     access::ModuleAccess,
     errors::VMResult,
@@ -79,7 +79,7 @@ fn valid_fallthrough_abort() {
 
 #[test]
 fn stdlib() {
-    for module in stdlib_modules(StdLibOptions::Staged) {
+    for module in stdlib_modules(StdLibOptions::Compiled) {
         verify_module(module.as_inner()).unwrap()
     }
 }
