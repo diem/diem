@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.31"
 bytes = "0.5.4"
 curve25519-dalek = { git = "https://github.com/novifinancial/curve25519-dalek.git", branch = "fiat2", default-features = false }
-digest = "0.8.1"
+digest = "0.9.0"
 ed25519-dalek = { git = "https://github.com/calibra/ed25519-dalek.git", branch = "fiat2", features = ["serde"], default-features = false }
 hex = "0.4.2"
 hmac = "0.7.1"
