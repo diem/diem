@@ -99,7 +99,6 @@ pub struct NetworkBuilder {
     channel_size: usize,
     direct_send_protocols: Vec<ProtocolId>,
     rpc_protocols: Vec<ProtocolId>,
-    discovery_interval_ms: u64,
     ping_interval_ms: u64,
     ping_timeout_ms: u64,
     ping_failures_tolerated: u64,
@@ -119,7 +118,7 @@ pub struct NetworkBuilder {
 
 impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
-    pub(crate) fn new(
+    pub fn new(
         executor: Handle,
         network_id: NetworkId,
         peer_id: PeerId,
@@ -156,7 +155,6 @@ impl NetworkBuilder {
             connection_reqs_tx,
             connection_reqs_rx,
             conn_mgr_reqs_tx: None,
-            discovery_interval_ms: constants::DISCOVERY_INTERVAL_MS,
             ping_interval_ms: constants::PING_INTERVAL_MS,
             ping_timeout_ms: constants::PING_TIMEOUT_MS,
             ping_failures_tolerated: constants::PING_FAILURES_TOLERATED,
@@ -237,8 +235,7 @@ impl NetworkBuilder {
             DiscoveryMethod::Gossip(gossip_config) => {
                 network_builder
                     .advertised_address(gossip_config.advertised_address.clone())
-                    .discovery_interval_ms(gossip_config.discovery_interval_ms)
-                    .add_gossip_discovery();
+                    .add_gossip_discovery(gossip_config.discovery_interval_ms);
             }
             DiscoveryMethod::Onchain => {
                 let (network_tx, discovery_events) = network_builder.add_protocol_handler(
@@ -291,12 +288,6 @@ impl NetworkBuilder {
     /// Set seed peers to bootstrap discovery
     pub fn seed_peers(&mut self, seed_peers: HashMap<PeerId, Vec<NetworkAddress>>) -> &mut Self {
         self.seed_peers = seed_peers;
-        self
-    }
-
-    /// Set discovery ticker interval
-    pub fn discovery_interval_ms(&mut self, discovery_interval_ms: u64) -> &mut Self {
-        self.discovery_interval_ms = discovery_interval_ms;
         self
     }
 
@@ -411,7 +402,7 @@ impl NetworkBuilder {
     /// peers as a network protocol.
     ///
     /// This is for testing purposes only and should not be used in production networks.
-    pub fn add_gossip_discovery(&mut self) -> &mut Self {
+    pub fn add_gossip_discovery(&mut self, discovery_interval_ms: u64) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager not enabled");
@@ -442,7 +433,6 @@ impl NetworkBuilder {
         let advertised_address = advertised_address.append_prod_protos(pubkey, HANDSHAKE_VERSION);
 
         let addrs = vec![advertised_address];
-        let discovery_interval_ms = self.discovery_interval_ms;
         let discovery = self.executor.enter(|| {
             Discovery::new(
                 self.network_context.clone(),

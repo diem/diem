@@ -22,6 +22,7 @@ use libra_types::{
     validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
     validator_verifier::random_validator_verifier, waypoint::Waypoint,
 };
+use network::constants;
 use network_builder::builder::{AuthenticationMode, NetworkBuilder};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
@@ -262,7 +263,7 @@ impl SynchronizerEnv {
             .trusted_peers(trusted_peers)
             .seed_peers(seed_peers)
             .add_connectivity_manager()
-            .add_gossip_discovery();
+            .add_gossip_discovery(constants::DISCOVERY_INTERVAL_MS);
 
         let (sender, events) =
             network_builder.add_protocol_handler(crate::network::network_endpoint_config());
