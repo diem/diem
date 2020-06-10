@@ -81,6 +81,7 @@ members = [
     "language/tools/utils",
     "language/tools/vm-genesis",
     "language/transaction-builder",
+    "language/transaction-builder-generator",
     "language/vm",
     "language/vm/serializer-tests",
     "libra-node",

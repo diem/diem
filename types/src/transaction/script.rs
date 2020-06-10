@@ -106,7 +106,7 @@ impl ScriptABI {
     }
 
     pub fn doc(&self) -> &str {
-        &self.name
+        &self.doc
     }
 
     pub fn code(&self) -> &[u8] {
