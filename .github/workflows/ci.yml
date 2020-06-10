@@ -168,3 +168,24 @@ jobs:
 
     - name: Check for changed and untracked files
       run: ./scripts/changed-files.sh
+
+  coverage-test:
+    runs-on: ubuntu-latest-xl
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Dependencies
+      run: |
+        echo "deb http://deb.debian.org/debian buster-backports main" | sudo tee -a /etc/apt/sources.list
+        sudo apt-get update
+        sudo apt-get -y -t buster-backports install clang-8 llvm-8
+        sudo apt-get install -y cmake curl clang llvm gcc-powerpc-linux-gnu
+        rustup component add clippy rustfmt
+        sudo apt-get install lcov
+        cargo install --force grcov
+    - name: gen cov
+      run: |
+        export RUSTC_BOOTSTRAP=1
+        export CARGO_INCREMENTAL=0
+        export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
+        export RUSTDOCFLAGS="-Cpanic=abort"
+        cargo test -vvv -p libradb

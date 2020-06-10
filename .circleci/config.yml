@@ -6,23 +6,23 @@ orbs:
 executors:
   build-executor:
     docker:
-      - image: circleci/rust:buster
+      - image: circleci/rust:1.44.0
     resource_class: 2xlarge
   unittest-executor:
     docker:
-      - image: circleci/rust:buster
+      - image: circleci/rust:1.44.0
     resource_class: 2xlarge+
   test-executor:
     docker:
-      - image: circleci/rust:buster
+      - image: circleci/rust:1.44.0
     resource_class: xlarge
   premainnet-cluster-test-executor:
     docker:
-      - image: circleci/rust:buster
+      - image: circleci/rust:1.44.0
     resource_class: xlarge
   audit-executor:
     docker:
-      - image: circleci/rust:buster
+      - image: circleci/rust:1.44.0
     resource_class: medium
   terraform-executor:
     docker:
@@ -60,8 +60,10 @@ commands:
       - run:
           name: Install Dependencies
           command: |
+            echo "deb http://deb.debian.org/debian buster-backports main" | sudo tee -a /etc/apt/sources.list
             sudo apt-get update
-            sudo apt-get install -y cmake curl clang llvm gcc-powerpc-linux-gnu
+            sudo apt-get -y -t buster-backports install clang-8 llvm-8
+            sudo apt-get install -y cmake curl gcc-powerpc-linux-gnu
             rustup component add clippy rustfmt
   install_code_coverage_deps:
     steps:
@@ -610,46 +612,29 @@ jobs:
           fail_only: true
           webhook: "${WEBHOOK_PREMAINNET}"
           failure_message: "<@channel> Cluster test failed on premainnet :ferris-detective:"
+  test-coverge:
+    executor: premainnet-cluster-test-executor
+    description: Run cluster test against Premainnet
+    steps:
+      - checkout
+      - rust_setup
+      - print_versions
+      - env_setup
+      - install_deps
+      - install_code_coverage_deps
+      - run:
+          name: gen cov
+          command: |
+            export RUSTC_BOOTSTRAP=1
+            export CARGO_INCREMENTAL=0
+            export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
+            export RUSTDOCFLAGS="-Cpanic=abort"
+            cargo test -vvv -p libradb
+
 workflows:
   commit-workflow:
     jobs:
-      - build-docker
-      - validate-cluster-test-dockerfile
-      - terraform
-      - prefetch-crates
-      - lint:
-          requires:
-            - prefetch-crates
-      - build-dev:
-          requires:
-            - prefetch-crates
-      - build-release:
-          requires:
-            - prefetch-crates
-      - run-e2e-test:
-          requires:
-            - prefetch-crates
-      - run-unit-test:
-          requires:
-            - prefetch-crates
-      - run-crypto-unit-test:
-          requires:
-            - prefetch-crates
-      - build-docs:
-          requires:
-            - lint
-      - deploy-docs:
-          requires:
-            - build-docs
-          filters:
-            branches:
-              only: master
-      - check-breaking-change:
-          requires:
-            - prefetch-crates
-          filters:
-           branches:
-             only: master
+      - test-coverge
 
   scheduled-workflow:
     triggers:
