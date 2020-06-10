@@ -115,7 +115,7 @@ script {
     use 0x0::Testnet;
     fun main(account: &signer) {
         Testnet::remove_testnet(account);
-        LibraAccount::create_testnet_account<LBR>(0xDEADBEEF, x"");
+        LibraAccount::create_testnet_account<LBR>(account, 0xDEADBEEF, x"");
         Testnet::initialize(account);
     }
 }

@@ -24,6 +24,7 @@ pub struct AccountResource {
     sent_events: EventHandle,
     sequence_number: u64,
     is_frozen: bool,
+    role_id: u64,
 }
 
 impl AccountResource {
@@ -36,6 +37,7 @@ impl AccountResource {
         sent_events: EventHandle,
         received_events: EventHandle,
         is_frozen: bool,
+        role_id: u64,
     ) -> Self {
         AccountResource {
             sequence_number,
@@ -45,6 +47,7 @@ impl AccountResource {
             sent_events,
             received_events,
             is_frozen,
+            role_id,
         }
     }
 
@@ -81,6 +84,11 @@ impl AccountResource {
     /// Return the the is_frozen flag for the given AccountResource
     pub fn is_frozen(&self) -> bool {
         self.is_frozen
+    }
+
+    /// Return the the is_frozen flag for the given AccountResource
+    pub fn role_id(&self) -> u64 {
+        self.role_id
     }
 }
 

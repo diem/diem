@@ -63,7 +63,7 @@ module Genesis {
         Libra::grant_mint_capability_to_association<Coin2>(association);
 
         // Register transaction fee accounts
-        LibraAccount::create_testnet_account<LBR>(0xFEE, copy dummy_auth_key_prefix);
+        LibraAccount::create_testnet_account<LBR>(association, 0xFEE, copy dummy_auth_key_prefix);
         TransactionFee::add_txn_fee_currency(fee_account, &coin1_burn_cap);
         TransactionFee::add_txn_fee_currency(fee_account, &coin2_burn_cap);
         TransactionFee::initialize(tc_account, fee_account);

@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 pub struct ValidatorConfigResource {
     pub validator_config: Option<ValidatorConfig>,
     pub delegated_account: Option<AccountAddress>,
+    pub is_certified: bool,
 }
 
 impl MoveResource for ValidatorConfigResource {

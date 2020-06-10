@@ -1,12 +1,13 @@
 // Error codes:
 // 7000 -> INSUFFICIENT_PRIVILEGES
-// 7001 -> INVALID_ROOT_VASP_ACCOUNT
+// 7001 -> INVALID_PARENT_VASP_ACCOUNT
 // 7002 -> INVALID_CHILD_VASP_ACCOUNT
 // 7003 -> CHILD_ACCOUNT_STILL_PARENT
 // 7004 -> INVALID_PUBLIC_KEY
 address 0x0 {
 
 module VASP {
+    use 0x0::Association;
     use 0x0::LibraTimestamp;
     use 0x0::Signer;
     use 0x0::Signature;
@@ -16,7 +17,7 @@ module VASP {
     // VASP-related metadata for the account. It is subject to a time
     // limitation, and needs to be re-certified by an association
     // account before the certification expires.
-    struct ParentVASP {
+    resource struct ParentVASP {
         // The human readable name of this VASP.
         human_name: vector<u8>,
         // The base_url holds the URL to be used for off-chain
@@ -36,7 +37,7 @@ module VASP {
     // The parent VASP can create as many of these as they wish, and them
     // being a VASP account is dependent on the continuing certification of
     // the parent VASP account by the association.
-    struct ChildVASP { parent_vasp_addr: address }
+    resource struct ChildVASP { parent_vasp_addr: address }
 
     ///////////////////////////////////////////////////////////////////////////
     // Association called functions for parent VASP accounts
@@ -58,73 +59,97 @@ module VASP {
     // To-be parent-vasp called functions
     ///////////////////////////////////////////////////////////////////////////
 
-    public fun create_parent_vasp_credential(
+    public fun publish_parent_vasp_credential(
+        association: &signer,
+        vasp: &signer,
         human_name: vector<u8>,
         base_url: vector<u8>,
         compliance_public_key: vector<u8>
-    ): ParentVASP {
+    ) {
+        Association::assert_is_root(association);
         Transaction::assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), 7004);
-        ParentVASP {
-           // For testnet, so it should never expire. So set to u64::MAX
-           expiration_date: 18446744073709551615,
-           human_name,
-           base_url,
-           compliance_public_key,
-        }
+        move_to(
+            vasp,
+            ParentVASP {
+                // For testnet, so it should never expire. So set to u64::MAX
+                expiration_date: 18446744073709551615,
+                human_name,
+                base_url,
+                compliance_public_key,
+            }
+        )
+    }
+
+    /// Create a child VASP resource for the `parent`
+    /// Aborts if `parent` is not a ParentVASP
+    public fun publish_child_vasp_credential(parent: &signer, child: &signer) {
+        let parent_vasp_addr = Signer::address_of(parent);
+        Transaction::assert(exists<ParentVASP>(parent_vasp_addr), 7000);
+        move_to(child, ChildVASP { parent_vasp_addr });
     }
 
     ///////////////////////////////////////////////////////////////////////////
     // Publicly callable APIs
     ///////////////////////////////////////////////////////////////////////////
 
-    // Create a child VASP resource for the sender
-    // Aborts if the sender is not a ParentVASP
-    public fun create_child_vasp(sender: &signer): ChildVASP {
-        ChildVASP { parent_vasp_addr: Signer::address_of(sender) }
+    /// Return `addr` if `addr` is a `ParentVASP` or its parent's address if it is a `ChildVASP`
+    /// Aborts otherwise
+    public fun parent_address(addr: address): address acquires ChildVASP {
+        if (exists<ParentVASP>(addr)) {
+            addr
+        } else if (exists<ChildVASP>(addr)) {
+            borrow_global<ChildVASP>(addr).parent_vasp_addr
+        } else { // wrong account type, abort
+            abort(88)
+        }
     }
 
-    public fun child_parent_address(child: &ChildVASP): address {
-        child.parent_vasp_addr
+    public fun is_parent(addr: address): bool {
+        exists<ParentVASP>(addr)
     }
 
-    // Return true if `sender` is the parent VASP of `ChildVASP`
-    public fun is_parent_vasp(child_vasp: &ChildVASP, sender: &signer): bool {
-        Signer::address_of(sender) == child_vasp.parent_vasp_addr
+    public fun is_child(addr: address): bool {
+        exists<ChildVASP>(addr)
     }
 
-    // Return the human-readable name for the VASP account
-    public fun human_name(parent_vasp: &ParentVASP): vector<u8> {
-        *&parent_vasp.human_name
+    public fun is_vasp(addr: address): bool {
+        is_parent(addr) || is_child(addr)
     }
 
-    // Return the base URL for the VASP account
-    public fun base_url(parent_vasp: &ParentVASP): vector<u8> {
-        *&parent_vasp.base_url
+    /// Return the human-readable name for the VASP account
+    public fun human_name(addr: address): vector<u8>  acquires ChildVASP, ParentVASP {
+        *&borrow_global<ParentVASP>(parent_address(addr)).human_name
+    }
+
+    /// Return the base URL for the VASP account
+    public fun base_url(addr: address): vector<u8>  acquires ChildVASP, ParentVASP {
+        *&borrow_global<ParentVASP>(parent_address(addr)).base_url
+    }
+
+    /// Return the compliance public key for the VASP account
+    public fun compliance_public_key(addr: address): vector<u8> acquires ChildVASP, ParentVASP {
+        *&borrow_global<ParentVASP>(parent_address(addr)).compliance_public_key
+    }
+
+    /// Return the expiration date for the VASP account
+    public fun expiration_date(addr: address): u64  acquires ChildVASP, ParentVASP {
+        *&borrow_global<ParentVASP>(parent_address(addr)).expiration_date
     }
 
     /// Rotate the base URL for the `parent_vasp` account to `new_url`
-    public fun rotate_base_url(parent_vasp: &mut ParentVASP, new_url: vector<u8>) {
-        parent_vasp.base_url = new_url
-    }
-
-    // Return the compliance public key for the VASP account
-    public fun compliance_public_key(parent_vasp: &ParentVASP): vector<u8> {
-        *&parent_vasp.compliance_public_key
+    public fun rotate_base_url(parent_vasp: &signer, new_url: vector<u8>) acquires ParentVASP {
+        let parent_addr = Signer::address_of(parent_vasp);
+        borrow_global_mut<ParentVASP>(parent_addr).base_url = new_url
     }
 
     /// Rotate the compliance public key for `parent_vasp` to `new_key`
-    public fun rotate_compliance_public_key(parent_vasp: &mut ParentVASP, new_key: vector<u8>) {
+    public fun rotate_compliance_public_key(
+        parent_vasp: &signer,
+        new_key: vector<u8>
+    ) acquires ParentVASP {
         Transaction::assert(Signature::ed25519_validate_pubkey(copy new_key), 7004);
-        parent_vasp.compliance_public_key = new_key;
-    }
-
-    // Return the expiration date for the VASP account
-    public fun expiration_date(parent_vasp: &ParentVASP): u64 {
-        parent_vasp.expiration_date
-    }
-
-    fun parent_credential_expired(parent_credential: &ParentVASP): bool {
-        parent_credential.expiration_date < LibraTimestamp::now_microseconds()
+        let parent_addr = Signer::address_of(parent_vasp);
+        borrow_global_mut<ParentVASP>(parent_addr).compliance_public_key = new_key
     }
 
     fun singleton_addr(): address {

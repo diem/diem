@@ -18,6 +18,9 @@
 -  [Function `get_consensus_pubkey`](#0x0_ValidatorConfig_get_consensus_pubkey)
 -  [Function `get_validator_network_identity_pubkey`](#0x0_ValidatorConfig_get_validator_network_identity_pubkey)
 -  [Function `get_validator_network_address`](#0x0_ValidatorConfig_get_validator_network_address)
+-  [Function `decertify`](#0x0_ValidatorConfig_decertify)
+-  [Function `certify`](#0x0_ValidatorConfig_certify)
+-  [Function `is_certified`](#0x0_ValidatorConfig_is_certified)
 
 
 
@@ -107,6 +110,13 @@
 <dd>
 
 </dd>
+<dt>
+
+<code>is_certified: bool</code>
+</dt>
+<dd>
+
+</dd>
 </dl>
 
 
@@ -132,6 +142,7 @@
     move_to(account, <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
         config: <a href="Option.md#0x0_Option_none">Option::none</a>(),
         operator_account: <a href="Option.md#0x0_Option_none">Option::none</a>(),
+        is_certified: <b>true</b>
     });
 }
 </code></pre>
@@ -410,6 +421,80 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_get_validator_network_address">get_validator_network_address</a>(config_ref: &<a href="#0x0_ValidatorConfig_Config">Config</a>): &vector&lt;u8&gt; {
     &config_ref.validator_network_address
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_ValidatorConfig_decertify"></a>
+
+## Function `decertify`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_decertify">decertify</a>(account: &signer, addr: address)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_decertify">decertify</a>(account: &signer, addr: address) <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
+    Transaction::assert(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), 1002);
+    borrow_global_mut&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr).is_certified = <b>false</b>;
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_ValidatorConfig_certify"></a>
+
+## Function `certify`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_certify">certify</a>(account: &signer, addr: address)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_certify">certify</a>(account: &signer, addr: address) <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
+    Transaction::assert(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), 1002);
+    borrow_global_mut&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr).is_certified = <b>true</b>;
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_ValidatorConfig_is_certified"></a>
+
+## Function `is_certified`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_is_certified">is_certified</a>(addr: address): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_is_certified">is_certified</a>(addr: address): bool <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
+     exists&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr) && borrow_global&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr).is_certified
 }
 </code></pre>
 

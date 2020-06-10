@@ -4,7 +4,6 @@
 address 0x0 {
 
 module LibraSystem {
-    use 0x0::LibraAccount;
     use 0x0::LibraConfig;
     use 0x0::Option::{Self, Option};
     use 0x0::Transaction;
@@ -192,7 +191,7 @@ module LibraSystem {
 
     fun is_valid_and_certified(addr: address): bool {
         ValidatorConfig::is_valid(addr) &&
-            LibraAccount::is_certified<LibraAccount::ValidatorRole>(addr)
+            ValidatorConfig::is_certified(addr)
             // TODO(valerini): only allow certified operators, i.e. uncomment the line
             // && LibraAccount::is_certified<LibraAccount::ValidatorOperatorRole>(ValidatorConfig::get_operator(addr))
     }

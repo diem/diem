@@ -10,6 +10,7 @@
 address 0x0 {
 
 module ValidatorConfig {
+    use 0x0::Association;
     use 0x0::Option::{Self, Option};
     use 0x0::Transaction;
     use 0x0::Signer;
@@ -31,6 +32,7 @@ module ValidatorConfig {
         // set and rotated by the operator_account
         config: Option<Config>,
         operator_account: Option<address>,
+        is_certified: bool, // this flag is for revocation purposes
     }
 
     // TODO(valerini): add events here
@@ -44,6 +46,7 @@ module ValidatorConfig {
         move_to(account, ValidatorConfig {
             config: Option::none(),
             operator_account: Option::none(),
+            is_certified: true
         });
     }
 
@@ -156,6 +159,24 @@ module ValidatorConfig {
     // Never aborts
     public fun get_validator_network_address(config_ref: &Config): &vector<u8> {
         &config_ref.validator_network_address
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Proof of concept code used for Validator certification
+    ///////////////////////////////////////////////////////////////////////////
+
+    public fun decertify(account: &signer, addr: address) acquires ValidatorConfig {
+        Transaction::assert(Association::addr_is_association(Signer::address_of(account)), 1002);
+        borrow_global_mut<ValidatorConfig>(addr).is_certified = false;
+    }
+
+    public fun certify(account: &signer, addr: address) acquires ValidatorConfig {
+        Transaction::assert(Association::addr_is_association(Signer::address_of(account)), 1002);
+        borrow_global_mut<ValidatorConfig>(addr).is_certified = true;
+    }
+
+    public fun is_certified(addr: address): bool acquires ValidatorConfig {
+         exists<ValidatorConfig>(addr) && borrow_global<ValidatorConfig>(addr).is_certified
     }
 }
 }

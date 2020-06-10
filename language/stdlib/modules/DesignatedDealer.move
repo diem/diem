@@ -1,16 +1,16 @@
 address 0x0 {
 module DesignatedDealer {
+    use 0x0::Association;
+    use 0x0::Libra::{Self, Libra};
     use 0x0::LibraTimestamp;
     use 0x0::Vector;
     use 0x0::Transaction as Txn;
 
-    struct Dealer {
+    resource struct Dealer {
         /// Time window start in microseconds
         window_start: u64,
         /// The minted inflow during this time window
         window_inflow: u64,
-        /// Association grants
-        is_certified: bool,
         /// 0-indexed array of tier upperbounds
         tiers: vector<u64>
     }
@@ -20,14 +20,16 @@ module DesignatedDealer {
     // To-be designated-dealer called functions
     ///////////////////////////////////////////////////////////////////////////
 
-    public fun create_designated_dealer(
-    ): Dealer {
-        Dealer {
-            window_start: LibraTimestamp::now_microseconds(),
-            window_inflow: 0,
-            is_certified: true,
-            tiers: Vector::empty(),
-        }
+    public fun publish_designated_dealer_credential(blessed: &signer, dd: &signer) {
+        Association::assert_account_is_blessed(blessed);
+        move_to(
+            dd,
+            Dealer {
+                window_start: LibraTimestamp::now_microseconds(),
+                window_inflow: 0,
+                tiers: Vector::empty(),
+            }
+        )
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -35,8 +37,7 @@ module DesignatedDealer {
     ///////////////////////////////////////////////////////////////////////////
 
 
-    public fun add_tier(dealer: &mut Dealer, next_tier_upperbound: u64)
-    {
+    fun add_tier_(dealer: &mut Dealer, next_tier_upperbound: u64) {
         let tiers = &mut dealer.tiers;
         let number_of_tiers: u64 = Vector::length(tiers);
         // INVALID_TIER_ADDITION
@@ -49,8 +50,14 @@ module DesignatedDealer {
         Vector::push_back(tiers, next_tier_upperbound);
     }
 
-    public fun update_tier(dealer: &mut Dealer, tier_index: u64, new_upperbound: u64)
-    {
+    public fun add_tier(blessed: &signer, addr: address, tier_upperbound: u64
+    ) acquires Dealer {
+        Association::assert_account_is_blessed(blessed);
+        let dealer = borrow_global_mut<Dealer>(addr);
+        add_tier_(dealer, tier_upperbound)
+    }
+
+    fun update_tier_(dealer: &mut Dealer, tier_index: u64, new_upperbound: u64) {
         let tiers = &mut dealer.tiers;
         let number_of_tiers = Vector::length(tiers);
         // INVALID_TIER_INDEX
@@ -67,7 +74,15 @@ module DesignatedDealer {
         *tier_mut = new_upperbound;
     }
 
-    public fun tiered_mint(dealer: &mut Dealer, amount: u64, tier_index: u64): bool {
+    public fun update_tier(
+        blessed: &signer, addr: address, tier_index: u64, new_upperbound: u64
+    ) acquires Dealer {
+        Association::assert_account_is_blessed(blessed);
+        let dealer = borrow_global_mut<Dealer>(addr);
+        update_tier_(dealer, tier_index, new_upperbound)
+    }
+
+    fun tiered_mint_(dealer: &mut Dealer, amount: u64, tier_index: u64): bool {
         reset_window(dealer);
         let cur_inflow = *&dealer.window_inflow;
         let tiers = &mut dealer.tiers;
@@ -86,9 +101,25 @@ module DesignatedDealer {
         *tier_check
     }
 
-    public fun is_designated_dealer(dealer: &Dealer): bool
-    {
-        *&dealer.is_certified
+    public fun tiered_mint<CoinType>(
+        blessed: &signer, amount: u64, addr: address, tier_index: u64
+    ): Libra<CoinType> acquires Dealer {
+        Association::assert_account_is_blessed(blessed);
+
+        // INVALID_MINT_AMOUNT
+        Txn::assert(amount > 0, 6);
+
+        // NOT_A_DD
+        Txn::assert(exists_at(addr), 1);
+
+        let tier_check = tiered_mint_(borrow_global_mut<Dealer>(addr), amount, tier_index);
+        // INVALID_AMOUNT_FOR_TIER
+        Txn::assert(tier_check, 5);
+        Libra::mint<CoinType>(blessed, amount)
+    }
+
+    public fun exists_at(addr: address): bool {
+        exists<Dealer>(addr)
     }
 
     // If the time window starting at `dealer.window_start` and lasting for
@@ -101,7 +132,6 @@ module DesignatedDealer {
             dealer.window_inflow = 0;
         }
     }
-
 
     fun window_length(): u64 {
         // number of microseconds in a day
