@@ -9,7 +9,7 @@ license = "Apache-2.0"
 
 [dependencies]
 serde = { version = "1.0.111", features = ["derive"] }
-serde_json = "1.0.53"
+serde_json = "1.0.54"
 structopt = "0.3.14"
 anyhow = "1.0.31"
 colored-diff = "0.2.2"
