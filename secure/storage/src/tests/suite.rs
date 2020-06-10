@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{Error, Storage, Value};
+use crate::{BoxedStorage, CryptoStorage, Error, KVStorage, Value};
 use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Signature, Uniform};
 
 /// This suite contains tests for secure storage backends. We test the correct functionality
@@ -13,7 +13,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Signature,
 /// Note: this is required because: (i) vault tests cannot be run in the usual fashion (i.e., vault
 /// tests rely on first running the vault docker script in `docker/vault/run.sh`); and (ii) vault
 /// tests cannot currently be run in parallel, as each test uses the same vault instance.
-const STORAGE_TESTS: &[fn(&mut dyn Storage)] = &[
+const STORAGE_TESTS: &[fn(&mut BoxedStorage)] = &[
     test_create_and_get_non_existent_version,
     test_create_get_key_pair,
     test_create_key_pair_and_perform_rotations,
@@ -34,7 +34,7 @@ const U64_KEY: &str = "U64_Key";
 const CRYPTO_NAME: &str = "Test_Key_Name";
 
 /// Executes all storage tests on a given storage backend.
-pub fn execute_all_storage_tests(storage: &mut dyn Storage) {
+pub fn execute_all_storage_tests(storage: &mut BoxedStorage) {
     for test in STORAGE_TESTS.iter() {
         test(storage);
         storage.reset_and_clear().unwrap();
@@ -43,7 +43,7 @@ pub fn execute_all_storage_tests(storage: &mut dyn Storage) {
 
 /// This test tries to get and set non-existent keys in storage and asserts that the correct
 /// errors are returned on these operations.
-fn test_get_non_existent(storage: &mut dyn Storage) {
+fn test_get_non_existent(storage: &mut BoxedStorage) {
     assert_eq!(
         storage.get(CRYPTO_KEY).unwrap_err(),
         Error::KeyNotSet(CRYPTO_KEY.to_string())
@@ -56,7 +56,7 @@ fn test_get_non_existent(storage: &mut dyn Storage) {
 
 /// This test stores various key/value pairs in storage, updates them, retrieves the values to
 /// ensure the correct value types are returned.
-fn test_get_set(storage: &mut dyn Storage) {
+fn test_get_set(storage: &mut BoxedStorage) {
     let crypto_private_1 = Ed25519PrivateKey::generate_for_testing();
     let crypto_private_2 = Ed25519PrivateKey::generate_for_testing();
     let u64_1 = 10;
@@ -102,7 +102,7 @@ fn test_get_set(storage: &mut dyn Storage) {
 }
 
 /// This test ensures that a key can reasonably be imported.
-fn test_import_key(storage: &mut dyn Storage) {
+fn test_import_key(storage: &mut BoxedStorage) {
     let key_name = "key";
     let imported_key_name = "imported_key";
 
@@ -155,7 +155,7 @@ fn test_import_key(storage: &mut dyn Storage) {
 
 /// This test stores different types of values into storage, retrieves them, and asserts
 /// that the value unwrap functions return an unexpected type error on an incorrect unwrap.
-fn test_verify_incorrect_value_types(storage: &mut dyn Storage) {
+fn test_verify_incorrect_value_types(storage: &mut BoxedStorage) {
     let crypto_value = Value::Ed25519PrivateKey(Ed25519PrivateKey::generate_for_testing());
     let u64_value = Value::U64(10);
 
@@ -180,7 +180,7 @@ fn test_verify_incorrect_value_types(storage: &mut dyn Storage) {
 /// This test: (i) creates a new named test key pair; (ii) retrieves the public key for
 /// the created key pair; (iii) compares the public keys returned by the create call and the
 /// retrieval call.
-fn test_create_get_key_pair(storage: &mut dyn Storage) {
+fn test_create_get_key_pair(storage: &mut BoxedStorage) {
     let public_key = storage.create_key(CRYPTO_NAME).unwrap();
     let retrieved_public_key_response = storage.get_public_key(CRYPTO_NAME).unwrap();
     assert_eq!(public_key, retrieved_public_key_response.public_key);
@@ -188,7 +188,7 @@ fn test_create_get_key_pair(storage: &mut dyn Storage) {
 
 /// This test tries to get the public key of a key pair that has not yet been created. As
 /// such, it asserts that this attempt fails.
-fn test_get_uncreated_key_pair(storage: &mut dyn Storage) {
+fn test_get_uncreated_key_pair(storage: &mut BoxedStorage) {
     let key_pair_name = "Non-existent Key";
     assert!(
         storage.get_public_key(key_pair_name).is_err(),
@@ -197,7 +197,7 @@ fn test_get_uncreated_key_pair(storage: &mut dyn Storage) {
 }
 
 /// Verify HashValues work correctly
-fn test_hash_value(storage: &mut dyn Storage) {
+fn test_hash_value(storage: &mut BoxedStorage) {
     let hash_value_key = "HashValue";
     let hash_value_value = HashValue::random();
 
@@ -214,13 +214,13 @@ fn test_hash_value(storage: &mut dyn Storage) {
 }
 
 /// This test verifies the storage engine is up and running.
-fn test_ensure_storage_is_available(storage: &mut dyn Storage) {
+fn test_ensure_storage_is_available(storage: &mut BoxedStorage) {
     storage.available().unwrap();
 }
 
 /// This test creates a new named key pair and attempts to get a non-existent version of the public
 /// and private keys. As such, these calls should fail.
-fn test_create_and_get_non_existent_version(storage: &mut dyn Storage) {
+fn test_create_and_get_non_existent_version(storage: &mut BoxedStorage) {
     // Create new named key pair
     let _ = storage.create_key(CRYPTO_NAME).unwrap();
 
@@ -234,7 +234,7 @@ fn test_create_and_get_non_existent_version(storage: &mut dyn Storage) {
 
 /// This test creates a new key pair and performs multiple key rotations, ensuring that
 /// storage updates key pair versions appropriately.
-fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
+fn test_create_key_pair_and_perform_rotations(storage: &mut BoxedStorage) {
     let num_rotations = 10;
 
     let mut public_key = storage.create_key(CRYPTO_NAME).unwrap();
@@ -258,7 +258,7 @@ fn test_create_key_pair_and_perform_rotations(storage: &mut dyn Storage) {
 /// This test creates a new key pair, signs a message using the key pair, rotates the key pair,
 /// re-signs the message using the previous key pair version, and asserts the same signature is
 /// produced.
-fn test_create_sign_rotate_sign(storage: &mut dyn Storage) {
+fn test_create_sign_rotate_sign(storage: &mut BoxedStorage) {
     // Generate new key pair
     let public_key = storage.create_key(CRYPTO_NAME).unwrap();
 
@@ -278,7 +278,7 @@ fn test_create_sign_rotate_sign(storage: &mut dyn Storage) {
 }
 
 /// This test verifies that timestamps increase with successive writes
-fn test_incremental_timestamp(storage: &mut dyn Storage) {
+fn test_incremental_timestamp(storage: &mut BoxedStorage) {
     let key = "timestamp_u64";
     let value0 = 442;
     let value1 = 450;

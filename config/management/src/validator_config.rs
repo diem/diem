@@ -8,7 +8,7 @@ use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
 };
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
-use libra_secure_storage::{Storage, Value};
+use libra_secure_storage::{BoxedStorage, CryptoStorage, KVStorage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
     account_address::{self, AccountAddress},
@@ -35,16 +35,16 @@ pub struct ValidatorConfig {
 
 impl ValidatorConfig {
     pub fn execute(self) -> Result<Transaction, Error> {
-        let mut local: Box<dyn Storage> = self.backends.local.try_into()?;
+        let mut local: BoxedStorage = self.backends.local.try_into()?;
         local
             .available()
             .map_err(|e| Error::LocalStorageUnavailable(e.to_string()))?;
 
         // Step 1) Retrieve keys from local storage
-        let consensus_key = ed25519_from_storage(CONSENSUS_KEY, local.as_mut())?;
-        let fullnode_network_key = x25519_from_storage(FULLNODE_NETWORK_KEY, local.as_mut())?;
-        let validator_network_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, local.as_mut())?;
-        let operator_key = ed25519_from_storage(OPERATOR_KEY, local.as_mut())?;
+        let consensus_key = ed25519_from_storage(CONSENSUS_KEY, &local)?;
+        let fullnode_network_key = x25519_from_storage(FULLNODE_NETWORK_KEY, &local)?;
+        let validator_network_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, &local)?;
+        let operator_key = ed25519_from_storage(OPERATOR_KEY, &local)?;
 
         // append ln-noise-ik and ln-handshake protocols to base network addresses
 
@@ -101,7 +101,7 @@ impl ValidatorConfig {
         // Step 3) Submit to remote storage
 
         if let Some(remote) = self.backends.remote {
-            let mut remote: Box<dyn Storage> = remote.try_into()?;
+            let mut remote: BoxedStorage = remote.try_into()?;
             remote
                 .available()
                 .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
@@ -117,7 +117,7 @@ impl ValidatorConfig {
 
 fn ed25519_from_storage(
     key_name: &'static str,
-    storage: &dyn Storage,
+    storage: &BoxedStorage,
 ) -> Result<Ed25519PublicKey, Error> {
     Ok(storage
         .get_public_key(key_name)
@@ -127,7 +127,7 @@ fn ed25519_from_storage(
 
 fn x25519_from_storage(
     key_name: &'static str,
-    storage: &dyn Storage,
+    storage: &BoxedStorage,
 ) -> Result<x25519::PublicKey, Error> {
     let edkey = ed25519_from_storage(key_name, storage)?;
     x25519::PublicKey::from_ed25519_public_bytes(&edkey.to_bytes())

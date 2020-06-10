@@ -3,7 +3,7 @@
 
 use crate::error::Error;
 use libra_config::config::{self, GitHubConfig, OnDiskStorageConfig, Token, VaultConfig};
-use libra_secure_storage::Storage;
+use libra_secure_storage::BoxedStorage;
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
@@ -129,10 +129,10 @@ impl TryInto<config::SecureBackend> for SecureBackend {
     }
 }
 
-impl TryInto<Box<dyn Storage>> for SecureBackend {
+impl TryInto<BoxedStorage> for SecureBackend {
     type Error = Error;
 
-    fn try_into(self) -> Result<Box<dyn Storage>, Error> {
+    fn try_into(self) -> Result<BoxedStorage, Error> {
         let config: config::SecureBackend = self.try_into()?;
         Ok((&config).into())
     }
@@ -212,7 +212,7 @@ mod tests {
         assert!(storage(vault).is_err());
     }
 
-    fn storage(s: &str) -> Result<Box<dyn Storage>, Error> {
+    fn storage(s: &str) -> Result<BoxedStorage, Error> {
         let management_backend: SecureBackend = s.try_into()?;
         management_backend.try_into()
     }

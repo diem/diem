@@ -30,12 +30,12 @@ pub use crate::{
     namespaced_storage::NamespacedStorage,
     on_disk::{OnDiskStorage, OnDiskStorageInternal},
     policy::{Capability, Identity, Permission, Policy},
-    storage::{BoxStorage, Storage},
+    storage::BoxedStorage,
     value::Value,
     vault::VaultStorage,
 };
 
-impl From<&SecureBackend> for Box<dyn Storage> {
+impl From<&SecureBackend> for BoxedStorage {
     fn from(backend: &SecureBackend) -> Self {
         match backend {
             SecureBackend::GitHub(config) => {
@@ -45,21 +45,21 @@ impl From<&SecureBackend> for Box<dyn Storage> {
                     config.token.read_token().expect("Unable to read token"),
                 );
                 if let Some(namespace) = &config.namespace {
-                    Box::new(NamespacedStorage::new(storage, namespace.clone()))
+                    BoxedStorage::from(NamespacedStorage::new(Box::new(storage), namespace.clone()))
                 } else {
-                    Box::new(storage)
+                    BoxedStorage::from(storage)
                 }
             }
-            SecureBackend::InMemoryStorage => Box::new(InMemoryStorage::new()),
+            SecureBackend::InMemoryStorage => BoxedStorage::from(InMemoryStorage::new()),
             SecureBackend::OnDiskStorage(config) => {
                 let storage = OnDiskStorage::new(config.path());
                 if let Some(namespace) = &config.namespace {
-                    Box::new(NamespacedStorage::new(storage, namespace.clone()))
+                    BoxedStorage::from(NamespacedStorage::new(Box::new(storage), namespace.clone()))
                 } else {
-                    Box::new(storage)
+                    BoxedStorage::from(storage)
                 }
             }
-            SecureBackend::Vault(config) => Box::new(VaultStorage::new(
+            SecureBackend::Vault(config) => BoxedStorage::from(VaultStorage::new(
                 config.server.clone(),
                 config.token.read_token().expect("Unable to read token"),
                 config.namespace.clone(),

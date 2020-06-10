@@ -8,7 +8,9 @@ use libra_global_constants::{
     OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_network_address::NetworkAddress;
-use libra_secure_storage::{NamespacedStorage, OnDiskStorage, Storage, Value};
+use libra_secure_storage::{
+    BoxedStorage, CryptoStorage, KVStorage, NamespacedStorage, OnDiskStorage, Value,
+};
 use libra_types::{account_address::AccountAddress, transaction::Transaction, waypoint::Waypoint};
 use std::{fs::File, path::Path};
 use structopt::StructOpt;
@@ -25,9 +27,9 @@ impl StorageHelper {
         Self { temppath }
     }
 
-    pub fn storage(&self, namespace: String) -> Box<dyn Storage> {
+    pub fn storage(&self, namespace: String) -> BoxedStorage {
         let storage = OnDiskStorage::new(self.temppath.path().to_path_buf());
-        Box::new(NamespacedStorage::new(storage, namespace))
+        BoxedStorage::from(NamespacedStorage::new(Box::new(storage), namespace))
     }
 
     pub fn path(&self) -> &Path {

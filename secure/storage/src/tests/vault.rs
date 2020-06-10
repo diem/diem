@@ -4,7 +4,7 @@
 use crate::{
     tests::suite,
     vault::{VaultEngine, VaultStorage},
-    Capability, CryptoStorage, Error, Identity, KVStorage, Permission, Policy, Value,
+    BoxedStorage, Capability, CryptoStorage, Error, Identity, KVStorage, Permission, Policy, Value,
 };
 use libra_crypto::{HashValue, Signature};
 
@@ -43,16 +43,19 @@ fn execute_storage_tests_vault() {
 
 /// Runs the test suite on a VaultStorage instance that does not use distinct namespaces
 fn test_suite_no_namespaces() {
-    let mut storage = create_vault_with_namespace(None);
+    let mut storage = BoxedStorage::from(create_vault_with_namespace(None));
     suite::execute_all_storage_tests(&mut storage);
 }
 
 /// Runs the test suite on a VaultStorage instance that supports multiple distinct namespaces.
 /// Tests should be able to run across namespaces without interfering.
 fn test_suite_multiple_namespaces() {
-    let mut storage_1 = create_vault_with_namespace(Some(VAULT_NAMESPACE_1.into()));
-    let mut storage_2 = create_vault_with_namespace(Some(VAULT_NAMESPACE_2.into()));
-    let mut storage_3 = create_vault_with_namespace(Some(VAULT_NAMESPACE_3.into()));
+    let mut storage_1 =
+        BoxedStorage::from(create_vault_with_namespace(Some(VAULT_NAMESPACE_1.into())));
+    let mut storage_2 =
+        BoxedStorage::from(create_vault_with_namespace(Some(VAULT_NAMESPACE_2.into())));
+    let mut storage_3 =
+        BoxedStorage::from(create_vault_with_namespace(Some(VAULT_NAMESPACE_3.into())));
 
     suite::execute_all_storage_tests(&mut storage_1);
     suite::execute_all_storage_tests(&mut storage_2);

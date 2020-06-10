@@ -26,7 +26,7 @@ use libra_crypto::{
 };
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_logger::{error, info};
-use libra_secure_storage::Storage;
+use libra_secure_storage::{CryptoStorage, KVStorage};
 use libra_secure_time::TimeService;
 use libra_types::{
     account_address::AccountAddress,
@@ -97,7 +97,7 @@ pub struct KeyManager<LI, S, T> {
 impl<LI, S, T> KeyManager<LI, S, T>
 where
     LI: LibraInterface,
-    S: Storage,
+    S: KVStorage + CryptoStorage,
     T: TimeService,
 {
     pub fn new(

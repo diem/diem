@@ -247,6 +247,7 @@ pub struct SingleBackend {
 pub mod tests {
     use super::*;
     use crate::storage_helper::StorageHelper;
+    use libra_secure_storage::{CryptoStorage, KVStorage};
     use libra_types::account_address::AccountAddress;
     use std::{
         fs::File,

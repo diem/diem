@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{tests::suite, GitHubStorage};
+use crate::{tests::suite, BoxedStorage, GitHubStorage};
 
 const OWNER: &str = "OWNER";
 const REPOSITORY: &str = "REPOSITORY";
@@ -13,10 +13,10 @@ const TOKEN: &str = "TOKEN";
 #[ignore]
 #[test]
 fn github_storage() {
-    let mut storage = Box::new(GitHubStorage::new(
+    let mut storage = BoxedStorage::from(GitHubStorage::new(
         OWNER.into(),
         REPOSITORY.into(),
         TOKEN.into(),
     ));
-    suite::execute_all_storage_tests(storage.as_mut());
+    suite::execute_all_storage_tests(&mut storage);
 }

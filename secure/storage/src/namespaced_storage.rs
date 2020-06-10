@@ -7,12 +7,12 @@ use crate::{CryptoKVStorage, Error, GetResponse, KVStorage, Value};
 /// effectively prefixing all keys with then namespace value and "/" so a namespace of foo and a
 /// key of bar becomes "foo/bar". Without a namespace, the key would just be "bar". This matches
 /// how this library implements namespaces for Vault.
-pub struct NamespacedStorage<T> {
+pub struct NamespacedStorage {
     namespace: String,
-    inner: T,
+    inner: Box<dyn KVStorage>,
 }
 
-impl<T: KVStorage> KVStorage for NamespacedStorage<T> {
+impl KVStorage for NamespacedStorage {
     fn available(&self) -> Result<(), Error> {
         self.inner.available()
     }
@@ -32,8 +32,8 @@ impl<T: KVStorage> KVStorage for NamespacedStorage<T> {
     }
 }
 
-impl<T> NamespacedStorage<T> {
-    pub fn new(storage: T, namespace: String) -> Self {
+impl NamespacedStorage {
+    pub fn new(storage: Box<dyn KVStorage>, namespace: String) -> Self {
         NamespacedStorage {
             namespace,
             inner: storage,
@@ -45,7 +45,7 @@ impl<T> NamespacedStorage<T> {
     }
 }
 
-impl<T: KVStorage> CryptoKVStorage for NamespacedStorage<T> {}
+impl CryptoKVStorage for NamespacedStorage {}
 
 #[cfg(test)]
 mod test {
@@ -64,10 +64,10 @@ mod test {
         let mut default = OnDiskStorage::new(path_buf.clone());
 
         let storage = OnDiskStorage::new(path_buf.clone());
-        let mut nss0 = NamespacedStorage::new(storage, ns0.into());
+        let mut nss0 = NamespacedStorage::new(Box::new(storage), ns0.into());
 
         let storage = OnDiskStorage::new(path_buf);
-        let mut nss1 = NamespacedStorage::new(storage, ns1.into());
+        let mut nss1 = NamespacedStorage::new(Box::new(storage), ns1.into());
 
         default.set(key, Value::U64(0)).unwrap();
         nss0.set(key, Value::U64(1)).unwrap();
@@ -88,10 +88,10 @@ mod test {
         let default = OnDiskStorage::new(path_buf.clone());
 
         let storage = OnDiskStorage::new(path_buf.clone());
-        let mut nss = NamespacedStorage::new(storage, ns.into());
+        let mut nss = NamespacedStorage::new(Box::new(storage), ns.into());
 
         let storage = OnDiskStorage::new(path_buf);
-        let another_nss = NamespacedStorage::new(storage, ns.into());
+        let another_nss = NamespacedStorage::new(Box::new(storage), ns.into());
 
         nss.set(key, Value::U64(1)).unwrap();
         default.get(key).unwrap_err();

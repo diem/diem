@@ -14,7 +14,7 @@ use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_key_manager::libra_interface::{JsonRpcLibraInterface, LibraInterface};
 use libra_logger::prelude::*;
-use libra_secure_storage::{Storage, Value};
+use libra_secure_storage::{BoxedStorage, CryptoStorage, KVStorage, Value};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::{
@@ -1298,7 +1298,7 @@ fn test_key_manager_consensus_rotation() {
 
     // Bootstrap secure storage by initializing the keys required by the key manager.
     // TODO(joshlind): set these keys using config manager when initialization is supported.
-    let mut storage: Box<dyn Storage> = (&key_manager_config.secure_backend).try_into().unwrap();
+    let mut storage: BoxedStorage = (&key_manager_config.secure_backend).try_into().unwrap();
     storage.create_key("consensus_previous").unwrap();
     let operator_private = node_config
         .test

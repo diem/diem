@@ -3,7 +3,7 @@
 
 use crate::{error::Error, SecureBackends};
 use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_secure_storage::{Storage, Value};
+use libra_secure_storage::{BoxedStorage, CryptoStorage, KVStorage, Value};
 use std::convert::TryInto;
 use structopt::StructOpt;
 
@@ -60,7 +60,7 @@ fn submit_key(
     account_name: Option<&'static str>,
     secure_backends: SecureBackends,
 ) -> Result<Ed25519PublicKey, Error> {
-    let mut local: Box<dyn Storage> = secure_backends.local.try_into()?;
+    let mut local: BoxedStorage = secure_backends.local.try_into()?;
     local
         .available()
         .map_err(|e| Error::LocalStorageUnavailable(e.to_string()))?;
@@ -79,7 +79,7 @@ fn submit_key(
 
     if let Some(remote) = secure_backends.remote {
         let key = Value::Ed25519PublicKey(key.clone());
-        let mut remote: Box<dyn Storage> = remote.try_into()?;
+        let mut remote: BoxedStorage = remote.try_into()?;
         remote
             .available()
             .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
