@@ -110,6 +110,7 @@ edition = "2018"
 
 [dependencies]
 libra-types = {{ path = "../libra-types", version = "0.1.0" }}
+serde_bytes = "0.11"
 "#,
     )
     .unwrap();

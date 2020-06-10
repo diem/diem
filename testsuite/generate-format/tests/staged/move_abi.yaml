@@ -15,8 +15,7 @@ ScriptABI:
   STRUCT:
     - name: STR
     - doc: STR
-    - code:
-        SEQ: U8
+    - code: BYTES
     - ty_args:
         SEQ:
           TYPENAME: TypeArgumentABI

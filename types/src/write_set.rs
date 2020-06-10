@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Eq, Hash, PartialEq, Serialize, Deserialize)]
 pub enum WriteOp {
     Deletion,
-    Value(Vec<u8>),
+    Value(#[serde(with = "serde_bytes")] Vec<u8>),
 }
 
 impl WriteOp {

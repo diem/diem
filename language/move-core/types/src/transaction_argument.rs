@@ -11,7 +11,7 @@ pub enum TransactionArgument {
     U64(u64),
     U128(u128),
     Address(AccountAddress),
-    U8Vector(Vec<u8>),
+    U8Vector(#[serde(with = "serde_bytes")] Vec<u8>),
     Bool(bool),
 }
 

@@ -47,6 +47,7 @@ use std::fmt;
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccessPath {
     pub address: AccountAddress,
+    #[serde(with = "serde_bytes")]
     pub path: Vec<u8>,
 }
 
