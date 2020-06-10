@@ -13,6 +13,7 @@ use anyhow::anyhow;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
 use docgen::docgen::Docgen;
 use handlebars::Handlebars;
+use itertools::Itertools;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
 use move_lang::find_move_filenames;
@@ -211,6 +212,13 @@ fn calculate_deps(sources: &[String], input_deps: &[String]) -> anyhow::Result<V
     for src in sources.iter() {
         calculate_deps_recursively(Path::new(src), &file_map, &mut visited, &mut deps)?;
     }
+    // Remove input sources from deps. They can end here because our dep analysis is an
+    // over-approximation and for example cannot distinguish between references inside
+    // and outside comments.
+    let deps = deps
+        .into_iter()
+        .filter(|d| !sources.contains(d))
+        .collect_vec();
     Ok(deps)
 }
 
@@ -226,6 +234,7 @@ fn calculate_deps_recursively(
     if !visited.insert(path.to_string_lossy().to_string()) {
         return Ok(());
     }
+    debug!("including `{}`", path.display());
     for dep in extract_matches(path, &*REX)? {
         if let Some(dep_path) = file_map.get(&dep) {
             let dep_str = dep_path.to_string_lossy().to_string();
