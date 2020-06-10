@@ -28,7 +28,7 @@ use spec_lang::{
     emit, emitln,
     env::{
         GlobalEnv, SpecVarId, ABORTS_IF_IS_PARTIAL_PRAGMA, ABORTS_IF_IS_STRICT_PRAGMA,
-        REQUIRES_IF_ABORTS,
+        REQUIRES_IF_ABORTS, SMOKE_TEST_PRAGMA,
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
@@ -391,6 +391,18 @@ impl<'env> SpecTranslator<'env> {
                 emit!(self.writer, ";")
             });
             emitln!(self.writer);
+        }
+
+        // Smoke test mode
+        if func_target.is_pragma_true(SMOKE_TEST_PRAGMA, || false) {
+            // Generates `ensure $abort_flag;` to check if the move
+            // prover can prove `ensures false;` because the function
+            // always aborts.
+            *self.in_ensures.borrow_mut() = true;
+            emit!(self.writer, "ensures $abort_flag;\n");
+            *self.in_ensures.borrow_mut() = false;
+            // Ignore the post-condition specifications for this function
+            return;
         }
 
         // Generate aborts_if. Logically, if we have abort conditions P1..Pn, we have
