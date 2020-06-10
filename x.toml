@@ -56,6 +56,7 @@ members = [
     "language/ir-testsuite",
     "language/move-lang/functional-tests",
     "language/move-prover/test-utils",
+    "language/transaction-builder-generator",
     "language/tools/test-generation",
     "language/tools/utils",
     "language/vm/serializer-tests",
