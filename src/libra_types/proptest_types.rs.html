@@ -1077,6 +1077,8 @@
 <span id="1077">1077</span>
 <span id="1078">1078</span>
 <span id="1079">1079</span>
+<span id="1080">1080</span>
+<span id="1081">1081</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1084,7 +1086,9 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">account_address</span>::{<span class="self">self</span>, <span class="ident">AccountAddress</span>},
-    <span class="ident">account_config</span>::{<span class="ident">AccountResource</span>, <span class="ident">BalanceResource</span>},
+    <span class="ident">account_config</span>::{
+        <span class="ident">AccountResource</span>, <span class="ident">BalanceResource</span>, <span class="ident">KeyRotationCapabilityResource</span>, <span class="ident">WithdrawCapabilityResource</span>,
+    },
     <span class="ident">account_state_blob</span>::<span class="ident">AccountStateBlob</span>,
     <span class="ident">block_info</span>::{<span class="ident">BlockInfo</span>, <span class="ident">Round</span>},
     <span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>,
@@ -1744,8 +1748,8 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Arbitrary</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">AccountResourceGen</span> {
-    <span class="ident">delegated_key_rotation_capability</span>: <span class="ident">bool</span>,
-    <span class="ident">delegated_withdrawal_capability</span>: <span class="ident">bool</span>,
+    <span class="ident">withdrawal_capability</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WithdrawCapabilityResource</span><span class="op">&gt;</span>,
+    <span class="ident">key_rotation_capability</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">KeyRotationCapabilityResource</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">AccountResourceGen</span> {
@@ -1759,8 +1763,8 @@
         <span class="ident">AccountResource</span>::<span class="ident">new</span>(
             <span class="ident">account_info</span>.<span class="ident">sequence_number</span>,
             <span class="ident">account_info</span>.<span class="ident">public_key</span>.<span class="ident">to_bytes</span>().<span class="ident">to_vec</span>(),
-            <span class="self">self</span>.<span class="ident">delegated_key_rotation_capability</span>,
-            <span class="self">self</span>.<span class="ident">delegated_withdrawal_capability</span>,
+            <span class="self">self</span>.<span class="ident">withdrawal_capability</span>,
+            <span class="self">self</span>.<span class="ident">key_rotation_capability</span>,
             <span class="ident">account_info</span>.<span class="ident">sent_event_handle</span>.<span class="ident">clone</span>(),
             <span class="ident">account_info</span>.<span class="ident">received_event_handle</span>.<span class="ident">clone</span>(),
             <span class="bool-val">false</span>,

@@ -684,8 +684,8 @@
             <span class="ident">authentication_key</span>: <span class="ident">BytesView</span>::<span class="ident">from</span>(<span class="ident">account</span>.<span class="ident">authentication_key</span>()),
             <span class="ident">sent_events_key</span>: <span class="ident">BytesView</span>::<span class="ident">from</span>(<span class="ident">account</span>.<span class="ident">sent_events</span>().<span class="ident">key</span>().<span class="ident">as_bytes</span>()),
             <span class="ident">received_events_key</span>: <span class="ident">BytesView</span>::<span class="ident">from</span>(<span class="ident">account</span>.<span class="ident">received_events</span>().<span class="ident">key</span>().<span class="ident">as_bytes</span>()),
-            <span class="ident">delegated_key_rotation_capability</span>: <span class="ident">account</span>.<span class="ident">delegated_key_rotation_capability</span>(),
-            <span class="ident">delegated_withdrawal_capability</span>: <span class="ident">account</span>.<span class="ident">delegated_withdrawal_capability</span>(),
+            <span class="ident">delegated_key_rotation_capability</span>: <span class="ident">account</span>.<span class="ident">has_delegated_key_rotation_capability</span>(),
+            <span class="ident">delegated_withdrawal_capability</span>: <span class="ident">account</span>.<span class="ident">has_delegated_withdrawal_capability</span>(),
             <span class="ident">role</span>: <span class="ident">AccountRoleView</span>::<span class="ident">from</span>(<span class="ident">account_role</span>),
         }
     }

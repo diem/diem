@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["account",""],["association_capability",""],["balance",""],["currency_info",""],["role",""],["vasp",""]]});
+initSidebarItems({"mod":[["account",""],["association_capability",""],["balance",""],["currency_info",""],["key_rotation_capability",""],["role",""],["vasp",""],["withdraw_capability",""]]});

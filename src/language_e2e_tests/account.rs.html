@@ -1024,6 +1024,63 @@
 <span id="1024">1024</span>
 <span id="1025">1025</span>
 <span id="1026">1026</span>
+<span id="1027">1027</span>
+<span id="1028">1028</span>
+<span id="1029">1029</span>
+<span id="1030">1030</span>
+<span id="1031">1031</span>
+<span id="1032">1032</span>
+<span id="1033">1033</span>
+<span id="1034">1034</span>
+<span id="1035">1035</span>
+<span id="1036">1036</span>
+<span id="1037">1037</span>
+<span id="1038">1038</span>
+<span id="1039">1039</span>
+<span id="1040">1040</span>
+<span id="1041">1041</span>
+<span id="1042">1042</span>
+<span id="1043">1043</span>
+<span id="1044">1044</span>
+<span id="1045">1045</span>
+<span id="1046">1046</span>
+<span id="1047">1047</span>
+<span id="1048">1048</span>
+<span id="1049">1049</span>
+<span id="1050">1050</span>
+<span id="1051">1051</span>
+<span id="1052">1052</span>
+<span id="1053">1053</span>
+<span id="1054">1054</span>
+<span id="1055">1055</span>
+<span id="1056">1056</span>
+<span id="1057">1057</span>
+<span id="1058">1058</span>
+<span id="1059">1059</span>
+<span id="1060">1060</span>
+<span id="1061">1061</span>
+<span id="1062">1062</span>
+<span id="1063">1063</span>
+<span id="1064">1064</span>
+<span id="1065">1065</span>
+<span id="1066">1066</span>
+<span id="1067">1067</span>
+<span id="1068">1068</span>
+<span id="1069">1069</span>
+<span id="1070">1070</span>
+<span id="1071">1071</span>
+<span id="1072">1072</span>
+<span id="1073">1073</span>
+<span id="1074">1074</span>
+<span id="1075">1075</span>
+<span id="1076">1076</span>
+<span id="1077">1077</span>
+<span id="1078">1078</span>
+<span id="1079">1079</span>
+<span id="1080">1080</span>
+<span id="1081">1081</span>
+<span id="1082">1082</span>
+<span id="1083">1083</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1038,7 +1095,8 @@
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">account_config</span>::{
         <span class="self">self</span>, <span class="ident">from_currency_code_string</span>, <span class="ident">type_tag_for_currency_code</span>, <span class="ident">AccountResource</span>,
-        <span class="ident">BalanceResource</span>, <span class="ident">ReceivedPaymentEvent</span>, <span class="ident">SentPaymentEvent</span>, <span class="ident">COIN1_NAME</span>, <span class="ident">COIN2_NAME</span>, <span class="ident">LBR_NAME</span>,
+        <span class="ident">BalanceResource</span>, <span class="ident">KeyRotationCapabilityResource</span>, <span class="ident">ReceivedPaymentEvent</span>, <span class="ident">SentPaymentEvent</span>,
+        <span class="ident">WithdrawCapabilityResource</span>, <span class="ident">COIN1_NAME</span>, <span class="ident">COIN2_NAME</span>, <span class="ident">LBR_NAME</span>,
     },
     <span class="ident">event</span>::<span class="ident">EventHandle</span>,
     <span class="ident">transaction</span>::{
@@ -1186,7 +1244,7 @@
     }
 
     <span class="comment">// TODO: plug in the account type</span>
-    <span class="kw">fn</span> <span class="ident">make_access_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">tag</span>: <span class="ident">StructTag</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccessPath</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_access_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">tag</span>: <span class="ident">StructTag</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccessPath</span> {
         <span class="comment">// TODO: we need a way to get the type (FatStructType) of the Account in place</span>
         <span class="kw">let</span> <span class="ident">resource_tag</span> <span class="op">=</span> <span class="ident">ResourceKey</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">addr</span>, <span class="ident">tag</span>);
         <span class="ident">AccessPath</span>::<span class="ident">resource_access_path</span>(<span class="kw-2">&amp;</span><span class="ident">resource_tag</span>)
@@ -1403,7 +1461,7 @@
             <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">address</span>(),
             <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">script</span>),
             <span class="ident">sequence_number</span>,
-            <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span>,
+            <span class="ident">gas_costs</span>::<span class="ident">TXN_RESERVED</span> <span class="op">*</span> <span class="number">2</span>,
             <span class="number">0</span>, <span class="comment">// gas price</span>
             <span class="ident">LBR_NAME</span>.<span class="ident">to_owned</span>(),
         )
@@ -1690,9 +1748,9 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AccountData</span> {
     <span class="ident">account</span>: <span class="ident">Account</span>,
+    <span class="ident">withdrawal_capability</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">WithdrawCapability</span><span class="op">&gt;</span>,
+    <span class="ident">key_rotation_capability</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">KeyRotationCapability</span><span class="op">&gt;</span>,
     <span class="ident">sequence_number</span>: <span class="ident">u64</span>,
-    <span class="ident">delegated_key_rotation_capability</span>: <span class="ident">bool</span>,
-    <span class="ident">delegated_withdrawal_capability</span>: <span class="ident">bool</span>,
     <span class="ident">sent_events</span>: <span class="ident">EventHandle</span>,
     <span class="ident">received_events</span>: <span class="ident">EventHandle</span>,
     <span class="ident">is_frozen</span>: <span class="ident">bool</span>,
@@ -1755,8 +1813,6 @@
             <span class="ident">sequence_number</span>,
             <span class="number">0</span>,
             <span class="number">0</span>,
-            <span class="bool-val">false</span>,
-            <span class="bool-val">false</span>,
             <span class="ident">account_specifier</span>,
             <span class="bool-val">false</span>,
         )
@@ -1789,8 +1845,6 @@
         <span class="ident">sequence_number</span>: <span class="ident">u64</span>,
         <span class="ident">sent_events_count</span>: <span class="ident">u64</span>,
         <span class="ident">received_events_count</span>: <span class="ident">u64</span>,
-        <span class="ident">delegated_key_rotation_capability</span>: <span class="ident">bool</span>,
-        <span class="ident">delegated_withdrawal_capability</span>: <span class="ident">bool</span>,
         <span class="ident">account_specifier</span>: <span class="ident">AccountRoleSpecifier</span>,
         <span class="ident">is_frozen</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -1799,12 +1853,12 @@
         <span class="self">Self</span> {
             <span class="ident">account_role</span>: <span class="ident">AccountRole</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">account</span>.<span class="ident">address</span>(), <span class="ident">account_specifier</span>),
             <span class="ident">event_generator</span>: <span class="ident">EventHandleGenerator</span>::<span class="ident">new_with_event_count</span>(<span class="kw-2">*</span><span class="ident">account</span>.<span class="ident">address</span>(), <span class="number">2</span>),
+            <span class="ident">withdrawal_capability</span>: <span class="prelude-val">Some</span>(<span class="ident">WithdrawCapability</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">account</span>.<span class="ident">address</span>())),
+            <span class="ident">key_rotation_capability</span>: <span class="prelude-val">Some</span>(<span class="ident">KeyRotationCapability</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">account</span>.<span class="ident">address</span>())),
             <span class="ident">account</span>,
             <span class="ident">balances</span>,
             <span class="ident">sequence_number</span>,
             <span class="ident">is_frozen</span>,
-            <span class="ident">delegated_key_rotation_capability</span>,
-            <span class="ident">delegated_withdrawal_capability</span>,
             <span class="ident">sent_events</span>: <span class="ident">new_event_handle</span>(<span class="ident">sent_events_count</span>),
             <span class="ident">received_events</span>: <span class="ident">new_event_handle</span>(<span class="ident">received_events_count</span>),
         }
@@ -1871,8 +1925,12 @@
             <span class="ident">ty_args</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">layout</span>: <span class="macro">vec</span><span class="macro">!</span>[
                 <span class="ident">FatType</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">FatType</span>::<span class="ident">U8</span>)),
-                <span class="ident">FatType</span>::<span class="ident">Bool</span>,
-                <span class="ident">FatType</span>::<span class="ident">Bool</span>,
+                <span class="ident">FatType</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">FatType</span>::<span class="ident">Struct</span>(<span class="ident">Box</span>::<span class="ident">new</span>(
+                    <span class="ident">WithdrawCapability</span>::<span class="ident">type_</span>(),
+                )))),
+                <span class="ident">FatType</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">FatType</span>::<span class="ident">Struct</span>(<span class="ident">Box</span>::<span class="ident">new</span>(
+                    <span class="ident">KeyRotationCapability</span>::<span class="ident">type_</span>(),
+                )))),
                 <span class="ident">FatType</span>::<span class="ident">Struct</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="self">Self</span>::<span class="ident">event_handle_type</span>(<span class="ident">FatType</span>::<span class="ident">Struct</span>(
                     <span class="ident">Box</span>::<span class="ident">new</span>(<span class="self">Self</span>::<span class="ident">sent_payment_event_type</span>()),
                 )))),
@@ -1904,8 +1962,8 @@
             <span class="macro">vec</span><span class="macro">!</span>[
                 <span class="comment">// TODO: this needs to compute the auth key instead</span>
                 <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">AuthenticationKey</span>::<span class="ident">ed25519</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">account</span>.<span class="ident">pubkey</span>).<span class="ident">to_vec</span>()),
-                <span class="ident">Value</span>::<span class="ident">bool</span>(<span class="self">self</span>.<span class="ident">delegated_key_rotation_capability</span>),
-                <span class="ident">Value</span>::<span class="ident">bool</span>(<span class="self">self</span>.<span class="ident">delegated_withdrawal_capability</span>),
+                <span class="self">self</span>.<span class="ident">withdrawal_capability</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">value</span>(),
+                <span class="self">self</span>.<span class="ident">key_rotation_capability</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">value</span>(),
                 <span class="ident">Value</span>::<span class="ident">struct_</span>(<span class="ident">Struct</span>::<span class="ident">pack</span>(
                     <span class="macro">vec</span><span class="macro">!</span>[
                         <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="self">self</span>.<span class="ident">received_events</span>.<span class="ident">count</span>()),
@@ -2049,6 +2107,62 @@
     <span class="doccomment">/// Returns the initial received events count.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">received_events_count</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
         <span class="self">self</span>.<span class="ident">received_events</span>.<span class="ident">count</span>()
+    }
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">WithdrawCapability</span> {
+    <span class="ident">account_address</span>: <span class="ident">AccountAddress</span>,
+}
+<span class="kw">impl</span> <span class="ident">WithdrawCapability</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">account_address</span>: <span class="ident">AccountAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> { <span class="ident">account_address</span> }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">type_</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">FatStructType</span> {
+        <span class="ident">FatStructType</span> {
+            <span class="ident">address</span>: <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>,
+            <span class="ident">module</span>: <span class="ident">WithdrawCapabilityResource</span>::<span class="ident">module_identifier</span>(),
+            <span class="ident">name</span>: <span class="ident">WithdrawCapabilityResource</span>::<span class="ident">struct_identifier</span>(),
+            <span class="ident">is_resource</span>: <span class="bool-val">true</span>,
+            <span class="ident">ty_args</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">layout</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">FatType</span>::<span class="ident">Address</span>],
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Value</span> {
+        <span class="ident">Value</span>::<span class="ident">vector_general</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">struct_</span>(<span class="ident">Struct</span>::<span class="ident">pack</span>(
+            <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">address</span>(<span class="self">self</span>.<span class="ident">account_address</span>)],
+            <span class="bool-val">true</span>,
+        ))])
+    }
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">KeyRotationCapability</span> {
+    <span class="ident">account_address</span>: <span class="ident">AccountAddress</span>,
+}
+<span class="kw">impl</span> <span class="ident">KeyRotationCapability</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">account_address</span>: <span class="ident">AccountAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> { <span class="ident">account_address</span> }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">type_</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">FatStructType</span> {
+        <span class="ident">FatStructType</span> {
+            <span class="ident">address</span>: <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>,
+            <span class="ident">module</span>: <span class="ident">KeyRotationCapabilityResource</span>::<span class="ident">module_identifier</span>(),
+            <span class="ident">name</span>: <span class="ident">KeyRotationCapabilityResource</span>::<span class="ident">struct_identifier</span>(),
+            <span class="ident">is_resource</span>: <span class="bool-val">true</span>,
+            <span class="ident">ty_args</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">layout</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">FatType</span>::<span class="ident">Address</span>],
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">value</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Value</span> {
+        <span class="ident">Value</span>::<span class="ident">vector_general</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">struct_</span>(<span class="ident">Struct</span>::<span class="ident">pack</span>(
+            <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">address</span>(<span class="self">self</span>.<span class="ident">account_address</span>)],
+            <span class="bool-val">true</span>,
+        ))])
     }
 }
 </pre></div>
