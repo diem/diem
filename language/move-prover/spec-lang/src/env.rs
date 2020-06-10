@@ -69,6 +69,9 @@ pub const ABORTS_IF_IS_STRICT_PRAGMA: &str = "aborts_if_is_strict";
 /// Pragma indicating that requires are also enforced if the aborts condition is true.
 pub const REQUIRES_IF_ABORTS: &str = "requires_if_aborts";
 
+/// Pragma indicating that the function will run smoke tests
+pub const SMOKE_TEST_PRAGMA: &str = "smoke_test";
+
 // =================================================================================================
 /// # Locations
 
