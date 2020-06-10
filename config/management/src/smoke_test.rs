@@ -11,7 +11,7 @@ use libra_config::{
     network_id::NetworkId,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
-use libra_secure_storage::Value;
+use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use libra_swarm::swarm::{LibraNode, LibraSwarm, LibraSwarmDir};
 use libra_temppath::TempPath;
 use libra_types::account_address;

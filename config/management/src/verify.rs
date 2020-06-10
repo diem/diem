@@ -7,7 +7,7 @@ use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
-use libra_secure_storage::Storage;
+use libra_secure_storage::{BoxedStorage, CryptoStorage, KVStorage};
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress, account_config, account_state::AccountState,
@@ -41,7 +41,7 @@ pub struct Verify {
 
 impl Verify {
     pub fn execute(self) -> Result<String, Error> {
-        let storage: Box<dyn Storage> = self.backend.backend.try_into()?;
+        let storage: BoxedStorage = self.backend.backend.try_into()?;
         storage
             .available()
             .map_err(|e| Error::LocalStorageUnavailable(e.to_string()))?;
@@ -52,55 +52,39 @@ impl Verify {
         writeln!(buffer, "Keys").unwrap();
         write_break(&mut buffer);
 
-        write_ed25519_key(storage.as_ref(), &mut buffer, CONSENSUS_KEY);
-        write_x25519_key(storage.as_ref(), &mut buffer, FULLNODE_NETWORK_KEY);
-        write_ed25519_key(
-            storage.as_ref(),
-            &mut buffer,
-            libra_global_constants::OWNER_KEY,
-        );
-        write_ed25519_key(
-            storage.as_ref(),
-            &mut buffer,
-            libra_global_constants::OPERATOR_KEY,
-        );
-        write_ed25519_key(storage.as_ref(), &mut buffer, VALIDATOR_NETWORK_KEY);
+        write_ed25519_key(&storage, &mut buffer, CONSENSUS_KEY);
+        write_x25519_key(&storage, &mut buffer, FULLNODE_NETWORK_KEY);
+        write_ed25519_key(&storage, &mut buffer, libra_global_constants::OWNER_KEY);
+        write_ed25519_key(&storage, &mut buffer, libra_global_constants::OPERATOR_KEY);
+        write_ed25519_key(&storage, &mut buffer, VALIDATOR_NETWORK_KEY);
 
         write_break(&mut buffer);
         writeln!(buffer, "Data").unwrap();
         write_break(&mut buffer);
 
         write_string(
-            storage.as_ref(),
+            &storage,
             &mut buffer,
             libra_global_constants::OPERATOR_ACCOUNT,
         );
-        write_string(
-            storage.as_ref(),
-            &mut buffer,
-            libra_global_constants::OWNER_ACCOUNT,
-        );
-        write_u64(storage.as_ref(), &mut buffer, libra_global_constants::EPOCH);
+        write_string(&storage, &mut buffer, libra_global_constants::OWNER_ACCOUNT);
+        write_u64(&storage, &mut buffer, libra_global_constants::EPOCH);
         write_u64(
-            storage.as_ref(),
+            &storage,
             &mut buffer,
             libra_global_constants::LAST_VOTED_ROUND,
         );
         write_u64(
-            storage.as_ref(),
+            &storage,
             &mut buffer,
             libra_global_constants::PREFERRED_ROUND,
         );
-        write_waypoint(
-            storage.as_ref(),
-            &mut buffer,
-            libra_global_constants::WAYPOINT,
-        );
+        write_waypoint(&storage, &mut buffer, libra_global_constants::WAYPOINT);
 
         write_break(&mut buffer);
 
         if let Some(genesis_path) = self.genesis_path.as_ref() {
-            compare_genesis(storage.as_ref(), &mut buffer, genesis_path)?;
+            compare_genesis(&storage, &mut buffer, genesis_path)?;
         }
 
         Ok(buffer)
@@ -120,17 +104,17 @@ fn write_break(buffer: &mut String) {
     .unwrap();
 }
 
-fn write_ed25519_key(storage: &dyn Storage, buffer: &mut String, key: &'static str) {
+fn write_ed25519_key(storage: &BoxedStorage, buffer: &mut String, key: &'static str) {
     let value = ed25519_from_storage(key, storage).map_or_else(|e| e, |v| v.to_string());
     writeln!(buffer, "{} - {}", key, value).unwrap();
 }
 
-fn write_x25519_key(storage: &dyn Storage, buffer: &mut String, key: &'static str) {
+fn write_x25519_key(storage: &BoxedStorage, buffer: &mut String, key: &'static str) {
     let value = ed25519_from_storage(key, storage).map_or_else(|e| e, |v| v.to_string());
     writeln!(buffer, "{} - {}", key, value).unwrap();
 }
 
-fn write_string(storage: &dyn Storage, buffer: &mut String, key: &str) {
+fn write_string(storage: &BoxedStorage, buffer: &mut String, key: &str) {
     let value = storage
         .get(key)
         .and_then(|c| c.value.string())
@@ -138,7 +122,7 @@ fn write_string(storage: &dyn Storage, buffer: &mut String, key: &str) {
     writeln!(buffer, "{} - {}", key, value).unwrap();
 }
 
-fn write_u64(storage: &dyn Storage, buffer: &mut String, key: &str) {
+fn write_u64(storage: &BoxedStorage, buffer: &mut String, key: &str) {
     let value = storage
         .get(key)
         .and_then(|c| c.value.u64())
@@ -147,7 +131,7 @@ fn write_u64(storage: &dyn Storage, buffer: &mut String, key: &str) {
     writeln!(buffer, "{} - {}", key, value).unwrap();
 }
 
-fn write_waypoint(storage: &dyn Storage, buffer: &mut String, key: &str) {
+fn write_waypoint(storage: &BoxedStorage, buffer: &mut String, key: &str) {
     let value = storage
         .get(key)
         .and_then(|c| c.value.string())
@@ -166,7 +150,7 @@ fn write_waypoint(storage: &dyn Storage, buffer: &mut String, key: &str) {
 }
 
 fn compare_genesis(
-    storage: &dyn Storage,
+    storage: &BoxedStorage,
     buffer: &mut String,
     genesis_path: &PathBuf,
 ) -> Result<(), Error> {
@@ -269,7 +253,7 @@ fn validator_config(
     Ok(info.config().clone())
 }
 
-fn validator_account(storage: &dyn Storage) -> Result<AccountAddress, Error> {
+fn validator_account(storage: &BoxedStorage) -> Result<AccountAddress, Error> {
     let account = storage
         .get(libra_global_constants::OPERATOR_ACCOUNT)
         .map_err(|e| {
@@ -293,7 +277,7 @@ fn validator_account(storage: &dyn Storage) -> Result<AccountAddress, Error> {
 
 fn ed25519_from_storage(
     key_name: &'static str,
-    storage: &dyn Storage,
+    storage: &BoxedStorage,
 ) -> Result<Ed25519PublicKey, String> {
     storage
         .get_public_key(key_name)
@@ -303,7 +287,7 @@ fn ed25519_from_storage(
 
 fn x25519_from_storage(
     key_name: &'static str,
-    storage: &dyn Storage,
+    storage: &BoxedStorage,
 ) -> Result<x25519::PublicKey, String> {
     let edkey = ed25519_from_storage(key_name, storage)?;
     x25519::PublicKey::from_ed25519_public_bytes(&edkey.to_bytes()).map_err(|e| e.to_string())

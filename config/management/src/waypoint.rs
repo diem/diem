@@ -3,7 +3,7 @@
 
 use crate::{error::Error, SecureBackends, SingleBackend};
 use executor::db_bootstrapper;
-use libra_secure_storage::{Storage, Value};
+use libra_secure_storage::{BoxedStorage, KVStorage, Value};
 use libra_temppath::TempPath;
 use libra_types::waypoint::Waypoint;
 use libra_vm::LibraVM;
@@ -40,7 +40,7 @@ impl CreateWaypoint {
             .ok_or_else(|| Error::UnexpectedError("Unable to generate a waypoint".to_string()))?;
 
         if let Some(remote) = self.secure_backends.remote {
-            let mut remote: Box<dyn Storage> = remote.try_into()?;
+            let mut remote: BoxedStorage = remote.try_into()?;
             remote
                 .available()
                 .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;

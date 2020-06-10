@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{constants, error::Error, SingleBackend};
-use libra_secure_storage::{Storage, Value};
+use libra_secure_storage::{BoxedStorage, KVStorage, Value};
 use serde::{Deserialize, Serialize};
 use std::{
     convert::TryInto,
@@ -59,7 +59,7 @@ impl SetLayout {
         let layout = Layout::from_disk(&self.path)?;
         let data = layout.to_toml()?;
 
-        let mut remote: Box<dyn Storage> = self.backend.backend.try_into()?;
+        let mut remote: BoxedStorage = self.backend.backend.try_into()?;
         remote
             .available()
             .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
