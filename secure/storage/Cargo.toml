@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 base64 = "0.12.1"
 chrono = "0.4.11"
+enum_dispatch = "0.3.1"
 rand = "0.7.3"
 serde = { version = "1.0.111", features = ["rc"], default-features = false }
 serde_json = "1.0.54"
