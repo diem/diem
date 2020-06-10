@@ -14,7 +14,7 @@ use libra_crypto::x25519;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
     time::Duration,
 };
@@ -29,7 +29,7 @@ pub type ConnectivityManagerService = ConnectivityManager<Fuse<Interval>, Expone
 /// The configuration fields for ConnectivityManager
 struct ConnectivityManagerBuilderConfig {
     network_context: Arc<NetworkContext>,
-    eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+    eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
     seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
     connectivity_check_interval_ms: u64,
     backoff_base: u64,
@@ -57,7 +57,7 @@ pub struct ConnectivityManagerBuilder {
 impl ConnectivityManagerBuilder {
     pub fn create(
         network_context: Arc<NetworkContext>,
-        eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+        eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
         seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
         connectivity_check_interval_ms: u64,
         backoff_base: u64,
