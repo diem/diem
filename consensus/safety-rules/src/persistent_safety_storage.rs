@@ -115,8 +115,8 @@ impl PersistentSafetyStorage {
     }
 
     #[cfg(any(test, feature = "testing"))]
-    pub fn internal_store(&mut self) -> &mut dyn Storage {
-        self.internal_store.as_mut()
+    pub fn internal_store(&mut self) -> &mut BoxedStorage {
+        &mut self.internal_store
     }
 }
 

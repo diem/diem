@@ -11,6 +11,7 @@ use consensus_types::{
 };
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_global_constants::CONSENSUS_KEY;
+use libra_secure_storage::CryptoStorage;
 use libra_types::{
     epoch_change::EpochChangeProof,
     epoch_state::EpochState,
@@ -618,7 +619,12 @@ fn test_uninitialized_signer(func: Callback) {
     let round = genesis_qc.certified_block().round();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
-    safety_rules.update(a1.block().quorum_cert()).unwrap_err();
+    let err = safety_rules.update(a1.block().quorum_cert()).unwrap_err();
+    assert_eq!(err, Error::NotInitialized("validator_verifier".into()));
+    let err = safety_rules
+        .sign_proposal(a1.block().block_data().clone())
+        .unwrap_err();
+    assert_eq!(err, Error::NotInitialized("validator_signer".into()));
 
     safety_rules.initialize(&proof).unwrap();
     safety_rules.update(a1.block().quorum_cert()).unwrap();

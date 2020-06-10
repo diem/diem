@@ -223,10 +223,9 @@ impl TSafetyRules for SafetyRules {
     /// @TODO verify QC correctness
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error> {
         debug!("Incoming vote proposal to sign.");
+        self.signer()?;
         let proposed_block = vote_proposal.block();
-
         self.verify_epoch(proposed_block.epoch())?;
-
         let last_voted_round = self.persistent_storage.last_voted_round()?;
         if proposed_block.round() <= last_voted_round {
             debug!(
@@ -264,7 +263,6 @@ impl TSafetyRules for SafetyRules {
 
         self.persistent_storage
             .set_last_voted_round(proposed_block.round())?;
-
         let validator_signer = self.signer()?;
         Ok(Vote::new(
             VoteData::new(
@@ -277,14 +275,16 @@ impl TSafetyRules for SafetyRules {
             ),
             validator_signer.author(),
             self.construct_ledger_info(proposed_block),
-            validator_signer,
+            &validator_signer,
         ))
     }
 
     fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
         debug!("Incoming proposal to sign.");
+        let validator_signer = self.signer()?;
         self.verify_author(block_data.author())?;
         self.verify_epoch(block_data.epoch())?;
+
         let last_voted_round = self.persistent_storage.last_voted_round()?;
         if block_data.round() <= last_voted_round {
             debug!(
@@ -312,11 +312,10 @@ impl TSafetyRules for SafetyRules {
             ));
         }
 
-        let validator_signer = self.signer()?;
         COUNTERS.sign_proposal.inc();
         Ok(Block::new_proposal_from_block_data(
             block_data,
-            validator_signer,
+            &validator_signer,
         ))
     }
 
@@ -329,6 +328,7 @@ impl TSafetyRules for SafetyRules {
         debug!("Incoming timeout message for round {}", timeout.round());
         COUNTERS.requested_sign_timeout.inc();
 
+        self.signer()?;
         self.verify_epoch(timeout.epoch())?;
 
         let preferred_round = self.persistent_storage.preferred_round()?;
@@ -352,7 +352,7 @@ impl TSafetyRules for SafetyRules {
         }
 
         let validator_signer = self.signer()?;
-        let signature = timeout.sign(validator_signer);
+        let signature = timeout.sign(&validator_signer);
         COUNTERS.sign_timeout.inc();
         debug!("Successfully signed timeout message.");
         Ok(signature)
