@@ -14,6 +14,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Signature,
 /// tests rely on first running the vault docker script in `docker/vault/run.sh`); and (ii) vault
 /// tests cannot currently be run in parallel, as each test uses the same vault instance.
 const STORAGE_TESTS: &[fn(&mut BoxedStorage)] = &[
+    test_set_reset_get,
     test_create_and_get_non_existent_version,
     test_create_get_key_pair,
     test_create_key_pair_and_perform_rotations,
@@ -39,6 +40,19 @@ pub fn execute_all_storage_tests(storage: &mut BoxedStorage) {
         test(storage);
         storage.reset_and_clear().unwrap();
     }
+}
+
+/// This test tries to set a key, reset the storage and then retrieve its
+// value, checking that the reset is indeed performed in testing mode. It
+/// should be performed first, as other tests will depend on it.
+fn test_set_reset_get(storage: &mut Storage) {
+    let u64_1 = 10;
+    storage.set(U64_KEY, Value::U64(u64_1)).unwrap();
+    storage.reset_and_clear().unwrap();
+    assert_eq!(
+        storage.get(U64_KEY).unwrap_err(),
+        Error::KeyNotSet(U64_KEY.to_string())
+    );
 }
 
 /// This test tries to get and set non-existent keys in storage and asserts that the correct

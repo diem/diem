@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::Error;
+use enum_dispatch::enum_dispatch;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     HashValue,
@@ -12,6 +13,7 @@ use serde::{Deserialize, Serialize};
 /// keys securely. The API offered here is inspired by the 'Transit Secret Engine' provided by
 /// Vault: a production-ready storage engine for cloud infrastructures (e.g., see
 /// https://www.vaultproject.io/docs/secrets/transit/index.html).
+#[enum_dispatch]
 pub trait CryptoStorage: Send + Sync {
     /// Securely generates a new named Ed25519 key pair and returns the corresponding public key.
     /// There are no guarantees about the state of the system after calling this multiple times.

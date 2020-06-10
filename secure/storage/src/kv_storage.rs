@@ -2,12 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{Error, Value};
+use enum_dispatch::enum_dispatch;
 use serde::{Deserialize, Serialize};
 
 /// A secure key/value storage engine. Create takes a policy that is enforced internally by the
 /// actual backend. The policy contains public identities that the backend can translate into a
 /// unique and private token for another service. Hence get and set internally will pass the
 /// current service private token to the backend to gain its permissions.
+#[enum_dispatch]
 pub trait KVStorage: Send + Sync {
     /// Returns an error if the backend service is not online and available.
     fn available(&self) -> Result<(), Error>;
