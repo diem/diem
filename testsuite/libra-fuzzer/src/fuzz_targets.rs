@@ -22,6 +22,7 @@ mod consensus_proposal;
 mod inbound_rpc_protocol;
 mod inner_signed_transaction;
 mod json_rpc_service;
+mod language_transaction_execution;
 mod network_noise_initiator;
 mod network_noise_responder;
 //mod storage_save_blocks;

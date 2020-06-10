@@ -1,11 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    account_universe::{
-        default_num_accounts, default_num_transactions, AccountUniverseGen, RotateKeyGen,
-    },
-    tests::account_universe::{run_and_assert_gas_cost_stability, run_and_assert_universe},
+use crate::account_universe::{
+    default_num_accounts, default_num_transactions, run_and_assert_gas_cost_stability,
+    run_and_assert_universe, AccountUniverseGen, RotateKeyGen,
 };
 use proptest::{collection::vec, prelude::*};
 

@@ -11,6 +11,7 @@ use libra_types::{
 };
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
+use std::sync::Arc;
 
 /// Represents a peer-to-peer transaction performed in the account universe.
 ///
@@ -101,4 +102,13 @@ impl AUTransactionGen for P2PTransferGen {
 
         (txn, (status, gas_used))
     }
+}
+
+pub fn p2p_strategy(
+    min: u64,
+    max: u64,
+) -> impl Strategy<Value = Arc<dyn AUTransactionGen + 'static>> {
+    prop_oneof![
+        3 => any_with::<P2PTransferGen>((min, max)).prop_map(P2PTransferGen::arced),
+    ]
 }

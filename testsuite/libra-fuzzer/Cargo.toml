@@ -33,6 +33,7 @@ move-vm-types = { path = "../../language/move-vm/types", version = "0.1.0", feat
 network = { path = "../../network", version = "0.1.0", features = ["fuzzing"] }
 vm = { path = "../../language/vm", version = "0.1.0", features = ["fuzzing"] }
 libradb = { path = "../../storage/libradb", version = "0.1.0", features = ["fuzzing"] }
+language-e2e-tests = { path = "../../language/e2e-tests", version = "0.1.0" }
 
 [dev-dependencies]
 rusty-fork = "0.3.0"

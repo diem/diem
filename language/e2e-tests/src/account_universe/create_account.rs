@@ -16,6 +16,7 @@ use libra_types::{
 };
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
+use std::sync::Arc;
 
 /// Represents a create-account transaction performed in the account universe.
 ///
@@ -120,4 +121,16 @@ impl AUTransactionGen for CreateExistingAccountGen {
 
         (txn, (status, gas_used))
     }
+}
+
+pub fn create_account_strategy(
+    min: u64,
+    max: u64,
+) -> impl Strategy<Value = Arc<dyn AUTransactionGen + 'static>> {
+    prop_oneof![
+        3 => any_with::<CreateAccountGen>((min, max)).prop_map(CreateAccountGen::arced),
+        1 => any_with::<CreateExistingAccountGen>((min, max)).prop_map(
+            CreateExistingAccountGen::arced,
+        ),
+    ]
 }
