@@ -8,6 +8,7 @@ module Genesis {
     use 0x1::CoreAddresses;
     use 0x1::Coin1;
     use 0x1::Coin2;
+    use 0x1::DualAttestationLimit;
     use 0x1::Event;
     use 0x1::LBR::{Self, LBR};
     use 0x1::Libra::{Self, AddCurrency};
@@ -98,6 +99,7 @@ module Genesis {
         LibraSystem::initialize_validator_set(config_account);
         LibraVersion::initialize(config_account);
 
+        DualAttestationLimit::initialize(config_account, tc_account);
         LibraBlock::initialize_block_metadata(association);
         LibraWriteSetManager::initialize(association);
         LibraTimestamp::initialize(association);

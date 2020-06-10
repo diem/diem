@@ -98,6 +98,7 @@
     <a href="LibraSystem.md#0x1_LibraSystem_initialize_validator_set">LibraSystem::initialize_validator_set</a>(config_account);
     <a href="LibraVersion.md#0x1_LibraVersion_initialize">LibraVersion::initialize</a>(config_account);
 
+    <a href="DualAttestationLimit.md#0x1_DualAttestationLimit_initialize">DualAttestationLimit::initialize</a>(config_account, tc_account);
     <a href="LibraBlock.md#0x1_LibraBlock_initialize_block_metadata">LibraBlock::initialize_block_metadata</a>(association);
     <a href="LibraWriteSetManager.md#0x1_LibraWriteSetManager_initialize">LibraWriteSetManager::initialize</a>(association);
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_initialize">LibraTimestamp::initialize</a>(association);

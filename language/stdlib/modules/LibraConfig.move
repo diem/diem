@@ -59,7 +59,7 @@ module LibraConfig {
         let signer_address = Signer::address_of(account);
         assert(
             exists<ModifyConfigCapability<Config>>(signer_address)
-             || signer_address == Association::root_address(),
+            || Association::addr_is_association(signer_address),
             24
         );
 
@@ -99,6 +99,20 @@ module LibraConfig {
         // the value which triggers the reconfiguration.
 
         return ModifyConfigCapability<Config> {}
+    }
+
+    // publish config and give capability only to TC account
+    public fun publish_new_treasury_compliance_config<Config: copyable>(
+        config_account: &signer,
+        tc_account: &signer,
+        payload: Config,
+    ) {
+        assert(
+            Association::has_privilege<CreateConfigCapability>(Signer::address_of(config_account)),
+            1
+        );
+        move_to(config_account, LibraConfig { payload });
+        move_to(tc_account, ModifyConfigCapability<Config> {});
     }
 
     // Publish a new config item. Only the config address can modify such config.

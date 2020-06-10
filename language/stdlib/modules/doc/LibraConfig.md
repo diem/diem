@@ -15,6 +15,7 @@
 -  [Function `set`](#0x1_LibraConfig_set)
 -  [Function `set_with_capability`](#0x1_LibraConfig_set_with_capability)
 -  [Function `publish_new_config_with_capability`](#0x1_LibraConfig_publish_new_config_with_capability)
+-  [Function `publish_new_treasury_compliance_config`](#0x1_LibraConfig_publish_new_treasury_compliance_config)
 -  [Function `publish_new_config`](#0x1_LibraConfig_publish_new_config)
 -  [Function `publish_new_config_with_delegate`](#0x1_LibraConfig_publish_new_config_with_delegate)
 -  [Function `claim_delegated_modify_config`](#0x1_LibraConfig_claim_delegated_modify_config)
@@ -264,7 +265,7 @@
     <b>let</b> signer_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>assert</b>(
         exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address)
-         || signer_address == <a href="Association.md#0x1_Association_root_address">Association::root_address</a>(),
+        || <a href="Association.md#0x1_Association_addr_is_association">Association::addr_is_association</a>(signer_address),
         24
     );
 
@@ -341,6 +342,39 @@
     // the value which triggers the reconfiguration.
 
     <b>return</b> <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {}
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraConfig_publish_new_treasury_compliance_config"></a>
+
+## Function `publish_new_treasury_compliance_config`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_treasury_compliance_config">publish_new_treasury_compliance_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, tc_account: &signer, payload: Config)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_treasury_compliance_config">publish_new_treasury_compliance_config</a>&lt;Config: <b>copyable</b>&gt;(
+    config_account: &signer,
+    tc_account: &signer,
+    payload: Config,
+) {
+    <b>assert</b>(
+        <a href="Association.md#0x1_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x1_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account)),
+        1
+    );
+    move_to(config_account, <a href="#0x1_LibraConfig">LibraConfig</a> { payload });
+    move_to(tc_account, <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {});
 }
 </code></pre>
 

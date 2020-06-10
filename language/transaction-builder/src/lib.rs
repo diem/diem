@@ -209,7 +209,7 @@ register_all_txn_scripts! {
     doc: "Encode a program transferring `amount` coins to `recipient_address` with (optional) \
           associated metadata `metadata` and (optional) `signature` on the metadata, amount, and \
           sender address. The `metadata` and `signature` parameters are only required if \
-          `amount` >= 1000 LBR and the sender and recipient of the funds are two distinct VASPs. \
+          `amount` >= 1_000_000 micro LBR and the sender and recipient of the funds are two distinct VASPs. \
           Fails if there is no account at the recipient address or if the sender's balance is lower \
           than `amount`"
 }
@@ -466,6 +466,14 @@ register_all_txn_scripts! {
          `new_exchange_rate_denominator/new_exchange_rate_numerator`."
 }
 
+{
+    script: UpdateTravelRuleLimit,
+    builder: encode_update_travel_rule_limit,
+    type_args: [],
+    args: [nonce: U64, new_micro_lbr_limit: U64],
+    doc: "Encode a program that updates the travel rule limit to 'new_micro_lbr_limit'"
+}
+
 } // End of txn scripts
 
 //...........................................................................
@@ -581,6 +589,7 @@ mod tests {
                 "unfreeze_account",
                 "rotate_authentication_key_with_nonce",
                 "update_exchange_rate",
+                "update_travel_rule_limit"
             ],
             abis.iter().map(|x| x.name()).collect::<Vec<_>>()
         );

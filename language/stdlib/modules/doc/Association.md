@@ -433,7 +433,7 @@ Return whether the account at
 
 
 
-<pre><code><b>fun</b> <a href="#0x1_Association_treasury_compliance_account">treasury_compliance_account</a>(): address
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Association_treasury_compliance_account">treasury_compliance_account</a>(): address
 </code></pre>
 
 
@@ -442,7 +442,7 @@ Return whether the account at
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x1_Association_treasury_compliance_account">treasury_compliance_account</a>(): address {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Association_treasury_compliance_account">treasury_compliance_account</a>(): address {
     <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()
 }
 </code></pre>

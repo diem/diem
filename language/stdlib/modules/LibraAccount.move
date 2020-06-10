@@ -23,6 +23,7 @@ module LibraAccount {
     use 0x1::DesignatedDealer;
     use 0x1::Libra::{Self, Libra};
     use 0x1::Option::{Self, Option};
+    use 0x1::DualAttestationLimit;
 
     // Every Libra account has a LibraAccount resource
     resource struct LibraAccount {
@@ -219,13 +220,10 @@ module LibraAccount {
         // Check that the `to_deposit` coin is non-zero
         let deposit_value = Libra::value(&to_deposit);
         assert(deposit_value > 0, 7);
-
-        // TODO: on-chain config for travel rule limit instead of hardcoded value
-        // TODO: nail down details of limit (specified in LBR? is 1 LBR a milliLibra or microLibra?)
-        let travel_rule_limit = 1000;
+        let travel_rule_limit_microlibra = DualAttestationLimit::get_cur_microlibra_limit();
         // travel rule only applies for payments over a threshold
-        let above_threshold =
-            Libra::approx_lbr_for_value<Token>(deposit_value) >= travel_rule_limit;
+        let approx_lbr_microlibra_value = Libra::approx_lbr_for_value<Token>(deposit_value);
+        let above_threshold = approx_lbr_microlibra_value >= travel_rule_limit_microlibra;
         // travel rule only applies if the sender and recipient are both VASPs
         let both_vasps = VASP::is_vasp(sender) && VASP::is_vasp(payee);
         // Don't check the travel rule if we're on testnet and sender
@@ -583,6 +581,10 @@ module LibraAccount {
         make_account<CoinType>(new_dd_account, auth_key_prefix, false, role_id)
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    // VASP methods
+    ///////////////////////////////////////////////////////////////////////////
+
     /// Create an account with the ParentVASP role at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address`.  If `add_all_currencies` is true, 0 balances for
     /// all available currencies in the system will also be added.
@@ -625,6 +627,10 @@ module LibraAccount {
     }
 
     // TODO: who can create an unhosted account?
+    ///////////////////////////////////////////////////////////////////////////
+    // Unhosted methods
+    ///////////////////////////////////////////////////////////////////////////
+
     public fun create_unhosted_account<Token>(
         new_account_address: address,
         auth_key_prefix: vector<u8>,
@@ -637,6 +643,11 @@ module LibraAccount {
         let role_id = 7;
         make_account<Token>(new_account, auth_key_prefix, add_all_currencies, role_id)
     }
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // General purpose methods
+    ///////////////////////////////////////////////////////////////////////////
 
     native fun create_signer(addr: address): signer;
     native fun destroy_signer(sig: signer);
