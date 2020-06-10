@@ -1,6 +1,5 @@
 module TestResources {
     use 0x1::Signer;
-    use 0x1::Transaction;
 
     spec module {
         pragma verify = true;
@@ -22,22 +21,22 @@ module TestResources {
         ensures exists<R>(Signer::get_address(account));
     }
 
-    public fun create_resource() {
-        move_to_sender<R>(R{x:1});
+    public fun create_resource(account: &signer) {
+        move_to<R>(account, R{x:1});
     }
     spec fun create_resource {
-        aborts_if exists<R>(sender());
-        ensures exists<R>(sender());
+        aborts_if exists<R>(Signer::get_address(account));
+        ensures exists<R>(Signer::get_address(account));
     }
 
-    public fun create_resource_incorrect() {
-        if(exists<R>(Transaction::sender())) {
+    public fun create_resource_incorrect(account: &signer) {
+        if(exists<R>(Signer::address_of(account))) {
             abort 1
         };
     }
     spec fun create_resource_incorrect {
-     aborts_if exists<R>(sender());
-     ensures exists<R>(sender());
+     aborts_if exists<R>(Signer::get_address(account));
+     ensures exists<R>(Signer::get_address(account));
     }
 
     public fun move_from_addr(a: address) acquires R {
@@ -48,18 +47,18 @@ module TestResources {
         aborts_if !exists<R>(a);
     }
 
-    public fun move_from_addr_to_sender(a: address) acquires R {
+    public fun move_from_addr_to_sender(account: &signer, a: address) acquires R {
         let r = move_from<R>(a);
         let R{x: x} = r;
-        move_to_sender<R>(R{x: x});
+        move_to<R>(account, R{x: x});
     }
     spec fun move_from_addr_to_sender {
         aborts_if !exists<R>(a);
-        aborts_if (sender() != a) && exists<R>(sender());
-        ensures exists<R>(sender());
-        ensures (sender() != a) ==> !exists<R>(a);
-        ensures old(global<R>(a).x) == global<R>(sender()).x;
-        ensures old(global<R>(a)) == global<R>(sender());
+        aborts_if (Signer::get_address(account) != a) && exists<R>(Signer::get_address(account));
+        ensures exists<R>(Signer::get_address(account));
+        ensures (Signer::get_address(account) != a) ==> !exists<R>(a);
+        ensures old(global<R>(a).x) == global<R>(Signer::get_address(account)).x;
+        ensures old(global<R>(a)) == global<R>(Signer::get_address(account));
     }
 
     public fun move_from_addr_and_return(a: address): R acquires R {
@@ -74,27 +73,27 @@ module TestResources {
         ensures result == old(global<R>(a));
     }
 
-    public fun move_from_sender_and_return(): R acquires R {
-        let r = move_from<R>(Transaction::sender());
+    public fun move_from_sender_and_return(account: &signer): R acquires R {
+        let r = move_from<R>(Signer::address_of(account));
         let R{x: x} = r;
         R{x: x}
     }
     spec fun move_from_sender_and_return {
-        aborts_if !exists<R>(sender());
-        ensures result.x == old(global<R>(sender()).x);
-        ensures result == old(global<R>(sender()));
+        aborts_if !exists<R>(Signer::get_address(account));
+        ensures result.x == old(global<R>(Signer::get_address(account)).x);
+        ensures result == old(global<R>(Signer::get_address(account)));
     }
 
-    public fun move_from_sender_to_sender() acquires R {
-        let r = move_from<R>(Transaction::sender());
+    public fun move_from_sender_to_sender(account: &signer) acquires R {
+        let r = move_from<R>(Signer::address_of(account));
         let R{x: x} = r;
-        move_to_sender<R>(R{x: x});
+        move_to<R>(account, R{x: x});
     }
     spec fun move_from_sender_to_sender {
-        aborts_if !exists<R>(sender());
-        ensures exists<R>(sender());
-        ensures old(global<R>(sender()).x) == global<R>(sender()).x;
-        ensures old(global<R>(sender())) == global<R>(sender());
+        aborts_if !exists<R>(Signer::get_address(account));
+        ensures exists<R>(Signer::get_address(account));
+        ensures old(global<R>(Signer::get_address(account)).x) == global<R>(Signer::get_address(account)).x;
+        ensures old(global<R>(Signer::get_address(account))) == global<R>(Signer::get_address(account));
     }
 
     public fun borrow_global_mut_correct(a: address) acquires R {
@@ -239,28 +238,28 @@ module TestResources {
         ensures result == R{x: 7};
     }
 
-    public fun spec_pack_A(): A {
-        A{ addr: Transaction::sender(), val: 7 }
+    public fun spec_pack_A(account: &signer): A {
+        A{ addr: Signer::address_of(account), val: 7 }
     }
     spec fun spec_pack_A {
         aborts_if false;
-        ensures result.addr == sender();
+        ensures result.addr == Signer::get_address(account);
         ensures result.val == 7;
-        ensures result == A{ addr: sender(), val: 7 };
-        ensures result == A{ val: 7, addr: sender() };
+        ensures result == A{ addr: Signer::get_address(account), val: 7 };
+        ensures result == A{ val: 7, addr: Signer::get_address(account) };
     }
 
-    public fun spec_pack_B(): B {
-        B{ val: 77, a: A{ addr: Transaction::sender(), val: 7 }}
+    public fun spec_pack_B(account: &signer): B {
+        B{ val: 77, a: A{ addr: Signer::address_of(account), val: 7 }}
     }
     spec fun spec_pack_B {
         aborts_if false;
         ensures result.val == 77;
         ensures result.a.val == 7;
-        ensures result.a.addr == sender();
-        ensures result == B{ val: 77, a: A{ addr: sender(), val: 7 }};
-        ensures result == B{ val: 77, a: A{ val: 7, addr: sender()}};
-        ensures result == B{ a: A{ addr: sender(), val: 7 }, val: 77 };
-        ensures result == B{ a: A{ val: 7, addr: sender()}, val: 77 };
+        ensures result.a.addr == Signer::get_address(account);
+        ensures result == B{ val: 77, a: A{ addr: Signer::get_address(account), val: 7 }};
+        ensures result == B{ val: 77, a: A{ val: 7, addr: Signer::get_address(account)}};
+        ensures result == B{ a: A{ addr: Signer::get_address(account), val: 7 }, val: 77 };
+        ensures result == B{ a: A{ val: 7, addr: Signer::get_address(account)}, val: 77 };
     }
 }

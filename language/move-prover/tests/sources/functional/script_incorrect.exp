@@ -1,19 +1,26 @@
 Move prover returns: exiting with boogie verification errors
 error: abort not covered by any of the `aborts_if` clauses
 
-   ┌── tests/sources/functional/script_incorrect.move:5:1 ───
+   ┌── tests/sources/functional/script_incorrect.move:7:1 ───
    │
- 5 │ ╭ fun main<Token>() {
- 6 │ │     ScriptProvider::register<Token>();
- 7 │ │ }
+ 7 │ ╭ fun main<Token>(account: &signer) {
+ 8 │ │     ScriptProvider::register<Token>(account);
+ 9 │ │ }
    │ ╰─^
    │
-   =     at tests/sources/functional/script_incorrect.move:5:1: main (entry)
-   =     at tests/sources/functional/script_provider.move:14:5: register (entry)
-   =     at tests/sources/functional/script_provider.move:15:9: register (ABORTED)
+   =     at tests/sources/functional/script_incorrect.move:7:1: main (entry)
+   =     at tests/sources/functional/script_provider.move:16:5: register (entry)
+   =     at ../stdlib/modules/Signer.move:13:5: address_of (entry)
+   =     at ../stdlib/modules/Signer.move:10:23: borrow_address
+   =     at ../stdlib/modules/Signer.move:14:9: address_of
+   =         s = <redacted>,
+   =         result = <redacted>
+   =     at tests/sources/functional/script_provider.move:17:24: register (ABORTED)
+   =         account = <redacted>,
+   =         $t1 = <redacted>
 
-    ┌── tests/sources/functional/script_provider.move:15:9 ───
+    ┌── tests/sources/functional/script_provider.move:17:24 ───
     │
- 15 │         assert(Transaction::sender() == 0x1, 1);
-    │         --------------------------------------- abort happened here
+ 17 │         assert(Signer::address_of(account) == 0x1, 1);
+    │                        ---------- abort happened here
     │

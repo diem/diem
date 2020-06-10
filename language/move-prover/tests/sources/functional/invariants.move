@@ -24,7 +24,7 @@ module TestInvariants {
         define greater_one(x: num): bool { x > 1 }
 
         // Impure function to be used in update invariants.
-        define tautology() : bool { sender() == 0x0 || sender() != 0x0 }
+        define tautology() : bool { global<R>(0x5551212) == R {x: 2} || global<R>(0x5551212) != R {x: 2} }
     }
 
 

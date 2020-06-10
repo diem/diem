@@ -8,6 +8,7 @@ error:  A postcondition might not hold on this return path.
     │
     =     at tests/sources/functional/type_values.move:37:5: add_R_incorrect (entry)
     =     at tests/sources/functional/type_values.move:38:9: add_R_incorrect
+    =         account = <redacted>
     =     at tests/sources/functional/type_values.move:37:5: add_R_incorrect (exit)
 
 error:  A postcondition might not hold on this return path.
