@@ -453,6 +453,7 @@
 <span id="453">453</span>
 <span id="454">454</span>
 <span id="455">455</span>
+<span id="456">456</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -703,6 +704,7 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">tests</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
     <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">storage_helper</span>::<span class="ident">StorageHelper</span>;
+    <span class="kw">use</span> <span class="ident">libra_secure_storage</span>::{<span class="ident">CryptoStorage</span>, <span class="ident">KVStorage</span>};
     <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
     <span class="kw">use</span> <span class="ident">std</span>::{
         <span class="ident">fs</span>::<span class="ident">File</span>,

@@ -140,7 +140,7 @@
 <span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::<span class="ident">Round</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">ed25519</span>::<span class="ident">Ed25519PrivateKey</span>;
 <span class="kw">use</span> <span class="ident">libra_global_constants</span>::{<span class="ident">CONSENSUS_KEY</span>, <span class="ident">EPOCH</span>, <span class="ident">LAST_VOTED_ROUND</span>, <span class="ident">PREFERRED_ROUND</span>, <span class="ident">WAYPOINT</span>};
-<span class="kw">use</span> <span class="ident">libra_secure_storage</span>::{<span class="ident">InMemoryStorage</span>, <span class="ident">Storage</span>, <span class="ident">Value</span>};
+<span class="kw">use</span> <span class="ident">libra_secure_storage</span>::{<span class="ident">BoxedStorage</span>, <span class="ident">CryptoStorage</span>, <span class="ident">InMemoryStorage</span>, <span class="ident">KVStorage</span>, <span class="ident">Value</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">waypoint</span>::<span class="ident">Waypoint</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">str</span>::<span class="ident">FromStr</span>;
 
@@ -150,29 +150,29 @@
 <span class="doccomment">/// @TODO add access to private key from persistent store</span>
 <span class="doccomment">/// @TODO add retrieval of private key based upon public key to persistent store</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PersistentSafetyStorage</span> {
-    <span class="ident">internal_store</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Storage</span><span class="op">&gt;</span>,
+    <span class="ident">internal_store</span>: <span class="ident">BoxedStorage</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">PersistentSafetyStorage</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">in_memory</span>(<span class="ident">private_key</span>: <span class="ident">Ed25519PrivateKey</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">InMemoryStorage</span>::<span class="ident">new</span>());
+        <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">BoxedStorage</span>::<span class="ident">from</span>(<span class="ident">InMemoryStorage</span>::<span class="ident">new</span>());
         <span class="self">Self</span>::<span class="ident">initialize</span>(<span class="ident">storage</span>, <span class="ident">private_key</span>, <span class="ident">Waypoint</span>::<span class="ident">default</span>())
     }
 
     <span class="doccomment">/// Use this to instantiate a PersistentStorage for a new data store, one that has no</span>
     <span class="doccomment">/// SafetyRules values set.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">initialize</span>(
-        <span class="kw-2">mut</span> <span class="ident">internal_store</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Storage</span><span class="op">&gt;</span>,
+        <span class="kw-2">mut</span> <span class="ident">internal_store</span>: <span class="ident">BoxedStorage</span>,
         <span class="ident">private_key</span>: <span class="ident">Ed25519PrivateKey</span>,
         <span class="ident">waypoint</span>: <span class="ident">Waypoint</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>::<span class="ident">initialize_</span>(<span class="ident">internal_store</span>.<span class="ident">as_mut</span>(), <span class="ident">private_key</span>, <span class="ident">waypoint</span>)
+        <span class="self">Self</span>::<span class="ident">initialize_</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">internal_store</span>, <span class="ident">private_key</span>, <span class="ident">waypoint</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;Unable to initialize backend storage&quot;</span>);
         <span class="self">Self</span> { <span class="ident">internal_store</span> }
     }
 
     <span class="kw">fn</span> <span class="ident">initialize_</span>(
-        <span class="ident">internal_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">Storage</span>,
+        <span class="ident">internal_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BoxedStorage</span>,
         <span class="ident">private_key</span>: <span class="ident">Ed25519PrivateKey</span>,
         <span class="ident">waypoint</span>: <span class="ident">Waypoint</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
@@ -186,7 +186,7 @@
 
     <span class="doccomment">/// Use this to instantiate a PersistentStorage with an existing data store. This is intended</span>
     <span class="doccomment">/// for constructed environments.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">internal_store</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Storage</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">internal_store</span>: <span class="ident">BoxedStorage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> { <span class="ident">internal_store</span> }
     }
 

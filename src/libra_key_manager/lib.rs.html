@@ -362,7 +362,7 @@
 };
 <span class="kw">use</span> <span class="ident">libra_global_constants</span>::{<span class="ident">CONSENSUS_KEY</span>, <span class="ident">OPERATOR_ACCOUNT</span>, <span class="ident">OPERATOR_KEY</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::{<span class="ident">error</span>, <span class="ident">info</span>};
-<span class="kw">use</span> <span class="ident">libra_secure_storage</span>::<span class="ident">Storage</span>;
+<span class="kw">use</span> <span class="ident">libra_secure_storage</span>::{<span class="ident">CryptoStorage</span>, <span class="ident">KVStorage</span>};
 <span class="kw">use</span> <span class="ident">libra_secure_time</span>::<span class="ident">TimeService</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
@@ -433,7 +433,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">LI</span>, <span class="ident">S</span>, <span class="ident">T</span><span class="op">&gt;</span> <span class="ident">KeyManager</span><span class="op">&lt;</span><span class="ident">LI</span>, <span class="ident">S</span>, <span class="ident">T</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">LI</span>: <span class="ident">LibraInterface</span>,
-    <span class="ident">S</span>: <span class="ident">Storage</span>,
+    <span class="ident">S</span>: <span class="ident">KVStorage</span> <span class="op">+</span> <span class="ident">CryptoStorage</span>,
     <span class="ident">T</span>: <span class="ident">TimeService</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(

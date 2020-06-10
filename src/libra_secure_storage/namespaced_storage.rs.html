@@ -109,12 +109,12 @@
 <span class="doccomment">/// effectively prefixing all keys with then namespace value and &quot;/&quot; so a namespace of foo and a</span>
 <span class="doccomment">/// key of bar becomes &quot;foo/bar&quot;. Without a namespace, the key would just be &quot;bar&quot;. This matches</span>
 <span class="doccomment">/// how this library implements namespaces for Vault.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NamespacedStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NamespacedStorage</span> {
     <span class="ident">namespace</span>: <span class="ident">String</span>,
-    <span class="ident">inner</span>: <span class="ident">T</span>,
+    <span class="ident">inner</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">KVStorage</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">KVStorage</span><span class="op">&gt;</span> <span class="ident">KVStorage</span> <span class="kw">for</span> <span class="ident">NamespacedStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
+<span class="kw">impl</span> <span class="ident">KVStorage</span> <span class="kw">for</span> <span class="ident">NamespacedStorage</span> {
     <span class="kw">fn</span> <span class="ident">available</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">available</span>()
     }
@@ -134,8 +134,8 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> <span class="ident">NamespacedStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">storage</span>: <span class="ident">T</span>, <span class="ident">namespace</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+<span class="kw">impl</span> <span class="ident">NamespacedStorage</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">storage</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">KVStorage</span><span class="op">&gt;</span>, <span class="ident">namespace</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">NamespacedStorage</span> {
             <span class="ident">namespace</span>,
             <span class="ident">inner</span>: <span class="ident">storage</span>,
@@ -147,7 +147,7 @@
     }
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">KVStorage</span><span class="op">&gt;</span> <span class="ident">CryptoKVStorage</span> <span class="kw">for</span> <span class="ident">NamespacedStorage</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {}
+<span class="kw">impl</span> <span class="ident">CryptoKVStorage</span> <span class="kw">for</span> <span class="ident">NamespacedStorage</span> {}
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
@@ -166,10 +166,10 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">default</span> <span class="op">=</span> <span class="ident">OnDiskStorage</span>::<span class="ident">new</span>(<span class="ident">path_buf</span>.<span class="ident">clone</span>());
 
         <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">OnDiskStorage</span>::<span class="ident">new</span>(<span class="ident">path_buf</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nss0</span> <span class="op">=</span> <span class="ident">NamespacedStorage</span>::<span class="ident">new</span>(<span class="ident">storage</span>, <span class="ident">ns0</span>.<span class="ident">into</span>());
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nss0</span> <span class="op">=</span> <span class="ident">NamespacedStorage</span>::<span class="ident">new</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage</span>), <span class="ident">ns0</span>.<span class="ident">into</span>());
 
         <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">OnDiskStorage</span>::<span class="ident">new</span>(<span class="ident">path_buf</span>);
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nss1</span> <span class="op">=</span> <span class="ident">NamespacedStorage</span>::<span class="ident">new</span>(<span class="ident">storage</span>, <span class="ident">ns1</span>.<span class="ident">into</span>());
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nss1</span> <span class="op">=</span> <span class="ident">NamespacedStorage</span>::<span class="ident">new</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage</span>), <span class="ident">ns1</span>.<span class="ident">into</span>());
 
         <span class="ident">default</span>.<span class="ident">set</span>(<span class="ident">key</span>, <span class="ident">Value</span>::<span class="ident">U64</span>(<span class="number">0</span>)).<span class="ident">unwrap</span>();
         <span class="ident">nss0</span>.<span class="ident">set</span>(<span class="ident">key</span>, <span class="ident">Value</span>::<span class="ident">U64</span>(<span class="number">1</span>)).<span class="ident">unwrap</span>();
@@ -190,10 +190,10 @@
         <span class="kw">let</span> <span class="ident">default</span> <span class="op">=</span> <span class="ident">OnDiskStorage</span>::<span class="ident">new</span>(<span class="ident">path_buf</span>.<span class="ident">clone</span>());
 
         <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">OnDiskStorage</span>::<span class="ident">new</span>(<span class="ident">path_buf</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nss</span> <span class="op">=</span> <span class="ident">NamespacedStorage</span>::<span class="ident">new</span>(<span class="ident">storage</span>, <span class="ident">ns</span>.<span class="ident">into</span>());
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nss</span> <span class="op">=</span> <span class="ident">NamespacedStorage</span>::<span class="ident">new</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage</span>), <span class="ident">ns</span>.<span class="ident">into</span>());
 
         <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">OnDiskStorage</span>::<span class="ident">new</span>(<span class="ident">path_buf</span>);
-        <span class="kw">let</span> <span class="ident">another_nss</span> <span class="op">=</span> <span class="ident">NamespacedStorage</span>::<span class="ident">new</span>(<span class="ident">storage</span>, <span class="ident">ns</span>.<span class="ident">into</span>());
+        <span class="kw">let</span> <span class="ident">another_nss</span> <span class="op">=</span> <span class="ident">NamespacedStorage</span>::<span class="ident">new</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">storage</span>), <span class="ident">ns</span>.<span class="ident">into</span>());
 
         <span class="ident">nss</span>.<span class="ident">set</span>(<span class="ident">key</span>, <span class="ident">Value</span>::<span class="ident">U64</span>(<span class="number">1</span>)).<span class="ident">unwrap</span>();
         <span class="ident">default</span>.<span class="ident">get</span>(<span class="ident">key</span>).<span class="ident">unwrap_err</span>();
