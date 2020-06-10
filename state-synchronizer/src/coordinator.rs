@@ -33,7 +33,7 @@ use std::{
 };
 use tokio::time::{interval, timeout};
 use std::collections::BTreeMap;
-use std::ops::Bound::Included;
+//use std::ops::Bound::Included;
 
 pub(crate) struct SyncRequest {
     // The Result value returned to the caller is Error in case the StateSynchronizer failed to
@@ -875,11 +875,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
                     // first, try to find biggest pending LI s.t. pending LI's version is the largest
 //                    let highest_li_version = self.local_state.highest_local_li.ledger_info().version();
-                    let pending_li = if let Some((_version, ledger_info)) = self.pending_ledger_infos.range((Included(0), Included(known_version + self.config.chunk_limit))).rev().next() {
-                        Some(ledger_info.clone())
-                    } else {
-                        self.pending_ledger_infos.iter().next().map(|(_version, ledger_info)| ledger_info.clone())
-                    };
+//                    let pending_li = if let Some((_version, ledger_info)) = self.pending_ledger_infos.range((Included(0), Included(known_version + self.config.chunk_limit))).rev().next() {
+//                        Some(ledger_info.clone())
+//                    } else {
+//                        self.pending_ledger_infos.iter().next().map(|(_version, ledger_info)| ledger_info.clone())
+//                    };
+                    let pending_li = self.pending_ledger_infos.iter().next().map(|(_version, ledger_info)| ledger_info.clone());
                     TargetType::HighestAvailable {
                         target_li: pending_li,
                         timeout_ms: self.config.long_poll_timeout_ms,
