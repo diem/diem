@@ -39,7 +39,7 @@ use network_simple_onchain_discovery::{
 };
 use std::{
     clone::Clone,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     sync::{Arc, RwLock},
 };
 use subscription_service::ReconfigSubscription;
@@ -56,7 +56,7 @@ pub struct NetworkBuilder {
     executor: Handle,
     network_context: Arc<NetworkContext>,
     seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
-    trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+    trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
     channel_size: usize,
     connectivity_check_interval_ms: u64,
     max_connection_delay_ms: u64,
@@ -232,6 +232,15 @@ impl NetworkBuilder {
         &mut self,
         trusted_peers: HashMap<PeerId, x25519::PublicKey>,
     ) -> &mut Self {
+        // TODO(philiphayes): remove
+        let trusted_peers = trusted_peers
+            .into_iter()
+            .map(|(peer_id, pubkey)| {
+                let mut pubkey_set = HashSet::new();
+                pubkey_set.insert(pubkey);
+                (peer_id, pubkey_set)
+            })
+            .collect();
         *self.trusted_peers.write().unwrap() = trusted_peers;
         self
     }

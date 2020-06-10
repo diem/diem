@@ -49,7 +49,7 @@ use rand::{
 use serde::Serialize;
 use std::{
     cmp::min,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt, mem,
     sync::{Arc, RwLock},
     time::{Duration, Instant},
@@ -64,7 +64,7 @@ mod test;
 pub struct ConnectivityManager<TTicker, TBackoff> {
     network_context: Arc<NetworkContext>,
     /// Nodes which are eligible to join the network.
-    eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+    eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
     /// PeerId and address of remote peers to which this peer is connected.
     connected: HashMap<PeerId, NetworkAddress>,
     /// Addresses of peers received from discovery sources.
@@ -153,7 +153,7 @@ where
     /// Creates a new instance of the [`ConnectivityManager`] actor.
     pub fn new(
         network_context: Arc<NetworkContext>,
-        eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+        eligible: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
         seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
         ticker: TTicker,
         connection_reqs_tx: ConnectionRequestSender,
@@ -163,16 +163,16 @@ where
         max_delay_ms: u64,
         connection_limit: Option<usize>,
     ) -> Self {
+        // TODO(philiphayes): replace this with better approach
         {
             // Reconcile the keysets eligible is only used to allow us to dial the remote peer
             let eligible_peers = &mut eligible.write().unwrap();
-            for (id, addr) in &seed_peers {
-                let key = addr[0]
-                    .find_noise_proto()
-                    .expect("Unable to find x25519 key in address");
-                if !eligible_peers.contains_key(&id) {
-                    eligible_peers.insert(*id, key);
-                }
+            for (id, addrs) in &seed_peers {
+                let pubkey_set: HashSet<_> = addrs
+                    .iter()
+                    .filter_map(NetworkAddress::find_noise_proto)
+                    .collect();
+                eligible_peers.entry(*id).or_default().extend(pubkey_set);
             }
         }
 
@@ -505,6 +505,17 @@ where
                     "{} Received updated list of eligible nodes",
                     self.network_context
                 );
+
+                // TODO(philiphayes): remove
+                let nodes = nodes
+                    .into_iter()
+                    .map(|(peer_id, pubkey)| {
+                        let mut pubkey_set = HashSet::new();
+                        pubkey_set.insert(pubkey);
+                        (peer_id, pubkey_set)
+                    })
+                    .collect();
+
                 *self.eligible.write().unwrap() = nodes;
             }
             ConnectivityRequest::GetDialQueueSize(sender) => {

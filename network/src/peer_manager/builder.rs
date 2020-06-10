@@ -26,7 +26,7 @@ use netcore::transport::{
 };
 use std::{
     clone::Clone,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt::Debug,
     num::NonZeroUsize,
     sync::{Arc, RwLock},
@@ -66,7 +66,7 @@ struct TransportContext {
     direct_send_protocols: Vec<ProtocolId>,
     rpc_protocols: Vec<ProtocolId>,
     authentication_mode: AuthenticationMode,
-    trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+    trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
 }
 
 impl TransportContext {
@@ -75,7 +75,7 @@ impl TransportContext {
         direct_send_protocols: Vec<ProtocolId>,
         rpc_protocols: Vec<ProtocolId>,
         authentication_mode: AuthenticationMode,
-        trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
     ) -> Self {
         Self {
             chain_id,
@@ -201,7 +201,7 @@ impl PeerManagerBuilder {
         network_context: Arc<NetworkContext>,
         // TODO(philiphayes): better support multiple listening addrs
         listen_address: NetworkAddress,
-        trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
         authentication_mode: AuthenticationMode,
         channel_size: usize,
         max_concurrent_network_reqs: usize,

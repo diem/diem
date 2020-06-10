@@ -21,7 +21,7 @@ use libra_types::PeerId;
 use netcore::transport::{tcp, ConnectionOrigin, Transport};
 use serde::Serialize;
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     convert::TryFrom,
     fmt::Debug,
     io,
@@ -282,7 +282,7 @@ where
         base_transport: TTransport,
         self_peer_id: PeerId,
         identity_key: x25519::PrivateKey,
-        trusted_peers: Option<Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>>,
+        trusted_peers: Option<Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>>,
         handshake_version: u8,
         chain_id: ChainId,
         network_id: NetworkId,
@@ -519,9 +519,11 @@ mod test {
         key1: &x25519::PrivateKey,
         id2: PeerId,
         key2: &x25519::PrivateKey,
-    ) -> Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>> {
+    ) -> Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>> {
+        let pubkey_set1 = [key1.public_key()].iter().copied().collect();
+        let pubkey_set2 = [key2.public_key()].iter().copied().collect();
         Arc::new(RwLock::new(
-            vec![(id1, key1.public_key()), (id2, key2.public_key())]
+            vec![(id1, pubkey_set1), (id2, pubkey_set2)]
                 .into_iter()
                 .collect(),
         ))
@@ -539,7 +541,7 @@ mod test {
         Runtime,
         (PeerId, LibraNetTransport<TTransport>),
         (PeerId, LibraNetTransport<TTransport>),
-        Option<Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>>,
+        Option<Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>>,
         SupportedProtocols,
     )
     where
