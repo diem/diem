@@ -152,8 +152,12 @@ impl Client {
     /// Create or update a file.
     pub fn put(&self, path: &str, content: &str) -> Result<(), Error> {
         let json = match self.get_sha(path) {
-            Ok(hash) => json!({ "content": content, "message": "libra-secure", "sha": hash }),
-            Err(Error::NotFound(_)) => json!({ "content": content, "message": "libra-secure" }),
+            Ok(hash) => {
+                json!({ "content": content, "message": format!("[libra-management] {}", path), "sha": hash })
+            }
+            Err(Error::NotFound(_)) => {
+                json!({ "content": content, "message": format!("[libra-management] {}", path) })
+            }
             Err(e) => return Err(e),
         };
 
