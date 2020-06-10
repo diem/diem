@@ -19,4 +19,4 @@ petgraph = { version = "0.5.1", features = ["graphmap", "matrix_graph", "stable_
 serde = { version = "1.0.111", features = ["derive", "rc"] }
 sha-1 = { version = "0.8.2", features = ["std"] }
 subtle = { version = "2.2.3", features = ["i128", "std"] }
-syn = { version = "1.0.30", features = ["clone-impls", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }
+syn = { version = "1.0.31", features = ["clone-impls", "derive", "extra-traits", "fold", "full", "parsing", "printing", "proc-macro", "quote", "visit", "visit-mut"] }
