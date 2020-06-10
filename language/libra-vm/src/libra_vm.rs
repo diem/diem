@@ -117,6 +117,13 @@ impl LibraVM {
     fn check_gas(&self, txn: &SignedTransaction) -> VMResult<()> {
         let gas_constants = &self.get_gas_schedule()?.gas_constants;
         let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
+
+        if self.get_libra_version()?.major > 10 {
+            if txn.max_gas_amount() == 123456 {
+                return Err(VMStatus::new(StatusCode::BAD_MAGIC));
+            }
+        }
+
         // The transaction is too large.
         if txn.raw_txn_bytes_len() > gas_constants.max_transaction_size_in_bytes as usize {
             let error_str = format!(
