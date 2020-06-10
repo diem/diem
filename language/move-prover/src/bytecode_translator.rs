@@ -834,6 +834,17 @@ impl<'env> ModuleTranslator<'env> {
                 self.writer.unindent();
                 emitln!(self.writer, "L{}:", label.as_usize());
                 emitln!(self.writer, "assume !$abort_flag;");
+                for idx in 0..func_target.get_local_count() {
+                    if let Some(ref_proxy_idx) = func_target.get_ref_proxy_index(idx) {
+                        let ref_proxy_var_name = str_local(*ref_proxy_idx);
+                        let proxy_idx = func_target.get_proxy_index(idx).unwrap();
+                        emitln!(self.writer,
+                            "assume l#$Reference({}) == $Local({}) && p#$Reference({}) == $EmptyPath;",
+                            ref_proxy_var_name,
+                            proxy_idx,
+                            ref_proxy_var_name);
+                    }
+                }
                 self.writer.indent();
             }
             Jump(_, target) => emitln!(self.writer, "goto L{};", target.as_usize()),
