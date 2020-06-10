@@ -14,7 +14,7 @@ proptest = "0.10.0"
 rand = "0.7.3"
 serde = { version = "1.0.111", features = ["derive"] }
 serde-reflection = "0.3.0"
-serde_yaml = "0.8.12"
+serde_yaml = "0.8.13"
 structopt = "0.3.14"
 
 consensus = { path = "../../consensus", version = "0.1.0", features=["fuzzing"] }
