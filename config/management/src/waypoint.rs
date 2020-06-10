@@ -1,14 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, SecureBackends, SingleBackend};
+use crate::{error::Error, secure_backend::RelativePosition, SecureBackends, SingleBackend};
 use executor::db_bootstrapper;
+use libra_global_constants::WAYPOINT;
 use libra_secure_storage::{BoxedStorage, KVStorage, Value};
 use libra_temppath::TempPath;
 use libra_types::waypoint::Waypoint;
 use libra_vm::LibraVM;
 use libradb::LibraDB;
-use std::convert::TryInto;
+use std::{convert::TryInto, str::FromStr};
 use storage_interface::DbReaderWriter;
 use structopt::StructOpt;
 
@@ -40,19 +41,79 @@ impl CreateWaypoint {
             .ok_or_else(|| Error::UnexpectedError("Unable to generate a waypoint".to_string()))?;
 
         if let Some(remote) = self.secure_backends.remote {
-            let mut remote: BoxedStorage = remote.try_into()?;
-            remote
-                .available()
-                .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
+            let mut remote_storage: BoxedStorage = remote.try_into()?;
+            InsertWaypoint::insert_waypoint_to_backend(
+                &waypoint,
+                &mut remote_storage,
+                RelativePosition::Remote,
+            )?;
+        }
+        Ok(waypoint)
+    }
+}
 
-            let waypoint_value = Value::String(waypoint.to_string());
-            remote
-                .set(libra_global_constants::WAYPOINT, waypoint_value)
-                .map_err(|e| {
-                    Error::RemoteStorageWriteError(libra_global_constants::WAYPOINT, e.to_string())
-                })?;
+#[derive(Debug, StructOpt)]
+pub struct InsertWaypoint {
+    #[structopt(flatten)]
+    secure_backends: SecureBackends,
+
+    #[structopt(long)]
+    waypoint: Option<String>,
+}
+
+impl InsertWaypoint {
+    pub fn execute(self) -> Result<Waypoint, Error> {
+        if self.waypoint.is_some() && self.secure_backends.remote.is_some() {
+            return Err(Error::CommandArgumentError(
+                "only one of --waypoint and --remote can be provided".to_string(),
+            ));
         }
 
+        let waypoint_string = if let Some(waypoint_string) = self.waypoint {
+            waypoint_string
+        } else if let Some(remote_backend) = self.secure_backends.remote {
+            TryInto::<BoxedStorage>::try_into(remote_backend)?
+                .get(WAYPOINT)
+                .and_then(|v| v.value.string())
+                .map_err(|e| Error::RemoteStorageReadError(WAYPOINT, e.to_string()))?
+        } else {
+            return Err(Error::CommandArgumentError(
+                "please provide either --waypoint or --remote".to_string(),
+            ));
+        };
+
+        let waypoint = Waypoint::from_str(&waypoint_string)
+            .map_err(|e| Error::UnexpectedError(e.to_string()))?;
+        let mut local_storage: BoxedStorage = self.secure_backends.local.try_into()?;
+        Self::insert_waypoint_to_backend(&waypoint, &mut local_storage, RelativePosition::Local)?;
         Ok(waypoint)
+    }
+
+    fn insert_waypoint_to_backend(
+        waypoint: &Waypoint,
+        backend_storage: &mut BoxedStorage,
+        backend_location: RelativePosition,
+    ) -> Result<(), Error> {
+        backend_storage
+            .available()
+            .map_err(|e| match backend_location {
+                RelativePosition::Local => Error::LocalStorageUnavailable(e.to_string()),
+                RelativePosition::Remote => Error::RemoteStorageUnavailable(e.to_string()),
+            })?;
+
+        backend_storage
+            .set(
+                libra_global_constants::WAYPOINT,
+                Value::String(waypoint.to_string()),
+            )
+            .map_err(|e| match backend_location {
+                RelativePosition::Local => {
+                    Error::LocalStorageWriteError(libra_global_constants::WAYPOINT, e.to_string())
+                }
+                RelativePosition::Remote => {
+                    Error::RemoteStorageWriteError(libra_global_constants::WAYPOINT, e.to_string())
+                }
+            })?;
+        Ok(())
     }
 }

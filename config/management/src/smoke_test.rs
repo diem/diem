@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{layout::Layout, storage_helper::StorageHelper};
+use crate::{constants, layout::Layout, storage_helper::StorageHelper};
 use config_builder::{BuildSwarm, SwarmConfig};
 use libra_config::{
     config::{
@@ -117,10 +117,13 @@ fn smoke_test() {
     genesis_path.create_as_file().unwrap();
     let genesis = helper.genesis(genesis_path.path()).unwrap();
 
+    // Save the waypoint into shared secure storage so that validators can perform insert_waypoint
+    let waypoint = helper.create_waypoint(constants::COMMON_NS).unwrap();
+
     // Step 5) Introduce waypoint and genesis into the configs and verify along the way
     for (i, mut config) in configs.iter_mut().enumerate() {
         let ns = i.to_string();
-        let waypoint = helper.create_waypoint(&ns).unwrap();
+        helper.insert_waypoint(&ns, constants::COMMON_NS).unwrap();
         let output = helper.verify_genesis(&ns, genesis_path.path()).unwrap();
         // 4 matches = 5 splits
         assert_eq!(output.split("match").count(), 5);

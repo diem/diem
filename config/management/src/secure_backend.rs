@@ -16,6 +16,12 @@ pub const GITHUB: &str = "github";
 pub const MEMORY: &str = "memory";
 pub const VAULT: &str = "vault";
 
+#[derive(Copy, Clone, Debug)]
+pub enum RelativePosition {
+    Local,
+    Remote,
+}
+
 /// SecureBackend is a parameter that is stored as set of semi-colon separated key/value pairs. The
 /// only expected key is backend which defines which of the SecureBackends the parameters refer to.
 /// Some backends require parameters others do not, so that requires a conversion into the
