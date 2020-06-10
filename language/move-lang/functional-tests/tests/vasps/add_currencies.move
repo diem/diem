@@ -22,11 +22,17 @@ fun main(assoc: &signer) {
     // now create a parent VASP that accepts all currencies
     add_all_currencies = true;
     LibraAccount::create_parent_vasp_account<LBR>(
-        assoc, 0xB, dummy_auth_key_prefix, x"A1", x"A2", pubkey, add_all_currencies
+        assoc, 0xB, dummy_auth_key_prefix, x"A1", x"A2", copy pubkey, add_all_currencies
     );
     Transaction::assert(LibraAccount::accepts_currency<LBR>(0xB), 2004);
     Transaction::assert(LibraAccount::accepts_currency<Coin1>(0xB), 2005);
     Transaction::assert(LibraAccount::accepts_currency<Coin2>(0xB), 2006);
+
+    // set up parent account as a VASP
+    // TODO: remove this once //! account works
+    LibraAccount::add_parent_vasp_role_from_association(
+        assoc, {{parent}}, x"A1", x"A2", pubkey,
+    );
 }
 }
 // check: EXECUTED

@@ -144,21 +144,6 @@ impl Account {
         self.make_access_path(BalanceResource::struct_tag_for_currency(type_tag))
     }
 
-    /// Returns the AccessPath that describes the Account type resource instance.
-    ///
-    /// Use this to retrieve or publish the Account AccountRole blob.
-    pub fn make_account_role_access_path(
-        &self,
-        account_specifier: AccountRoleSpecifier,
-    ) -> AccessPath {
-        let struct_tag = match account_specifier {
-            AccountRoleSpecifier::Empty => account_config::empty_account_role_struct_tag(),
-            AccountRoleSpecifier::Vasp => account_config::vasp_account_role_struct_tag(),
-            AccountRoleSpecifier::Unhosted => account_config::unhosted_account_role_struct_tag(),
-        };
-        self.make_access_path(struct_tag)
-    }
-
     // TODO: plug in the account type
     pub fn make_access_path(&self, tag: StructTag) -> AccessPath {
         // TODO: we need a way to get the type (FatStructType) of the Account in place
@@ -446,18 +431,39 @@ impl Balance {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AccountRoleSpecifier {
-    Empty,
-    Vasp,
+    AssocRoot,
+    TreasuryCompliance,
+    DesignatedDealer,
+    Validator,
+    ValidatorOperator,
+    ParentVASP,
+    ChildVASP,
     Unhosted,
+}
+
+impl AccountRoleSpecifier {
+    pub fn id(&self) -> u64 {
+        match self {
+            Self::AssocRoot => 0,
+            Self::TreasuryCompliance => 1,
+            Self::DesignatedDealer => 2,
+            Self::Validator => 3,
+            Self::ValidatorOperator => 4,
+            Self::ParentVASP => 5,
+            Self::ChildVASP => 6,
+            Self::Unhosted => 7,
+        }
+    }
 }
 
 impl FromStr for AccountRoleSpecifier {
     type Err = Error;
+
     fn from_str(s: &str) -> Result<Self> {
         match s {
-            "empty" => Ok(AccountRoleSpecifier::Empty),
+            "empty" => Ok(AccountRoleSpecifier::AssocRoot), // TODO: rename from empty
             "unhosted" => Ok(AccountRoleSpecifier::Unhosted),
-            "vasp" => Ok(AccountRoleSpecifier::Vasp),
+            "vasp" => Ok(AccountRoleSpecifier::ParentVASP), // TODO: rename from vasp
             other => Err(Error::msg(format!(
                 "Unrecognized account type specifier {} found.",
                 other
@@ -468,7 +474,7 @@ impl FromStr for AccountRoleSpecifier {
 
 impl Default for AccountRoleSpecifier {
     fn default() -> Self {
-        AccountRoleSpecifier::Vasp
+        AccountRoleSpecifier::ParentVASP
     }
 }
 
@@ -494,118 +500,6 @@ impl AccountRole {
 
     pub fn account_specifier(&self) -> AccountRoleSpecifier {
         self.account_specifier
-    }
-
-    fn empty_account_role() -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: account_config::empty_account_role_module_name().to_owned(),
-            name: account_config::empty_account_role_struct_name().to_owned(),
-            is_resource: false,
-            ty_args: vec![],
-            layout: vec![FatType::Bool],
-        }
-    }
-
-    fn unhosted_type() -> FatStructType {
-        let inner_account_limits = FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: account_config::account_limits_module_name().to_owned(),
-            name: account_config::account_limits_window_struct_name().to_owned(),
-            is_resource: false,
-            ty_args: vec![],
-            layout: vec![FatType::U64, FatType::U64, FatType::U64, FatType::U64],
-        };
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: account_config::unhosted_type_module_name().to_owned(),
-            name: account_config::unhosted_type_struct_name().to_owned(),
-            is_resource: false,
-            ty_args: vec![],
-            layout: vec![FatType::Struct(Box::new(inner_account_limits))],
-        }
-    }
-
-    fn vasp_account_role() -> FatStructType {
-        let root_vasp_metadata = FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: account_config::vasp_type_module_name().to_owned(),
-            name: account_config::root_vasp_type_struct_name().to_owned(),
-            is_resource: false,
-            ty_args: vec![],
-            layout: vec![
-                FatType::Vector(Box::new(FatType::U8)),
-                FatType::Vector(Box::new(FatType::U8)),
-                FatType::U64,
-                FatType::Vector(Box::new(FatType::U8)),
-            ],
-        };
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: account_config::vasp_type_module_name().to_owned(),
-            name: account_config::root_vasp_type_struct_name().to_owned(),
-            is_resource: false,
-            ty_args: vec![],
-            layout: vec![FatType::Struct(Box::new(root_vasp_metadata))],
-        }
-    }
-
-    fn type_layout(account_specifier: AccountRoleSpecifier) -> Vec<FatType> {
-        let inner_type = match account_specifier {
-            AccountRoleSpecifier::Empty => Self::empty_account_role(),
-            AccountRoleSpecifier::Vasp => Self::vasp_account_role(),
-            AccountRoleSpecifier::Unhosted => Self::unhosted_type(),
-        };
-        vec![
-            FatType::Bool,
-            FatType::Struct(Box::new(inner_type)),
-            FatType::Address,
-        ]
-    }
-
-    /// Returns the Move Value representation of the AccountRole.
-    pub fn to_value(&self) -> Value {
-        let inner_type_structure = match self.account_specifier {
-            AccountRoleSpecifier::Empty => Struct::pack(vec![Value::bool(false)], false),
-            AccountRoleSpecifier::Vasp => Struct::pack(
-                vec![Value::struct_(Struct::pack(
-                    vec![
-                        Value::vector_u8(vec![]),
-                        Value::vector_u8(vec![]),
-                        Value::u64(u64::MAX),
-                        Value::vector_u8(vec![0u8; 16]),
-                    ],
-                    false,
-                ))],
-                false,
-            ),
-            AccountRoleSpecifier::Unhosted => Struct::pack(
-                vec![Value::struct_(Struct::pack(
-                    vec![Value::u64(0), Value::u64(0), Value::u64(0), Value::u64(0)],
-                    false,
-                ))],
-                false,
-            ),
-        };
-        Value::struct_(Struct::pack(
-            vec![
-                Value::bool(true),
-                Value::struct_(inner_type_structure),
-                Value::address(self.self_address),
-            ],
-            true,
-        ))
-    }
-
-    pub fn type_(account_specifier: AccountRoleSpecifier) -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: account_config::account_role_module_name().to_owned(),
-            name: account_config::account_role_struct_name().to_owned(),
-            is_resource: true,
-            ty_args: vec![],
-            layout: Self::type_layout(account_specifier),
-        }
     }
 }
 
@@ -661,6 +555,7 @@ pub struct AccountData {
     sent_events: EventHandle,
     received_events: EventHandle,
     is_frozen: bool,
+    role_id: u64,
 
     balances: BTreeMap<Identifier, Balance>,
     event_generator: EventHandleGenerator,
@@ -681,17 +576,17 @@ impl AccountData {
             balance,
             lbr_currency_code(),
             sequence_number,
-            AccountRoleSpecifier::Vasp,
+            AccountRoleSpecifier::ParentVASP,
         )
     }
 
-    pub fn new_empty() -> Self {
+    pub fn new_assoc_root() -> Self {
         Self::with_account(
             Account::new(),
             0,
             lbr_currency_code(),
             0,
-            AccountRoleSpecifier::Empty,
+            AccountRoleSpecifier::AssocRoot,
         )
     }
 
@@ -768,6 +663,7 @@ impl AccountData {
             is_frozen,
             sent_events: new_event_handle(sent_events_count),
             received_events: new_event_handle(received_events_count),
+            role_id: account_specifier.id(),
         }
     }
 
@@ -822,7 +718,7 @@ impl AccountData {
         }
     }
 
-    /// Returns the (Move value) layout of the LibraAccount::T struct
+    /// Returns the (Move value) layout of the LibraAccount::LibraAccount struct
     pub fn type_() -> FatStructType {
         FatStructType {
             address: account_config::CORE_CODE_ADDRESS,
@@ -846,6 +742,7 @@ impl AccountData {
                 )))),
                 FatType::U64,
                 FatType::Bool,
+                FatType::U64,
             ],
         }
     }
@@ -856,14 +753,13 @@ impl AccountData {
     }
 
     /// Creates and returns the top-level resources to be published under the account
-    pub fn to_value(&self) -> (Value, Vec<(Identifier, Value)>, Value, Value) {
+    pub fn to_value(&self) -> (Value, Vec<(Identifier, Value)>, Value) {
         // TODO: publish some concept of Account
         let balances: Vec<_> = self
             .balances
             .iter()
             .map(|(code, balance)| (code.clone(), balance.to_value()))
             .collect();
-        let assoc_cap = self.account_role.to_value();
         let event_generator = self.event_generator.to_value();
         let account = Value::struct_(Struct::pack(
             vec![
@@ -887,10 +783,11 @@ impl AccountData {
                 )),
                 Value::u64(self.sequence_number),
                 Value::bool(self.is_frozen),
+                Value::u64(self.role_id),
             ],
             true,
         ));
-        (account, balances, assoc_cap, event_generator)
+        (account, balances, event_generator)
     }
 
     /// Returns the AccessPath that describes the Account resource instance.
@@ -914,23 +811,10 @@ impl AccountData {
         self.account.make_event_generator_access_path()
     }
 
-    /// Returns the AccessPath that describes the Account balance resource instance.
-    ///
-    /// Use this to retrieve or publish the Account blob.
-    pub fn make_account_role_access_path(
-        &self,
-        account_specifier: AccountRoleSpecifier,
-    ) -> AccessPath {
-        self.account
-            .make_account_role_access_path(account_specifier)
-    }
-
     /// Creates a writeset that contains the account data and can be patched to the storage
     /// directly.
     pub fn to_writeset(&self) -> WriteSet {
-        let account_role_specifier = self.account_role();
-        let (account_blob, balance_blobs, account_role_blob, event_generator_blob) =
-            self.to_value();
+        let (account_blob, balance_blobs, event_generator_blob) = self.to_value();
         let mut write_set = Vec::new();
         let account = account_blob
             .value_as::<Struct>()
@@ -946,15 +830,6 @@ impl AccountData {
                 .unwrap();
             write_set.push((self.make_balance_access_path(code), WriteOp::Value(balance)));
         }
-        let account_role = account_role_blob
-            .value_as::<Struct>()
-            .unwrap()
-            .simple_serialize(&AccountRole::type_(account_role_specifier))
-            .unwrap();
-        write_set.push((
-            self.make_account_role_access_path(account_role_specifier),
-            WriteOp::Value(account_role),
-        ));
 
         let event_generator = event_generator_blob
             .value_as::<Struct>()

@@ -21,7 +21,7 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
 
     main<Token>(account: &signer, fresh_address: address, auth_key_prefix: vector<u8>, initial_amount: u64) {
       let with_cap: LibraAccount.WithdrawCapability;
-      LibraAccount.create_testnet_account<Token>(copy(fresh_address), move(auth_key_prefix));
+      LibraAccount.create_unhosted_account<Token>(copy(fresh_address), move(auth_key_prefix), false);
       if (copy(initial_amount) > 0) {
          with_cap = LibraAccount.extract_withdraw_capability(copy(account));
          LibraAccount.deposit<Token>(

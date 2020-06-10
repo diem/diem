@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(vasp: &signer, new_key: vector&lt;u8&gt;) {
-    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_rotate_compliance_public_key">LibraAccount::rotate_compliance_public_key</a>(vasp, new_key)
+    <a href="../../modules/doc/VASP.md#0x0_VASP_rotate_compliance_public_key">VASP::rotate_compliance_public_key</a>(vasp, new_key)
 }
 </code></pre>
 

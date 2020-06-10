@@ -69,6 +69,8 @@ pub struct AccountView {
     pub received_events_key: BytesView,
     pub delegated_key_rotation_capability: bool,
     pub delegated_withdrawal_capability: bool,
+    pub is_frozen: bool,
+    pub role_id: u64,
     pub role: AccountRoleView,
 }
 
@@ -91,6 +93,8 @@ impl AccountView {
             received_events_key: BytesView::from(account.received_events().key().as_bytes()),
             delegated_key_rotation_capability: account.has_delegated_key_rotation_capability(),
             delegated_withdrawal_capability: account.has_delegated_withdrawal_capability(),
+            is_frozen: account.is_frozen(),
+            role_id: account.role_id(),
             role: AccountRoleView::from(account_role),
         }
     }
@@ -405,7 +409,6 @@ impl From<Transaction> for TransactionDataView {
 impl From<AccountRole> for AccountRoleView {
     fn from(role: AccountRole) -> Self {
         match role {
-            AccountRole::Empty => AccountRoleView::Empty,
             AccountRole::Unhosted => AccountRoleView::Unhosted,
             AccountRole::Unknown => AccountRoleView::Unknown,
             AccountRole::ChildVASP(child_vasp) => AccountRoleView::ChildVASP {

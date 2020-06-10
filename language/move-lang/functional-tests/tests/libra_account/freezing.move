@@ -81,7 +81,22 @@ fun main(account: &signer) {
 // check: ABORTED
 // check: 14
 
-// create a chid VASP
+// TODO: this can go away once //! account works
+// create a parent VASPx
+//! new-transaction
+//! sender: association
+script {
+use 0x0::LibraAccount;
+fun main(association: &signer) {
+    let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
+    LibraAccount::add_parent_vasp_role_from_association(
+        association, {{vasp}}, x"A", x"B", pubkey
+    )
+}
+}
+// check: EXECUTED
+
+// create a child VASP
 //! new-transaction
 //! sender: vasp
 script {

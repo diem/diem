@@ -468,9 +468,9 @@
 
 <pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_valid_and_certified">is_valid_and_certified</a>(addr: address): bool {
     <a href="ValidatorConfig.md#0x0_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(addr) &&
-        <a href="LibraAccount.md#0x0_LibraAccount_is_certified">LibraAccount::is_certified</a>&lt;<a href="LibraAccount.md#0x0_LibraAccount_ValidatorRole">LibraAccount::ValidatorRole</a>&gt;(addr)
+        <a href="ValidatorConfig.md#0x0_ValidatorConfig_is_certified">ValidatorConfig::is_certified</a>(addr)
         // TODO(valerini): only allow certified operators, i.e. uncomment the line
-        // && <a href="LibraAccount.md#0x0_LibraAccount_is_certified">LibraAccount::is_certified</a>&lt;<a href="LibraAccount.md#0x0_LibraAccount_ValidatorOperatorRole">LibraAccount::ValidatorOperatorRole</a>&gt;(<a href="ValidatorConfig.md#0x0_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(addr))
+        // && LibraAccount::is_certified&lt;LibraAccount::ValidatorOperatorRole&gt;(<a href="ValidatorConfig.md#0x0_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(addr))
 }
 </code></pre>
 

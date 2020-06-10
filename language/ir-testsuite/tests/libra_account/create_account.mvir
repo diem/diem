@@ -1,11 +1,25 @@
 import 0x0.LibraAccount;
 import 0x0.LBR;
 import 0x0.LCS;
+
+//! sender: association
+main(account: &signer) {
+    let addr: address;
+
+    addr = 0x111101;
+    assert(!LibraAccount.exists(copy(addr)), 83);
+    LibraAccount.create_testnet_account<LBR.LBR>(copy(account), copy(addr), LCS.to_bytes<address>(&addr));
+    return;
+}
+
+//! new-transaction
+import 0x0.LibraAccount;
+import 0x0.LBR;
+import 0x0.LCS;
 import 0x0.Libra;
 
 main(account: &signer) {
     let addr: address;
-    let account_exists: bool;
     let ten_coins: Libra.Libra<LBR.LBR>;
     let account_exists_now: bool;
     let account2_balance: u64;
@@ -13,13 +27,10 @@ main(account: &signer) {
     let with_cap: LibraAccount.WithdrawCapability;
 
     addr = 0x111101;
-    account_exists = LibraAccount.exists(copy(addr));
-    assert(!move(account_exists), 83);
 
     with_cap = LibraAccount.extract_withdraw_capability(copy(account));
     ten_coins = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 10);
     LibraAccount.restore_withdraw_capability(move(with_cap));
-    LibraAccount.create_testnet_account<LBR.LBR>(copy(addr), LCS.to_bytes<address>(&addr));
     LibraAccount.deposit<LBR.LBR>(copy(account), copy(addr), move(ten_coins));
 
     account_exists_now = LibraAccount.exists(copy(addr));

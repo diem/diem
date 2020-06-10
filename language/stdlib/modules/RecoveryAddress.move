@@ -2,8 +2,9 @@ address 0x0 {
 module RecoveryAddress {
     use 0x0::LibraAccount;
     use 0x0::Signer;
-    use 0x0::Vector;
     use 0x0::Transaction;
+    use 0x0::VASP;
+    use 0x0::Vector;
 
     /// A resource that holds the `KeyRotationCapability`s for several accounts belonging to the
     /// same VASP. A VASP account that delegates its `KeyRotationCapability` to
@@ -25,7 +26,7 @@ module RecoveryAddress {
     public fun publish(recovery_account: &signer) {
         // Only VASPs can create a recovery address
         // TODO: proper error code
-        Transaction::assert(LibraAccount::is_vasp(Signer::address_of(recovery_account)), 2222);
+        Transaction::assert(VASP::is_vasp(Signer::address_of(recovery_account)), 2222);
         // put the rotation capability for the recovery account itself in `rotation_caps`. This
         // ensures two things:
         // (1) It's not possible to get into a "recovery cycle" where A is the recovery account for
@@ -79,8 +80,8 @@ module RecoveryAddress {
         let addr = Signer::address_of(to_recover_account);
         // Only accept the rotation capability if both accounts belong to the same VASP
         Transaction::assert(
-            LibraAccount::parent_vasp_address(recovery_address) ==
-                LibraAccount::parent_vasp_address(addr),
+            VASP::parent_address(recovery_address) ==
+                VASP::parent_address(addr),
             444 // TODO: proper error code
         );
 

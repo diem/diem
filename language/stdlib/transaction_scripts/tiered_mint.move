@@ -1,4 +1,5 @@
 script {
+use 0x0::DesignatedDealer;
 use 0x0::LibraAccount;
 use 0x0::SlidingNonce;
 
@@ -13,8 +14,9 @@ fun main<CoinType>(
     tier_index: u64
 ) {
     SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
-    LibraAccount::mint_to_designated_dealer<CoinType>(
-        tc_account, designated_dealer_address, mint_amount, tier_index
+    let coins = DesignatedDealer::tiered_mint<CoinType>(
+        tc_account, mint_amount, designated_dealer_address, tier_index
     );
+    LibraAccount::deposit(tc_account, designated_dealer_address, coins)
 }
 }

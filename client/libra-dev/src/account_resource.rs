@@ -111,6 +111,7 @@ mod tests {
             EventHandle::new(EventKey::new_from_address(&addr, 0), 777),
             EventHandle::new(EventKey::new_from_address(&addr, 0), 888),
             false,
+            5, // PARENT_VASP_ROLE_ID
         );
         let br = BalanceResource::new(100);
 

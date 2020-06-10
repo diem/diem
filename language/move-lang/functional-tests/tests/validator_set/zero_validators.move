@@ -17,15 +17,15 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::LibraAccount;
     use 0x0::LibraSystem;
+    use 0x0::ValidatorConfig;
     fun main(account: &signer) {
         let num_validators = LibraSystem::validator_set_size();
         0x0::Transaction::assert(num_validators == 1, 98);
         let index = 0;
         while (index < num_validators) {
             let addr = LibraSystem::get_ith_validator_address(index);
-            LibraAccount::decertify<LibraAccount::ValidatorRole>(account, addr);
+            ValidatorConfig::decertify(account, addr);
             index = index + 1;
         }
     }
