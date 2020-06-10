@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    noise::{stream::NoiseStream, HandshakeAuthMode, NoiseUpgrader},
+    noise::{stream::NoiseStream, AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader},
     protocols::{
         identity::exchange_handshake,
         wire::handshake::v1::{HandshakeMsg, MessagingProtocolVersion, SupportedProtocols},
@@ -239,7 +239,10 @@ async fn upgrade_outbound<T: TSocket>(
     let socket = fut_socket.await?;
 
     // noise handshake
-    let socket = ctxt.noise.upgrade_outbound(socket, remote_pubkey).await?;
+    let socket = ctxt
+        .noise
+        .upgrade_outbound(socket, remote_pubkey, AntiReplayTimestamps::now)
+        .await?;
 
     // sanity check: Noise IK should always guarantee this is true
     debug_assert_eq!(remote_pubkey, socket.get_remote_static());
