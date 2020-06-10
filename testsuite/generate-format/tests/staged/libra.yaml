@@ -3,8 +3,7 @@ AccessPath:
   STRUCT:
     - address:
         TYPENAME: AccountAddress
-    - path:
-        SEQ: U8
+    - path: BYTES
 AccountAddress:
   NEWTYPESTRUCT:
     TUPLEARRAY:
@@ -41,8 +40,7 @@ ContractEventV0:
     - sequence_number: U64
     - type_tag:
         TYPENAME: TypeTag
-    - event_data:
-        SEQ: U8
+    - event_data: BYTES
 Ed25519PublicKey:
   NEWTYPESTRUCT: BYTES
 Ed25519Signature:
@@ -55,8 +53,7 @@ Identifier:
   NEWTYPESTRUCT: STR
 Module:
   STRUCT:
-    - code:
-        SEQ: U8
+    - code: BYTES
 MultiEd25519PublicKey:
   NEWTYPESTRUCT: BYTES
 MultiEd25519Signature:
@@ -74,8 +71,7 @@ RawTransaction:
     - expiration_time: U64
 Script:
   STRUCT:
-    - code:
-        SEQ: U8
+    - code: BYTES
     - ty_args:
         SEQ:
           TYPENAME: TypeTag
@@ -130,8 +126,7 @@ TransactionArgument:
           TYPENAME: AccountAddress
     4:
       U8Vector:
-        NEWTYPE:
-          SEQ: U8
+        NEWTYPE: BYTES
     5:
       Bool:
         NEWTYPE: BOOL
@@ -193,8 +188,7 @@ WriteOp:
       Deletion: UNIT
     1:
       Value:
-        NEWTYPE:
-          SEQ: U8
+        NEWTYPE: BYTES
 WriteSet:
   NEWTYPESTRUCT:
     TYPENAME: WriteSetMut

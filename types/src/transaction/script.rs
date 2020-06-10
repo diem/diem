@@ -12,6 +12,7 @@ pub const SCRIPT_HASH_LENGTH: usize = 32;
 /// Call a Move script.
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Script {
+    #[serde(with = "serde_bytes")]
     code: Vec<u8>,
     ty_args: Vec<TypeTag>,
     args: Vec<TransactionArgument>,
@@ -60,6 +61,7 @@ pub struct ScriptABI {
     /// Some text comment.
     doc: String,
     /// The `code` value to set in the `Script` object.
+    #[serde(with = "serde_bytes")]
     code: Vec<u8>,
     /// The names of the type arguments.
     ty_args: Vec<TypeArgumentABI>,

@@ -6,6 +6,7 @@ use std::fmt;
 
 #[derive(Clone, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub struct Module {
+    #[serde(with = "serde_bytes")]
     code: Vec<u8>,
 }
 

@@ -65,6 +65,7 @@ pub struct ContractEventV0 {
     /// The type of the data
     type_tag: TypeTag,
     /// The data payload of the event
+    #[serde(with = "serde_bytes")]
     event_data: Vec<u8>,
 }
 
