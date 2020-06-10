@@ -4,8 +4,8 @@
 use crate::{error::Error, Command};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{
-    ASSOCIATION_KEY, CONSENSUS_KEY, EPOCH, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, OPERATOR_KEY,
-    OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
+    ASSOCIATION_KEY, CONSENSUS_KEY, EPOCH, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND,
+    OPERATOR_KEY, OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_network_address::NetworkAddress;
 use libra_secure_storage::{
@@ -45,6 +45,7 @@ impl StorageHelper {
 
         storage.create_key(ASSOCIATION_KEY).unwrap();
         storage.create_key(CONSENSUS_KEY).unwrap();
+        storage.create_key(EXECUTION_KEY).unwrap();
         storage.create_key(FULLNODE_NETWORK_KEY).unwrap();
         storage.create_key(OWNER_KEY).unwrap();
         storage.create_key(OPERATOR_KEY).unwrap();

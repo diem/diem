@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use consensus_types::{
-    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote, vote_proposal::VoteProposal,
+    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote,
+    vote_proposal::MaybeSignedVoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
 use libra_metrics::monitor;
@@ -29,7 +30,10 @@ impl TSafetyRules for MetricsSafetyRules {
         monitor!("safety_rules", self.inner.initialize(proof))
     }
 
-    fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error> {
+    fn construct_and_sign_vote(
+        &mut self,
+        vote_proposal: &MaybeSignedVoteProposal,
+    ) -> Result<Vote, Error> {
         monitor!(
             "safety_rules",
             self.inner.construct_and_sign_vote(vote_proposal)

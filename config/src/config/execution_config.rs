@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::config::{Error, RootPath};
+use crate::config::{Error, RootPath, SecureBackend};
 use libra_types::transaction::Transaction;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -20,6 +20,7 @@ pub struct ExecutionConfig {
     pub genesis: Option<Transaction>,
     pub genesis_file_location: PathBuf,
     pub service: ExecutionCorrectnessService,
+    pub backend: SecureBackend,
 }
 
 impl std::fmt::Debug for ExecutionConfig {
@@ -45,6 +46,7 @@ impl Default for ExecutionConfig {
             genesis: None,
             genesis_file_location: PathBuf::new(),
             service: ExecutionCorrectnessService::Thread,
+            backend: SecureBackend::InMemoryStorage,
         }
     }
 }

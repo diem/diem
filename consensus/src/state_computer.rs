@@ -4,11 +4,12 @@
 use crate::state_replication::StateComputer;
 use anyhow::{Error, Result};
 use consensus_types::block::Block;
-use executor_types::{BlockExecutor, StateComputeResult};
+use execution_correctness::ExecutionCorrectness;
+use executor_types::StateComputeResult;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_metrics::monitor;
-use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::Transaction};
+use libra_types::ledger_info::LedgerInfoWithSignatures;
 use state_synchronizer::StateSyncClient;
 use std::{
     boxed::Box,
@@ -18,31 +19,19 @@ use std::{
 /// Basic communication with the Execution module;
 /// implements StateComputer traits.
 pub struct ExecutionProxy {
-    execution_correctness_client: Mutex<Box<dyn BlockExecutor + Send + Sync>>,
+    execution_correctness_client: Mutex<Box<dyn ExecutionCorrectness + Send + Sync>>,
     synchronizer: Arc<StateSyncClient>,
 }
 
 impl ExecutionProxy {
     pub fn new(
-        execution_correctness_client: Box<dyn BlockExecutor + Send + Sync>,
+        execution_correctness_client: Box<dyn ExecutionCorrectness + Send + Sync>,
         synchronizer: Arc<StateSyncClient>,
     ) -> Self {
         Self {
             execution_correctness_client: Mutex::new(execution_correctness_client),
             synchronizer,
         }
-    }
-
-    fn transactions_from_block(block: &Block) -> Vec<Transaction> {
-        let mut transactions = vec![Transaction::BlockMetadata(block.into())];
-        transactions.extend(
-            block
-                .payload()
-                .unwrap_or(&vec![])
-                .iter()
-                .map(|txn| Transaction::UserTransaction(txn.clone())),
-        );
-        transactions
     }
 }
 
@@ -62,15 +51,13 @@ impl StateComputer for ExecutionProxy {
         );
 
         // TODO: figure out error handling for the prologue txn
+
         monitor!(
             "execute_block",
             self.execution_correctness_client
                 .lock()
                 .unwrap()
-                .execute_block(
-                    (block.id(), Self::transactions_from_block(block)),
-                    parent_block_id,
-                )
+                .execute_block(block.clone(), parent_block_id)
                 .map_err(Error::from)
         )
     }

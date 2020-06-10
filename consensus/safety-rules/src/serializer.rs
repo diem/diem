@@ -3,7 +3,8 @@
 
 use crate::{ConsensusState, Error, SafetyRules, TSafetyRules};
 use consensus_types::{
-    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote, vote_proposal::VoteProposal,
+    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote,
+    vote_proposal::MaybeSignedVoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
 use libra_logger::warn;
@@ -15,7 +16,7 @@ use std::sync::{Arc, RwLock};
 pub enum SafetyRulesInput {
     ConsensusState,
     Initialize(Box<EpochChangeProof>),
-    ConstructAndSignVote(Box<VoteProposal>),
+    ConstructAndSignVote(Box<MaybeSignedVoteProposal>),
     SignProposal(Box<BlockData>),
     SignTimeout(Box<Timeout>),
 }
@@ -95,7 +96,10 @@ impl TSafetyRules for SerializerClient {
         lcs::from_bytes(&response)?
     }
 
-    fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error> {
+    fn construct_and_sign_vote(
+        &mut self,
+        vote_proposal: &MaybeSignedVoteProposal,
+    ) -> Result<Vote, Error> {
         let response = self.request(SafetyRulesInput::ConstructAndSignVote(Box::new(
             vote_proposal.clone(),
         )))?;

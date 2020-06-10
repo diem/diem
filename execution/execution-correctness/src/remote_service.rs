@@ -6,6 +6,7 @@ use crate::serializer::{
 };
 use executor::Executor;
 use executor_types::Error;
+use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_logger::warn;
 use libra_secure_net::{NetworkClient, NetworkServer};
 use libra_vm::LibraVM;
@@ -22,11 +23,15 @@ pub trait RemoteService {
     fn server_address(&self) -> SocketAddr;
 }
 
-pub fn execute(storage_addr: SocketAddr, listen_addr: SocketAddr) {
+pub fn execute(
+    storage_addr: SocketAddr,
+    listen_addr: SocketAddr,
+    prikey: Option<Ed25519PrivateKey>,
+) {
     let block_executor = Box::new(Executor::<LibraVM>::new(
         StorageClient::new(&storage_addr).into(),
     ));
-    let mut serializer_service = SerializerService::new(block_executor);
+    let mut serializer_service = SerializerService::new(block_executor, prikey);
     let mut network_server = NetworkServer::new(listen_addr);
 
     loop {

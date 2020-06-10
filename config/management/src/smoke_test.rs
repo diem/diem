@@ -118,6 +118,7 @@ fn smoke_test() {
 
         config.consensus.safety_rules.backend =
             secure_backend(helper.path(), &swarm_path, &ns, "safety-rules");
+        config.execution.backend = secure_backend(helper.path(), &swarm_path, &ns, "execution");
 
         if i == 0 {
             // This is unfortunate due to the way SwarmConfig works

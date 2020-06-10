@@ -11,7 +11,7 @@ use consensus_types::{
     block::{
         block_test_utils::{
             self, certificate_for_genesis, placeholder_certificate_for_block,
-            placeholder_ledger_info, random_payload,
+            placeholder_ledger_info,
         },
         Block,
     },
@@ -395,43 +395,4 @@ fn test_need_fetch_for_qc() {
         block_store.need_fetch_for_quorum_cert(duplicate_qc.as_ref()),
         NeedFetchResult::QCAlreadyExist,
     );
-}
-
-#[test]
-fn test_empty_reconfiguration_suffix() {
-    let mut inserter = TreeInserter::default();
-    let block_store = inserter.block_store();
-    let genesis = block_store.root();
-    let payload = random_payload(1);
-    let a1 = inserter.insert_block_with_qc(certificate_for_genesis(), &genesis, 1);
-    let a2 = inserter.insert_block(&a1, 2, None);
-    let a3 = inserter.insert_reconfiguration_block(&a2, 3);
-    let a4 = inserter.create_block_with_qc(
-        inserter.create_qc_for_block(a3.as_ref(), None),
-        a3.as_ref().timestamp_usecs(),
-        4,
-        payload.clone(),
-    );
-    // Child of reconfiguration carries a payload will fail to insert
-    a4.verify_well_formed().unwrap_err();
-    let a5 = inserter.create_block_with_qc(
-        inserter.create_qc_for_block(a3.as_ref(), None),
-        a3.as_ref().timestamp_usecs(),
-        4,
-        vec![],
-    );
-    // Child of reconfiguration doesn't carry payload will succeed and roll over the validator set
-    let a5 = block_store.execute_and_insert_block(a5).unwrap();
-    assert!(a5.compute_result().has_reconfiguration());
-    // Block continues another branch can carry payload
-    inserter.insert_block(&a2, 4, None);
-    block_store.prune_tree(a3.id());
-    // If reconfiguration is committed, the child block will fail to insert
-    let a6 = inserter.create_block_with_qc(
-        inserter.create_qc_for_block(a5.as_ref(), None),
-        a5.as_ref().timestamp_usecs(),
-        5,
-        payload,
-    );
-    a6.verify_well_formed().unwrap_err();
 }

@@ -9,7 +9,7 @@ use consensus_types::{
     timeout::Timeout,
     vote::Vote,
     vote_data::VoteData,
-    vote_proposal::VoteProposal,
+    vote_proposal::{MaybeSignedVoteProposal, VoteProposal},
 };
 use libra_crypto::hash::{CryptoHash, TransactionAccumulatorHasher};
 use libra_secure_storage::{InMemoryStorage, Storage};
@@ -40,40 +40,43 @@ pub fn make_proposal_with_qc_and_proof(
     proof: Proof,
     qc: QuorumCert,
     validator_signer: &ValidatorSigner,
-) -> VoteProposal {
-    VoteProposal::new(
-        proof,
-        Block::new_proposal(
-            payload,
-            round,
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            qc,
-            validator_signer,
+) -> MaybeSignedVoteProposal {
+    MaybeSignedVoteProposal {
+        vote_proposal: VoteProposal::new(
+            proof,
+            Block::new_proposal(
+                payload,
+                round,
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                qc,
+                validator_signer,
+            ),
+            None,
         ),
-        None,
-    )
+        signature: None,
+    }
 }
 
 pub fn make_proposal_with_qc(
     round: Round,
     qc: QuorumCert,
     validator_signer: &ValidatorSigner,
-) -> VoteProposal {
+) -> MaybeSignedVoteProposal {
     make_proposal_with_qc_and_proof(vec![], round, empty_proof(), qc, validator_signer)
 }
 
 pub fn make_proposal_with_parent_and_overrides(
     payload: Payload,
     round: Round,
-    parent: &VoteProposal,
-    committed: Option<&VoteProposal>,
+    parent: &MaybeSignedVoteProposal,
+    committed: Option<&MaybeSignedVoteProposal>,
     validator_signer: &ValidatorSigner,
     epoch: Option<u64>,
     next_epoch_state: Option<EpochState>,
-) -> VoteProposal {
+) -> MaybeSignedVoteProposal {
     let block_epoch = match epoch {
         Some(e) => e,
         _ => parent.block().epoch(),
@@ -157,10 +160,10 @@ pub fn make_proposal_with_parent_and_overrides(
 pub fn make_proposal_with_parent(
     payload: Payload,
     round: Round,
-    parent: &VoteProposal,
-    committed: Option<&VoteProposal>,
+    parent: &MaybeSignedVoteProposal,
+    committed: Option<&MaybeSignedVoteProposal>,
     validator_signer: &ValidatorSigner,
-) -> VoteProposal {
+) -> MaybeSignedVoteProposal {
     make_proposal_with_parent_and_overrides(
         payload,
         round,

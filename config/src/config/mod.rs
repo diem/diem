@@ -327,6 +327,7 @@ impl NodeConfig {
             let validator_network = self.validator_network.as_mut().unwrap();
             validator_network.random_with_peer_id(rng, Some(peer_id));
             test.random_consensus_key(rng);
+            test.random_execution_key(rng);
         } else {
             self.validator_network = None;
             if self.full_node_networks.is_empty() {

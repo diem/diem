@@ -27,7 +27,7 @@ use consensus_types::{
     timeout_certificate::TimeoutCertificate,
     vote::Vote,
     vote_msg::VoteMsg,
-    vote_proposal::VoteProposal,
+    vote_proposal::{MaybeSignedVoteProposal, VoteProposal},
 };
 use debug_interface::prelude::*;
 use libra_crypto::hash::TransactionAccumulatorHasher;
@@ -523,18 +523,21 @@ impl RoundManager {
             .get_block(executed_block.parent_id())
             .expect("[RoundManager] Parent block not found after execution");
 
-        let vote_proposal = VoteProposal::new(
-            AccumulatorExtensionProof::<TransactionAccumulatorHasher>::new(
-                parent_block.compute_result().frozen_subtree_roots().clone(),
-                parent_block.compute_result().num_leaves(),
-                executed_block
-                    .compute_result()
-                    .transaction_info_hashes()
-                    .clone(),
+        let vote_proposal = MaybeSignedVoteProposal {
+            signature: None,
+            vote_proposal: VoteProposal::new(
+                AccumulatorExtensionProof::<TransactionAccumulatorHasher>::new(
+                    parent_block.compute_result().frozen_subtree_roots().clone(),
+                    parent_block.compute_result().num_leaves(),
+                    executed_block
+                        .compute_result()
+                        .transaction_info_hashes()
+                        .clone(),
+                ),
+                block.clone(),
+                executed_block.compute_result().epoch_state().clone(),
             ),
-            block.clone(),
-            executed_block.compute_result().epoch_state().clone(),
-        );
+        };
 
         let vote = self
             .safety_rules

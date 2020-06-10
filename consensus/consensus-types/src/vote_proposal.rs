@@ -2,14 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::block::Block;
-use libra_crypto::hash::TransactionAccumulatorHasher;
+use libra_crypto::{ed25519::Ed25519Signature, hash::TransactionAccumulatorHasher};
+use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_types::{epoch_state::EpochState, proof::AccumulatorExtensionProof};
 use serde::{Deserialize, Serialize};
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    ops::Deref,
+};
 
 /// This structure contains all the information needed by safety rules to
 /// evaluate a proposal / block for correctness / safety and to produce a Vote.
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Clone, CryptoHasher, Deserialize, LCSCryptoHash, Serialize)]
 pub struct VoteProposal {
     /// Contains the data necessary to construct the parent's execution output state
     /// and the childs in a verifiable way
@@ -52,5 +56,24 @@ impl VoteProposal {
 impl Display for VoteProposal {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "VoteProposal[block: {}]", self.block,)
+    }
+}
+
+/// Wraps a vote_proposal and its signature.
+#[derive(Clone, Deserialize, Serialize)]
+pub struct MaybeSignedVoteProposal {
+    /// The vote proposal to be signed.
+    pub vote_proposal: VoteProposal,
+
+    /// The signature of this proposal's hash from Libra Execution Correctness service. It is
+    /// an `Option` because the LEC can be configured to not sign the vote hash.
+    pub signature: Option<Ed25519Signature>,
+}
+
+impl Deref for MaybeSignedVoteProposal {
+    type Target = VoteProposal;
+
+    fn deref(&self) -> &VoteProposal {
+        &self.vote_proposal
     }
 }
