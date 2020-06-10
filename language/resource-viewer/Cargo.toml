@@ -19,7 +19,7 @@ move-vm-types = { path = "../move-vm/types", version = "0.1.0" }
 stdlib = { path = "../stdlib", version = "0.1.0" }
 vm = { path = "../vm", version = "0.1.0" }
 vm-genesis = { path = "../tools/vm-genesis", version = "0.1.0" }
-serde_json = "1.0.53"
+serde_json = "1.0.54"
 serde = { version = "1.0.111", features = ["derive", "rc"] }
 
 anyhow = "1.0.31"

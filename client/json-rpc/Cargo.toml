@@ -14,7 +14,7 @@ anyhow = "1.0.31"
 hex = "0.4.2"
 reqwest = { version = "0.10.6", features = ["blocking", "json"], default_features = false }
 serde = { version = "1.0.111", default-features = false }
-serde_json = "1.0.53"
+serde_json = "1.0.54"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-json-rpc-types  = { path = "../../json-rpc/types" }
