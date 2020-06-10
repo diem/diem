@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 mod execution_correctness_manager;
-mod local_client;
+mod local;
 mod process;
 mod remote_service;
 mod serializer;

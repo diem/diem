@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    local_client::LocalClient,
+    local::LocalClient,
     process::ProcessService,
     remote_service::RemoteService,
     serializer::{SerializerClient, SerializerService},
