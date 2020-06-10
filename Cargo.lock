@@ -2374,6 +2374,7 @@ dependencies = [
  "consensus-types 0.1.0",
  "datatest-stable 0.1.0",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "language-e2e-tests 0.1.0",
  "libra-canonical-serialization 0.1.0",
  "libra-json-rpc 0.1.0",
  "libra-proptest-helpers 0.1.0",

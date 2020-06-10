@@ -21,6 +21,8 @@ use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, 
 use move_vm_types::gas_schedule::calculate_intrinsic_gas;
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
+use std::sync::Arc;
+
 /// Represents a sequence number mismatch transaction
 ///
 #[derive(Arbitrary, Clone, Debug)]
@@ -170,4 +172,12 @@ impl AUTransactionGen for InvalidAuthkeyGen {
             ),
         )
     }
+}
+
+pub fn bad_txn_strategy() -> impl Strategy<Value = Arc<dyn AUTransactionGen + 'static>> {
+    prop_oneof![
+        1 => any_with::<SequenceNumberMismatchGen>((0, 10_000)).prop_map(SequenceNumberMismatchGen::arced),
+        1 => any_with::<InvalidAuthkeyGen>(()).prop_map(InvalidAuthkeyGen::arced),
+        1 => any_with::<InsufficientBalanceGen>((1, 20_000)).prop_map(InsufficientBalanceGen::arced),
+    ]
 }

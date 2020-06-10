@@ -1,15 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    account_universe::{
-        default_num_accounts, default_num_transactions, log_balance_strategy, AUTransactionGen,
-        AccountUniverseGen, CreateAccountGen, CreateExistingAccountGen,
-    },
-    tests::account_universe::{run_and_assert_gas_cost_stability, run_and_assert_universe},
+use crate::account_universe::{
+    create_account_strategy, default_num_accounts, default_num_transactions, log_balance_strategy,
+    run_and_assert_gas_cost_stability, run_and_assert_universe, AccountUniverseGen,
+    CreateAccountGen, CreateExistingAccountGen,
 };
 use proptest::{collection::vec, prelude::*};
-use std::sync::Arc;
 
 proptest! {
     // These tests are pretty slow but quite comprehensive, so run a smaller number of them.
@@ -81,16 +78,4 @@ proptest! {
     ) {
         run_and_assert_universe(universe, transfers)?;
     }
-}
-
-pub(super) fn create_account_strategy(
-    min: u64,
-    max: u64,
-) -> impl Strategy<Value = Arc<dyn AUTransactionGen + 'static>> {
-    prop_oneof![
-        3 => any_with::<CreateAccountGen>((min, max)).prop_map(CreateAccountGen::arced),
-        1 => any_with::<CreateExistingAccountGen>((min, max)).prop_map(
-            CreateExistingAccountGen::arced,
-        ),
-    ]
 }
