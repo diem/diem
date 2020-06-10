@@ -11,10 +11,12 @@
 //! For examples of property-based tests written against this model, see the
 //! `tests/account_universe` directory.
 
+mod bad_transaction;
 mod create_account;
 mod peer_to_peer;
 mod rotate_key;
 mod universe;
+pub use bad_transaction::*;
 pub use create_account::*;
 pub use peer_to_peer::*;
 pub use rotate_key::*;

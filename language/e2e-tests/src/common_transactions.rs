@@ -45,6 +45,23 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
         .expect("Failed to compile")
 });
 
+pub static EMPTY_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
+    let code = "
+    main<Token>(account: &signer) {
+      return;
+    }
+";
+
+    let compiler = Compiler {
+        address: account_config::CORE_CODE_ADDRESS,
+        extra_deps: vec![],
+        ..Compiler::default()
+    };
+    compiler
+        .into_script_blob("file_name", code)
+        .expect("Failed to compile")
+});
+
 /// Returns a transaction to add a new validator
 pub fn add_validator_txn(
     sender: &Account,
@@ -62,6 +79,24 @@ pub fn add_validator_txn(
         gas_costs::TXN_RESERVED * 2,
         0,
         LBR_NAME.to_owned(),
+    )
+}
+
+pub fn empty_txn(
+    sender: &Account,
+    seq_num: u64,
+    max_gas_amount: u64,
+    gas_unit_price: u64,
+    gas_currency_code: String,
+) -> SignedTransaction {
+    sender.create_signed_txn_with_args(
+        EMPTY_SCRIPT.to_vec(),
+        vec![],
+        vec![],
+        seq_num,
+        max_gas_amount,
+        gas_unit_price,
+        gas_currency_code,
     )
 }
 
