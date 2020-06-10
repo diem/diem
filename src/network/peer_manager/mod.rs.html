@@ -1713,7 +1713,7 @@
     <span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="ident">dial_peer_request</span> {
             <span class="ident">TransportRequest</span>::<span class="ident">DialPeer</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>, <span class="ident">response_tx</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">match</span> <span class="self">self</span>.<span class="ident">transport</span>.<span class="ident">dial</span>(<span class="ident">addr</span>.<span class="ident">clone</span>()) {
+                <span class="kw">match</span> <span class="self">self</span>.<span class="ident">transport</span>.<span class="ident">dial</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>.<span class="ident">clone</span>()) {
                     <span class="prelude-val">Ok</span>(<span class="ident">upgrade</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(
                         <span class="ident">upgrade</span>
                             .<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">out</span><span class="op">|</span> (<span class="ident">out</span>, <span class="ident">addr</span>, <span class="ident">peer_id</span>, <span class="ident">response_tx</span>))

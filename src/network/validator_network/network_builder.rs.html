@@ -477,6 +477,18 @@
 <span id="477">477</span>
 <span id="478">478</span>
 <span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -894,15 +906,26 @@
             .<span class="ident">take</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;Authentication Mode not set&quot;</span>);
 
-        <span class="kw">let</span> (<span class="ident">key</span>, <span class="ident">maybe_trusted_peers</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">authentication_mode</span> {
-            <span class="ident">AuthenticationMode</span>::<span class="ident">ServerOnly</span>(<span class="ident">key</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">key</span>, <span class="prelude-val">None</span>),
-            <span class="ident">AuthenticationMode</span>::<span class="ident">Mutual</span>(<span class="ident">key</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">key</span>, <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">trusted_peers</span>.<span class="ident">clone</span>())),
+        <span class="kw">let</span> (<span class="ident">key</span>, <span class="ident">maybe_trusted_peers</span>, <span class="ident">peer_id</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">authentication_mode</span> {
+            <span class="comment">// validator-operated full node</span>
+            <span class="ident">AuthenticationMode</span>::<span class="ident">ServerOnly</span>(<span class="ident">key</span>) <span class="kw">if</span> <span class="self">self</span>.<span class="ident">peer_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">default</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">public_key</span> <span class="op">=</span> <span class="ident">key</span>.<span class="ident">public_key</span>();
+                <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">from_identity_public_key</span>(<span class="ident">public_key</span>);
+                (<span class="ident">key</span>, <span class="prelude-val">None</span>, <span class="ident">peer_id</span>)
+            }
+            <span class="comment">// full node</span>
+            <span class="ident">AuthenticationMode</span>::<span class="ident">ServerOnly</span>(<span class="ident">key</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">key</span>, <span class="prelude-val">None</span>, <span class="self">self</span>.<span class="ident">peer_id</span>),
+            <span class="comment">// validator</span>
+            <span class="ident">AuthenticationMode</span>::<span class="ident">Mutual</span>(<span class="ident">key</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                (<span class="ident">key</span>, <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">trusted_peers</span>.<span class="ident">clone</span>()), <span class="self">self</span>.<span class="ident">peer_id</span>)
+            }
         };
 
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">listen_address</span>.<span class="ident">as_slice</span>() {
             [<span class="ident">Ip4</span>(<span class="kw">_</span>), <span class="ident">Tcp</span>(<span class="kw">_</span>)] <span class="op">|</span> [<span class="ident">Ip6</span>(<span class="kw">_</span>), <span class="ident">Tcp</span>(<span class="kw">_</span>)] <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">build_with_transport</span>(<span class="ident">LibraNetTransport</span>::<span class="ident">new</span>(
                     <span class="ident">LIBRA_TCP_TRANSPORT</span>.<span class="ident">clone</span>(),
+                    <span class="ident">peer_id</span>,
                     <span class="ident">key</span>,
                     <span class="ident">maybe_trusted_peers</span>,
                     <span class="ident">HANDSHAKE_VERSION</span>,
@@ -912,6 +935,7 @@
             }
             [<span class="ident">Memory</span>(<span class="kw">_</span>)] <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">build_with_transport</span>(<span class="ident">LibraNetTransport</span>::<span class="ident">new</span>(
                 <span class="ident">memory</span>::<span class="ident">MemoryTransport</span>,
+                <span class="ident">peer_id</span>,
                 <span class="ident">key</span>,
                 <span class="ident">maybe_trusted_peers</span>,
                 <span class="ident">HANDSHAKE_VERSION</span>,

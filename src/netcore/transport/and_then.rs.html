@@ -177,6 +177,7 @@
 <span id="177">177</span>
 <span id="178">178</span>
 <span id="179">179</span>
+<span id="180">180</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -184,6 +185,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">transport</span>::{<span class="ident">ConnectionOrigin</span>, <span class="ident">Transport</span>};
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">future</span>::<span class="ident">Future</span>, <span class="ident">stream</span>::<span class="ident">Stream</span>};
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">pin_project</span>::<span class="ident">pin_project</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">pin</span>::<span class="ident">Pin</span>,
@@ -230,8 +232,8 @@
         <span class="prelude-val">Ok</span>((<span class="ident">listener</span>, <span class="ident">addr</span>))
     }
 
-    <span class="kw">fn</span> <span class="ident">dial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Outbound</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">transport</span>.<span class="ident">dial</span>(<span class="ident">addr</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
+    <span class="kw">fn</span> <span class="ident">dial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">peer_id</span>: <span class="ident">PeerId</span>, <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Outbound</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">fut</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">transport</span>.<span class="ident">dial</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">origin</span> <span class="op">=</span> <span class="ident">ConnectionOrigin</span>::<span class="ident">Outbound</span>;
         <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">function</span>.<span class="ident">clone</span>();
 

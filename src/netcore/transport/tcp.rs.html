@@ -354,6 +354,9 @@
 <span id="354">354</span>
 <span id="355">355</span>
 <span id="356">356</span>
+<span id="357">357</span>
+<span id="358">358</span>
+<span id="359">359</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -367,6 +370,7 @@
     <span class="ident">stream</span>::<span class="ident">Stream</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::{<span class="ident">parse_dns_tcp</span>, <span class="ident">parse_ip_tcp</span>, <span class="ident">IpFilter</span>, <span class="ident">NetworkAddress</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">convert</span>::<span class="ident">TryFrom</span>,
     <span class="ident">fmt</span>::<span class="ident">Debug</span>,
@@ -450,7 +454,7 @@
         ))
     }
 
-    <span class="kw">fn</span> <span class="ident">dial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Outbound</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">dial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">_peer_id</span>: <span class="ident">PeerId</span>, <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Outbound</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">protos</span> <span class="op">=</span> <span class="ident">addr</span>.<span class="ident">as_slice</span>();
 
         <span class="comment">// ensure addr is well formed to save some work before potentially</span>
@@ -632,6 +636,7 @@
         <span class="ident">io</span>::{<span class="ident">AsyncReadExt</span>, <span class="ident">AsyncWriteExt</span>},
         <span class="ident">stream</span>::<span class="ident">StreamExt</span>,
     };
+    <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
     <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span>;
 
     <span class="attribute">#[<span class="ident">tokio</span>::<span class="ident">test</span>]</span>
@@ -655,8 +660,8 @@
         });
 
         <span class="kw">let</span> (<span class="ident">listener</span>, <span class="ident">addr</span>) <span class="op">=</span> <span class="ident">t</span>.<span class="ident">listen_on</span>(<span class="string">&quot;/ip4/127.0.0.1/tcp/0&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>())<span class="question-mark">?</span>;
-
-        <span class="kw">let</span> <span class="ident">dial</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">dial</span>(<span class="ident">addr</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">random</span>();
+        <span class="kw">let</span> <span class="ident">dial</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">dial</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">listener</span> <span class="op">=</span> <span class="ident">listener</span>.<span class="ident">into_future</span>().<span class="ident">then</span>(<span class="op">|</span>(<span class="ident">maybe_result</span>, <span class="ident">_stream</span>)<span class="op">|</span> {
             <span class="kw">let</span> (<span class="ident">incoming</span>, <span class="ident">_addr</span>) <span class="op">=</span> <span class="ident">maybe_result</span>.<span class="ident">unwrap</span>().<span class="ident">unwrap</span>();
             <span class="ident">incoming</span>.<span class="ident">map</span>(<span class="prelude-ty">Result</span>::<span class="ident">unwrap</span>)
@@ -674,7 +679,8 @@
         <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">listen_on</span>(<span class="string">&quot;/memory/0&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());
 
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">dial</span>(<span class="string">&quot;/memory/22&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
+        <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">random</span>();
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">t</span>.<span class="ident">dial</span>(<span class="ident">peer_id</span>, <span class="string">&quot;/memory/22&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>());
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());
     }
 

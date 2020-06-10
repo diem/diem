@@ -897,46 +897,6 @@
 <span id="897">897</span>
 <span id="898">898</span>
 <span id="899">899</span>
-<span id="900">900</span>
-<span id="901">901</span>
-<span id="902">902</span>
-<span id="903">903</span>
-<span id="904">904</span>
-<span id="905">905</span>
-<span id="906">906</span>
-<span id="907">907</span>
-<span id="908">908</span>
-<span id="909">909</span>
-<span id="910">910</span>
-<span id="911">911</span>
-<span id="912">912</span>
-<span id="913">913</span>
-<span id="914">914</span>
-<span id="915">915</span>
-<span id="916">916</span>
-<span id="917">917</span>
-<span id="918">918</span>
-<span id="919">919</span>
-<span id="920">920</span>
-<span id="921">921</span>
-<span id="922">922</span>
-<span id="923">923</span>
-<span id="924">924</span>
-<span id="925">925</span>
-<span id="926">926</span>
-<span id="927">927</span>
-<span id="928">928</span>
-<span id="929">929</span>
-<span id="930">930</span>
-<span id="931">931</span>
-<span id="932">932</span>
-<span id="933">933</span>
-<span id="934">934</span>
-<span id="935">935</span>
-<span id="936">936</span>
-<span id="937">937</span>
-<span id="938">938</span>
-<span id="939">939</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -958,7 +918,6 @@
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">x25519</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::{<span class="ident">parse_dns_tcp</span>, <span class="ident">parse_ip_tcp</span>, <span class="ident">parse_memory</span>, <span class="ident">NetworkAddress</span>};
-<span class="kw">use</span> <span class="ident">libra_security_logger</span>::{<span class="ident">security_log</span>, <span class="ident">SecurityEvent</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">netcore</span>::<span class="ident">transport</span>::{<span class="ident">tcp</span>, <span class="ident">ConnectionOrigin</span>, <span class="ident">Transport</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -1084,44 +1043,6 @@
     <span class="kw">pub</span> <span class="ident">metadata</span>: <span class="ident">ConnectionMetadata</span>,
 }
 
-<span class="doccomment">/// Convert a remote pubkey into a network `PeerId`.</span>
-<span class="kw">fn</span> <span class="ident">identity_pubkey_to_peer_id</span>(
-    <span class="ident">maybe_trusted_peers</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">remote_pubkey</span>: <span class="kw-2">&amp;</span><span class="ident">x25519</span>::<span class="ident">PublicKey</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PeerId</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">trusted_peers</span>) <span class="op">=</span> <span class="ident">maybe_trusted_peers</span> {
-        <span class="comment">// if mutual authentication, try to find peer with this identity pubkey.</span>
-
-        <span class="kw">let</span> <span class="ident">trusted_peers</span> <span class="op">=</span> <span class="ident">trusted_peers</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>();
-        <span class="kw">let</span> <span class="ident">maybe_peerid_with_pubkey</span> <span class="op">=</span> <span class="ident">trusted_peers</span>
-            .<span class="ident">iter</span>()
-            .<span class="ident">find</span>(<span class="op">|</span>(<span class="ident">_peer_id</span>, <span class="ident">public_keys</span>)<span class="op">|</span> <span class="kw-2">&amp;</span><span class="ident">public_keys</span>.<span class="ident">identity_public_key</span> <span class="op">=</span><span class="op">=</span> <span class="ident">remote_pubkey</span>)
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">peer_id</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="kw-2">*</span><span class="ident">peer_id</span>);
-        <span class="ident">maybe_peerid_with_pubkey</span>
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>, <span class="string">&quot;Not a trusted peer&quot;</span>))
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> {
-                <span class="ident">security_log</span>(<span class="ident">SecurityEvent</span>::<span class="ident">InvalidNetworkPeer</span>)
-                    .<span class="ident">error</span>(<span class="string">&quot;UntrustedPeer&quot;</span>)
-                    .<span class="ident">data</span>(<span class="kw-2">&amp;</span><span class="ident">trusted_peers</span>)
-                    .<span class="ident">data</span>(<span class="kw-2">&amp;</span><span class="ident">remote_pubkey</span>)
-                    .<span class="ident">log</span>();
-                <span class="ident">err</span>
-            })
-    } <span class="kw">else</span> {
-        <span class="comment">// else, only client authenticating the server. Generate PeerId from x25519::PublicKey.</span>
-        <span class="comment">// Note: This is inconsistent with current types because AccountAddress is derived</span>
-        <span class="comment">// from consensus key which is of type Ed25519PublicKey. Since AccountAddress does</span>
-        <span class="comment">// not mean anything in a setting without remote authentication, we use the network</span>
-        <span class="comment">// public key to generate a peer_id for the peer.</span>
-        <span class="comment">// See this issue for potential improvements: https://github.com/libra/libra/issues/3960</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">array</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="ident">PeerId</span>::<span class="ident">LENGTH</span>];
-        <span class="kw">let</span> <span class="ident">pubkey_slice</span> <span class="op">=</span> <span class="ident">remote_pubkey</span>.<span class="ident">as_slice</span>();
-        <span class="comment">// keep only the last 16 bytes</span>
-        <span class="ident">array</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">pubkey_slice</span>[<span class="ident">x25519</span>::<span class="ident">PUBLIC_KEY_SIZE</span> <span class="op">-</span> <span class="ident">PeerId</span>::<span class="ident">LENGTH</span>..]);
-        <span class="prelude-val">Ok</span>(<span class="ident">PeerId</span>::<span class="ident">new</span>(<span class="ident">array</span>))
-    }
-}
-
 <span class="doccomment">/// Exchange HandshakeMsg&#39;s to try negotiating a set of common supported protocols.</span>
 <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">perform_handshake</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">TSocket</span><span class="op">&gt;</span>(
     <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
@@ -1180,7 +1101,6 @@
 <span class="doccomment">/// Common context for performing both inbound and outbound connection upgrades.</span>
 <span class="kw">struct</span> <span class="ident">UpgradeContext</span> {
     <span class="ident">noise</span>: <span class="ident">NoiseUpgrader</span>,
-    <span class="ident">trusted_peers</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">handshake_version</span>: <span class="ident">u8</span>,
     <span class="ident">own_handshake</span>: <span class="ident">HandshakeMsg</span>,
 }
@@ -1199,10 +1119,8 @@
     <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">fut_socket</span>.<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// try authenticating via noise handshake</span>
-    <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">ctxt</span>.<span class="ident">noise</span>.<span class="ident">upgrade_inbound</span>(<span class="ident">socket</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let</span> (<span class="ident">socket</span>, <span class="ident">peer_id</span>) <span class="op">=</span> <span class="ident">ctxt</span>.<span class="ident">noise</span>.<span class="ident">upgrade_inbound</span>(<span class="ident">socket</span>).<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">remote_pubkey</span> <span class="op">=</span> <span class="ident">socket</span>.<span class="ident">get_remote_static</span>();
-
-    <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">identity_pubkey_to_peer_id</span>(<span class="ident">ctxt</span>.<span class="ident">trusted_peers</span>.<span class="ident">as_ref</span>(), <span class="kw-2">&amp;</span><span class="ident">remote_pubkey</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">addr</span> <span class="op">=</span> <span class="ident">addr</span>.<span class="ident">append_prod_protos</span>(<span class="ident">remote_pubkey</span>, <span class="ident">HANDSHAKE_VERSION</span>);
 
     <span class="comment">// try to negotiate common libranet version and supported application protocols</span>
@@ -1215,22 +1133,20 @@
     <span class="ident">ctxt</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">UpgradeContext</span><span class="op">&gt;</span>,
     <span class="ident">fut_socket</span>: <span class="kw">impl</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>,
+    <span class="ident">remote_peer_id</span>: <span class="ident">PeerId</span>,
     <span class="ident">remote_pubkey</span>: <span class="ident">x25519</span>::<span class="ident">PublicKey</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">NoiseStream</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">origin</span> <span class="op">=</span> <span class="ident">ConnectionOrigin</span>::<span class="ident">Outbound</span>;
     <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">fut_socket</span>.<span class="kw">await</span><span class="question-mark">?</span>;
 
-    <span class="comment">// we can check early if this is even a trusted peer</span>
-    <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">identity_pubkey_to_peer_id</span>(<span class="ident">ctxt</span>.<span class="ident">trusted_peers</span>.<span class="ident">as_ref</span>(), <span class="kw-2">&amp;</span><span class="ident">remote_pubkey</span>)<span class="question-mark">?</span>;
-
-    <span class="comment">// try authenticating via noise handshake</span>
+    <span class="comment">// noise handshake</span>
     <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">ctxt</span>.<span class="ident">noise</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">socket</span>, <span class="ident">remote_pubkey</span>).<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// sanity check: Noise IK should always guarantee this is true</span>
     <span class="macro">debug_assert_eq</span><span class="macro">!</span>(<span class="ident">remote_pubkey</span>, <span class="ident">socket</span>.<span class="ident">get_remote_static</span>());
 
     <span class="comment">// try to negotiate common libranet version and supported application protocols</span>
-    <span class="ident">perform_handshake</span>(<span class="ident">peer_id</span>, <span class="ident">socket</span>, <span class="ident">addr</span>, <span class="ident">origin</span>, <span class="kw-2">&amp;</span><span class="ident">ctxt</span>.<span class="ident">own_handshake</span>).<span class="kw">await</span>
+    <span class="ident">perform_handshake</span>(<span class="ident">remote_peer_id</span>, <span class="ident">socket</span>, <span class="ident">addr</span>, <span class="ident">origin</span>, <span class="kw-2">&amp;</span><span class="ident">ctxt</span>.<span class="ident">own_handshake</span>).<span class="kw">await</span>
 }
 
 <span class="doccomment">/// The common LibraNet Transport.</span>
@@ -1261,6 +1177,7 @@
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">base_transport</span>: <span class="ident">TTransport</span>,
+        <span class="ident">self_peer_id</span>: <span class="ident">PeerId</span>,
         <span class="ident">identity_key</span>: <span class="ident">x25519</span>::<span class="ident">PrivateKey</span>,
         <span class="ident">trusted_peers</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">handshake_version</span>: <span class="ident">u8</span>,
@@ -1278,8 +1195,7 @@
 
         <span class="self">Self</span> {
             <span class="ident">ctxt</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">UpgradeContext</span> {
-                <span class="ident">noise</span>: <span class="ident">NoiseUpgrader</span>::<span class="ident">new</span>(<span class="ident">identity_key</span>, <span class="ident">auth_mode</span>),
-                <span class="ident">trusted_peers</span>,
+                <span class="ident">noise</span>: <span class="ident">NoiseUpgrader</span>::<span class="ident">new</span>(<span class="ident">self_peer_id</span>, <span class="ident">identity_key</span>, <span class="ident">auth_mode</span>),
                 <span class="ident">handshake_version</span>,
                 <span class="ident">own_handshake</span>,
             }),
@@ -1356,6 +1272,7 @@
     <span class="doccomment">/// `/dns6/&lt;ipaddr&gt;/tcp/&lt;port&gt;`</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">dial</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
         <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>
         <span class="kw">impl</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">NoiseStream</span><span class="op">&lt;</span><span class="ident">TTransport</span>::<span class="ident">Output</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
@@ -1376,10 +1293,10 @@
         }
 
         <span class="comment">// try to connect socket</span>
-        <span class="kw">let</span> <span class="ident">fut_socket</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">base_transport</span>.<span class="ident">dial</span>(<span class="ident">base_addr</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">fut_socket</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">base_transport</span>.<span class="ident">dial</span>(<span class="ident">peer_id</span>, <span class="ident">base_addr</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// outbound dial upgrade task</span>
-        <span class="kw">let</span> <span class="ident">upgrade_fut</span> <span class="op">=</span> <span class="ident">upgrade_outbound</span>(<span class="self">self</span>.<span class="ident">ctxt</span>.<span class="ident">clone</span>(), <span class="ident">fut_socket</span>, <span class="ident">addr</span>, <span class="ident">pubkey</span>);
+        <span class="kw">let</span> <span class="ident">upgrade_fut</span> <span class="op">=</span> <span class="ident">upgrade_outbound</span>(<span class="self">self</span>.<span class="ident">ctxt</span>.<span class="ident">clone</span>(), <span class="ident">fut_socket</span>, <span class="ident">addr</span>, <span class="ident">peer_id</span>, <span class="ident">pubkey</span>);
         <span class="kw">let</span> <span class="ident">upgrade_fut</span> <span class="op">=</span> <span class="ident">timeout_io</span>(<span class="ident">TRANSPORT_TIMEOUT</span>, <span class="ident">upgrade_fut</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">upgrade_fut</span>)
     }
@@ -1461,8 +1378,9 @@
     <span class="kw">type</span> <span class="ident">Listener</span> <span class="op">=</span>
         <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Stream</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="self">Self</span>::<span class="ident">Inbound</span>, <span class="ident">NetworkAddress</span>)<span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 
-    <span class="kw">fn</span> <span class="ident">dial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Outbound</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">dial</span>(<span class="ident">addr</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">upgrade_fut</span><span class="op">|</span> <span class="ident">upgrade_fut</span>.<span class="ident">boxed</span>())
+    <span class="kw">fn</span> <span class="ident">dial</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">peer_id</span>: <span class="ident">PeerId</span>, <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>::<span class="ident">Outbound</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">dial</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>)
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">upgrade_fut</span><span class="op">|</span> <span class="ident">upgrade_fut</span>.<span class="ident">boxed</span>())
     }
 
     <span class="kw">fn</span> <span class="ident">listen_on</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="self">Self</span>::<span class="ident">Listener</span>, <span class="ident">NetworkAddress</span>)<span class="op">&gt;</span> {
@@ -1555,10 +1473,8 @@
                 (<span class="ident">listener_peer_id</span>, <span class="ident">dialer_peer_id</span>, <span class="prelude-val">Some</span>(<span class="ident">trusted_peers</span>))
             }
             <span class="ident">Auth</span>::<span class="ident">ServerOnly</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">listener_peer_id</span> <span class="op">=</span>
-                    <span class="ident">identity_pubkey_to_peer_id</span>(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="ident">listener_key</span>.<span class="ident">public_key</span>()).<span class="ident">unwrap</span>();
-                <span class="kw">let</span> <span class="ident">dialer_peer_id</span> <span class="op">=</span>
-                    <span class="ident">identity_pubkey_to_peer_id</span>(<span class="prelude-val">None</span>, <span class="kw-2">&amp;</span><span class="ident">dialer_key</span>.<span class="ident">public_key</span>()).<span class="ident">unwrap</span>();
+                <span class="kw">let</span> <span class="ident">listener_peer_id</span> <span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">from_identity_public_key</span>(<span class="ident">listener_key</span>.<span class="ident">public_key</span>());
+                <span class="kw">let</span> <span class="ident">dialer_peer_id</span> <span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">from_identity_public_key</span>(<span class="ident">dialer_key</span>.<span class="ident">public_key</span>());
 
                 (<span class="ident">listener_peer_id</span>, <span class="ident">dialer_peer_id</span>, <span class="prelude-val">None</span>)
             }
@@ -1570,6 +1486,7 @@
 
         <span class="kw">let</span> <span class="ident">listener_transport</span> <span class="op">=</span> <span class="ident">LibraNetTransport</span>::<span class="ident">new</span>(
             <span class="ident">base_transport</span>.<span class="ident">clone</span>(),
+            <span class="ident">listener_peer_id</span>,
             <span class="ident">listener_key</span>,
             <span class="ident">trusted_peers</span>.<span class="ident">clone</span>(),
             <span class="ident">HANDSHAKE_VERSION</span>,
@@ -1579,6 +1496,7 @@
 
         <span class="kw">let</span> <span class="ident">dialer_transport</span> <span class="op">=</span> <span class="ident">LibraNetTransport</span>::<span class="ident">new</span>(
             <span class="ident">base_transport</span>,
+            <span class="ident">dialer_peer_id</span>,
             <span class="ident">dialer_key</span>,
             <span class="ident">trusted_peers</span>.<span class="ident">clone</span>(),
             <span class="ident">HANDSHAKE_VERSION</span>,
@@ -1684,7 +1602,7 @@
         <span class="kw">let</span> <span class="ident">dialer_task</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
             <span class="comment">// dial listener</span>
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">conn</span> <span class="op">=</span> <span class="ident">dialer_transport</span>
-                .<span class="ident">dial</span>(<span class="ident">listener_addr</span>.<span class="ident">clone</span>())
+                .<span class="ident">dial</span>(<span class="ident">listener_peer_id</span>, <span class="ident">listener_addr</span>.<span class="ident">clone</span>())
                 .<span class="ident">unwrap</span>()
                 .<span class="kw">await</span>
                 .<span class="ident">unwrap</span>();
@@ -1721,7 +1639,7 @@
     {
         <span class="kw">let</span> (
             <span class="kw-2">mut</span> <span class="ident">rt</span>,
-            (<span class="ident">_listener_peer_id</span>, <span class="ident">listener_transport</span>),
+            (<span class="ident">listener_peer_id</span>, <span class="ident">listener_transport</span>),
             (<span class="ident">dialer_peer_id</span>, <span class="ident">dialer_transport</span>),
             <span class="ident">trusted_peers</span>,
             <span class="ident">_supported_protocols</span>,
@@ -1757,7 +1675,9 @@
         <span class="comment">// fail because we are not authenticated.</span>
         <span class="kw">let</span> <span class="ident">dialer_task</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
             <span class="comment">// dial listener</span>
-            <span class="kw">let</span> <span class="ident">fut_upgrade</span> <span class="op">=</span> <span class="ident">dialer_transport</span>.<span class="ident">dial</span>(<span class="ident">listener_addr</span>.<span class="ident">clone</span>()).<span class="ident">unwrap</span>();
+            <span class="kw">let</span> <span class="ident">fut_upgrade</span> <span class="op">=</span> <span class="ident">dialer_transport</span>
+                .<span class="ident">dial</span>(<span class="ident">listener_peer_id</span>, <span class="ident">listener_addr</span>.<span class="ident">clone</span>())
+                .<span class="ident">unwrap</span>();
             <span class="ident">fut_upgrade</span>
                 .<span class="kw">await</span>
                 .<span class="ident">expect_err</span>(<span class="string">&quot;should fail because listener rejects our unauthed connection&quot;</span>);

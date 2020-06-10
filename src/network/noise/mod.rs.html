@@ -91,6 +91,11 @@
 <span id="91">91</span>
 <span id="92">92</span>
 <span id="93">93</span>
+<span id="94">94</span>
+<span id="95">95</span>
+<span id="96">96</span>
+<span id="97">97</span>
+<span id="98">98</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -122,23 +127,28 @@
 <span class="doccomment">//! let mut rng = StdRng::from_seed(TEST_SEED);</span>
 <span class="doccomment">//! let client_private = x25519::PrivateKey::generate(&amp;mut rng);</span>
 <span class="doccomment">//! let client_public = client_private.public_key();</span>
+<span class="doccomment">//! let client_peer_id = PeerId::random();</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let server_private = x25519::PrivateKey::generate(&amp;mut rng);</span>
 <span class="doccomment">//! let server_public = server_private.public_key();</span>
+<span class="doccomment">//! let server_peer_id = PeerId::random();</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // create list of trusted peers</span>
 <span class="doccomment">//! let mut trusted_peers = Arc::new(RwLock::new(HashMap::new()));</span>
 <span class="doccomment">//! {</span>
-<span class="doccomment">//!     trusted_peers.write().unwrap().insert(PeerId::random(), NetworkPublicKeys {</span>
+<span class="doccomment">//!     trusted_peers.write().unwrap().insert(client_peer_id, NetworkPublicKeys {</span>
 <span class="doccomment">//!        identity_public_key: client_public,</span>
+<span class="doccomment">//!     });</span>
+<span class="doccomment">//!     trusted_peers.write().unwrap().insert(server_peer_id, NetworkPublicKeys {</span>
+<span class="doccomment">//!        identity_public_key: server_public,</span>
 <span class="doccomment">//!     });</span>
 <span class="doccomment">//! }</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let client_auth = HandshakeAuthMode::mutual(trusted_peers.clone());</span>
-<span class="doccomment">//! let client = NoiseUpgrader::new(client_private, client_auth);</span>
+<span class="doccomment">//! let client = NoiseUpgrader::new(client_peer_id, client_private, client_auth);</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let server_auth = HandshakeAuthMode::mutual(trusted_peers);</span>
-<span class="doccomment">//! let server = NoiseUpgrader::new(server_private, server_auth);</span>
+<span class="doccomment">//! let server = NoiseUpgrader::new(server_peer_id, server_private, server_auth);</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // use an in-memory socket as example</span>
 <span class="doccomment">//! let (dialer_socket, listener_socket) = MemorySocket::new_pair();</span>
@@ -150,7 +160,7 @@
 <span class="doccomment">//! ));</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let mut client_session = client_session?;</span>
-<span class="doccomment">//! let mut server_session = server_session?;</span>
+<span class="doccomment">//! let (mut server_session, _client_peer_id) = server_session?;</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // client -&gt; server</span>
 <span class="doccomment">//! executor::block_on(client_session.write_all(b&quot;client hello&quot;))?;</span>

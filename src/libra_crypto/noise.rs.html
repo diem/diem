@@ -706,6 +706,11 @@
 <span id="706">706</span>
 <span id="707">707</span>
 <span id="708">708</span>
+<span id="709">709</span>
+<span id="710">710</span>
+<span id="711">711</span>
+<span id="712">712</span>
+<span id="713">713</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -953,6 +958,11 @@
             <span class="ident">private_key</span>,
             <span class="ident">public_key</span>,
         }
+    }
+
+    <span class="doccomment">/// Handy getter to access the configuration&#39;s public key</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">public_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">x25519</span>::<span class="ident">PublicKey</span> {
+        <span class="self">self</span>.<span class="ident">public_key</span>
     }
 
     <span class="comment">//</span>
