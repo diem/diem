@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+mod bad_transaction;
 mod create_account;
 mod peer_to_peer;
 mod rotate_key;
@@ -95,6 +96,7 @@ fn all_transactions_strategy(
         8 => peer_to_peer::p2p_strategy(min, max),
         1 => create_account::create_account_strategy(min, max),
         1 => any::<RotateKeyGen>().prop_map(RotateKeyGen::arced),
+        1 => bad_transaction::bad_txn_strategy(),
     ]
 }
 
