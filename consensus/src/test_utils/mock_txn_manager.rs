@@ -61,6 +61,8 @@ impl TxnManager for MockTransactionManager {
                 compute_results.root_hash(),
                 compute_results.frozen_subtree_roots().clone(),
                 compute_results.num_leaves(),
+                compute_results.parent_frozen_subtree_roots().clone(),
+                compute_results.parent_num_leaves(),
                 compute_results.epoch_state().clone(),
                 mock_transaction_status(block.payload().map_or(0, |txns| txns.len())),
                 compute_results.transaction_info_hashes().clone(),

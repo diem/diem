@@ -1,20 +1,26 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::remote_service::{self, RemoteService};
+use crate::{
+    execution_correctness_manager,
+    remote_service::{self, RemoteService},
+};
 use libra_config::config::{ExecutionCorrectnessService, NodeConfig};
+use libra_crypto::ed25519::Ed25519PrivateKey;
 use std::net::SocketAddr;
 
 pub struct Process {
     config: NodeConfig,
+    prikey: Option<Ed25519PrivateKey>,
 }
 
 impl Process {
-    pub fn new(config: NodeConfig) -> Self {
-        Self { config }
+    pub fn new(mut config: NodeConfig) -> Self {
+        let prikey = execution_correctness_manager::extract_execution_prikey(&mut config);
+        Self { config, prikey }
     }
 
-    pub fn start(&self) {
+    pub fn start(self) {
         let service = &self.config.execution.service;
         let server_addr = match &service {
             ExecutionCorrectnessService::Process(remote_service) => remote_service.server_address,
@@ -23,7 +29,7 @@ impl Process {
             }
             _ => panic!("Unexpected ExecutionCorrectness service: {:?}", service),
         };
-        remote_service::execute(self.config.storage.address, server_addr);
+        remote_service::execute(self.config.storage.address, server_addr, self.prikey);
     }
 }
 

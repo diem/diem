@@ -8,6 +8,7 @@ pub use error::Error;
 
 use anyhow::Result;
 use libra_crypto::{
+    ed25519::Ed25519Signature,
     hash::{EventAccumulatorHasher, TransactionAccumulatorHasher, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
@@ -17,7 +18,7 @@ use libra_types::{
     contract_event::ContractEvent,
     epoch_state::EpochState,
     ledger_info::LedgerInfoWithSignatures,
-    proof::{accumulator::InMemoryAccumulator, SparseMerkleProof},
+    proof::{accumulator::InMemoryAccumulator, AccumulatorExtensionProof, SparseMerkleProof},
     transaction::{Transaction, TransactionListWithProof, TransactionStatus, Version},
 };
 use scratchpad::{ProofRead, SparseMerkleTree};
@@ -82,24 +83,36 @@ pub trait BlockExecutor: Send {
 /// of success / failure of the transactions.
 /// Note that the specific details of compute_status are opaque to StateMachineReplication,
 /// which is going to simply pass the results between StateComputer and TxnManager.
-#[derive(Debug, Default, PartialEq, Eq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct StateComputeResult {
     /// transaction accumulator root hash is identified as `state_id` in Consensus.
     root_hash: HashValue,
     /// Represents the roots of all the full subtrees from left to right in this accumulator
     /// after the execution. For details, please see [`InMemoryAccumulator`](accumulator::InMemoryAccumulator).
     frozen_subtree_roots: Vec<HashValue>,
+
+    /// The frozen subtrees roots of the parent block,
+    parent_frozen_subtree_roots: Vec<HashValue>,
+
     /// The number of leaves of the transaction accumulator after executing a proposed block.
     /// This state must be persisted to ensure that on restart that the version is calculated correctly.
     num_leaves: u64,
+
+    /// The number of leaves after executing the parent block,
+    parent_num_leaves: u64,
+
     /// If set, this is the new epoch info that should be changed to if this block is committed.
     epoch_state: Option<EpochState>,
     /// The compute status (success/failure) of the given payload. The specific details are opaque
     /// for StateMachineReplication, which is merely passing it between StateComputer and
     /// TxnManager.
     compute_status: Vec<TransactionStatus>,
+
     /// The transaction info hashes of all success txns.
     transaction_info_hashes: Vec<HashValue>,
+
+    /// The signature of the VoteProposal corresponding to this block.
+    signature: Option<Ed25519Signature>,
 }
 
 impl StateComputeResult {
@@ -107,6 +120,8 @@ impl StateComputeResult {
         root_hash: HashValue,
         frozen_subtree_roots: Vec<HashValue>,
         num_leaves: u64,
+        parent_frozen_subtree_roots: Vec<HashValue>,
+        parent_num_leaves: u64,
         epoch_state: Option<EpochState>,
         compute_status: Vec<TransactionStatus>,
         transaction_info_hashes: Vec<HashValue>,
@@ -115,9 +130,12 @@ impl StateComputeResult {
             root_hash,
             frozen_subtree_roots,
             num_leaves,
+            parent_frozen_subtree_roots,
+            parent_num_leaves,
             epoch_state,
             compute_status,
             transaction_info_hashes,
+            signature: None,
         }
     }
 }
@@ -139,6 +157,14 @@ impl StateComputeResult {
         &self.epoch_state
     }
 
+    pub fn extension_proof(&self) -> AccumulatorExtensionProof<TransactionAccumulatorHasher> {
+        AccumulatorExtensionProof::<TransactionAccumulatorHasher>::new(
+            self.parent_frozen_subtree_roots.clone(),
+            self.parent_num_leaves(),
+            self.transaction_info_hashes().clone(),
+        )
+    }
+
     pub fn transaction_info_hashes(&self) -> &Vec<HashValue> {
         &self.transaction_info_hashes
     }
@@ -151,8 +177,24 @@ impl StateComputeResult {
         &self.frozen_subtree_roots
     }
 
+    pub fn parent_num_leaves(&self) -> u64 {
+        self.parent_num_leaves
+    }
+
+    pub fn parent_frozen_subtree_roots(&self) -> &Vec<HashValue> {
+        &self.parent_frozen_subtree_roots
+    }
+
     pub fn has_reconfiguration(&self) -> bool {
         self.epoch_state.is_some()
+    }
+
+    pub fn signature(&self) -> &Option<Ed25519Signature> {
+        &self.signature
+    }
+
+    pub fn set_signature(&mut self, sig: Ed25519Signature) {
+        self.signature = Some(sig);
     }
 }
 
@@ -289,29 +331,37 @@ impl ProcessedVMOutput {
         &self.epoch_state
     }
 
-    pub fn state_compute_result(&self) -> StateComputeResult {
+    pub fn has_reconfiguration(&self) -> bool {
+        self.epoch_state.is_some()
+    }
+
+    pub fn compute_result(
+        &self,
+        parent_frozen_subtree_roots: Vec<HashValue>,
+        parent_num_leaves: u64,
+    ) -> StateComputeResult {
         let txn_accu = self.executed_trees().txn_accumulator();
-        StateComputeResult {
-            // Now that we have the root hash and execution status we can send the response to
-            // consensus.
-            // TODO: The VM will support a special transaction to set the validators for the
-            // next epoch that is part of a block execution.
-            root_hash: self.accu_root(),
-            num_leaves: txn_accu.num_leaves(),
-            epoch_state: self.epoch_state.clone(),
-            frozen_subtree_roots: txn_accu.frozen_subtree_roots().clone(),
-            compute_status: self
-                .transaction_data()
+        // Now that we have the root hash and execution status we can send the response to
+        // consensus.
+        // TODO: The VM will support a special transaction to set the validators for the
+        // next epoch that is part of a block execution.
+        StateComputeResult::new(
+            self.accu_root(),
+            txn_accu.frozen_subtree_roots().clone(),
+            txn_accu.num_leaves(),
+            parent_frozen_subtree_roots,
+            parent_num_leaves,
+            self.epoch_state.clone(),
+            self.transaction_data()
                 .iter()
                 .map(|txn_data| txn_data.status())
                 .cloned()
                 .collect(),
-            transaction_info_hashes: self
-                .transaction_data()
+            self.transaction_data()
                 .iter()
                 .filter_map(|x| x.txn_info_hash())
                 .collect(),
-        }
+        )
     }
 }
 

@@ -7,7 +7,7 @@ use consensus_types::{
     common::Round,
     quorum_cert::QuorumCert,
     timeout::Timeout,
-    vote_proposal::VoteProposal,
+    vote_proposal::MaybeSignedVoteProposal,
 };
 use libra_crypto::hash::{CryptoHash, HashValue};
 use libra_global_constants::CONSENSUS_KEY;
@@ -42,16 +42,16 @@ fn make_proposal_with_qc_and_proof(
     proof: Proof,
     qc: QuorumCert,
     signer: &ValidatorSigner,
-) -> VoteProposal {
+) -> MaybeSignedVoteProposal {
     test_utils::make_proposal_with_qc_and_proof(vec![], round, proof, qc, signer)
 }
 
 fn make_proposal_with_parent(
     round: Round,
-    parent: &VoteProposal,
-    committed: Option<&VoteProposal>,
+    parent: &MaybeSignedVoteProposal,
+    committed: Option<&MaybeSignedVoteProposal>,
     signer: &ValidatorSigner,
-) -> VoteProposal {
+) -> MaybeSignedVoteProposal {
     test_utils::make_proposal_with_parent(vec![], round, parent, committed, signer)
 }
 

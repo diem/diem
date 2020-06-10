@@ -3,7 +3,8 @@
 
 use crate::{ConsensusState, Error};
 use consensus_types::{
-    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote, vote_proposal::VoteProposal,
+    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote,
+    vote_proposal::MaybeSignedVoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
 use libra_types::epoch_change::EpochChangeProof;
@@ -21,7 +22,10 @@ pub trait TSafetyRules {
     fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error>;
 
     /// Attempts to vote for a given proposal following the voting rules.
-    fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error>;
+    fn construct_and_sign_vote(
+        &mut self,
+        vote_proposal: &MaybeSignedVoteProposal,
+    ) -> Result<Vote, Error>;
 
     /// As the holder of the private key, SafetyRules also signs proposals or blocks.
     /// A Block is a signed BlockData along with some additional metadata.

@@ -7,7 +7,7 @@ use crate::{
 };
 use consensus_types::{
     block::Block, block_data::BlockData, common::Author, quorum_cert::QuorumCert, timeout::Timeout,
-    vote::Vote, vote_data::VoteData, vote_proposal::VoteProposal,
+    vote::Vote, vote_data::VoteData, vote_proposal::MaybeSignedVoteProposal,
 };
 use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue};
 use libra_logger::debug;
@@ -263,8 +263,17 @@ impl TSafetyRules for SafetyRules {
         self.start_new_epoch(last_li.ledger_info())
     }
 
-    fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error> {
+    fn construct_and_sign_vote(
+        &mut self,
+        maybe_signed_vote_proposal: &MaybeSignedVoteProposal,
+    ) -> Result<Vote, Error> {
         debug!("Incoming vote proposal to sign.");
+        self.signer()?;
+
+        let (vote_proposal, _execution_signature) = (
+            &maybe_signed_vote_proposal.vote_proposal,
+            &maybe_signed_vote_proposal.signature,
+        );
         let proposed_block = vote_proposal.block();
         self.verify_epoch(proposed_block.epoch())?;
         self.verify_qc(proposed_block.quorum_cert())?;

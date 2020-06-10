@@ -44,14 +44,17 @@ impl StateComputer for MockStateComputer {
             .lock()
             .unwrap()
             .insert(block.id(), block.payload().unwrap_or(&vec![]).clone());
-        Ok(StateComputeResult::new(
+        let result = StateComputeResult::new(
             *ACCUMULATOR_PLACEHOLDER_HASH,
+            vec![],
+            0,
             vec![],
             0,
             None,
             vec![],
             vec![],
-        ))
+        );
+        Ok(result)
     }
 
     async fn commit(
@@ -106,6 +109,8 @@ impl StateComputer for EmptyStateComputer {
     fn compute(&self, _block: &Block, _parent_block_id: HashValue) -> Result<StateComputeResult> {
         Ok(StateComputeResult::new(
             *ACCUMULATOR_PLACEHOLDER_HASH,
+            vec![],
+            0,
             vec![],
             0,
             None,

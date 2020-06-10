@@ -746,9 +746,8 @@ impl TransactionListProof {
 }
 
 /// A proof that first verifies that establishes correct computation of the root and then
-/// returns the new tree to acquire a new root and version. Note: this is used internally by
-/// VoteProposal hence why it exists within consensus-types andd not libra-types.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+/// returns the new tree to acquire a new root and version.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct AccumulatorExtensionProof<H> {
     /// Represents the roots of all the full subtrees from left to right in the original accumulator.
     frozen_subtree_roots: Vec<HashValue>,

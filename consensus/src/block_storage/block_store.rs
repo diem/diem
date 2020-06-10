@@ -149,18 +149,23 @@ impl BlockStore {
             root_metadata.accu_hash,
         );
 
+        let result = StateComputeResult::new(
+            root_metadata.accu_hash,
+            root_metadata.frozen_root_hashes,
+            root_metadata.num_leaves, /* num_leaves */
+            vec![],                   /* parent_root_hashes */
+            0,                        /* parent_num_leaves */
+            None,                     /* validators */
+            vec![],                   /* compute_status */
+            vec![],                   /* txn_infos */
+        );
+
         let executed_root_block = ExecutedBlock::new(
             root_block,
             // Create a dummy state_compute_result with necessary fields filled in.
-            StateComputeResult::new(
-                root_metadata.accu_hash,
-                root_metadata.frozen_root_hashes,
-                root_metadata.num_leaves, /* num_leaves */
-                None,                     /* epoch_state */
-                vec![],                   /* compute_status */
-                vec![],                   /* transaction_info_hashes */
-            ),
+            result,
         );
+
         let tree = BlockTree::new(
             executed_root_block,
             root_qc,
@@ -306,25 +311,14 @@ impl BlockStore {
             .get_block(block.parent_id())
             .ok_or_else(|| format_err!("Block with missing parent {}", block.parent_id()))?;
 
-        // Reconfiguration rule - if a block is a child of pending reconfiguration, it needs to be empty
-        // So we roll over the executed state until it's committed and we start new epoch.
-        let state_compute_result = if parent_block.compute_result().has_reconfiguration() {
-            StateComputeResult::new(
-                parent_block.compute_result().root_hash(),
-                parent_block.compute_result().frozen_subtree_roots().clone(),
-                parent_block.compute_result().num_leaves(),
-                parent_block.compute_result().epoch_state().clone(),
-                vec![], /* compute_status */
-                vec![], /* transaction_info_hashes */
-            )
-        } else {
-            // Although NIL blocks don't have payload, we still send a T::default() to compute
-            // because we may inject a block prologue transaction.
-            self.state_computer
-                .compute(&block, parent_block.id())
-                .with_context(|| format!("Execution failure for block {}", block))?
-        };
-        Ok(ExecutedBlock::new(block, state_compute_result))
+        // Although NIL blocks don't have a payload, we still send a T::default() to compute
+        // because we may inject a block prologue transaction.
+        let state_compute_result_with_sig = self
+            .state_computer
+            .compute(&block, parent_block.id())
+            .with_context(|| format!("Execution failure for block {}", block))?;
+
+        Ok(ExecutedBlock::new(block, state_compute_result_with_sig))
     }
 
     /// Validates quorum certificates and inserts it into block tree assuming dependencies exist.
@@ -478,20 +472,20 @@ impl BlockStore {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         let executed_block = self.execute_block(block)?;
         let compute_result = executed_block.compute_result();
+        let result = StateComputeResult::new(
+            compute_result.root_hash(),
+            compute_result.frozen_subtree_roots().clone(),
+            compute_result.num_leaves(),
+            compute_result.parent_frozen_subtree_roots().clone(),
+            compute_result.parent_num_leaves(),
+            Some(EpochState::empty()),
+            compute_result.compute_status().clone(),
+            compute_result.transaction_info_hashes().clone(),
+        );
         Ok(self
             .inner
             .write()
             .unwrap()
-            .insert_block(ExecutedBlock::new(
-                executed_block.block().clone(),
-                StateComputeResult::new(
-                    compute_result.root_hash(),
-                    compute_result.frozen_subtree_roots().clone(),
-                    compute_result.num_leaves(),
-                    Some(EpochState::empty()),
-                    compute_result.compute_status().clone(),
-                    compute_result.transaction_info_hashes().clone(),
-                ),
-            ))?)
+            .insert_block(ExecutedBlock::new(executed_block.block().clone(), result))?)
     }
 }
