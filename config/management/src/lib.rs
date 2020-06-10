@@ -44,6 +44,8 @@ pub enum Command {
     CreateWaypoint(crate::waypoint::CreateWaypoint),
     #[structopt(about = "Retrieves data from a store to produce genesis")]
     Genesis(crate::genesis::Genesis),
+    #[structopt(about = "Insert a waypoint")]
+    InsertWaypoint(crate::waypoint::InsertWaypoint),
     #[structopt(about = "Submits an Ed25519PublicKey for the operator")]
     OperatorKey(crate::key::OperatorKey),
     #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
@@ -61,6 +63,7 @@ pub enum CommandName {
     AssociationKey,
     CreateWaypoint,
     Genesis,
+    InsertWaypoint,
     OperatorKey,
     OwnerKey,
     SetLayout,
@@ -74,6 +77,7 @@ impl From<&Command> for CommandName {
             Command::AssociationKey(_) => CommandName::AssociationKey,
             Command::CreateWaypoint(_) => CommandName::CreateWaypoint,
             Command::Genesis(_) => CommandName::Genesis,
+            Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
             Command::SetLayout(_) => CommandName::SetLayout,
@@ -89,6 +93,7 @@ impl std::fmt::Display for CommandName {
             CommandName::AssociationKey => "association-key",
             CommandName::CreateWaypoint => "create-waypoint",
             CommandName::Genesis => "genesis",
+            CommandName::InsertWaypoint => "insert-waypoint",
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
             CommandName::SetLayout => "set-layout",
@@ -105,6 +110,7 @@ impl Command {
             Command::AssociationKey(_) => self.association_key().unwrap().to_string(),
             Command::CreateWaypoint(_) => self.create_waypoint().unwrap().to_string(),
             Command::Genesis(_) => format!("{:?}", self.genesis().unwrap()),
+            Command::InsertWaypoint(_) => self.insert_waypoint().unwrap().to_string(),
             Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
             Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
@@ -141,6 +147,17 @@ impl Command {
         } else {
             Err(Error::UnexpectedCommand(
                 CommandName::Genesis,
+                CommandName::from(&self),
+            ))
+        }
+    }
+
+    pub fn insert_waypoint(self) -> Result<Waypoint, Error> {
+        if let Command::InsertWaypoint(insert_waypoint) = self {
+            insert_waypoint.execute()
+        } else {
+            Err(Error::UnexpectedCommand(
+                CommandName::InsertWaypoint,
                 CommandName::from(&self),
             ))
         }

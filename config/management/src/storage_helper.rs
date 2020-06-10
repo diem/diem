@@ -120,6 +120,28 @@ impl StorageHelper {
         command.genesis()
     }
 
+    pub fn insert_waypoint(&self, local_ns: &str, remote_ns: &str) -> Result<Waypoint, Error> {
+        let args = format!(
+            "
+                management
+                insert-waypoint
+                --local backend={backend};\
+                    path={path};\
+                    namespace={local_ns}
+                --remote backend={backend};\
+                    path={path};\
+                    namespace={remote_ns}
+            ",
+            backend = crate::secure_backend::DISK,
+            path = self.path_string(),
+            local_ns = local_ns,
+            remote_ns = remote_ns,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.insert_waypoint()
+    }
+
     pub fn operator_key(&self, local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
