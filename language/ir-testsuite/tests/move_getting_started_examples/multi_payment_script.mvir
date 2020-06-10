@@ -11,9 +11,12 @@ main(account: &signer, payee1: address, amount1: u64, payee2: address, amount2: 
   let coin1: Libra.Libra<LBR.LBR>;
   let coin2: Libra.Libra<LBR.LBR>;
   let total: u64;
+  let with_cap: LibraAccount.WithdrawCapability;
 
   total = move(amount1) + copy(amount2);
-  coin1 = LibraAccount.withdraw_from<LBR.LBR>(copy(account), move(total));
+  with_cap = LibraAccount.extract_withdraw_capability(copy(account));
+  coin1 = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, move(total));
+  LibraAccount.restore_withdraw_capability(move(with_cap));
   // This mutates `coin1`, which now has value `amount1`.
   // `coin2` has value `amount2`.
   coin2 = Libra.withdraw<LBR.LBR>(&mut coin1, move(amount2));

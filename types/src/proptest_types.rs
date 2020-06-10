@@ -4,7 +4,9 @@
 use crate::{
     access_path::AccessPath,
     account_address::{self, AccountAddress},
-    account_config::{AccountResource, BalanceResource},
+    account_config::{
+        AccountResource, BalanceResource, KeyRotationCapabilityResource, WithdrawCapabilityResource,
+    },
     account_state_blob::AccountStateBlob,
     block_info::{BlockInfo, Round},
     block_metadata::BlockMetadata,
@@ -664,8 +666,8 @@ impl ContractEventGen {
 
 #[derive(Arbitrary, Debug)]
 struct AccountResourceGen {
-    delegated_key_rotation_capability: bool,
-    delegated_withdrawal_capability: bool,
+    withdrawal_capability: Option<WithdrawCapabilityResource>,
+    key_rotation_capability: Option<KeyRotationCapabilityResource>,
 }
 
 impl AccountResourceGen {
@@ -679,8 +681,8 @@ impl AccountResourceGen {
         AccountResource::new(
             account_info.sequence_number,
             account_info.public_key.to_bytes().to_vec(),
-            self.delegated_key_rotation_capability,
-            self.delegated_withdrawal_capability,
+            self.withdrawal_capability,
+            self.key_rotation_capability,
             account_info.sent_event_handle.clone(),
             account_info.received_event_handle.clone(),
             false,

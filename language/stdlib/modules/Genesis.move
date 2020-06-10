@@ -92,10 +92,22 @@ module Genesis {
         LibraBlock::initialize_block_metadata(association);
         LibraWriteSetManager::initialize(association);
         LibraTimestamp::initialize(association);
-        LibraAccount::rotate_authentication_key(association, copy genesis_auth_key);
-        LibraAccount::rotate_authentication_key(config_account, copy genesis_auth_key);
-        LibraAccount::rotate_authentication_key(fee_account, copy genesis_auth_key);
-        LibraAccount::rotate_authentication_key(tc_account, genesis_auth_key);
+
+        let assoc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(association);
+        LibraAccount::rotate_authentication_key(&assoc_rotate_key_cap, copy genesis_auth_key);
+        LibraAccount::restore_key_rotation_capability(assoc_rotate_key_cap);
+
+        let config_rotate_key_cap = LibraAccount::extract_key_rotation_capability(config_account);
+        LibraAccount::rotate_authentication_key(&config_rotate_key_cap, copy genesis_auth_key);
+        LibraAccount::restore_key_rotation_capability(config_rotate_key_cap);
+
+        let fee_rotate_key_cap = LibraAccount::extract_key_rotation_capability(fee_account);
+        LibraAccount::rotate_authentication_key(&fee_rotate_key_cap, copy genesis_auth_key);
+        LibraAccount::restore_key_rotation_capability(fee_rotate_key_cap);
+
+        let tc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(tc_account);
+        LibraAccount::rotate_authentication_key(&tc_rotate_key_cap, genesis_auth_key);
+        LibraAccount::restore_key_rotation_capability(tc_rotate_key_cap);
     }
 
 }

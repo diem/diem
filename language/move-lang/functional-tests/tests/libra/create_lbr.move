@@ -42,8 +42,10 @@ fun main(account: &signer) {
     let amount_lbr = 10;
     let coin1_balance = LibraAccount::balance<Coin1>({{bob}});
     let coin2_balance = LibraAccount::balance<Coin2>({{bob}});
-    let coin1 = LibraAccount::withdraw_from<Coin1>(account, coin1_balance);
-    let coin2 = LibraAccount::withdraw_from<Coin2>(account, coin2_balance);
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    let coin1 = LibraAccount::withdraw_from<Coin1>(&with_cap, coin1_balance);
+    let coin2 = LibraAccount::withdraw_from<Coin2>(&with_cap, coin2_balance);
+    LibraAccount::restore_withdraw_capability(with_cap);
     let (lbr, coin1, coin2) = LBR::create(amount_lbr, coin1, coin2);
     Transaction::assert(Libra::value(&lbr) == 10, 0);
     Transaction::assert(Libra::value(&coin1) == coin1_balance - 6, 1);
@@ -65,7 +67,9 @@ use 0x0::LibraAccount;
 use 0x0::Transaction;
 use 0x0::Libra;
 fun main(account: &signer) {
-    let lbr = LibraAccount::withdraw_from<LBR>(account, 10);
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    let lbr = LibraAccount::withdraw_from<LBR>(&with_cap, 10);
+    LibraAccount::restore_withdraw_capability(with_cap);
     Transaction::assert(Libra::value(&lbr) == 10, 3);
     let (coin1, coin2) = LBR::unpack(account, lbr);
     Transaction::assert(Libra::value(&coin1) == 5, 4);
@@ -93,8 +97,10 @@ fun main(account: &signer) {
     let amount_lbr = 0;
     let coin1_balance = LibraAccount::balance<Coin1>({{bob}});
     let coin2_balance = LibraAccount::balance<Coin2>({{bob}});
-    let coin1 = LibraAccount::withdraw_from<Coin1>(account, coin1_balance);
-    let coin2 = LibraAccount::withdraw_from<Coin2>(account, coin2_balance);
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    let coin1 = LibraAccount::withdraw_from<Coin1>(&with_cap, coin1_balance);
+    let coin2 = LibraAccount::withdraw_from<Coin2>(&with_cap, coin2_balance);
+    LibraAccount::restore_withdraw_capability(with_cap);
     let (lbr, coin1, coin2) = LBR::create(amount_lbr, coin1, coin2);
     Transaction::assert(Libra::value(&lbr) == 0, 6);
     Transaction::assert(Libra::value(&coin1) == coin1_balance, 7);

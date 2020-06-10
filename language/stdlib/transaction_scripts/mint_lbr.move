@@ -8,8 +8,10 @@ fun main(account: &signer, amount_lbr: u64) {
     let sender = Signer::address_of(account);
     let coin1_balance = LibraAccount::balance<Coin1>(sender);
     let coin2_balance = LibraAccount::balance<Coin2>(sender);
-    let coin1 = LibraAccount::withdraw_from<Coin1>(account, coin1_balance);
-    let coin2 = LibraAccount::withdraw_from<Coin2>(account, coin2_balance);
+    let withdraw_cap = LibraAccount::extract_withdraw_capability(account);
+    let coin1 = LibraAccount::withdraw_from<Coin1>(&withdraw_cap, coin1_balance);
+    let coin2 = LibraAccount::withdraw_from<Coin2>(&withdraw_cap, coin2_balance);
+    LibraAccount::restore_withdraw_capability(withdraw_cap);
     let (lbr, coin1, coin2) = LBR::create(amount_lbr, coin1, coin2);
     LibraAccount::deposit_to(account, lbr);
     LibraAccount::deposit_to(account, coin1);

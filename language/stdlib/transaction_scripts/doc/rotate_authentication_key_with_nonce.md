@@ -26,7 +26,9 @@
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
   <a href="../../modules/doc/SlidingNonce.md#0x0_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
-  <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(account, new_key)
+  <b>let</b> key_rotation_capability = <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account);
+  <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);
+  <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(key_rotation_capability);
 }
 </code></pre>
 

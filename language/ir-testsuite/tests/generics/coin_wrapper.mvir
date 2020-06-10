@@ -75,9 +75,12 @@ import 0x0.Libra;
 main(account: &signer) {
   let coin: Libra.Libra<LBR.LBR>;
   let byte: vector<u8>;
+  let with_cap: LibraAccount.WithdrawCapability;
 
   byte = h"bac1ac";
-  coin = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 1000);
+  with_cap = LibraAccount.extract_withdraw_capability(copy(account));
+  coin = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 1000);
+  LibraAccount.restore_withdraw_capability(move(with_cap));
 
   M.coin_wrapper(copy(account), move(coin));
   M.inner_wrapper(copy(account), move(byte));

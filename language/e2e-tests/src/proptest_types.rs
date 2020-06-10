@@ -40,8 +40,6 @@ impl AccountData {
                         sequence_number,
                         sent_events_count,
                         received_events_count,
-                        false, // TODO: vary withdrawal capability param?
-                        false, // TODO: vary rotation capability param?
                         AccountRoleSpecifier::default(), // TODO: Vary account type?
                         false,
                     )

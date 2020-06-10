@@ -10,7 +10,7 @@ module TransactionFee {
     use 0x0::LibraAccount;
 
     /// The `TransactionFeeCollection` resource holds the
-    /// `LibraAccount::withdraw_with_capability` for the `0xFEE` account.
+    /// `LibraAccount::WithdrawCapability` for the `0xFEE` account.
     /// This is used for the collection of the transaction fees since it
     /// must be sent from the account at the `0xB1E55ED` address.
     resource struct TransactionFeeCollection {
@@ -62,7 +62,7 @@ module TransactionFee {
     acquires TransactionFeeCollection, TransactionFeePreburn {
         if (is_lbr<CoinType>()) {
             let amount = LibraAccount::balance<LBR>(0xFEE);
-            let coins = LibraAccount::withdraw_with_capability<LBR>(
+            let coins = LibraAccount::withdraw_from<LBR>(
                 &borrow_global<TransactionFeeCollection>(Signer::address_of(blessed_sender)).cap,
                 amount
             );
@@ -71,7 +71,7 @@ module TransactionFee {
             preburn_coin<Coin2>(coin2)
         } else {
             let amount = LibraAccount::balance<CoinType>(0xFEE);
-            let coins = LibraAccount::withdraw_with_capability<CoinType>(
+            let coins = LibraAccount::withdraw_from<CoinType>(
                 &borrow_global<TransactionFeeCollection>(Signer::address_of(blessed_sender)).cap,
                 amount
             );

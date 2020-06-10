@@ -23,7 +23,7 @@
 
 The
 <code><a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a></code> resource holds the
-<code><a href="LibraAccount.md#0x0_LibraAccount_withdraw_with_capability">LibraAccount::withdraw_with_capability</a></code> for the
+<code><a href="LibraAccount.md#0x0_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a></code> for the
 <code>0xFEE</code> account.
 This is used for the collection of the transaction fees since it
 must be sent from the account at the
@@ -234,7 +234,7 @@ underlying fiat.
 <b>acquires</b> <a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>, <a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a> {
     <b>if</b> (<a href="#0x0_TransactionFee_is_lbr">is_lbr</a>&lt;CoinType&gt;()) {
         <b>let</b> amount = <a href="LibraAccount.md#0x0_LibraAccount_balance">LibraAccount::balance</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;(0xFEE);
-        <b>let</b> coins = <a href="LibraAccount.md#0x0_LibraAccount_withdraw_with_capability">LibraAccount::withdraw_with_capability</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;(
+        <b>let</b> coins = <a href="LibraAccount.md#0x0_LibraAccount_withdraw_from">LibraAccount::withdraw_from</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;(
             &borrow_global&lt;<a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_sender)).cap,
             amount
         );
@@ -243,7 +243,7 @@ underlying fiat.
         <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;(coin2)
     } <b>else</b> {
         <b>let</b> amount = <a href="LibraAccount.md#0x0_LibraAccount_balance">LibraAccount::balance</a>&lt;CoinType&gt;(0xFEE);
-        <b>let</b> coins = <a href="LibraAccount.md#0x0_LibraAccount_withdraw_with_capability">LibraAccount::withdraw_with_capability</a>&lt;CoinType&gt;(
+        <b>let</b> coins = <a href="LibraAccount.md#0x0_LibraAccount_withdraw_from">LibraAccount::withdraw_from</a>&lt;CoinType&gt;(
             &borrow_global&lt;<a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_sender)).cap,
             amount
         );

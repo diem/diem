@@ -35,7 +35,9 @@ script {
     use 0x0::LBR::LBR;
     use 0x0::LibraAccount;
     fun main(account: &signer) {
-        let coins = LibraAccount::withdraw_from<LBR>(account, 10);
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        let coins = LibraAccount::withdraw_from<LBR>(&with_cap, 10);
+        LibraAccount::restore_withdraw_capability(with_cap);
         LibraAccount::deposit_to(account, coins);
     }
 }
@@ -46,7 +48,9 @@ script {
 script {
     use 0x0::LibraAccount;
     fun main(account: &signer) {
-        LibraAccount::rotate_authentication_key(account, x"123abc");
+        let rot_cap = LibraAccount::extract_key_rotation_capability(account);
+        LibraAccount::rotate_authentication_key(&rot_cap, x"123abc");
+        LibraAccount::restore_key_rotation_capability(rot_cap);
     }
 }
 // check: ABORTED
@@ -134,7 +138,9 @@ script {
     use 0x0::LibraAccount;
     use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR>(account, {{alice}}, 10000);
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 10000);
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // TODO: what is this testing?

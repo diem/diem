@@ -11,7 +11,8 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::{
         self, from_currency_code_string, type_tag_for_currency_code, AccountResource,
-        BalanceResource, ReceivedPaymentEvent, SentPaymentEvent, COIN1_NAME, COIN2_NAME, LBR_NAME,
+        BalanceResource, KeyRotationCapabilityResource, ReceivedPaymentEvent, SentPaymentEvent,
+        WithdrawCapabilityResource, COIN1_NAME, COIN2_NAME, LBR_NAME,
     },
     event::EventHandle,
     transaction::{
@@ -159,7 +160,7 @@ impl Account {
     }
 
     // TODO: plug in the account type
-    fn make_access_path(&self, tag: StructTag) -> AccessPath {
+    pub fn make_access_path(&self, tag: StructTag) -> AccessPath {
         // TODO: we need a way to get the type (FatStructType) of the Account in place
         let resource_tag = ResourceKey::new(self.addr, tag);
         AccessPath::resource_access_path(&resource_tag)
@@ -376,7 +377,7 @@ impl Account {
             *self.address(),
             TransactionPayload::Script(script),
             sequence_number,
-            gas_costs::TXN_RESERVED,
+            gas_costs::TXN_RESERVED * 2,
             0, // gas price
             LBR_NAME.to_owned(),
         )
@@ -663,9 +664,9 @@ impl EventHandleGenerator {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct AccountData {
     account: Account,
+    withdrawal_capability: Option<WithdrawCapability>,
+    key_rotation_capability: Option<KeyRotationCapability>,
     sequence_number: u64,
-    delegated_key_rotation_capability: bool,
-    delegated_withdrawal_capability: bool,
     sent_events: EventHandle,
     received_events: EventHandle,
     is_frozen: bool,
@@ -728,8 +729,6 @@ impl AccountData {
             sequence_number,
             0,
             0,
-            false,
-            false,
             account_specifier,
             false,
         )
@@ -762,8 +761,6 @@ impl AccountData {
         sequence_number: u64,
         sent_events_count: u64,
         received_events_count: u64,
-        delegated_key_rotation_capability: bool,
-        delegated_withdrawal_capability: bool,
         account_specifier: AccountRoleSpecifier,
         is_frozen: bool,
     ) -> Self {
@@ -772,12 +769,12 @@ impl AccountData {
         Self {
             account_role: AccountRole::new(*account.address(), account_specifier),
             event_generator: EventHandleGenerator::new_with_event_count(*account.address(), 2),
+            withdrawal_capability: Some(WithdrawCapability::new(*account.address())),
+            key_rotation_capability: Some(KeyRotationCapability::new(*account.address())),
             account,
             balances,
             sequence_number,
             is_frozen,
-            delegated_key_rotation_capability,
-            delegated_withdrawal_capability,
             sent_events: new_event_handle(sent_events_count),
             received_events: new_event_handle(received_events_count),
         }
@@ -844,8 +841,12 @@ impl AccountData {
             ty_args: vec![],
             layout: vec![
                 FatType::Vector(Box::new(FatType::U8)),
-                FatType::Bool,
-                FatType::Bool,
+                FatType::Vector(Box::new(FatType::Struct(Box::new(
+                    WithdrawCapability::type_(),
+                )))),
+                FatType::Vector(Box::new(FatType::Struct(Box::new(
+                    KeyRotationCapability::type_(),
+                )))),
                 FatType::Struct(Box::new(Self::event_handle_type(FatType::Struct(
                     Box::new(Self::sent_payment_event_type()),
                 )))),
@@ -877,8 +878,8 @@ impl AccountData {
             vec![
                 // TODO: this needs to compute the auth key instead
                 Value::vector_u8(AuthenticationKey::ed25519(&self.account.pubkey).to_vec()),
-                Value::bool(self.delegated_key_rotation_capability),
-                Value::bool(self.delegated_withdrawal_capability),
+                self.withdrawal_capability.as_ref().unwrap().value(),
+                self.key_rotation_capability.as_ref().unwrap().value(),
                 Value::struct_(Struct::pack(
                     vec![
                         Value::u64(self.received_events.count()),
@@ -1022,5 +1023,61 @@ impl AccountData {
     /// Returns the initial received events count.
     pub fn received_events_count(&self) -> u64 {
         self.received_events.count()
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct WithdrawCapability {
+    account_address: AccountAddress,
+}
+impl WithdrawCapability {
+    pub fn new(account_address: AccountAddress) -> Self {
+        Self { account_address }
+    }
+
+    pub fn type_() -> FatStructType {
+        FatStructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: WithdrawCapabilityResource::module_identifier(),
+            name: WithdrawCapabilityResource::struct_identifier(),
+            is_resource: true,
+            ty_args: vec![],
+            layout: vec![FatType::Address],
+        }
+    }
+
+    pub fn value(&self) -> Value {
+        Value::vector_general(vec![Value::struct_(Struct::pack(
+            vec![Value::address(self.account_address)],
+            true,
+        ))])
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct KeyRotationCapability {
+    account_address: AccountAddress,
+}
+impl KeyRotationCapability {
+    pub fn new(account_address: AccountAddress) -> Self {
+        Self { account_address }
+    }
+
+    pub fn type_() -> FatStructType {
+        FatStructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: KeyRotationCapabilityResource::module_identifier(),
+            name: KeyRotationCapabilityResource::struct_identifier(),
+            is_resource: true,
+            ty_args: vec![],
+            layout: vec![FatType::Address],
+        }
+    }
+
+    pub fn value(&self) -> Value {
+        Value::vector_general(vec![Value::struct_(Struct::pack(
+            vec![Value::address(self.account_address)],
+            true,
+        ))])
     }
 }

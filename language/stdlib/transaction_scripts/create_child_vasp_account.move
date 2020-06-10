@@ -21,7 +21,9 @@ fun main<CoinType>(
     );
     // Give the newly created child `child_initial_balance` coins
     if (child_initial_balance > 0) {
-        LibraAccount::pay_from<CoinType>(parent_vasp, child_address, child_initial_balance)
+        let vasp_withdrawal_cap = LibraAccount::extract_withdraw_capability(parent_vasp);
+        LibraAccount::pay_from<CoinType>(&vasp_withdrawal_cap, child_address, child_initial_balance);
+        LibraAccount::restore_withdraw_capability(vasp_withdrawal_cap);
     };
 }
 }

@@ -89,8 +89,8 @@ impl AccountView {
             authentication_key: BytesView::from(account.authentication_key()),
             sent_events_key: BytesView::from(account.sent_events().key().as_bytes()),
             received_events_key: BytesView::from(account.received_events().key().as_bytes()),
-            delegated_key_rotation_capability: account.delegated_key_rotation_capability(),
-            delegated_withdrawal_capability: account.delegated_withdrawal_capability(),
+            delegated_key_rotation_capability: account.has_delegated_key_rotation_capability(),
+            delegated_withdrawal_capability: account.has_delegated_withdrawal_capability(),
             role: AccountRoleView::from(account_role),
         }
     }

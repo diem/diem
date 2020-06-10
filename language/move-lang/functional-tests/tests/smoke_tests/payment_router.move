@@ -119,7 +119,7 @@ module PaymentRouter {
         let routed_info = borrow_global<RoutedAccount<Token>>(Signer::address_of(account));
         let router_info = borrow_global<PaymentRouterInfo>(*&routed_info.router_account_addr);
         Transaction::assert(!router_info.exclusive_withdrawals_only, 2);
-        LibraAccount::withdraw_with_capability(
+        LibraAccount::withdraw_from(
             &routed_info.withdrawal_cap,
             amount
         )
@@ -134,7 +134,7 @@ module PaymentRouter {
         // TODO: policy around how to rotate through different accounts
         let index = 0;
         let addr = Vector::borrow(addrs, index);
-        LibraAccount::withdraw_with_capability(
+        LibraAccount::withdraw_from(
             &borrow_global<RoutedAccount<Token>>(*addr).withdrawal_cap,
             amount
         )
@@ -594,7 +594,9 @@ use {{default}}::PaymentRouter;
 use 0x0::Coin2::Coin2;
 use 0x0::LibraAccount;
 fun main(account: &signer) {
-    let x_coins = LibraAccount::withdraw_from<Coin2>(account, 10);
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    let x_coins = LibraAccount::withdraw_from<Coin2>(&with_cap, 10);
+    LibraAccount::restore_withdraw_capability(with_cap);
     PaymentRouter::deposit<Coin2>(account, {{bob2}}, x_coins);
 }
 }

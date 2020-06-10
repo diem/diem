@@ -99,7 +99,7 @@
         <a href="Signature.md#0x0_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_public_key),
         9003, // TODO: proper error code
     );
-    <a href="LibraAccount.md#0x0_LibraAccount_rotate_authentication_key_with_capability">LibraAccount::rotate_authentication_key_with_capability</a>(
+    <a href="LibraAccount.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(
         &shared_key.rotation_cap,
         <a href="Authenticator.md#0x0_Authenticator_ed25519_authentication_key">Authenticator::ed25519_authentication_key</a>(<b>copy</b> new_public_key)
     );

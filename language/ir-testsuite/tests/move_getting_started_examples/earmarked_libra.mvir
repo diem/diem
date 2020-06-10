@@ -92,9 +92,12 @@ main(account: &signer) {
   let recipient_address: address;
   let coin: Libra.Libra<LBR.LBR>;
   let earmarked_coin: EarmarkedLibra.T;
+  let with_cap: LibraAccount.WithdrawCapability;
 
   recipient_address = 0xb0b;
-  coin = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 1000);
+  with_cap = LibraAccount.extract_withdraw_capability(copy(account));
+  coin = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 1000);
+  LibraAccount.restore_withdraw_capability(move(with_cap));
   EarmarkedLibra.create(copy(account), move(coin), move(recipient_address));
 
   earmarked_coin = EarmarkedLibra.claim_for_creator();

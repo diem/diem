@@ -31,7 +31,9 @@
     metadata: vector&lt;u8&gt;,
     metadata_signature: vector&lt;u8&gt;
 ) {
-  <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_pay_from_with_metadata">LibraAccount::pay_from_with_metadata</a>&lt;Token&gt;(payer, payee, amount, metadata, metadata_signature)
+  <b>let</b> payer_withdrawal_cap = <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(payer);
+  <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_pay_from_with_metadata">LibraAccount::pay_from_with_metadata</a>&lt;Token&gt;(&payer_withdrawal_cap, payee, amount, metadata, metadata_signature);
+  <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_restore_withdraw_capability">LibraAccount::restore_withdraw_capability</a>(payer_withdrawal_cap);
 }
 </code></pre>
 
