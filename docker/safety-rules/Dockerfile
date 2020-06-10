@@ -24,6 +24,7 @@ RUN strip /libra/target/release/config-builder
 FROM debian:buster AS prod
 
 RUN addgroup --system --gid 6180 libra && adduser --system --ingroup libra --no-create-home --uid 6180 libra
+RUN sysctl -w net.ipv4.udp_wmem_min=65536
 
 RUN mkdir -p /opt/libra/bin /opt/libra/etc /opt/libra/data/common
 

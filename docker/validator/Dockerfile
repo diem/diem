@@ -25,6 +25,9 @@ RUN strip /libra/target/release/db-bootstrapper
 FROM debian:buster AS prod
 
 RUN addgroup --system --gid 6180 libra && adduser --system --ingroup libra --no-create-home --uid 6180 libra
+RUN apt-get update && apt-get install -y procps
+RUN echo "net.ipv4.udp_wmem_min=65536" >> /etc/sysctl.conf
+RUN sysctl -p
 
 RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY docker/install-tools.sh /root
