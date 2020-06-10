@@ -29,7 +29,7 @@ use k8s_openapi::api::batch::v1::Job;
 use kube::api::ListParams;
 use libra_config::config::DEFAULT_JSON_RPC_PORT;
 use reqwest::Client as HttpClient;
-use std::process::Command;
+use std::{collections::HashSet, process::Command};
 
 const DEFAULT_NAMESPACE: &str = "default";
 
@@ -264,6 +264,12 @@ impl ClusterSwarmKube {
         Ok(())
     }
 
+    async fn list_nodes(&self) -> Result<Vec<Node>> {
+        let node_api: Api<Node> = Api::all(self.client.clone());
+        let lp = ListParams::default().labels("nodeType=validators");
+        Ok(node_api.list(&lp).await?.items)
+    }
+
     async fn get_pod_node_and_ip(&self, pod_name: &str) -> Result<(String, String)> {
         libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10000, 60), || {
             let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
@@ -366,10 +372,8 @@ impl ClusterSwarmKube {
         debug!("Trying to remove_all_network_effects");
         let back_off_limit = 2;
 
-        let node_api: Api<Node> = Api::all(self.client.clone());
-        let lp = ListParams::default().labels("nodeType=validators");
-        let jobs: Vec<Job> = node_api
-            .list(&lp)
+        let jobs: Vec<Job> = self
+            .list_nodes()
             .await?
             .iter()
             .map(|node| -> Result<Job, anyhow::Error> {
@@ -450,6 +454,39 @@ impl ClusterSwarmKube {
         self.run_jobs(vec![job_spec], back_off_limit).await
     }
 
+    async fn allocate_node(&self, instance_config: &InstanceConfig) -> Result<String> {
+        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 15), || {
+            Box::pin(async move { self.allocate_node_impl(instance_config).await })
+        })
+        .await
+    }
+
+    async fn allocate_node_impl(&self, instance_config: &InstanceConfig) -> Result<String> {
+        let nodes = self.list_nodes().await?;
+        let nodes_count = nodes.len();
+        // Holding lock for read-verfy-write to avoid race conditions on this map
+        let mut node_map = self.node_map.lock().await;
+        if let Some(existed) = node_map.get(instance_config) {
+            return Ok(existed.clone());
+        }
+        let used_nodes: HashSet<_> = node_map.values().collect();
+        for node in nodes {
+            let name = node
+                .metadata
+                .ok_or_else(|| format_err!("metadata not found for node"))?
+                .name
+                .ok_or_else(|| format_err!("node name not found"))?;
+            if !used_nodes.contains(&&name) {
+                node_map.insert(instance_config.clone(), name.clone());
+                return Ok(name);
+            }
+        }
+        Err(format_err!(
+            "Can not find free node, got total {} nodes",
+            nodes_count
+        ))
+    }
+
     pub async fn upsert_node(
         &self,
         instance_config: InstanceConfig,
@@ -469,12 +506,9 @@ impl ClusterSwarmKube {
             self.delete_resource::<Pod>(&pod_name).await?;
         }
         let node_name = self
-            .node_map
-            .lock()
+            .allocate_node(&instance_config)
             .await
-            .get(&instance_config)
-            .cloned()
-            .unwrap_or_else(|| "".to_string());
+            .map_err(|e| format_err!("Failed to allocate node: {}", e))?;
         debug!("Creating pod {} on node {:?}", pod_name, node_name);
         let (p, s): (Pod, Service) = match &instance_config {
             Validator(validator_config) => (
@@ -551,11 +585,8 @@ impl ClusterSwarmKube {
             }
             Err(e) => bail!("Failed to create service : {}", e),
         }
-        let (node_name, pod_ip) = self.get_pod_node_and_ip(&pod_name).await?;
-        assert!(
-            !node_name.is_empty(),
-            "get_pod_node_and_ip returned empty node_name"
-        );
+        let (pod_node_name, pod_ip) = self.get_pod_node_and_ip(&pod_name).await?;
+        assert_eq!(node_name, pod_node_name);
         let ac_port = DEFAULT_JSON_RPC_PORT as u32;
         let instance = Instance::new_k8s(
             pod_name,
@@ -566,10 +597,6 @@ impl ClusterSwarmKube {
             self.http_client.clone(),
             self.clone(),
         );
-        self.node_map
-            .lock()
-            .await
-            .insert(instance_config, node_name);
         Ok(instance)
     }
 
