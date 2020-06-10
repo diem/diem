@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["client",""],["network_interface","Protobuf based interface between OnchainDiscovery and Network layers."],["service",""],["types",""]]});
+initSidebarItems({"mod":[["builder",""],["client",""],["network_interface","Protobuf based interface between OnchainDiscovery and Network layers."],["service",""],["types",""]]});

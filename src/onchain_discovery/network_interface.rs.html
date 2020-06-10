@@ -98,7 +98,6 @@
 <span id="98"> 98</span>
 <span id="99"> 99</span>
 <span id="100">100</span>
-<span id="101">101</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -106,12 +105,10 @@
 <span class="doccomment">//! Protobuf based interface between OnchainDiscovery and Network layers.</span>
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">types</span>::{<span class="ident">OnchainDiscoveryMsg</span>, <span class="ident">QueryDiscoverySetRequest</span>, <span class="ident">QueryDiscoverySetResponse</span>};
 <span class="kw">use</span> <span class="ident">channel</span>::{<span class="ident">libra_channel</span>, <span class="ident">message_queues</span>::<span class="ident">QueueStyle</span>};
-<span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">channel</span>::<span class="ident">mpsc</span>, <span class="ident">sink</span>::<span class="ident">SinkExt</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">network</span>::{
-    <span class="ident">connectivity_manager</span>::<span class="ident">ConnectivityRequest</span>,
     <span class="ident">peer_manager</span>::{
-        <span class="ident">conn_notifs_channel</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerNotification</span>,
+        <span class="ident">ConnectionNotification</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerNotification</span>,
         <span class="ident">PeerManagerRequestSender</span>,
     },
     <span class="ident">protocols</span>::{<span class="ident">network</span>::<span class="ident">NetworkSender</span>, <span class="ident">rpc</span>::<span class="ident">error</span>::<span class="ident">RpcError</span>},
@@ -120,22 +117,41 @@
 };
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
 
+<span class="doccomment">/// The interface from Network to OnchainDiscovery layer.</span>
+<span class="doccomment">///</span>
+<span class="doccomment">/// `OnchainDiscoveryNetworkEvents` is a wrapper around streams of `PeerManagerNotification` and</span>
+<span class="doccomment">/// `ConnectionNotification` events. Unlike other *NetworkEvents, it is not itself a `Stream` and</span>
+<span class="doccomment">/// serves only as a transient holder of the underlying Streams during setup and initialization.</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OnchainDiscoveryNetworkEvents</span> {
+    <span class="kw">pub</span> <span class="ident">peer_mgr_notifs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">ProtocolId</span>), <span class="ident">PeerManagerNotification</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">connection_notifs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionNotification</span><span class="op">&gt;</span>,
+}
+
+<span class="kw">impl</span> <span class="ident">OnchainDiscoveryNetworkEvents</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">peer_mgr_notifs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">ProtocolId</span>), <span class="ident">PeerManagerNotification</span><span class="op">&gt;</span>,
+        <span class="ident">connection_notifs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionNotification</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">peer_mgr_notifs_rx</span>,
+            <span class="ident">connection_notifs_rx</span>,
+        }
+    }
+}
+
 <span class="doccomment">/// The interface from OnchainDiscovery to Networking layer.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OnchainDiscoveryNetworkSender</span> {
-    <span class="ident">network_sender</span>: <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">OnchainDiscoveryMsg</span><span class="op">&gt;</span>,
-    <span class="ident">conn_mgr_reqs_tx</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span>,
+    <span class="ident">inner</span>: <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">OnchainDiscoveryMsg</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">OnchainDiscoveryNetworkSender</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">peer_mgr_reqs_tx</span>: <span class="ident">PeerManagerRequestSender</span>,
         <span class="ident">conn_reqs_tx</span>: <span class="ident">ConnectionRequestSender</span>,
-        <span class="ident">conn_mgr_reqs_tx</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
-            <span class="ident">network_sender</span>: <span class="ident">NetworkSender</span>::<span class="ident">new</span>(<span class="ident">peer_mgr_reqs_tx</span>, <span class="ident">conn_reqs_tx</span>),
-            <span class="ident">conn_mgr_reqs_tx</span>,
+            <span class="ident">inner</span>: <span class="ident">NetworkSender</span>::<span class="ident">new</span>(<span class="ident">peer_mgr_reqs_tx</span>, <span class="ident">conn_reqs_tx</span>),
         }
     }
 
@@ -149,7 +165,7 @@
         <span class="kw">let</span> <span class="ident">req_msg_enum</span> <span class="op">=</span> <span class="ident">OnchainDiscoveryMsg</span>::<span class="ident">QueryDiscoverySetRequest</span>(<span class="ident">req_msg</span>);
 
         <span class="kw">let</span> <span class="ident">res_msg_enum</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">network_sender</span>
+            .<span class="ident">inner</span>
             .<span class="ident">send_rpc</span>(<span class="ident">recipient</span>, <span class="ident">protocol</span>, <span class="ident">req_msg_enum</span>, <span class="ident">timeout</span>)
             .<span class="kw">await</span><span class="question-mark">?</span>;
 
@@ -161,24 +177,13 @@
         };
         <span class="prelude-val">Ok</span>(<span class="ident">res_msg</span>)
     }
-
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">send_connectivity_request</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">req</span>: <span class="ident">ConnectivityRequest</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">mpsc</span>::<span class="ident">SendError</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">conn_mgr_reqs_tx</span>.<span class="ident">send</span>(<span class="ident">req</span>).<span class="kw">await</span>
-    }
 }
 
 <span class="doccomment">/// Construct OnchainDiscoveryNetworkSender/Events and register them with the</span>
 <span class="doccomment">/// given network builder.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_to_network</span>(
     <span class="ident">network</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NetworkBuilder</span>,
-) <span class="op">-</span><span class="op">&gt;</span> (
-    <span class="ident">OnchainDiscoveryNetworkSender</span>,
-    <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">ProtocolId</span>), <span class="ident">PeerManagerNotification</span><span class="op">&gt;</span>,
-    <span class="ident">conn_notifs_channel</span>::<span class="ident">Receiver</span>,
-) {
+) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">OnchainDiscoveryNetworkSender</span>, <span class="ident">OnchainDiscoveryNetworkEvents</span>) {
     <span class="kw">let</span> (<span class="ident">network_sender</span>, <span class="ident">network_receiver</span>, <span class="ident">conn_reqs_tx</span>, <span class="ident">conn_notifs_rx</span>) <span class="op">=</span> <span class="ident">network</span>
         .<span class="ident">add_protocol_handler</span>(
             <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">ProtocolId</span>::<span class="ident">OnchainDiscoveryRpc</span>],
@@ -190,15 +195,8 @@
             <span class="prelude-val">None</span>,
         );
     (
-        <span class="ident">OnchainDiscoveryNetworkSender</span>::<span class="ident">new</span>(
-            <span class="ident">network_sender</span>,
-            <span class="ident">conn_reqs_tx</span>,
-            <span class="ident">network</span>
-                .<span class="ident">conn_mgr_reqs_tx</span>()
-                .<span class="ident">expect</span>(<span class="string">&quot;ConnecitivtyManager not enabled&quot;</span>),
-        ),
-        <span class="ident">network_receiver</span>,
-        <span class="ident">conn_notifs_rx</span>,
+        <span class="ident">OnchainDiscoveryNetworkSender</span>::<span class="ident">new</span>(<span class="ident">network_sender</span>, <span class="ident">conn_reqs_tx</span>),
+        <span class="ident">OnchainDiscoveryNetworkEvents</span>::<span class="ident">new</span>(<span class="ident">network_receiver</span>, <span class="ident">conn_notifs_rx</span>),
     )
 }
 </pre></div>
