@@ -3,12 +3,12 @@
 
 use anyhow::Result;
 use bytecode_verifier::{VerifiedModule, VerifiedScript};
+use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::{parse_module, parse_script},
 };
 use libra_types::{account_address::AccountAddress, vm_error::VMStatus};
-use stdlib::{stdlib_modules, StdLibOptions};
 use vm::{
     access::ScriptAccess,
     file_format::{CompiledModule, CompiledScript},
@@ -146,7 +146,7 @@ pub fn compile_script_string_with_stdlib(code: &str) -> Result<CompiledScript> {
 }
 
 fn stdlib() -> Vec<CompiledModule> {
-    stdlib_modules(StdLibOptions::Staged)
+    stdlib_modules(StdLibOptions::Compiled)
         .iter()
         .map(|m| m.clone().into_inner())
         .collect()

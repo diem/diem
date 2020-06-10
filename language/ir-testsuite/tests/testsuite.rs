@@ -3,6 +3,7 @@
 
 use anyhow::Result;
 use bytecode_verifier::verifier::VerifiedModule;
+use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use functional_tests::{
     compiler::{Compiler, ScriptOrModule},
     testsuite,
@@ -14,7 +15,6 @@ use ir_to_bytecode::{
 use libra_types::account_address::AccountAddress;
 use move_ir_types::ast;
 use std::path::Path;
-use stdlib::{stdlib_modules, StdLibOptions};
 
 struct IRCompiler {
     deps: Vec<VerifiedModule>,
@@ -52,7 +52,7 @@ impl Compiler for IRCompiler {
         })
     }
 
-    fn use_staged_genesis(&self) -> bool {
+    fn use_compiled_genesis(&self) -> bool {
         true
     }
 }

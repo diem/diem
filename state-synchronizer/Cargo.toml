@@ -44,7 +44,7 @@ vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }
 transaction-builder = { path = "../language/transaction-builder", version = "0.1.0" }
 channel = { path = "../common/channel", version = "0.1.0" }
 executor-test-helpers = { path = "../execution/executor-test-helpers", version = "0.1.0" }
-stdlib = { path = "../language/stdlib", version = "0.1.0" }
+compiled-stdlib = { path = "../language/stdlib/compiled",  version = "0.1.0" }
 storage-service = { path = "../storage/storage-service", version = "0.1.0" }
 subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
 

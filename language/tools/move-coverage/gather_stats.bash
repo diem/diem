@@ -30,7 +30,7 @@ popd || exit 1
 echo "Converting trace file..."
 cargo run --bin move-trace-conversion -- -f "$TRACE_PATH" -o trace.mvcov
 echo "Producing coverage summaries..."
-cargo run --bin coverage-summaries -- -t trace.mvcov -s ../../stdlib/staged/stdlib.mv -o "$1"
+cargo run --bin coverage-summaries -- -t trace.mvcov -s ../../stdlib/compiled/stdlib.mv -o "$1"
 cat ./baseline/coverage_report > "$2"
 
 unset MOVE_VM_TRACE

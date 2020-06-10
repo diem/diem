@@ -6,6 +6,7 @@ use crate::{
     executor::FakeExecutor,
     gas_costs,
 };
+use compiled_stdlib::transaction_scripts::StdlibScript;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_config::{self, BurnEvent, LBR_NAME},
@@ -17,7 +18,6 @@ use move_core_types::{
     language_storage::{StructTag, TypeTag},
 };
 use std::convert::TryFrom;
-use stdlib::transaction_scripts::StdlibScript;
 use transaction_builder::{encode_burn_txn_fees_script, encode_mint_lbr_to_address_script};
 
 #[test]

@@ -8,6 +8,7 @@ use crate::{
     data_store::{FakeDataStore, GENESIS_CHANGE_SET, GENESIS_CHANGE_SET_FRESH},
 };
 use bytecode_verifier::VerifiedModule;
+use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use libra_config::generator;
 use libra_crypto::HashValue;
 use libra_state_view::StateView;
@@ -24,7 +25,6 @@ use libra_types::{
 };
 use libra_vm::{LibraVM, VMExecutor, VMValidator};
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
-use stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use vm::CompiledModule;
 use vm_genesis::GENESIS_KEYPAIR;
 
@@ -60,7 +60,7 @@ impl FakeExecutor {
 
     pub fn whitelist_genesis() -> Self {
         Self::custom_genesis(
-            stdlib_modules(StdLibOptions::Staged).to_vec(),
+            stdlib_modules(StdLibOptions::Compiled).to_vec(),
             None,
             VMPublishingOption::Locked(StdlibScript::whitelist()),
         )
@@ -75,7 +75,7 @@ impl FakeExecutor {
         }
 
         Self::custom_genesis(
-            stdlib_modules(StdLibOptions::Staged).to_vec(),
+            stdlib_modules(StdLibOptions::Compiled).to_vec(),
             None,
             publishing_options,
         )

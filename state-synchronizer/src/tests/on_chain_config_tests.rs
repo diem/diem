@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::executor_proxy::{ExecutorProxy, ExecutorProxyTrait};
+use compiled_stdlib::transaction_scripts::StdlibScript;
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_test_helpers::{
     gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs, get_test_signed_transaction,
@@ -20,7 +21,6 @@ use libra_types::{
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
-use stdlib::transaction_scripts::StdlibScript;
 use storage_interface::DbReaderWriter;
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{

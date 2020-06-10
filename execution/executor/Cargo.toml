@@ -40,7 +40,7 @@ executor-test-helpers = { path = "../executor-test-helpers", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0" }
 libra-temppath = { path = "../../common/temppath", version = "0.1.0" }
 libradb = { path = "../../storage/libradb", version = "0.1.0" }
-stdlib = { path = "../../language/stdlib", version = "0.1.0" }
+compiled-stdlib = { path = "../../language/stdlib/compiled",  version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
 

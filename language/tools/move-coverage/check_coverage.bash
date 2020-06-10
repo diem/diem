@@ -31,14 +31,14 @@ echo "Converting trace file..."
 cargo run --bin move-trace-conversion -- -f "$TRACE_PATH" -o trace.mvcov
 
 echo "Producing coverage summaries..."
-cargo run --bin coverage-summaries -- -t trace.mvcov -s ../../stdlib/staged/stdlib.mv
+cargo run --bin coverage-summaries -- -t trace.mvcov -s ../../stdlib/compiled/stdlib.mv
 
 echo "==========================================================================="
 echo "You can check source coverage for a module by running:"
 echo "> cargo run --bin source-coverage -- -t trace.mvcov -b ../../move-lang/move_build_output/modules/<LOOK_FOR_MODULE_HERE>.mv -s ../../stdlib/modules/<SOURCE_MODULE>.move"
 echo "---------------------------------------------------------------------------"
 echo "You can can also getter a finer-grained coverage summary for each function by running:"
-echo "> cargo run --bin coverage-summaries -- -t trace.mvcov -s ../../stdlib/staged/stdlib.mv"
+echo "> cargo run --bin coverage-summaries -- -t trace.mvcov -s ../../stdlib/compiled/stdlib.mv"
 echo "==========================================================================="
 
 unset MOVE_VM_TRACE

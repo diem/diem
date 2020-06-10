@@ -72,6 +72,7 @@ members = [
     "language/move-vm/types",
     "language/resource-viewer",
     "language/stdlib",
+    "language/stdlib/compiled",
     "language/tools/disassembler",
     "language/tools/genesis-viewer",
     "language/tools/move-coverage",

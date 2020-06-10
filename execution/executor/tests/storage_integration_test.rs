@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{ensure, format_err, Result};
+use compiled_stdlib::transaction_scripts::StdlibScript;
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_test_helpers::{
     extract_signer, gen_block_id, gen_block_metadata, gen_ledger_info_with_sigs,
@@ -26,7 +27,6 @@ use libra_vm::LibraVM;
 use libradb::LibraDB;
 use rand::SeedableRng;
 use std::convert::TryFrom;
-use stdlib::transaction_scripts::StdlibScript;
 use storage_interface::DbReaderWriter;
 use transaction_builder::{
     encode_block_prologue_script, encode_mint_lbr_to_address_script,

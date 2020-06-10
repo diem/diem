@@ -7,6 +7,7 @@ use crate::{
     AccountData, AccountStatus,
 };
 use anyhow::{bail, ensure, format_err, Error, Result};
+use compiled_stdlib::{transaction_scripts::StdlibScript, StdLibOptions};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     test_utils::KeyPair,
@@ -54,7 +55,6 @@ use std::{
     str::{self, FromStr},
     thread, time,
 };
-use stdlib::{transaction_scripts::StdlibScript, StdLibOptions};
 use transaction_builder::encode_register_validator_script;
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";

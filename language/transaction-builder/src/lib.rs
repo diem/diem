@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use compiled_stdlib::{transaction_scripts::StdlibScript, StdLibOptions};
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -17,7 +18,6 @@ use libra_types::{
 use mirai_annotations::*;
 use move_core_types::language_storage::TypeTag;
 use std::convert::TryFrom;
-use stdlib::{transaction_scripts::StdlibScript, StdLibOptions};
 use vm::access::ModuleAccess;
 
 fn validate_auth_key_prefix(auth_key_prefix: &[u8]) {
@@ -552,7 +552,7 @@ pub fn get_transaction_name(code: &[u8]) -> String {
 
 pub fn encode_stdlib_upgrade_transaction(option: StdLibOptions) -> ChangeSet {
     let mut write_set = WriteSetMut::new(vec![]);
-    let stdlib = stdlib::stdlib_modules(option);
+    let stdlib = compiled_stdlib::stdlib_modules(option);
     for module in stdlib {
         let mut bytes = vec![];
         module

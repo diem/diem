@@ -4,6 +4,7 @@
 //! Support for encoding transactions for common situations.
 
 use crate::{account::Account, gas_costs};
+use compiled_stdlib::transaction_scripts::StdlibScript;
 use compiler::Compiler;
 use libra_types::{
     account_address::AccountAddress,
@@ -12,7 +13,6 @@ use libra_types::{
     transaction::{RawTransaction, SignedTransaction, TransactionArgument},
 };
 use once_cell::sync::Lazy;
-use stdlib::transaction_scripts::StdlibScript;
 
 pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
     let code = "

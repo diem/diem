@@ -9,6 +9,7 @@ use crate::{
 use bytecode_verifier::verifier::{
     verify_module_dependencies, verify_script_dependencies, VerifiedModule, VerifiedScript,
 };
+use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use language_e2e_tests::executor::FakeExecutor;
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_state_view::StateView;
@@ -35,7 +36,6 @@ use std::{
     str::FromStr,
     time::Duration,
 };
-use stdlib::{stdlib_modules, StdLibOptions};
 use vm::{
     file_format::{CompiledModule, CompiledScript},
     views::ModuleView,
@@ -575,7 +575,7 @@ pub fn eval<TComp: Compiler>(
 
     // Set up a fake executor with the genesis block and create the accounts.
     let mut exec = if config.validator_accounts == 0 {
-        if compiler.use_staged_genesis() {
+        if compiler.use_compiled_genesis() {
             FakeExecutor::from_genesis_file()
         } else {
             FakeExecutor::from_fresh_genesis()
@@ -584,8 +584,8 @@ pub fn eval<TComp: Compiler>(
         // use custom validator set. this requires dynamically generating a new genesis tx and
         // is thus more expensive.
         FakeExecutor::custom_genesis(
-            stdlib_modules(if compiler.use_staged_genesis() {
-                StdLibOptions::Staged
+            stdlib_modules(if compiler.use_compiled_genesis() {
+                StdLibOptions::Compiled
             } else {
                 StdLibOptions::Fresh
             })

@@ -14,7 +14,7 @@ pub trait Compiler {
         input: &str,
     ) -> Result<ScriptOrModule>;
 
-    fn use_staged_genesis(&self) -> bool;
+    fn use_compiled_genesis(&self) -> bool;
 }
 
 pub enum ScriptOrModule {

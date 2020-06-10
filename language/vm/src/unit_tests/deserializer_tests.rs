@@ -68,7 +68,7 @@ fn malformed_simple() {
 
 // Ensure that we can deserialize a script from disk
 static EMPTY_SCRIPT: &[u8] =
-    include_bytes!("../../../stdlib/staged/transaction_scripts/empty_script.mv");
+    include_bytes!("../../../stdlib/compiled/transaction_scripts/empty_script.mv");
 
 #[test]
 fn deserialize_file() {

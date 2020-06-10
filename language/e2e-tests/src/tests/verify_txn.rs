@@ -6,6 +6,7 @@ use crate::{
     compile::compile_module_with_address, executor::FakeExecutor, transaction_status_eq,
 };
 use bytecode_verifier::VerifiedModule;
+use compiled_stdlib::transaction_scripts::StdlibScript;
 use compiler::Compiler;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
@@ -19,7 +20,6 @@ use libra_types::{
     vm_error::{StatusCode, StatusType, VMStatus},
 };
 use move_core_types::gas_schedule::{GasAlgebra, GasConstants};
-use stdlib::transaction_scripts::StdlibScript;
 use transaction_builder::encode_transfer_with_metadata_script;
 
 #[test]
