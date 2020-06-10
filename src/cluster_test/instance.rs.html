@@ -235,6 +235,21 @@
 <span id="235">235</span>
 <span id="236">236</span>
 <span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -258,6 +273,20 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">InstanceConfig</span> {
     <span class="ident">Validator</span>(<span class="ident">ValidatorConfig</span>),
     <span class="ident">Fullnode</span>(<span class="ident">FullnodeConfig</span>),
+    <span class="ident">LSR</span>(<span class="ident">LSRConfig</span>),
+    <span class="ident">Vault</span>(<span class="ident">VaultConfig</span>),
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VaultConfig</span> {
+    <span class="kw">pub</span> <span class="ident">index</span>: <span class="ident">u32</span>,
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LSRConfig</span> {
+    <span class="kw">pub</span> <span class="ident">index</span>: <span class="ident">u32</span>,
+    <span class="kw">pub</span> <span class="ident">num_validators</span>: <span class="ident">u32</span>,
+    <span class="kw">pub</span> <span class="ident">image_tag</span>: <span class="ident">String</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
@@ -265,6 +294,7 @@
     <span class="kw">pub</span> <span class="ident">index</span>: <span class="ident">u32</span>,
     <span class="kw">pub</span> <span class="ident">num_validators</span>: <span class="ident">u32</span>,
     <span class="kw">pub</span> <span class="ident">num_fullnodes</span>: <span class="ident">u32</span>,
+    <span class="kw">pub</span> <span class="ident">enable_lsr</span>: <span class="ident">bool</span>,
     <span class="kw">pub</span> <span class="ident">image_tag</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">config_overrides</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 }
