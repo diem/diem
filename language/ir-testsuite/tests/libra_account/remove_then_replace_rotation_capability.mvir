@@ -15,12 +15,12 @@ main(account: &signer) {
   cap = LibraAccount.extract_key_rotation_capability(copy(account));
   assert(LibraAccount.delegated_key_rotation_capability(copy(sender)), 51);
 
+  // and the sender should be able to rotate
+  LibraAccount.rotate_authentication_key(&cap, move(old_auth_key));
+
   // restoring the capability should flip the flag back
   LibraAccount.restore_key_rotation_capability(move(cap));
   assert(!LibraAccount.delegated_key_rotation_capability(copy(sender)), 52);
-
-  // and the sender should be able to rotate once again
-  LibraAccount.rotate_authentication_key(move(account), move(old_auth_key));
 
   return;
 }
@@ -33,11 +33,14 @@ import 0x0.LibraAccount;
 
 main(account: &signer) {
   let cap: LibraAccount.KeyRotationCapability;
+  let cap2: LibraAccount.KeyRotationCapability;
 
   cap = LibraAccount.extract_key_rotation_capability(copy(account));
+  cap2 = LibraAccount.extract_key_rotation_capability(copy(account));
   // should fail
-  LibraAccount.rotate_authentication_key(move(account), h"00");
+  LibraAccount.rotate_authentication_key(&cap2, h"00");
   LibraAccount.restore_key_rotation_capability(move(cap));
+  LibraAccount.restore_key_rotation_capability(move(cap2));
 
   return;
 }

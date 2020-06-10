@@ -39,9 +39,9 @@ pub fn libra_LibraAccountResource_from_safe(
                         balance: balance_resource.coin(),
                         sequence: account_resource.sequence_number(),
                         delegated_key_rotation_capability: account_resource
-                            .delegated_key_rotation_capability(),
+                            .has_delegated_key_rotation_capability(),
                         delegated_withdrawal_capability: account_resource
-                            .delegated_withdrawal_capability(),
+                            .has_delegated_withdrawal_capability(),
                         sent_events,
                         received_events,
                         authentication_key,
@@ -106,8 +106,8 @@ mod tests {
         let ar = AccountResource::new(
             123_456_789,
             auth_key.to_vec(),
-            true,
-            false,
+            None,
+            None,
             EventHandle::new(EventKey::new_from_address(&addr, 0), 777),
             EventHandle::new(EventKey::new_from_address(&addr, 0), 888),
             false,
@@ -143,11 +143,11 @@ mod tests {
         assert_eq!(result.authentication_key, ar.authentication_key());
         assert_eq!(
             result.delegated_key_rotation_capability,
-            ar.delegated_key_rotation_capability()
+            ar.has_delegated_key_rotation_capability()
         );
         assert_eq!(
             result.delegated_withdrawal_capability,
-            ar.delegated_withdrawal_capability()
+            ar.has_delegated_withdrawal_capability()
         );
         assert_eq!(result.sent_events.count, ar.sent_events().count());
         assert_eq!(

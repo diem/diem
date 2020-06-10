@@ -39,7 +39,7 @@ module SharedEd25519PublicKey {
             Signature::ed25519_validate_pubkey(copy new_public_key),
             9003, // TODO: proper error code
         );
-        LibraAccount::rotate_authentication_key_with_capability(
+        LibraAccount::rotate_authentication_key(
             &shared_key.rotation_cap,
             Authenticator::ed25519_authentication_key(copy new_public_key)
         );

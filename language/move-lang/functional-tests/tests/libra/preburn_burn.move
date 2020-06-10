@@ -42,7 +42,9 @@ use 0x0::Libra;
 use 0x0::LibraAccount;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from<Coin1>(account, 100);
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    let coin = LibraAccount::withdraw_from<Coin1>(&with_cap, 100);
+    LibraAccount::restore_withdraw_capability(with_cap);
     let old_market_cap = Libra::market_cap<Coin1>();
     // send the coins to the preburn bucket. market cap should not be affected, but the preburn
     // bucket should increase in size by 100

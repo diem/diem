@@ -93,10 +93,22 @@
     <a href="LibraBlock.md#0x0_LibraBlock_initialize_block_metadata">LibraBlock::initialize_block_metadata</a>(association);
     <a href="LibraWriteSetManager.md#0x0_LibraWriteSetManager_initialize">LibraWriteSetManager::initialize</a>(association);
     <a href="LibraTimestamp.md#0x0_LibraTimestamp_initialize">LibraTimestamp::initialize</a>(association);
-    <a href="LibraAccount.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(association, <b>copy</b> genesis_auth_key);
-    <a href="LibraAccount.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(config_account, <b>copy</b> genesis_auth_key);
-    <a href="LibraAccount.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(fee_account, <b>copy</b> genesis_auth_key);
-    <a href="LibraAccount.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(tc_account, genesis_auth_key);
+
+    <b>let</b> assoc_rotate_key_cap = <a href="LibraAccount.md#0x0_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(association);
+    <a href="LibraAccount.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&assoc_rotate_key_cap, <b>copy</b> genesis_auth_key);
+    <a href="LibraAccount.md#0x0_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(assoc_rotate_key_cap);
+
+    <b>let</b> config_rotate_key_cap = <a href="LibraAccount.md#0x0_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(config_account);
+    <a href="LibraAccount.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&config_rotate_key_cap, <b>copy</b> genesis_auth_key);
+    <a href="LibraAccount.md#0x0_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(config_rotate_key_cap);
+
+    <b>let</b> fee_rotate_key_cap = <a href="LibraAccount.md#0x0_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(fee_account);
+    <a href="LibraAccount.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&fee_rotate_key_cap, <b>copy</b> genesis_auth_key);
+    <a href="LibraAccount.md#0x0_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(fee_rotate_key_cap);
+
+    <b>let</b> tc_rotate_key_cap = <a href="LibraAccount.md#0x0_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(tc_account);
+    <a href="LibraAccount.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&tc_rotate_key_cap, genesis_auth_key);
+    <a href="LibraAccount.md#0x0_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(tc_rotate_key_cap);
 }
 </code></pre>
 

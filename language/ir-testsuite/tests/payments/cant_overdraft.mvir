@@ -8,14 +8,17 @@ main(account: &signer) {
     let all_coins: Libra.Libra<LBR.LBR>;
     let one_coin: Libra.Libra<LBR.LBR>;
     let addr: address;
+    let with_cap: LibraAccount.WithdrawCapability;
 
     addr = Signer.address_of(copy(account));
     sender_balance = LibraAccount.balance<LBR.LBR>(copy(addr));
-    all_coins = LibraAccount.withdraw_from<LBR.LBR>(copy(account), move(sender_balance));
+    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
+    all_coins = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, move(sender_balance));
 
     assert(LibraAccount.balance<LBR.LBR>(copy(addr)) == 0, 42);
 
-    one_coin = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 1);
+    one_coin = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 1);
+    LibraAccount.restore_withdraw_capability(move(with_cap));
 
     LibraAccount.deposit_to<LBR.LBR>(copy(account), move(all_coins));
     LibraAccount.deposit_to<LBR.LBR>(copy(account), move(one_coin));

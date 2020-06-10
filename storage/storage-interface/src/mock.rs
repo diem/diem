@@ -133,8 +133,8 @@ fn get_mock_account_state_blob() -> AccountStateBlob {
     let account_resource = AccountResource::new(
         0,
         vec![],
-        false,
-        false,
+        None,
+        None,
         EventHandle::random_handle(0),
         EventHandle::random_handle(0),
         false,

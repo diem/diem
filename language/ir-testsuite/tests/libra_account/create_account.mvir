@@ -10,12 +10,15 @@ main(account: &signer) {
     let account_exists_now: bool;
     let account2_balance: u64;
     let account2_sequence_number: u64;
+    let with_cap: LibraAccount.WithdrawCapability;
 
     addr = 0x111101;
     account_exists = LibraAccount.exists(copy(addr));
     assert(!move(account_exists), 83);
 
-    ten_coins = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 10);
+    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
+    ten_coins = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 10);
+    LibraAccount.restore_withdraw_capability(move(with_cap));
     LibraAccount.create_testnet_account<LBR.LBR>(copy(addr), LCS.to_bytes<address>(&addr));
     LibraAccount.deposit<LBR.LBR>(copy(account), copy(addr), move(ten_coins));
 

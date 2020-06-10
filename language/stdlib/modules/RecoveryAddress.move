@@ -59,7 +59,7 @@ module RecoveryAddress {
         while (i < len) {
             let cap = Vector::borrow(caps, i);
             if (LibraAccount::key_rotation_capability_address(cap) == &to_recover) {
-                LibraAccount::rotate_authentication_key_with_capability(cap, new_key);
+                LibraAccount::rotate_authentication_key(cap, new_key);
                 return
             };
             i = i + 1

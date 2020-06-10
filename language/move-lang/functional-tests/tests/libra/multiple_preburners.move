@@ -52,7 +52,9 @@ use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from<Coin1>(account, 100);
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    let coin = LibraAccount::withdraw_from<Coin1>(&with_cap, 100);
+    LibraAccount::restore_withdraw_capability(with_cap);
     Libra::preburn_to<Coin1>(account, coin);
     Transaction::assert(Libra::preburn_value<Coin1>() == 100, 8001)
 }
@@ -89,7 +91,9 @@ use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from<Coin1>(account, 200);
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    let coin = LibraAccount::withdraw_from<Coin1>(&with_cap, 200);
+    LibraAccount::restore_withdraw_capability(with_cap);
     Libra::preburn_to<Coin1>(account, coin);
     Transaction::assert(Libra::preburn_value<Coin1>() == 300, 8002)
 }
@@ -110,7 +114,9 @@ use 0x0::LibraAccount;
 use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from<Coin1>(account, 200);
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    let coin = LibraAccount::withdraw_from<Coin1>(&with_cap, 200);
+    LibraAccount::restore_withdraw_capability(with_cap);
     Libra::preburn_to<Coin1>(account, coin);
 }
 }
@@ -185,7 +191,9 @@ use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let coin = LibraAccount::withdraw_from<Coin1>(account, 100);
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    let coin = LibraAccount::withdraw_from<Coin1>(&with_cap, 100);
+    LibraAccount::restore_withdraw_capability(with_cap);
     Libra::preburn_to<Coin1>(account, coin);
     Transaction::assert(Libra::preburn_value<Coin1>() == 100, 8005)
 }
@@ -237,7 +245,9 @@ use 0x0::Libra;
 use 0x0::LibraAccount;
 fun main(account: &signer) {
     Libra::publish_preburn(account, Libra::new_preburn<Coin2>());
-    let coin = LibraAccount::withdraw_from<Coin2>(account, 100);
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    let coin = LibraAccount::withdraw_from<Coin2>(&with_cap, 100);
+    LibraAccount::restore_withdraw_capability(with_cap);
     Libra::preburn_to<Coin2>(account, coin);
 }
 }

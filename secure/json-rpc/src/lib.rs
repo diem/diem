@@ -477,8 +477,8 @@ mod test {
         AccountResource::new(
             10,
             vec![],
-            false,
-            false,
+            None,
+            None,
             EventHandle::random_handle(100),
             EventHandle::random_handle(100),
             false,

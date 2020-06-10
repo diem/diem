@@ -46,9 +46,11 @@ use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 use 0x0::Transaction;
 fun main(account: &signer) {
-    let coin100 = LibraAccount::withdraw_from<Coin1>(account, 100);
-    let coin200 = LibraAccount::withdraw_from<Coin1>(account, 200);
-    let coin300 = LibraAccount::withdraw_from<Coin1>(account, 300);
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    let coin100 = LibraAccount::withdraw_from<Coin1>(&with_cap, 100);
+    let coin200 = LibraAccount::withdraw_from<Coin1>(&with_cap, 200);
+    let coin300 = LibraAccount::withdraw_from<Coin1>(&with_cap, 300);
+    LibraAccount::restore_withdraw_capability(with_cap);
     Libra::preburn_to<Coin1>(account, coin100);
     Libra::preburn_to<Coin1>(account, coin200);
     Libra::preburn_to<Coin1>(account, coin300);

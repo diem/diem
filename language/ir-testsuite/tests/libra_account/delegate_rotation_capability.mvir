@@ -36,7 +36,7 @@ module SharedKeyRotation {
         if ((*&copy(wallet_ref).master_key_address == copy(sender)) ||
             (*LibraAccount.key_rotation_capability_address(&copy(wallet_ref).cap) == move(sender))
         ) {
-            LibraAccount.rotate_authentication_key_with_capability(
+            LibraAccount.rotate_authentication_key(
                 &move(wallet_ref).cap,
                 move(new_key)
             );

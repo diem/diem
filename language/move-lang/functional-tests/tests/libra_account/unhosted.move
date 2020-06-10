@@ -21,11 +21,13 @@ script {
     use 0x0::LibraAccount;
     use 0x0::Coin1::Coin1;
     fun main(account: &signer) {
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
         LibraAccount::deposit(
             account,
             {{bob}},
-            LibraAccount::withdraw_from<Coin1>(account, 10001)
+            LibraAccount::withdraw_from<Coin1>(&with_cap, 10001)
         );
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // TODO: fix account limits

@@ -19,9 +19,9 @@ module AlicePays {
 
     public fun pay(payee: address, amount: u64) acquires T {
         let t = borrow_global<T>({{alice}});
-        LibraAccount::pay_from_capability<LBR>(
-            payee,
+        LibraAccount::pay_from_with_metadata<LBR>(
             &t.cap,
+            payee,
             amount,
             x"0A11CE",
             x""

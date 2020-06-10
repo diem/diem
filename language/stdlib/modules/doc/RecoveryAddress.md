@@ -142,7 +142,7 @@ Aborts if
     <b>while</b> (i &lt; len) {
         <b>let</b> cap = <a href="Vector.md#0x0_Vector_borrow">Vector::borrow</a>(caps, i);
         <b>if</b> (<a href="LibraAccount.md#0x0_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(cap) == &to_recover) {
-            <a href="LibraAccount.md#0x0_LibraAccount_rotate_authentication_key_with_capability">LibraAccount::rotate_authentication_key_with_capability</a>(cap, new_key);
+            <a href="LibraAccount.md#0x0_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(cap, new_key);
             <b>return</b>
         };
         i = i + 1

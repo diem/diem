@@ -27,7 +27,7 @@ module SillyColdWallet {
 
         wallet_ref = borrow_global_mut<T>(move(wallet_address));
         if (*&copy(wallet_ref).owner == Signer.address_of(move(account))) {
-            return LibraAccount.withdraw_with_capability<LBR.LBR>(&move(wallet_ref).cap, move(amount));
+            return LibraAccount.withdraw_from<LBR.LBR>(&move(wallet_ref).cap, move(amount));
         } else {
             abort(77);
         }
@@ -83,8 +83,11 @@ import 0x0.Libra;
 // check that Alice can no longer withdraw from her account
 main(account: &signer) {
     let coin: Libra.Libra<LBR.LBR>;
+    let with_cap: LibraAccount.WithdrawCapability;
 
-    coin = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 1000);
+    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
+    coin = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 1000);
+    LibraAccount.restore_withdraw_capability(move(with_cap));
     LibraAccount.deposit_to<LBR.LBR>(move(account), move(coin));
     return;
 }
@@ -102,8 +105,11 @@ import 0x0.Libra;
 // check that Bob can still withdraw from his normal account
 main(account: &signer) {
     let coin: Libra.Libra<LBR.LBR>;
+    let with_cap: LibraAccount.WithdrawCapability;
 
-    coin = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 1000);
+    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
+    coin = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 1000);
+    LibraAccount.restore_withdraw_capability(move(with_cap));
     LibraAccount.deposit_to<LBR.LBR>(move(account), move(coin));
     return;
 }
@@ -117,6 +123,9 @@ import 0x0.Vector;
 
 // check that other users can still pay into Alice's account in the normal way
 main(account: &signer) {
-    LibraAccount.pay_from<LBR.LBR>(move(account), {{alice}}, 1000);
+    let with_cap: LibraAccount.WithdrawCapability;
+    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
+    LibraAccount.pay_from<LBR.LBR>(&with_cap, {{alice}}, 1000);
+    LibraAccount.restore_withdraw_capability(move(with_cap));
     return;
 }

@@ -12,8 +12,11 @@ import 0x0.Libra;
 
 main(account: &signer, receiver: address) {
     let coins: Libra.Libra<LBR.LBR>;
+    let with_cap: LibraAccount.WithdrawCapability;
 
-    coins = LibraAccount.withdraw_from<LBR.LBR>(copy(account), 200);
+    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
+    coins = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 200);
+    LibraAccount.restore_withdraw_capability(move(with_cap));
     LibraAccount.deposit<LBR.LBR>(move(account), move(receiver), move(coins));
 
     return;

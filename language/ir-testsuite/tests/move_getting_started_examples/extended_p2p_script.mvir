@@ -15,10 +15,13 @@ main(account: &signer, payee: address, amount: u64) {
   // variables are separate operations, but the bytecode verifier will prevent
   // any attempt to use an uninitialized variable.
   let coin: Libra.Libra<LBR.LBR>;
+  let with_cap: LibraAccount.WithdrawCapability;
 
   // Acquire a Libra.Libra<LBR.LBR> resource with value `amount` from the sender's
   // account.  This will fail if the sender's balance is less than `amount`.
-  coin = LibraAccount.withdraw_from<LBR.LBR>(copy(account), move(amount));
+  with_cap = LibraAccount.extract_withdraw_capability(copy(account));
+  coin = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, move(amount));
+  LibraAccount.restore_withdraw_capability(move(with_cap));
   // Move the Libra.Libra<LBR.LBR> resource into the account of `payee`. If there is no
   // account at the address `payee`, this step will fail
   LibraAccount.deposit<LBR.LBR>(copy(account), move(payee), move(coin));

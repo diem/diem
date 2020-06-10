@@ -4,7 +4,10 @@ import 0x0.Libra;
 
 main(account: &signer) {
     let ten_coins: Libra.Libra<LBR.LBR>;
-    ten_coins = LibraAccount.withdraw_from<LBR.LBR>(move(account), 10);
+    let with_cap: LibraAccount.WithdrawCapability;
+    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
+    ten_coins = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 10);
+    LibraAccount.restore_withdraw_capability(move(with_cap));
     _ = move(ten_coins);
 
     return;

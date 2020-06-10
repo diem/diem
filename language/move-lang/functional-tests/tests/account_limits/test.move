@@ -19,7 +19,9 @@ script {
     use 0x0::LibraAccount;
     use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR>(account, {{alice}}, 1);
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 1);
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // TODO: fix
@@ -118,7 +120,9 @@ script {
     // don't actually know that the balance is greater than 0 in the
     // account limits code, but it is.
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR>(account, {{alice}}, 1);
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 1);
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // check: EXECUTED
@@ -139,7 +143,9 @@ script {
     use 0x0::LibraAccount;
     use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR>(account, {{alice}}, 1);
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 1);
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // check: EXECUTED
@@ -174,7 +180,9 @@ script {
     use 0x0::LibraAccount;
     use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR>(account, {{alice}}, 1);
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 1);
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // check: EXECUTED
@@ -197,7 +205,9 @@ script {
     use 0x0::LibraAccount;
     use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR>(account, {{alice}}, 1);
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 1);
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // TODO: fix
@@ -255,7 +265,9 @@ script {
     use 0x0::LibraAccount;
     use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR>(account, {{alice}}, 101);
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 101);
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // chec: ABORTED
@@ -279,7 +291,9 @@ script {
     use 0x0::LibraAccount;
     use 0x0::LBR::LBR;
     fun main(account: &signer) {
-        LibraAccount::pay_from<LBR>(account, {{alice}}, 1);
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 1);
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // TODO: fix

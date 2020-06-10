@@ -56,14 +56,16 @@ module ApprovedPayment {
         metadata: vector<u8>,
         signature: vector<u8>
     ) acquires T {
+        let with_cap = LibraAccount::extract_withdraw_capability(payer);
         deposit<Token>(
             payer,
             borrow_global<T>(payee),
             payee,
-            LibraAccount::withdraw_from<Token>(payer, amount),
+            LibraAccount::withdraw_from<Token>(&with_cap, amount),
             metadata,
             signature
-        )
+        );
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 
     // Rotate the key used to sign approved payments. This will invalidate any approved payments

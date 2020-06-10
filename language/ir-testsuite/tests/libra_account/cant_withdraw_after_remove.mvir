@@ -4,15 +4,18 @@ import 0x0.Libra;
 
 main(sender: &signer) {
   let cap: LibraAccount.WithdrawCapability;
+  let with_cap: LibraAccount.WithdrawCapability;
   let coin: Libra.Libra<LBR.LBR>;
 
   cap = LibraAccount.extract_withdraw_capability(copy(sender));
+  with_cap = LibraAccount.extract_withdraw_capability(copy(sender));
 
   // withdrawing after the capability has been extracted should fail
-  coin = LibraAccount.withdraw_from<LBR.LBR>(copy(sender), 100);
-  LibraAccount.deposit_to<LBR.LBR>(move(sender), move(coin));
+  coin = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 100);
+  LibraAccount.deposit_to<LBR.LBR>(copy(sender), move(coin));
 
   LibraAccount.restore_withdraw_capability(move(cap));
+  LibraAccount.restore_withdraw_capability(move(with_cap));
 
   return;
 }
