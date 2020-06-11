@@ -4,12 +4,12 @@
 // genesis (for now).
 address 0x0 {
 module Genesis {
-    use 0x0::Association;
+    use 0x0::Association::{Self, PublishModule};
     use 0x0::Coin1::{Self, Coin1};
     use 0x0::Coin2::{Self, Coin2};
     use 0x0::Event;
     use 0x0::LBR::{Self, LBR};
-    use 0x0::Libra;
+    use 0x0::Libra::{Self, AddCurrency};
     use 0x0::LibraAccount;
     use 0x0::LibraBlock;
     use 0x0::LibraConfig;
@@ -35,7 +35,8 @@ module Genesis {
 
         // Association root setup
         Association::initialize(association);
-        Association::grant_privilege<Libra::AddCurrency>(association, association);
+        Association::grant_privilege<AddCurrency>(association, association);
+        Association::grant_privilege<PublishModule>(association, association);
 
         // On-chain config setup
         Event::publish_generator(config_account);

@@ -36,7 +36,8 @@
 
     // <a href="Association.md#0x0_Association">Association</a> root setup
     <a href="Association.md#0x0_Association_initialize">Association::initialize</a>(association);
-    <a href="Association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="Libra.md#0x0_Libra_AddCurrency">Libra::AddCurrency</a>&gt;(association, association);
+    <a href="Association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;AddCurrency&gt;(association, association);
+    <a href="Association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;PublishModule&gt;(association, association);
 
     // On-chain config setup
     <a href="Event.md#0x0_Event_publish_generator">Event::publish_generator</a>(config_account);

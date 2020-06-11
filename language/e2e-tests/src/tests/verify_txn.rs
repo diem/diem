@@ -2,8 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    account::AccountData, assert_prologue_disparity, assert_prologue_parity, assert_status_eq,
-    compile::compile_module_with_address, executor::FakeExecutor, transaction_status_eq,
+    account::{Account, AccountData},
+    assert_prologue_disparity, assert_prologue_parity, assert_status_eq,
+    compile::compile_module_with_address,
+    executor::FakeExecutor,
+    transaction_status_eq,
 };
 use bytecode_verifier::VerifiedModule;
 use compiled_stdlib::transaction_scripts::StdlibScript;
@@ -440,7 +443,45 @@ pub fn test_no_publishing() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::UNKNOWN_MODULE)
+        VMStatus::new(StatusCode::INVALID_MODULE_PUBLISHER)
+    );
+}
+
+#[test]
+pub fn test_no_publishing_assoc_sender() {
+    // create a FakeExecutor with a genesis from file
+    let executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
+
+    // create a transaction trying to publish a new module.
+    let sender = Account::new_association();
+
+    let module = String::from(
+        "
+        module M {
+            public max(a: u64, b: u64): u64 {
+                if (copy(a) > copy(b)) {
+                    return copy(a);
+                } else {
+                    return copy(b);
+                }
+                return 0;
+            }
+
+            public sum(a: u64, b: u64): u64 {
+                let c: u64;
+                c = copy(a) + copy(b);
+                return copy(c);
+            }
+        }
+        ",
+    );
+
+    let random_module = compile_module_with_address(sender.address(), "file_name", &module);
+    let txn = sender.create_user_txn(random_module, 1, 100_000, 0, LBR_NAME.to_owned());
+    assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
+    assert_eq!(
+        executor.execute_transaction(txn).status(),
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
 }
 

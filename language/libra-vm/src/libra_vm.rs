@@ -252,9 +252,11 @@ impl LibraVM {
     ) -> VMResult<VerifiedTransactionPayload> {
         let mut cost_strategy = CostStrategy::system(self.get_gas_schedule()?, GasUnits::new(0));
         let mut data_store = TransactionDataCache::new(remote_cache);
-        if !&self.on_chain_config()?.publishing_option.is_open() {
+        if !&self.on_chain_config()?.publishing_option.is_open()
+            && !can_publish_modules(txn_data.sender(), remote_cache)
+        {
             warn!("[VM] Custom modules not allowed");
-            return Err(VMStatus::new(StatusCode::UNKNOWN_MODULE));
+            return Err(VMStatus::new(StatusCode::INVALID_MODULE_PUBLISHER));
         };
         self.run_prologue(
             &mut data_store,
@@ -1057,9 +1059,18 @@ fn is_governance_txn(sender: AccountAddress, remote_cache: &dyn RemoteCache) -> 
     let association_capability_path =
         create_access_path(sender, association_capability_struct_tag());
     if let Ok(Some(blob)) = remote_cache.get(&association_capability_path) {
-        return lcs::from_bytes::<account_config::AssociationCapabilityResource>(&blob)
-            .map(|x| x.is_certified())
-            .unwrap_or(false);
+        return lcs::from_bytes::<account_config::AssociationCapabilityResource>(&blob).is_ok();
+    }
+    false
+}
+
+fn can_publish_modules(sender: AccountAddress, remote_cache: &dyn RemoteCache) -> bool {
+    let association_capability_path = create_access_path(
+        sender,
+        association_module_publishing_capability_struct_tag(),
+    );
+    if let Ok(Some(blob)) = remote_cache.get(&association_capability_path) {
+        return lcs::from_bytes::<account_config::AssociationCapabilityResource>(&blob).is_ok();
     }
     false
 }
