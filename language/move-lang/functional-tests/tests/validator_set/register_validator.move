@@ -26,6 +26,7 @@ script{
 //! sender: vivian
 script{
     use 0x0::LibraSystem;
+    use 0x0::Signer;
 
     // check that sending from validator accounts works
     fun main(account: &signer) {
@@ -56,6 +57,7 @@ script{
 // //! new-transaction
 // //! sender: 0xAA
 // script{
+//     use 0x0::Signer;
 //     use 0x0::ValidatorConfig;
 
 //     // register Alice as a validator candidate, then rotate a key + check that it worked.
