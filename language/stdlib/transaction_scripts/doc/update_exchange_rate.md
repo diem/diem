@@ -13,9 +13,10 @@
 
 ## Function `main`
 
+Script for Treasury Comliance Account to update <Currency> to LBR rate
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(association: &signer, new_exchange_rate_denominator: u64, new_exchange_rate_numerator: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_denominator: u64, new_exchange_rate_numerator: u64)
 </code></pre>
 
 
@@ -25,15 +26,17 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Currency&gt;(
-    association: &signer,
+    tc_account: &signer,
+    sliding_nonce: u64,
     new_exchange_rate_denominator: u64,
     new_exchange_rate_numerator: u64
 ) {
+    <a href="../../modules/doc/SlidingNonce.md#0x0_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
     <b>let</b> rate = <a href="../../modules/doc/FixedPoint32.md#0x0_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(
         new_exchange_rate_denominator,
         new_exchange_rate_numerator,
     );
-    <a href="../../modules/doc/Libra.md#0x0_Libra_update_lbr_exchange_rate">Libra::update_lbr_exchange_rate</a>&lt;Currency&gt;(association, rate)
+    <a href="../../modules/doc/Libra.md#0x0_Libra_update_lbr_exchange_rate">Libra::update_lbr_exchange_rate</a>&lt;Currency&gt;(tc_account, rate)
 }
 </code></pre>
 

@@ -393,14 +393,6 @@ register_all_txn_scripts! {
 //  Association-related scripts
 //...........................................................................
 
-{
-    script: UpdateExchangeRate,
-    builder: encode_update_exchange_rate,
-    type_args: [currency],
-    args: [new_exchange_rate_denominator: U64, new_exchange_rate_numerator: U64],
-    doc: "Updates the on-chain exchange rate to LBR for the given `currency` to be given by\
-         `new_exchange_rate_denominator/new_exchange_rate_numerator`."
-}
 
 {
     script: UpdateMintingAbility,
@@ -482,6 +474,15 @@ register_all_txn_scripts! {
     args: [nonce: U64, new_hashed_key: Bytes],
     doc: "Encode a program that rotates the sender's authentication key to `new_key`. `new_key`\
           should be a 256 bit sha3 hash of an ed25519 public key. This script also takes nonce"
+}
+
+{
+    script: UpdateExchangeRate,
+    builder: encode_update_exchange_rate,
+    type_args: [currency],
+    args: [nonce: U64, new_exchange_rate_denominator: U64, new_exchange_rate_numerator: U64],
+    doc: "Updates the on-chain exchange rate to LBR for the given `currency` to be given by\
+         `new_exchange_rate_denominator/new_exchange_rate_numerator`."
 }
 
 } // End of txn scripts
@@ -602,7 +603,6 @@ mod tests {
                 "update_libra_version",
                 "mint_lbr",
                 "unmint_lbr",
-                "update_exchange_rate",
                 "update_minting_ability",
                 "create_parent_vasp_account",
                 "create_child_vasp_account",
@@ -610,7 +610,8 @@ mod tests {
                 "create_designated_dealer",
                 "freeze_account",
                 "unfreeze_account",
-                "rotate_authentication_key_with_nonce"
+                "rotate_authentication_key_with_nonce",
+                "update_exchange_rate",
             ],
             abis.iter().map(|x| x.name()).collect::<Vec<_>>()
         );
