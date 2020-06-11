@@ -77,10 +77,12 @@
 
 use digest::{
     generic_array::{self, ArrayLength, GenericArray},
-    BlockInput, FixedOutput, Input, Reset,
+    BlockInput, FixedOutput, Reset, Update,
 };
+
 use generic_array::typenum::Unsigned;
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, Mac, NewMac};
+
 use std::marker::PhantomData;
 use thiserror::Error;
 
@@ -89,7 +91,8 @@ use thiserror::Error;
 #[derive(Clone, Debug)]
 pub struct Hkdf<D>
 where
-    D: Input + BlockInput + FixedOutput + Reset + Default + Clone,
+    D: Update + BlockInput + FixedOutput + Reset + Default + Clone,
+    D::BlockSize: ArrayLength<u8>,
     D::OutputSize: ArrayLength<u8>,
 {
     _marker: PhantomData<D>,
@@ -97,7 +100,7 @@ where
 
 impl<D> Hkdf<D>
 where
-    D: Input + BlockInput + FixedOutput + Reset + Default + Clone,
+    D: Update + BlockInput + FixedOutput + Reset + Default + Clone,
     D::BlockSize: ArrayLength<u8> + Clone,
     D::OutputSize: ArrayLength<u8>,
 {
@@ -116,9 +119,9 @@ where
             None => Hmac::<D>::new(&Default::default()),
         };
 
-        hmac.input(ikm);
+        hmac.update(ikm);
 
-        Ok(hmac.result().code().to_vec())
+        Ok(hmac.finalize().into_bytes().to_vec())
     }
 
     /// The RFC5869 HKDF-Expand operation.
@@ -138,14 +141,14 @@ where
 
         for (blocknum, okm_block) in okm.chunks_mut(hmac_output_bytes).enumerate() {
             if let Some(ref prev) = prev {
-                hmac.input(prev)
+                hmac.update(prev)
             }
             if let Some(_info) = info {
-                hmac.input(_info);
+                hmac.update(_info);
             }
-            hmac.input(&[blocknum as u8 + 1]);
+            hmac.update(&[blocknum as u8 + 1]);
 
-            let output = hmac.result_reset().code();
+            let output = hmac.finalize_reset().into_bytes();
             okm_block.copy_from_slice(&output[..okm_block.len()]);
 
             prev = Some(output);

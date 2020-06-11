@@ -38,10 +38,10 @@ pub fn make_corpus(
                 break;
             }
         };
-
         // Use the SHA-1 of the result as the file name.
-        sha1.input(&result);
-        let hash = sha1.result_reset();
+        sha1.update(&result);
+
+        let hash = sha1.finalize_reset();
         let name = hex::encode(hash.as_slice());
         let path = corpus_dir.join(name);
         let mut f = fs::File::create(&path)
