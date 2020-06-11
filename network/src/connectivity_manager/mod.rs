@@ -44,7 +44,7 @@ use num_variants::NumVariants;
 use std::{
     cmp::min,
     collections::HashMap,
-    fmt,
+    fmt, mem,
     sync::{Arc, RwLock},
     time::{Duration, Instant},
 };
@@ -414,10 +414,14 @@ where
                         // At least one peer's addresses have actually changed.
                         have_any_changed = true;
 
-                        // Ensure that the next dial attempt starts from the first
-                        // address if the addresses have actually changed.
+                        // If we're currently trying to dial this peer, we reset
+                        // their dial state. As a result, we will begin our next
+                        // dial attempt from the first address (which might have
+                        // changed) and from a fresh backoff (since the current
+                        // backoff delay might be maxed out if we can't reach any
+                        // of their previous addresses).
                         if let Some(dial_state) = self.dial_states.get_mut(&peer_id) {
-                            dial_state.reset_addr();
+                            mem::replace(dial_state, DialState::new(self.backoff_strategy.clone()));
                         }
 
                         // Log the change to this peer's addresses.
@@ -603,10 +607,6 @@ where
             backoff,
             addr_idx: 0,
         }
-    }
-
-    fn reset_addr(&mut self) {
-        self.addr_idx = 0;
     }
 
     fn next_addr<'a>(&mut self, addrs: &'a Addresses) -> &'a NetworkAddress {
