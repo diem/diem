@@ -566,18 +566,21 @@ jobs:
           command: |
             # Please see the runbook to determine when to update these values: https://fb.quip.com/FnSVAppvJaT9
             echo Premainnet git revision $PREMAINNET_GIT_REVISION
-            echo 'export NODES=a11d2e31854e811eaa1f702474484dd1-21dcb00bef9f6cc0.elb.us-west-2.amazonaws.com:80,\
-            a1981c0ab68b011eab1bb02f729e0dd7-3c9f20567ceb2efd.elb.us-west-2.amazonaws.com:80,\
-            a569b48655cbc40d092379f55e630966-e1f284c7eb8add73.elb.eu-west-1.amazonaws.com:80,\
-            aa4d66f81665240019022d50326c1654-cf61b8e99df12293.elb.eu-west-1.amazonaws.com:80,\
-            a88662827a2d341bbb7beb883d6e32b9-2e166f46672c7f2b.elb.us-east-1.amazonaws.com:80,\
+            echo 'export NODES=aa4d66f81665240019022d50326c1654-cf61b8e99df12293.elb.eu-west-1.amazonaws.com:80,\
+            aa82477d9b73b4531976e66cd4076eed-a1a497567aecf78e.elb.eu-west-1.amazonaws.com:80,\
+            a0aa8f8cacac149bb8d5bd891fda3dfa-2285ad042afe7e20.elb.us-east-1.amazonaws.com:80,\
+            a0be2811e181148f193dbb130042ca17-fa9afbb369bf4b77.elb.us-west-2.amazonaws.com:80,\
             a092976324bb748d7b2885dc64e6c71a-dac92eeea83a39b1.elb.us-west-2.amazonaws.com:80,\
+            a11d2e31854e811eaa1f702474484dd1-21dcb00bef9f6cc0.elb.us-west-2.amazonaws.com:80,\
+            a6c7d5afc80de11ea9bcd0a7a792c33e-564886650.ap-southeast-1.elb.amazonaws.com:80,\
             libra-fullnode-pre-mainnet.shopifyapps.com:80,\
+            3.230.173.177:32251,\
             20.50.43.42:80,\
             34.68.134.0:80,\
-            35.193.177.28:80,\
+            34.96.244.174:80,\
+            35.246.147.6:80,\
             51.159.75.165:80,\
-            3.230.173.177:32251' >> $BASH_ENV
+            104.197.179.142:80' >> $BASH_ENV
             echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
             echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
       - checkout
