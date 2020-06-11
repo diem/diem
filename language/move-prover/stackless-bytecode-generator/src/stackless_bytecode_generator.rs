@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    annotations::Annotations,
     function_target::FunctionTargetData,
     stackless_bytecode::{
         AssignKind, AttrId,
@@ -98,19 +97,14 @@ impl<'a> StacklessBytecodeGenerator<'a> {
             self.code.push(bytecode);
         }
 
-        FunctionTargetData {
-            code: self.code,
-            local_types: self.local_types,
-            return_types: self.func_env.get_return_types(),
-            param_proxy_map: BTreeMap::new(),
-            ref_param_proxy_map: BTreeMap::new(),
-            ref_param_return_map: BTreeMap::new(),
-            acquires_global_resources: self.func_env.get_acquires_global_resources(),
-            locations: self.location_table,
-            annotations: Annotations::default(),
+        FunctionTargetData::new(
+            self.code,
+            self.local_types,
+            self.func_env.get_return_types(),
+            self.location_table,
+            self.func_env.get_acquires_global_resources(),
             given_spec_blocks,
-            generated_spec_blocks: BTreeMap::new(),
-        }
+        )
     }
 
     /// Create a new attribute id and populate location table.
