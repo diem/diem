@@ -5,7 +5,9 @@
 //! genesis.blob.
 
 use crate::{
-    config::{NetworkConfig, NodeConfig, SeedPeersConfig, TestConfig, HANDSHAKE_VERSION},
+    config::{
+        DiscoveryMethod, NetworkConfig, NodeConfig, SeedPeersConfig, TestConfig, HANDSHAKE_VERSION,
+    },
     network_id::NetworkId,
 };
 use libra_network_address::NetworkAddress;
@@ -35,6 +37,7 @@ pub fn validator_swarm(
         node.upstream
             .primary_networks
             .push(network.identity.peer_id_from_config().unwrap());
+        network.discovery_method = DiscoveryMethod::gossip(network.listen_address.clone());
         network.mutual_authentication = true;
         network.network_id = NetworkId::Validator;
 
@@ -43,7 +46,8 @@ pub fn validator_swarm(
 
     // set the first validator as every validators' initial configured seed peer.
     let seed_config = &nodes[0].validator_network.as_ref().unwrap();
-    let seed_peers = build_seed_peers(&seed_config, seed_config.advertised_address.clone());
+    let advertised_address = seed_config.discovery_method.advertised_address();
+    let seed_peers = build_seed_peers(&seed_config, advertised_address);
     for node in &mut nodes {
         let network = node.validator_network.as_mut().unwrap();
         network.seed_peers = seed_peers.clone();

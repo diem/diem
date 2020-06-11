@@ -269,12 +269,16 @@ impl NodeConfig {
 
         if let Some(network) = self.validator_network.as_mut() {
             network.listen_address = crate::utils::get_available_port_in_multiaddr(true);
-            network.advertised_address = network.listen_address.clone();
+            if let DiscoveryMethod::Gossip(config) = &mut network.discovery_method {
+                config.advertised_address = network.listen_address.clone();
+            }
         }
 
         for network in self.full_node_networks.iter_mut() {
             network.listen_address = crate::utils::get_available_port_in_multiaddr(true);
-            network.advertised_address = network.listen_address.clone();
+            if let DiscoveryMethod::Gossip(config) = &mut network.discovery_method {
+                config.advertised_address = network.listen_address.clone();
+            }
         }
     }
 
@@ -410,7 +414,6 @@ mod test {
             .as_mut()
             .expect("Missing expected network config");
 
-        expected_network.advertised_address = actual_network.advertised_address.clone();
         expected_network.listen_address = actual_network.listen_address.clone();
         expected_network.identity = actual_network.identity.clone();
         expected_network.network_peers = actual_network.network_peers.clone();

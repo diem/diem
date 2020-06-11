@@ -6,8 +6,8 @@ use anyhow::{ensure, format_err, Result};
 use executor::db_bootstrapper;
 use libra_config::{
     config::{
-        NodeConfig, OnDiskStorageConfig, RemoteService, SafetyRulesService, SecureBackend, Token,
-        VaultConfig, WaypointConfig,
+        DiscoveryMethod, NodeConfig, OnDiskStorageConfig, RemoteService, SafetyRulesService,
+        SecureBackend, Token, VaultConfig, WaypointConfig,
     },
     generator,
 };
@@ -87,7 +87,8 @@ impl ValidatorConfig {
             .as_mut()
             .ok_or(Error::MissingValidatorNetwork)?;
         validator_network.listen_address = self.listen_address.clone();
-        validator_network.advertised_address = self.advertised_address.clone();
+        validator_network.discovery_method =
+            DiscoveryMethod::gossip(self.advertised_address.clone());
         validator_network.seed_peers = seed_peers;
 
         self.build_safety_rules(&mut config)?;
@@ -246,10 +247,13 @@ mod test {
         let (seed_peer_id, seed_addrs) = network.seed_peers.seed_peers.iter().next().unwrap();
         assert_eq!(seed_addrs.len(), 1);
         assert_ne!(&network.peer_id(), seed_peer_id);
-        assert_ne!(&network.advertised_address, &seed_addrs[0]);
+        assert_ne!(
+            &network.discovery_method.advertised_address(),
+            &seed_addrs[0]
+        );
 
         assert_eq!(
-            network.advertised_address,
+            network.discovery_method.advertised_address(),
             NetworkAddress::from_str(DEFAULT_ADVERTISED_ADDRESS).unwrap()
         );
         assert_eq!(

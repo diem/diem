@@ -73,8 +73,6 @@ initialize_storage = true
 
 [validator_network]
 listen_address = "/ip4/0.0.0.0/tcp/6180"
-advertised_address = "/ip4/127.0.0.1/tcp/6180"
-discovery_interval_ms = 1000
 connectivity_check_interval_ms = 5000
 mutual_authentication = false
 network_peers_file = ""

@@ -307,8 +307,8 @@ pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegi
             let identity_key = network.identity.public_key_from_config().unwrap();
 
             let advertised_address = network
-                .advertised_address
-                .clone()
+                .discovery_method
+                .advertised_address()
                 .append_prod_protos(identity_key, HANDSHAKE_VERSION);
             let raw_advertised_address = RawNetworkAddress::try_from(&advertised_address).unwrap();
 

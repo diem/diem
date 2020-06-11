@@ -35,15 +35,10 @@ pub struct NetworkConfig {
     // TODO: Add support for multiple listen/advertised addresses in config.
     // The address that this node is listening on for new connections.
     pub listen_address: NetworkAddress,
-    // The address that this node advertises to other nodes for the discovery protocol.
-    pub advertised_address: NetworkAddress,
-    pub discovery_interval_ms: u64,
     pub connectivity_check_interval_ms: u64,
     // Select this to enforce that both peers should authenticate each other, otherwise
     // authentication only occurs for outgoing connections.
     pub mutual_authentication: bool,
-    // Enable this network to use either gossip discovery or onchain discovery.
-    pub discovery_method: DiscoveryMethod,
     // Leveraged by mutual_authentication for incoming peers that may not have a well-defined
     // network address.
     #[serde(skip)]
@@ -53,6 +48,8 @@ pub struct NetworkConfig {
     #[serde(skip)]
     pub seed_peers: SeedPeersConfig,
     pub seed_peers_file: PathBuf,
+    // Enable this network to use either gossip discovery or onchain discovery.
+    pub discovery_method: DiscoveryMethod,
     pub identity: Identity,
     pub network_id: NetworkId,
 }
@@ -68,11 +65,9 @@ impl NetworkConfig {
         let mut config = Self {
             network_id,
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
-            advertised_address: "/ip4/127.0.0.1/tcp/6180".parse().unwrap(),
-            discovery_interval_ms: 1000,
             connectivity_check_interval_ms: 5000,
             mutual_authentication: false,
-            discovery_method: DiscoveryMethod::Gossip,
+            discovery_method: DiscoveryMethod::None,
             identity: Identity::None,
             network_peers_file: PathBuf::new(),
             network_peers: NetworkPeersConfig::default(),
@@ -91,11 +86,9 @@ impl NetworkConfig {
         Self {
             network_id: self.network_id.clone(),
             listen_address: self.listen_address.clone(),
-            advertised_address: self.advertised_address.clone(),
-            discovery_interval_ms: self.discovery_interval_ms,
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
             mutual_authentication: self.mutual_authentication,
-            discovery_method: self.discovery_method,
+            discovery_method: self.discovery_method.clone(),
             identity: Identity::None,
             network_peers_file: self.network_peers_file.clone(),
             network_peers: self.network_peers.clone(),
@@ -113,10 +106,6 @@ impl NetworkConfig {
             let path = root_dir.full_path(&self.seed_peers_file);
             self.seed_peers = SeedPeersConfig::load_config(&path)?;
             self.seed_peers.verify_libranet_addrs()?;
-        }
-        if self.advertised_address.to_string().is_empty() {
-            self.advertised_address =
-                utils::get_local_ip().ok_or_else(|| anyhow!("No local IP"))?;
         }
         if self.listen_address.to_string().is_empty() {
             self.listen_address = utils::get_local_ip().ok_or_else(|| anyhow!("No local IP"))?;
@@ -250,19 +239,42 @@ pub struct NetworkPeerInfo {
     pub identity_public_key: x25519::PublicKey,
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case", tag = "type")]
 pub enum DiscoveryMethod {
     // default until we can deprecate
-    Gossip,
+    Gossip(GossipConfig),
     Onchain,
     None,
 }
 
+impl DiscoveryMethod {
+    pub fn gossip(advertised_address: NetworkAddress) -> Self {
+        DiscoveryMethod::Gossip(GossipConfig {
+            advertised_address,
+            discovery_interval_ms: 1000,
+        })
+    }
+
+    pub fn advertised_address(&self) -> NetworkAddress {
+        if let DiscoveryMethod::Gossip(config) = self {
+            config.advertised_address.clone()
+        } else {
+            panic!("Invalid discovery method");
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct GossipConfig {
+    // The address that this node advertises to other nodes for the discovery protocol.
+    pub advertised_address: NetworkAddress,
+    pub discovery_interval_ms: u64,
+}
+
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(tag = "type")]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case", tag = "type")]
 pub enum Identity {
     FromConfig(IdentityFromConfig),
     FromStorage(IdentityFromStorage),
@@ -417,13 +429,11 @@ mod test {
 
         // Now reset IP addresses and save
         config.listen_address = NetworkAddress::mock();
-        config.advertised_address = NetworkAddress::mock();
         config.save(&root_dir).unwrap();
 
         // Now load and verify default IP addresses are generated
         config.load(&root_dir, RoleType::FullNode).unwrap();
         assert_ne!(config.listen_address.to_string(), "");
-        assert_ne!(config.advertised_address.to_string(), "");
     }
 
     fn generate_config() -> (NetworkConfig, TempPath) {
