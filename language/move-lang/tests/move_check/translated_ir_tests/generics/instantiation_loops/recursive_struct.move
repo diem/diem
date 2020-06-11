@@ -17,17 +17,21 @@ module M1 {
 }
 
 module M2 {
+    use 0x0::Signer;
+
     resource struct X { y: vector<Y> }
     resource struct Y { x: vector<X> }
 
     // blows up the vm
-    public fun ex(): bool {
-        exists<X>(0x0::Transaction::sender())
+    public fun ex(account: &signer): bool {
+        let sender = Signer::address_of(account);
+        exists<X>(sender)
     }
 
     // blows up the VM
-    public fun borrow() acquires X {
-        _ = borrow_global<X>(0x0::Transaction::sender())
+    public fun borrow(account: &signer) acquires X {
+        let sender = Signer::address_of(account);
+        _ = borrow_global<X>(sender)
     }
 }
 

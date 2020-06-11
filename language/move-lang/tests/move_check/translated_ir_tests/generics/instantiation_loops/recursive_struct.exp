@@ -22,34 +22,34 @@ error:
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/generics/instantiation_loops/recursive_struct.move:20:35 ───
+    ┌── tests/move_check/translated_ir_tests/generics/instantiation_loops/recursive_struct.move:22:35 ───
     │
- 20 │     resource struct X { y: vector<Y> }
+ 22 │     resource struct X { y: vector<Y> }
     │                                   ^ Invalid field containing 'Y' in struct 'X'.
     ·
- 20 │     resource struct X { y: vector<Y> }
+ 22 │     resource struct X { y: vector<Y> }
     │                                   - Using this struct creates a cycle: 'Y' contains 'X' contains 'Y'
     │
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/generics/instantiation_loops/recursive_struct.move:41:8 ───
+    ┌── tests/move_check/translated_ir_tests/generics/instantiation_loops/recursive_struct.move:45:8 ───
     │
- 41 │ module M3 {
+ 45 │ module M3 {
     │        ^^ Duplicate definition for module '0x42::M3'
     ·
- 34 │ module M3 {
+ 38 │ module M3 {
     │        -- Previously defined here
     │
 
 error: 
 
-    ┌── tests/move_check/translated_ir_tests/generics/instantiation_loops/recursive_struct.move:46:26 ───
+    ┌── tests/move_check/translated_ir_tests/generics/instantiation_loops/recursive_struct.move:50:26 ───
     │
- 46 │     struct C { d: vector<D> }
+ 50 │     struct C { d: vector<D> }
     │                          ^ Invalid field containing 'D' in struct 'C'.
     ·
- 46 │     struct C { d: vector<D> }
+ 50 │     struct C { d: vector<D> }
     │                          - Using this struct creates a cycle: 'D' contains 'A' contains 'B' contains 'C' contains 'D'
     │
 

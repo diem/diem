@@ -1,9 +1,10 @@
 module A {
-    use 0x0::Transaction;
+    use 0x0::Signer;
     resource struct T {v: u64}
 
-    public fun A0(addr: address) acquires T {
-        let x = borrow_global_mut<T>(Transaction::sender());
+    public fun A0(account: &signer, addr: address) acquires T {
+        let sender = Signer::address_of(account);
+        let x = borrow_global_mut<T>(sender);
         let y = borrow_global_mut<T>(addr);
         x;
         y;

@@ -1,13 +1,13 @@
 module A {
-    use 0x0::Transaction;
+    use 0x0::Signer;
     resource struct T1 {v: u64}
 
-    public fun test1() acquires T1 {
-        borrow_acquires_t1();
+    public fun test1(account: &signer) acquires T1 {
+        borrow_acquires_t1(account);
     }
 
-    fun borrow_acquires_t1(): &mut T1 acquires T1 {
-        borrow_global_mut<T1>(Transaction::sender())
+    fun borrow_acquires_t1(account: &signer): &mut T1 acquires T1 {
+        borrow_global_mut<T1>(Signer::address_of(account))
     }
 }
 

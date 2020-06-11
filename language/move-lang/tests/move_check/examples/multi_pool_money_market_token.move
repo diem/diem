@@ -71,6 +71,7 @@ module Token {
 address 0x2 {
 
 module OneToOneMarket {
+    use 0x0::Signer;
     use 0x0::Transaction;
     use 0x0::Map;
     use 0x1::Token;
@@ -94,7 +95,7 @@ module OneToOneMarket {
     }
 
     fun accept<AssetType: copyable>(account: &signer, init: Token::Coin<AssetType>) {
-        let sender = Transaction::sender();
+        let sender = Signer::address_of(account);
         Transaction::assert(!exists<Pool<AssetType>>(sender), 42);
         move_to(account, Pool<AssetType> { coin: init })
     }
@@ -128,7 +129,7 @@ module OneToOneMarket {
     ): Token::Coin<Out>
         acquires Price, Pool, DepositRecord, BorrowRecord
     {
-        Transaction::assert(amount <= max_borrow_amount<In, Out>(pool_owner), 1025);
+        Transaction::assert(amount <= max_borrow_amount<In, Out>(account, pool_owner), 1025);
 
         update_borrow_record<In, Out>(account, pool_owner, amount);
 
@@ -136,11 +137,11 @@ module OneToOneMarket {
         Token::withdraw(&mut pool.coin, amount)
     }
 
-    fun max_borrow_amount<In: copyable, Out: copyable>(pool_owner: address): u64
+    fun max_borrow_amount<In: copyable, Out: copyable>(account: &signer, pool_owner: address): u64
         acquires Price, Pool, DepositRecord, BorrowRecord
     {
-        let input_deposited = deposited_amount<In, Out>(pool_owner);
-        let output_deposited = borrowed_amount<In, Out>(pool_owner);
+        let input_deposited = deposited_amount<In, Out>(account, pool_owner);
+        let output_deposited = borrowed_amount<In, Out>(account, pool_owner);
 
         let input_into_output =
             input_deposited * borrow_global<Price<In, Out>>(pool_owner).price;
@@ -158,7 +159,7 @@ module OneToOneMarket {
     fun update_deposit_record<In: copyable, Out: copyable>(account: &signer, pool_owner: address, amount: u64)
         acquires DepositRecord
     {
-        let sender = Transaction::sender();
+        let sender = Signer::address_of(account);
         if (!exists<DepositRecord<In, Out>>(sender)) {
             move_to(account, DepositRecord<In, Out> { record: Map::empty() })
         };
@@ -173,7 +174,7 @@ module OneToOneMarket {
     fun update_borrow_record<In: copyable, Out: copyable>(account: &signer, pool_owner: address, amount: u64)
         acquires BorrowRecord
     {
-        let sender = Transaction::sender();
+        let sender = Signer::address_of(account);
         if (!exists<BorrowRecord<In, Out>>(sender)) {
             move_to(account, BorrowRecord<In, Out> { record: Map::empty() })
         };
@@ -185,10 +186,10 @@ module OneToOneMarket {
         Map::insert(record, pool_owner, amount)
     }
 
-    fun deposited_amount<In: copyable, Out: copyable>(pool_owner: address): u64
+    fun deposited_amount<In: copyable, Out: copyable>(account: &signer, pool_owner: address): u64
         acquires DepositRecord
     {
-        let sender = Transaction::sender();
+        let sender = Signer::address_of(account);
         if (!exists<DepositRecord<In, Out>>(sender)) return 0;
 
         let record = &borrow_global<DepositRecord<In, Out>>(sender).record;
@@ -196,10 +197,10 @@ module OneToOneMarket {
         else 0
     }
 
-    fun borrowed_amount<In: copyable, Out: copyable>(pool_owner: address): u64
+    fun borrowed_amount<In: copyable, Out: copyable>(account: &signer, pool_owner: address): u64
         acquires BorrowRecord
     {
-        let sender = Transaction::sender();
+        let sender = Signer::address_of(account);
         if (!exists<BorrowRecord<In, Out>>(sender)) return 0;
 
         let record = &borrow_global<BorrowRecord<In, Out>>(sender).record;
@@ -214,6 +215,7 @@ address 0x70DD {
 
 module ToddNickles {
     use 0x1::Token;
+    use 0x0::Signer;
     use 0x0::Transaction;
 
     struct T {}
@@ -223,12 +225,12 @@ module ToddNickles {
     }
 
     public fun init(account: &signer) {
-        Transaction::assert(Transaction::sender() == 0x70DD, 42);
+        Transaction::assert(Signer::address_of(account) == 0x70DD, 42);
         move_to(account, Wallet { nickles: Token::create(T{}, 0) })
     }
 
-    public fun mint(): Token::Coin<T> {
-        Transaction::assert(Transaction::sender() == 0x70DD, 42);
+    public fun mint(account: &signer): Token::Coin<T> {
+        Transaction::assert(Signer::address_of(account) == 0x70DD, 42);
         Token::create(T{}, 5)
     }
 
