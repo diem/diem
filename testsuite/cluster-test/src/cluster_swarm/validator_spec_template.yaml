@@ -104,6 +104,14 @@ spec:
         sleep 3;
         echo "Waiting for all validator pods to be scheduled";
       done
+      if [[ {enable_lsr} = true ]]; then
+        until [ $(kubectl get pods -l app=libra-lsr | grep ^lsr | grep -e Running | wc -l) = "{num_validators}" ]; do
+          sleep 3;
+          echo "Waiting for all LSRs to be healthy";
+        done
+        echo "All LSRs are healthy.."
+      fi
+
   containers:
   - name: fluent-bit
     image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/fluent-bit:1.3.9

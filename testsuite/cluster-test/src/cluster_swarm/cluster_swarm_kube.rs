@@ -92,6 +92,7 @@ impl ClusterSwarmKube {
         num_validators: u32,
         node_name: &str,
         image_tag: &str,
+        lsr_backend: &str,
     ) -> Result<(Pod, Service)> {
         let pod_yaml = format!(
             include_str!("lsr_spec_template.yaml"),
@@ -99,6 +100,7 @@ impl ClusterSwarmKube {
             num_validators = num_validators,
             image_tag = image_tag,
             node_name = node_name,
+            lsr_backend = lsr_backend,
             cfg_seed = CFG_SEED,
         );
         let pod_spec: serde_yaml::Value = serde_yaml::from_str(&pod_yaml)?;
@@ -546,6 +548,7 @@ impl ClusterSwarmKube {
                 lsr_config.num_validators,
                 &node_name,
                 &lsr_config.image_tag,
+                &lsr_config.lsr_backend,
             )?,
         };
         match pod_api.create(&PostParams::default(), &p).await {

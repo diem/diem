@@ -34,6 +34,7 @@ pub struct LSRConfig {
     pub index: u32,
     pub num_validators: u32,
     pub image_tag: String,
+    pub lsr_backend: String,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash)]

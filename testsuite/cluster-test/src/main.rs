@@ -106,6 +106,12 @@ struct Args {
     pub k8s_num_validators: u32,
     #[structopt(long)]
     pub enable_lsr: bool,
+    #[structopt(
+        long,
+        help = "Backend used by lsr. Possible Values are in-memory, on-disk, vault",
+        default_value = "vault"
+    )]
+    pub lsr_backend: String,
 }
 
 pub fn main() {
@@ -446,7 +452,11 @@ impl ClusterUtil {
             let mut instance_count = args.k8s_num_validators
                 + (args.k8s_fullnodes_per_validator * args.k8s_num_validators);
             if args.enable_lsr {
-                instance_count += args.k8s_num_validators * 2;
+                if args.lsr_backend == "vault" {
+                    instance_count += args.k8s_num_validators * 2;
+                } else {
+                    instance_count += args.k8s_num_validators;
+                }
             }
             aws::set_asg_size(instance_count as i64, 5.0, &asg_name, true)
                 .await
@@ -456,6 +466,7 @@ impl ClusterUtil {
                     args.k8s_num_validators,
                     args.k8s_fullnodes_per_validator,
                     args.enable_lsr,
+                    &args.lsr_backend,
                     &image_tag,
                 )
                 .await
