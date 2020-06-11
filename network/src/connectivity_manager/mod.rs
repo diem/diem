@@ -149,6 +149,22 @@ where
         backoff_strategy: TBackoff,
         max_delay_ms: u64,
     ) -> Self {
+        {
+            // Reconcile the keysets eligible is only used to allow us to dial the remote peer
+            let eligible_peers = &mut eligible.write().unwrap();
+            for (id, addr) in &seed_peers {
+                let key = addr[0]
+                    .find_noise_proto()
+                    .expect("Unable to find x25519 key in address");
+                if !eligible_peers.contains_key(&id) {
+                    let public_keys = NetworkPublicKeys {
+                        identity_public_key: key,
+                    };
+                    eligible_peers.insert(*id, public_keys);
+                }
+            }
+        }
+
         // Ensure seed peers doesn't contain our own address (we want to avoid
         // pointless self-dials).
         let peer_addresses = PeerAddresses(
