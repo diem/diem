@@ -11,7 +11,7 @@ use libra_config::{
     config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
 };
-use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
+use libra_json_rpc_server::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::gen_mempool_reconfig_subscription;
 use libra_metrics::metric_server;

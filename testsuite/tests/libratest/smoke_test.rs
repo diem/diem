@@ -11,7 +11,7 @@ use libra_crypto::{
     SigningKey, Uniform,
 };
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
-use libra_json_rpc::views::{ScriptView, TransactionDataView};
+use libra_json_rpc_server::views::{ScriptView, TransactionDataView};
 use libra_key_manager::libra_interface::{JsonRpcLibraInterface, LibraInterface};
 use libra_logger::prelude::*;
 use libra_secure_storage::{BoxedStorage, CryptoStorage, KVStorage, Value};

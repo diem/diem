@@ -272,7 +272,7 @@ mod test {
     use futures::{channel::mpsc::channel, StreamExt};
     use libra_config::utils;
     use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Uniform};
-    use libra_json_rpc::test_bootstrap;
+    use libra_json_rpc_server::test_bootstrap;
     use libra_types::{
         account_address::AccountAddress,
         account_config::{AccountResource, BalanceResource},

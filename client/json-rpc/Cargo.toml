@@ -17,7 +17,7 @@ serde = { version = "1.0.111", default-features = false }
 serde_json = "1.0.54"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-libra-json-rpc-types  = { path = "../../json-rpc/types" }
+libra-json-rpc-types  = { path = "../../json-rpc-server/types" }
 libra-types = { path = "../../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 

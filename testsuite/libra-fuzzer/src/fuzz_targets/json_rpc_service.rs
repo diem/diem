@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::FuzzTargetImpl;
-use libra_json_rpc::fuzzing::{fuzzer, generate_corpus};
+use libra_json_rpc_server::fuzzing::{fuzzer, generate_corpus};
 use libra_proptest_helpers::ValueGenerator;
 
 #[derive(Clone, Debug, Default)]

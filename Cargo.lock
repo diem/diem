@@ -2302,7 +2302,7 @@ dependencies = [
  "datatest-stable 0.1.0",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
- "libra-json-rpc 0.1.0",
+ "libra-json-rpc-server 0.1.0",
  "libra-proptest-helpers 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
@@ -2337,7 +2337,22 @@ name = "libra-global-constants"
 version = "0.1.0"
 
 [[package]]
-name = "libra-json-rpc"
+name = "libra-json-rpc-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-canonical-serialization 0.1.0",
+ "libra-json-rpc-types 0.1.0",
+ "libra-types 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "reqwest 0.10.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.111 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.54 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "libra-json-rpc-server"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2371,21 +2386,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "libra-json-rpc-client"
-version = "0.1.0"
-dependencies = [
- "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
- "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "libra-canonical-serialization 0.1.0",
- "libra-json-rpc-types 0.1.0",
- "libra-types 0.1.0",
- "libra-workspace-hack 0.1.0",
- "reqwest 0.10.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde 1.0.111 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_json 1.0.54 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "libra-json-rpc-types"
 version = "0.1.0"
 dependencies = [
@@ -2413,7 +2413,7 @@ dependencies = [
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-global-constants 0.1.0",
- "libra-json-rpc 0.1.0",
+ "libra-json-rpc-server 0.1.0",
  "libra-logger 0.1.0",
  "libra-secure-json-rpc 0.1.0",
  "libra-secure-push-metrics 0.1.0",
@@ -2562,7 +2562,7 @@ dependencies = [
  "jemallocator 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
- "libra-json-rpc 0.1.0",
+ "libra-json-rpc-server 0.1.0",
  "libra-logger 0.1.0",
  "libra-mempool 0.1.0",
  "libra-metrics 0.1.0",
@@ -2613,7 +2613,7 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
- "libra-json-rpc 0.1.0",
+ "libra-json-rpc-server 0.1.0",
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
@@ -5311,7 +5311,7 @@ dependencies = [
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-global-constants 0.1.0",
- "libra-json-rpc 0.1.0",
+ "libra-json-rpc-server 0.1.0",
  "libra-key-manager 0.1.0",
  "libra-logger 0.1.0",
  "libra-secure-storage 0.1.0",
