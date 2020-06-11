@@ -1,5 +1,5 @@
 module M {
-    import 0x0.Event;
+    import 0x1.Event;
 
     struct MyEvent<T1, T2> { b: bool }
 

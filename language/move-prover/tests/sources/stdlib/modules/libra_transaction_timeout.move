@@ -1,8 +1,8 @@
-address 0x0 {
+address 0x1 {
 
 module LibraTransactionTimeout {
-  use 0x0::Transaction;
-  use 0x0::LibraTimestamp;
+  use 0x1::Transaction;
+  use 0x1::LibraTimestamp;
 
   resource struct TTL {
     // Only transactions with timestamp in between block time and block time + duration would be accepted.

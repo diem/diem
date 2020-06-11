@@ -32,8 +32,8 @@
     fullnodes_network_identity_pubkey: vector&lt;u8&gt;,
     fullnodes_network_address: vector&lt;u8&gt;,
 ) {
-    <b>let</b> sender = <a href="../../modules/doc/Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
-    <a href="../../modules/doc/ValidatorConfig.md#0x0_ValidatorConfig_set_config">ValidatorConfig::set_config</a>(
+    <b>let</b> sender = <a href="../../modules/doc/Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    <a href="../../modules/doc/ValidatorConfig.md#0x1_ValidatorConfig_set_config">ValidatorConfig::set_config</a>(
         account,
         sender,
         consensus_pubkey,
@@ -42,7 +42,7 @@
         fullnodes_network_identity_pubkey,
         fullnodes_network_address
     );
-    <a href="../../modules/doc/LibraSystem.md#0x0_LibraSystem_add_validator">LibraSystem::add_validator</a>(account, sender)
+    <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_add_validator">LibraSystem::add_validator</a>(account, sender)
 }
 </code></pre>
 

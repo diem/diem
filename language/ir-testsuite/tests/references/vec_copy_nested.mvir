@@ -1,5 +1,5 @@
 module DeepCopy {
-    import 0x0.Vector;
+    import 0x1.Vector;
 
     struct Config { i: u64 }
     struct Nested { c: Self.Config }

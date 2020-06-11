@@ -1,13 +1,13 @@
-address 0x0 {
+address 0x1 {
 
 module TransactionFee {
-    use 0x0::CoreAddresses;
-    use 0x0::Coin1::Coin1;
-    use 0x0::Coin2::Coin2;
-    use 0x0::LBR::{Self, LBR};
-    use 0x0::Libra::{Self, Libra, Preburn, BurnCapability};
-    use 0x0::LibraAccount;
-    use 0x0::Signer;
+    use 0x1::CoreAddresses;
+    use 0x1::Coin1::Coin1;
+    use 0x1::Coin2::Coin2;
+    use 0x1::LBR::{Self, LBR};
+    use 0x1::Libra::{Self, Libra, Preburn, BurnCapability};
+    use 0x1::LibraAccount;
+    use 0x1::Signer;
 
     /// The `TransactionFeeCollection` resource holds the
     /// `LibraAccount::WithdrawCapability` for the `CoreAddresses::TRANSACTION_FEE_ADDRESS()` account.

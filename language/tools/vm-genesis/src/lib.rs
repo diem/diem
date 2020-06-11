@@ -142,6 +142,7 @@ fn create_and_initialize_main_accounts(
             Value::transaction_argument_signer_reference(root_association_address),
             Value::transaction_argument_signer_reference(config_address()),
             Value::transaction_argument_signer_reference(fee_account_address),
+            Value::transaction_argument_signer_reference(account_config::CORE_CODE_ADDRESS),
             Value::transaction_argument_signer_reference(tc_account_address),
             Value::address(tc_account_address),
             Value::vector_u8(genesis_auth_key.to_vec()),

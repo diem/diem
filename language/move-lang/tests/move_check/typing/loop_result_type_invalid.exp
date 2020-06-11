@@ -9,7 +9,7 @@ error:
     │         ------------------------- The type: '()'
     ·
  10 │     fun t0(): X::R {
-    │               ---- Is not compatible with: '0x1::X::R'
+    │               ---- Is not compatible with: '0x2::X::R'
     │
 
 error: 
@@ -31,7 +31,7 @@ error:
     ┌── tests/move_check/typing/loop_result_type_invalid.move:19:9 ───
     │
  19 │         foo(loop { break })
-    │         ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x1::M::foo'. Invalid argument for parameter 'x'
+    │         ^^^^^^^^^^^^^^^^^^^ Invalid call of '0x2::M::foo'. Invalid argument for parameter 'x'
     ·
  19 │         foo(loop { break })
     │             -------------- The type: '()'

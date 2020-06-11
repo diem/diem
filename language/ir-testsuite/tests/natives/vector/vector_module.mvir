@@ -1,7 +1,7 @@
 module M {
-import 0x0.LBR;
-    import 0x0.Libra;
-    import 0x0.Vector;
+import 0x1.LBR;
+    import 0x1.Libra;
+    import 0x1.Vector;
     resource Coins { f: vector<Libra.Libra<LBR.LBR>> }
 
     public new(account: &signer) {
@@ -48,9 +48,9 @@ import 0x0.LBR;
 
 //! new-transaction
 import {{default}}.M;
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
 
 main(account: &signer) {
     let coin: Libra.Libra<LBR.LBR>;
@@ -66,9 +66,9 @@ main(account: &signer) {
 
 //! new-transaction
 import {{default}}.M;
-import 0x0.LBR;
-import 0x0.Libra;
-import 0x0.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
+import 0x1.LibraAccount;
 
 main(account: &signer) {
     let coin: Libra.Libra<LBR.LBR>;
@@ -86,9 +86,9 @@ main(account: &signer) {
 
 //! new-transaction
 import {{default}}.M;
-import 0x0.LBR;
-import 0x0.Libra;
-import 0x0.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
+import 0x1.LibraAccount;
 
 main(account: &signer) {
     let coin: Libra.Libra<LBR.LBR>;

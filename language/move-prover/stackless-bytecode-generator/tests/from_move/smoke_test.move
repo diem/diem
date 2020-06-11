@@ -4,7 +4,7 @@
 // dep: ../tests/sources/stdlib/modules/transaction.move
 
 module SmokeTest {
-    use 0x0::Transaction;
+    use 0x1::Transaction;
 
     // -----------------
     // Basic Ops

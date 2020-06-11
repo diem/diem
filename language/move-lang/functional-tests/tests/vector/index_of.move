@@ -1,5 +1,5 @@
 script {
-use 0x0::Vector;
+use 0x1::Vector;
 fun main() {
     let vec = Vector::empty();
     let (has, index) = Vector::index_of(&vec, &true);

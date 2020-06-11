@@ -1,5 +1,5 @@
 
 module M {
 
-    use 0x0::X::{S as XS,,};
+    use 0x1::X::{S as XS,,};
 }

@@ -1,4 +1,4 @@
-address 0x0 {
+address 0x1 {
 
 module X {
     struct S {}
@@ -19,8 +19,8 @@ module M {
 
     struct A { f1: XS, f2: S, f3: Z}
 
-    use 0x0::X::{S as XS, foo};
-    use 0x0::Z::{
+    use 0x1::X::{S as XS, foo};
+    use 0x1::Z::{
         S as Z,
         foo as zfoo,
     };
@@ -31,7 +31,7 @@ module M {
         zfoo();
     }
 
-    use 0x0::Y::S;
-    use 0x0::Y::foo as Foo;
+    use 0x1::Y::S;
+    use 0x1::Y::foo as Foo;
 }
 }

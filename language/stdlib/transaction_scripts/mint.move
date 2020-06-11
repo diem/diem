@@ -1,5 +1,5 @@
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 fun main<Token>(account: &signer, payee: address, auth_key_prefix: vector<u8>, amount: u64) {
   if (!LibraAccount::exists_at(payee)) {
       LibraAccount::create_testnet_account<Token>(account, payee, auth_key_prefix)

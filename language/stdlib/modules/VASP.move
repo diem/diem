@@ -4,13 +4,13 @@
 // 7002 -> INVALID_CHILD_VASP_ACCOUNT
 // 7003 -> CHILD_ACCOUNT_STILL_PARENT
 // 7004 -> INVALID_PUBLIC_KEY
-address 0x0 {
+address 0x1 {
 
 module VASP {
-    use 0x0::Association;
-    use 0x0::LibraTimestamp;
-    use 0x0::Signer;
-    use 0x0::Signature;
+    use 0x1::Association;
+    use 0x1::LibraTimestamp;
+    use 0x1::Signer;
+    use 0x1::Signature;
 
     // A ParentVASP is held only by the root VASP account and holds the
     // VASP-related metadata for the account. It is subject to a time

@@ -3,7 +3,7 @@ error:
     ┌── tests/move_check/typing/module_call_missing_function.move:13:9 ───
     │
  13 │         Self::fooo();
-    │         ^^^^^^^^^^ Invalid module access. Unbound function 'fooo' in module '0x1::M'
+    │         ^^^^^^^^^^ Invalid module access. Unbound function 'fooo' in module '0x2::M'
     │
 
 error: 
@@ -19,6 +19,6 @@ error:
     ┌── tests/move_check/typing/module_call_missing_function.move:15:9 ───
     │
  15 │         X::foooooo();
-    │         ^^^^^^^^^^ Invalid module access. Unbound function 'foooooo' in module '0x1::X'
+    │         ^^^^^^^^^^ Invalid module access. Unbound function 'foooooo' in module '0x2::X'
     │
 

@@ -3,8 +3,8 @@
 // register blessed as a preburn entity
 //! sender: association
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::LibraAccount;
+use 0x1::Coin1::Coin1;
+use 0x1::LibraAccount;
 fun main(account: &signer) {
     LibraAccount::add_preburn_from_association<Coin1>(account, {{blessed}})
 }
@@ -15,8 +15,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::Libra;
+use 0x1::Coin1::Coin1;
+use 0x1::Libra;
 fun main(account: &signer) {
     let coin100 = Libra::mint<Coin1>(account, 100);
     let coin200 = Libra::mint<Coin1>(account, 200);
@@ -37,8 +37,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::Libra;
+use 0x1::Coin1::Coin1;
+use 0x1::Libra;
 fun main(account: &signer) {
     let burn_address = {{blessed}};
     Libra::burn<Coin1>(account, burn_address);

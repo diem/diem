@@ -3,7 +3,7 @@
 //! account: c2, 0Coin2
 
 module BurnCapabilityHolder {
-    use 0x0::Libra;
+    use 0x1::Libra;
     resource struct Holder<Token> {
         cap: Libra::BurnCapability<Token>,
     }
@@ -17,10 +17,10 @@ module BurnCapabilityHolder {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::Libra;
-use 0x0::LibraAccount;
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
+use 0x1::Libra;
+use 0x1::LibraAccount;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
 fun main(account: &signer) {
     let coin1 = Libra::mint<Coin1>(account, 10000);
     let coin2 = Libra::mint<Coin2>(account, 10000);
@@ -55,8 +55,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::Libra;
-use 0x0::Coin1::Coin1;
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
 fun main(account: &signer) {
     Libra::destroy_zero(Libra::mint<Coin1>(account, 1));
 }
@@ -68,8 +68,8 @@ fun main(account: &signer) {
 //! sender: bob
 //! gas-currency: Coin1
 script {
-    use 0x0::Libra;
-    use 0x0::Coin1::Coin1;
+    use 0x1::Libra;
+    use 0x1::Coin1::Coin1;
     fun main()  {
         let coins = Libra::zero<Coin1>();
         Libra::approx_lbr_for_coin<Coin1>(&coins);
@@ -80,7 +80,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::Libra;
+    use 0x1::Libra;
     fun main()  {
         Libra::destroy_zero(
             Libra::zero<u64>()
@@ -92,9 +92,9 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::Libra;
-    use 0x0::LBR::LBR;
-    use 0x0::Coin1::Coin1;
+    use 0x1::Libra;
+    use 0x1::LBR::LBR;
+    use 0x1::Coin1::Coin1;
     fun main()  {
         assert(!Libra::is_synthetic_currency<Coin1>(), 9);
         assert(Libra::is_synthetic_currency<LBR>(), 10);
@@ -106,7 +106,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::Libra;
+    use 0x1::Libra;
     fun main(account: &signer)  {
         Libra::initialize(account);
     }
@@ -117,8 +117,8 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::LibraAccount;
-use 0x0::Coin1::Coin1;
+use 0x1::LibraAccount;
+use 0x1::Coin1::Coin1;
 fun main(account: &signer)  {
     LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 1000000000 * 1000000 + 1);
 }
@@ -129,8 +129,8 @@ fun main(account: &signer)  {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::Libra;
-    use 0x0::Coin1::Coin1;
+    use 0x1::Libra;
+    use 0x1::Coin1::Coin1;
     fun main(account: &signer)  {
         Libra::publish_mint_capability(
             account,
@@ -143,8 +143,8 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::Libra;
-    use 0x0::Coin1::Coin1;
+    use 0x1::Libra;
+    use 0x1::Coin1::Coin1;
     use {{default}}::BurnCapabilityHolder;
     fun main(account: &signer)  {
         BurnCapabilityHolder::hold(

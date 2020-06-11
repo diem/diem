@@ -1,6 +1,6 @@
 script {
-use 0x0::Libra;
-use 0x0::SlidingNonce;
+use 0x1::Libra;
+use 0x1::SlidingNonce;
 
 /// Permanently destroy the `Token`s stored in the oldest burn request under the `Preburn` resource.
 /// This will only succeed if `account` has a `MintCapability<Token>`, a `Preburn<Token>` resource

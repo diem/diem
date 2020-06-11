@@ -2,32 +2,33 @@
 // are executed, and the order in which they are executed in genesis. Note
 // however, that there are certain calls that remain in Rust code in
 // genesis (for now).
-address 0x0 {
+address 0x1 {
 module Genesis {
-    use 0x0::Association::{Self, PublishModule};
-    use 0x0::CoreAddresses;
-    use 0x0::Coin1;
-    use 0x0::Coin2;
-    use 0x0::Event;
-    use 0x0::LBR::{Self, LBR};
-    use 0x0::Libra::{Self, AddCurrency};
-    use 0x0::LibraAccount;
-    use 0x0::LibraBlock;
-    use 0x0::LibraConfig;
-    use 0x0::LibraSystem;
-    use 0x0::LibraTimestamp;
-    use 0x0::LibraTransactionTimeout;
-    use 0x0::LibraVersion;
-    use 0x0::LibraWriteSetManager;
-    use 0x0::Signer;
-    use 0x0::Testnet;
-    use 0x0::TransactionFee;
-    use 0x0::Unhosted;
+    use 0x1::Association::{Self, PublishModule};
+    use 0x1::CoreAddresses;
+    use 0x1::Coin1;
+    use 0x1::Coin2;
+    use 0x1::Event;
+    use 0x1::LBR::{Self, LBR};
+    use 0x1::Libra::{Self, AddCurrency};
+    use 0x1::LibraAccount;
+    use 0x1::LibraBlock;
+    use 0x1::LibraConfig;
+    use 0x1::LibraSystem;
+    use 0x1::LibraTimestamp;
+    use 0x1::LibraTransactionTimeout;
+    use 0x1::LibraVersion;
+    use 0x1::LibraWriteSetManager;
+    use 0x1::Signer;
+    use 0x1::Testnet;
+    use 0x1::TransactionFee;
+    use 0x1::Unhosted;
 
     fun initialize(
         association: &signer,
         config_account: &signer,
         fee_account: &signer,
+        core_code_account: &signer,
         tc_account: &signer,
         tc_addr: address,
         genesis_auth_key: vector<u8>,
@@ -38,6 +39,11 @@ module Genesis {
         Association::initialize(association);
         Association::grant_privilege<AddCurrency>(association, association);
         Association::grant_privilege<PublishModule>(association, association);
+
+        // Setup the core code address as an association account that can
+        // publish modules.
+        Association::grant_association_address(association, core_code_account);
+        Association::grant_privilege<PublishModule>(association, core_code_account);
 
         // On-chain config setup
         Event::publish_generator(config_account);
@@ -59,6 +65,12 @@ module Genesis {
         Unhosted::publish_global_limits_definition(association);
         LibraAccount::create_genesis_account<LBR>(
             Signer::address_of(association),
+            copy dummy_auth_key_prefix,
+        );
+
+        Event::publish_generator(core_code_account);
+        LibraAccount::create_genesis_account<LBR>(
+            Signer::address_of(core_code_account),
             copy dummy_auth_key_prefix,
         );
 
@@ -103,8 +115,12 @@ module Genesis {
         LibraAccount::restore_key_rotation_capability(fee_rotate_key_cap);
 
         let tc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(tc_account);
-        LibraAccount::rotate_authentication_key(&tc_rotate_key_cap, genesis_auth_key);
+        LibraAccount::rotate_authentication_key(&tc_rotate_key_cap, copy genesis_auth_key);
         LibraAccount::restore_key_rotation_capability(tc_rotate_key_cap);
+
+        let core_code_rotate_key_cap = LibraAccount::extract_key_rotation_capability(core_code_account);
+        LibraAccount::rotate_authentication_key(&core_code_rotate_key_cap, genesis_auth_key);
+        LibraAccount::restore_key_rotation_capability(core_code_rotate_key_cap);
     }
 
 }

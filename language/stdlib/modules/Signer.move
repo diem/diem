@@ -1,4 +1,4 @@
-address 0x0 {
+address 0x1 {
 module Signer {
     // Borrows the address of the signer
     // Conceptually, you can think of the `signer` as being a resource struct wrapper arround an

@@ -1,4 +1,4 @@
-address 0x0 {
+address 0x1 {
 
 // A variable-sized container that can hold both unrestricted types and resources.
 module Vector {

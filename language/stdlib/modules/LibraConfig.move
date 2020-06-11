@@ -1,11 +1,11 @@
-address 0x0 {
+address 0x1 {
 module LibraConfig {
-    use 0x0::CoreAddresses;
-    use 0x0::Event;
-    use 0x0::LibraTimestamp;
-    use 0x0::Signer;
-    use 0x0::Association;
-    use 0x0::Offer;
+    use 0x1::CoreAddresses;
+    use 0x1::Event;
+    use 0x1::LibraTimestamp;
+    use 0x1::Signer;
+    use 0x1::Association;
+    use 0x1::Offer;
 
     // A generic singleton resource that holds a value of a specific type.
     resource struct LibraConfig<Config: copyable> { payload: Config }

@@ -3,7 +3,7 @@
 
 use crate::{account, account::AccountData, executor::FakeExecutor, gas_costs};
 use libra_types::{
-    account_address::AccountAddress, account_config::LBR_NAME, on_chain_config::VMPublishingOption,
+    account_address::AccountAddress, account_config, on_chain_config::VMPublishingOption,
     transaction::TransactionStatus, vm_error::StatusCode,
 };
 use move_core_types::identifier::Identifier;
@@ -31,7 +31,7 @@ fn script_code_unverifiable() {
         10,
         gas_costs::TXN_RESERVED,
         1,
-        LBR_NAME.to_owned(),
+        account_config::LBR_NAME.to_owned(),
     );
 
     // execute transaction
@@ -106,7 +106,7 @@ fn script_none_existing_module_dep() {
         10,
         gas_costs::TXN_RESERVED,
         1,
-        LBR_NAME.to_owned(),
+        account_config::LBR_NAME.to_owned(),
     );
 
     // execute transaction
@@ -145,7 +145,7 @@ fn script_non_existing_function_dep() {
     // LCS module
     script
         .address_identifiers
-        .push(AccountAddress::new([0u8; AccountAddress::LENGTH]));
+        .push(account_config::CORE_CODE_ADDRESS);
     script.identifiers.push(Identifier::new("LCS").unwrap());
     let module_handle = ModuleHandle {
         address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
@@ -178,7 +178,7 @@ fn script_non_existing_function_dep() {
         10,
         gas_costs::TXN_RESERVED,
         1,
-        LBR_NAME.to_owned(),
+        account_config::LBR_NAME.to_owned(),
     );
 
     // execute transaction
@@ -217,7 +217,7 @@ fn script_bad_sig_function_dep() {
     // LCS module
     script
         .address_identifiers
-        .push(AccountAddress::new([0u8; AccountAddress::LENGTH]));
+        .push(account_config::CORE_CODE_ADDRESS);
     script.identifiers.push(Identifier::new("LCS").unwrap());
     let module_handle = ModuleHandle {
         address: AddressIdentifierIndex((script.address_identifiers.len() - 1) as u16),
@@ -252,7 +252,7 @@ fn script_bad_sig_function_dep() {
         10,
         gas_costs::TXN_RESERVED,
         1,
-        LBR_NAME.to_owned(),
+        account_config::LBR_NAME.to_owned(),
     );
 
     // execute transaction

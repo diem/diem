@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/expansion/module_alias_as_type.move:6:14 ───
    │
- 6 │     use 0x1::X;
+ 6 │     use 0x2::X;
    │              ^ Unused 'use' of alias 'X'. Consider removing it
    │
 

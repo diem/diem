@@ -5,7 +5,7 @@ error:
  10 │     struct u {}
     │            ^ Duplicate module member or alias 'u'. Top level names in a namespace must be unique
     ·
-  9 │     use 0x1::X::u;
+  9 │     use 0x2::X::u;
     │                 - Previously defined here
     │
 
@@ -21,7 +21,7 @@ error:
 
     ┌── tests/move_check/expansion/use_function_same_name_as_struct.move:15:22 ───
     │
- 15 │     use 0x1::X::u as Bar;
+ 15 │     use 0x2::X::u as Bar;
     │                      ^^^ Duplicate module member or alias 'Bar'. Top level names in a namespace must be unique
     ·
  14 │     struct Bar {}
@@ -32,7 +32,7 @@ error:
 
     ┌── tests/move_check/expansion/use_function_same_name_as_struct.move:15:22 ───
     │
- 15 │     use 0x1::X::u as Bar;
+ 15 │     use 0x2::X::u as Bar;
     │                      ^^^ Unused 'use' of alias 'Bar'. Consider removing it
     │
 

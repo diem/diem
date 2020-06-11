@@ -1,6 +1,6 @@
 // requires shift-left and shift-right which are currently not implemented in prelude
 
-address 0x0 {
+address 0x1 {
 
 module FixedPoint32 {
 

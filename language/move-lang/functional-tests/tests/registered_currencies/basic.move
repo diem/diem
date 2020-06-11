@@ -1,5 +1,5 @@
 module Holder {
-    use 0x0::RegisteredCurrencies;
+    use 0x1::RegisteredCurrencies;
     resource struct Holder {
         cap: RegisteredCurrencies::RegistrationCapability,
     }
@@ -10,7 +10,7 @@ module Holder {
 //! new-transaction
 script {
     use {{default}}::Holder;
-    use 0x0::RegisteredCurrencies;
+    use 0x1::RegisteredCurrencies;
     fun main(account: &signer) {
         Holder::hold(account, RegisteredCurrencies::initialize(account));
     }

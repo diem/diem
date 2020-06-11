@@ -7,7 +7,7 @@
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::LibraSystem;
+    use 0x1::LibraSystem;
     fun main() {
         LibraSystem::get_validator_config({{vivian}});
     }
@@ -17,8 +17,8 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::LibraSystem;
-    use 0x0::ValidatorConfig;
+    use 0x1::LibraSystem;
+    use 0x1::ValidatorConfig;
     fun main(account: &signer) {
         let num_validators = LibraSystem::validator_set_size();
         assert(num_validators == 1, 98);
@@ -35,7 +35,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::LibraSystem;
+    use 0x1::LibraSystem;
     fun main(account: &signer) {
         LibraSystem::update_and_reconfigure(account);
         let num_validators = LibraSystem::validator_set_size();
@@ -47,7 +47,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::LibraSystem;
+    use 0x1::LibraSystem;
     fun main() {
         LibraSystem::get_validator_config({{vivian}});
     }

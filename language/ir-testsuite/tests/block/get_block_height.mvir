@@ -1,7 +1,7 @@
 //! account: vivian, 1000000, 0, validator
 //! new-transaction
 
-import 0x0.LibraBlock;
+import 0x1.LibraBlock;
 main() {
     // check that the height of the initial block is zero
     assert(LibraBlock.get_current_block_height() == 0, 77);
@@ -14,8 +14,8 @@ main() {
 //! block-time: 100000000
 
 //! new-transaction
-import 0x0.LibraBlock;
-import 0x0.LibraTimestamp;
+import 0x1.LibraBlock;
+import 0x1.LibraTimestamp;
 
 main() {
     assert(LibraBlock.get_current_block_height() == 1, 76);
@@ -28,8 +28,8 @@ main() {
 //! block-time: 101000000
 
 //! new-transaction
-import 0x0.LibraBlock;
-import 0x0.LibraTimestamp;
+import 0x1.LibraBlock;
+import 0x1.LibraTimestamp;
 
 main() {
     assert(LibraBlock.get_current_block_height() == 2, 76);

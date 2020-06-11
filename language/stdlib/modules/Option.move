@@ -1,6 +1,6 @@
-address 0x0 {
+address 0x1 {
 module Option {
-    use 0x0::Vector;
+    use 0x1::Vector;
 
     // Abstraction of a value that may or may not be present. Implemented with a vector of size
     // zero or one because Move bytecode does not have ADTs.

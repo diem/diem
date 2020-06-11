@@ -1,4 +1,4 @@
-address 0x0 {
+address 0x1 {
 module CoreAddresses {
     /// The address of the root association account. This account is
     /// created in genesis, and cannot be changed. This address has
@@ -8,7 +8,7 @@ module CoreAddresses {
         0xA550C18
     }
 
-    /// The (singleton) address under which the `0x0::Libra::CurrencyInfo` resource for
+    /// The (singleton) address under which the `0x1::Libra::CurrencyInfo` resource for
     /// every registered currency is published. This is the same as the
     /// `ASSOCIATION_ROOT_ADDRESS` but there is no requirement that it must
     /// be this from an operational viewpoint, so this is why this is separated out.

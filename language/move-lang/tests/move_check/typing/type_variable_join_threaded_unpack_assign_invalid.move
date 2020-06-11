@@ -1,4 +1,4 @@
-address 0x1 {
+address 0x2 {
 
 module Container {
     struct T<V> {}
@@ -18,7 +18,7 @@ module Container {
 
 
 module M {
-    use 0x1::Container;
+    use 0x2::Container;
 
     struct Box<T> { f1: T, f2: T }
     resource struct R{}

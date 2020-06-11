@@ -23,3 +23,7 @@ pub fn treasury_compliance_account_address() -> AccountAddress {
     AccountAddress::from_hex_literal("0xB1E55ED")
         .expect("Parsing valid hex literal should always succeed")
 }
+
+pub fn reserved_vm_address() -> AccountAddress {
+    AccountAddress::new([0u8; AccountAddress::LENGTH])
+}

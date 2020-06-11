@@ -1,5 +1,5 @@
 script {
-use 0x0::FixedPoint32;
+use 0x1::FixedPoint32;
 
 fun main() {
     // The minimum non-zero value is 2^-32. Check that anything smaller

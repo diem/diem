@@ -1,5 +1,5 @@
 module Tester {
-    use 0x0::Signer;
+    use 0x1::Signer;
 
     resource struct Initializer { x: u64, y: u64 }
     struct Point { x: u64, y: u64 }

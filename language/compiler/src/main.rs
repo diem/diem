@@ -11,7 +11,9 @@ use bytecode_verifier::{
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use compiler::{util, Compiler};
 use ir_to_bytecode::parser::{parse_module, parse_script};
-use libra_types::{access_path::AccessPath, account_address::AccountAddress, vm_error::VMStatus};
+use libra_types::{
+    access_path::AccessPath, account_address::AccountAddress, account_config, vm_error::VMStatus,
+};
 use std::{
     convert::TryFrom,
     fs,
@@ -80,7 +82,7 @@ fn main() {
     let address = args
         .address
         .map(|a| AccountAddress::try_from(a).unwrap())
-        .unwrap_or_else(AccountAddress::default);
+        .unwrap_or(account_config::CORE_CODE_ADDRESS);
     let source_path = Path::new(&args.source_path);
     let mvir_extension = "mvir";
     let mv_extension = "mv";

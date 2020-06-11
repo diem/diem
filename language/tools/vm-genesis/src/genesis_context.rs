@@ -56,7 +56,7 @@ impl<'a> GenesisContext<'a> {
             vm,
             gas_schedule: zero_cost_schedule(),
             data_store,
-            sender: AccountAddress::default(),
+            sender: account_config::reserved_vm_address(),
         }
     }
 

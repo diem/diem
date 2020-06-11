@@ -5,8 +5,8 @@
 //! block-time: 100000000
 
 //! new-transaction
-import 0x0.LibraBlock;
-import 0x0.LibraTimestamp;
+import 0x1.LibraBlock;
+import 0x1.LibraTimestamp;
 
 main() {
     assert(LibraBlock.get_current_block_height() == 1, 76);

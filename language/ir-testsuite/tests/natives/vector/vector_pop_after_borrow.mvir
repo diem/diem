@@ -1,4 +1,4 @@
-import 0x0.Vector;
+import 0x1.Vector;
 import {{default}}.M;
 main() {
     let v: vector<u64>;

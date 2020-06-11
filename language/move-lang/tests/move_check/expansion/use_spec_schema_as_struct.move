@@ -1,4 +1,4 @@
-address 0x1 {
+address 0x2 {
 module X {
     spec schema Foo<T> {
         ensures true;
@@ -6,7 +6,7 @@ module X {
 }
 
 module M {
-    use 0x1::X::Foo;
+    use 0x2::X::Foo;
     fun t(): Foo<u64> {
         abort 0
     }

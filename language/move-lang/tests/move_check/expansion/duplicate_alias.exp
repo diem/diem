@@ -2,10 +2,10 @@ error:
 
    ┌── tests/move_check/expansion/duplicate_alias.move:8:19 ───
    │
- 8 │     use 0x1::Y as Z;
+ 8 │     use 0x2::Y as Z;
    │                   ^ Duplicate module alias 'Z'. Module aliases must be unique within a given namespace
    ·
- 7 │     use 0x1::X as Z;
+ 7 │     use 0x2::X as Z;
    │                   - Previously defined here
    │
 
@@ -13,7 +13,7 @@ error:
 
    ┌── tests/move_check/expansion/duplicate_alias.move:8:19 ───
    │
- 8 │     use 0x1::Y as Z;
+ 8 │     use 0x2::Y as Z;
    │                   ^ Unused 'use' of alias 'Z'. Consider removing it
    │
 

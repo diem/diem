@@ -1,6 +1,6 @@
 script {
-    use 0x0::LibraSystem;
-    use 0x0::ValidatorConfig;
+    use 0x1::LibraSystem;
+    use 0x1::ValidatorConfig;
 
     // Rotates validator's config
     fun main(

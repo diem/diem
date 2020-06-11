@@ -4,7 +4,7 @@
 
 //! new-transaction
 script {
-use 0x0::LibraSystem;
+use 0x1::LibraSystem;
 fun main(account: &signer) {
     LibraSystem::initialize_validator_set(account);
 }
@@ -14,7 +14,7 @@ fun main(account: &signer) {
 
 //! new-transaction
 script {
-use 0x0::LibraSystem;
+use 0x1::LibraSystem;
 fun main(account: &signer) {
     LibraSystem::update_and_reconfigure(account);
 }
@@ -25,7 +25,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x0::ValidatorConfig;
+use 0x1::ValidatorConfig;
 fun main(account: &signer) {
     ValidatorConfig::set_operator(account, 0x0);
 }
@@ -35,8 +35,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x0::Signer;
-use 0x0::ValidatorConfig;
+use 0x1::Signer;
+use 0x1::ValidatorConfig;
 fun main(account: &signer) {
     ValidatorConfig::set_operator(account, Signer::address_of(account))
 }
@@ -46,7 +46,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x0::ValidatorConfig;
+use 0x1::ValidatorConfig;
 // delegate to alice
 fun main(account: &signer) {
     ValidatorConfig::set_operator(account, {{alice}});
@@ -58,7 +58,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x0::ValidatorConfig;
+use 0x1::ValidatorConfig;
 fun main(account: &signer) {
     ValidatorConfig::set_consensus_pubkey(account, {{vivian}}, x"");
 }
@@ -69,7 +69,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x0::ValidatorConfig;
+use 0x1::ValidatorConfig;
 fun main(account: &signer) {
     ValidatorConfig::set_config(account, {{vivian}}, x"", x"", x"", x"", x"");
 }

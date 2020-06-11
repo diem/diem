@@ -6,7 +6,7 @@
 
 //! new-transaction
 script {
-use 0x0::LibraTimestamp;
+use 0x1::LibraTimestamp;
 
 fun main() {
     assert(!LibraTimestamp::is_genesis(), 10)

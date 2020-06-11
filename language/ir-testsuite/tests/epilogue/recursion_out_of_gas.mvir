@@ -11,9 +11,9 @@ module M {
 
 //! new-transaction
 //! sender: association
-import 0x0.LBR;
-import 0x0.LibraAccount;
-import 0x0.Libra;
+import 0x1.LBR;
+import 0x1.LibraAccount;
+import 0x1.Libra;
 main(blessed: &signer) {
     LibraAccount.deposit_to<LBR.LBR>(copy(blessed), LBR.mint(copy(blessed), 50000));
     return;

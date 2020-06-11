@@ -1,7 +1,7 @@
-address 0x0 {
+address 0x1 {
 
 module LibraTimestamp {
-    use 0x0::Transaction;
+    use 0x1::Transaction;
 
     // A singleton resource holding the current Unix time in microseconds
     resource struct CurrentTimeMicroseconds {

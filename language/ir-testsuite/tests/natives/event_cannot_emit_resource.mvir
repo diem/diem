@@ -1,6 +1,6 @@
-import 0x0.Event;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.Event;
+import 0x1.LBR;
+import 0x1.Libra;
 main() {
     let handle: Event.EventHandle<Libra.Libra<LBR.LBR>>;
     let zero: Libra.Libra<LBR.LBR>;

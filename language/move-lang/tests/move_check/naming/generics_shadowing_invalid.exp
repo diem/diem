@@ -9,7 +9,7 @@ error:
    │                    - The type: 'S'
    ·
  7 │         (s1: Self::S);
-   │              ------- Is not compatible with: '0x1::M::S'
+   │              ------- Is not compatible with: '0x2::M::S'
    │
 
 error: 
@@ -28,13 +28,13 @@ error:
     ┌── tests/move_check/naming/generics_shadowing_invalid.move:9:9 ───
     │
   9 │         bar(s1);
-    │         ^^^^^^^ Invalid call of '0x1::M::bar'. Invalid argument for parameter 's'
+    │         ^^^^^^^ Invalid call of '0x2::M::bar'. Invalid argument for parameter 's'
     ·
   6 │     fun foo<S>(s1: S, s2: S): S {
     │                    - The type: 'S'
     ·
  13 │     fun bar(s: S) {}
-    │                - Is not compatible with: '0x1::M::S'
+    │                - Is not compatible with: '0x2::M::S'
     │
 
 error: 

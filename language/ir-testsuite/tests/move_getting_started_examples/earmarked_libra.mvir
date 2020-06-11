@@ -3,8 +3,8 @@
 
 // A module for earmarking a coin for a specific recipient
 module EarmarkedLibra {
-  import 0x0.LBR;
-  import 0x0.Libra;
+  import 0x1.LBR;
+  import 0x1.Libra;
 
   // A wrapper containing a Libra coin and the address of the recipient the
   // coin is earmarked for.
@@ -83,9 +83,9 @@ module EarmarkedLibra {
 
 //! new-transaction
 
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
 import {{default}}.EarmarkedLibra;
 
 main(account: &signer) {

@@ -1,5 +1,5 @@
 script {
-use 0x0::FixedPoint32;
+use 0x1::FixedPoint32;
 
 fun main() {
     // Dividing by zero should cause an arithmetic error.

@@ -16,8 +16,8 @@ use once_cell::sync::Lazy;
 
 pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
     let code = "
-    import 0x0.Libra;
-    import 0x0.LibraAccount;
+    import 0x1.Libra;
+    import 0x1.LibraAccount;
 
     main<Token>(account: &signer, fresh_address: address, auth_key_prefix: vector<u8>, initial_amount: u64) {
       let with_cap: LibraAccount.WithdrawCapability;

@@ -1,5 +1,5 @@
 module ConfigHolder {
-    use 0x0::LibraConfig;
+    use 0x1::LibraConfig;
     resource struct Holder<T> {
         cap: LibraConfig::ModifyConfigCapability<T>
     }
@@ -17,7 +17,7 @@ module ConfigHolder {
 
 //! new-transaction
 script {
-    use 0x0::LibraConfig;
+    use 0x1::LibraConfig;
     fun main(account: &signer) {
         LibraConfig::initialize(account, account);
     }
@@ -27,7 +27,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::LibraConfig;
+    use 0x1::LibraConfig;
     fun main() {
         let _x = LibraConfig::get<u64>();
     }
@@ -37,7 +37,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::LibraConfig;
+    use 0x1::LibraConfig;
     fun main(account: &signer) {
         LibraConfig::set(account, 0);
     }
@@ -47,7 +47,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::LibraConfig;
+    use 0x1::LibraConfig;
     use {{default}}::ConfigHolder;
     fun main(account: &signer) {
         ConfigHolder::hold(
@@ -62,7 +62,7 @@ script {
 //! new-transaction
 //! sender: config
 script {
-    use 0x0::LibraConfig;
+    use 0x1::LibraConfig;
     use {{default}}::ConfigHolder;
     fun main(account: &signer) {
         ConfigHolder::hold(
@@ -75,7 +75,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::LibraConfig;
+    use 0x1::LibraConfig;
     use {{default}}::ConfigHolder;
     fun main(account: &signer) {
         let cap = ConfigHolder::get<u64>();
@@ -87,7 +87,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::LibraConfig;
+    use 0x1::LibraConfig;
     fun main(account: &signer) {
         LibraConfig::publish_new_config(account, 0)
     }
@@ -97,7 +97,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::LibraConfig;
+    use 0x1::LibraConfig;
     fun main(account: &signer) {
         LibraConfig::publish_new_config_with_delegate(account, 0, {{config}})
     }

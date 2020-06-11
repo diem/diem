@@ -1,6 +1,6 @@
 // Self offers are silly, but ok.
 
-import 0x0.Offer;
+import 0x1.Offer;
 
 // Create a self offer containing a u64
 main(account: &signer) {
@@ -15,7 +15,7 @@ main(account: &signer) {
 }
 
 //! new-transaction
-import 0x0.Offer;
+import 0x1.Offer;
 
 // Claim the self offer
 main(account: &signer) {

@@ -11,11 +11,11 @@ module M {
     }
 
     public fun read(sender: &signer): bool acquires R1 {
-        borrow_global<R1>(0x0::Signer::address_of(sender)).f
+        borrow_global<R1>(0x1::Signer::address_of(sender)).f
     }
 
     public fun read_gen<T: copyable>(sender: &signer): T acquires R2 {
-        *&borrow_global<R2<T>>(0x0::Signer::address_of(sender)).f
+        *&borrow_global<R2<T>>(0x1::Signer::address_of(sender)).f
     }
 }
 

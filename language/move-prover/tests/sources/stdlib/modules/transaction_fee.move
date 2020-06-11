@@ -1,9 +1,9 @@
-address 0x0 {
+address 0x1 {
 
 module TransactionFee {
-    use 0x0::LibraAccount;
-    use 0x0::LibraSystem;
-    use 0x0::Transaction;
+    use 0x1::Transaction;
+    use 0x1::LibraAccount;
+    use 0x1::LibraSystem;
 
     spec module {
         pragma verify = false;

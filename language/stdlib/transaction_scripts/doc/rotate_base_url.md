@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(vasp: &signer, new_url: vector&lt;u8&gt;) {
-    <a href="../../modules/doc/VASP.md#0x0_VASP_rotate_base_url">VASP::rotate_base_url</a>(vasp, new_url)
+    <a href="../../modules/doc/VASP.md#0x1_VASP_rotate_base_url">VASP::rotate_base_url</a>(vasp, new_url)
 }
 </code></pre>
 

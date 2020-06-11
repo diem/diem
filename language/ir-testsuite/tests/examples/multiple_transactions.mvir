@@ -6,9 +6,9 @@
 //! args: {{bob}}
 //! gas-price: 0
 
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
 
 main(account: &signer, receiver: address) {
     let coins: Libra.Libra<LBR.LBR>;
@@ -28,8 +28,8 @@ main(account: &signer, receiver: address) {
 //! new-transaction
 //! sender: alice
 
-import 0x0.LibraAccount;
-import 0x0.LBR;
+import 0x1.LibraAccount;
+import 0x1.LBR;
 
 main() {
     let balance: u64;
@@ -47,8 +47,8 @@ main() {
 // Bob checks that he has 90200 Libra Coins
 //! new-transaction
 //! sender: bob
-import 0x0.LibraAccount;
-import 0x0.LBR;
+import 0x1.LibraAccount;
+import 0x1.LBR;
 
 main() {
     let balance: u64;

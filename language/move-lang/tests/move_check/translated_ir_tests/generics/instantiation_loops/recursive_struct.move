@@ -17,7 +17,7 @@ module M1 {
 }
 
 module M2 {
-    use 0x0::Signer;
+    use 0x1::Signer;
 
     resource struct X { y: vector<Y> }
     resource struct Y { x: vector<X> }

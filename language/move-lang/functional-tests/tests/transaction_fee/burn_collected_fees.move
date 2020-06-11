@@ -3,8 +3,8 @@
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::LibraAccount;
-    use 0x0::Coin1::Coin1;
+    use 0x1::LibraAccount;
+    use 0x1::Coin1::Coin1;
     fun main(assoc: &signer) {
         LibraAccount::mint_to_address<Coin1>(assoc, {{bob}}, 10000);
     }
@@ -23,12 +23,12 @@ script {
 
 //! new-transaction
 //! sender: blessed
-//! type-args: 0x0::Coin1::Coin1
+//! type-args: 0x1::Coin1::Coin1
 script {
-use 0x0::Libra;
-use 0x0::TransactionFee;
-use 0x0::Coin1::Coin1 as Coin1;
-use 0x0::Coin2::Coin2 as Coin2;
+use 0x1::Libra;
+use 0x1::TransactionFee;
+use 0x1::Coin1::Coin1 as Coin1;
+use 0x1::Coin2::Coin2 as Coin2;
 fun main<CoinType>(blessed_account: &signer) {
     TransactionFee::preburn_fees<CoinType>(blessed_account);
     if (TransactionFee::is_lbr<CoinType>()) {
@@ -51,12 +51,12 @@ fun main<CoinType>(blessed_account: &signer) {
 
 //! new-transaction
 //! sender: blessed
-//! type-args: 0x0::Coin1::Coin1
+//! type-args: 0x1::Coin1::Coin1
 script {
-use 0x0::Libra;
-use 0x0::TransactionFee;
-use 0x0::Coin1::Coin1 as Coin1;
-use 0x0::Coin2::Coin2 as Coin2;
+use 0x1::Libra;
+use 0x1::TransactionFee;
+use 0x1::Coin1::Coin1 as Coin1;
+use 0x1::Coin2::Coin2 as Coin2;
 fun main<CoinType>(blessed_account: &signer) {
     TransactionFee::preburn_fees<CoinType>(blessed_account);
     if (TransactionFee::is_lbr<CoinType>()) {

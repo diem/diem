@@ -1,8 +1,8 @@
-address 0x0 {
+address 0x1 {
 
 module Testnet {
-    use 0x0::CoreAddresses;
-    use 0x0::Signer;
+    use 0x1::CoreAddresses;
+    use 0x1::Signer;
 
     resource struct IsTestnet { }
 

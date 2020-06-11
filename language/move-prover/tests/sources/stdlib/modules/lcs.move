@@ -3,7 +3,7 @@
 // published on-chain. See https://github.com/libra/libra/tree/master/common/lcs for more
 // details on LCS (TODO: link to spec once we have one)
 
-address 0x0 {
+address 0x1 {
 module LCS {
     spec module {
         native define serialize<MoveValue>(v: &MoveValue): vector<u8>;

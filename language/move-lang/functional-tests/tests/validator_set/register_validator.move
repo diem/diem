@@ -4,8 +4,8 @@
 
 // check that the validator account config works
 script{
-    use 0x0::LibraSystem;
-    use 0x0::Signer;
+    use 0x1::LibraSystem;
+    use 0x1::Signer;
 
     fun main(account: &signer) {
         let sender = Signer::address_of(account);
@@ -25,8 +25,8 @@ script{
 //! new-transaction
 //! sender: vivian
 script{
-    use 0x0::LibraSystem;
-    use 0x0::Signer;
+    use 0x1::LibraSystem;
+    use 0x1::Signer;
 
     // check that sending from validator accounts works
     fun main(account: &signer) {
@@ -40,8 +40,8 @@ script{
 //! new-transaction
 //! sender: association
 script{
-    use 0x0::LBR::LBR;
-    use 0x0::LibraAccount;
+    use 0x1::LBR::LBR;
+    use 0x1::LibraAccount;
 
     // register Alice as a validator candidate
     fun main(creator: &signer) {
@@ -57,8 +57,8 @@ script{
 // //! new-transaction
 // //! sender: 0xAA
 // script{
-//     use 0x0::Signer;
-//     use 0x0::ValidatorConfig;
+//     use 0x1::Signer;
+//     use 0x1::ValidatorConfig;
 
 //     // register Alice as a validator candidate, then rotate a key + check that it worked.
 //     fun main(account: &signer) {

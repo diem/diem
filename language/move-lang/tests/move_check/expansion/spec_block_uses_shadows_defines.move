@@ -1,4 +1,4 @@
-address 0x1 {
+address 0x2 {
 module M {
     resource struct R1 {}
     resource struct R2<T> {}
@@ -8,7 +8,7 @@ module M {
     }
 
     spec module {
-        use 0x1::M::{R1 as R, R2 as S};
+        use 0x2::M::{R1 as R, R2 as S};
         // TODO syntax change to move spec heleprs outside of blocks
         define S(): bool { false }
         define R(): bool { false }

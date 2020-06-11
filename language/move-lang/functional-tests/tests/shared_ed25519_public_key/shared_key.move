@@ -5,8 +5,8 @@
 //! account: alice
 
 script {
-use 0x0::LibraAccount;
-use 0x0::SharedEd25519PublicKey;
+use 0x1::LibraAccount;
+use 0x1::SharedEd25519PublicKey;
 fun main(account: &signer) {
     let old_auth_key = LibraAccount::authentication_key({{default}});
     // from RFC 8032
@@ -38,7 +38,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x0::SharedEd25519PublicKey;
+use 0x1::SharedEd25519PublicKey;
 fun main(account: &signer) {
     let invalid_pubkey = x"000";
     SharedEd25519PublicKey::publish(account, invalid_pubkey)
@@ -51,7 +51,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x0::SharedEd25519PublicKey;
+use 0x1::SharedEd25519PublicKey;
 fun main(account: &signer) {
     let invalid_pubkey = x"10003d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     SharedEd25519PublicKey::publish(account, invalid_pubkey)
@@ -65,7 +65,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x0::SharedEd25519PublicKey;
+use 0x1::SharedEd25519PublicKey;
 fun main(account: &signer) {
     // from RFC 8032
     let valid_pubkey =  x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
@@ -82,7 +82,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x0::SharedEd25519PublicKey;
+use 0x1::SharedEd25519PublicKey;
 fun main(account: &signer) {
     let valid_pubkey =  x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     SharedEd25519PublicKey::publish(account, valid_pubkey);

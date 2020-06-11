@@ -6,7 +6,7 @@
 // allows a different address `master_key_address` to rotate the auth key. This is useful for
 // implementing (e.g.) a hot wallet with a cold recovery key.
 module SharedKeyRotation {
-    import 0x0.LibraAccount;
+    import 0x1.LibraAccount;
 
     resource T {
         // cap.address can rotate the auth key for cap.address
@@ -50,7 +50,7 @@ module SharedKeyRotation {
 //! new-transaction
 //! sender: alice
 import {{alice}}.SharedKeyRotation;
-import 0x0.LibraAccount;
+import 0x1.LibraAccount;
 // create a SharedKeyRotation for Alice's account with Bob's account key as the master key
 main(account: &signer) {
     assert(LibraAccount.sequence_number({{alice}}) == 1, 77);
@@ -61,9 +61,9 @@ main(account: &signer) {
 // TODO: fix when porting to source lang. These are too painful without proper vector<u8> literals
 // //! new-transaction
 // //! sender: alice
-// import 0x0.AddressUtil;
+// import 0x1.AddressUtil;
 // import {{alice}}.SharedKeyRotation;
-// import 0x0.LibraAccount;
+// import 0x1.LibraAccount;
 // // Alice can rotate her key. Here, she rotates it to its original value
 // main() {
 //     assert(LibraAccount.sequence_number({{alice}}) == 2, 78);
@@ -77,7 +77,7 @@ main(account: &signer) {
 // //! new-transaction
 // //! sender: bob
 // import {{alice}}.SharedKeyRotation;
-// import 0x0.LibraAccount;
+// import 0x1.LibraAccount;
 // // Bob can too. Here, he zeroes it out to stop Alice from sending any transactions
 // main() {
 //     assert(LibraAccount.sequence_number({{alice}}) == 3, 78);
@@ -96,9 +96,9 @@ main(account: &signer) {
 
 // //! new-transaction
 // //! sender: bob
-// import 0x0.AddressUtil;
+// import 0x1.AddressUtil;
 // import {{alice}}.SharedKeyRotation;
-// import 0x0.LibraAccount;
+// import 0x1.LibraAccount;
 // // Bob now rotates the key back to its old value
 // main() {
 //     assert(LibraAccount.sequence_number({{alice}}) == 3, 78);
@@ -108,7 +108,7 @@ main(account: &signer) {
 
 // //! new-transaction
 // //! sender: alice
-// import 0x0.LibraAccount;
+// import 0x1.LibraAccount;
 // // And then Alice should be able to send a tx once again
 // main() {
 //     assert(LibraAccount.sequence_number({{alice}}) == 3, 79);

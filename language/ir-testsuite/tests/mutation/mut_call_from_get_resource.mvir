@@ -1,5 +1,5 @@
 module Token {
-    import 0x0.Signer;
+    import 0x1.Signer;
 
     resource T {balance: u64}
 

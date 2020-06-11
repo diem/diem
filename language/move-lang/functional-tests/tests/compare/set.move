@@ -2,9 +2,9 @@
 // This is a reasonable smoke test for the Compare module, but don't actually use this without
 // singificantly more testing/thought about the API!
 module Set {
-    use 0x0::Compare;
-    use 0x0::LCS;
-    use 0x0::Vector;
+    use 0x1::Compare;
+    use 0x1::LCS;
+    use 0x1::Vector;
 
     struct T<Elem> { v: vector<Elem> }
 

@@ -1,5 +1,5 @@
 module ApprovalGroup {
-    import 0x0.Signature;
+    import 0x1.Signature;
 
     resource T {
         // we do not have collection support in move now, so illustrate
@@ -67,13 +67,13 @@ module ApprovalGroup {
 
 //! new-transaction
 module ColdWallet {
-    import 0x0.Hash;
-    import 0x0.LBR;
-    import 0x0.LCS;
-    import 0x0.Libra;
-    import 0x0.LibraAccount;
-    import 0x0.Vector;
-    import 0x0.Signer;
+    import 0x1.Hash;
+    import 0x1.LBR;
+    import 0x1.LCS;
+    import 0x1.Libra;
+    import 0x1.LibraAccount;
+    import 0x1.Vector;
+    import 0x1.Signer;
     import {{default}}.ApprovalGroup;
 
     resource T {

@@ -1,10 +1,10 @@
 module PaymentChannel {
-    import 0x0.Signature;
-    import 0x0.LBR;
-    import 0x0.LCS;
-    import 0x0.Libra;
-    import 0x0.LibraAccount;
-    import 0x0.Vector;
+    import 0x1.Signature;
+    import 0x1.LBR;
+    import 0x1.LCS;
+    import 0x1.Libra;
+    import 0x1.LibraAccount;
+    import 0x1.Vector;
 
     // This is the PaymentChannel resource
     // It keeps track of the balances for funder and counterparty

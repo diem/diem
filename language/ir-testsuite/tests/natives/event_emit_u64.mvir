@@ -1,4 +1,4 @@
-import 0x0.Event;
+import 0x1.Event;
 
 main(account: &signer) {
     let handle: Event.EventHandle<u64>;

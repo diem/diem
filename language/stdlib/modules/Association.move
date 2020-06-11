@@ -1,4 +1,4 @@
-address 0x0 {
+address 0x1 {
 
 /// Implements logic for registering addresses as association addresses, and
 /// determining if the sending account is an association account.
@@ -15,8 +15,8 @@ address 0x0 {
 /// ```
 
 module Association {
-    use 0x0::CoreAddresses;
-    use 0x0::Signer;
+    use 0x1::CoreAddresses;
+    use 0x1::Signer;
 
     /// The root account privilege. This is created at genesis and has
     /// special privileges (e.g. removing an account as an association

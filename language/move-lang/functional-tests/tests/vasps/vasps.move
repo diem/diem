@@ -5,10 +5,10 @@
 //! new-transaction
 //! sender: association
 script {
-use 0x0::LBR::LBR;
-use 0x0::LibraAccount;
-use 0x0::LibraTimestamp;
-use 0x0::VASP;
+use 0x1::LBR::LBR;
+use 0x1::LibraAccount;
+use 0x1::LibraTimestamp;
+use 0x1::VASP;
 fun main(assoc: &signer) {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
@@ -43,9 +43,9 @@ fun main(assoc: &signer) {
 //! new-transaction
 //! sender: parent
 script {
-use 0x0::LibraAccount;
-use 0x0::LBR::LBR;
-use 0x0::VASP;
+use 0x1::LibraAccount;
+use 0x1::LBR::LBR;
+use 0x1::VASP;
 fun main(parent_vasp: &signer) {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
     let add_all_currencies = false;
@@ -63,7 +63,7 @@ fun main(parent_vasp: &signer) {
 // //! new-transaction
 // //! sender: parent
 // script {
-// use 0x0::LibraAccount;
+// use 0x1::LibraAccount;
 // fun main(parent_vasp: &signer) {
 //     let old_pubkey = LibraAccount::compliance_public_key({{parent}});
 //     let new_pubkey = x"8013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
@@ -78,7 +78,7 @@ fun main(parent_vasp: &signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x0::VASP;
+use 0x1::VASP;
 fun main() {
     assert(VASP::parent_address({{bob}}) == {{parent}}, 2013);
 }

@@ -1,11 +1,11 @@
-address 0x0 {
+address 0x1 {
 
 module LibraBlock {
-    use 0x0::CoreAddresses;
-    use 0x0::Event;
-    use 0x0::LibraSystem;
-    use 0x0::LibraTimestamp;
-    use 0x0::Signer;
+    use 0x1::CoreAddresses;
+    use 0x1::Event;
+    use 0x1::LibraSystem;
+    use 0x1::LibraTimestamp;
+    use 0x1::Signer;
 
     resource struct BlockMetadata {
       // Height of the current block

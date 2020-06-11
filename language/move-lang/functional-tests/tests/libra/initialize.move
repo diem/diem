@@ -1,7 +1,7 @@
 //! new-transaction
 //! sender: association
 script {
-use 0x0::Association;
+use 0x1::Association;
 // init the association
 fun main(account: &signer) {
     Association::initialize(account);
@@ -12,7 +12,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: config
 script {
-use 0x0::Libra;
+use 0x1::Libra;
 fun main(account: &signer) {
     Libra::initialize(account);
 }

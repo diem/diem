@@ -1,9 +1,9 @@
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
-use 0x0::LBR;
-use 0x0::LibraAccount;
-use 0x0::Signer;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
+use 0x1::LBR;
+use 0x1::LibraAccount;
+use 0x1::Signer;
 fun main(account: &signer, amount_lbr: u64) {
     let sender = Signer::address_of(account);
     let coin1_balance = LibraAccount::balance<Coin1>(sender);

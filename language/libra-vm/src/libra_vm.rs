@@ -501,7 +501,7 @@ impl LibraVM {
         //    might be useful here.
         // 3. We set the max gas to a big number just to get rid of the potential out of gas error.
         let mut txn_data = TransactionMetadata::default();
-        txn_data.sender = account_config::CORE_CODE_ADDRESS;
+        txn_data.sender = account_config::reserved_vm_address();
         txn_data.max_gas_amount = GasUnits::new(std::u64::MAX);
 
         let gas_schedule = zero_cost_schedule();

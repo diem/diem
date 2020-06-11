@@ -33,7 +33,7 @@
     compliance_public_key: vector&lt;u8&gt;,
     add_all_currencies: bool
 ) {
-    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_create_parent_vasp_account">LibraAccount::create_parent_vasp_account</a>&lt;CoinType&gt;(
+    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_parent_vasp_account">LibraAccount::create_parent_vasp_account</a>&lt;CoinType&gt;(
         association,
         new_account_address,
         auth_key_prefix,

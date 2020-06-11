@@ -1,5 +1,5 @@
 module M {
-    use 0x0::Vector;
+    use 0x1::Vector;
 
     struct Foo {}
     resource struct Bar {}

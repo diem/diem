@@ -9,8 +9,8 @@
 //! new-transaction
 //! sender: association
 script{
-    use 0x0::LibraSystem;
-    use 0x0::ValidatorConfig;
+    use 0x1::LibraSystem;
+    use 0x1::ValidatorConfig;
     // Decertify two validators to make sure we can remove both
     // from the set and trigger reconfiguration
     fun main(account: &signer) {
@@ -33,8 +33,8 @@ script{
 //! sender: viola
 // validators: viola
 script{
-    use 0x0::LibraSystem;
-    use 0x0::ValidatorConfig;
+    use 0x1::LibraSystem;
+    use 0x1::ValidatorConfig;
     // Two reconfigurations cannot happen in the same block
     fun main(account: &signer) {
         ValidatorConfig::set_consensus_pubkey(account, {{viola}}, x"40");

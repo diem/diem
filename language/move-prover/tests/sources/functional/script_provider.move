@@ -1,8 +1,8 @@
 // A module providing functionality to the script*.move tests
-address 0x0 {
+address 0x1 {
 
 module ScriptProvider {
-    use 0x0::Transaction;
+    use 0x1::Transaction;
 
     spec module {
         pragma verify = true;

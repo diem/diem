@@ -5,7 +5,7 @@
 //! new-transaction
 //! sender: alice
 script{
-use 0x0::ValidatorConfig;
+use 0x1::ValidatorConfig;
 // rotate alice's pubkey
 fun main(account: &signer) {
     ValidatorConfig::set_consensus_pubkey(account, {{alice}}, x"40");
@@ -25,8 +25,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: vivian
 script{
-use 0x0::LibraSystem;
-use 0x0::ValidatorConfig;
+use 0x1::LibraSystem;
+use 0x1::ValidatorConfig;
 
 // rotate vivian's pubkey and then run the block prologue. Now, reconfiguration should be triggered.
 fun main(account: &signer) {
@@ -49,8 +49,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: vivian
 script{
-use 0x0::LibraSystem;
-use 0x0::ValidatorConfig;
+use 0x1::LibraSystem;
+use 0x1::ValidatorConfig;
 // rotate vivian's pubkey to the same value and run the block prologue. No reconfiguration should be
 // triggered. the not "NewEpochEvent" check part tests this because reconfiguration always emits a
 // NewEpoch event.

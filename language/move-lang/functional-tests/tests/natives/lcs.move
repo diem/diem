@@ -1,7 +1,7 @@
 // Test for LCS serialization in Move
 
 script {
-use 0x0::LCS;
+use 0x1::LCS;
 
 fun main() {
     // address

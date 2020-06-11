@@ -1,5 +1,5 @@
 script {
-use 0x0::SharedEd25519PublicKey;
+use 0x1::SharedEd25519PublicKey;
 
 // (1) rotate the public key stored in `account`'s `SharedEd25519PublicKey` resource to
 // `new_public_key`

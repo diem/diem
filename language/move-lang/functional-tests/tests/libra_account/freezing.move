@@ -4,7 +4,7 @@
 //! new-transaction
 //! sender: bob
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 // not frozen
 fun main() {
     assert(!LibraAccount::account_is_frozen({{bob}}), 0);
@@ -15,7 +15,7 @@ fun main() {
 //! new-transaction
 //! sender: association
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 // A special association privilege is needed for freezing an account
 fun main(account: &signer) {
     LibraAccount::freeze_account(account, {{bob}});
@@ -27,7 +27,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 // Make sure we can freeze and unfreeze accounts.
 fun main(account: &signer) {
     LibraAccount::freeze_account(account, {{bob}});
@@ -53,7 +53,7 @@ fun main() { }
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 fun main(account: &signer) {
     LibraAccount::unfreeze_account(account, {{bob}});
 }
@@ -71,7 +71,7 @@ fun main() { }
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 fun main(account: &signer) {
     LibraAccount::freeze_account(account, {{association}})
 }
@@ -84,7 +84,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: association
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 fun main(association: &signer) {
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     LibraAccount::add_parent_vasp_role_from_association(
@@ -98,8 +98,8 @@ fun main(association: &signer) {
 //! new-transaction
 //! sender: vasp
 script {
-use 0x0::LibraAccount;
-use 0x0::LBR::LBR;
+use 0x1::LibraAccount;
+use 0x1::LBR::LBR;
 fun main(parent_vasp: &signer) {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
     LibraAccount::create_child_vasp_account<LBR>(parent_vasp, 0xAA, dummy_auth_key_prefix, false);
@@ -110,7 +110,7 @@ fun main(parent_vasp: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 // Freezing a child account doesn't freeze the root, freezing the root
 // doesn't freeze the child
 fun main(account: &signer) {

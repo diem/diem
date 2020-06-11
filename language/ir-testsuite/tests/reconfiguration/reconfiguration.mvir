@@ -8,7 +8,7 @@
 
 //! new-transaction
 // Reconfiguration can only be invoked by association.
-import 0x0.LibraConfig;
+import 0x1.LibraConfig;
 
 main(account: &signer) {
     LibraConfig.reconfigure(move(account));
@@ -20,7 +20,7 @@ main(account: &signer) {
 
 //! new-transaction
 //! sender: config
-import 0x0.LibraConfig;
+import 0x1.LibraConfig;
 
 main(account: &signer) {
     LibraConfig.reconfigure(move(account));
@@ -33,7 +33,7 @@ main(account: &signer) {
 //! new-transaction
 //! sender: config
 // Cannot trigger two reconfiguration within the same block.
-import 0x0.LibraConfig;
+import 0x1.LibraConfig;
 
 main(account: &signer) {
     LibraConfig.reconfigure(move(account));
@@ -49,7 +49,7 @@ main(account: &signer) {
 
 //! new-transaction
 //! sender: config
-import 0x0.LibraConfig;
+import 0x1.LibraConfig;
 
 main(account: &signer) {
     LibraConfig.reconfigure(move(account));

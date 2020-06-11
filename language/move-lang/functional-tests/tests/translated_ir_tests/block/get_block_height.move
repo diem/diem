@@ -2,7 +2,7 @@
 //! new-transaction
 
 script{
-use 0x0::LibraBlock;
+use 0x1::LibraBlock;
 fun main() {
     // check that the height of the initial block is zero
     assert(LibraBlock::get_current_block_height() == 0, 77);
@@ -15,8 +15,8 @@ fun main() {
 
 //! new-transaction
 script{
-use 0x0::LibraBlock;
-use 0x0::LibraTimestamp;
+use 0x1::LibraBlock;
+use 0x1::LibraTimestamp;
 
 fun main() {
     assert(LibraBlock::get_current_block_height() == 1, 76);
@@ -30,8 +30,8 @@ fun main() {
 
 //! new-transaction
 script{
-use 0x0::LibraBlock;
-use 0x0::LibraTimestamp;
+use 0x1::LibraBlock;
+use 0x1::LibraTimestamp;
 
 fun main() {
     assert(LibraBlock::get_current_block_height() == 2, 76);

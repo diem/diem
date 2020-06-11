@@ -1,8 +1,8 @@
-address 0x0 {
+address 0x1 {
 
 module LibraTimestamp {
-    use 0x0::CoreAddresses;
-    use 0x0::Signer;
+    use 0x1::CoreAddresses;
+    use 0x1::Signer;
 
     // A singleton resource holding the current Unix time in microseconds
     resource struct CurrentTimeMicroseconds {

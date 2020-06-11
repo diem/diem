@@ -1,5 +1,5 @@
-import 0x0.LibraAccount;
-import 0x0.CoreAddresses;
+import 0x1.LibraAccount;
+import 0x1.CoreAddresses;
 
 main() {
   // check that the sequence number of the Association account (which sent the genesis txn) has been

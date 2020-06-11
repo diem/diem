@@ -1,7 +1,7 @@
 script {
-use 0x0::DesignatedDealer;
-use 0x0::LibraAccount;
-use 0x0::SlidingNonce;
+use 0x1::DesignatedDealer;
+use 0x1::LibraAccount;
+use 0x1::SlidingNonce;
 
 /// Script for Treasury Comliance Account to mint 'mint_amount' to 'designated_dealer_address' for
 /// 'tier_index' tier

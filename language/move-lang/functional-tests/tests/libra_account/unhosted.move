@@ -4,8 +4,8 @@
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::Coin1::Coin1;
-    use 0x0::LibraAccount;
+    use 0x1::Coin1::Coin1;
+    use 0x1::LibraAccount;
     fun main(account: &signer) {
         LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 10001);
     }
@@ -18,8 +18,8 @@ script {
 //! sender: bob
 //! gas-currency: Coin1
 script {
-    use 0x0::LibraAccount;
-    use 0x0::Coin1::Coin1;
+    use 0x1::LibraAccount;
+    use 0x1::Coin1::Coin1;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
         LibraAccount::deposit(

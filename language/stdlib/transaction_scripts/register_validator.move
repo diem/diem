@@ -1,7 +1,7 @@
 script {
-    use 0x0::LibraSystem;
-    use 0x0::Signer;
-    use 0x0::ValidatorConfig;
+    use 0x1::LibraSystem;
+    use 0x1::Signer;
+    use 0x1::ValidatorConfig;
 
     // Here the sender's address should already be certified as both a Validator.
     // This tx sets the config and adds the validator to the Validator Set.

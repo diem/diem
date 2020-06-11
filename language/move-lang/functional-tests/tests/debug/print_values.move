@@ -1,6 +1,6 @@
 module M {
-    use 0x0::Debug;
-    use 0x0::Vector;
+    use 0x1::Debug;
+    use 0x1::Vector;
 
     struct Foo {}
     struct Bar { x: u128, y: Foo, z: bool }

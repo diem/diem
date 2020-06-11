@@ -4,9 +4,9 @@
 // emphasize the ability to split a `Libra.Libra<LBR.LBR>` resource. The more concise
 // way would be to use multiple calls to `LibraAccount.withdraw_from`.
 
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
 main(account: &signer, payee1: address, amount1: u64, payee2: address, amount2: u64) {
   let coin1: Libra.Libra<LBR.LBR>;
   let coin2: Libra.Libra<LBR.LBR>;

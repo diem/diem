@@ -1,6 +1,6 @@
 // Tests of quantification over addresses.
 module AddressQuant {
-    use 0x0::Transaction;
+    use 0x1::Transaction;
 
     resource struct R {
         x: u64

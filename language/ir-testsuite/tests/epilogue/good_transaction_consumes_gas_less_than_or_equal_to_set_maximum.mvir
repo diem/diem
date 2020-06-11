@@ -2,9 +2,9 @@
 
 //! new-transaction
 //! sender: blessed
-import 0x0.LBR;
-import 0x0.LibraAccount;
-import 0x0.Libra;
+import 0x1.LBR;
+import 0x1.LibraAccount;
+import 0x1.Libra;
 main(blessed: &signer) {
     LibraAccount.deposit<LBR.LBR>(copy(blessed), {{default}}, LBR.mint(move(blessed), 10000));
     return;
@@ -18,8 +18,8 @@ main() {
 }
 
 //! new-transaction
-import 0x0.LibraAccount;
-import 0x0.LBR;
+import 0x1.LibraAccount;
+import 0x1.LBR;
 
 main() {
     // Ensures that the account was deducted for the gas fee.

@@ -1,6 +1,6 @@
 module MoneyHolder {
-        import 0x0.LBR;
-        import 0x0.Libra;
+        import 0x1.LBR;
+        import 0x1.Libra;
 
         resource T { money: Libra.Libra<LBR.LBR> }
 
@@ -28,8 +28,8 @@ module MoneyHolder {
 //! new-transaction
 
 import {{default}}.MoneyHolder;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LBR;
+import 0x1.Libra;
 
 main() {
     let coin: Libra.Libra<LBR.LBR>;

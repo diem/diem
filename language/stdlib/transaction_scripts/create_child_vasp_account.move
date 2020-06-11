@@ -1,5 +1,5 @@
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 
 /// Create a `ChildVASP` account for sender `parent_vasp` at `child_address` with a balance of
 /// `child_initial_balance` in `CoinType` and an initial authentication_key

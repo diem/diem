@@ -4,9 +4,9 @@
 //! sender: bob
 //! gas-currency: Coin1
 script {
-use 0x0::LibraAccount;
-use 0x0::LBR::LBR;
-use 0x0::Coin2::Coin2;
+use 0x1::LibraAccount;
+use 0x1::LBR::LBR;
+use 0x1::Coin2::Coin2;
 fun main(account: &signer) {
     LibraAccount::add_currency<Coin2>(account);
     LibraAccount::add_currency<LBR>(account);
@@ -17,8 +17,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::LibraAccount;
-use 0x0::Coin2::Coin2;
+use 0x1::LibraAccount;
+use 0x1::Coin2::Coin2;
 fun main(account: &signer) {
     LibraAccount::mint_to_address<Coin2>(account, {{bob}}, 100);
 }
@@ -30,11 +30,11 @@ fun main(account: &signer) {
 //! gas-price: 0
 //! gas-currency: Coin1
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
-use 0x0::LibraAccount;
-use 0x0::Libra;
-use 0x0::LBR;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
+use 0x1::LibraAccount;
+use 0x1::Libra;
+use 0x1::LBR;
 fun main(sender: &signer) {
     let with_cap = LibraAccount::extract_withdraw_capability(sender);
     let coin1 = LibraAccount::withdraw_from<Coin1>(&with_cap, 10);
@@ -54,9 +54,9 @@ fun main(sender: &signer) {
 //! gas-price: 0
 //! gas-currency: Coin1
 script {
-use 0x0::LBR::{Self, LBR};
-use 0x0::LibraAccount;
-use 0x0::Libra;
+use 0x1::LBR::{Self, LBR};
+use 0x1::LibraAccount;
+use 0x1::Libra;
 fun main(sender: &signer) {
     let with_cap = LibraAccount::extract_withdraw_capability(sender);
     let lbr = LibraAccount::withdraw_from<LBR>(&with_cap, 18);
@@ -74,11 +74,11 @@ fun main(sender: &signer) {
 //! sender: bob
 //! gas-price: 0
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
-use 0x0::LibraAccount;
-use 0x0::Libra;
-use 0x0::LBR;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
+use 0x1::LibraAccount;
+use 0x1::Libra;
+use 0x1::LBR;
 fun main(sender: &signer) {
     let with_cap = LibraAccount::extract_withdraw_capability(sender);
     let coin1 = LibraAccount::withdraw_from<Coin1>(&with_cap, 2);
@@ -99,11 +99,11 @@ fun main(sender: &signer) {
 //! sender: bob
 //! gas-price: 0
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
-use 0x0::LibraAccount;
-use 0x0::Libra;
-use 0x0::LBR;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
+use 0x1::LibraAccount;
+use 0x1::Libra;
+use 0x1::LBR;
 fun main(sender: &signer) {
     let with_cap = LibraAccount::extract_withdraw_capability(sender);
     let coin1 = LibraAccount::withdraw_from<Coin1>(&with_cap, 1);
@@ -125,11 +125,11 @@ fun main(sender: &signer) {
 //! sender: bob
 //! gas-price: 0
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
-use 0x0::LibraAccount;
-use 0x0::Libra;
-use 0x0::LBR;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
+use 0x1::LibraAccount;
+use 0x1::Libra;
+use 0x1::LBR;
 fun main(sender: &signer) {
     let with_cap = LibraAccount::extract_withdraw_capability(sender);
     let coin1 = LibraAccount::withdraw_from<Coin1>(&with_cap, 9);
@@ -148,11 +148,11 @@ fun main(sender: &signer) {
 //! sender: bob
 //! gas-price: 0
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
-use 0x0::LibraAccount;
-use 0x0::Libra;
-use 0x0::LBR;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
+use 0x1::LibraAccount;
+use 0x1::Libra;
+use 0x1::LBR;
 fun main(sender: &signer) {
     let with_cap = LibraAccount::extract_withdraw_capability(sender);
     let coin1 = LibraAccount::withdraw_from<Coin1>(&with_cap, 10);

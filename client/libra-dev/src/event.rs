@@ -177,7 +177,7 @@ fn test_libra_LibraEvent_from() {
     use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
     use libra_types::{
         account_address::{self, AccountAddress},
-        account_config::{from_currency_code_string, SentPaymentEvent, LBR_NAME},
+        account_config::{self, from_currency_code_string, SentPaymentEvent, LBR_NAME},
         contract_event::ContractEvent,
         event::{EventHandle, EventKey},
     };
@@ -196,7 +196,7 @@ fn test_libra_LibraEvent_from() {
     let name = "SentPaymentEvent";
 
     let type_tag = Struct(StructTag {
-        address: AccountAddress::new([0; AccountAddress::LENGTH]),
+        address: account_config::CORE_CODE_ADDRESS,
         module: Identifier::new(module).unwrap(),
         name: Identifier::new(name).unwrap(),
         type_params: [].to_vec(),

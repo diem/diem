@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/parser/use_with_address.move:2:1 ───
    │
- 2 │ use 0x0::Module;
+ 2 │ use 0x1::Module;
    │ ^^^ Invalid code unit. Expected 'address', 'module', or 'script'. Got 'use'
    │
 

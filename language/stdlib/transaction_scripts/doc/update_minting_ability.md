@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Currency&gt;(account: &signer, allow_minting: bool) {
-    <a href="../../modules/doc/Libra.md#0x0_Libra_update_minting_ability">Libra::update_minting_ability</a>&lt;Currency&gt;(account, allow_minting)
+    <a href="../../modules/doc/Libra.md#0x1_Libra_update_minting_ability">Libra::update_minting_ability</a>&lt;Currency&gt;(account, allow_minting)
 }
 </code></pre>
 

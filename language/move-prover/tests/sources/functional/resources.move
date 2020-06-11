@@ -1,6 +1,6 @@
 module TestResources {
-    use 0x0::Transaction;
-    use 0x0::Signer;
+    use 0x1::Signer;
+    use 0x1::Transaction;
 
     spec module {
         pragma verify = true;

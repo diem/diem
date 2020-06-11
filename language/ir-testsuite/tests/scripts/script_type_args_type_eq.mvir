@@ -25,9 +25,9 @@ main<T>(account: &signer) {
 
 
 //! new-transaction
-//! type-args: 0x0::LibraAccount::LibraAccount
+//! type-args: 0x1::LibraAccount::LibraAccount
 import {{default}}.M;
-import 0x0.LibraAccount;
+import 0x1.LibraAccount;
 
 main<T>(account: &signer) {
     assert(M.type_eq<T, LibraAccount.LibraAccount>(copy(account)), 100);
@@ -38,9 +38,9 @@ main<T>(account: &signer) {
 
 
 //! new-transaction
-//! type-args: 0x0::LibraAccount::Balance<0x0::LibraAccount::Balance<vector<u64>>>
+//! type-args: 0x1::LibraAccount::Balance<0x1::LibraAccount::Balance<vector<u64>>>
 import {{default}}.M;
-import 0x0.LibraAccount;
+import 0x1.LibraAccount;
 
 main<T>(account: &signer) {
     assert(M.type_eq<T, LibraAccount.Balance<LibraAccount.Balance<vector<u64>>>>(copy(account)), 100);

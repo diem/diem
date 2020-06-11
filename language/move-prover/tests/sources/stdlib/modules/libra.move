@@ -1,8 +1,8 @@
-address 0x0 {
+address 0x1 {
 
 module Libra {
-    use 0x0::Transaction;
-    use 0x0::Vector;
+    use 0x1::Vector;
+    use 0x1::Transaction;
 
     // A resource representing a fungible token
     resource struct T<Token> {

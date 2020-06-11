@@ -5,7 +5,7 @@ error:
  6 │     fun foo() {
    │     ^ Expected '}'
    ·
- 4 │     use 0x0::X::{S as XS
+ 4 │     use 0x1::X::{S as XS
    │                 - To match this '{'
    │
 

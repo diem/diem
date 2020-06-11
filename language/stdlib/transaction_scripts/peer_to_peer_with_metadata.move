@@ -1,5 +1,5 @@
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 
 fun main<Token>(
     payer: &signer,

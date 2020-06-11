@@ -1,8 +1,8 @@
-address 0x0 {
+address 0x1 {
 
 module LBR {
-    use 0x0::Transaction;
-    use 0x0::Libra;
+    use 0x1::Transaction;
+    use 0x1::Libra;
 
     struct T { }
 

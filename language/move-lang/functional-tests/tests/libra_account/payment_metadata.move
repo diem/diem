@@ -3,8 +3,8 @@
 
 //! sender: alice
 script {
-use 0x0::LBR::LBR;
-use 0x0::LibraAccount;
+use 0x1::LBR::LBR;
+use 0x1::LibraAccount;
 // send a transaction with metadata and make sure we see it in the PaymentReceivedEvent
 fun main(account: &signer) {
     let with_cap = LibraAccount::extract_withdraw_capability(account);
@@ -22,8 +22,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: alice
 script {
-use 0x0::LibraAccount;
-use 0x0::LBR::LBR;
+use 0x1::LibraAccount;
+use 0x1::LBR::LBR;
 // same thing, but using "deposit_with_metadata" API
 fun main(account: &signer) {
     let with_cap = LibraAccount::extract_withdraw_capability(account);

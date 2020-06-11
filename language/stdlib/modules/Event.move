@@ -1,9 +1,9 @@
-address 0x0 {
+address 0x1 {
 
 module Event {
-    use 0x0::LCS;
-    use 0x0::Signer;
-    use 0x0::Vector;
+    use 0x1::LCS;
+    use 0x1::Signer;
+    use 0x1::Vector;
 
     // A resource representing the counter used to generate uniqueness under each account. There won't be destructor for
     // this resource to guarantee the uniqueness of the generated handle.

@@ -103,7 +103,7 @@ If the module documentation is included in a larger context, the section tags wi
 doc:
 
 ```move
-# Module `0x0::LibraAccount`
+# Module `0x1::LibraAccount`
 
 This is the Libra account module.
 
@@ -125,7 +125,7 @@ decorated as follows:
 
 -  Identifiers are attempted to resolve against the documented code and on success, hyperlinked to the declaration.
    For example, within the `LibraAccount` module, all occurences of `T`, `Self::T`, `LibraAccount::T`, and
-   `0x0::LibraAccount:T` will resolve into a link to the declaration. This resolution is heuristic and may have
+   `0x1::LibraAccount:T` will resolve into a link to the declaration. This resolution is heuristic and may have
    positive and negative false positives. Specifically, it currently does not consider aliases and use-declarations.
 
    If you use a simple name in code comments. like `foo`, it will not resolve against a function `foo` in the current

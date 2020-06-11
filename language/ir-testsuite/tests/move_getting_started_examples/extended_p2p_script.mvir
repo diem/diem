@@ -5,9 +5,9 @@
 // Use LibraAccount module published on the blockchain at account address
 // 0x0...0 (with 64 zeroes). 0x0 is shorthand that the IR pads out to
 // 256 bits (64 digits) by adding leading zeroes.
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
 main(account: &signer, payee: address, amount: u64) {
   // The bytecode (and consequently, the IR) has typed locals.  The scope of
   // each local is the entire procedure. All local variable declarations must

@@ -10,7 +10,7 @@
 //! new-transaction
 //! sender: alice
 script{
-    use 0x0::LibraSystem;
+    use 0x1::LibraSystem;
     fun main(account: &signer) {
         LibraSystem::remove_validator(account, {{alice}});
         assert(!LibraSystem::is_validator({{alice}}), 77);
@@ -29,7 +29,7 @@ script{
 //! new-transaction
 //! sender: alice
 script{
-    use 0x0::LibraSystem;
+    use 0x1::LibraSystem;
     fun main(account: &signer) {
         LibraSystem::remove_validator(account, {{bob}});
     }
@@ -45,7 +45,7 @@ script{
 //! new-transaction
 //! sender: alice
 script{
-    use 0x0::LibraSystem;
+    use 0x1::LibraSystem;
     fun main(account: &signer) {
         LibraSystem::add_validator(account, {{alice}});
 

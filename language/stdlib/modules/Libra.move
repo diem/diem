@@ -1,13 +1,13 @@
-address 0x0 {
+address 0x1 {
 
 module Libra {
-    use 0x0::CoreAddresses;
-    use 0x0::Association;
-    use 0x0::Event;
-    use 0x0::FixedPoint32::{Self, FixedPoint32};
-    use 0x0::RegisteredCurrencies;
-    use 0x0::Signer;
-    use 0x0::Vector;
+    use 0x1::CoreAddresses;
+    use 0x1::Association;
+    use 0x1::Event;
+    use 0x1::FixedPoint32::{Self, FixedPoint32};
+    use 0x1::RegisteredCurrencies;
+    use 0x1::Signer;
+    use 0x1::Vector;
 
     /// The `Libra` resource defines the Libra coin for each currency in
     /// Libra. Each "coin" is coupled with a type `CoinType` specifying the
@@ -23,19 +23,19 @@ module Libra {
     /// The `MintCapability` resource defines a capability to allow minting
     /// of coins of `CoinType` currency by the holder of this capability.
     /// This capability is held only either by the CoreAddresses::TREASURY_COMPLIANCE_ADDRESS() account or the
-    /// `0x0::LBR` module (and `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()` in testnet).
+    /// `0x1::LBR` module (and `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()` in testnet).
     resource struct MintCapability<CoinType> { }
 
     /// The `BurnCapability` resource defines a capability to allow coins
     /// of `CoinType` currency to be burned by the holder of the
     /// capability. This capability is only held by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()` account,
-    /// and the `0x0::LBR` module (and `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()` in testnet).
+    /// and the `0x1::LBR` module (and `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()` in testnet).
     resource struct BurnCapability<CoinType> { }
 
     /// The `CurrencyRegistrationCapability` is a singleton resource
     /// published under the `CoreAddresses::DEFAULT_CONFIG_ADDRESS()` and grants
-    /// the capability to the `0x0::Libra` module to add currencies to the
-    /// `0x0::RegisteredCurrencies` on-chain config.
+    /// the capability to the `0x1::Libra` module to add currencies to the
+    /// `0x1::RegisteredCurrencies` on-chain config.
     resource struct CurrencyRegistrationCapability {
         /// A capability to allow updating the set of registered currencies on-chain.
         cap: RegisteredCurrencies::RegistrationCapability,
@@ -166,7 +166,7 @@ module Libra {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Initialization of the `Libra` module; initializes the set of
-    /// registered currencies in the `0x0::RegisteredCurrencies` on-chain
+    /// registered currencies in the `0x1::RegisteredCurrencies` on-chain
     /// config, and publishes the `CurrencyRegistrationCapability` under the
     /// `CoreAddresses::DEFAULT_CONFIG_ADDRESS()`.
     public fun initialize(config_account: &signer) {
@@ -242,7 +242,7 @@ module Libra {
 
     /// Mint a new `Libra` coin of `CoinType` currency worth `value`. The
     /// caller must have a reference to a `MintCapability<CoinType>`. Only
-    /// the Association account or the `0x0::LBR` module can acquire such a
+    /// the Association account or the `0x1::LBR` module can acquire such a
     /// reference.
     public fun mint_with_capability<CoinType>(
         value: u64,

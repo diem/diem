@@ -1,6 +1,6 @@
 module RTest {
-import 0x0.LBR;
-    import 0x0.Libra;
+import 0x1.LBR;
+    import 0x1.Libra;
     resource T{fr: Libra.Libra<LBR.LBR>}
 
     public new(y: Libra.Libra<LBR.LBR>): Self.T {

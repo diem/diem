@@ -6,8 +6,8 @@
 
 //! new-transaction
 //! expiration-time: 100
-import 0x0.LibraSystem;
-import 0x0.LibraTimestamp;
+import 0x1.LibraSystem;
+import 0x1.LibraTimestamp;
 
 main() {
     return;
@@ -16,8 +16,8 @@ main() {
 
 //! new-transaction
 //! expiration-time: 101
-import 0x0.LibraSystem;
-import 0x0.LibraTimestamp;
+import 0x1.LibraSystem;
+import 0x1.LibraTimestamp;
 
 main() {
     return;
@@ -27,8 +27,8 @@ main() {
 // TODO: 100 + 86400 = 86500, should be rejected after we fix the mempool flakiness. See details in issues #2346.
 //! new-transaction
 //! expiration-time: 86500
-import 0x0.LibraSystem;
-import 0x0.LibraTimestamp;
+import 0x1.LibraSystem;
+import 0x1.LibraTimestamp;
 
 main() {
     return;
@@ -41,8 +41,8 @@ main() {
 
 //! new-transaction
 //! expiration-time: 86500
-import 0x0.LibraSystem;
-import 0x0.LibraTimestamp;
+import 0x1.LibraSystem;
+import 0x1.LibraTimestamp;
 
 main() {
     return;
@@ -51,8 +51,8 @@ main() {
 
 //! new-transaction
 //! expiration-time: 101
-import 0x0.LibraSystem;
-import 0x0.LibraTimestamp;
+import 0x1.LibraSystem;
+import 0x1.LibraTimestamp;
 
 main() {
     return;
@@ -61,8 +61,8 @@ main() {
 
 //! new-transaction
 //! expiration-time: 9223372036855
-import 0x0.LibraSystem;
-import 0x0.LibraTimestamp;
+import 0x1.LibraSystem;
+import 0x1.LibraTimestamp;
 
 main() {
     return;

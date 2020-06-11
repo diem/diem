@@ -4,9 +4,9 @@
 
 //! new-transaction
 //! sender: blessed
-import 0x0.LBR;
-import 0x0.LibraAccount;
-import 0x0.Libra;
+import 0x1.LBR;
+import 0x1.LibraAccount;
+import 0x1.Libra;
 main(blessed: &signer) {
     LibraAccount.deposit<LBR.LBR>(copy(blessed), {{alice}}, LBR.mint(copy(blessed), 1000000));
     LibraAccount.deposit<LBR.LBR>(copy(blessed), {{bob}}, LBR.mint(move(blessed), 1000000));
@@ -22,9 +22,9 @@ main(blessed: &signer) {
 //! sender: alice
 //! gas-price: 1
 //! args: 1000000
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Vector;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Vector;
 
 main(account: &signer, amount: u64) {
     let with_cap: LibraAccount.WithdrawCapability;
@@ -45,9 +45,9 @@ main(account: &signer, amount: u64) {
 //! sender: bob
 //! gas-price: 1
 //! args: 1000
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Vector;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Vector;
 
 main(account: &signer, amount: u64) {
     let with_cap: LibraAccount.WithdrawCapability;
@@ -65,8 +65,8 @@ main(account: &signer, amount: u64) {
 // 2) Alice's balance is exactly 1000 greater than Bob's, indicating they consumed the same amount of gas.
 
 //! new-transaction
-import 0x0.LibraAccount;
-import 0x0.LBR;
+import 0x1.LibraAccount;
+import 0x1.LBR;
 
 main() {
     assert(LibraAccount.balance<LBR.LBR>({{carol}}) == 1000, 42);

@@ -2,127 +2,127 @@ error:
 
    ┌── tests/move_check/parser/use_inner_scope.move:5:13 ───
    │
- 5 │         use 0x1::Mango;
-   │             ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x1::Mango'
+ 5 │         use 0x2::Mango;
+   │             ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Mango'
    │
 
 error: 
 
    ┌── tests/move_check/parser/use_inner_scope.move:6:13 ───
    │
- 6 │         use 0x1::Mango as M;
-   │             ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x1::Mango'
+ 6 │         use 0x2::Mango as M;
+   │             ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Mango'
    │
 
 error: 
 
    ┌── tests/move_check/parser/use_inner_scope.move:7:13 ───
    │
- 7 │         use 0x1::Mango::baz;
-   │             ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x1::Mango'
+ 7 │         use 0x2::Mango::baz;
+   │             ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Mango'
    │
 
 error: 
 
    ┌── tests/move_check/parser/use_inner_scope.move:8:13 ───
    │
- 8 │         use 0x1::Salsa::{Self, foo as bar, foo};
-   │             ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x1::Salsa'
+ 8 │         use 0x2::Salsa::{Self, foo as bar, foo};
+   │             ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Salsa'
    │
 
 error: 
 
     ┌── tests/move_check/parser/use_inner_scope.move:10:17 ───
     │
- 10 │             use 0x1::Mango;
-    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x1::Mango'
+ 10 │             use 0x2::Mango;
+    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Mango'
     │
 
 error: 
 
     ┌── tests/move_check/parser/use_inner_scope.move:11:17 ───
     │
- 11 │             use 0x2::Mango as M;
-    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Mango'
+ 11 │             use 0x3::Mango as M;
+    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x3::Mango'
     │
 
 error: 
 
     ┌── tests/move_check/parser/use_inner_scope.move:12:17 ───
     │
- 12 │             use 0x2::Mango::baz;
-    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Mango'
+ 12 │             use 0x3::Mango::baz;
+    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x3::Mango'
     │
 
 error: 
 
     ┌── tests/move_check/parser/use_inner_scope.move:13:17 ───
     │
- 13 │             use 0x2::Salsa::{Self, foo as bar, foo};
-    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Salsa'
+ 13 │             use 0x3::Salsa::{Self, foo as bar, foo};
+    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x3::Salsa'
     │
 
 error: 
 
     ┌── tests/move_check/parser/use_inner_scope.move:27:53 ───
     │
- 27 │                                                 use 0x1::Mango;
-    │                                                     ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x1::Mango'
+ 27 │                                                 use 0x2::Mango;
+    │                                                     ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Mango'
     │
 
 error: 
 
     ┌── tests/move_check/parser/use_inner_scope.move:28:53 ───
     │
- 28 │                                                 use 0x2::Mango as M;
-    │                                                     ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Mango'
+ 28 │                                                 use 0x3::Mango as M;
+    │                                                     ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x3::Mango'
     │
 
 error: 
 
     ┌── tests/move_check/parser/use_inner_scope.move:29:53 ───
     │
- 29 │                                                 use 0x2::Mango::baz;
-    │                                                     ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Mango'
+ 29 │                                                 use 0x3::Mango::baz;
+    │                                                     ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x3::Mango'
     │
 
 error: 
 
     ┌── tests/move_check/parser/use_inner_scope.move:30:53 ───
     │
- 30 │                                                 use 0x2::Salsa::{Self, foo as bar, foo};
-    │                                                     ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Salsa'
+ 30 │                                                 use 0x3::Salsa::{Self, foo as bar, foo};
+    │                                                     ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x3::Salsa'
     │
 
 error: 
 
     ┌── tests/move_check/parser/use_inner_scope.move:43:17 ───
     │
- 43 │             use 0x1::Mango;
-    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x1::Mango'
+ 43 │             use 0x2::Mango;
+    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Mango'
     │
 
 error: 
 
     ┌── tests/move_check/parser/use_inner_scope.move:44:17 ───
     │
- 44 │             use 0x2::Mango as M;
-    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Mango'
+ 44 │             use 0x3::Mango as M;
+    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x3::Mango'
     │
 
 error: 
 
     ┌── tests/move_check/parser/use_inner_scope.move:45:17 ───
     │
- 45 │             use 0x2::Mango::baz;
-    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Mango'
+ 45 │             use 0x3::Mango::baz;
+    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x3::Mango'
     │
 
 error: 
 
     ┌── tests/move_check/parser/use_inner_scope.move:46:17 ───
     │
- 46 │             use 0x2::Salsa::{Self, foo as bar, foo};
-    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x2::Salsa'
+ 46 │             use 0x3::Salsa::{Self, foo as bar, foo};
+    │                 ^^^^^^^^^^ Invalid 'use'. Unbound module: '0x3::Salsa'
     │
 

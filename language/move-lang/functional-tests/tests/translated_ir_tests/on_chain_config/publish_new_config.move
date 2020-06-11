@@ -3,7 +3,7 @@
 
 //! sender: alice
 module FooConfig {
-    use 0x0::LibraConfig;
+    use 0x1::LibraConfig;
 
     struct T {
         version: u64,

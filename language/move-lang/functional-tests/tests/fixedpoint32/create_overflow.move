@@ -1,5 +1,5 @@
 script {
-use 0x0::FixedPoint32;
+use 0x1::FixedPoint32;
 
 fun main() {
     // The maximum value is 2^32 - 1. Check that anything larger aborts

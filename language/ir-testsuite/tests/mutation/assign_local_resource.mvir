@@ -1,7 +1,7 @@
 // check: WRITEREF_RESOURCE_ERROR
 
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LBR;
+import 0x1.Libra;
 main() {
     let resource1: Libra.Libra<LBR.LBR>;
     let resource_ref: &mut Libra.Libra<LBR.LBR>;

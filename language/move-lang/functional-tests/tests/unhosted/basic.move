@@ -1,6 +1,6 @@
 //! new-transaction
 script {
-    use 0x0::Unhosted;
+    use 0x1::Unhosted;
     fun main(account: &signer) {
         Unhosted::publish_global_limits_definition(account);
     }
@@ -10,7 +10,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::Unhosted;
+    use 0x1::Unhosted;
     fun main() {
         let _t = Unhosted::create();
     }
@@ -21,8 +21,8 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::Unhosted;
-    use 0x0::Testnet;
+    use 0x1::Unhosted;
+    use 0x1::Testnet;
     fun main(account: &signer) {
         Testnet::remove_testnet(account);
         let _t = Unhosted::create();
