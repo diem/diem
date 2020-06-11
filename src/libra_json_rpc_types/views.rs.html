@@ -591,7 +591,6 @@
 <span id="591">591</span>
 <span id="592">592</span>
 <span id="593">593</span>
-<span id="594">594</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1023,7 +1022,6 @@
         <span class="kw">let</span> <span class="ident">unknown_currency</span> <span class="op">=</span> <span class="string">&quot;unknown_currency&quot;</span>.<span class="ident">to_string</span>();
 
         <span class="kw">let</span> (<span class="ident">code</span>, <span class="ident">args</span>, <span class="ident">ty_args</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">value</span> {
-            <span class="ident">TransactionPayload</span>::<span class="ident">Program</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="string">&quot;deprecated&quot;</span>.<span class="ident">to_string</span>(), <span class="ident">empty_vec</span>, <span class="ident">empty_ty_vec</span>),
             <span class="ident">TransactionPayload</span>::<span class="ident">WriteSet</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="string">&quot;genesis&quot;</span>.<span class="ident">to_string</span>(), <span class="ident">empty_vec</span>, <span class="ident">empty_ty_vec</span>),
             <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">script</span>) <span class="op">=</span><span class="op">&gt;</span> (
                 <span class="ident">get_transaction_name</span>(<span class="ident">script</span>.<span class="ident">code</span>()),

@@ -1069,16 +1069,6 @@
 <span id="1069">1069</span>
 <span id="1070">1070</span>
 <span id="1071">1071</span>
-<span id="1072">1072</span>
-<span id="1073">1073</span>
-<span id="1074">1074</span>
-<span id="1075">1075</span>
-<span id="1076">1076</span>
-<span id="1077">1077</span>
-<span id="1078">1078</span>
-<span id="1079">1079</span>
-<span id="1080">1080</span>
-<span id="1081">1081</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1371,15 +1361,6 @@
     <span class="ident">expiration_time_secs</span>: <span class="ident">u64</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">RawTransaction</span> {
     <span class="kw">match</span> <span class="ident">payload</span> {
-        <span class="ident">TransactionPayload</span>::<span class="ident">Program</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">RawTransaction</span>::<span class="ident">new</span>(
-            <span class="ident">sender</span>,
-            <span class="ident">sequence_number</span>,
-            <span class="ident">TransactionPayload</span>::<span class="ident">Program</span>,
-            <span class="ident">max_gas_amount</span>,
-            <span class="ident">gas_unit_price</span>,
-            <span class="ident">gas_currency_code</span>,
-            <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">expiration_time_secs</span>),
-        ),
         <span class="ident">TransactionPayload</span>::<span class="ident">Module</span>(<span class="ident">module</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">RawTransaction</span>::<span class="ident">new_module</span>(
             <span class="ident">sender</span>,
             <span class="ident">sequence_number</span>,
@@ -1625,7 +1606,6 @@
             <span class="number">4</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">script_strategy</span>(),
             <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">module_strategy</span>(),
             <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">write_set_strategy</span>(),
-            <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Just</span>(<span class="ident">TransactionPayload</span>::<span class="ident">Program</span>),
         ]
         .<span class="ident">boxed</span>()
     }

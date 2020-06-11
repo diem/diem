@@ -1183,8 +1183,6 @@
 <span id="1183">1183</span>
 <span id="1184">1184</span>
 <span id="1185">1185</span>
-<span id="1186">1186</span>
-<span id="1187">1187</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1473,7 +1471,6 @@
         <span class="self">self</span>.<span class="ident">check_gas</span>(<span class="ident">transaction</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">txn_data</span> <span class="op">=</span> <span class="ident">TransactionMetadata</span>::<span class="ident">new</span>(<span class="ident">transaction</span>);
         <span class="kw">match</span> <span class="ident">transaction</span>.<span class="ident">payload</span>() {
-            <span class="ident">TransactionPayload</span>::<span class="ident">Program</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_SCRIPT</span>)),
             <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">script</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">verify_script</span>(<span class="ident">remote_cache</span>, <span class="ident">script</span>, <span class="ident">txn_data</span>, <span class="ident">account_currency_symbol</span>)
             }
@@ -1492,7 +1489,6 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">txn_data</span> <span class="op">=</span> <span class="ident">TransactionMetadata</span>::<span class="ident">new</span>(<span class="ident">transaction</span>);
         <span class="kw">match</span> <span class="ident">transaction</span>.<span class="ident">payload</span>() {
-            <span class="ident">TransactionPayload</span>::<span class="ident">Program</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_SCRIPT</span>)),
             <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">script</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">check_gas</span>(<span class="ident">transaction</span>)<span class="question-mark">?</span>;
                 <span class="self">self</span>.<span class="ident">verify_script</span>(<span class="ident">remote_cache</span>, <span class="ident">script</span>, <span class="ident">txn_data</span>, <span class="ident">account_currency_symbol</span>)<span class="question-mark">?</span>;
