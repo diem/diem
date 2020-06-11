@@ -669,7 +669,7 @@
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">cmp</span>::<span class="ident">min</span>,
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
-    <span class="ident">fmt</span>,
+    <span class="ident">fmt</span>, <span class="ident">mem</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">RwLock</span>},
     <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
 };
@@ -1039,10 +1039,14 @@
                         <span class="comment">// At least one peer&#39;s addresses have actually changed.</span>
                         <span class="ident">have_any_changed</span> <span class="op">=</span> <span class="bool-val">true</span>;
 
-                        <span class="comment">// Ensure that the next dial attempt starts from the first</span>
-                        <span class="comment">// address if the addresses have actually changed.</span>
+                        <span class="comment">// If we&#39;re currently trying to dial this peer, we reset</span>
+                        <span class="comment">// their dial state. As a result, we will begin our next</span>
+                        <span class="comment">// dial attempt from the first address (which might have</span>
+                        <span class="comment">// changed) and from a fresh backoff (since the current</span>
+                        <span class="comment">// backoff delay might be maxed out if we can&#39;t reach any</span>
+                        <span class="comment">// of their previous addresses).</span>
                         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">dial_state</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">dial_states</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>) {
-                            <span class="ident">dial_state</span>.<span class="ident">reset_addr</span>();
+                            <span class="ident">mem</span>::<span class="ident">replace</span>(<span class="ident">dial_state</span>, <span class="ident">DialState</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">backoff_strategy</span>.<span class="ident">clone</span>()));
                         }
 
                         <span class="comment">// Log the change to this peer&#39;s addresses.</span>
@@ -1228,10 +1232,6 @@
             <span class="ident">backoff</span>,
             <span class="ident">addr_idx</span>: <span class="number">0</span>,
         }
-    }
-
-    <span class="kw">fn</span> <span class="ident">reset_addr</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="self">self</span>.<span class="ident">addr_idx</span> <span class="op">=</span> <span class="number">0</span>;
     }
 
     <span class="kw">fn</span> <span class="ident">next_addr</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">addrs</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">Addresses</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">NetworkAddress</span> {
