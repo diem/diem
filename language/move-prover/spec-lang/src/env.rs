@@ -551,6 +551,14 @@ impl GlobalEnv {
             .map(|(i, v)| (SpecFunId::new(i), v))
             .collect();
 
+        let next_free_node_id = loc_map
+            .keys()
+            .chain(type_map.keys())
+            .map(|i| i.as_usize())
+            .max()
+            .unwrap_or(0)
+            + 1;
+
         self.module_data.push(ModuleData {
             name,
             id: ModuleId(idx as RawIndex),
@@ -564,8 +572,9 @@ impl GlobalEnv {
             module_spec,
             source_map,
             loc,
-            loc_map,
-            type_map,
+            next_free_node_id: RefCell::new(next_free_node_id),
+            loc_map: RefCell::new(loc_map),
+            type_map: RefCell::new(type_map),
             instantiation_map,
             spec_block_infos,
         });
@@ -817,10 +826,13 @@ pub struct ModuleData {
     pub loc: Loc,
 
     /// A map from node id to associated location.
-    pub loc_map: BTreeMap<NodeId, Loc>,
+    pub loc_map: RefCell<BTreeMap<NodeId, Loc>>,
 
     /// A map from node id to associated type.
-    pub type_map: BTreeMap<NodeId, Type>,
+    pub type_map: RefCell<BTreeMap<NodeId, Type>>,
+
+    /// A counter for allocating node ids.
+    pub next_free_node_id: RefCell<usize>,
 
     /// A map from node id to associated instantiation of type parameters.
     pub instantiation_map: BTreeMap<NodeId, Vec<Type>>,
@@ -1155,6 +1167,7 @@ impl<'env> ModuleEnv<'env> {
     pub fn get_node_loc(&self, node_id: NodeId) -> Loc {
         self.data
             .loc_map
+            .borrow()
             .get(&node_id)
             .cloned()
             .unwrap_or_else(|| self.env.unknown_loc())
@@ -1164,9 +1177,25 @@ impl<'env> ModuleEnv<'env> {
     pub fn get_node_type(&self, node_id: NodeId) -> Type {
         self.data
             .type_map
+            .borrow()
             .get(&node_id)
             .cloned()
             .unwrap_or_else(|| Type::Error)
+    }
+
+    /// Allocates a new node id.
+    pub fn new_node_id(&self) -> NodeId {
+        let id = NodeId::new(*self.data.next_free_node_id.borrow());
+        *self.data.next_free_node_id.borrow_mut() += 1;
+        id
+    }
+
+    /// Allocates a new node id and assigns location and type to it.
+    pub fn new_node(&self, loc: Loc, ty: Type) -> NodeId {
+        let id = self.new_node_id();
+        self.data.loc_map.borrow_mut().insert(id, loc);
+        self.data.type_map.borrow_mut().insert(id, ty);
+        id
     }
 
     /// Gets the type parameter instantiation associated with the given node.
