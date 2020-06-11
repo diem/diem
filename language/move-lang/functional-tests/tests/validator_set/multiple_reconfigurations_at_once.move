@@ -43,7 +43,9 @@ script{
     use 0x1::ValidatorConfig;
     // Two reconfigurations cannot happen in the same block
     fun main(account: &signer) {
-        ValidatorConfig::set_consensus_pubkey(account, {{viola}}, x"40");
+        ValidatorConfig::set_config(account, {{viola}},
+                                    x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a",
+                                    x"", x"", x"", x"");
     }
 }
 
@@ -69,7 +71,9 @@ script{
 script{
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
-        ValidatorConfig::set_consensus_pubkey(account, {{viola}}, x"50");
+        ValidatorConfig::set_config(account, {{viola}},
+                                    x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+                                    x"", x"", x"", x"");
     }
 }
 

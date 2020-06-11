@@ -43,6 +43,9 @@
 -  [Function `new_unhosted_role`](#0x1_Roles_new_unhosted_role)
 -  [Function `extract_privilege_to_capability`](#0x1_Roles_extract_privilege_to_capability)
 -  [Function `restore_capability_to_privilege`](#0x1_Roles_restore_capability_to_privilege)
+-  [Specification](#0x1_Roles_Specification)
+        -  [Role persistence](#0x1_Roles_@Role_persistence)
+        -  [Role-specific privileges](#0x1_Roles_@Role-specific_privileges)
 
 This module describes two things:
 1. The relationship between roles, e.g. Role_A can creates accounts of Role_B
@@ -88,11 +91,6 @@ a
 
 The roleId contains the role id for the account. This is only moved
 to an account as a top-level resource, and is otherwise immovable.
-INVARIANT: Once an account at address
-<code>A</code> is granted a role
-<code>R</code> it
-will remain an account with role
-<code>R</code> for all time.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Roles_RoleId">RoleId</a>
@@ -124,7 +122,7 @@ will remain an account with role
 Privileges are extracted in to capabilities. Capabilities hold /
 the account address that they were extracted from (i.e. tagged or
 "tainted"). Capabilities can then only be restored to the account
-where they were extracted from.
+from which they were extracted.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Roles_Capability">Capability</a>&lt;<a href="#0x1_Roles_Privilege">Privilege</a>: <b>resource</b>&gt;
@@ -1187,7 +1185,7 @@ leaves the module we tag it with the account where it was held. You
 can only put the capability back if the
 <code>account</code> address you are
 storing it back under and the
-<code>owner_address</code> if the incoming capability agree.
+<code>owner_address</code> of the incoming capability agree.
 INVARIANT: Once a privilege witness is created and stored under
 a Privilege<PrivWitness> resource at an address A there are only two states:
 1. The resource Privilege<PrivWitness> is stored at A;
@@ -1260,3 +1258,136 @@ restored back to A. i.e. \forall (cap: Capability<P>),
 
 
 </details>
+
+<a name="0x1_Roles_Specification"></a>
+
+## Specification
+
+>**Note:** Just started, only a few specs.
+
+
+<a name="0x1_Roles_@Role_persistence"></a>
+
+#### Role persistence
+
+
+
+<pre><code>pragma verify = <b>true</b>;
+</code></pre>
+
+
+Helper functions
+
+
+<a name="0x1_Roles_spec_has_role_id"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(addr: address): bool {
+    exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr)
+}
+<a name="0x1_Roles_spec_get_role_id"></a>
+<b>define</b> <a href="#0x1_Roles_spec_get_role_id">spec_get_role_id</a>(addr: address): u64 {
+    <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id
+}
+<a name="0x1_Roles_SPEC_ASSOCIATION_ROOT_ROLE_ID"></a>
+<b>define</b> <a href="#0x1_Roles_SPEC_ASSOCIATION_ROOT_ROLE_ID">SPEC_ASSOCIATION_ROOT_ROLE_ID</a>(): u64 { 0 }
+<a name="0x1_Roles_SPEC_TREASURY_COMPLIANCE_ROLE_ID"></a>
+<b>define</b> <a href="#0x1_Roles_SPEC_TREASURY_COMPLIANCE_ROLE_ID">SPEC_TREASURY_COMPLIANCE_ROLE_ID</a>(): u64 { 1 }
+<a name="0x1_Roles_SPEC_DESIGNATED_DEALER_ROLE_ID"></a>
+<b>define</b> <a href="#0x1_Roles_SPEC_DESIGNATED_DEALER_ROLE_ID">SPEC_DESIGNATED_DEALER_ROLE_ID</a>(): u64 { 2 }
+<a name="0x1_Roles_SPEC_VALIDATOR_ROLE_ID"></a>
+<b>define</b> <a href="#0x1_Roles_SPEC_VALIDATOR_ROLE_ID">SPEC_VALIDATOR_ROLE_ID</a>(): u64 { 3 }
+<a name="0x1_Roles_SPEC_VALIDATOR_OPERATOR_ROLE_ID"></a>
+<b>define</b> <a href="#0x1_Roles_SPEC_VALIDATOR_OPERATOR_ROLE_ID">SPEC_VALIDATOR_OPERATOR_ROLE_ID</a>(): u64 { 4 }
+<a name="0x1_Roles_SPEC_PARENT_VASP_ROLE_ID"></a>
+<b>define</b> <a href="#0x1_Roles_SPEC_PARENT_VASP_ROLE_ID">SPEC_PARENT_VASP_ROLE_ID</a>(): u64 { 5 }
+<a name="0x1_Roles_SPEC_CHILD_VASP_ROLE_ID"></a>
+<b>define</b> <a href="#0x1_Roles_SPEC_CHILD_VASP_ROLE_ID">SPEC_CHILD_VASP_ROLE_ID</a>(): u64 { 6 }
+<a name="0x1_Roles_SPEC_UNHOSTED_ROLE_ID"></a>
+<b>define</b> <a href="#0x1_Roles_SPEC_UNHOSTED_ROLE_ID">SPEC_UNHOSTED_ROLE_ID</a>(): u64 { 7 }
+</code></pre>
+
+
+**Informally:** Once an account at address
+<code>A</code> is granted a role
+<code>R</code> it
+will remain an account with role
+<code>R</code> for all time.
+
+
+<a name="0x1_Roles_RoleIdPersists"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Roles_RoleIdPersists">RoleIdPersists</a> {
+    <b>ensures</b> forall addr: address where <b>old</b>(<a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(addr)) :
+        <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(addr) && (<b>old</b>(<a href="#0x1_Roles_spec_get_role_id">spec_get_role_id</a>(addr)) == <a href="#0x1_Roles_spec_get_role_id">spec_get_role_id</a>(addr));
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_Roles_RoleIdPersists">RoleIdPersists</a> <b>to</b> *&lt;T&gt;, *;
+</code></pre>
+
+
+
+<a name="0x1_Roles_@Role-specific_privileges"></a>
+
+#### Role-specific privileges
+
+
+
+<a name="0x1_Roles_AssociationRootRoleMatchesRoleId"></a>
+
+**Informally:** Each address has a RoleID iff the address has a privilege that
+matches the role_id field of the RoleId.
+
+>TODO BUG (dd): The Prover finds many false errors for the following because
+the Prover thinks many add_privilege_* functions can store *any* privilege,
+including the AssociationRootRole, on addresses that don't have the
+association root RootId.  This false error is due to a limitation of
+the Move Prover. In reality, the add_privilege_* functions cannot
+be called with an AssociationRootRole argument, because no instances
+of AssociationRootRole can be accessed by another module (and, of course,
+add_privilege_* functions are not called in a way that violates the
+property in this module.
+
+
+<pre><code><b>schema</b> <a href="#0x1_Roles_AssociationRootRoleMatchesRoleId">AssociationRootRoleMatchesRoleId</a> {
+    <b>invariant</b> <b>module</b> forall addr: address where <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(addr):
+        (<a href="#0x1_Roles_spec_get_role_id">spec_get_role_id</a>(addr) == <a href="#0x1_Roles_SPEC_ASSOCIATION_ROOT_ROLE_ID">SPEC_ASSOCIATION_ROOT_ROLE_ID</a>())
+        ==&gt; exists&lt;<a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_AssociationRootRole">AssociationRootRole</a>&gt;&gt;(addr);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_Roles_AssociationRootRoleMatchesRoleId">AssociationRootRoleMatchesRoleId</a> <b>to</b> <b>public</b> *&lt;T&gt;, *;
+</code></pre>
+
+
+**Informally:** Every address that has the treasury compliance
+role ID also has a treasury compliance privilege.
+
+> TODO (dd): Need to add the converse, but that will have the
+same problem as AssociationRootRoleMatchesRoleId due to prover
+limitation.
+
+
+<a name="0x1_Roles_TreasuryComplianceRoleMatchesRoleId"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_Roles_TreasuryComplianceRoleMatchesRoleId">TreasuryComplianceRoleMatchesRoleId</a> {
+    <b>invariant</b> <b>module</b> forall addr: address where <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(addr):
+        (<a href="#0x1_Roles_spec_get_role_id">spec_get_role_id</a>(addr) == <a href="#0x1_Roles_SPEC_TREASURY_COMPLIANCE_ROLE_ID">SPEC_TREASURY_COMPLIANCE_ROLE_ID</a>())
+         ==&gt; exists&lt;<a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_TreasuryComplianceRole">TreasuryComplianceRole</a>&gt;&gt;(addr);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_Roles_TreasuryComplianceRoleMatchesRoleId">TreasuryComplianceRoleMatchesRoleId</a> <b>to</b> *&lt;T&gt;, *;
+</code></pre>
