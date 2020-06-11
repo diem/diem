@@ -23,7 +23,9 @@ script {
         assert(LibraSystem::is_validator({{bob}}) == true, 98);
 
         // bob rotates his public key
-        ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
+        ValidatorConfig::set_config(account, {{bob}},
+                                    x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+                                    x"", x"", x"", x"");
     }
 }
 
@@ -43,7 +45,8 @@ script {
 
         // check bob's public key
         let validator_config = LibraSystem::get_validator_config({{bob}});
-        assert(*ValidatorConfig::get_consensus_pubkey(&validator_config) == x"30", 99);
+        assert(*ValidatorConfig::get_consensus_pubkey(&validator_config) ==
+               x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c", 99);
     }
 }
 
