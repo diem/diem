@@ -49,7 +49,7 @@ mod tests {
         ProtocolId,
     };
     use futures::{executor::block_on, future::join};
-    use libra_config::network_id::NetworkId;
+    use libra_config::{chain_id::ChainId, network_id::NetworkId};
     use memsocket::MemorySocket;
 
     fn build_test_connection() -> (MemorySocket, MemorySocket) {
@@ -59,10 +59,11 @@ mod tests {
     #[test]
     fn simple_handshake() {
         let network_id = NetworkId::Validator;
+        let chain_id = ChainId::default();
         let (mut outbound, mut inbound) = build_test_connection();
 
         // Create client and server handshake messages.
-        let mut server_handshake = HandshakeMsg::new(network_id.clone());
+        let mut server_handshake = HandshakeMsg::new(chain_id.clone(), network_id.clone());
         server_handshake.add(
             MessagingProtocolVersion::V1,
             [
@@ -72,7 +73,7 @@ mod tests {
             .iter()
             .into(),
         );
-        let mut client_handshake = HandshakeMsg::new(network_id);
+        let mut client_handshake = HandshakeMsg::new(chain_id, network_id);
         client_handshake.add(
             MessagingProtocolVersion::V1,
             [ProtocolId::ConsensusRpc, ProtocolId::ConsensusDirectSend]

@@ -17,7 +17,7 @@ use crate::{
 };
 use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
-use libra_config::{config::RoleType, network_id::NetworkId};
+use libra_config::{chain_id::ChainId, config::RoleType, network_id::NetworkId};
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
@@ -98,6 +98,7 @@ pub struct DummyNetwork {
 pub fn setup_network() -> DummyNetwork {
     let runtime = Runtime::new().unwrap();
     let network_id = NetworkId::Validator;
+    let chain_id = ChainId::default();
     let dialer_peer_id = PeerId::random();
     let listener_peer_id = PeerId::random();
 
@@ -125,9 +126,10 @@ pub fn setup_network() -> DummyNetwork {
     // Set up the listener network
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
+        chain_id.clone(),
         network_id.clone(),
-        listener_peer_id,
         RoleType::Validator,
+        listener_peer_id,
         listener_addr,
     );
     network_builder
@@ -140,9 +142,10 @@ pub fn setup_network() -> DummyNetwork {
     // Set up the dialer network
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
+        chain_id,
         network_id,
-        dialer_peer_id,
         RoleType::Validator,
+        dialer_peer_id,
         dialer_addr,
     );
     network_builder

@@ -43,7 +43,7 @@ pub use safety_rules_config::*;
 mod upstream_config;
 pub use upstream_config::*;
 mod test_config;
-use crate::network_id::NetworkId;
+use crate::{chain_id::ChainId, network_id::NetworkId};
 use libra_types::waypoint::Waypoint;
 pub use test_config::*;
 
@@ -89,6 +89,7 @@ pub struct NodeConfig {
 #[serde(default, deny_unknown_fields)]
 pub struct BaseConfig {
     data_dir: PathBuf,
+    pub chain_id: ChainId,
     pub role: RoleType,
     pub waypoint: WaypointConfig,
 }
@@ -97,6 +98,7 @@ impl Default for BaseConfig {
     fn default() -> BaseConfig {
         BaseConfig {
             data_dir: PathBuf::from("/opt/libra/data/commmon"),
+            chain_id: ChainId::default(),
             role: RoleType::Validator,
             waypoint: WaypointConfig::None,
         }

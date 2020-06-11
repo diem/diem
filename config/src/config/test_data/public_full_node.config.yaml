@@ -1,4 +1,5 @@
 base:
+    chain_id: "some-test-id"
     data_dir: "/opt/libra/data/common"
     role: "full_node"
     waypoint:
