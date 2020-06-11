@@ -683,6 +683,33 @@
 <span id="683">683</span>
 <span id="684">684</span>
 <span id="685">685</span>
+<span id="686">686</span>
+<span id="687">687</span>
+<span id="688">688</span>
+<span id="689">689</span>
+<span id="690">690</span>
+<span id="691">691</span>
+<span id="692">692</span>
+<span id="693">693</span>
+<span id="694">694</span>
+<span id="695">695</span>
+<span id="696">696</span>
+<span id="697">697</span>
+<span id="698">698</span>
+<span id="699">699</span>
+<span id="700">700</span>
+<span id="701">701</span>
+<span id="702">702</span>
+<span id="703">703</span>
+<span id="704">704</span>
+<span id="705">705</span>
+<span id="706">706</span>
+<span id="707">707</span>
+<span id="708">708</span>
+<span id="709">709</span>
+<span id="710">710</span>
+<span id="711">711</span>
+<span id="712">712</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -715,7 +742,7 @@
 <span class="kw">use</span> <span class="ident">kube</span>::<span class="ident">api</span>::<span class="ident">ListParams</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">DEFAULT_JSON_RPC_PORT</span>;
 <span class="kw">use</span> <span class="ident">reqwest</span>::<span class="ident">Client</span> <span class="kw">as</span> <span class="ident">HttpClient</span>;
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">process</span>::<span class="ident">Command</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashSet</span>, <span class="ident">process</span>::<span class="ident">Command</span>};
 
 <span class="kw">const</span> <span class="ident">DEFAULT_NAMESPACE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;default&quot;</span>;
 
@@ -950,6 +977,12 @@
         <span class="prelude-val">Ok</span>(())
     }
 
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">list_nodes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Node</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">node_api</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">Node</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Api</span>::<span class="ident">all</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">clone</span>());
+        <span class="kw">let</span> <span class="ident">lp</span> <span class="op">=</span> <span class="ident">ListParams</span>::<span class="ident">default</span>().<span class="ident">labels</span>(<span class="string">&quot;nodeType=validators&quot;</span>);
+        <span class="prelude-val">Ok</span>(<span class="ident">node_api</span>.<span class="ident">list</span>(<span class="kw-2">&amp;</span><span class="ident">lp</span>).<span class="kw">await</span><span class="question-mark">?</span>.<span class="ident">items</span>)
+    }
+
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_pod_node_and_ip</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">pod_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">String</span>)<span class="op">&gt;</span> {
         <span class="ident">libra_retrier</span>::<span class="ident">retry_async</span>(<span class="ident">libra_retrier</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">10000</span>, <span class="number">60</span>), <span class="op">|</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">pod_api</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">Pod</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Api</span>::<span class="ident">namespaced</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">clone</span>(), <span class="ident">DEFAULT_NAMESPACE</span>);
@@ -1052,10 +1085,8 @@
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Trying to remove_all_network_effects&quot;</span>);
         <span class="kw">let</span> <span class="ident">back_off_limit</span> <span class="op">=</span> <span class="number">2</span>;
 
-        <span class="kw">let</span> <span class="ident">node_api</span>: <span class="ident">Api</span><span class="op">&lt;</span><span class="ident">Node</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Api</span>::<span class="ident">all</span>(<span class="self">self</span>.<span class="ident">client</span>.<span class="ident">clone</span>());
-        <span class="kw">let</span> <span class="ident">lp</span> <span class="op">=</span> <span class="ident">ListParams</span>::<span class="ident">default</span>().<span class="ident">labels</span>(<span class="string">&quot;nodeType=validators&quot;</span>);
-        <span class="kw">let</span> <span class="ident">jobs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Job</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">node_api</span>
-            .<span class="ident">list</span>(<span class="kw-2">&amp;</span><span class="ident">lp</span>)
+        <span class="kw">let</span> <span class="ident">jobs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Job</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">list_nodes</span>()
             .<span class="kw">await</span><span class="question-mark">?</span>
             .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">node</span><span class="op">|</span> <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Job</span>, <span class="ident">anyhow</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
@@ -1136,6 +1167,39 @@
         <span class="self">self</span>.<span class="ident">run_jobs</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">job_spec</span>], <span class="ident">back_off_limit</span>).<span class="kw">await</span>
     }
 
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">allocate_node</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">instance_config</span>: <span class="kw-2">&amp;</span><span class="ident">InstanceConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+        <span class="ident">libra_retrier</span>::<span class="ident">retry_async</span>(<span class="ident">libra_retrier</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">5000</span>, <span class="number">15</span>), <span class="op">|</span><span class="op">|</span> {
+            <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> { <span class="self">self</span>.<span class="ident">allocate_node_impl</span>(<span class="ident">instance_config</span>).<span class="kw">await</span> })
+        })
+        .<span class="kw">await</span>
+    }
+
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">allocate_node_impl</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">instance_config</span>: <span class="kw-2">&amp;</span><span class="ident">InstanceConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">nodes</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">list_nodes</span>().<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">nodes_count</span> <span class="op">=</span> <span class="ident">nodes</span>.<span class="ident">len</span>();
+        <span class="comment">// Holding lock for read-verfy-write to avoid race conditions on this map</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_map</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">node_map</span>.<span class="ident">lock</span>().<span class="kw">await</span>;
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">existed</span>) <span class="op">=</span> <span class="ident">node_map</span>.<span class="ident">get</span>(<span class="ident">instance_config</span>) {
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">existed</span>.<span class="ident">clone</span>());
+        }
+        <span class="kw">let</span> <span class="ident">used_nodes</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">node_map</span>.<span class="ident">values</span>().<span class="ident">collect</span>();
+        <span class="kw">for</span> <span class="ident">node</span> <span class="kw">in</span> <span class="ident">nodes</span> {
+            <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">node</span>
+                .<span class="ident">metadata</span>
+                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;metadata not found for node&quot;</span>))<span class="question-mark">?</span>
+                .<span class="ident">name</span>
+                .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;node name not found&quot;</span>))<span class="question-mark">?</span>;
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">used_nodes</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="kw-2">&amp;</span><span class="ident">name</span>) {
+                <span class="ident">node_map</span>.<span class="ident">insert</span>(<span class="ident">instance_config</span>.<span class="ident">clone</span>(), <span class="ident">name</span>.<span class="ident">clone</span>());
+                <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">name</span>);
+            }
+        }
+        <span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(
+            <span class="string">&quot;Can not find free node, got total {} nodes&quot;</span>,
+            <span class="ident">nodes_count</span>
+        ))
+    }
+
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">upsert_node</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">instance_config</span>: <span class="ident">InstanceConfig</span>,
@@ -1155,12 +1219,9 @@
             <span class="self">self</span>.<span class="ident">delete_resource</span>::<span class="op">&lt;</span><span class="ident">Pod</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">pod_name</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         }
         <span class="kw">let</span> <span class="ident">node_name</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">node_map</span>
-            .<span class="ident">lock</span>()
+            .<span class="ident">allocate_node</span>(<span class="kw-2">&amp;</span><span class="ident">instance_config</span>)
             .<span class="kw">await</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">instance_config</span>)
-            .<span class="ident">cloned</span>()
-            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>());
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Failed to allocate node: {}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>;
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Creating pod {} on node {:?}&quot;</span>, <span class="ident">pod_name</span>, <span class="ident">node_name</span>);
         <span class="kw">let</span> (<span class="ident">p</span>, <span class="ident">s</span>): (<span class="ident">Pod</span>, <span class="ident">Service</span>) <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">instance_config</span> {
             <span class="ident">Validator</span>(<span class="ident">validator_config</span>) <span class="op">=</span><span class="op">&gt;</span> (
@@ -1237,11 +1298,8 @@
             }
             <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;Failed to create service : {}&quot;</span>, <span class="ident">e</span>),
         }
-        <span class="kw">let</span> (<span class="ident">node_name</span>, <span class="ident">pod_ip</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_pod_node_and_ip</span>(<span class="kw-2">&amp;</span><span class="ident">pod_name</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="macro">assert</span><span class="macro">!</span>(
-            <span class="op">!</span><span class="ident">node_name</span>.<span class="ident">is_empty</span>(),
-            <span class="string">&quot;get_pod_node_and_ip returned empty node_name&quot;</span>
-        );
+        <span class="kw">let</span> (<span class="ident">pod_node_name</span>, <span class="ident">pod_ip</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_pod_node_and_ip</span>(<span class="kw-2">&amp;</span><span class="ident">pod_name</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">node_name</span>, <span class="ident">pod_node_name</span>);
         <span class="kw">let</span> <span class="ident">ac_port</span> <span class="op">=</span> <span class="ident">DEFAULT_JSON_RPC_PORT</span> <span class="kw">as</span> <span class="ident">u32</span>;
         <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">Instance</span>::<span class="ident">new_k8s</span>(
             <span class="ident">pod_name</span>,
@@ -1252,10 +1310,6 @@
             <span class="self">self</span>.<span class="ident">http_client</span>.<span class="ident">clone</span>(),
             <span class="self">self</span>.<span class="ident">clone</span>(),
         );
-        <span class="self">self</span>.<span class="ident">node_map</span>
-            .<span class="ident">lock</span>()
-            .<span class="kw">await</span>
-            .<span class="ident">insert</span>(<span class="ident">instance_config</span>, <span class="ident">node_name</span>);
         <span class="prelude-val">Ok</span>(<span class="ident">instance</span>)
     }
 
