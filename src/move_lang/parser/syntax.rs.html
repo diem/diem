@@ -2146,13 +2146,6 @@
 <span id="2146">2146</span>
 <span id="2147">2147</span>
 <span id="2148">2148</span>
-<span id="2149">2149</span>
-<span id="2150">2150</span>
-<span id="2151">2151</span>
-<span id="2152">2152</span>
-<span id="2153">2153</span>
-<span id="2154">2154</span>
-<span id="2155">2155</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2429,7 +2422,6 @@
 <span class="comment">// Parse a module access (a variable, struct type, or function):</span>
 <span class="comment">//      ModuleAccess =</span>
 <span class="comment">//          &lt;Identifier&gt;</span>
-<span class="comment">//          | &quot;::&quot; &lt;Identifier&gt;</span>
 <span class="comment">//          | &lt;ModuleName&gt; &quot;::&quot; &lt;Identifier&gt;</span>
 <span class="comment">//          | &lt;ModuleIdent&gt; &quot;::&quot; &lt;Identifier&gt;</span>
 <span class="kw">fn</span> <span class="ident">parse_module_access</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span>, <span class="ident">F</span>: <span class="ident">FnOnce</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span><span class="op">&gt;</span>(
@@ -2447,12 +2439,6 @@
             } <span class="kw">else</span> {
                 <span class="ident">ModuleAccess_</span>::<span class="ident">Name</span>(<span class="ident">m</span>)
             }
-        }
-
-        <span class="ident">Tok</span>::<span class="ident">ColonColon</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="ident">tokens</span>.<span class="ident">advance</span>()<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">parse_identifier</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>;
-            <span class="ident">ModuleAccess_</span>::<span class="ident">Global</span>(<span class="ident">n</span>)
         }
 
         <span class="ident">Tok</span>::<span class="ident">AddressValue</span> <span class="op">=</span><span class="op">&gt;</span> {
@@ -2767,7 +2753,7 @@
             <span class="ident">Exp_</span>::<span class="ident">Continue</span>
         }
 
-        <span class="ident">Tok</span>::<span class="ident">ColonColon</span> <span class="op">|</span> <span class="ident">Tok</span>::<span class="ident">IdentifierValue</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_name_exp</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>,
+        <span class="ident">Tok</span>::<span class="ident">IdentifierValue</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parse_name_exp</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>,
 
         <span class="ident">Tok</span>::<span class="ident">AddressValue</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="comment">// Check if this is a ModuleIdent (in a ModuleAccess).</span>
@@ -3308,7 +3294,7 @@
 }
 
 <span class="kw">fn</span> <span class="ident">make_builtin_call</span>(<span class="ident">loc</span>: <span class="ident">Loc</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">type_args</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Exp</span> {
-    <span class="kw">let</span> <span class="ident">maccess</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">ModuleAccess_</span>::<span class="ident">Global</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">name</span>.<span class="ident">to_string</span>())));
+    <span class="kw">let</span> <span class="ident">maccess</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">ModuleAccess_</span>::<span class="ident">Name</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">name</span>.<span class="ident">to_string</span>())));
     <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">Exp_</span>::<span class="ident">Call</span>(<span class="ident">maccess</span>, <span class="ident">type_args</span>, <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">args</span>)))
 }
 
@@ -3914,8 +3900,8 @@
         },
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">unexpected_token_error</span>(
             <span class="ident">tokens</span>,
-            <span class="string">&quot;one of `assert`, `assume`, `decreases`, `aborts_if`, `succeeds_if`, \
-             `ensures`, `requires`, `include`, `apply`, `pragma`, `global`, or a name&quot;</span>,
+            <span class="string">&quot;one of `assert`, `assume`, `decreases`, `aborts_if`, `succeeds_if`, `ensures`, \
+             `requires`, `include`, `apply`, `pragma`, `global`, or a name&quot;</span>,
         )),
     }
 }

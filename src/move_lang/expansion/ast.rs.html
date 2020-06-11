@@ -878,18 +878,6 @@
 <span id="878">878</span>
 <span id="879">879</span>
 <span id="880">880</span>
-<span id="881">881</span>
-<span id="882">882</span>
-<span id="883">883</span>
-<span id="884">884</span>
-<span id="885">885</span>
-<span id="886">886</span>
-<span id="887">887</span>
-<span id="888">888</span>
-<span id="889">889</span>
-<span id="890">890</span>
-<span id="891">891</span>
-<span id="892">892</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1114,7 +1102,6 @@
     <span class="ident">Copy</span>(<span class="ident">Var</span>),
 
     <span class="ident">Name</span>(<span class="ident">ModuleAccess</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span><span class="op">&gt;</span>),
-    <span class="ident">GlobalCall</span>(<span class="ident">Name</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Spanned</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span><span class="op">&gt;</span>),
     <span class="ident">Call</span>(<span class="ident">ModuleAccess</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Spanned</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span><span class="op">&gt;</span>),
     <span class="ident">Pack</span>(<span class="ident">ModuleAccess</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span><span class="op">&gt;</span>, <span class="ident">Fields</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span>),
 
@@ -1574,17 +1561,6 @@
                     <span class="ident">ss</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
                     <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;&gt;&quot;</span>);
                 }
-            }
-            <span class="ident">E</span>::<span class="ident">GlobalCall</span>(<span class="ident">n</span>, <span class="ident">tys_opt</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">rhs</span>)) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;::{}&quot;</span>, <span class="ident">n</span>));
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">ss</span>) <span class="op">=</span> <span class="ident">tys_opt</span> {
-                    <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;&lt;&quot;</span>);
-                    <span class="ident">ss</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
-                    <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;&gt;&quot;</span>);
-                }
-                <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;(&quot;</span>);
-                <span class="ident">w</span>.<span class="ident">comma</span>(<span class="ident">rhs</span>, <span class="op">|</span><span class="ident">w</span>, <span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>));
-                <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;)&quot;</span>);
             }
             <span class="ident">E</span>::<span class="ident">Call</span>(<span class="ident">ma</span>, <span class="ident">tys_opt</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">rhs</span>)) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">ma</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);

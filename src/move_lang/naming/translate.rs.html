@@ -897,17 +897,6 @@
 <span id="897">897</span>
 <span id="898">898</span>
 <span id="899">899</span>
-<span id="900">900</span>
-<span id="901">901</span>
-<span id="902">902</span>
-<span id="903">903</span>
-<span id="904">904</span>
-<span id="905">905</span>
-<span id="906">906</span>
-<span id="907">907</span>
-<span id="908">908</span>
-<span id="909">909</span>
-<span id="910">910</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1617,17 +1606,6 @@
         <span class="ident">EE</span>::<span class="ident">Cast</span>(<span class="ident">e</span>, <span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NE</span>::<span class="ident">Cast</span>(<span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">e</span>), <span class="ident">type_</span>(<span class="ident">context</span>, <span class="ident">t</span>)),
         <span class="ident">EE</span>::<span class="ident">Annotate</span>(<span class="ident">e</span>, <span class="ident">t</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NE</span>::<span class="ident">Annotate</span>(<span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">e</span>), <span class="ident">type_</span>(<span class="ident">context</span>, <span class="ident">t</span>)),
 
-        <span class="ident">EE</span>::<span class="ident">GlobalCall</span>(<span class="ident">n</span>, <span class="ident">tys_opt</span>, <span class="ident">rhs</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">ty_args</span> <span class="op">=</span> <span class="ident">tys_opt</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">tys</span><span class="op">|</span> <span class="ident">types</span>(<span class="ident">context</span>, <span class="ident">tys</span>));
-            <span class="kw">let</span> <span class="ident">nes</span> <span class="op">=</span> <span class="ident">call_args</span>(<span class="ident">context</span>, <span class="ident">rhs</span>);
-            <span class="kw">match</span> <span class="ident">resolve_builtin_function</span>(<span class="ident">context</span>, <span class="ident">eloc</span>, <span class="kw-2">&amp;</span><span class="ident">n</span>, <span class="ident">ty_args</span>) {
-                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">context</span>.<span class="ident">has_errors</span>());
-                    <span class="ident">NE</span>::<span class="ident">UnresolvedError</span>
-                }
-                <span class="prelude-val">Some</span>(<span class="ident">b</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NE</span>::<span class="ident">Builtin</span>(<span class="ident">sp</span>(<span class="ident">n</span>.<span class="ident">loc</span>, <span class="ident">b</span>), <span class="ident">nes</span>),
-            }
-        }
         <span class="ident">EE</span>::<span class="ident">Call</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="ident">mloc</span>, <span class="ident">ma_</span>), <span class="ident">tys_opt</span>, <span class="ident">rhs</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">use</span> <span class="ident">E</span>::<span class="ident">ModuleAccess_</span> <span class="kw">as</span> <span class="ident">EA</span>;
             <span class="kw">let</span> <span class="ident">ty_args</span> <span class="op">=</span> <span class="ident">tys_opt</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">tys</span><span class="op">|</span> <span class="ident">types</span>(<span class="ident">context</span>, <span class="ident">tys</span>));

@@ -4160,19 +4160,6 @@
 <span id="4160">4160</span>
 <span id="4161">4161</span>
 <span id="4162">4162</span>
-<span id="4163">4163</span>
-<span id="4164">4164</span>
-<span id="4165">4165</span>
-<span id="4166">4166</span>
-<span id="4167">4167</span>
-<span id="4168">4168</span>
-<span id="4169">4169</span>
-<span id="4170">4170</span>
-<span id="4171">4171</span>
-<span id="4172">4172</span>
-<span id="4173">4173</span>
-<span id="4174">4174</span>
-<span id="4175">4175</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -4195,7 +4182,7 @@
 <span class="kw">use</span> <span class="ident">regex</span>::<span class="ident">Regex</span>;
 
 <span class="kw">use</span> <span class="ident">bytecode_source_map</span>::<span class="ident">source_map</span>::<span class="ident">SourceMap</span>;
-<span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::{<span class="ident">sp</span>, <span class="ident">Spanned</span>};
+<span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="ident">Spanned</span>;
 <span class="kw">use</span> <span class="ident">move_lang</span>::{
     <span class="ident">compiled_unit</span>::{<span class="ident">FunctionInfo</span>, <span class="ident">SpecInfo</span>},
     <span class="ident">expansion</span>::<span class="ident">ast</span> <span class="kw">as</span> <span class="ident">EA</span>,
@@ -7409,19 +7396,6 @@
             }
             <span class="ident">EA</span>::<span class="ident">Exp_</span>::<span class="ident">Name</span>(<span class="ident">maccess</span>, <span class="ident">type_params</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">translate_name</span>(<span class="kw-2">&amp;</span><span class="ident">loc</span>, <span class="ident">maccess</span>, <span class="ident">type_params</span>.<span class="ident">as_deref</span>(), <span class="ident">expected_type</span>)
-            }
-            <span class="ident">EA</span>::<span class="ident">Exp_</span>::<span class="ident">GlobalCall</span>(<span class="ident">n</span>, <span class="ident">type_params</span>, <span class="ident">args</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">maccess_</span> <span class="op">=</span> <span class="ident">EA</span>::<span class="ident">ModuleAccess_</span>::<span class="ident">Name</span>(<span class="ident">n</span>.<span class="ident">clone</span>());
-                <span class="kw">let</span> <span class="ident">maccess</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">n</span>.<span class="ident">loc</span>, <span class="ident">maccess_</span>);
-                <span class="comment">// Need to make a &amp;[&amp;Exp] out of args.</span>
-                <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="ident">args</span>.<span class="ident">value</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">e</span>).<span class="ident">collect_vec</span>();
-                <span class="self">self</span>.<span class="ident">translate_fun_call</span>(
-                    <span class="ident">expected_type</span>,
-                    <span class="kw-2">&amp;</span><span class="ident">loc</span>,
-                    <span class="kw-2">&amp;</span><span class="ident">maccess</span>,
-                    <span class="ident">type_params</span>.<span class="ident">as_deref</span>(),
-                    <span class="kw-2">&amp;</span><span class="ident">args</span>,
-                )
             }
             <span class="ident">EA</span>::<span class="ident">Exp_</span>::<span class="ident">Call</span>(<span class="ident">maccess</span>, <span class="ident">type_params</span>, <span class="ident">args</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="comment">// Need to make a &amp;[&amp;Exp] out of args.</span>

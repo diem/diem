@@ -1382,9 +1382,6 @@
 <span id="1382">1382</span>
 <span id="1383">1383</span>
 <span id="1384">1384</span>
-<span id="1385">1385</span>
-<span id="1386">1386</span>
-<span id="1387">1387</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1679,8 +1676,6 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ModuleAccess_</span> {
     <span class="comment">// N</span>
     <span class="ident">Name</span>(<span class="ident">Name</span>),
-    <span class="comment">// ::N</span>
-    <span class="ident">Global</span>(<span class="ident">Name</span>),
     <span class="comment">// M.S</span>
     <span class="ident">ModuleAccess</span>(<span class="ident">ModuleName</span>, <span class="ident">Name</span>),
     <span class="comment">// OxADDR.M.S</span>
@@ -2517,7 +2512,6 @@
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
         <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">ModuleAccess_</span>::<span class="ident">Name</span>(<span class="ident">n</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">n</span>),
-            <span class="ident">ModuleAccess_</span>::<span class="ident">Global</span>(<span class="ident">n</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;::{}&quot;</span>, <span class="ident">n</span>),
             <span class="ident">ModuleAccess_</span>::<span class="ident">ModuleAccess</span>(<span class="ident">m</span>, <span class="ident">n</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="ident">m</span>, <span class="ident">n</span>),
             <span class="ident">ModuleAccess_</span>::<span class="ident">QualifiedModuleAccess</span>(<span class="ident">m</span>, <span class="ident">n</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="ident">m</span>, <span class="ident">n</span>),
         })
