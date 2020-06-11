@@ -285,7 +285,6 @@ impl LibraVM {
         self.check_gas(transaction)?;
         let txn_data = TransactionMetadata::new(transaction);
         match transaction.payload() {
-            TransactionPayload::Program => Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT)),
             TransactionPayload::Script(script) => {
                 self.verify_script(remote_cache, script, txn_data, account_currency_symbol)
             }
@@ -304,7 +303,6 @@ impl LibraVM {
     ) -> VMResult<()> {
         let txn_data = TransactionMetadata::new(transaction);
         match transaction.payload() {
-            TransactionPayload::Program => Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT)),
             TransactionPayload::Script(script) => {
                 self.check_gas(transaction)?;
                 self.verify_script(remote_cache, script, txn_data, account_currency_symbol)?;

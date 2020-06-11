@@ -226,15 +226,6 @@ impl Account {
         gas_currency_code: String,
     ) -> RawTransaction {
         match payload {
-            TransactionPayload::Program => RawTransaction::new(
-                address,
-                sequence_number,
-                TransactionPayload::Program,
-                max_gas_amount,
-                gas_unit_price,
-                gas_currency_code,
-                Duration::from_secs(DEFAULT_EXPIRATION_TIME),
-            ),
             TransactionPayload::WriteSet(writeset) => {
                 RawTransaction::new_change_set(address, sequence_number, writeset)
             }

@@ -352,9 +352,7 @@ where
                             bail!("Write set should be a subset of read set.")
                         }
                         Transaction::UserTransaction(txn) => match txn.payload() {
-                            TransactionPayload::Program
-                            | TransactionPayload::Module(_)
-                            | TransactionPayload::Script(_) => {
+                            TransactionPayload::Module(_) | TransactionPayload::Script(_) => {
                                 bail!("Write set should be a subset of read set.")
                             }
                             TransactionPayload::WriteSet(_) => (),
