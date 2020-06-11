@@ -51,7 +51,6 @@ pub const SCRIPT_MODULE_NAME: &str = "<SELF>";
 
 /// Names used in the bytecode/AST to represent the main function of a script
 pub const SCRIPT_BYTECODE_FUN_NAME: &str = "<SELF>";
-pub const SCRIPT_AST_FUN_NAME: &str = "main";
 
 /// Pragma indicating whether verification should be performed for a function.
 pub const VERIFY_PRAGMA: &str = "verify";

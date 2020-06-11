@@ -6,20 +6,26 @@
 //! byte code). This includes identifying the Move sub-language supported by the specification
 //! system, as well as type checking it and translating it to the spec language ast.
 
-use std::collections::{BTreeMap, BTreeSet, LinkedList, VecDeque};
+use std::{
+    collections::{BTreeMap, BTreeSet, LinkedList, VecDeque},
+    fmt,
+    fmt::Formatter,
+};
 
 use itertools::Itertools;
-use num::{BigUint, FromPrimitive, Num};
-
-use bytecode_source_map::source_map::SourceMap;
 #[allow(unused_imports)]
 use log::{debug, info, warn};
+use num::{BigUint, FromPrimitive, Num};
+use regex::Regex;
+
+use bytecode_source_map::source_map::SourceMap;
+use move_ir_types::location::{sp, Spanned};
 use move_lang::{
     compiled_unit::{FunctionInfo, SpecInfo},
-    expansion::ast::{self as EA},
+    expansion::ast as EA,
     hlir::ast::{BaseType, SingleType},
     naming::ast::TParam,
-    parser::ast::{self as PA, FunctionName},
+    parser::ast::{self as PA, BinOp_, FunctionName},
     shared::{unique_map::UniqueMap, Name},
 };
 use vm::{
@@ -37,16 +43,12 @@ use crate::{
     env::{
         FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, MoveIrLoc, NodeId, SchemaId,
         SpecFunId, SpecVarId, StructData, StructId, TypeConstraint, TypeParameter,
-        SCRIPT_AST_FUN_NAME, SCRIPT_BYTECODE_FUN_NAME,
+        SCRIPT_BYTECODE_FUN_NAME,
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
     ty::{PrimitiveType, Substitution, Type, TypeDisplayContext, BOOL_TYPE},
 };
-use move_ir_types::location::{sp, Spanned};
-use move_lang::parser::ast::BinOp_;
-use regex::Regex;
-use std::{fmt, fmt::Formatter};
 
 // =================================================================================================
 /// # Translator
@@ -2635,12 +2637,17 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 let handle_idx = module.function_def_at(def_idx).function;
                 let handle = module.function_handle_at(handle_idx);
                 let view = FunctionHandleView::new(&module, handle);
-                let mut name_str = view.name().as_str();
-                // Script functions have different names in AST and bytecode; adjust.
-                if name_str == SCRIPT_BYTECODE_FUN_NAME {
-                    name_str = SCRIPT_AST_FUN_NAME;
-                }
-                let name = self.symbol_pool().make(name_str);
+                let name_str = view.name().as_str();
+                let name = if name_str == SCRIPT_BYTECODE_FUN_NAME {
+                    // This is a pseudo script module, which has exactly one function. Determine
+                    // the name of this function.
+                    self.parent.fun_table.iter().filter_map(|(k, _)| {
+                        if k.module_name == self.module_name
+                        { Some(k.symbol) } else { None }
+                    }).next().expect("unexpected script with multiple or no functions")
+                } else {
+                    self.symbol_pool().make(name_str)
+                };
                 let fun_spec = self.fun_specs.remove(&name).unwrap_or_else(Spec::default);
                 if let Some(entry) = self.parent.fun_table.get(&self.qualified_by_module(name)) {
                     let arg_names = project_1st(&entry.params);
@@ -2702,7 +2709,6 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
 // =================================================================================================
 /// # Expression and Type Translation
-
 #[derive(Debug)]
 pub struct ExpTranslator<'env, 'translator, 'module_translator> {
     parent: &'module_translator mut ModuleTranslator<'env, 'translator>,
@@ -3103,25 +3109,25 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                     // Attempt to resolve as builtin type.
                     match n.value.as_str() {
                         "bool" => {
-                            return check_zero_args(self, Type::new_prim(PrimitiveType::Bool))
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::Bool));
                         }
                         "u8" => return check_zero_args(self, Type::new_prim(PrimitiveType::U8)),
                         "u64" => return check_zero_args(self, Type::new_prim(PrimitiveType::U64)),
                         "u128" => {
-                            return check_zero_args(self, Type::new_prim(PrimitiveType::U128))
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::U128));
                         }
                         "num" => return check_zero_args(self, Type::new_prim(PrimitiveType::Num)),
                         "range" => {
-                            return check_zero_args(self, Type::new_prim(PrimitiveType::Range))
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::Range));
                         }
                         "address" => {
-                            return check_zero_args(self, Type::new_prim(PrimitiveType::Address))
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::Address));
                         }
                         "signer" => {
-                            return check_zero_args(self, Type::new_prim(PrimitiveType::Signer))
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::Signer));
                         }
                         "type" => {
-                            return check_zero_args(self, Type::new_prim(PrimitiveType::TypeValue))
+                            return check_zero_args(self, Type::new_prim(PrimitiveType::TypeValue));
                         }
                         "vector" => {
                             if args.len() != 1 {
