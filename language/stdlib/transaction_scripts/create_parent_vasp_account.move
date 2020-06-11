@@ -1,5 +1,5 @@
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 fun main<CoinType>(
     association: &signer,
     new_account_address: address,

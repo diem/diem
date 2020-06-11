@@ -1,4 +1,4 @@
-address 0x1 {
+address 0x2 {
 module M {
     struct S1 { b: bool }
     struct S2 { u: u64 }
@@ -10,9 +10,9 @@ module M {
     }
 
     fun t() {
-        use 0x1::M::{check as foo, num as foo};
-        use 0x1::M as N;
-        use 0x1::M as N;
+        use 0x2::M::{check as foo, num as foo};
+        use 0x2::M as N;
+        use 0x2::M as N;
 
     }
 }

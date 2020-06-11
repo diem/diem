@@ -28,7 +28,8 @@ impl AccountAddress {
     /// The number of bytes in an address.
     pub const LENGTH: usize = 16;
 
-    pub const DEFAULT: Self = Self([0u8; AccountAddress::LENGTH]);
+    /// Hex address: 0x0
+    pub const DEFAULT: Self = Self([0u8; Self::LENGTH]);
 
     pub fn random() -> Self {
         let mut rng = OsRng;

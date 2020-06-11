@@ -1,5 +1,5 @@
 script {
-    use 0x0::LibraSystem;
+    use 0x1::LibraSystem;
 
     // Callable by Validator's operator
     fun main(account: &signer, validator_address: address) {

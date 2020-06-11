@@ -1,5 +1,5 @@
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LBR;
+import 0x1.Libra;
 
 main() {
     let z: Libra.Libra<LBR.LBR>;

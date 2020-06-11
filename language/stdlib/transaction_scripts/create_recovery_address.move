@@ -1,5 +1,5 @@
 script {
-use 0x0::RecoveryAddress;
+use 0x1::RecoveryAddress;
 
 /// Extract the `KeyRotationCapability` for `recovery_account` and publish it in a
 /// `RecoveryAddress` resource under  `recovery_account`.

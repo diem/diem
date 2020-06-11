@@ -5,7 +5,7 @@ error:
  10 │     fun U() {}
     │         ^ Duplicate module member or alias 'U'. Top level names in a namespace must be unique
     ·
-  8 │     use 0x1::X::{U, U as U2};
+  8 │     use 0x2::X::{U, U as U2};
     │                  - Previously defined here
     │
 
@@ -16,7 +16,7 @@ error:
  11 │     fun U2() {}
     │         ^^ Duplicate module member or alias 'U2'. Top level names in a namespace must be unique
     ·
-  8 │     use 0x1::X::{U, U as U2};
+  8 │     use 0x2::X::{U, U as U2};
     │                          -- Previously defined here
     │
 
@@ -24,7 +24,7 @@ error:
 
     ┌── tests/move_check/expansion/use_struct_same_name_as_function.move:15:18 ───
     │
- 15 │     use 0x1::X::{R, R as R2};
+ 15 │     use 0x2::X::{R, R as R2};
     │                  ^ Duplicate module member or alias 'R'. Top level names in a namespace must be unique
     ·
  12 │     fun R() {}
@@ -35,7 +35,7 @@ error:
 
     ┌── tests/move_check/expansion/use_struct_same_name_as_function.move:15:18 ───
     │
- 15 │     use 0x1::X::{R, R as R2};
+ 15 │     use 0x2::X::{R, R as R2};
     │                  ^ Unused 'use' of alias 'R'. Consider removing it
     │
 
@@ -43,7 +43,7 @@ error:
 
     ┌── tests/move_check/expansion/use_struct_same_name_as_function.move:15:26 ───
     │
- 15 │     use 0x1::X::{R, R as R2};
+ 15 │     use 0x2::X::{R, R as R2};
     │                          ^^ Duplicate module member or alias 'R2'. Top level names in a namespace must be unique
     ·
  13 │     fun R2() {}
@@ -54,7 +54,7 @@ error:
 
     ┌── tests/move_check/expansion/use_struct_same_name_as_function.move:15:26 ───
     │
- 15 │     use 0x1::X::{R, R as R2};
+ 15 │     use 0x2::X::{R, R as R2};
     │                          ^^ Unused 'use' of alias 'R2'. Consider removing it
     │
 

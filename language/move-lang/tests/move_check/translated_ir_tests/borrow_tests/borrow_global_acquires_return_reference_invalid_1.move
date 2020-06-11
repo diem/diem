@@ -1,5 +1,5 @@
 module A {
-    use 0x0::Signer;
+    use 0x1::Signer;
     resource struct T1 {v: u64}
 
     public fun test1(account: &signer) acquires T1 {

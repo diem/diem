@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/parser/use_module_member_invalid_comma.move:4:26 ───
    │
- 4 │     use 0x0::X::{S as XS,,};
+ 4 │     use 0x1::X::{S as XS,,};
    │                          ^ Expected a module member alias
    │
 

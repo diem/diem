@@ -1,15 +1,15 @@
 // Error codes:
 // 1100 -> OPERATOR_ACCOUNT_DOES_NOT_EXIST
 // 1101 -> INVALID_TRANSACTION_SENDER
-address 0x0 {
+address 0x1 {
 
 module LibraSystem {
-    use 0x0::CoreAddresses;
-    use 0x0::LibraConfig;
-    use 0x0::Option::{Self, Option};
-    use 0x0::Signer;
-    use 0x0::ValidatorConfig;
-    use 0x0::Vector;
+    use 0x1::CoreAddresses;
+    use 0x1::LibraConfig;
+    use 0x1::Option::{Self, Option};
+    use 0x1::Signer;
+    use 0x1::ValidatorConfig;
+    use 0x1::Vector;
 
     struct ValidatorInfo {
         addr: address,

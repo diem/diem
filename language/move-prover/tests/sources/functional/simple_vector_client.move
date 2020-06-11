@@ -2,7 +2,7 @@
 // using the standard vector module.
 
 module TestVector {
-    use 0x0::Vector;
+    use 0x1::Vector;
 
     spec module {
         pragma verify = true;

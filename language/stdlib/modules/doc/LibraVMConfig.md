@@ -1,25 +1,25 @@
 
-<a name="0x0_LibraVMConfig"></a>
+<a name="0x1_LibraVMConfig"></a>
 
-# Module `0x0::LibraVMConfig`
+# Module `0x1::LibraVMConfig`
 
 ### Table of Contents
 
--  [Struct `LibraVMConfig`](#0x0_LibraVMConfig_LibraVMConfig)
--  [Struct `GasSchedule`](#0x0_LibraVMConfig_GasSchedule)
--  [Struct `GasConstants`](#0x0_LibraVMConfig_GasConstants)
--  [Function `initialize`](#0x0_LibraVMConfig_initialize)
--  [Function `set_publishing_option`](#0x0_LibraVMConfig_set_publishing_option)
+-  [Struct `LibraVMConfig`](#0x1_LibraVMConfig_LibraVMConfig)
+-  [Struct `GasSchedule`](#0x1_LibraVMConfig_GasSchedule)
+-  [Struct `GasConstants`](#0x1_LibraVMConfig_GasConstants)
+-  [Function `initialize`](#0x1_LibraVMConfig_initialize)
+-  [Function `set_publishing_option`](#0x1_LibraVMConfig_set_publishing_option)
 
 
 
-<a name="0x0_LibraVMConfig_LibraVMConfig"></a>
+<a name="0x1_LibraVMConfig_LibraVMConfig"></a>
 
 ## Struct `LibraVMConfig`
 
 
 
-<pre><code><b>struct</b> <a href="#0x0_LibraVMConfig">LibraVMConfig</a>
+<pre><code><b>struct</b> <a href="#0x1_LibraVMConfig">LibraVMConfig</a>
 </code></pre>
 
 
@@ -38,7 +38,7 @@
 </dd>
 <dt>
 
-<code>gas_schedule: <a href="#0x0_LibraVMConfig_GasSchedule">LibraVMConfig::GasSchedule</a></code>
+<code>gas_schedule: <a href="#0x1_LibraVMConfig_GasSchedule">LibraVMConfig::GasSchedule</a></code>
 </dt>
 <dd>
 
@@ -48,13 +48,13 @@
 
 </details>
 
-<a name="0x0_LibraVMConfig_GasSchedule"></a>
+<a name="0x1_LibraVMConfig_GasSchedule"></a>
 
 ## Struct `GasSchedule`
 
 
 
-<pre><code><b>struct</b> <a href="#0x0_LibraVMConfig_GasSchedule">GasSchedule</a>
+<pre><code><b>struct</b> <a href="#0x1_LibraVMConfig_GasSchedule">GasSchedule</a>
 </code></pre>
 
 
@@ -80,7 +80,7 @@
 </dd>
 <dt>
 
-<code>gas_constants: <a href="#0x0_LibraVMConfig_GasConstants">LibraVMConfig::GasConstants</a></code>
+<code>gas_constants: <a href="#0x1_LibraVMConfig_GasConstants">LibraVMConfig::GasConstants</a></code>
 </dt>
 <dd>
 
@@ -90,13 +90,13 @@
 
 </details>
 
-<a name="0x0_LibraVMConfig_GasConstants"></a>
+<a name="0x1_LibraVMConfig_GasConstants"></a>
 
 ## Struct `GasConstants`
 
 
 
-<pre><code><b>struct</b> <a href="#0x0_LibraVMConfig_GasConstants">GasConstants</a>
+<pre><code><b>struct</b> <a href="#0x1_LibraVMConfig_GasConstants">GasConstants</a>
 </code></pre>
 
 
@@ -178,13 +178,13 @@
 
 </details>
 
-<a name="0x0_LibraVMConfig_initialize"></a>
+<a name="0x1_LibraVMConfig_initialize"></a>
 
 ## Function `initialize`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVMConfig_initialize">initialize</a>(config_account: &signer, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(config_account: &signer, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -193,13 +193,13 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVMConfig_initialize">initialize</a>(
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(
     config_account: &signer,
     publishing_option: vector&lt;u8&gt;,
     instruction_schedule: vector&lt;u8&gt;,
     native_schedule: vector&lt;u8&gt;,
 ) {
-    <b>let</b> gas_constants = <a href="#0x0_LibraVMConfig_GasConstants">GasConstants</a> {
+    <b>let</b> gas_constants = <a href="#0x1_LibraVMConfig_GasConstants">GasConstants</a> {
         global_memory_per_byte_cost: 8,
         global_memory_per_byte_write_cost: 8,
         min_transaction_gas_units: 600,
@@ -212,11 +212,11 @@
     };
 
 
-    <a href="LibraConfig.md#0x0_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>&lt;<a href="#0x0_LibraVMConfig">LibraVMConfig</a>&gt;(
+    <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;(
         config_account,
-        <a href="#0x0_LibraVMConfig">LibraVMConfig</a> {
+        <a href="#0x1_LibraVMConfig">LibraVMConfig</a> {
             publishing_option,
-            gas_schedule: <a href="#0x0_LibraVMConfig_GasSchedule">GasSchedule</a> {
+            gas_schedule: <a href="#0x1_LibraVMConfig_GasSchedule">GasSchedule</a> {
                 instruction_schedule,
                 native_schedule,
                 gas_constants,
@@ -230,13 +230,13 @@
 
 </details>
 
-<a name="0x0_LibraVMConfig_set_publishing_option"></a>
+<a name="0x1_LibraVMConfig_set_publishing_option"></a>
 
 ## Function `set_publishing_option`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVMConfig_set_publishing_option">set_publishing_option</a>(account: &signer, publishing_option: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_set_publishing_option">set_publishing_option</a>(account: &signer, publishing_option: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -245,10 +245,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraVMConfig_set_publishing_option">set_publishing_option</a>(account: &signer, publishing_option: vector&lt;u8&gt;) {
-    <b>let</b> current_config = <a href="LibraConfig.md#0x0_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x0_LibraVMConfig">LibraVMConfig</a>&gt;();
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_set_publishing_option">set_publishing_option</a>(account: &signer, publishing_option: vector&lt;u8&gt;) {
+    <b>let</b> current_config = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;();
     current_config.publishing_option = publishing_option;
-    <a href="LibraConfig.md#0x0_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x0_LibraVMConfig">LibraVMConfig</a>&gt;(account, current_config);
+    <a href="LibraConfig.md#0x1_LibraConfig_set">LibraConfig::set</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;(account, current_config);
 }
 </code></pre>
 

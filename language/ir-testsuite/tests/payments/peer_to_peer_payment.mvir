@@ -1,9 +1,9 @@
 //! account: bob, 1000000
 
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Signer;
-import 0x0.Vector;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Signer;
+import 0x1.Vector;
 
 main(sender: &signer) {
     let sender_addr: address;

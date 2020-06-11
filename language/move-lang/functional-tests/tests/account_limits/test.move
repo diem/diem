@@ -5,7 +5,7 @@
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::Testnet;
+    use 0x1::Testnet;
     // Unset testnet
     fun main(account: &signer) {
         Testnet::remove_testnet(account)
@@ -16,8 +16,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::LibraAccount;
-    use 0x0::LBR::LBR;
+    use 0x1::LibraAccount;
+    use 0x1::LBR::LBR;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
         LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 1);
@@ -31,7 +31,7 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 fun main(account: &signer) {
     LibraAccount::mint_lbr_to_address(account, {{bob}}, 1);
 }
@@ -43,7 +43,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::Testnet;
+    use 0x1::Testnet;
     // Reset testnet
     fun main(account: &signer) {
         Testnet::initialize(account)
@@ -54,7 +54,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::AccountLimits;
+    use 0x1::AccountLimits;
     fun main(account: &signer) {
         AccountLimits::publish_unrestricted_limits(account)
     }
@@ -64,7 +64,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::AccountLimits;
+    use 0x1::AccountLimits;
     fun main(account: &signer) {
         AccountLimits::certify_limits_definition(account, {{bob}});
     }
@@ -73,7 +73,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::AccountLimits;
+    use 0x1::AccountLimits;
     fun main(account: &signer) {
         AccountLimits::decertify_limits_definition(account, {{bob}});
     }
@@ -84,7 +84,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::AccountLimits;
+    use 0x1::AccountLimits;
     fun main(account: &signer) {
         AccountLimits::decertify_limits_definition(account, {{bob}});
     }
@@ -94,7 +94,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::AccountLimits;
+    use 0x1::AccountLimits;
     fun main(account: &signer) {
         AccountLimits::unpublish_limits_definition(account);
     }
@@ -103,7 +103,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::AccountLimits;
+    use 0x1::AccountLimits;
     fun main() {
         assert(AccountLimits::default_limits_addr() == {{association}}, 0);
     }
@@ -113,8 +113,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::LibraAccount;
-    use 0x0::LBR::LBR;
+    use 0x1::LibraAccount;
+    use 0x1::LBR::LBR;
     // Since we directly wrote into this account using fake data store, we
     // don't actually know that the balance is greater than 0 in the
     // account limits code, but it is.
@@ -129,7 +129,7 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 fun main(account: &signer) {
     LibraAccount::mint_lbr_to_address(account, {{bob}}, 2);
 }
@@ -139,8 +139,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::LibraAccount;
-    use 0x0::LBR::LBR;
+    use 0x1::LibraAccount;
+    use 0x1::LBR::LBR;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
         LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 1);
@@ -152,7 +152,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::AccountLimits;
+    use 0x1::AccountLimits;
     // Publish our own limits definition for testing! Make sure we are
     // exercising the unrestricted limits check.
     fun main(account: &signer) {
@@ -166,7 +166,7 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::LibraAccount;
+use 0x1::LibraAccount;
 fun main(account: &signer) {
     LibraAccount::mint_lbr_to_address(account, {{bob}}, 2);
 }
@@ -176,8 +176,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::LibraAccount;
-    use 0x0::LBR::LBR;
+    use 0x1::LibraAccount;
+    use 0x1::LBR::LBR;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
         LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 1);
@@ -189,7 +189,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::AccountLimits;
+    use 0x1::AccountLimits;
     // Publish our own limits definition for testing! Make sure we are
     // exercising the unrestricted limits check.
     fun main(account: &signer) {
@@ -201,8 +201,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::LibraAccount;
-    use 0x0::LBR::LBR;
+    use 0x1::LibraAccount;
+    use 0x1::LBR::LBR;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
         LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 1);
@@ -216,7 +216,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::AccountLimits;
+    use 0x1::AccountLimits;
     // Publish our own limits definition for testing!
     fun main(account: &signer) {
         AccountLimits::unpublish_limits_definition(account);
@@ -239,7 +239,7 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::LibraAccount;
+    use 0x1::LibraAccount;
     fun main(account: &signer) {
         LibraAccount::mint_lbr_to_address(account, {{bob}}, 100);
     }
@@ -249,7 +249,7 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::LibraAccount;
+    use 0x1::LibraAccount;
     fun main(account: &signer) {
         LibraAccount::mint_lbr_to_address(account, {{bob}}, 1);
     }
@@ -261,8 +261,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::LibraAccount;
-    use 0x0::LBR::LBR;
+    use 0x1::LibraAccount;
+    use 0x1::LBR::LBR;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
         LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 101);
@@ -275,7 +275,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::AccountLimits;
+    use 0x1::AccountLimits;
     // Publish our own limits definition for testing! Make sure we are
     // exercising the unrestricted limits check.
     fun main(account: &signer) {
@@ -287,8 +287,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::LibraAccount;
-    use 0x0::LBR::LBR;
+    use 0x1::LibraAccount;
+    use 0x1::LBR::LBR;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
         LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 1);
@@ -302,7 +302,7 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::LibraAccount;
+    use 0x1::LibraAccount;
     fun main(account: &signer) {
         LibraAccount::mint_lbr_to_address(account, {{bob}}, 1);
     }

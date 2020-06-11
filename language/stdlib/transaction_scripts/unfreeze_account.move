@@ -1,6 +1,6 @@
 script {
-use 0x0::LibraAccount;
-use 0x0::SlidingNonce;
+use 0x1::LibraAccount;
+use 0x1::SlidingNonce;
 
 /// Script for un-freezing account by authorized initiator
 /// sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details

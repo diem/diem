@@ -1,5 +1,5 @@
 module Tester {
-    import 0x0.Signer;
+    import 0x1.Signer;
 
     resource Data { v1: u64, v2: u64 }
     resource Box { f: u64 }

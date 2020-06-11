@@ -1,5 +1,5 @@
 module M {
-    import 0x0.Signer;
+    import 0x1.Signer;
 
     resource R1 { f: bool }
     resource R2<T> { f: T }

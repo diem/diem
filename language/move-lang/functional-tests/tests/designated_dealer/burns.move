@@ -6,9 +6,9 @@
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::DesignatedDealer;
-    use 0x0::LibraAccount;
-    use 0x0::Coin1::Coin1;
+    use 0x1::DesignatedDealer;
+    use 0x1::LibraAccount;
+    use 0x1::Coin1::Coin1;
     fun main(account: &signer) {
         let dummy_auth_key_prefix = x"00000000000000000000000000000001";
         LibraAccount::create_designated_dealer<Coin1>(account, 0xDEADBEEF, dummy_auth_key_prefix);
@@ -25,9 +25,9 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::DesignatedDealer;
-    use 0x0::LibraAccount;
-    use 0x0::Coin1::Coin1;
+    use 0x1::DesignatedDealer;
+    use 0x1::LibraAccount;
+    use 0x1::Coin1::Coin1;
     fun main(tc_account: &signer) {
         let designated_dealer_address = 0xDEADBEEF;
         DesignatedDealer::add_tier(tc_account, 0xDEADBEEF, 100); // first Tier, 0th index

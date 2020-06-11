@@ -1,7 +1,7 @@
-address 0x0 {
+address 0x1 {
 
 module TraceBug {
-    use 0x0::Transaction;
+    use 0x1::Transaction;
 
     resource struct Root { }
 

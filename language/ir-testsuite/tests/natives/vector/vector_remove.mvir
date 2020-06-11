@@ -1,4 +1,4 @@
-import 0x0.Vector;
+import 0x1.Vector;
 
 main() {
   let vec: vector<u64>;
@@ -42,7 +42,7 @@ main() {
 // check: EXECUTED
 
 //! new-transaction
-import 0x0.Vector;
+import 0x1.Vector;
 // remove on empty vector should fail
 main() {
   let vec: vector<u64>;
@@ -57,7 +57,7 @@ main() {
 // check: Some(10)
 
 //! new-transaction
-import 0x0.Vector;
+import 0x1.Vector;
 // remove on out-of-bounds index should fail
 main() {
   let vec: vector<u64>;

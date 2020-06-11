@@ -1,6 +1,6 @@
-address 0x1 {
+address 0x2 {
 module M {
     fun t() {
-        if (cond) use 0x1::M;
+        if (cond) use 0x2::M;
     }
 }

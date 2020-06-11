@@ -7,13 +7,13 @@
 // 1105 -> VALIDATOR_OPERATOR_IS_NOT_SET
 // 1106 -> VALIDATOR_RESOURCE_DOES_NOT_EXIST
 // 1107 -> INVALID_NET
-address 0x0 {
+address 0x1 {
 
 module ValidatorConfig {
-    use 0x0::Association;
-    use 0x0::Option::{Self, Option};
-    use 0x0::Signer;
-    use 0x0::CoreAddresses;
+    use 0x1::Association;
+    use 0x1::Option::{Self, Option};
+    use 0x1::Signer;
+    use 0x1::CoreAddresses;
 
     struct Config {
         consensus_pubkey: vector<u8>,

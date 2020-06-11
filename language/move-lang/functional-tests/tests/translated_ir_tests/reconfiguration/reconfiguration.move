@@ -9,7 +9,7 @@
 //! new-transaction
 // Reconfiguration can only be invoked by association.
 script {
-use 0x0::LibraConfig;
+use 0x1::LibraConfig;
 
 fun main(account: &signer) {
     LibraConfig::reconfigure(account)
@@ -22,7 +22,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: config
 script {
-use 0x0::LibraConfig;
+use 0x1::LibraConfig;
 
 fun main(account: &signer) {
     LibraConfig::reconfigure(account)
@@ -36,7 +36,7 @@ fun main(account: &signer) {
 //! sender: config
 // Cannot trigger two reconfiguration within the same block.
 script {
-use 0x0::LibraConfig;
+use 0x1::LibraConfig;
 
 fun main(account: &signer) {
     LibraConfig::reconfigure(account)
@@ -53,7 +53,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: config
 script {
-use 0x0::LibraConfig;
+use 0x1::LibraConfig;
 
 fun main(account: &signer) {
     LibraConfig::reconfigure(account)

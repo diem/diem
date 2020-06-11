@@ -9,7 +9,7 @@ use crate::{
     transaction_status_eq,
 };
 use libra_types::{
-    account_config::LBR_NAME,
+    account_config::{self, LBR_NAME},
     on_chain_config::VMPublishingOption,
     transaction::TransactionStatus,
     vm_error::{StatusCode, StatusType, VMStatus},
@@ -201,6 +201,38 @@ pub fn test_publishing_no_modules_proper_sender() {
         *sender.address(),
         random_script,
         1,
+        100_000,
+        0,
+        LBR_NAME.to_owned(),
+    );
+    assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
+    assert_eq!(
+        executor.execute_transaction(txn).status(),
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+    );
+}
+
+#[test]
+pub fn test_publishing_no_modules_core_code_sender() {
+    // create a FakeExecutor with a genesis from file
+    let executor = FakeExecutor::whitelist_genesis();
+
+    // create a transaction trying to publish a new module.
+    let sender = Account::new_association();
+
+    let program = String::from(
+        "
+        module M {
+        }
+        ",
+    );
+
+    let random_script =
+        compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &program);
+    let txn = sender.create_signed_txn_impl(
+        account_config::CORE_CODE_ADDRESS,
+        random_script,
+        0,
         100_000,
         0,
         LBR_NAME.to_owned(),

@@ -1,10 +1,10 @@
-address 0x0 {
+address 0x1 {
 
 module Unhosted {
-    use 0x0::CoreAddresses;
-    use 0x0::AccountLimits;
-    use 0x0::Signer;
-    use 0x0::Testnet;
+    use 0x1::CoreAddresses;
+    use 0x1::AccountLimits;
+    use 0x1::Signer;
+    use 0x1::Testnet;
 
     // An unhosted account is subject to account holding/velocity limits.
     // This holds the metadata about the account transactions during a

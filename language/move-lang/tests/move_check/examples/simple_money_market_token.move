@@ -1,4 +1,4 @@
-address 0x1 {
+address 0x2 {
 
 module Token {
 
@@ -50,8 +50,8 @@ module Token {
 address 0xB055 {
 
 module OneToOneMarket {
-    use 0x0::Signer;
-    use 0x1::Token;
+    use 0x1::Signer;
+    use 0x2::Token;
 
     resource struct Pool<AssetType: copyable> {
         coin: Token::Coin<AssetType>,
@@ -176,8 +176,8 @@ module OneToOneMarket {
 address 0x70DD {
 
 module ToddNickles {
-    use 0x1::Token;
-    use 0x0::Signer;
+    use 0x2::Token;
+    use 0x1::Signer;
 
     struct T {}
 

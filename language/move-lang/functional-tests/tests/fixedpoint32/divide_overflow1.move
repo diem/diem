@@ -1,5 +1,5 @@
 script {
-use 0x0::FixedPoint32;
+use 0x1::FixedPoint32;
 
 fun main() {
     let f1 = FixedPoint32::create_from_raw_value(1); // 0x0.00000001

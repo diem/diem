@@ -1,10 +1,10 @@
 // The module for the account resource that governs every Libra account
 module LibraAccount {
-    import 0x0.LibraCoin;
-    import 0x0.Hash;
-    import 0x0.U64Util;
-    import 0x0.Vector;
-    import 0x0.AddressUtil;
+    import 0x1.LibraCoin;
+    import 0x1.Hash;
+    import 0x1.U64Util;
+    import 0x1.Vector;
+    import 0x1.AddressUtil;
 
     // Every Libra account has a LibraAccount.T resource
     resource T {

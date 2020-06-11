@@ -3,8 +3,8 @@
 
 //! sender: alice
 module FooConfig {
-    use 0x0::LibraConfig;
-    use 0x0::CoreAddresses;
+    use 0x1::LibraConfig;
+    use 0x1::CoreAddresses;
 
     struct T {
         version: u64,

@@ -84,7 +84,7 @@ fn generate(inp_dir: &Path, out_dir: &Path) -> anyhow::Result<()> {
         let mut at = 0;
         // TODO: This is not 100% correct because modules can be used with full qualification and without `use`.
         // Refer to `move-prover/src/lib.rs` which correctly addresses this issue.
-        let rex2 = Regex::new(r"(?m)use 0x0::(\w+)\s*;").unwrap();
+        let rex2 = Regex::new(r"(?m)use 0x1::(\w+)\s*;").unwrap();
         while let Some(cap) = rex2.captures(&content[at..]) {
             let dep = cap.get(1).unwrap().as_str().to_string();
             dep_list.push(dep.clone());

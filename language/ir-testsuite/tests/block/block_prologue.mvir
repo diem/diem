@@ -9,8 +9,8 @@
 // check: 1000000
 
 //! new-transaction
-import 0x0.LibraTimestamp;
-import 0x0.LibraBlock;
+import 0x1.LibraTimestamp;
+import 0x1.LibraBlock;
 
 main() {
     assert(LibraBlock.get_current_block_height() == 1, 73);
@@ -20,7 +20,7 @@ main() {
 }
 
 //! new-transaction
-import 0x0.LibraTimestamp;
+import 0x1.LibraTimestamp;
 
 main() {
     assert(LibraTimestamp.now_microseconds() != 2000000, 77);
@@ -29,9 +29,9 @@ main() {
 
 //! new-transaction
 //! sender: vivian
-import 0x0.LibraBlock;
-import 0x0.LibraTimestamp;
-import 0x0.Vector;
+import 0x1.LibraBlock;
+import 0x1.LibraTimestamp;
+import 0x1.Vector;
 
 main(account: &signer) {
     LibraBlock.block_prologue(move(account), 1, 10, Vector.empty<address>(), {{vivian}});
@@ -43,7 +43,7 @@ main(account: &signer) {
 
 //! new-transaction
 //! sender: vivian
-import 0x0.LibraTimestamp;
+import 0x1.LibraTimestamp;
 
 main(account: &signer) {
     LibraTimestamp.update_global_time(move(account), {{vivian}}, 20);

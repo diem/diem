@@ -1,5 +1,5 @@
-import 0x0.LibraAccount;
-import 0x0.Coin1;
+import 0x1.LibraAccount;
+import 0x1.Coin1;
 
 main(account: &signer) {
     LibraAccount.success_epilogue<Coin1.Coin1>(move(account), 0, 0, 0, 0);

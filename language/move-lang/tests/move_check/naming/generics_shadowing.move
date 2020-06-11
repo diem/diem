@@ -1,4 +1,4 @@
-address 0x1 {
+address 0x2 {
 
 module M {
     resource struct S {}

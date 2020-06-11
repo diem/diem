@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Privilege&gt;(account: &signer, addr: address) {
-    <a href="../../modules/doc/Association.md#0x0_Association_remove_privilege">Association::remove_privilege</a>&lt;Privilege&gt;(account, addr)
+    <a href="../../modules/doc/Association.md#0x1_Association_remove_privilege">Association::remove_privilege</a>&lt;Privilege&gt;(account, addr)
 }
 </code></pre>
 

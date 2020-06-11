@@ -1,12 +1,12 @@
-address 0x0 {
+address 0x1 {
 
 module LibraBlock {
-    use 0x0::LBR;
-    use 0x0::LibraAccount;
-    use 0x0::LibraSystem;
-    use 0x0::LibraTimestamp;
-    use 0x0::Transaction;
-    use 0x0::TransactionFee;
+    use 0x1::Transaction;
+    use 0x1::LBR;
+    use 0x1::LibraAccount;
+    use 0x1::LibraSystem;
+    use 0x1::LibraTimestamp;
+    use 0x1::TransactionFee;
 
     spec module {
         pragma verify = false;

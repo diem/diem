@@ -2,11 +2,11 @@
 // - Ed25519 (single-sig)
 // - MultiEd25519 (K-of-N multisig)
 
-address 0x0 {
+address 0x1 {
 module Authenticator {
-    use 0x0::Hash;
-    use 0x0::LCS;
-    use 0x0::Vector;
+    use 0x1::Hash;
+    use 0x1::LCS;
+    use 0x1::Vector;
 
     // A multi-ed25519 public key
     struct MultiEd25519PublicKey {

@@ -1,9 +1,9 @@
-address 0x0 {
+address 0x1 {
 module DesignatedDealer {
-    use 0x0::Association;
-    use 0x0::Libra::{Self, Libra};
-    use 0x0::LibraTimestamp;
-    use 0x0::Vector;
+    use 0x1::Association;
+    use 0x1::Libra::{Self, Libra};
+    use 0x1::LibraTimestamp;
+    use 0x1::Vector;
 
     resource struct Dealer {
         /// Time window start in microseconds

@@ -8,7 +8,7 @@
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::SlidingNonce;
+    use 0x1::SlidingNonce;
 
     fun main(account: &signer) {
         SlidingNonce::publish(account);
@@ -40,7 +40,7 @@ script {
 //! new-transaction
 //! sender: alice
 script {
-    use 0x0::SlidingNonce;
+    use 0x1::SlidingNonce;
 
     fun main(account: &signer) {
         SlidingNonce::record_nonce_or_abort(account, 0);

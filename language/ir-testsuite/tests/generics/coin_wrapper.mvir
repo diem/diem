@@ -1,6 +1,6 @@
 module M {
-    import 0x0.LBR;
-    import 0x0.Libra;
+    import 0x1.LBR;
+    import 0x1.Libra;
     resource Foo<T: resource> { x: T }
     resource CoinWrapper { f: Self.Foo<Libra.Libra<LBR.LBR>> }
     resource InnerWrapper { f: Self.Foo<Self.Inner>}
@@ -68,9 +68,9 @@ module M {
 
 //! new-transaction
 import {{default}}.M;
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
 
 main(account: &signer) {
   let coin: Libra.Libra<LBR.LBR>;
@@ -90,8 +90,8 @@ main(account: &signer) {
 
 //! new-transaction
 import {{default}}.M;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LBR;
+import 0x1.Libra;
 
 main() {
   let coin: Libra.Libra<LBR.LBR>;
@@ -105,9 +105,9 @@ main() {
 
 //! new-transaction
 import {{default}}.M;
-import 0x0.LBR;
-import 0x0.Libra;
-import 0x0.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
+import 0x1.LibraAccount;
 
 main(account: &signer) {
   let coin: Libra.Libra<LBR.LBR>;

@@ -15,8 +15,8 @@
 //! expiration-time: 3
 // rotate bob's key with reconfiguration
 script {
-use 0x0::ValidatorConfig;
-use 0x0::LibraSystem;
+use 0x1::ValidatorConfig;
+use 0x1::LibraSystem;
 fun main(account: &signer) {
     // assert alice is a validator
     assert(ValidatorConfig::is_valid({{bob}}) == true, 98);

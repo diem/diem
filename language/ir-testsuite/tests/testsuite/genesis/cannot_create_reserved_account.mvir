@@ -1,7 +1,7 @@
-import 0x0.LibraAccount;
-import 0x0.LCS;
-import 0x0.Vector;
-import 0x0.LBR;
+import 0x1.LibraAccount;
+import 0x1.LCS;
+import 0x1.Vector;
+import 0x1.LBR;
 
 main() {
   let addr: address;

@@ -2,7 +2,7 @@
 
 //! new-transaction
 script {
-    use 0x0::LibraTimestamp;
+    use 0x1::LibraTimestamp;
     fun main(account: &signer) {
         LibraTimestamp::initialize(account);
     }

@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Token&gt;(creator: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;) {
-    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_create_validator_account">LibraAccount::create_validator_account</a>&lt;Token&gt;(
+    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_validator_account">LibraAccount::create_validator_account</a>&lt;Token&gt;(
         creator,
         new_account_address,
         auth_key_prefix

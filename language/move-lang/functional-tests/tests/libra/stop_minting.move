@@ -1,8 +1,8 @@
 //! sender: association
 script {
-use 0x0::LibraAccount;
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
+use 0x1::LibraAccount;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
 
 // register blessed as a preburner
 fun main(account: &signer) {
@@ -15,9 +15,9 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::Libra;
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
 
 // do some preburning
 fun main(account: &signer) {
@@ -35,9 +35,9 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::Libra;
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
 
 fun main(account: &signer) {
     Libra::burn<Coin1>(account, {{blessed}});
@@ -52,8 +52,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::Libra;
-use 0x0::Coin1::Coin1;
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
 
 fun main(account: &signer) {
     Libra::update_minting_ability<Coin1>(account, false);

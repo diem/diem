@@ -1,6 +1,6 @@
 // Tests for the non-aborting behavior of Option functions
 script {
-use 0x0::Option;
+use 0x1::Option;
 
 fun main() {
     // constructors for some/none + boolean is functions

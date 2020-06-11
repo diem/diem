@@ -1,25 +1,25 @@
 
-<a name="0x0_SlidingNonce"></a>
+<a name="0x1_SlidingNonce"></a>
 
-# Module `0x0::SlidingNonce`
+# Module `0x1::SlidingNonce`
 
 ### Table of Contents
 
--  [Struct `SlidingNonce`](#0x0_SlidingNonce_SlidingNonce)
--  [Function `record_nonce_or_abort`](#0x0_SlidingNonce_record_nonce_or_abort)
--  [Function `try_record_nonce`](#0x0_SlidingNonce_try_record_nonce)
--  [Function `publish`](#0x0_SlidingNonce_publish)
--  [Function `publish_nonce_resource`](#0x0_SlidingNonce_publish_nonce_resource)
+-  [Struct `SlidingNonce`](#0x1_SlidingNonce_SlidingNonce)
+-  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_record_nonce_or_abort)
+-  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
+-  [Function `publish`](#0x1_SlidingNonce_publish)
+-  [Function `publish_nonce_resource`](#0x1_SlidingNonce_publish_nonce_resource)
 
 
 
-<a name="0x0_SlidingNonce_SlidingNonce"></a>
+<a name="0x1_SlidingNonce_SlidingNonce"></a>
 
 ## Struct `SlidingNonce`
 
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x0_SlidingNonce">SlidingNonce</a>
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_SlidingNonce">SlidingNonce</a>
 </code></pre>
 
 
@@ -48,13 +48,13 @@
 
 </details>
 
-<a name="0x0_SlidingNonce_record_nonce_or_abort"></a>
+<a name="0x1_SlidingNonce_record_nonce_or_abort"></a>
 
 ## Function `record_nonce_or_abort`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64)
 </code></pre>
 
 
@@ -63,8 +63,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64) <b>acquires</b> <a href="#0x0_SlidingNonce">SlidingNonce</a> {
-    <b>let</b> code = <a href="#0x0_SlidingNonce_try_record_nonce">try_record_nonce</a>(account, seq_nonce);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64) <b>acquires</b> <a href="#0x1_SlidingNonce">SlidingNonce</a> {
+    <b>let</b> code = <a href="#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account, seq_nonce);
     <b>assert</b>(code == 0, code);
 }
 </code></pre>
@@ -73,13 +73,13 @@
 
 </details>
 
-<a name="0x0_SlidingNonce_try_record_nonce"></a>
+<a name="0x1_SlidingNonce_try_record_nonce"></a>
 
 ## Function `try_record_nonce`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64
 </code></pre>
 
 
@@ -88,11 +88,11 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64 <b>acquires</b> <a href="#0x0_SlidingNonce">SlidingNonce</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account: &signer, seq_nonce: u64): u64 <b>acquires</b> <a href="#0x1_SlidingNonce">SlidingNonce</a> {
     <b>if</b> (seq_nonce == 0) {
         <b>return</b> 0
     };
-    <b>let</b> t = borrow_global_mut&lt;<a href="#0x0_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account));
+    <b>let</b> t = borrow_global_mut&lt;<a href="#0x1_SlidingNonce">SlidingNonce</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account));
     <b>if</b> (t.min_nonce &gt; seq_nonce) {
         <b>return</b> 10001
     };
@@ -126,13 +126,13 @@
 
 </details>
 
-<a name="0x0_SlidingNonce_publish"></a>
+<a name="0x1_SlidingNonce_publish"></a>
 
 ## Function `publish`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_publish">publish</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish">publish</a>(account: &signer)
 </code></pre>
 
 
@@ -141,8 +141,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_publish">publish</a>(account: &signer) {
-    move_to(account, <a href="#0x0_SlidingNonce">SlidingNonce</a> {  min_nonce: 0, nonce_mask: 0 });
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish">publish</a>(account: &signer) {
+    move_to(account, <a href="#0x1_SlidingNonce">SlidingNonce</a> {  min_nonce: 0, nonce_mask: 0 });
 }
 </code></pre>
 
@@ -150,13 +150,13 @@
 
 </details>
 
-<a name="0x0_SlidingNonce_publish_nonce_resource"></a>
+<a name="0x1_SlidingNonce_publish_nonce_resource"></a>
 
 ## Function `publish_nonce_resource`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(association: &signer, account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(association: &signer, account: &signer)
 </code></pre>
 
 
@@ -165,9 +165,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(association: &signer, account: &signer) {
-    <a href="Association.md#0x0_Association_assert_is_root">Association::assert_is_root</a>(association);
-    <b>let</b> new_resource = <a href="#0x0_SlidingNonce">SlidingNonce</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(association: &signer, account: &signer) {
+    <a href="Association.md#0x1_Association_assert_is_root">Association::assert_is_root</a>(association);
+    <b>let</b> new_resource = <a href="#0x1_SlidingNonce">SlidingNonce</a> {
         min_nonce: 0,
         nonce_mask: 0,
     };

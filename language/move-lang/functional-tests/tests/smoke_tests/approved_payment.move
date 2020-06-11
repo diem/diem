@@ -7,11 +7,11 @@
 // a hurdle that must be cleared for all payments to the payee. In addition, approved payments do
 // not have replay protection.
 module ApprovedPayment {
-    use 0x0::Libra::Libra;
-    use 0x0::LibraAccount;
-    use 0x0::Signature;
-    use 0x0::Signer;
-    use 0x0::Vector;
+    use 0x1::Libra::Libra;
+    use 0x1::LibraAccount;
+    use 0x1::Signature;
+    use 0x1::Signer;
+    use 0x1::Vector;
 
     // A resource to be published under the payee's account
     resource struct T {
@@ -207,7 +207,7 @@ fun main(account: &signer) {
 //! sender: bob2
 script {
 use {{default}}::ApprovedPayment;
-use 0x0::LBR::LBR;
+use 0x1::LBR::LBR;
 fun main(account: &signer) {
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
@@ -263,7 +263,7 @@ fun main(account: &signer) {
 //! sender: bob3
 script {
 use {{default}}::ApprovedPayment;
-use 0x0::LBR::LBR;
+use 0x1::LBR::LBR;
 fun main(account: &signer) {
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";
@@ -278,7 +278,7 @@ fun main(account: &signer) {
 //! sender: bob3
 script {
 use {{default}}::ApprovedPayment;
-use 0x0::LBR::LBR;
+use 0x1::LBR::LBR;
 fun main(account: &signer) {
     let payment_id = x"0000000000000000000000000000000000000000000000000000000000000000";
     let signature = x"";
@@ -295,7 +295,7 @@ fun main(account: &signer) {
 //! sender: bob3
 script {
 use {{default}}::ApprovedPayment;
-use 0x0::LBR::LBR;
+use 0x1::LBR::LBR;
 fun main(account: &signer) {
     let payment_id = x"7";
     let signature = x"62d6be393b8ec77fb2c12ff44ca8b5bd8bba83b805171bc99f0af3bdc619b20b8bd529452fe62dac022c80752af2af02fb610c20f01fb67a4d72789db2b8b703";

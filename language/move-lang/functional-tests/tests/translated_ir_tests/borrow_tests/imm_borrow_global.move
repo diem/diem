@@ -28,7 +28,7 @@ module A {
 
 module Tester {
     use {{alice}}::A;
-    use 0x0::Signer;
+    use 0x1::Signer;
 
     resource struct Pair { x: A::Coin, y: A::Coin }
 

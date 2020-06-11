@@ -1,6 +1,6 @@
 script {
-use 0x0::LBR::LBR;
-use 0x0::LibraAccount;
+use 0x1::LBR::LBR;
+use 0x1::LibraAccount;
 fun main(account: &signer, payee: address, auth_key_prefix: vector<u8>, amount: u64) {
   if (!LibraAccount::exists_at(payee)) {
       LibraAccount::create_testnet_account<LBR>(account, payee, auth_key_prefix);

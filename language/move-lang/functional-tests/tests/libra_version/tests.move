@@ -1,6 +1,6 @@
 //! new-transaction
 script{
-use 0x0::LibraVersion;
+use 0x1::LibraVersion;
 fun main(account: &signer) {
     LibraVersion::initialize(account);
 }
@@ -10,7 +10,7 @@ fun main(account: &signer) {
 
 //! new-transaction
 script{
-use 0x0::LibraVersion;
+use 0x1::LibraVersion;
 fun main(account: &signer) {
     LibraVersion::set(account, 0);
 }

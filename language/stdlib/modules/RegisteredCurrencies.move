@@ -1,10 +1,10 @@
-address 0x0 {
+address 0x1 {
 
 module RegisteredCurrencies {
-    use 0x0::CoreAddresses;
-    use 0x0::LibraConfig;
-    use 0x0::Signer;
-    use 0x0::Vector;
+    use 0x1::CoreAddresses;
+    use 0x1::LibraConfig;
+    use 0x1::Signer;
+    use 0x1::Vector;
 
     // An on-chain config holding all of the currency codes for registered
     // currencies. The inner vector<u8>'s are string representations of

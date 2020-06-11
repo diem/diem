@@ -34,11 +34,11 @@ sliding_nonce is a unique nonce for operation, see sliding_nonce.move for detail
     mint_amount: u64,
     tier_index: u64
 ) {
-    <a href="../../modules/doc/SlidingNonce.md#0x0_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
-    <b>let</b> coins = <a href="../../modules/doc/DesignatedDealer.md#0x0_DesignatedDealer_tiered_mint">DesignatedDealer::tiered_mint</a>&lt;CoinType&gt;(
+    <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
+    <b>let</b> coins = <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_tiered_mint">DesignatedDealer::tiered_mint</a>&lt;CoinType&gt;(
         tc_account, mint_amount, designated_dealer_address, tier_index
     );
-    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_deposit">LibraAccount::deposit</a>(tc_account, designated_dealer_address, coins)
+    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_deposit">LibraAccount::deposit</a>(tc_account, designated_dealer_address, coins)
 }
 </code></pre>
 

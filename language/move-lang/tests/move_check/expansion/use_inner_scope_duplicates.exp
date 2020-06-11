@@ -2,10 +2,10 @@ error:
 
     ┌── tests/move_check/expansion/use_inner_scope_duplicates.move:13:43 ───
     │
- 13 │         use 0x1::M::{check as foo, num as foo};
+ 13 │         use 0x2::M::{check as foo, num as foo};
     │                                           ^^^ Duplicate module member or alias 'foo'. Top level names in a namespace must be unique
     ·
- 13 │         use 0x1::M::{check as foo, num as foo};
+ 13 │         use 0x2::M::{check as foo, num as foo};
     │                               --- Previously defined here
     │
 
@@ -13,7 +13,7 @@ error:
 
     ┌── tests/move_check/expansion/use_inner_scope_duplicates.move:13:43 ───
     │
- 13 │         use 0x1::M::{check as foo, num as foo};
+ 13 │         use 0x2::M::{check as foo, num as foo};
     │                                           ^^^ Unused 'use' of alias 'foo'. Consider removing it
     │
 
@@ -21,10 +21,10 @@ error:
 
     ┌── tests/move_check/expansion/use_inner_scope_duplicates.move:15:23 ───
     │
- 15 │         use 0x1::M as N;
+ 15 │         use 0x2::M as N;
     │                       ^ Duplicate module alias 'N'. Module aliases must be unique within a given namespace
     ·
- 14 │         use 0x1::M as N;
+ 14 │         use 0x2::M as N;
     │                       - Previously defined here
     │
 
@@ -32,7 +32,7 @@ error:
 
     ┌── tests/move_check/expansion/use_inner_scope_duplicates.move:15:23 ───
     │
- 15 │         use 0x1::M as N;
+ 15 │         use 0x2::M as N;
     │                       ^ Unused 'use' of alias 'N'. Consider removing it
     │
 

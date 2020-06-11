@@ -1,7 +1,7 @@
 // Test fot public key validation
 
 script {
-use 0x0::Signature;
+use 0x1::Signature;
 
 fun main() {
 

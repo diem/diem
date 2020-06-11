@@ -1,4 +1,4 @@
-address 0x0 {
+address 0x1 {
 
 /// The Libra module defines basic functionality around coins.
 ///
@@ -10,10 +10,10 @@ address 0x0 {
 /// > We use block quotes like this to mark documentation text which is specific to docgen testing.
 /// >
 /// > We can refer to a module like in `LibraDocTest` -- if it is unambiguous -- or like
-/// `0x0::LibraDocTest`.
+/// `0x1::LibraDocTest`.
 module LibraDocTest {
-    use 0x0::Transaction;
-    use 0x0::Vector;
+    use 0x1::Vector;
+    use 0x1::Transaction;
 
     /// # Settings for Verification
     ///
@@ -72,7 +72,7 @@ module LibraDocTest {
 
     /// A singleton resource that grants access to `LibraDocTest::mint`. Only the Association has one.
     ///
-    /// > Instead of `LibraDocTest::mint` we can also write `0x0::LibraDocTest::mint`, `Self::mint`, or just `mint()`
+    /// > Instead of `LibraDocTest::mint` we can also write `0x1::LibraDocTest::mint`, `Self::mint`, or just `mint()`
     /// > (for functions from enclosing module) to get a hyper link in documentation text.
     resource struct MintCapability<Token> { }
 

@@ -82,7 +82,7 @@ error:
     │                          ^^^^^^^^^^^^^^^^^^ Invalid call to move_from.
     ·
  33 │         destroy(account, move_from<X::R>(a));
-    │                                    ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
+    │                                    ---- The type '0x2::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
 error: 
@@ -93,7 +93,7 @@ error:
     │                          ^^^^^^^^^^^^^^^ Invalid call to move_from.
     ·
  34 │         destroy(account, move_from<S>(a));
-    │                                    - Expected a nominal resource. Found the type: '0x1::M::S'
+    │                                    - Expected a nominal resource. Found the type: '0x2::M::S'
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -137,7 +137,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
  39 │         borrow_global<X::R>(a);
-    │                       ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
+    │                       ---- The type '0x2::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
 error: 
@@ -148,7 +148,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global.
     ·
  40 │         borrow_global<S>(a);
-    │                       - Expected a nominal resource. Found the type: '0x1::M::S'
+    │                       - Expected a nominal resource. Found the type: '0x2::M::S'
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -192,7 +192,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
  45 │         borrow_global_mut<X::R>(a);
-    │                           ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
+    │                           ---- The type '0x2::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
 error: 
@@ -203,7 +203,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to borrow_global_mut.
     ·
  46 │         borrow_global_mut<S>(a);
-    │                           - Expected a nominal resource. Found the type: '0x1::M::S'
+    │                           - Expected a nominal resource. Found the type: '0x2::M::S'
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -247,7 +247,7 @@ error:
     │         ^^^^^^^^^^^^^^^ Invalid call to exists.
     ·
  51 │         exists<X::R>(a);
-    │                ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
+    │                ---- The type '0x2::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
 error: 
@@ -258,7 +258,7 @@ error:
     │         ^^^^^^^^^^^^ Invalid call to exists.
     ·
  52 │         exists<S>(a);
-    │                - Expected a nominal resource. Found the type: '0x1::M::S'
+    │                - Expected a nominal resource. Found the type: '0x2::M::S'
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here
@@ -310,7 +310,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to.
     ·
  57 │         move_to<X::R>(account, any());
-    │                 ---- The type '0x1::X::R' was not declared in the current module. Global storage access is internal to the module'
+    │                 ---- The type '0x2::X::R' was not declared in the current module. Global storage access is internal to the module'
     │
 
 error: 
@@ -321,7 +321,7 @@ error:
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call to move_to.
     ·
  58 │         move_to<S>(account, any());
-    │                 - Expected a nominal resource. Found the type: '0x1::M::S'
+    │                 - Expected a nominal resource. Found the type: '0x2::M::S'
     ·
  10 │     struct S {}
     │            - Declared as a normal struct here

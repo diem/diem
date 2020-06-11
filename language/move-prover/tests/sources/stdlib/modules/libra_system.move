@@ -1,11 +1,11 @@
-address 0x0 {
+address 0x1 {
 
 module LibraSystem {
-    use 0x0::LibraAccount;
-    use 0x0::ValidatorConfig;
-    use 0x0::Vector;
-    use 0x0::Transaction;
-    use 0x0::LibraTimestamp;
+    use 0x1::LibraAccount;
+    use 0x1::ValidatorConfig;
+    use 0x1::Vector;
+    use 0x1::LibraTimestamp;
+    use 0x1::Transaction;
 
     spec module {
         pragma verify = false;

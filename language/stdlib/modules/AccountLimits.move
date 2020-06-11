@@ -3,13 +3,13 @@
 // 1 -> INVALID_LIMITS_DEFINITION_NOT_CERTIFIED
 // 2 -> INVALID_ACCOUNT_MUTATION_CAPABILITY_SENDER
 // 3 -> WITHDREW_INVALID_CURRENCY
-address 0x0 {
+address 0x1 {
 
 module AccountLimits {
-    use 0x0::CoreAddresses;
-    use 0x0::Association;
-    use 0x0::LibraTimestamp;
-    use 0x0::Signer;
+    use 0x1::CoreAddresses;
+    use 0x1::Association;
+    use 0x1::LibraTimestamp;
+    use 0x1::Signer;
 
     // An operations capability that restricts callers of this module since
     // the operations can mutate account states.
@@ -66,7 +66,7 @@ module AccountLimits {
         addr: address,
         _cap: &CallingCapability,
     ): bool acquires LimitsDefinition, Window {
-        assert(0x0::Testnet::is_testnet(), 10047);
+        assert(0x1::Testnet::is_testnet(), 10047);
         can_receive<CoinType>(
             amount,
             borrow_global_mut<Window>(addr),
@@ -82,7 +82,7 @@ module AccountLimits {
         addr: address,
         _cap: &CallingCapability,
     ): bool acquires LimitsDefinition, Window {
-        assert(0x0::Testnet::is_testnet(), 10048);
+        assert(0x1::Testnet::is_testnet(), 10048);
         can_withdraw<CoinType>(
             amount,
             borrow_global_mut<Window>(addr),

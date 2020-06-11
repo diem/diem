@@ -1,4 +1,4 @@
-address 0x0 {
+address 0x1 {
 
 module FixedPoint32 {
 

@@ -10,7 +10,7 @@ module Token {
 //! new-transaction
 
 import {{default}}.Token;
-import 0x0.Signer;
+import 0x1.Signer;
 
 main(account: &signer) {
     let addr1: address;

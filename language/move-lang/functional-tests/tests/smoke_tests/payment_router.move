@@ -10,10 +10,10 @@
 // 2 -> NON_EXCLUSIVE_WITHDRAWALS_NOT_PERMITTED
 // 3 -> ADDRESS_IS_NOT_ROUTED
 module PaymentRouter {
-    use 0x0::LibraAccount;
-    use 0x0::Libra::Libra;
-    use 0x0::Vector;
-    use 0x0::Signer;
+    use 0x1::LibraAccount;
+    use 0x1::Libra::Libra;
+    use 0x1::Vector;
+    use 0x1::Signer;
 
     // A resource that specifies the addresses that are allowed to be added
     // to this multi-currency holding.
@@ -164,9 +164,9 @@ module PaymentRouter {
 //! sender: bob
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
-use 0x0::LBR::LBR;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
+use 0x1::LBR::LBR;
 fun main(account: &signer) {
     PaymentRouter::initialize(account, true);
     PaymentRouter::allow_account_address(account, {{bob}});
@@ -196,7 +196,7 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 fun main(sender: &signer) {
     PaymentRouter::add_account_to<Coin1>(sender, {{bob}});
 }
@@ -207,7 +207,7 @@ fun main(sender: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 fun main(sender: &signer) {
     PaymentRouter::add_account_to<Coin1>(sender, {{bob}});
 }
@@ -218,7 +218,7 @@ fun main(sender: &signer) {
 //! gas-currency: Coin2
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin2::Coin2;
+use 0x1::Coin2::Coin2;
 fun main(sender: &signer) {
     PaymentRouter::add_account_to<Coin2>(sender, {{bob}});
 }
@@ -228,7 +228,7 @@ fun main(sender: &signer) {
 //! sender: bob
 script {
 use {{default}}::PaymentRouter;
-use 0x0::LBR::LBR;
+use 0x1::LBR::LBR;
 fun main(sender: &signer) {
     PaymentRouter::add_account_to<LBR>(sender, {{bob}});
 }
@@ -239,7 +239,7 @@ fun main(sender: &signer) {
 //! gas-currency: Coin2
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin2::Coin2;
+use 0x1::Coin2::Coin2;
 fun main(sender: &signer) {
     PaymentRouter::add_account_to<Coin2>(sender, {{bob}});
 }
@@ -250,12 +250,12 @@ fun main(sender: &signer) {
 //! new-transaction
 //! sender: bob
 script {
-use 0x0::Vector;
+use 0x1::Vector;
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
-use 0x0::LBR::LBR;
-use 0x0::Signer;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
+use 0x1::LBR::LBR;
+use 0x1::Signer;
 fun main(account: &signer) {
     let sender = Signer::address_of(account);
     let addrs_coin1 = PaymentRouter::addresses_for_currency<Coin1>(sender);
@@ -272,8 +272,8 @@ fun main(account: &signer) {
 //! sender: bob
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
-use 0x0::LibraAccount;
+use 0x1::Coin1::Coin1;
+use 0x1::LibraAccount;
 // Withdraw from the router "root" account.
 fun main(account: &signer) {
     let prev_balance = LibraAccount::balance<Coin1>({{alice}});
@@ -291,7 +291,7 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 // Try to have alice withdraw through the payment router. But this doesn't
 // work since `exclusive_withdrawals_only` is set to true.
 fun main(account: &signer) {
@@ -306,7 +306,7 @@ fun main(account: &signer) {
 //! sender: bob
 script {
 use {{default}}::PaymentRouter;
-use 0x0::LBR::LBR;
+use 0x1::LBR::LBR;
 // Try to have bob withdraw through the payment router owned by bob. But this doesn't
 // work since `exclusive_withdrawals_only` is set to true.
 fun main(account: &signer) {
@@ -331,8 +331,8 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
-use 0x0::LibraAccount;
+use 0x1::Coin1::Coin1;
+use 0x1::LibraAccount;
 // Try to have alice withdraw through the payment router. This now succeeds
 // since we set `exclusive_withdrawals_only` to false.
 fun main(account: &signer) {
@@ -359,7 +359,7 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 fun main(account: &signer) {
     PaymentRouter::initialize(account, true);
     PaymentRouter::allow_account_address(account, {{bob1}});
@@ -374,7 +374,7 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 fun main(account: &signer) {
     PaymentRouter::initialize(account, false);
     PaymentRouter::allow_account_address(account, {{alice1}});
@@ -390,7 +390,7 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 fun main(sender: &signer) {
     PaymentRouter::add_account_to<Coin1>(sender, {{bob1}});
 }
@@ -401,7 +401,7 @@ fun main(sender: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 fun main(sender: &signer) {
     PaymentRouter::add_account_to<Coin1>(sender, {{bob1}});
 }
@@ -412,7 +412,7 @@ fun main(sender: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 fun main(sender: &signer) {
     PaymentRouter::add_account_to<Coin1>(sender, {{alice1}});
 }
@@ -423,7 +423,7 @@ fun main(sender: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 fun main(sender: &signer) {
     PaymentRouter::add_account_to<Coin1>(sender, {{alice1}});
 }
@@ -434,7 +434,7 @@ fun main(sender: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 // Try to have gary1 withdraw through bob1's payment router. But this doesn't
 // work since bob1 has set the exclusive_withdrawal_flag to true.
 fun main(account: &signer) {
@@ -450,7 +450,7 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 // vivan can withdraw through alice1's payment router since alice1 has set
 // the exclusive_withdrawal_flag to false.
 fun main(account: &signer) {
@@ -464,7 +464,7 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 fun main() {
     assert(PaymentRouter::is_routed<Coin1>({{bob1}}), 0);
     assert(PaymentRouter::is_routed<Coin1>({{gary1}}), 0);
@@ -484,7 +484,7 @@ fun main() {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 fun main(sender: &signer) {
     PaymentRouter::add_account_to<Coin1>(sender, {{alice1}});
 }
@@ -495,7 +495,7 @@ fun main(sender: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 // an account can't belong to multiple routers. This fails since nope1 is
 // already routed by the payment router at alice1.
 fun main(sender: &signer) {
@@ -510,8 +510,8 @@ fun main(sender: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
-use 0x0::Vector;
+use 0x1::Coin1::Coin1;
+use 0x1::Vector;
 fun main() {
     let bob1s = PaymentRouter::addresses_for_currency<Coin1>({{bob1}});
     let alice1s = PaymentRouter::addresses_for_currency<Coin1>({{alice1}});
@@ -532,9 +532,9 @@ fun main() {
 //! sender: bob2
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
-use 0x0::LBR::LBR;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
+use 0x1::LBR::LBR;
 fun main(account: &signer) {
     PaymentRouter::initialize(account, true);
     PaymentRouter::allow_account_address(account, {{bob2}});
@@ -550,7 +550,7 @@ fun main(account: &signer) {
 //! gas-currency: Coin1
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 fun main(sender: &signer) {
     PaymentRouter::add_account_to<Coin1>(sender, {{bob2}});
 }
@@ -560,7 +560,7 @@ fun main(sender: &signer) {
 //! sender: bob2
 script {
 use {{default}}::PaymentRouter;
-use 0x0::LBR::LBR;
+use 0x1::LBR::LBR;
 fun main(sender: &signer) {
     PaymentRouter::add_account_to<LBR>(sender, {{bob2}});
 }
@@ -570,7 +570,7 @@ fun main(sender: &signer) {
 //! sender: bob2
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin2::Coin2;
+use 0x1::Coin2::Coin2;
 fun main(account: &signer) {
     let x_coins = PaymentRouter::withdraw<Coin2>(account, 10);
     PaymentRouter::deposit<Coin2>(account, {{bob2}}, x_coins);
@@ -584,8 +584,8 @@ fun main(account: &signer) {
 //! gas-currency: Coin2
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin2::Coin2;
-use 0x0::LibraAccount;
+use 0x1::Coin2::Coin2;
+use 0x1::LibraAccount;
 fun main(account: &signer) {
     let with_cap = LibraAccount::extract_withdraw_capability(account);
     let x_coins = LibraAccount::withdraw_from<Coin2>(&with_cap, 10);
@@ -599,7 +599,7 @@ fun main(account: &signer) {
 //! new-transaction
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Coin1::Coin1;
+use 0x1::Coin1::Coin1;
 fun main() {
     let _addr = PaymentRouter::router_address<Coin1>({{default}})
 }

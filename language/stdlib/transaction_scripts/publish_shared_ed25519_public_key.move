@@ -1,5 +1,5 @@
 script {
-use 0x0::SharedEd25519PublicKey;
+use 0x1::SharedEd25519PublicKey;
 
 // (1) Rotate the authentication key of the sender to `public_key`
 // (2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability

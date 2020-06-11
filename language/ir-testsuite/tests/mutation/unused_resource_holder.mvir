@@ -1,8 +1,8 @@
 // check: UNSAFE_RET_UNUSED_RESOURCES
 
 module A {
-import 0x0.LBR;
-    import 0x0.Libra;
+import 0x1.LBR;
+    import 0x1.Libra;
 
     resource T{g: Libra.Libra<LBR.LBR>}
 
@@ -21,8 +21,8 @@ import 0x0.LBR;
 //! new-transaction
 
 import {{default}}.A;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LBR;
+import 0x1.Libra;
 
 main() {
     let zero_resource: Libra.Libra<LBR.LBR>;

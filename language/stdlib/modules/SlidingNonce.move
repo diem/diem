@@ -1,7 +1,7 @@
-address 0x0 {
+address 0x1 {
 module SlidingNonce {
-    use 0x0::Association;
-    use 0x0::Signer;
+    use 0x1::Association;
+    use 0x1::Signer;
 
     // This struct keep last 128 nonce values in a bit map nonce_mask
     // We assume that nonce are generated incrementally, but certain permutation is allowed when nonce are recorded

@@ -1,4 +1,4 @@
-address 0x0 {
+address 0x1 {
 
 module Signature {
     native public fun ed25519_validate_pubkey(public_key: vector<u8>): bool;

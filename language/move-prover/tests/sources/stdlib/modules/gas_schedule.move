@@ -1,4 +1,4 @@
-address 0x0 {
+address 0x1 {
 
 // The gas schedule keeps two separate schedules for the gas:
 // * The instruction_schedule: This holds the gas for each bytecode instruction.
@@ -12,8 +12,8 @@ address 0x0 {
 //    address, and will preload the vector with the gas schedule for instructions. The VM will then
 //    load this into memory at the startup of each block.
 module GasSchedule {
-    use 0x0::Vector;
-    use 0x0::Transaction;
+    use 0x1::Transaction;
+    use 0x1::Vector;
 
     // The gas cost for each instruction is represented using two amounts;
     // one for the cpu, and the other for storage.

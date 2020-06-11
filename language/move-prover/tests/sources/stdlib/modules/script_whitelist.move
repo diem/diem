@@ -1,7 +1,7 @@
-address 0x0 {
+address 0x1 {
 
 module ScriptWhitelist {
-    use 0x0::LibraConfig;
+    use 0x1::LibraConfig;
 
     spec module {
         pragma verify = false;

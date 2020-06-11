@@ -11,7 +11,7 @@
 // but only the list owner/node owner can remove a node
 module SortedLinkedList
 {
-    import 0x0.Signer;
+    import 0x1.Signer;
 
     resource Node
     {

@@ -9,8 +9,8 @@
 address {{sender}} {
 
 module MyModule {
-    use 0x0::Libra::Libra;
-    use 0x0::LBR::LBR;
+    use 0x1::Libra::Libra;
+    use 0x1::LBR::LBR;
 
     // The identity function for coins: takes a Libra<LBR> as input and hands it back
     public fun id(c: Libra<LBR>): Libra<LBR> {

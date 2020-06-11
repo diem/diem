@@ -1,7 +1,7 @@
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Libra;
-import 0x0.Signer;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
+import 0x1.Signer;
 
 main(account: &signer) {
     let sender_balance: u64;

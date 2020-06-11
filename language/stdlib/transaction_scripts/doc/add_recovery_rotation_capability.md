@@ -16,7 +16,7 @@
 Add the
 <code>KeyRotationCapability</code> for
 <code>to_recover_account</code> to the
-<code><a href="../../modules/doc/RecoveryAddress.md#0x0_RecoveryAddress">RecoveryAddress</a></code>
+<code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code>
 resource under
 <code>recovery_address</code>.
 Aborts if
@@ -39,7 +39,7 @@ Aborts if
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(to_recover_account: &signer, recovery_address: address) {
-    <a href="../../modules/doc/RecoveryAddress.md#0x0_RecoveryAddress_add_rotation_capability">RecoveryAddress::add_rotation_capability</a>(to_recover_account, recovery_address)
+    <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_add_rotation_capability">RecoveryAddress::add_rotation_capability</a>(to_recover_account, recovery_address)
 }
 </code></pre>
 

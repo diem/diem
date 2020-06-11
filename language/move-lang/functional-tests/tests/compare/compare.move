@@ -1,7 +1,7 @@
 // Tests for polymorphic comparison in Move
 script {
-use 0x0::Compare;
-use 0x0::LCS;
+use 0x1::Compare;
+use 0x1::LCS;
 
 fun main() {
     // TODO: replace with constants once the source lang has them

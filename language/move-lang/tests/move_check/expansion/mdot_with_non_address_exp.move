@@ -1,4 +1,4 @@
-address 0x1 {
+address 0x2 {
 
 module X {
     fun bar() { }

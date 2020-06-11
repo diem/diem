@@ -1,8 +1,8 @@
 // A test case which reproduces a performance/non-termination problem. See the spec of fun create for details.
 
 module Test {
-    use 0x0::LCS;
-    use 0x0::Vector;
+    use 0x1::LCS;
+    use 0x1::Vector;
 
     spec module {
         define eq_append<Element>(v: vector<Element>, v1: vector<Element>, v2: vector<Element>): bool {

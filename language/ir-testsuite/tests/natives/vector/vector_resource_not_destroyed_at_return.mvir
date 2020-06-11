@@ -1,5 +1,5 @@
 module M {
-    import 0x0.Vector;
+    import 0x1.Vector;
 
     resource R { b: bool}
 

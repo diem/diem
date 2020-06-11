@@ -1,4 +1,4 @@
-address 0x1 {
+address 0x2 {
 module M {
     struct S1 { b: bool }
     struct S2 { u: u64 }
@@ -10,8 +10,8 @@ module M {
     }
 
     fun t() {
-        use 0x1::N;
-        use 0x1::M::foo;
+        use 0x2::N;
+        use 0x2::M::foo;
 
     }
 }

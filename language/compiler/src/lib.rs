@@ -16,13 +16,13 @@ use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::{parse_module, parse_script},
 };
-use libra_types::account_address::AccountAddress;
+use libra_types::{account_address::AccountAddress, account_config};
 use move_ir_types::location::Loc;
 use std::mem;
 use vm::file_format::{CompiledModule, CompiledScript};
 
 /// An API for the compiler. Supports setting custom options.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Compiler {
     /// The address used as the sender for the compiler.
     pub address: AccountAddress,
@@ -41,6 +41,17 @@ pub struct Compiler {
     #[allow(missing_docs)]
     #[doc(hidden)]
     pub _non_exhaustive: (),
+}
+
+impl Default for Compiler {
+    fn default() -> Self {
+        Self {
+            address: account_config::CORE_CODE_ADDRESS,
+            skip_stdlib_deps: false,
+            extra_deps: vec![],
+            _non_exhaustive: (),
+        }
+    }
 }
 
 impl Compiler {

@@ -1,8 +1,8 @@
 //! debug
 
 module M {
-    import 0x0.Debug;
-    import 0x0.Vector;
+    import 0x1.Debug;
+    import 0x1.Vector;
 
     struct Foo { x: bool }
     struct Bar { x: u128, y: Self.Foo, z: bool }

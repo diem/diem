@@ -12,7 +12,7 @@
 //! new-transaction
 //! sender: vivian
 script{
-use 0x0::LibraSystem;
+use 0x1::LibraSystem;
 fun main(account: &signer) {
     LibraSystem::remove_validator(account, {{vivian}});
 }
@@ -29,7 +29,7 @@ fun main(account: &signer) {
 // check that Vivian is no longer a validator, Alice is not, but Viola is still a
 // validator
 script{
-use 0x0::LibraSystem;
+use 0x1::LibraSystem;
 fun main() {
     assert(!LibraSystem::is_validator({{vivian}}), 70);
     assert(!LibraSystem::is_validator({{alice}}), 71);

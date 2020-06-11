@@ -1,6 +1,6 @@
 module A {
-import 0x0.LBR;
-    import 0x0.Libra;
+import 0x1.LBR;
+    import 0x1.Libra;
     resource A { c: Libra.Libra<LBR.LBR> }
     public new(c: Libra.Libra<LBR.LBR>): Self.A {
         return A { c: move(c) };

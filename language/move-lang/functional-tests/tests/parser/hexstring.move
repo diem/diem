@@ -1,5 +1,5 @@
 script {
-use 0x0::Vector;
+use 0x1::Vector;
 
 fun main() {
     let v = x"01020304";

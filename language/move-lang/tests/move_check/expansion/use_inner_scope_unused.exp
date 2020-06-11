@@ -2,7 +2,7 @@ error:
 
     ┌── tests/move_check/expansion/use_inner_scope_unused.move:13:23 ───
     │
- 13 │         use 0x1::M as X;
+ 13 │         use 0x2::M as X;
     │                       ^ Unused 'use' of alias 'X'. Consider removing it
     │
 
@@ -10,7 +10,7 @@ error:
 
     ┌── tests/move_check/expansion/use_inner_scope_unused.move:14:31 ───
     │
- 14 │         use 0x1::M::{check as f, S1 as S8};
+ 14 │         use 0x2::M::{check as f, S1 as S8};
     │                               ^ Unused 'use' of alias 'f'. Consider removing it
     │
 
@@ -18,7 +18,7 @@ error:
 
     ┌── tests/move_check/expansion/use_inner_scope_unused.move:14:40 ───
     │
- 14 │         use 0x1::M::{check as f, S1 as S8};
+ 14 │         use 0x2::M::{check as f, S1 as S8};
     │                                        ^^ Unused 'use' of alias 'S8'. Consider removing it
     │
 

@@ -6,9 +6,9 @@
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::DesignatedDealer;
-    use 0x0::Coin1::Coin1;
-    use 0x0::LibraAccount;
+    use 0x1::DesignatedDealer;
+    use 0x1::Coin1::Coin1;
+    use 0x1::LibraAccount;
     fun main(account: &signer) {
         let dummy_auth_key_prefix = x"00000000000000000000000000000001";
         LibraAccount::create_designated_dealer<Coin1>(account, 0xDEADBEEF, dummy_auth_key_prefix);
@@ -25,9 +25,9 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::DesignatedDealer;
-    use 0x0::LibraAccount;
-    use 0x0::Coin1::Coin1;
+    use 0x1::DesignatedDealer;
+    use 0x1::LibraAccount;
+    use 0x1::Coin1::Coin1;
     fun main(tc_account: &signer) {
         DesignatedDealer::add_tier(tc_account, 0xDEADBEEF, 100); // first Tier, 0th index
         let coins = DesignatedDealer::tiered_mint<Coin1>(
@@ -48,9 +48,9 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::DesignatedDealer;
-    use 0x0::LibraAccount;
-    use 0x0::Coin1::Coin1;
+    use 0x1::DesignatedDealer;
+    use 0x1::LibraAccount;
+    use 0x1::Coin1::Coin1;
     fun main(tc_account: &signer) {
         let coins = DesignatedDealer::tiered_mint<Coin1>(
             tc_account, 1001, 0xDEADBEEF, 1
@@ -67,7 +67,7 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x0::DesignatedDealer;
+    use 0x1::DesignatedDealer;
     fun main(tc_account: &signer) {
         DesignatedDealer::update_tier(tc_account, 0xDEADBEEF, 4, 1000000); // invalid tier index (max index 3)
     }
@@ -83,9 +83,9 @@ script {
 //! new-transaction
 //! sender: ricky
 script {
-    use 0x0::DesignatedDealer;
-    use 0x0::LibraAccount;
-    use 0x0::Coin1::Coin1;
+    use 0x1::DesignatedDealer;
+    use 0x1::LibraAccount;
+    use 0x1::Coin1::Coin1;
     fun main(tc_account: &signer) {
         let coins = DesignatedDealer::tiered_mint<Coin1>(
             tc_account, 1, 0xDEADBEEF, 0

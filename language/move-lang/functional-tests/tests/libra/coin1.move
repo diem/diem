@@ -1,9 +1,9 @@
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::Libra;
-use 0x0::Coin1::Coin1;
-use 0x0::FixedPoint32;
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+use 0x1::FixedPoint32;
 fun main(account: &signer) {
     assert(Libra::approx_lbr_for_value<Coin1>(10) == 5, 1);
     assert(Libra::scaling_factor<Coin1>() == 1000000, 2);

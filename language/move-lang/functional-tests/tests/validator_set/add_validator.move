@@ -4,8 +4,8 @@
 
 //! sender: bob
 script {
-use 0x0::LibraSystem;
-use 0x0::ValidatorConfig;
+use 0x1::LibraSystem;
+use 0x1::ValidatorConfig;
 fun main() {
     // test bob is a validator
     assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
@@ -18,8 +18,8 @@ fun main() {
 //! new-transaction
 //! sender: association
 script {
-use 0x0::LBR::LBR;
-use 0x0::LibraAccount;
+use 0x1::LBR::LBR;
+use 0x1::LibraAccount;
 fun main(creator: &signer) {
     LibraAccount::create_validator_account<LBR>(
         creator, 0xAA, x"00000000000000000000000000000000"
@@ -33,8 +33,8 @@ fun main(creator: &signer) {
 // //! new-transaction
 // //! sender: 0xAA
 // script {
-// use 0x0::ValidatorConfig;
-// use 0x0::ValidatorOperatorConfig;
+// use 0x1::ValidatorConfig;
+// use 0x1::ValidatorOperatorConfig;
 // fun main() {
 //     ValidatorConfig::set_config(0xAA, x"10", x"20", x"30", x"40", x"50", x"60");
 //     let config = ValidatorConfig::get_config(0xAA);

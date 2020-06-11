@@ -1,6 +1,6 @@
 //! new-transaction
 script {
-    use 0x0::LibraTransactionTimeout;
+    use 0x1::LibraTransactionTimeout;
     fun main(account: &signer) {
         LibraTransactionTimeout::initialize(account);
     }
@@ -10,7 +10,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::LibraTransactionTimeout;
+    use 0x1::LibraTransactionTimeout;
     fun main(account: &signer) {
         LibraTransactionTimeout::set_timeout(account, 0);
     }
@@ -20,7 +20,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::LibraTransactionTimeout;
+    use 0x1::LibraTransactionTimeout;
     fun main(account: &signer) {
         LibraTransactionTimeout::set_timeout(account, 0);
     }
@@ -31,7 +31,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::LibraTransactionTimeout;
+    use 0x1::LibraTransactionTimeout;
     fun main(account: &signer) {
         LibraTransactionTimeout::set_timeout(account, 86400000000);
     }

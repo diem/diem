@@ -1,14 +1,14 @@
-address 0x0 {
+address 0x1 {
 
 // The module for the account resource that governs every Libra account
 module LibraAccount {
-    use 0x0::Hash;
-    use 0x0::LBR;
-    use 0x0::LCS;
-    use 0x0::Libra;
-    use 0x0::LibraTransactionTimeout;
-    use 0x0::Transaction;
-    use 0x0::Vector;
+    use 0x1::Transaction;
+    use 0x1::Hash;
+    use 0x1::LBR;
+    use 0x1::LCS;
+    use 0x1::Libra;
+    use 0x1::LibraTransactionTimeout;
+    use 0x1::Vector;
 
     spec module {
         //pragma verify=true;
@@ -545,7 +545,7 @@ module LibraAccount {
 
     // Creates a new account at `fresh_address` with an initial balance of zero and authentication
     // key `auth_key_prefix` | `fresh_address`
-    // Creating an account at address 0x0 will cause runtime failure as it is a
+    // Creating an account at address 0x1 will cause runtime failure as it is a
     // reserved address for the MoveVM.
     public fun create_account<Token>(fresh_address: address, auth_key_prefix: vector<u8>) {
         let generator = EventHandleGenerator {counter: 0};

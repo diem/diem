@@ -1,5 +1,5 @@
 script {
-use 0x0::RecoveryAddress;
+use 0x1::RecoveryAddress;
 
 /// Add the `KeyRotationCapability` for `to_recover_account` to the `RecoveryAddress`
 /// resource under `recovery_address`.

@@ -1,6 +1,6 @@
 module TestHash {
 
-    use 0x0::Hash;
+    use 0x1::Hash;
 
     spec module {
         pragma verify = true;

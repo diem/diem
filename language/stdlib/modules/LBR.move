@@ -1,12 +1,12 @@
-address 0x0 {
+address 0x1 {
 
 module LBR {
-    use 0x0::CoreAddresses;
-    use 0x0::Coin1::Coin1;
-    use 0x0::Coin2::Coin2;
-    use 0x0::FixedPoint32::{Self, FixedPoint32};
-    use 0x0::Libra::{Self, Libra};
-    use 0x0::Signer;
+    use 0x1::CoreAddresses;
+    use 0x1::Coin1::Coin1;
+    use 0x1::Coin2::Coin2;
+    use 0x1::FixedPoint32::{Self, FixedPoint32};
+    use 0x1::Libra::{Self, Libra};
+    use 0x1::Signer;
 
     // The type tag for this coin type.
     resource struct LBR { }

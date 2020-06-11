@@ -1,6 +1,6 @@
 module LibraAccount {
-    import 0x0.LibraAccount;
-    import 0x0.Signer;
+    import 0x1.LibraAccount;
+    import 0x1.Signer;
 
     resource T{sequence_number: u64}
 

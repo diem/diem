@@ -1,8 +1,8 @@
-address 0x0 {
+address 0x1 {
 
 // TODO: add optional timeout for reclaiming by original publisher once we have implemented time
 module Offer {
-  use 0x0::Signer;
+  use 0x1::Signer;
   // A wrapper around value `offered` that can be claimed by the address stored in `for`.
   resource struct Offer<Offered> { offered: Offered, for: address }
 

@@ -4,10 +4,10 @@
 
 //! sender: alice
 module SillyColdWallet {
-    import 0x0.LibraAccount;
-    import 0x0.LBR;
-    import 0x0.Libra;
-    import 0x0.Signer;
+    import 0x1.LibraAccount;
+    import 0x1.LBR;
+    import 0x1.Libra;
+    import 0x1.Signer;
 
     resource T {
         cap: LibraAccount.WithdrawCapability,
@@ -37,7 +37,7 @@ module SillyColdWallet {
 //! new-transaction
 //! sender: alice
 import {{alice}}.SillyColdWallet;
-import 0x0.LibraAccount;
+import 0x1.LibraAccount;
 
 // create a cold wallet for Bob that withdraws from Alice's account
 main(sender: &signer) {
@@ -54,9 +54,9 @@ main(sender: &signer) {
 //! new-transaction
 //! sender: bob
 import {{alice}}.SillyColdWallet;
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
 
 // use the cold wallet that Alice created to move funds into Bob's account
 main(account: &signer) {
@@ -76,9 +76,9 @@ main(account: &signer) {
 
 //! new-transaction
 //! sender: alice
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
 
 // check that Alice can no longer withdraw from her account
 main(account: &signer) {
@@ -98,9 +98,9 @@ main(account: &signer) {
 
 //! new-transaction
 //! sender: bob
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Libra;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Libra;
 
 // check that Bob can still withdraw from his normal account
 main(account: &signer) {
@@ -117,9 +117,9 @@ main(account: &signer) {
 
 //! new-transaction
 //! sender: carol
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.Vector;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.Vector;
 
 // check that other users can still pay into Alice's account in the normal way
 main(account: &signer) {

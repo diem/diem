@@ -2,7 +2,7 @@ module M {
 
 }
 
-address 0x1 {
+address 0x2 {
 
 module M {
     struct X {}
@@ -15,13 +15,13 @@ module M {
 
 }
 
-address 0x2{}
 address 0x3{}
-address 0x1{}
-address 0x3{
+address 0x4{}
+address 0x2{}
+address 0x4{
 
 module M {
-    use 0x1::M;
+    use 0x2::M;
 
     struct X {}
 
@@ -37,11 +37,11 @@ module M {
 
 }
 
-address 0x1 {
+address 0x2 {
 
 module M2 {
-    use 0x1::M as M1;
-    use 0x3::M as M3;
+    use 0x2::M as M1;
+    use 0x4::M as M3;
 
     struct X {}
 

@@ -1,5 +1,5 @@
 module A {
-    use 0x0::Signer;
+    use 0x1::Signer;
     resource struct T {v: u64}
     resource struct U {v: u64}
 

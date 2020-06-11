@@ -1,7 +1,7 @@
 script {
-use 0x0::Libra;
-use 0x0::FixedPoint32;
-use 0x0::SlidingNonce;
+use 0x1::Libra;
+use 0x1::FixedPoint32;
+use 0x1::SlidingNonce;
 
 /// Script for Treasury Comliance Account to update <Currency> to LBR rate
 

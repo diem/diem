@@ -1,8 +1,8 @@
-address 0x0 {
+address 0x1 {
 
 module ValidatorConfig {
+    use 0x1::Transaction;
 
-    use 0x0::Transaction;
     // TODO(philiphayes): We should probably enforce a max length for these fields
 
     struct Config {

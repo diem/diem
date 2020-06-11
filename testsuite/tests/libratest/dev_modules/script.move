@@ -7,8 +7,8 @@
 // the compiled stdlib.
 
 script {
-use 0x0::LibraAccount;
-use 0x0::LBR::LBR;
+use 0x1::LibraAccount;
+use 0x1::LBR::LBR;
 use {{sender}}::MyModule;
 
 fun main(account: &signer, recipient: address, amount: u64) {

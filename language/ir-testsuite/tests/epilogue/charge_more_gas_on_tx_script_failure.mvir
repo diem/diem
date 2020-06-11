@@ -3,9 +3,9 @@
 
 //! new-transaction
 //! sender: blessed
-import 0x0.LBR;
-import 0x0.LibraAccount;
-import 0x0.Libra;
+import 0x1.LBR;
+import 0x1.LibraAccount;
+import 0x1.Libra;
 main(blessed: &signer) {
     LibraAccount.deposit<LBR.LBR>(copy(blessed), {{alice}}, LBR.mint(copy(blessed), 10000));
     LibraAccount.deposit<LBR.LBR>(copy(blessed), {{bob}}, LBR.mint(move(blessed), 10000));
@@ -37,8 +37,8 @@ main(abrt: u64) {
 // check: 78
 
 //! new-transaction
-import 0x0.LibraAccount;
-import 0x0.LBR;
+import 0x1.LibraAccount;
+import 0x1.LBR;
 
 main() {
     assert(LibraAccount.balance<LBR.LBR>({{bob}}) < LibraAccount.balance<LBR.LBR>({{alice}}), 79);

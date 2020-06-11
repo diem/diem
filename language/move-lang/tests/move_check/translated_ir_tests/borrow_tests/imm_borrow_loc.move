@@ -1,5 +1,5 @@
 module Tester {
-    use 0x0::Signer;
+    use 0x1::Signer;
 
     resource struct Data { v1: u64, v2: u64 }
     resource struct Box { f: u64 }

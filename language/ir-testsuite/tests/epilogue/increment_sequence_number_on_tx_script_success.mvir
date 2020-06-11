@@ -7,7 +7,7 @@ main() {
 
 
 //! new-transaction
-import 0x0.LibraAccount;
+import 0x1.LibraAccount;
 
 main() {
     assert(LibraAccount.sequence_number(get_txn_sender()) == 1, 42);

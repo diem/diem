@@ -1,6 +1,6 @@
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.LCS;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.LCS;
 
 //! sender: association
 main(account: &signer) {
@@ -13,10 +13,10 @@ main(account: &signer) {
 }
 
 //! new-transaction
-import 0x0.LibraAccount;
-import 0x0.LBR;
-import 0x0.LCS;
-import 0x0.Libra;
+import 0x1.LibraAccount;
+import 0x1.LBR;
+import 0x1.LCS;
+import 0x1.Libra;
 
 main(account: &signer) {
     let addr: address;

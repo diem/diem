@@ -1,11 +1,11 @@
-address 0x1 {
+address 0x2 {
 
 module N {
     fun foo() {}
 }
 
 module M {
-    use 0x1::N::{
+    use 0x2::N::{
         foo as address,
         foo as signer,
         foo as u8,

@@ -1,4 +1,4 @@
-address 0x1 {
+address 0x2 {
 module M {
     struct S1 { b: bool }
     struct S2 { u: u64 }
@@ -14,7 +14,7 @@ module M {
     }
 
     fun t<T>(): S3 {
-        use 0x1::M::{check as num, num as t, S1 as S2, S2 as Foo, S3 as T};
+        use 0x2::M::{check as num, num as t, S1 as S2, S2 as Foo, S3 as T};
         num() && true;
         t(0) + 1;
         S2 { b: false };
@@ -24,7 +24,7 @@ module M {
 
     fun t2<T>(x: T) {
         {
-            use 0x1::M::{check as num, num as t, S1 as S2, S2 as Foo, S3 as T};
+            use 0x2::M::{check as num, num as t, S1 as S2, S2 as Foo, S3 as T};
             num() && true;
             t(0) + 1;
             S2 { b: false };

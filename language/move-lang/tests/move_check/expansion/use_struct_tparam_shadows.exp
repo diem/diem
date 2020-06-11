@@ -5,10 +5,10 @@ error:
  12 │         x
     │         ^ Invalid return expression
     ·
- 11 │     fun foo<S>(x: S): 0x1::X::S {
+ 11 │     fun foo<S>(x: S): 0x2::X::S {
     │                   - The type: 'S'
     ·
- 11 │     fun foo<S>(x: S): 0x1::X::S {
-    │                       --------- Is not compatible with: '0x1::X::S'
+ 11 │     fun foo<S>(x: S): 0x2::X::S {
+    │                       --------- Is not compatible with: '0x2::X::S'
     │
 

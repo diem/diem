@@ -1,7 +1,7 @@
-address 0x1 {
+address 0x2 {
 module X {}
 module M {
-    use 0x1::X;
+    use 0x2::X;
 
     fun foo(s: X::S): X::S {
         let s = s;

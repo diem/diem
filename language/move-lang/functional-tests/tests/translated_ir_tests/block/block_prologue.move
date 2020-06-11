@@ -10,8 +10,8 @@
 
 //! new-transaction
 script{
-use 0x0::LibraTimestamp;
-use 0x0::LibraBlock;
+use 0x1::LibraTimestamp;
+use 0x1::LibraBlock;
 
 fun main() {
     assert(LibraBlock::get_current_block_height() == 1, 73);
@@ -21,7 +21,7 @@ fun main() {
 
 //! new-transaction
 script{
-use 0x0::LibraTimestamp;
+use 0x1::LibraTimestamp;
 
 fun main() {
     assert(LibraTimestamp::now_microseconds() != 2000000, 77);
@@ -30,8 +30,8 @@ fun main() {
 //! new-transaction
 //! sender: vivian
 script{
-use 0x0::LibraBlock;
-use 0x0::Vector;
+use 0x1::LibraBlock;
+use 0x1::Vector;
 
 fun main(account: &signer) {
     LibraBlock::block_prologue(account, 1, 10, Vector::empty<address>(), {{vivian}});
@@ -43,7 +43,7 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: vivian
 script{
-use 0x0::LibraTimestamp;
+use 0x1::LibraTimestamp;
 
 fun main(account: &signer) {
     LibraTimestamp::update_global_time(account, {{vivian}}, 20);

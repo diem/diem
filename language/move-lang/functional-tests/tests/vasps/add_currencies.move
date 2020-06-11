@@ -2,10 +2,10 @@
 
 //! sender: association
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
-use 0x0::LBR::LBR;
-use 0x0::LibraAccount;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
+use 0x1::LBR::LBR;
+use 0x1::LibraAccount;
 fun main(assoc: &signer) {
     // create a parent VASP that accepts one currency
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
@@ -40,10 +40,10 @@ fun main(assoc: &signer) {
 //! new-transaction
 //! sender: parent
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
-use 0x0::LBR::LBR;
-use 0x0::LibraAccount;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
+use 0x1::LBR::LBR;
+use 0x1::LibraAccount;
 fun main(parent_vasp: &signer) {
     // create a child VASP that accepts one currency
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";

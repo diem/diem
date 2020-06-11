@@ -1,9 +1,9 @@
-address 0x0 {
+address 0x1 {
 module RecoveryAddress {
-    use 0x0::LibraAccount;
-    use 0x0::Signer;
-    use 0x0::VASP;
-    use 0x0::Vector;
+    use 0x1::LibraAccount;
+    use 0x1::Signer;
+    use 0x1::VASP;
+    use 0x1::Vector;
 
     /// A resource that holds the `KeyRotationCapability`s for several accounts belonging to the
     /// same VASP. A VASP account that delegates its `KeyRotationCapability` to

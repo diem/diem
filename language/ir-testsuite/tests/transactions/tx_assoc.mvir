@@ -1,4 +1,4 @@
-import 0x0.CoreAddresses;
+import 0x1.CoreAddresses;
 //! sender: association
 main() {
     assert(get_txn_sender() == CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 0);
@@ -6,7 +6,7 @@ main() {
 }
 
 //! new-transaction
-import 0x0.CoreAddresses;
+import 0x1.CoreAddresses;
 main() {
     assert(get_txn_sender() != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 1);
     return;
@@ -15,7 +15,7 @@ main() {
 //! new-transaction
 //! account: alice
 //! sender: alice
-import 0x0.CoreAddresses;
+import 0x1.CoreAddresses;
 main() {
     assert(get_txn_sender() != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 2);
     assert({{alice}} != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 3);

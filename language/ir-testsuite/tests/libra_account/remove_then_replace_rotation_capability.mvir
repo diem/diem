@@ -1,5 +1,5 @@
-import 0x0.LibraAccount;
-import 0x0.Signer;
+import 0x1.LibraAccount;
+import 0x1.Signer;
 
 main(account: &signer) {
   let sender: address;
@@ -29,7 +29,7 @@ main(account: &signer) {
 
 // Extracting the capability should preclude rotation
 //! new-transaction
-import 0x0.LibraAccount;
+import 0x1.LibraAccount;
 
 main(account: &signer) {
   let cap: LibraAccount.KeyRotationCapability;

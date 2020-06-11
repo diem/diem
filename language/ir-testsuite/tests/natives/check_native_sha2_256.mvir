@@ -1,4 +1,4 @@
-import 0x0.Hash;
+import 0x1.Hash;
 
 main() {
     let input: vector<u8>;

@@ -25,7 +25,7 @@
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Currency&gt;(account: &signer) {
-    <a href="../../modules/doc/LibraAccount.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;Currency&gt;(account);
+    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;Currency&gt;(account);
 }
 </code></pre>
 

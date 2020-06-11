@@ -2,7 +2,7 @@
 //! account: alice, 10000LBR
 
 module Holder {
-    use 0x0::Signer;
+    use 0x1::Signer;
 
     resource struct Hold<T> {
         x: T
@@ -21,7 +21,7 @@ module Holder {
 
 //! new-transaction
 script {
-    use 0x0::LibraAccount;
+    use 0x1::LibraAccount;
     fun main(sender: &signer) {
         LibraAccount::initialize(sender);
     }
@@ -32,8 +32,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::LBR::LBR;
-    use 0x0::LibraAccount;
+    use 0x1::LBR::LBR;
+    use 0x1::LibraAccount;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
         let coins = LibraAccount::withdraw_from<LBR>(&with_cap, 10);
@@ -46,7 +46,7 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::LibraAccount;
+    use 0x1::LibraAccount;
     fun main(account: &signer) {
         let rot_cap = LibraAccount::extract_key_rotation_capability(account);
         LibraAccount::rotate_authentication_key(&rot_cap, x"123abc");
@@ -58,7 +58,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::LibraAccount;
+    use 0x1::LibraAccount;
     use {{default}}::Holder;
     fun main(account: &signer) {
         Holder::hold(
@@ -76,8 +76,8 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::LibraAccount;
-    use 0x0::LBR::LBR;
+    use 0x1::LibraAccount;
+    use 0x1::LBR::LBR;
     fun main() {
         LibraAccount::create_unhosted_account<LBR>(0xDEADBEEF, x"", false);
     }
@@ -87,8 +87,8 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::LibraAccount;
-    use 0x0::Signer;
+    use 0x1::LibraAccount;
+    use 0x1::Signer;
     fun main(sender: &signer) {
         let cap = LibraAccount::extract_key_rotation_capability(sender);
         assert(
@@ -109,9 +109,9 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::LibraAccount;
-    use 0x0::LBR::LBR;
-    use 0x0::Testnet;
+    use 0x1::LibraAccount;
+    use 0x1::LBR::LBR;
+    use 0x1::Testnet;
     fun main(account: &signer) {
         Testnet::remove_testnet(account);
         LibraAccount::create_testnet_account<LBR>(account, 0xDEADBEEF, x"");
@@ -124,7 +124,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::Testnet;
+    use 0x1::Testnet;
     fun main(account: &signer) {
         Testnet::remove_testnet(account);
     }
@@ -134,8 +134,8 @@ script {
 //! new-transaction
 //! sender: bob
 script {
-    use 0x0::LibraAccount;
-    use 0x0::LBR::LBR;
+    use 0x1::LibraAccount;
+    use 0x1::LBR::LBR;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
         LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 10000);
@@ -149,7 +149,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::Testnet;
+    use 0x1::Testnet;
     fun main(account: &signer) {
         Testnet::initialize(account);
     }

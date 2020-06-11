@@ -1,5 +1,5 @@
 module TestGenerics {
-    import 0x0.Vector;
+    import 0x1.Vector;
 
     resource R {
         v: vector<u64>

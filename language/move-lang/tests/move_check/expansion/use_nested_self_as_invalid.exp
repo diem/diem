@@ -2,7 +2,7 @@ error:
 
    ┌── tests/move_check/expansion/use_nested_self_as_invalid.move:8:26 ───
    │
- 8 │     use 0x1::X::{Self as B, foo, S};
+ 8 │     use 0x2::X::{Self as B, foo, S};
    │                          ^ Unused 'use' of alias 'B'. Consider removing it
    │
 

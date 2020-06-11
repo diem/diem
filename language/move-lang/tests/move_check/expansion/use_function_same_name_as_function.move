@@ -1,4 +1,4 @@
-address 0x1 {
+address 0x2 {
 module X {
     public fun u(): u64 {
         0
@@ -6,7 +6,7 @@ module X {
 }
 
 module M {
-    use 0x1::X::u;
+    use 0x2::X::u;
     fun u() {
     }
 }
@@ -14,7 +14,7 @@ module M {
 module N {
     fun bar() {
     }
-    use 0x1::X::u as bar;
+    use 0x2::X::u as bar;
 }
 
 }

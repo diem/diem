@@ -6,7 +6,7 @@
 // but it fails if loops are involved.
 
 module VerifyVector {
-    use 0x0::Vector;
+    use 0x1::Vector;
 
     spec module {
         pragma verify = true;

@@ -1,6 +1,6 @@
 module TestLCS {
 
-    use 0x0::LCS;
+    use 0x1::LCS;
 
     spec module {
         pragma verify = true;

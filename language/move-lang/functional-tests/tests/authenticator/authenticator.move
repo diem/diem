@@ -1,7 +1,7 @@
 // Create some valid multisig policies and compute their auth keys
 script {
-use 0x0::Authenticator;
-use 0x0::Vector;
+use 0x1::Authenticator;
+use 0x1::Vector;
 fun main() {
     let pubkey1 = x"c48b687a1dd8265101b33df6ae0b6825234e3f28df9ecb38fb286cf76dae919d";
     let pubkey2 = x"4b2a60883383be0ba24ed79aa5a6c9379728099a7b0c57edcec193a14ea5fce2";
@@ -46,8 +46,8 @@ fun main() {
 // empty policy should  be rejected
 //! new-transaction
 script {
-use 0x0::Authenticator;
-use 0x0::Vector;
+use 0x1::Authenticator;
+use 0x1::Vector;
 fun main() {
     let keys = Vector::empty<vector<u8>>();
     Authenticator::create_multi_ed25519(keys, 0);
@@ -60,8 +60,8 @@ fun main() {
 // bad threshold should be rejected (threshold 1 for empty keys)
 //! new-transaction
 script {
-use 0x0::Authenticator;
-use 0x0::Vector;
+use 0x1::Authenticator;
+use 0x1::Vector;
 fun main() {
     let keys = Vector::empty<vector<u8>>();
     Authenticator::create_multi_ed25519(keys, 1);
@@ -73,8 +73,8 @@ fun main() {
 
 //! new-transaction
 script {
-use 0x0::Authenticator;
-use 0x0::Vector;
+use 0x1::Authenticator;
+use 0x1::Vector;
 fun main() {
     let pubkey = x"";
 
@@ -94,8 +94,8 @@ fun main() {
 // bad threshold should be rejected (threshold 2 for 1 key)
 //! new-transaction
 script {
-use 0x0::Authenticator;
-use 0x0::Vector;
+use 0x1::Authenticator;
+use 0x1::Vector;
 fun main() {
     let keys = Vector::empty<vector<u8>>();
     Vector::push_back(
@@ -112,8 +112,8 @@ fun main() {
 // bad threshold should be rejected (threshold 0 for 1 address)
 //! new-transaction
 script {
-use 0x0::Authenticator;
-use 0x0::Vector;
+use 0x1::Authenticator;
+use 0x1::Vector;
 fun main() {
     let keys = Vector::empty<vector<u8>>();
     Vector::push_back(
@@ -130,8 +130,8 @@ fun main() {
 // 1-of-1 multi-ed25519 should have a different auth key than ed25519 with the same public key
 //! new-transaction
 script {
-use 0x0::Authenticator;
-use 0x0::Vector;
+use 0x1::Authenticator;
+use 0x1::Vector;
 fun main() {
     let pubkey = x"c48b687a1dd8265101b33df6ae0b6825234e3f28df9ecb38fb286cf76dae919d";
     let keys = Vector::empty<vector<u8>>();

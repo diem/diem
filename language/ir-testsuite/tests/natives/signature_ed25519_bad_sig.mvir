@@ -1,4 +1,4 @@
-import 0x0.Signature;
+import 0x1.Signature;
 
 main() {
     let message: vector<u8>;

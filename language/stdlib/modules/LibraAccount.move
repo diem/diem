@@ -1,28 +1,28 @@
-address 0x0 {
+address 0x1 {
 
 // The module for the account resource that governs every Libra account
 module LibraAccount {
-    use 0x0::CoreAddresses;
-    use 0x0::AccountLimits;
-    use 0x0::Association;
-    use 0x0::Coin1::Coin1;
-    use 0x0::Coin2::Coin2;
-    use 0x0::Event;
-    use 0x0::Hash;
-    use 0x0::LBR::{Self, LBR};
-    use 0x0::LCS;
-    use 0x0::LibraTimestamp;
-    use 0x0::LibraTransactionTimeout;
-    use 0x0::Signature;
-    use 0x0::Signer;
-    use 0x0::SlidingNonce;
-    use 0x0::Testnet;
-    use 0x0::ValidatorConfig;
-    use 0x0::VASP;
-    use 0x0::Vector;
-    use 0x0::DesignatedDealer;
-    use 0x0::Libra::{Self, Libra};
-    use 0x0::Option::{Self, Option};
+    use 0x1::CoreAddresses;
+    use 0x1::AccountLimits;
+    use 0x1::Association;
+    use 0x1::Coin1::Coin1;
+    use 0x1::Coin2::Coin2;
+    use 0x1::Event;
+    use 0x1::Hash;
+    use 0x1::LBR::{Self, LBR};
+    use 0x1::LCS;
+    use 0x1::LibraTimestamp;
+    use 0x1::LibraTransactionTimeout;
+    use 0x1::Signature;
+    use 0x1::Signer;
+    use 0x1::SlidingNonce;
+    use 0x1::Testnet;
+    use 0x1::ValidatorConfig;
+    use 0x1::VASP;
+    use 0x1::Vector;
+    use 0x1::DesignatedDealer;
+    use 0x1::Libra::{Self, Libra};
+    use 0x1::Option::{Self, Option};
 
     // Every Libra account has a LibraAccount resource
     resource struct LibraAccount {
@@ -437,7 +437,7 @@ module LibraAccount {
     // TODO: get rid of this and just use normal VASP creation
     // Creates a new testnet account at `fresh_address` with a balance of
     // zero `Token` type coins, and authentication key `auth_key_prefix` | `fresh_address`.
-    // Trying to create an account at address 0x0 will cause runtime failure as it is a
+    // Trying to create an account at address 0x1 will cause runtime failure as it is a
     // reserved address for the MoveVM.
     public fun create_testnet_account<Token>(
         association: &signer,
@@ -467,7 +467,7 @@ module LibraAccount {
     /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
     /// also be added.
     /// Aborts if there is already an account at `new_account_address`.
-    /// Creating an account at address 0x0 will abort as it is a reserved address for the MoveVM.
+    /// Creating an account at address 0x1 will abort as it is a reserved address for the MoveVM.
     fun make_account<Token>(
         new_account: signer,
         auth_key_prefix: vector<u8>,

@@ -1,4 +1,4 @@
-address 0x1 {
+address 0x2 {
 module M {
     resource struct S {}
     resource struct R<T> {}
@@ -8,7 +8,7 @@ module M {
     }
 
     spec module {
-        use 0x1::M::{S as R, R as S};
+        use 0x2::M::{S as R, R as S};
         ensures exists<S<u64>>(0x1) == exists<R>(0x1);
     }
 

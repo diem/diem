@@ -3,8 +3,8 @@
 // register blessed as a preburn entity
 //! sender: association
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::LibraAccount;
+use 0x1::Coin1::Coin1;
+use 0x1::LibraAccount;
 fun main(account: &signer) {
     LibraAccount::add_preburn_from_association<Coin1>(account, {{blessed}});
 }
@@ -15,8 +15,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::Libra;
+use 0x1::Coin1::Coin1;
+use 0x1::Libra;
 fun main(account: &signer) {
     let coin = Libra::mint<Coin1>(account, 100);
     let old_market_cap = Libra::market_cap<Coin1>();
@@ -35,8 +35,8 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::Coin1::Coin1;
-use 0x0::Libra;
+use 0x1::Coin1::Coin1;
+use 0x1::Libra;
 fun main(account: &signer) {
     let old_market_cap = Libra::market_cap<Coin1>();
     // do the burn. the market cap should now decrease, and the preburn bucket should be empty

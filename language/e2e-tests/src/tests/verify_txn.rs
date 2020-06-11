@@ -13,7 +13,7 @@ use compiled_stdlib::transaction_scripts::StdlibScript;
 use compiler::Compiler;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
-    account_config::{lbr_type_tag, CORE_CODE_ADDRESS, LBR_NAME},
+    account_config::{self, lbr_type_tag, LBR_NAME},
     on_chain_config::VMPublishingOption,
     test_helpers::transaction_test_helpers,
     transaction::{
@@ -69,7 +69,7 @@ fn verify_reserved_sender() {
         vec![],
     );
     let signed_txn = transaction_test_helpers::get_test_signed_txn(
-        CORE_CODE_ADDRESS,
+        account_config::reserved_vm_address(),
         0,
         &private_key,
         private_key.public_key(),
@@ -611,7 +611,7 @@ fn test_dependency_fails_verification() {
     executor.add_account_data(&sender);
 
     let code = "
-    import 0x0.Test;
+    import 0x1.Test;
 
     main() {
         let x: Test.S1;

@@ -1,9 +1,9 @@
 //! new-transaction
 //! sender: association
 script {
-use 0x0::Libra;
-use 0x0::Coin1::Coin1;
-use 0x0::Coin2::Coin2;
+use 0x1::Libra;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
 // Make sure that Coin1 and Coin2 are registered
 fun main() {
     assert(Libra::is_currency<Coin1>(), 1);

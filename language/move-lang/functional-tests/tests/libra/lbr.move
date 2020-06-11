@@ -2,8 +2,8 @@
 
 //! new-transaction
 script {
-use 0x0::Libra;
-use 0x0::LBR::LBR;
+use 0x1::Libra;
+use 0x1::LBR::LBR;
 fun main() {
     assert(Libra::approx_lbr_for_value<LBR>(10) == 10, 1);
     assert(Libra::scaling_factor<LBR>() == 1000000, 2);
@@ -16,8 +16,8 @@ fun main() {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::LibraAccount;
-use 0x0::LBR;
+use 0x1::LibraAccount;
+use 0x1::LBR;
 fun main(account: &signer) {
    LibraAccount::deposit(account, {{alice}}, LBR::mint(account, 1));
    LibraAccount::deposit(account, {{alice}}, LBR::mint(account,  2));
@@ -32,9 +32,9 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::LibraAccount;
-use 0x0::LBR::LBR;
-use 0x0::Libra;
+use 0x1::LibraAccount;
+use 0x1::LBR::LBR;
+use 0x1::Libra;
 fun main(account: &signer) {
    LibraAccount::deposit_to(account, Libra::mint<LBR>(account, 1000));
 }
@@ -46,9 +46,9 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x0::LBR::LBR;
-use 0x0::Libra;
-use 0x0::Offer;
+use 0x1::LBR::LBR;
+use 0x1::Libra;
+use 0x1::Offer;
 fun main(account: &signer) {
    Offer::create(account, Libra::remove_burn_capability<LBR>(account), {{alice}});
 }

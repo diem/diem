@@ -4,8 +4,8 @@
 
 //! sender: alice
 module AlicePays {
-    use 0x0::LBR::LBR;
-    use 0x0::LibraAccount;
+    use 0x1::LBR::LBR;
+    use 0x1::LibraAccount;
 
     resource struct T {
         cap: LibraAccount::WithdrawCapability,
@@ -46,8 +46,8 @@ fun main(sender: &signer) {
 //! sender: bob
 script {
 use {{alice}}::AlicePays;
-use 0x0::LBR::LBR;
-use 0x0::LibraAccount;
+use 0x1::LBR::LBR;
+use 0x1::LibraAccount;
 
 fun main() {
     let carol_prev_balance = LibraAccount::balance<LBR>({{carol}});

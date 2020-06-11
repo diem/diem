@@ -1,6 +1,6 @@
 //! new-transaction
 script {
-    use 0x0::Testnet;
+    use 0x1::Testnet;
     fun main(account: &signer) {
         Testnet::initialize(account);
     }
@@ -11,7 +11,7 @@ script {
 //! new-transaction
 //! sender: association
 script {
-    use 0x0::Testnet;
+    use 0x1::Testnet;
     fun main(account: &signer) {
         Testnet::remove_testnet(account);
     }
@@ -19,7 +19,7 @@ script {
 
 //! new-transaction
 script {
-    use 0x0::Testnet;
+    use 0x1::Testnet;
     fun main(account: &signer) {
         Testnet::remove_testnet(account);
     }
