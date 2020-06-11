@@ -86,16 +86,15 @@ pub fn setup_network(
     );
     network_builder.add_connection_monitoring();
 
+    // Sanity check seed peer addresses.
+    config
+        .seed_peers
+        .verify_libranet_addrs()
+        .expect("Seed peer addresses must be well-formed");
+    let seed_peers = config.seed_peers.seed_peers.clone();
+
     if config.mutual_authentication {
-        // Sanity check seed peer addresses.
-        config
-            .seed_peers
-            .verify_libranet_addrs()
-            .expect("Seed peer addresses must be well-formed");
-
         let network_peers = config.network_peers.peers.clone();
-        let seed_peers = config.seed_peers.seed_peers.clone();
-
         let trusted_peers = if role == RoleType::Validator {
             // for validators, trusted_peers is empty will be populated from consensus
             HashMap::new()
@@ -114,15 +113,17 @@ pub fn setup_network(
             .trusted_peers(trusted_peers)
             .seed_peers(seed_peers)
             .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
-            // TODO:  Why is the connectivity manager related to remote_authentication?
             .add_connectivity_manager();
     } else {
-        // Even if a network end-point operates without remote authentication, it might want to prove
-        // its identity to another peer it connects to. For this, we use TCP + Noise but without
-        // enforcing a trusted peers set.
+        // Enforce the outgoing connection (dialer) verifies the identity of the listener (server)
         network_builder
             .authentication_mode(AuthenticationMode::ServerOnly(identity_key))
             .advertised_address(config.advertised_address.clone());
+        if !seed_peers.is_empty() {
+            network_builder
+                .seed_peers(seed_peers)
+                .add_connectivity_manager();
+        }
     }
 
     match config.discovery_method {
@@ -310,15 +311,9 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     );
     debug!("Mempool started in {} ms", instant.elapsed().as_millis());
 
-    // Note: We need to start network provider before consensus, because the consensus
-    // initialization is blocked on state synchronizer to sync to the initial root ledger
-    // info, which in turn cannot make progress before network initialization
-    // because the NewPeer events which state synchronizer uses to know its
-    // peers are delivered by network provider. If we were to start network
-    // provider after consensus, we create a cyclic dependency from
-    // network provider -> consensus -> state synchronizer -> network provider. This deadlock
-    // was observed in GitHub Issue #749. A long term fix might be make
-    // consensus initialization async instead of blocking on state synchronizer.
+    // StateSync should be instantiated and started before Consensus to avoid a cyclic dependency:
+    // network provider -> consensus -> state synchronizer -> network provider.  This has resulted
+    // in a deadlock as observed in GitHub issue #749.
     if let Some((consensus_network_sender, consensus_network_events)) = consensus_network_handles {
         // Make sure that state synchronizer is caught up at least to its waypoint
         // (in case it's present). There is no sense to start consensus prior to that.

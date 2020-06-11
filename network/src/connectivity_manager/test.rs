@@ -184,6 +184,10 @@ fn connect_to_seeds_on_startup() {
     let mut rt = Runtime::new().unwrap();
     let seed_peer_id = PeerId::random();
     let seed_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+    let seed_addr = seed_addr.append_prod_protos(
+        x25519::PrivateKey::generate_for_testing().public_key(),
+        libra_config::config::HANDSHAKE_VERSION,
+    );
     let seed_peers = vec![(seed_peer_id, vec![seed_addr.clone()])]
         .into_iter()
         .collect::<HashMap<_, _>>();

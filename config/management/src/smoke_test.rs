@@ -176,9 +176,9 @@ fn smoke_test() {
         nodes: std::collections::HashMap::new(),
         config: SwarmConfig::build(&management_builder, &swarm_path).unwrap(),
     };
+
     swarm.launch_attempt(RoleType::FullNode, false).unwrap();
-    // This currently doesn't pass, the goal over the next set of commits is to make it succeed
-    // assert!(check_connectivity(&mut swarm, 1));
+    assert!(check_connectivity(&mut swarm, 1));
 }
 
 fn check_connectivity(swarm: &mut LibraSwarm, expected_peers: i64) -> bool {
