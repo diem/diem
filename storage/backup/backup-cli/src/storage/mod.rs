@@ -46,7 +46,9 @@ pub trait BackupStorage {
 
 #[derive(StructOpt)]
 pub enum StorageOpt {
+    #[structopt(about = "Select the LocalFs backup store.")]
     LocalFs(LocalFsOpt),
+    #[structopt(about = "Select the CommandAdapter backup store.")]
     CommandAdapter(CommandAdapterOpt),
 }
 
