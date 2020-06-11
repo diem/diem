@@ -5,7 +5,7 @@ use generate_format::Corpus;
 use serde_generate as serdegen;
 use serde_generate::SourceInstaller;
 use serde_reflection::Registry;
-use std::process::Command;
+use std::{io::Write, process::Command};
 use tempfile::tempdir;
 use transaction_builder::get_stdlib_script_abis;
 use transaction_builder_generator as buildgen;
@@ -48,4 +48,46 @@ fn test_that_python_code_parses() {
         .unwrap();
     assert_eq!(String::new(), String::from_utf8_lossy(&output.stderr));
     assert!(output.status.success());
+}
+
+#[test]
+fn test_that_rust_code_compiles() {
+    let registry = get_libra_registry();
+    let abis = get_stdlib_script_abis();
+    let dir = tempdir().unwrap();
+
+    let installer = serdegen::rust::Installer::new(dir.path().to_path_buf());
+    installer.install_module("libra-types", &registry).unwrap();
+
+    let dir_path = dir.path().join("libra-builders");
+    std::fs::create_dir_all(dir_path.clone()).unwrap();
+
+    let mut cargo = std::fs::File::create(&dir_path.join("Cargo.toml")).unwrap();
+    write!(
+        cargo,
+        r#"[package]
+name = "libra-builders"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+libra-types = {{ path = "../libra-types", version = "0.1.0" }}
+"#,
+    )
+    .unwrap();
+    std::fs::create_dir(dir_path.join("src")).unwrap();
+    let source_path = dir_path.join("src/lib.rs");
+    let mut source = std::fs::File::create(&source_path).unwrap();
+    buildgen::rust::output(&mut source, &abis).unwrap();
+
+    // Use a stable `target` dir to avoid downloading and recompiling crates everytime.
+    let target_dir = std::env::current_dir().unwrap().join("../../target");
+    let status = Command::new("cargo")
+        .current_dir(dir.path().join("libra-builders"))
+        .arg("build")
+        .arg("--target-dir")
+        .arg(target_dir)
+        .status()
+        .unwrap();
+    assert!(status.success());
 }

@@ -8,12 +8,13 @@
 //! '''
 
 use structopt::{clap::arg_enum, StructOpt};
-use transaction_builder_generator::python3;
+use transaction_builder_generator::{python3, rust};
 
 arg_enum! {
 #[derive(Debug, StructOpt)]
 enum Language {
     Python3,
+    Rust,
 }
 }
 
@@ -35,5 +36,6 @@ fn main() {
 
     match options.language {
         Language::Python3 => python3::output(&mut out, &abis).unwrap(),
+        Language::Rust => rust::output(&mut out, &abis).unwrap(),
     }
 }
