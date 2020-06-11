@@ -453,6 +453,11 @@
 <span id="453">453</span>
 <span id="454">454</span>
 <span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -504,7 +509,7 @@
     <span class="ident">sink</span>::<span class="ident">SinkExt</span>,
     <span class="ident">stream</span>::{<span class="ident">FusedStream</span>, <span class="ident">Stream</span>, <span class="ident">StreamExt</span>},
 };
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">RoleType</span>;
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">network_id</span>::<span class="ident">NetworkContext</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto_derive</span>::{<span class="ident">CryptoHasher</span>, <span class="ident">LCSCryptoHash</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
@@ -585,10 +590,7 @@
     <span class="doccomment">/// Note for self, which is prefixed with an underscore as this is not used but is in</span>
     <span class="doccomment">/// preparation for logic that changes the advertised Note while the validator is running.</span>
     <span class="ident">note</span>: <span class="ident">Note</span>,
-    <span class="doccomment">/// PeerId for self.</span>
-    <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
-    <span class="doccomment">/// Our node type.</span>
-    <span class="ident">role</span>: <span class="ident">RoleType</span>,
+    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
     <span class="doccomment">/// The DNS domain name other public full nodes should query to get this</span>
     <span class="doccomment">/// validator&#39;s list of full nodes.</span>
     <span class="ident">dns_seed_addr</span>: <span class="ident">Bytes</span>,
@@ -614,8 +616,7 @@
     <span class="ident">TTicker</span>: <span class="ident">Stream</span> <span class="op">+</span> <span class="ident">FusedStream</span> <span class="op">+</span> <span class="ident">Unpin</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">self_peer_id</span>: <span class="ident">PeerId</span>,
-        <span class="ident">role</span>: <span class="ident">RoleType</span>,
+        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
         <span class="ident">self_addrs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span>,
         <span class="ident">ticker</span>: <span class="ident">TTicker</span>,
         <span class="ident">network_reqs_tx</span>: <span class="ident">DiscoveryNetworkSender</span>,
@@ -624,7 +625,7 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="comment">// TODO(philiphayes): wire through config</span>
         <span class="kw">let</span> <span class="ident">dns_seed_addr</span> <span class="op">=</span> <span class="string">b&quot;example.com&quot;</span>;
-
+        <span class="kw">let</span> <span class="ident">self_peer_id</span> <span class="op">=</span> <span class="ident">network_context</span>.<span class="ident">peer_id</span>();
         <span class="kw">let</span> <span class="ident">epoch</span> <span class="op">=</span> <span class="ident">get_unix_epoch</span>();
         <span class="kw">let</span> <span class="ident">self_note</span> <span class="op">=</span> <span class="ident">Note</span>::<span class="ident">new</span>(<span class="ident">self_peer_id</span>, <span class="ident">self_addrs</span>, <span class="ident">dns_seed_addr</span>, <span class="ident">epoch</span>);
 
@@ -634,8 +635,7 @@
 
         <span class="self">Self</span> {
             <span class="ident">note</span>: <span class="ident">self_note</span>,
-            <span class="ident">peer_id</span>: <span class="ident">self_peer_id</span>,
-            <span class="ident">role</span>,
+            <span class="ident">network_context</span>,
             <span class="ident">dns_seed_addr</span>: <span class="ident">Bytes</span>::<span class="ident">from_static</span>(<span class="ident">dns_seed_addr</span>),
             <span class="ident">known_peers</span>,
             <span class="ident">connected_peers</span>: <span class="ident">HashSet</span>::<span class="ident">new</span>(),
@@ -657,7 +657,10 @@
         <span class="comment">// Ensure our metrics counter has an initial value.</span>
         <span class="self">self</span>.<span class="ident">record_num_discovery_notes</span>();
 
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Starting Discovery actor event loop&quot;</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{} Starting Discovery actor event loop&quot;</span>,
+            <span class="self">self</span>.<span class="ident">network_context</span>
+        );
         <span class="kw">loop</span> {
             <span class="ident">futures</span>::<span class="macro">select</span><span class="macro">!</span> {
                 <span class="ident">notif</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_notifs_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
@@ -667,7 +670,7 @@
                     <span class="self">self</span>.<span class="ident">handle_tick</span>();
                 }
                 <span class="ident">complete</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;Discovery actor terminated&quot;</span>);
+                    <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;{} Discovery actor terminated&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
                     <span class="kw">break</span>;
                 }
             }
@@ -679,7 +682,7 @@
     <span class="comment">// 2. Compose the msg to send.</span>
     <span class="comment">// 3. Spawn off a new task to push the msg to the peer.</span>
     <span class="kw">fn</span> <span class="ident">handle_tick</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Discovery interval tick&quot;</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} Discovery interval tick&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
         <span class="comment">// On each tick, we choose a random neighbor and push our state to it.</span>
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">peer</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">choose_random_neighbor</span>() {
             <span class="comment">// We clone `peer_mgr_reqs_tx` member of Self, since using `self` inside fut below</span>
@@ -689,7 +692,8 @@
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">compose_discovery_msg</span>();
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">send_to</span>(<span class="ident">peer</span>, <span class="ident">msg</span>) {
                 <span class="macro">warn</span><span class="macro">!</span>(
-                    <span class="string">&quot;Failed to send discovery msg to {}; error: {:?}&quot;</span>,
+                    <span class="string">&quot;{} Failed to send discovery msg to {}; error: {:?}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>,
                     <span class="ident">peer</span>.<span class="ident">short_str</span>(),
                     <span class="ident">err</span>
                 );
@@ -698,7 +702,7 @@
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_network_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">event</span>: <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">DiscoveryMsg</span><span class="op">&gt;</span>, <span class="ident">NetworkError</span><span class="op">&gt;</span>) {
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Network event::{:?}&quot;</span>, <span class="ident">event</span>);
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} Network event::{:?}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">event</span>);
         <span class="kw">match</span> <span class="ident">event</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">match</span> <span class="ident">e</span> {
@@ -715,13 +719,16 @@
                         <span class="self">self</span>.<span class="ident">record_num_discovery_notes</span>();
                     }
                     <span class="ident">Event</span>::<span class="ident">RpcRequest</span>(<span class="ident">req</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Unexpected notification from network: {:?}&quot;</span>, <span class="ident">req</span>);
+                        <span class="macro">warn</span><span class="macro">!</span>(
+                            <span class="string">&quot;{} Unexpected notification from network: {:?}&quot;</span>,
+                            <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">req</span>
+                        );
                         <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="bool-val">false</span>);
                     }
                 }
             }
             <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Received error: {}&quot;</span>, <span class="ident">err</span>);
+                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{} Received error: {}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">err</span>);
             }
         }
     }
@@ -755,7 +762,8 @@
                 <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">curr_note</span>) <span class="kw">if</span> <span class="ident">note</span>.<span class="ident">epoch</span>() <span class="op">&lt;</span><span class="op">=</span> <span class="ident">curr_note</span>.<span class="ident">epoch</span>() <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">if</span> <span class="ident">note</span>.<span class="ident">epoch</span>() <span class="op">&lt;</span> <span class="ident">curr_note</span>.<span class="ident">epoch</span>() {
                         <span class="macro">debug</span><span class="macro">!</span>(
-                            <span class="string">&quot;Received stale note for peer: {} from peer: {}&quot;</span>,
+                            <span class="string">&quot;{} Received stale note for peer: {} from peer: {}&quot;</span>,
+                            <span class="self">self</span>.<span class="ident">network_context</span>,
                             <span class="ident">note</span>.<span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                             <span class="ident">remote_peer</span>
                         );
@@ -764,7 +772,8 @@
                 }
                 <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="macro">info</span><span class="macro">!</span>(
-                        <span class="string">&quot;Received updated note for peer: {} from peer: {}&quot;</span>,
+                        <span class="string">&quot;{} Received updated note for peer: {} from peer: {}&quot;</span>,
+                        <span class="self">self</span>.<span class="ident">network_context</span>,
                         <span class="ident">note</span>.<span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                         <span class="ident">remote_peer</span>.<span class="ident">short_str</span>()
                     );
@@ -774,10 +783,11 @@
                     <span class="comment">// with clock behind the previous node. In such scenarios, it&#39;s best to issue a</span>
                     <span class="comment">// newer note with an epoch number higher than what we observed (unless the</span>
                     <span class="comment">// issued epoch number is u64::MAX).</span>
-                    <span class="kw">if</span> <span class="ident">note</span>.<span class="ident">peer_id</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">peer_id</span> {
+                    <span class="kw">if</span> <span class="ident">note</span>.<span class="ident">peer_id</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">peer_id</span>() {
                         <span class="macro">info</span><span class="macro">!</span>(
-                            <span class="string">&quot;Received an older note for self, but with higher epoch. \
+                            <span class="string">&quot;{} Received an older note for self, but with higher epoch. \
                              Previous epoch: {}, current epoch: {}&quot;</span>,
+                            <span class="self">self</span>.<span class="ident">network_context</span>,
                             <span class="ident">note</span>.<span class="ident">epoch</span>(),
                             <span class="self">self</span>.<span class="ident">note</span>.<span class="ident">epoch</span>()
                         );
@@ -788,7 +798,7 @@
                             <span class="kw">continue</span>;
                         }
                         <span class="ident">note</span> <span class="op">=</span> <span class="ident">Note</span>::<span class="ident">new</span>(
-                            <span class="self">self</span>.<span class="ident">peer_id</span>,
+                            <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">peer_id</span>(),
                             <span class="self">self</span>.<span class="ident">note</span>.<span class="ident">addrs</span>().<span class="ident">clone</span>(),
                             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">dns_seed_addr</span>,
                             <span class="ident">max</span>(<span class="ident">note</span>.<span class="ident">epoch</span>() <span class="op">+</span> <span class="number">1</span>, <span class="ident">get_unix_epoch</span>()),
@@ -825,12 +835,12 @@
         <span class="kw">let</span> <span class="ident">num_other_notes</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">known_peers</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">peer_id</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="kw-2">*</span><span class="ident">peer_id</span> <span class="op">!</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">peer_id</span>)
+            .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">peer_id</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="kw-2">*</span><span class="ident">peer_id</span> <span class="op">!</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">peer_id</span>())
             .<span class="ident">count</span>();
         <span class="kw">let</span> <span class="ident">num_other_notes</span>: <span class="ident">i64</span> <span class="op">=</span> <span class="ident">num_other_notes</span>.<span class="ident">try_into</span>().<span class="ident">unwrap_or</span>(<span class="number">0</span>);
 
         <span class="ident">counters</span>::<span class="ident">LIBRA_NETWORK_DISCOVERY_NOTES</span>
-            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="self">self</span>.<span class="ident">role</span>.<span class="ident">as_str</span>()])
+            .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">role</span>().<span class="ident">as_str</span>()])
             .<span class="ident">set</span>(<span class="ident">num_other_notes</span>);
     }
 }

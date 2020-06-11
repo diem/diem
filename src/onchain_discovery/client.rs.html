@@ -376,6 +376,22 @@
 <span id="376">376</span>
 <span id="377">377</span>
 <span id="378">378</span>
+<span id="379">379</span>
+<span id="380">380</span>
+<span id="381">381</span>
+<span id="382">382</span>
+<span id="383">383</span>
+<span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -394,7 +410,7 @@
     <span class="ident">sink</span>::<span class="ident">SinkExt</span>,
     <span class="ident">stream</span>::{<span class="ident">FusedStream</span>, <span class="ident">Stream</span>, <span class="ident">StreamExt</span>},
 };
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">RoleType</span>;
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">network_id</span>::<span class="ident">NetworkContext</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">on_chain_config</span>::<span class="ident">ValidatorSet</span>,
@@ -414,10 +430,8 @@
 <span class="doccomment">/// Actor for querying various sources (remote peers, local storage) for the</span>
 <span class="doccomment">/// latest discovery set and notifying the `ConnectivityManager` of updates.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OnchainDiscovery</span><span class="op">&lt;</span><span class="ident">TTicker</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// Our node&#39;s PeerId.</span>
-    <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
-    <span class="doccomment">/// Our node&#39;s role (validator || fullnode).</span>
-    <span class="ident">role</span>: <span class="ident">RoleType</span>,
+    <span class="doccomment">/// Network Context, includes all information about this node in it&#39;s network</span>
+    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
     <span class="doccomment">/// The current trusted state, which keeps track of the latest verified</span>
     <span class="doccomment">/// ledger version and validator set. This version can be ahead of other</span>
     <span class="doccomment">/// components (e.g., state sync) since we only rely on syncing epoch change</span>
@@ -458,8 +472,7 @@
     <span class="ident">TTicker</span>: <span class="ident">Stream</span> <span class="op">+</span> <span class="ident">FusedStream</span> <span class="op">+</span> <span class="ident">Unpin</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">self_peer_id</span>: <span class="ident">PeerId</span>,
-        <span class="ident">role</span>: <span class="ident">RoleType</span>,
+        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
         <span class="ident">waypoint</span>: <span class="ident">Waypoint</span>,
         <span class="ident">network_tx</span>: <span class="ident">OnchainDiscoveryNetworkSender</span>,
         <span class="ident">conn_mgr_reqs_tx</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span>,
@@ -472,8 +485,7 @@
         <span class="kw">let</span> <span class="ident">trusted_state</span> <span class="op">=</span> <span class="ident">waypoint</span>.<span class="ident">into</span>();
 
         <span class="self">Self</span> {
-            <span class="ident">peer_id</span>: <span class="ident">self_peer_id</span>,
-            <span class="ident">role</span>,
+            <span class="ident">network_context</span>,
             <span class="ident">trusted_state</span>,
             <span class="ident">latest_discovery_set</span>: <span class="ident">DiscoverySetInternal</span>::<span class="ident">empty</span>(),
             <span class="ident">connected_peers</span>: <span class="ident">HashSet</span>::<span class="ident">new</span>(),
@@ -499,16 +511,16 @@
         <span class="kw">let</span> <span class="ident">f_query_storage</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">handle_storage_query_tick</span>().<span class="ident">boxed</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pending_storage_query</span> <span class="op">=</span> <span class="ident">OptionFuture</span>::<span class="ident">new</span>(<span class="prelude-val">Some</span>(<span class="ident">f_query_storage</span>));
 
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;starting onchain discovery&quot;</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} starting onchain discovery&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
         <span class="kw">loop</span> {
             <span class="self">self</span>.<span class="ident">event_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">event_id</span>.<span class="ident">wrapping_add</span>(<span class="number">1</span>);
             <span class="ident">futures</span>::<span class="macro">select</span><span class="macro">!</span> {
                 <span class="ident">notif</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">conn_notifs_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;event id: {}, type: ConnectionNotification&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} event id: {}, type: ConnectionNotification&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
                     <span class="self">self</span>.<span class="ident">handle_connection_notif</span>(<span class="ident">notif</span>);
                 },
                 <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">peer_query_ticker</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;event id: {}, type: PeerQueryTick&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} event id: {}, type: PeerQueryTick&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
                     <span class="ident">pending_outbound_rpc</span>
                         .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> {
                             <span class="self">self</span>.<span class="ident">handle_peer_query_tick</span>()
@@ -516,20 +528,20 @@
                         });
                 },
                 <span class="ident">query_res</span> <span class="op">=</span> <span class="ident">pending_outbound_rpc</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;event id: {}, type: QueryResponse&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} event id: {}, type: QueryResponse&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
                     <span class="self">self</span>.<span class="ident">handle_outbound_query_res</span>(<span class="ident">query_res</span>).<span class="kw">await</span>;
                 },
                 <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">storage_query_ticker</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;event id: {}, type: StorageQueryTick&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} event id: {}, type: StorageQueryTick&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
                     <span class="ident">pending_storage_query</span>
                         .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">handle_storage_query_tick</span>().<span class="ident">boxed</span>()));
                 },
                 <span class="ident">query_res</span> <span class="op">=</span> <span class="ident">pending_storage_query</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;event id: {}, type: QueryResponse&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} event id: {}, type: QueryResponse&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
                     <span class="self">self</span>.<span class="ident">handle_outbound_query_res</span>(<span class="ident">query_res</span>).<span class="kw">await</span>;
                 }
                 <span class="ident">complete</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;onchain discovery terminated&quot;</span>);
+                    <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;{} onchain discovery terminated&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
                     <span class="kw">break</span>;
                 }
             }
@@ -539,12 +551,20 @@
     <span class="kw">fn</span> <span class="ident">handle_connection_notif</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">notif</span>: <span class="ident">ConnectionNotification</span>) {
         <span class="kw">match</span> <span class="ident">notif</span> {
             <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;connected to new peer: {}&quot;</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>());
+                <span class="macro">trace</span><span class="macro">!</span>(
+                    <span class="string">&quot;{} connected to new peer: {}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>,
+                    <span class="ident">peer_id</span>.<span class="ident">short_str</span>()
+                );
                 <span class="comment">// Add peer to connected peer list.</span>
                 <span class="self">self</span>.<span class="ident">connected_peers</span>.<span class="ident">insert</span>(<span class="ident">peer_id</span>);
             }
             <span class="ident">ConnectionNotification</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>, <span class="ident">_reason</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;disconnected from peer: {}&quot;</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>());
+                <span class="macro">trace</span><span class="macro">!</span>(
+                    <span class="string">&quot;{} disconnected from peer: {}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>,
+                    <span class="ident">peer_id</span>.<span class="ident">short_str</span>()
+                );
                 <span class="comment">// Remove peer from connected peer list.</span>
                 <span class="self">self</span>.<span class="ident">connected_peers</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>);
             }
@@ -570,12 +590,14 @@
             <span class="kw">let</span> <span class="ident">peer_id_short</span> <span class="op">=</span> <span class="ident">peer_id</span>.<span class="ident">short_str</span>();
 
             <span class="macro">trace</span><span class="macro">!</span>(
-                <span class="string">&quot;handle_peer_query_tick: querying peer: {}, trusted version: {}&quot;</span>,
+                <span class="string">&quot;{} handle_peer_query_tick: querying peer: {}, trusted version: {}&quot;</span>,
+                <span class="self">self</span>.<span class="ident">network_context</span>,
                 <span class="ident">peer_id_short</span>,
                 <span class="ident">req_msg</span>.<span class="ident">known_version</span>,
             );
 
             <span class="ident">peer_query_discovery_set</span>(
+                <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">clone</span>(),
                 <span class="ident">peer_id</span>,
                 <span class="ident">req_msg</span>,
                 <span class="self">self</span>.<span class="ident">outbound_rpc_timeout</span>,
@@ -595,13 +617,17 @@
         <span class="kw">match</span> <span class="ident">query_res</span> {
             <span class="prelude-val">Ok</span>((<span class="ident">peer_id</span>, <span class="ident">req_msg</span>, <span class="ident">res_msg</span>)) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">debug</span><span class="macro">!</span>(
-                    <span class="string">&quot;received query response: peer: {}, their version: {}&quot;</span>,
+                    <span class="string">&quot;{} received query response: peer: {}, their version: {}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>,
                     <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                     <span class="ident">res_msg</span>.<span class="ident">latest_li</span>.<span class="ident">ledger_info</span>().<span class="ident">version</span>(),
                 );
                 <span class="self">self</span>.<span class="ident">handle_query_response</span>(<span class="ident">peer_id</span>, <span class="ident">req_msg</span>, <span class="ident">res_msg</span>).<span class="kw">await</span>;
             }
-            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;query to remote peer failed: {:?}&quot;</span>, <span class="ident">err</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">warn</span><span class="macro">!</span>(
+                <span class="string">&quot;{} query to remote peer failed: {:?}&quot;</span>,
+                <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">err</span>
+            ),
         }
     }
 
@@ -616,13 +642,14 @@
     <span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">trusted_version</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">trusted_state</span>.<span class="ident">latest_version</span>();
         <span class="macro">trace</span><span class="macro">!</span>(
-            <span class="string">&quot;handle_storage_query_tick: querying self storage, trusted version: {}&quot;</span>,
+            <span class="string">&quot;{} handle_storage_query_tick: querying self storage, trusted version: {}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">network_context</span>,
             <span class="ident">trusted_version</span>,
         );
         <span class="kw">let</span> <span class="ident">req_msg</span> <span class="op">=</span> <span class="ident">QueryDiscoverySetRequest</span> {
             <span class="ident">known_version</span>: <span class="ident">trusted_version</span>,
         };
-        <span class="kw">let</span> <span class="ident">self_peer_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">peer_id</span>;
+        <span class="kw">let</span> <span class="ident">self_peer_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">peer_id</span>();
         <span class="kw">let</span> <span class="ident">libra_db</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">libra_db</span>);
         <span class="ident">storage_query_discovery_set_async</span>(<span class="ident">libra_db</span>, <span class="ident">req_msg</span>).<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">res</span><span class="op">|</span> {
             <span class="comment">// add peer_id context</span>
@@ -641,7 +668,8 @@
                 <span class="prelude-val">Ok</span>(<span class="ident">res</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">res</span>,
                 <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="macro">warn</span><span class="macro">!</span>(
-                        <span class="string">&quot;invalid query response: peer: {}, request_version: {}, err: {:?}&quot;</span>,
+                        <span class="string">&quot;{} invalid query response: peer: {}, request_version: {}, err: {:?}&quot;</span>,
+                        <span class="self">self</span>.<span class="ident">network_context</span>,
                         <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                         <span class="ident">req_msg</span>.<span class="ident">known_version</span>,
                         <span class="ident">err</span>
@@ -656,8 +684,9 @@
                 <span class="ident">latest_epoch_change_li</span>,
             } <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">info</span><span class="macro">!</span>(
-                    <span class="string">&quot;successfully ratcheted to new epoch: \
+                    <span class="string">&quot;{} successfully ratcheted to new epoch: \
                      peer: {}, epoch: {}, version: {}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>,
                     <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                     <span class="ident">latest_epoch_change_li</span>.<span class="ident">ledger_info</span>().<span class="ident">epoch</span>(),
                     <span class="ident">new_state</span>.<span class="ident">latest_version</span>(),
@@ -671,8 +700,9 @@
             }
             <span class="ident">TrustedStateChange</span>::<span class="ident">Version</span> { <span class="ident">new_state</span> } <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">debug</span><span class="macro">!</span>(
-                    <span class="string">&quot;successfully ratcheted to new version: \
+                    <span class="string">&quot;{} successfully ratcheted to new version: \
                      peer: {}, version: {}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>,
                     <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                     <span class="ident">new_state</span>.<span class="ident">latest_version</span>(),
                 );
@@ -684,7 +714,7 @@
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_new_discovery_set_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">validator_set</span>: <span class="ident">ValidatorSet</span>) {
         <span class="kw">let</span> <span class="ident">latest_discovery_set</span> <span class="op">=</span>
-            <span class="ident">DiscoverySetInternal</span>::<span class="ident">from_validator_set</span>(<span class="self">self</span>.<span class="ident">role</span>, <span class="ident">validator_set</span>);
+            <span class="ident">DiscoverySetInternal</span>::<span class="ident">from_validator_set</span>(<span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">role</span>(), <span class="ident">validator_set</span>);
 
         <span class="kw">let</span> <span class="ident">prev_discovery_set</span> <span class="op">=</span>
             <span class="ident">mem</span>::<span class="ident">replace</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">latest_discovery_set</span>, <span class="ident">latest_discovery_set</span>.<span class="ident">clone</span>());
@@ -732,6 +762,7 @@
 <span class="doccomment">/// Query a remote peer for their latest discovery set and a epoch change</span>
 <span class="doccomment">/// proof.</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">peer_query_discovery_set</span>(
+    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
     <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
     <span class="ident">req_msg</span>: <span class="ident">QueryDiscoverySetRequest</span>,
     <span class="ident">outbound_rpc_timeout</span>: <span class="ident">Duration</span>,
@@ -747,7 +778,8 @@
         .<span class="kw">await</span>
         .<span class="ident">with_context</span>(<span class="op">|</span><span class="op">|</span> {
             <span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;failed to query peer discovery set: peer: {}, latest_version: {}&quot;</span>,
+                <span class="string">&quot;{} failed to query peer discovery set: peer: {}, latest_version: {}&quot;</span>,
+                <span class="ident">network_context</span>,
                 <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                 <span class="ident">our_latest_version</span>,
             )

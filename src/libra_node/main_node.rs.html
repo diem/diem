@@ -364,7 +364,6 @@
 <span id="364">364</span>
 <span id="365">365</span>
 <span id="366">366</span>
-<span id="367">367</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -508,8 +507,7 @@
                     .<span class="ident">expect</span>(<span class="string">&quot;ConnectivityManager must be installed&quot;</span>),
                 <span class="ident">network_tx</span>,
                 <span class="ident">discovery_events</span>,
-                <span class="ident">peer_id</span>,
-                <span class="ident">role</span>,
+                <span class="ident">network_builder</span>.<span class="ident">network_context</span>().<span class="ident">clone</span>(),
                 <span class="ident">libra_db</span>,
                 <span class="ident">waypoint</span>,
                 <span class="ident">runtime</span>.<span class="ident">handle</span>(),

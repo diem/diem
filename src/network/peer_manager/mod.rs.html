@@ -905,6 +905,61 @@
 <span id="905">905</span>
 <span id="906">906</span>
 <span id="907">907</span>
+<span id="908">908</span>
+<span id="909">909</span>
+<span id="910">910</span>
+<span id="911">911</span>
+<span id="912">912</span>
+<span id="913">913</span>
+<span id="914">914</span>
+<span id="915">915</span>
+<span id="916">916</span>
+<span id="917">917</span>
+<span id="918">918</span>
+<span id="919">919</span>
+<span id="920">920</span>
+<span id="921">921</span>
+<span id="922">922</span>
+<span id="923">923</span>
+<span id="924">924</span>
+<span id="925">925</span>
+<span id="926">926</span>
+<span id="927">927</span>
+<span id="928">928</span>
+<span id="929">929</span>
+<span id="930">930</span>
+<span id="931">931</span>
+<span id="932">932</span>
+<span id="933">933</span>
+<span id="934">934</span>
+<span id="935">935</span>
+<span id="936">936</span>
+<span id="937">937</span>
+<span id="938">938</span>
+<span id="939">939</span>
+<span id="940">940</span>
+<span id="941">941</span>
+<span id="942">942</span>
+<span id="943">943</span>
+<span id="944">944</span>
+<span id="945">945</span>
+<span id="946">946</span>
+<span id="947">947</span>
+<span id="948">948</span>
+<span id="949">949</span>
+<span id="950">950</span>
+<span id="951">951</span>
+<span id="952">952</span>
+<span id="953">953</span>
+<span id="954">954</span>
+<span id="955">955</span>
+<span id="956">956</span>
+<span id="957">957</span>
+<span id="958">958</span>
+<span id="959">959</span>
+<span id="960">960</span>
+<span id="961">961</span>
+<span id="962">962</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -939,7 +994,6 @@
     <span class="ident">sink</span>::<span class="ident">SinkExt</span>,
     <span class="ident">stream</span>::{<span class="ident">Fuse</span>, <span class="ident">FuturesUnordered</span>, <span class="ident">StreamExt</span>},
 };
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">RoleType</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
@@ -958,6 +1012,7 @@
 <span class="kw">mod</span> <span class="ident">tests</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">error</span>::<span class="ident">PeerManagerError</span>;
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">network_id</span>::<span class="ident">NetworkContext</span>;
 
 <span class="doccomment">/// Request received by PeerManager from upstream actors.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
@@ -1118,12 +1173,9 @@
     <span class="ident">TTransport</span>: <span class="ident">Transport</span>,
     <span class="ident">TSocket</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">AsyncWrite</span>,
 {
+    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
     <span class="doccomment">/// A handle to a tokio executor.</span>
     <span class="ident">executor</span>: <span class="ident">Handle</span>,
-    <span class="doccomment">/// PeerId of &quot;self&quot;.</span>
-    <span class="ident">own_peer_id</span>: <span class="ident">PeerId</span>,
-    <span class="doccomment">/// Our node type.</span>
-    <span class="ident">role</span>: <span class="ident">RoleType</span>,
     <span class="doccomment">/// Address to listen on for incoming connections.</span>
     <span class="ident">listen_addr</span>: <span class="ident">NetworkAddress</span>,
     <span class="doccomment">/// Connection Listener, listening on `listen_addr`</span>
@@ -1175,8 +1227,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">executor</span>: <span class="ident">Handle</span>,
         <span class="ident">transport</span>: <span class="ident">TTransport</span>,
-        <span class="ident">own_peer_id</span>: <span class="ident">PeerId</span>,
-        <span class="ident">role</span>: <span class="ident">RoleType</span>,
+        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
         <span class="ident">listen_addr</span>: <span class="ident">NetworkAddress</span>,
         <span class="ident">requests_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">ProtocolId</span>), <span class="ident">PeerManagerRequest</span><span class="op">&gt;</span>,
         <span class="ident">connection_reqs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionRequest</span><span class="op">&gt;</span>,
@@ -1200,6 +1251,7 @@
         <span class="kw">let</span> <span class="ident">transport_notifs_tx_clone</span> <span class="op">=</span> <span class="ident">transport_notifs_tx</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> (<span class="ident">transport_handler</span>, <span class="ident">listen_addr</span>) <span class="op">=</span> <span class="ident">executor</span>.<span class="ident">enter</span>(<span class="op">|</span><span class="op">|</span> {
             <span class="ident">TransportHandler</span>::<span class="ident">new</span>(
+                <span class="ident">network_context</span>.<span class="ident">clone</span>(),
                 <span class="ident">transport</span>,
                 <span class="ident">listen_addr</span>,
                 <span class="ident">transport_reqs_rx</span>,
@@ -1207,9 +1259,8 @@
             )
         });
         <span class="self">Self</span> {
+            <span class="ident">network_context</span>,
             <span class="ident">executor</span>,
-            <span class="ident">own_peer_id</span>,
-            <span class="ident">role</span>,
             <span class="ident">listen_addr</span>,
             <span class="ident">transport_handler</span>: <span class="prelude-val">Some</span>(<span class="ident">transport_handler</span>),
             <span class="ident">active_peers</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
@@ -1250,7 +1301,7 @@
                 }
                 <span class="ident">complete</span> <span class="op">=</span><span class="op">&gt;</span> {
                   <span class="comment">// TODO: This should be ok when running in client mode.</span>
-                  <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;Peer manager actor terminated&quot;</span>);
+                  <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;{} Peer manager actor terminated&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
                   <span class="kw">break</span>;
                 }
             }
@@ -1258,22 +1309,29 @@
     }
 
     <span class="kw">fn</span> <span class="ident">handle_connection_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">event</span>: <span class="ident">TransportNotification</span><span class="op">&lt;</span><span class="ident">TSocket</span><span class="op">&gt;</span>) {
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;TransportNotification::{:?}&quot;</span>, <span class="ident">event</span>);
+        <span class="macro">trace</span><span class="macro">!</span>(
+            <span class="string">&quot;{} TransportNotification::{:?}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">network_context</span>,
+            <span class="ident">event</span>
+        );
         <span class="kw">match</span> <span class="ident">event</span> {
             <span class="ident">TransportNotification</span>::<span class="ident">NewConnection</span>(<span class="ident">conn</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;New connection established: {:?}&quot;</span>, <span class="ident">conn</span>,);
+                <span class="macro">info</span><span class="macro">!</span>(
+                    <span class="string">&quot;{} New connection established: {:?}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">conn</span>,
+                );
                 <span class="comment">// Update libra_network_peer counter.</span>
                 <span class="self">self</span>.<span class="ident">add_peer</span>(<span class="ident">conn</span>);
                 <span class="ident">counters</span>::<span class="ident">LIBRA_NETWORK_PEERS</span>
-                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="self">self</span>.<span class="ident">role</span>.<span class="ident">as_str</span>(), <span class="string">&quot;connected&quot;</span>])
+                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">role</span>().<span class="ident">as_str</span>(), <span class="string">&quot;connected&quot;</span>])
                     .<span class="ident">set</span>(<span class="self">self</span>.<span class="ident">active_peers</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">i64</span>);
             }
             <span class="ident">TransportNotification</span>::<span class="ident">Disconnected</span>(<span class="ident">lost_conn_metadata</span>, <span class="ident">reason</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="comment">// See: https://github.com/libra/libra/issues/3128#issuecomment-605351504 for</span>
                 <span class="comment">// detailed reasoning on `Disconnected` events should be handled correctly.</span>
                 <span class="macro">info</span><span class="macro">!</span>(
-                    <span class="string">&quot;Connection {:?} closed due to {:?}&quot;</span>,
-                    <span class="ident">lost_conn_metadata</span>, <span class="ident">reason</span>,
+                    <span class="string">&quot;{} Connection {:?} closed due to {:?}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">lost_conn_metadata</span>, <span class="ident">reason</span>,
                 );
                 <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">lost_conn_metadata</span>.<span class="ident">peer_id</span>();
                 <span class="comment">// If the active connection with the peer is lost, remove it from `active_peers`.</span>
@@ -1285,7 +1343,7 @@
                     }
                 }
                 <span class="ident">counters</span>::<span class="ident">LIBRA_NETWORK_PEERS</span>
-                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="self">self</span>.<span class="ident">role</span>.<span class="ident">as_str</span>(), <span class="string">&quot;connected&quot;</span>])
+                    .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">role</span>().<span class="ident">as_str</span>(), <span class="string">&quot;connected&quot;</span>])
                     .<span class="ident">set</span>(<span class="self">self</span>.<span class="ident">active_peers</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">i64</span>);
 
                 <span class="comment">// If the connection was explicitly closed by an upstream client, send an ACK.</span>
@@ -1296,8 +1354,8 @@
                     <span class="comment">// The client explicitly closed the connection and it should be notified.</span>
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">send_err</span>) <span class="op">=</span> <span class="ident">oneshot_tx</span>.<span class="ident">send</span>(<span class="prelude-val">Ok</span>(())) {
                         <span class="macro">info</span><span class="macro">!</span>(
-                            <span class="string">&quot;Failed to send connection close error. Error: {:?}&quot;</span>,
-                            <span class="ident">send_err</span>
+                            <span class="string">&quot;{} Failed to send connection close error. Error: {:?}&quot;</span>,
+                            <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">send_err</span>
                         );
                     }
                 }
@@ -1316,21 +1374,23 @@
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_connection_request</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">ConnectionRequest</span>) {
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;PeerManagerRequest::{:?}&quot;</span>, <span class="ident">request</span>);
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} PeerManagerRequest::{:?}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">request</span>);
         <span class="kw">match</span> <span class="ident">request</span> {
             <span class="ident">ConnectionRequest</span>::<span class="ident">DialPeer</span>(<span class="ident">requested_peer_id</span>, <span class="ident">addr</span>, <span class="ident">response_tx</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="comment">// Only dial peers which we aren&#39;t already connected with</span>
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="ident">curr_connection</span>, <span class="kw">_</span>)) <span class="op">=</span> <span class="self">self</span>.<span class="ident">active_peers</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">requested_peer_id</span>) {
                     <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="ident">PeerManagerError</span>::<span class="ident">AlreadyConnected</span>(<span class="ident">curr_connection</span>.<span class="ident">addr</span>().<span class="ident">clone</span>());
                     <span class="macro">debug</span><span class="macro">!</span>(
-                        <span class="string">&quot;Already connected with Peer {} using connection {:?}. Not dialing address {}&quot;</span>,
+                        <span class="string">&quot;{} Already connected with Peer {} using connection {:?}. Not dialing address {}&quot;</span>,
+                        <span class="self">self</span>.<span class="ident">network_context</span>,
                         <span class="ident">requested_peer_id</span>.<span class="ident">short_str</span>(),
                         <span class="ident">curr_connection</span>,
                         <span class="ident">addr</span>
                     );
                     <span class="kw">if</span> <span class="ident">response_tx</span>.<span class="ident">send</span>(<span class="prelude-val">Err</span>(<span class="ident">error</span>)).<span class="ident">is_err</span>() {
                         <span class="macro">warn</span><span class="macro">!</span>(
-                            <span class="string">&quot;Receiver for DialPeer {} dropped&quot;</span>,
+                            <span class="string">&quot;{} Receiver for DialPeer {} dropped&quot;</span>,
+                            <span class="self">self</span>.<span class="ident">network_context</span>,
                             <span class="ident">requested_peer_id</span>.<span class="ident">short_str</span>()
                         );
                     }
@@ -1349,13 +1409,14 @@
                         .<span class="ident">insert</span>(<span class="ident">conn_metadata</span>.<span class="ident">connection_id</span>(), <span class="ident">resp_tx</span>);
                 } <span class="kw">else</span> {
                     <span class="macro">info</span><span class="macro">!</span>(
-                        <span class="string">&quot;Connection with peer: {} is already closed&quot;</span>,
+                        <span class="string">&quot;{} Connection with peer: {} is already closed&quot;</span>,
+                        <span class="self">self</span>.<span class="ident">network_context</span>,
                         <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                     );
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">resp_tx</span>.<span class="ident">send</span>(<span class="prelude-val">Err</span>(<span class="ident">PeerManagerError</span>::<span class="ident">NotConnected</span>(<span class="ident">peer_id</span>))) {
                         <span class="macro">info</span><span class="macro">!</span>(
-                            <span class="string">&quot;Failed to indicate that connection is already closed. Error: {:?}&quot;</span>,
-                            <span class="ident">err</span>
+                            <span class="string">&quot;{} Failed to indicate that connection is already closed. Error: {:?}&quot;</span>,
+                            <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">err</span>
                         );
                     }
                 }
@@ -1364,32 +1425,40 @@
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">handle_request</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">request</span>: <span class="ident">PeerManagerRequest</span>) {
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;PeerManagerRequest::{:?}&quot;</span>, <span class="ident">request</span>);
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} PeerManagerRequest::{:?}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">request</span>);
         <span class="kw">match</span> <span class="ident">request</span> {
             <span class="ident">PeerManagerRequest</span>::<span class="ident">SendMessage</span>(<span class="ident">peer_id</span>, <span class="ident">msg</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="kw">_</span>, <span class="ident">sender</span>)) <span class="op">=</span> <span class="self">self</span>.<span class="ident">active_peers</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>) {
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">push</span>(<span class="ident">msg</span>.<span class="ident">protocol</span>, <span class="ident">NetworkRequest</span>::<span class="ident">SendMessage</span>(<span class="ident">msg</span>)) {
                         <span class="macro">info</span><span class="macro">!</span>(
-                            <span class="string">&quot;Failed to forward outbound message to downstream actor. Error:
+                            <span class="string">&quot;{} Failed to forward outbound message to downstream actor. Error:
                               {:?}&quot;</span>,
-                            <span class="ident">err</span>
+                            <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">err</span>
                         );
                     }
                 } <span class="kw">else</span> {
-                    <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Peer {} is not connected&quot;</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>());
+                    <span class="macro">warn</span><span class="macro">!</span>(
+                        <span class="string">&quot;{} Peer {} is not connected&quot;</span>,
+                        <span class="self">self</span>.<span class="ident">network_context</span>,
+                        <span class="ident">peer_id</span>.<span class="ident">short_str</span>()
+                    );
                 }
             }
             <span class="ident">PeerManagerRequest</span>::<span class="ident">SendRpc</span>(<span class="ident">peer_id</span>, <span class="ident">req</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>((<span class="kw">_</span>, <span class="ident">sender</span>)) <span class="op">=</span> <span class="self">self</span>.<span class="ident">active_peers</span>.<span class="ident">get_mut</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>) {
                     <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">push</span>(<span class="ident">req</span>.<span class="ident">protocol</span>, <span class="ident">NetworkRequest</span>::<span class="ident">SendRpc</span>(<span class="ident">req</span>)) {
                         <span class="macro">info</span><span class="macro">!</span>(
-                            <span class="string">&quot;Failed to forward outbound rpc to downstream actor. Error:
+                            <span class="string">&quot;{} Failed to forward outbound rpc to downstream actor. Error:
                             {:?}&quot;</span>,
-                            <span class="ident">err</span>
+                            <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">err</span>
                         );
                     }
                 } <span class="kw">else</span> {
-                    <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Peer {} is not connected&quot;</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>());
+                    <span class="macro">warn</span><span class="macro">!</span>(
+                        <span class="string">&quot;{} Peer {} is not connected&quot;</span>,
+                        <span class="self">self</span>.<span class="ident">network_context</span>,
+                        <span class="ident">peer_id</span>.<span class="ident">short_str</span>()
+                    );
                 }
             }
         }
@@ -1430,7 +1499,7 @@
     <span class="kw">fn</span> <span class="ident">add_peer</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">connection</span>: <span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">TSocket</span><span class="op">&gt;</span>) {
         <span class="kw">let</span> <span class="ident">conn_meta</span> <span class="op">=</span> <span class="ident">connection</span>.<span class="ident">metadata</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">conn_meta</span>.<span class="ident">peer_id</span>();
-        <span class="macro">assert_ne</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">own_peer_id</span>, <span class="ident">peer_id</span>);
+        <span class="macro">assert_ne</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">peer_id</span>(), <span class="ident">peer_id</span>);
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">send_new_peer_notification</span> <span class="op">=</span> <span class="bool-val">true</span>;
 
@@ -1438,7 +1507,7 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Entry</span>::<span class="ident">Occupied</span>(<span class="ident">active_entry</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">active_peers</span>.<span class="ident">entry</span>(<span class="ident">peer_id</span>) {
             <span class="kw">let</span> (<span class="ident">curr_conn_metadata</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">active_entry</span>.<span class="ident">get</span>();
             <span class="kw">if</span> <span class="self">Self</span>::<span class="ident">simultaneous_dial_tie_breaking</span>(
-                <span class="self">self</span>.<span class="ident">own_peer_id</span>,
+                <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">peer_id</span>(),
                 <span class="ident">peer_id</span>,
                 <span class="ident">curr_conn_metadata</span>.<span class="ident">origin</span>(),
                 <span class="ident">conn_meta</span>.<span class="ident">origin</span>(),
@@ -1447,15 +1516,18 @@
                 <span class="comment">// Drop the existing connection and replace it with the new connection</span>
                 <span class="ident">drop</span>(<span class="ident">peer_handle</span>);
                 <span class="macro">info</span><span class="macro">!</span>(
-                    <span class="string">&quot;Closing existing connection with Peer {} to mitigate simultaneous dial&quot;</span>,
+                    <span class="string">&quot;{} Closing existing connection with Peer {} to mitigate simultaneous dial&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>,
                     <span class="ident">peer_id</span>.<span class="ident">short_str</span>()
                 );
                 <span class="ident">send_new_peer_notification</span> <span class="op">=</span> <span class="bool-val">false</span>;
             } <span class="kw">else</span> {
                 <span class="macro">info</span><span class="macro">!</span>(
-                    <span class="string">&quot;Closing incoming connection with Peer {} to mitigate simultaneous dial&quot;</span>,
+                    <span class="string">&quot;{} Closing incoming connection with Peer {} to mitigate simultaneous dial&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>,
                     <span class="ident">peer_id</span>.<span class="ident">short_str</span>()
                 );
+                <span class="kw">let</span> <span class="ident">network_context</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">clone</span>();
                 <span class="comment">// Drop the new connection and keep the one already stored in active_peers</span>
                 <span class="kw">let</span> <span class="ident">drop_fut</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
                     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">connection</span> <span class="op">=</span> <span class="ident">connection</span>;
@@ -1466,7 +1538,8 @@
                     .<span class="kw">await</span>
                     {
                         <span class="macro">error</span><span class="macro">!</span>(
-                            <span class="string">&quot;Closing connection with Peer {} failed with error: {}&quot;</span>,
+                            <span class="string">&quot;{} Closing connection with Peer {} failed with error: {}&quot;</span>,
+                            <span class="ident">network_context</span>,
                             <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                             <span class="ident">e</span>
                         );
@@ -1518,7 +1591,8 @@
                 <span class="ident">ConnectionNotification</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>.<span class="ident">clone</span>(), <span class="ident">reason</span>),
             ) {
                 <span class="macro">warn</span><span class="macro">!</span>(
-                    <span class="string">&quot;Failed to send lost peer notification to handler for peer: {}. Error: {:?}&quot;</span>,
+                    <span class="string">&quot;{} Failed to send lost peer notification to handler for peer: {}. Error: {:?}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>,
                     <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                     <span class="ident">e</span>
                 );
@@ -1542,16 +1616,23 @@
         <span class="ident">network_events</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">ProtocolId</span>, <span class="ident">NetworkNotification</span><span class="op">&gt;</span>,
     ) {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">upstream_handlers</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upstream_handlers</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">network_context</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">clone</span>();
         <span class="self">self</span>.<span class="ident">executor</span>.<span class="ident">spawn</span>(<span class="ident">network_events</span>.<span class="ident">for_each_concurrent</span>(
             <span class="self">self</span>.<span class="ident">max_concurrent_network_reqs</span>,
             <span class="kw">move</span> <span class="op">|</span><span class="ident">inbound_event</span><span class="op">|</span> {
-                <span class="self">Self</span>::<span class="ident">handle_inbound_event</span>(<span class="ident">inbound_event</span>, <span class="ident">peer_id</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">upstream_handlers</span>);
+                <span class="self">Self</span>::<span class="ident">handle_inbound_event</span>(
+                    <span class="ident">network_context</span>.<span class="ident">clone</span>(),
+                    <span class="ident">inbound_event</span>,
+                    <span class="ident">peer_id</span>,
+                    <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">upstream_handlers</span>,
+                );
                 <span class="ident">futures</span>::<span class="ident">future</span>::<span class="ident">ready</span>(())
             },
         ));
     }
 
     <span class="kw">fn</span> <span class="ident">handle_inbound_event</span>(
+        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
         <span class="ident">inbound_event</span>: <span class="ident">NetworkNotification</span>,
         <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
         <span class="ident">upstream_handlers</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">HashMap</span><span class="op">&lt;</span>
@@ -1569,13 +1650,17 @@
                         <span class="ident">PeerManagerNotification</span>::<span class="ident">RecvMessage</span>(<span class="ident">peer_id</span>, <span class="ident">msg</span>),
                     ) {
                         <span class="macro">warn</span><span class="macro">!</span>(
-                            <span class="string">&quot;Upstream handler unable to handle messages for protocol: {:?}. Error:
+                            <span class="string">&quot;{} Upstream handler unable to handle messages for protocol: {:?}. Error:
                             {:?}&quot;</span>,
+                            <span class="ident">network_context</span>,
                             <span class="ident">protocol</span>, <span class="ident">err</span>
                         );
                     }
                 } <span class="kw">else</span> {
-                    <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;Received network event for unregistered protocol&quot;</span>);
+                    <span class="macro">unreachable</span><span class="macro">!</span>(
+                        <span class="string">&quot;{} Received network event for unregistered protocol&quot;</span>,
+                        <span class="ident">network_context</span>
+                    );
                 }
             }
             <span class="ident">NetworkNotification</span>::<span class="ident">RecvRpc</span>(<span class="ident">rpc_req</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -1587,13 +1672,16 @@
                         <span class="ident">PeerManagerNotification</span>::<span class="ident">RecvRpc</span>(<span class="ident">peer_id</span>, <span class="ident">rpc_req</span>),
                     ) {
                         <span class="macro">warn</span><span class="macro">!</span>(
-                            <span class="string">&quot;Upstream handler unable to handle rpc for protocol: {:?}. Error:
+                            <span class="string">&quot;{} Upstream handler unable to handle rpc for protocol: {:?}. Error:
                               {:?}&quot;</span>,
-                            <span class="ident">protocol</span>, <span class="ident">err</span>
+                            <span class="ident">network_context</span>, <span class="ident">protocol</span>, <span class="ident">err</span>
                         );
                     }
                 } <span class="kw">else</span> {
-                    <span class="macro">unreachable</span><span class="macro">!</span>(<span class="string">&quot;Received network event for unregistered protocol&quot;</span>);
+                    <span class="macro">unreachable</span><span class="macro">!</span>(
+                        <span class="string">&quot;{} Received network event for unregistered protocol&quot;</span>,
+                        <span class="ident">network_context</span>
+                    );
                 }
             }
         }
@@ -1624,6 +1712,7 @@
     <span class="ident">TTransport</span>: <span class="ident">Transport</span>,
     <span class="ident">TSocket</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">AsyncWrite</span>,
 {
+    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
     <span class="doccomment">/// [`Transport`] that is used to establish connections</span>
     <span class="ident">transport</span>: <span class="ident">TTransport</span>,
     <span class="ident">listener</span>: <span class="ident">Fuse</span><span class="op">&lt;</span><span class="ident">TTransport</span>::<span class="ident">Listener</span><span class="op">&gt;</span>,
@@ -1640,6 +1729,7 @@
     <span class="ident">TSocket</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
 {
     <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
         <span class="ident">transport</span>: <span class="ident">TTransport</span>,
         <span class="ident">listen_addr</span>: <span class="ident">NetworkAddress</span>,
         <span class="ident">transport_reqs_rx</span>: <span class="ident">channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">TransportRequest</span><span class="op">&gt;</span>,
@@ -1648,9 +1738,10 @@
         <span class="kw">let</span> (<span class="ident">listener</span>, <span class="ident">listen_addr</span>) <span class="op">=</span> <span class="ident">transport</span>
             .<span class="ident">listen_on</span>(<span class="ident">listen_addr</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;Transport listen on fails&quot;</span>);
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;listening on {:?}&quot;</span>, <span class="ident">listen_addr</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} listening on {:?}&quot;</span>, <span class="ident">network_context</span>, <span class="ident">listen_addr</span>);
         (
             <span class="self">Self</span> {
+                <span class="ident">network_context</span>,
                 <span class="ident">transport</span>,
                 <span class="ident">listener</span>: <span class="ident">listener</span>.<span class="ident">fuse</span>(),
                 <span class="ident">transport_reqs_rx</span>,
@@ -1664,7 +1755,10 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pending_inbound_connections</span> <span class="op">=</span> <span class="ident">FuturesUnordered</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">pending_outbound_connections</span> <span class="op">=</span> <span class="ident">FuturesUnordered</span>::<span class="ident">new</span>();
 
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Incoming connections listener Task started&quot;</span>);
+        <span class="macro">debug</span><span class="macro">!</span>(
+            <span class="string">&quot;{} Incoming connections listener Task started&quot;</span>,
+            <span class="self">self</span>.<span class="ident">network_context</span>
+        );
 
         <span class="kw">loop</span> {
             <span class="ident">futures</span>::<span class="macro">select</span><span class="macro">!</span> {
@@ -1676,11 +1770,11 @@
                 <span class="ident">incoming_connection</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">listener</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">match</span> <span class="ident">incoming_connection</span> {
                         <span class="prelude-val">Ok</span>((<span class="ident">upgrade</span>, <span class="ident">addr</span>)) <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Incoming connection from {}&quot;</span>, <span class="ident">addr</span>);
+                            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} Incoming connection from {}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">addr</span>);
                             <span class="ident">pending_inbound_connections</span>.<span class="ident">push</span>(<span class="ident">upgrade</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">out</span><span class="op">|</span> (<span class="ident">out</span>, <span class="ident">addr</span>)));
                         }
                         <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Incoming connection error {}&quot;</span>, <span class="ident">e</span>);
+                            <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;{} Incoming connection error {}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">e</span>);
                         }
                     }
                 },
@@ -1694,7 +1788,10 @@
             }
         }
 
-        <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Incoming connections listener Task ended&quot;</span>);
+        <span class="macro">error</span><span class="macro">!</span>(
+            <span class="string">&quot;{} Incoming connections listener Task ended&quot;</span>,
+            <span class="self">self</span>.<span class="ident">network_context</span>
+        );
     }
 
     <span class="kw">fn</span> <span class="ident">dial_peer</span>(
@@ -1725,7 +1822,8 @@
                             .<span class="ident">is_err</span>()
                         {
                             <span class="macro">warn</span><span class="macro">!</span>(
-                                <span class="string">&quot;Receiver for DialPeer {} request dropped&quot;</span>,
+                                <span class="string">&quot;{} Receiver for DialPeer {} request dropped&quot;</span>,
+                                <span class="self">self</span>.<span class="ident">network_context</span>,
                                 <span class="ident">peer_id</span>.<span class="ident">short_str</span>()
                             );
                         }
@@ -1748,7 +1846,8 @@
                 <span class="kw">let</span> <span class="ident">dialed_peer_id</span> <span class="op">=</span> <span class="ident">connection</span>.<span class="ident">metadata</span>.<span class="ident">peer_id</span>();
                 <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">dialed_peer_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">peer_id</span> {
                     <span class="macro">debug</span><span class="macro">!</span>(
-                        <span class="string">&quot;Peer &#39;{}&#39; successfully dialed at &#39;{}&#39;&quot;</span>,
+                        <span class="string">&quot;{} Peer &#39;{}&#39; successfully dialed at &#39;{}&#39;&quot;</span>,
+                        <span class="self">self</span>.<span class="ident">network_context</span>,
                         <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                         <span class="ident">addr</span>
                     );
@@ -1763,27 +1862,34 @@
                         <span class="ident">peer_id</span>.<span class="ident">short_str</span>()
                     );
 
-                    <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">e</span>);
+                    <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;{} {}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">e</span>);
 
                     <span class="prelude-val">Err</span>(<span class="ident">PeerManagerError</span>::<span class="ident">from_transport_error</span>(<span class="ident">e</span>))
                 };
 
                 <span class="kw">if</span> <span class="ident">response_tx</span>.<span class="ident">send</span>(<span class="ident">response</span>).<span class="ident">is_err</span>() {
                     <span class="macro">warn</span><span class="macro">!</span>(
-                        <span class="string">&quot;Receiver for DialPeer {} request dropped&quot;</span>,
+                        <span class="string">&quot;{} Receiver for DialPeer {} request dropped&quot;</span>,
+                        <span class="self">self</span>.<span class="ident">network_context</span>,
                         <span class="ident">peer_id</span>.<span class="ident">short_str</span>()
                     );
                 }
             }
             <span class="prelude-val">Err</span>(<span class="ident">error</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error dialing Peer {} at {}&quot;</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>(), <span class="ident">addr</span>);
+                <span class="macro">error</span><span class="macro">!</span>(
+                    <span class="string">&quot;{} Error dialing Peer {} at {}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>,
+                    <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
+                    <span class="ident">addr</span>
+                );
 
                 <span class="kw">if</span> <span class="ident">response_tx</span>
                     .<span class="ident">send</span>(<span class="prelude-val">Err</span>(<span class="ident">PeerManagerError</span>::<span class="ident">from_transport_error</span>(<span class="ident">error</span>)))
                     .<span class="ident">is_err</span>()
                 {
                     <span class="macro">warn</span><span class="macro">!</span>(
-                        <span class="string">&quot;Receiver for DialPeer {} request dropped&quot;</span>,
+                        <span class="string">&quot;{} Receiver for DialPeer {} request dropped&quot;</span>,
+                        <span class="self">self</span>.<span class="ident">network_context</span>,
                         <span class="ident">peer_id</span>.<span class="ident">short_str</span>()
                     );
                 }
@@ -1799,7 +1905,8 @@
         <span class="kw">match</span> <span class="ident">upgrade</span> {
             <span class="prelude-val">Ok</span>(<span class="ident">connection</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">debug</span><span class="macro">!</span>(
-                    <span class="string">&quot;Connection from {} at {} successfully upgraded&quot;</span>,
+                    <span class="string">&quot;{} Connection from {} at {} successfully upgraded&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>,
                     <span class="ident">connection</span>.<span class="ident">metadata</span>.<span class="ident">peer_id</span>().<span class="ident">short_str</span>(),
                     <span class="ident">addr</span>
                 );
@@ -1808,7 +1915,10 @@
                 <span class="self">self</span>.<span class="ident">transport_notifs_tx</span>.<span class="ident">send</span>(<span class="ident">event</span>).<span class="kw">await</span>.<span class="ident">unwrap</span>();
             }
             <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;Connection from {} failed to upgrade {}&quot;</span>, <span class="ident">addr</span>, <span class="ident">e</span>);
+                <span class="macro">warn</span><span class="macro">!</span>(
+                    <span class="string">&quot;{} Connection from {} failed to upgrade {}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">addr</span>, <span class="ident">e</span>
+                );
             }
         }
     }

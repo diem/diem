@@ -598,6 +598,30 @@
 <span id="598">598</span>
 <span id="599">599</span>
 <span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -637,6 +661,7 @@
     <span class="ident">future</span>::{<span class="ident">BoxFuture</span>, <span class="ident">FutureExt</span>},
     <span class="ident">stream</span>::{<span class="ident">FusedStream</span>, <span class="ident">FuturesUnordered</span>, <span class="ident">Stream</span>, <span class="ident">StreamExt</span>},
 };
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">network_id</span>::<span class="ident">NetworkContext</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
@@ -655,8 +680,7 @@
 
 <span class="doccomment">/// The ConnectivityManager actor.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConnectivityManager</span><span class="op">&lt;</span><span class="ident">TTicker</span>, <span class="ident">TBackoff</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// PeerId of this node.</span>
-    <span class="ident">self_peer_id</span>: <span class="ident">PeerId</span>,
+    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
     <span class="doccomment">/// Nodes which are eligible to join the network.</span>
     <span class="ident">eligible</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="doccomment">/// PeerId and address of remote peers to which this peer is connected.</span>
@@ -740,7 +764,7 @@
 {
     <span class="doccomment">/// Creates a new instance of the [`ConnectivityManager`] actor.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">self_peer_id</span>: <span class="ident">PeerId</span>,
+        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
         <span class="ident">eligible</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">seed_peers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">ticker</span>: <span class="ident">TTicker</span>,
@@ -755,7 +779,7 @@
         <span class="kw">let</span> <span class="ident">peer_addresses</span> <span class="op">=</span> <span class="ident">PeerAddresses</span>(
             <span class="ident">seed_peers</span>
                 .<span class="ident">into_iter</span>()
-                .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">peer_id</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">peer_id</span> <span class="op">!</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">self_peer_id</span>)
+                .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">peer_id</span>, <span class="kw">_</span>)<span class="op">|</span> <span class="ident">peer_id</span> <span class="op">!</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">network_context</span>.<span class="ident">peer_id</span>())
                 .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">peer_id</span>, <span class="ident">seed_addrs</span>)<span class="op">|</span> {
                     (
                         <span class="ident">peer_id</span>,
@@ -766,14 +790,14 @@
         );
 
         <span class="macro">info</span><span class="macro">!</span>(
-            <span class="string">&quot;[{}] ConnectivityManager init: num_seed_peers: {}, peer addresses: {}&quot;</span>,
-            <span class="ident">self_peer_id</span>.<span class="ident">short_str</span>(),
+            <span class="string">&quot;{} ConnectivityManager init: num_seed_peers: {}, peer addresses: {}&quot;</span>,
+            <span class="ident">network_context</span>,
             <span class="ident">peer_addresses</span>.<span class="number">0</span>.<span class="ident">len</span>(),
             <span class="ident">peer_addresses</span>,
         );
 
         <span class="self">Self</span> {
-            <span class="ident">self_peer_id</span>,
+            <span class="ident">network_context</span>,
             <span class="ident">eligible</span>,
             <span class="ident">connected</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
             <span class="ident">peer_addresses</span>,
@@ -802,28 +826,28 @@
         <span class="comment">// When we first startup, let&#39;s attempt to connect with our seed peers.</span>
         <span class="self">self</span>.<span class="ident">check_connectivity</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">pending_dials</span>).<span class="kw">await</span>;
 
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Starting connection manager&quot;</span>);
+        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} Starting connection manager&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
         <span class="kw">loop</span> {
             <span class="self">self</span>.<span class="ident">event_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">event_id</span>.<span class="ident">wrapping_add</span>(<span class="number">1</span>);
             ::<span class="ident">futures</span>::<span class="macro">select</span><span class="macro">!</span> {
                 <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ticker</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Event Id: {}, type: Tick&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} Event Id: {}, type: Tick&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
                     <span class="self">self</span>.<span class="ident">check_connectivity</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">pending_dials</span>).<span class="kw">await</span>;
                 },
                 <span class="ident">req</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">requests_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Event Id: {}, type: ConnectivityRequest, req: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>, <span class="ident">req</span>);
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} Event Id: {}, type: ConnectivityRequest, req: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>, <span class="ident">req</span>);
                     <span class="self">self</span>.<span class="ident">handle_request</span>(<span class="ident">req</span>);
                 },
                 <span class="ident">notif</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">connection_notifs_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Event Id: {}, type: peer_manager::ConnectionNotification, notif: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>, <span class="ident">notif</span>);
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} Event Id: {}, type: peer_manager::ConnectionNotification, notif: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>, <span class="ident">notif</span>);
                     <span class="self">self</span>.<span class="ident">handle_control_notification</span>(<span class="ident">notif</span>);
                 },
                 <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">pending_dials</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Event Id: {}, type: Dial complete, peer: {}&quot;</span>, <span class="self">self</span>.<span class="ident">event_id</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>());
+                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} Event Id: {}, type: Dial complete, peer: {}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>());
                     <span class="self">self</span>.<span class="ident">dial_queue</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>);
                 },
                 <span class="ident">complete</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;Connectivity manager actor terminated&quot;</span>);
+                    <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;{} Connectivity manager actor terminated&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
                     <span class="kw">break</span>;
                 }
             }
@@ -844,11 +868,16 @@
             .<span class="ident">cloned</span>()
             .<span class="ident">collect</span>();
         <span class="kw">for</span> <span class="ident">p</span> <span class="kw">in</span> <span class="ident">stale_connections</span>.<span class="ident">into_iter</span>() {
-            <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Should no longer be connected to peer: {}&quot;</span>, <span class="ident">p</span>.<span class="ident">short_str</span>());
+            <span class="macro">info</span><span class="macro">!</span>(
+                <span class="string">&quot;{} Should no longer be connected to peer: {}&quot;</span>,
+                <span class="self">self</span>.<span class="ident">network_context</span>,
+                <span class="ident">p</span>.<span class="ident">short_str</span>()
+            );
             <span class="comment">// Close existing connection.</span>
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">connection_reqs_tx</span>.<span class="ident">disconnect_peer</span>(<span class="ident">p</span>).<span class="kw">await</span> {
                 <span class="macro">info</span><span class="macro">!</span>(
-                    <span class="string">&quot;Failed to disconnect from peer: {}. Error: {:?}&quot;</span>,
+                    <span class="string">&quot;{} Failed to disconnect from peer: {}. Error: {:?}&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>,
                     <span class="ident">p</span>.<span class="ident">short_str</span>(),
                     <span class="ident">e</span>
                 );
@@ -930,17 +959,20 @@
             <span class="kw">let</span> (<span class="ident">cancel_tx</span>, <span class="ident">cancel_rx</span>) <span class="op">=</span> <span class="ident">oneshot</span>::<span class="ident">channel</span>();
 
             <span class="macro">info</span><span class="macro">!</span>(
-                <span class="string">&quot;Create dial future: peer: {}, at address: {}, after delay: {:?}&quot;</span>,
+                <span class="string">&quot;{} Create dial future: peer: {}, at address: {}, after delay: {:?}&quot;</span>,
+                <span class="self">self</span>.<span class="ident">network_context</span>,
                 <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                 <span class="ident">addr</span>,
                 <span class="ident">dial_delay</span>,
             );
 
+            <span class="kw">let</span> <span class="ident">network_context</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">clone</span>();
             <span class="comment">// Create future which completes by either dialing after calculated</span>
             <span class="comment">// delay or on cancellation.</span>
             <span class="kw">let</span> <span class="ident">f</span> <span class="op">=</span> <span class="kw">async</span> <span class="kw">move</span> {
                 <span class="macro">info</span><span class="macro">!</span>(
-                    <span class="string">&quot;Dial future: dialing peer: {}, at address: {}, after delay: {:?}&quot;</span>,
+                    <span class="string">&quot;{} Dial future: dialing peer: {}, at address: {}, after delay: {:?}&quot;</span>,
+                    <span class="ident">network_context</span>,
                     <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                     <span class="ident">addr</span>,
                     <span class="ident">f_delay</span>
@@ -951,7 +983,7 @@
                 <span class="comment">// `cancel_rx`.</span>
                 <span class="kw">let</span> <span class="ident">dial_result</span> <span class="op">=</span> ::<span class="ident">futures</span>::<span class="macro">select</span><span class="macro">!</span> {
                     <span class="kw">_</span> <span class="op">=</span> <span class="ident">f_delay</span>.<span class="ident">fuse</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Dialing peer: {}, at addr: {}&quot;</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>(), <span class="ident">addr</span>);
+                        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;{} Dialing peer: {}, at addr: {}&quot;</span>, <span class="ident">network_context</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>(), <span class="ident">addr</span>);
                         <span class="kw">match</span> <span class="ident">connction_reqs_tx</span>.<span class="ident">dial_peer</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>.<span class="ident">clone</span>()).<span class="kw">await</span> {
                             <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">DialResult</span>::<span class="ident">Success</span>,
                             <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">DialResult</span>::<span class="ident">Failed</span>(<span class="ident">e</span>),
@@ -961,7 +993,7 @@
                         <span class="ident">DialResult</span>::<span class="ident">Cancelled</span>
                     },
                 };
-                <span class="ident">log_dial_result</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>, <span class="ident">dial_result</span>);
+                <span class="ident">log_dial_result</span>(<span class="ident">network_context</span>, <span class="ident">peer_id</span>, <span class="ident">addr</span>, <span class="ident">dial_result</span>);
                 <span class="comment">// Send peer_id as future result so it can be removed from dial queue.</span>
                 <span class="ident">peer_id</span>
             };
@@ -992,12 +1024,12 @@
                 <span class="comment">// Keep track of if any peer&#39;s addresses have actually changed, so</span>
                 <span class="comment">// we can log without too much spam.</span>
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">have_any_changed</span> <span class="op">=</span> <span class="bool-val">false</span>;
-                <span class="kw">let</span> <span class="ident">self_peer_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">self_peer_id</span>.<span class="ident">short_str</span>();
+                <span class="kw">let</span> <span class="ident">self_peer_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">peer_id</span>();
 
                 <span class="kw">for</span> (<span class="ident">peer_id</span>, <span class="ident">addrs</span>) <span class="kw">in</span> <span class="ident">address_map</span> {
                     <span class="comment">// Do not include self_peer_id in the address list for dialing</span>
                     <span class="comment">// to avoid pointless self-dials.</span>
-                    <span class="kw">if</span> <span class="ident">peer_id</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">self_peer_id</span> {
+                    <span class="kw">if</span> <span class="ident">peer_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">self_peer_id</span> {
                         <span class="kw">continue</span>;
                     }
 
@@ -1017,8 +1049,8 @@
                         <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">peer_id</span>.<span class="ident">short_str</span>();
                         <span class="kw">let</span> <span class="ident">addrs</span> <span class="op">=</span> <span class="ident">curr_addrs</span>;
                         <span class="macro">info</span><span class="macro">!</span>(
-                            <span class="string">&quot;[{}] addresses updated for peer: {}, update src: {:?}, addrs: {}&quot;</span>,
-                            <span class="ident">self_peer_id</span>, <span class="ident">peer_id</span>, <span class="ident">src</span>, <span class="ident">addrs</span>,
+                            <span class="string">&quot;{} addresses updated for peer: {}, update src: {:?}, addrs: {}&quot;</span>,
+                            <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">peer_id</span>, <span class="ident">src</span>, <span class="ident">addrs</span>,
                         );
                     }
                 }
@@ -1027,13 +1059,16 @@
                 <span class="kw">if</span> <span class="ident">have_any_changed</span> {
                     <span class="kw">let</span> <span class="ident">peer_addresses</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">peer_addresses</span>;
                     <span class="macro">info</span><span class="macro">!</span>(
-                        <span class="string">&quot;[{}] current addresses: update src: {:?}, all peer addresses: {}&quot;</span>,
-                        <span class="ident">self_peer_id</span>, <span class="ident">src</span>, <span class="ident">peer_addresses</span>,
+                        <span class="string">&quot;{} current addresses: update src: {:?}, all peer addresses: {}&quot;</span>,
+                        <span class="self">self</span>.<span class="ident">network_context</span>, <span class="ident">src</span>, <span class="ident">peer_addresses</span>,
                     );
                 }
             }
             <span class="ident">ConnectivityRequest</span>::<span class="ident">UpdateEligibleNodes</span>(<span class="ident">nodes</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;Received updated list of eligible nodes&quot;</span>,);
+                <span class="macro">trace</span><span class="macro">!</span>(
+                    <span class="string">&quot;{} Received updated list of eligible nodes&quot;</span>,
+                    <span class="self">self</span>.<span class="ident">network_context</span>
+                );
                 <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">eligible</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>() <span class="op">=</span> <span class="ident">nodes</span>;
             }
             <span class="ident">ConnectivityRequest</span>::<span class="ident">GetDialQueueSize</span>(<span class="ident">sender</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -1058,7 +1093,8 @@
                     }
                     <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="macro">debug</span><span class="macro">!</span>(
-                            <span class="string">&quot;Ignoring stale lost peer event for peer: {}, addr: {}&quot;</span>,
+                            <span class="string">&quot;{} Ignoring stale lost peer event for peer: {}, addr: {}&quot;</span>,
+                            <span class="self">self</span>.<span class="ident">network_context</span>,
                             <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                             <span class="ident">addr</span>
                         );
@@ -1069,29 +1105,41 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">log_dial_result</span>(<span class="ident">peer_id</span>: <span class="ident">PeerId</span>, <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>, <span class="ident">dial_result</span>: <span class="ident">DialResult</span>) {
+<span class="kw">fn</span> <span class="ident">log_dial_result</span>(
+    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+    <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
+    <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>,
+    <span class="ident">dial_result</span>: <span class="ident">DialResult</span>,
+) {
     <span class="kw">match</span> <span class="ident">dial_result</span> {
         <span class="ident">DialResult</span>::<span class="ident">Success</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="macro">info</span><span class="macro">!</span>(
-                <span class="string">&quot;Successfully connected to peer: {} at address: {}&quot;</span>,
+                <span class="string">&quot;{} Successfully connected to peer: {} at address: {}&quot;</span>,
+                <span class="ident">network_context</span>,
                 <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                 <span class="ident">addr</span>
             );
         }
         <span class="ident">DialResult</span>::<span class="ident">Cancelled</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Cancelled pending dial to peer: {}&quot;</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>());
+            <span class="macro">info</span><span class="macro">!</span>(
+                <span class="string">&quot;{} Cancelled pending dial to peer: {}&quot;</span>,
+                <span class="ident">network_context</span>,
+                <span class="ident">peer_id</span>.<span class="ident">short_str</span>()
+            );
         }
         <span class="ident">DialResult</span>::<span class="ident">Failed</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">err</span> {
             <span class="ident">PeerManagerError</span>::<span class="ident">AlreadyConnected</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">info</span><span class="macro">!</span>(
-                    <span class="string">&quot;Already connected to peer: {} at address: {}&quot;</span>,
+                    <span class="string">&quot;{} Already connected to peer: {} at address: {}&quot;</span>,
+                    <span class="ident">network_context</span>,
                     <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                     <span class="ident">a</span>
                 );
             }
             <span class="ident">e</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">info</span><span class="macro">!</span>(
-                    <span class="string">&quot;Failed to connect to peer: {} at address: {}; error: {}&quot;</span>,
+                    <span class="string">&quot;{} Failed to connect to peer: {} at address: {}; error: {}&quot;</span>,
+                    <span class="ident">network_context</span>,
                     <span class="ident">peer_id</span>.<span class="ident">short_str</span>(),
                     <span class="ident">addr</span>,
                     <span class="ident">e</span>
