@@ -156,19 +156,18 @@ mod tests {
             },
         };
 
-        let text_from_config = "
-[vault]
-server = \"127.0.0.1:8200\"
+        let text_from_config = r#"
+vault:
+    server: "127.0.0.1:8200"
+    token:
+        type: "from_config"
+        token: "test"
+        "#;
 
-[vault.token]
-type = \"from_config\"
-token = \"test\"
-        ";
-
-        let de_from_config: Config = toml::from_str(text_from_config).unwrap();
+        let de_from_config: Config = serde_yaml::from_str(text_from_config).unwrap();
         assert_eq!(de_from_config, from_config);
         // Just assert that it can be serialized, not about to do string comparison
-        toml::to_string(&from_config).unwrap();
+        serde_yaml::to_string(&from_config).unwrap();
     }
 
     #[test]
@@ -184,19 +183,18 @@ token = \"test\"
             },
         };
 
-        let text_from_disk = "
-[vault]
-server = \"127.0.0.1:8200\"
+        let text_from_disk = r#"
+vault:
+    server: "127.0.0.1:8200"
+    token:
+        type: "from_disk"
+        path: "/token"
+        "#;
 
-[vault.token]
-type = \"from_disk\"
-path = \"/token\"
-        ";
-
-        let de_from_disk: Config = toml::from_str(text_from_disk).unwrap();
+        let de_from_disk: Config = serde_yaml::from_str(text_from_disk).unwrap();
         assert_eq!(de_from_disk, from_disk);
         // Just assert that it can be serialized, not about to do string comparison
-        toml::to_string(&from_disk).unwrap();
+        serde_yaml::to_string(&from_disk).unwrap();
     }
 
     #[test]

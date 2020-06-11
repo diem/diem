@@ -169,19 +169,19 @@ mod test {
     #[test]
     fn test_serialization() {
         let id = NetworkId::private_network("fooo");
-        let encoded = toml::to_string(&id).unwrap();
-        let decoded: NetworkId = toml::from_str(encoded.as_str()).unwrap();
+        let encoded = serde_yaml::to_string(&id).unwrap();
+        let decoded: NetworkId = serde_yaml::from_str(encoded.as_str()).unwrap();
         assert_eq!(id, decoded);
-        let encoded = toml::to_vec(&id).unwrap();
-        let decoded: NetworkId = toml::from_slice(encoded.as_slice()).unwrap();
+        let encoded = serde_yaml::to_vec(&id).unwrap();
+        let decoded: NetworkId = serde_yaml::from_slice(encoded.as_slice()).unwrap();
         assert_eq!(id, decoded);
 
         let id = NetworkId::Validator;
-        let encoded = toml::to_string(&id).unwrap();
-        let decoded: NetworkId = toml::from_str(encoded.as_str()).unwrap();
+        let encoded = serde_yaml::to_string(&id).unwrap();
+        let decoded: NetworkId = serde_yaml::from_str(encoded.as_str()).unwrap();
         assert_eq!(id, decoded);
-        let encoded = toml::to_vec(&id).unwrap();
-        let decoded: NetworkId = toml::from_slice(encoded.as_slice()).unwrap();
+        let encoded = serde_yaml::to_vec(&id).unwrap();
+        let decoded: NetworkId = serde_yaml::from_slice(encoded.as_slice()).unwrap();
         assert_eq!(id, decoded);
     }
 }
