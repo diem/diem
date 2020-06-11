@@ -22,7 +22,6 @@ pub const INLINE_PRELUDE: &str = "<inline-prelude>";
 
 const DEFAULT_BOOGIE_FLAGS: &[&str] = &[
     "-doModSetAnalysis",
-    "-noinfer",
     "-printVerifiedProceduresCount:0",
     "-printModel:4",
     // Right now, we let boogie only produce one error per procedure. The boogie wrapper isn't
