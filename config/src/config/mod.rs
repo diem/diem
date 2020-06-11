@@ -14,10 +14,6 @@ use std::{
 };
 use thiserror::Error;
 
-mod admission_control_config;
-pub use admission_control_config::*;
-mod rpc_config;
-pub use rpc_config::*;
 mod consensus_config;
 pub use consensus_config::*;
 mod debug_interface_config;
@@ -34,6 +30,8 @@ mod mempool_config;
 pub use mempool_config::*;
 mod network_config;
 pub use network_config::*;
+mod rpc_config;
+pub use rpc_config::*;
 mod secure_backend_config;
 pub use secure_backend_config::*;
 mod state_sync_config;
@@ -58,10 +56,6 @@ pub use test_config::*;
 #[serde(deny_unknown_fields)]
 pub struct NodeConfig {
     #[serde(default)]
-    pub admission_control: AdmissionControlConfig,
-    #[serde(default)]
-    pub rpc: RpcConfig,
-    #[serde(default)]
     pub base: BaseConfig,
     #[serde(default)]
     pub consensus: ConsensusConfig,
@@ -77,6 +71,8 @@ pub struct NodeConfig {
     pub metrics: MetricsConfig,
     #[serde(default)]
     pub mempool: MempoolConfig,
+    #[serde(default)]
+    pub rpc: RpcConfig,
     #[serde(default)]
     pub state_sync: StateSyncConfig,
     #[serde(default)]
@@ -183,7 +179,6 @@ impl NodeConfig {
     /// template for another config.
     pub fn clone_for_template(&self) -> Self {
         Self {
-            admission_control: self.admission_control.clone(),
             rpc: self.rpc.clone(),
             base: self.base.clone(),
             consensus: self.consensus.clone(),
@@ -262,10 +257,9 @@ impl NodeConfig {
     }
 
     pub fn randomize_ports(&mut self) {
-        self.admission_control.randomize_ports();
         self.debug_interface.randomize_ports();
-        self.storage.randomize_ports();
         self.rpc.randomize_ports();
+        self.storage.randomize_ports();
 
         if let Some(network) = self.validator_network.as_mut() {
             network.listen_address = crate::utils::get_available_port_in_multiaddr(true);
