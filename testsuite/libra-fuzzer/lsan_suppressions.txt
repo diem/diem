@@ -1,3 +1,4 @@
 leak:lazy_static
 leak:backtrace
 leak:libc
+leak:libra_mempool::tests::mocks::MockSharedMempool
