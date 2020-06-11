@@ -5,6 +5,7 @@ mod absint;
 pub mod ast;
 mod borrows;
 pub(crate) mod cfg;
+mod constant_fold;
 mod eliminate_locals;
 mod liveness;
 mod locals;
@@ -43,5 +44,13 @@ pub fn optimize(
     _locals: &UniqueMap<Var, SingleType>,
     cfg: &mut BlockCFG,
 ) {
-    eliminate_locals::optimize(cfg);
+    loop {
+        let mut changed = false;
+        changed = eliminate_locals::optimize(cfg) || changed;
+        changed = constant_fold::optimize(cfg) || changed;
+
+        if !changed {
+            break;
+        }
+    }
 }

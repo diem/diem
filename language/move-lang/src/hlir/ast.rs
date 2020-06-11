@@ -389,8 +389,16 @@ impl BaseType_ {
         Self::builtin(loc, BuiltinTypeName_::Address, vec![])
     }
 
+    pub fn u8(loc: Loc) -> BaseType {
+        Self::builtin(loc, BuiltinTypeName_::U8, vec![])
+    }
+
     pub fn u64(loc: Loc) -> BaseType {
         Self::builtin(loc, BuiltinTypeName_::U64, vec![])
+    }
+
+    pub fn u128(loc: Loc) -> BaseType {
+        Self::builtin(loc, BuiltinTypeName_::U128, vec![])
     }
 }
 
@@ -407,8 +415,16 @@ impl SingleType_ {
         Self::base(BaseType_::address(loc))
     }
 
+    pub fn u8(loc: Loc) -> SingleType {
+        Self::base(BaseType_::u8(loc))
+    }
+
     pub fn u64(loc: Loc) -> SingleType {
         Self::base(BaseType_::u64(loc))
+    }
+
+    pub fn u128(loc: Loc) -> SingleType {
+        Self::base(BaseType_::u128(loc))
     }
 
     pub fn kind(&self, loc: Loc) -> Kind {
@@ -436,8 +452,16 @@ impl Type_ {
         Self::single(SingleType_::address(loc))
     }
 
+    pub fn u8(loc: Loc) -> Type {
+        Self::single(SingleType_::u8(loc))
+    }
+
     pub fn u64(loc: Loc) -> Type {
         Self::single(SingleType_::u64(loc))
+    }
+
+    pub fn u128(loc: Loc) -> Type {
+        Self::single(SingleType_::u128(loc))
     }
 
     pub fn type_at_index(&self, idx: usize) -> &SingleType {
