@@ -5,16 +5,20 @@ use super::cfg::BlockCFG;
 use crate::parser::ast::Var;
 use std::collections::BTreeSet;
 
-pub fn optimize(cfg: &mut BlockCFG) {
-    super::remove_no_ops::optimize(cfg);
+/// returns true if anything changed
+pub fn optimize(cfg: &mut BlockCFG) -> bool {
+    let mut changed = super::remove_no_ops::optimize(cfg);
     loop {
         let ssa_temps = {
             let s = count(cfg);
             if s.is_empty() {
-                return;
+                break changed;
             }
             s
         };
+
+        // `eliminate` always removes if `ssa_temps` is not empty
+        changed = true;
         eliminate(cfg, ssa_temps);
         super::remove_no_ops::optimize(cfg);
     }

@@ -644,55 +644,51 @@ pub fun Libra::mint_with_capability<$tv0>(value: u64, _capability: &Libra::MintC
     var $t4: u64
     var $t5: u64
     var $t6: u64
-    var $t7: u64
-    var $t8: u64
-    var $t9: bool
-    var $t10: bool
-    var $t11: u64
-    var $t12: address
-    var $t13: &mut Libra::Info<#0>
-    var $t14: &mut Libra::Info<#0>
-    var $t15: &u128
+    var $t7: bool
+    var $t8: bool
+    var $t9: u64
+    var $t10: address
+    var $t11: &mut Libra::Info<#0>
+    var $t12: &mut Libra::Info<#0>
+    var $t13: &u128
+    var $t14: u128
+    var $t15: u64
     var $t16: u128
-    var $t17: u64
-    var $t18: u128
-    var $t19: u128
-    var $t20: &mut Libra::Info<#0>
-    var $t21: &mut u128
-    var $t22: u64
-    var $t23: Libra::T<#0>
+    var $t17: u128
+    var $t18: &mut Libra::Info<#0>
+    var $t19: &mut u128
+    var $t20: u64
+    var $t21: Libra::T<#0>
     Libra::assert_is_registered<#0>()
     $t5 := copy(value)
-    $t6 := 1000000000
-    $t7 := 1000000
-    $t8 := *($t6, $t7)
-    $t9 := <=($t5, $t8)
-    $t3 := $t9
-    $t10 := move($t3)
-    if ($t10) goto L0 else goto L1
+    $t6 := 1000000000000000
+    $t7 := <=($t5, $t6)
+    $t3 := $t7
+    $t8 := move($t3)
+    if ($t8) goto L0 else goto L1
     L1:
     goto L2
     L0:
     goto L3
     L2:
-    $t11 := 11
-    abort($t11)
+    $t9 := 11
+    abort($t9)
     L3:
-    $t12 := 0xa550c18
-    $t13 := borrow_global<Libra::Info<#0>>($t12)
-    market_cap := $t13
-    $t14 := copy(market_cap)
-    $t15 := borrow_field<Libra::Info<#0>>.total_value($t14)
-    $t16 := read_ref($t15)
-    $t17 := copy(value)
-    $t18 := (u128)($t17)
-    $t19 := +($t16, $t18)
-    $t20 := move(market_cap)
-    $t21 := borrow_field<Libra::Info<#0>>.total_value($t20)
-    write_ref($t21, $t19)
-    $t22 := copy(value)
-    $t23 := pack Libra::T<#0>($t22)
-    return $t23
+    $t10 := 0xa550c18
+    $t11 := borrow_global<Libra::Info<#0>>($t10)
+    market_cap := $t11
+    $t12 := copy(market_cap)
+    $t13 := borrow_field<Libra::Info<#0>>.total_value($t12)
+    $t14 := read_ref($t13)
+    $t15 := copy(value)
+    $t16 := (u128)($t15)
+    $t17 := +($t14, $t16)
+    $t18 := move(market_cap)
+    $t19 := borrow_field<Libra::Info<#0>>.total_value($t18)
+    write_ref($t19, $t17)
+    $t20 := copy(value)
+    $t21 := pack Libra::T<#0>($t20)
+    return $t21
 }
 
 
@@ -1626,68 +1622,64 @@ pub fun Libra::mint_with_capability<$tv0>(value: u64, _capability: Libra::MintCa
     var $t4: u64
     var $t5: u64
     var $t6: u64
-    var $t7: u64
-    var $t8: u64
-    var $t9: bool
-    var $t10: bool
-    var $t11: u64
-    var $t12: address
-    var $t13: &mut Libra::Info<#0>
-    var $t14: &mut Libra::Info<#0>
-    var $t15: u128
+    var $t7: bool
+    var $t8: bool
+    var $t9: u64
+    var $t10: address
+    var $t11: &mut Libra::Info<#0>
+    var $t12: &mut Libra::Info<#0>
+    var $t13: u128
+    var $t14: u128
+    var $t15: u64
     var $t16: u128
-    var $t17: u64
-    var $t18: u128
-    var $t19: u128
-    var $t20: &mut Libra::Info<#0>
-    var $t21: &mut u128
-    var $t22: u64
-    var $t23: Libra::T<#0>
+    var $t17: u128
+    var $t18: &mut Libra::Info<#0>
+    var $t19: &mut u128
+    var $t20: u64
+    var $t21: Libra::T<#0>
     Libra::assert_is_registered<#0>()
     $t5 := copy(value)
-    $t6 := 1000000000
-    $t7 := 1000000
-    $t8 := *($t6, $t7)
-    $t9 := <=($t5, $t8)
-    $t3 := $t9
-    $t10 := move($t3)
-    if ($t10) goto L0 else goto L1
+    $t6 := 1000000000000000
+    $t7 := <=($t5, $t6)
+    $t3 := $t7
+    $t8 := move($t3)
+    if ($t8) goto L0 else goto L1
     L1:
     goto L2
     L0:
     goto L3
     L2:
-    $t11 := 11
-    abort($t11)
+    $t9 := 11
+    abort($t9)
     L3:
-    $t12 := 0xa550c18
-    $t13 := borrow_global<Libra::Info<#0>>($t12)
-    // live_refs: $t13 borrowed_by: Libra::Info -> {Reference($t13)} borrows_from: Reference($t13) -> {Libra::Info}
-    market_cap := $t13
+    $t10 := 0xa550c18
+    $t11 := borrow_global<Libra::Info<#0>>($t10)
+    // live_refs: $t11 borrowed_by: Libra::Info -> {Reference($t11)} borrows_from: Reference($t11) -> {Libra::Info}
+    market_cap := $t11
     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
-    $t14 := copy(market_cap)
-    // live_refs: market_cap, $t14 borrowed_by: Libra::Info -> {Reference(market_cap)}, Reference(market_cap) -> {Reference($t14)} borrows_from: Reference(market_cap) -> {Libra::Info}, Reference($t14) -> {Reference(market_cap)}
-    // Reference(market_cap) <- $t14
-    $t15 := get_field<Libra::Info<#0>>.total_value($t14)
+    $t12 := copy(market_cap)
+    // live_refs: market_cap, $t12 borrowed_by: Libra::Info -> {Reference(market_cap)}, Reference(market_cap) -> {Reference($t12)} borrows_from: Reference(market_cap) -> {Libra::Info}, Reference($t12) -> {Reference(market_cap)}
+    // Reference(market_cap) <- $t12
+    $t13 := get_field<Libra::Info<#0>>.total_value($t12)
     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
-    $t16 := move($t15)
+    $t14 := move($t13)
     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
-    $t17 := copy(value)
+    $t15 := copy(value)
     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
-    $t18 := (u128)($t17)
+    $t16 := (u128)($t15)
     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
-    $t19 := +($t16, $t18)
+    $t17 := +($t14, $t16)
     // live_refs: market_cap borrowed_by: Libra::Info -> {Reference(market_cap)} borrows_from: Reference(market_cap) -> {Libra::Info}
-    $t20 := move(market_cap)
-    // live_refs: $t20 borrowed_by: Libra::Info -> {Reference($t20)} borrows_from: Reference($t20) -> {Libra::Info}
-    // Libra::Info <- $t20
-    $t21 := borrow_field<Libra::Info<#0>>.total_value($t20)
-    // live_refs: $t21 borrowed_by: Libra::Info -> {Reference($t21)}, Reference($t20) -> {Reference($t21)} borrows_from: Reference($t21) -> {Libra::Info, Reference($t20)}
-    // Libra::Info <- $t21, Reference($t20) <- $t21
-    write_ref($t21, $t19)
-    $t22 := copy(value)
-    $t23 := pack Libra::T<#0>($t22)
-    return $t23
+    $t18 := move(market_cap)
+    // live_refs: $t18 borrowed_by: Libra::Info -> {Reference($t18)} borrows_from: Reference($t18) -> {Libra::Info}
+    // Libra::Info <- $t18
+    $t19 := borrow_field<Libra::Info<#0>>.total_value($t18)
+    // live_refs: $t19 borrowed_by: Libra::Info -> {Reference($t19)}, Reference($t18) -> {Reference($t19)} borrows_from: Reference($t19) -> {Libra::Info, Reference($t18)}
+    // Libra::Info <- $t19, Reference($t18) <- $t19
+    write_ref($t19, $t17)
+    $t20 := copy(value)
+    $t21 := pack Libra::T<#0>($t20)
+    return $t21
 }
 
 

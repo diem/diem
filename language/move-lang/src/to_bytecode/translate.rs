@@ -856,7 +856,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
                 BT::U8 => B::CastU8,
                 BT::U64 => B::CastU64,
                 BT::U128 => B::CastU128,
-                _ => panic!("ICE type checking failed"),
+                _ => panic!("ICE type checking failed. unexpected cast"),
             };
             code.push(sp(loc, instr));
         }

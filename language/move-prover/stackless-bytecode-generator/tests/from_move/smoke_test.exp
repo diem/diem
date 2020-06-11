@@ -5,45 +5,25 @@ fun SmokeTest::arithmetic_ops(a: u64): (u64, u64) {
     var $t2: u64
     var $t3: u64
     var $t4: u64
-    var $t5: u64
+    var $t5: bool
     var $t6: u64
     var $t7: u64
     var $t8: u64
-    var $t9: u64
-    var $t10: u64
-    var $t11: u64
-    var $t12: u64
-    var $t13: u64
-    var $t14: u64
-    var $t15: bool
-    var $t16: u64
-    var $t17: u64
-    var $t18: u64
-    $t2 := 6
-    $t3 := 4
-    $t4 := +($t2, $t3)
-    $t5 := 1
-    $t6 := -($t4, $t5)
-    $t7 := 2
-    $t8 := *($t6, $t7)
-    $t9 := 3
-    $t10 := /($t8, $t9)
-    $t11 := 4
-    $t12 := %($t10, $t11)
-    c := $t12
-    $t13 := copy(c)
-    $t14 := 2
-    $t15 := !=($t13, $t14)
-    if ($t15) goto L0 else goto L1
+    $t2 := 2
+    c := $t2
+    $t3 := copy(c)
+    $t4 := 2
+    $t5 := !=($t3, $t4)
+    if ($t5) goto L0 else goto L1
     L1:
     goto L2
     L0:
-    $t16 := 42
-    abort($t16)
+    $t6 := 42
+    abort($t6)
     L2:
-    $t17 := copy(c)
-    $t18 := copy(a)
-    return ($t17, $t18)
+    $t7 := copy(c)
+    $t8 := copy(a)
+    return ($t7, $t8)
 }
 
 
