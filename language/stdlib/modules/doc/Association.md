@@ -8,6 +8,7 @@
 -  [Struct `Root`](#0x0_Association_Root)
 -  [Struct `PrivilegedCapability`](#0x0_Association_PrivilegedCapability)
 -  [Struct `Association`](#0x0_Association_Association)
+-  [Struct `PublishModule`](#0x0_Association_PublishModule)
 -  [Function `initialize`](#0x0_Association_initialize)
 -  [Function `grant_privilege`](#0x0_Association_grant_privilege)
 -  [Function `grant_association_address`](#0x0_Association_grant_association_address)
@@ -120,6 +121,38 @@ means that the address is an association address.
 
 
 <pre><code><b>struct</b> <a href="#0x0_Association">Association</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>dummy_field: bool</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x0_Association_PublishModule"></a>
+
+## Struct `PublishModule`
+
+The presence of an instance of an
+<code><a href="#0x0_Association_PublishModule">Association::PublishModule</a></code>
+privilege at an address means that that address can publish code to
+the chain.
+
+
+<pre><code><b>struct</b> <a href="#0x0_Association_PublishModule">PublishModule</a>
 </code></pre>
 
 

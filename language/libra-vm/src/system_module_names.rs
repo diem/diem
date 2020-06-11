@@ -96,6 +96,8 @@ pub static ASSOCIATION_CAPABILITY_STRUCT_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("PrivilegedCapability").unwrap());
 pub static BASE_ASSOCIATION_CAPABILITY_TYPE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("Association").unwrap());
+pub static ASSOCIATION_MODULE_PUBLISHING_TYPE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("PublishModule").unwrap());
 
 // TODO Move this somewhere else
 pub fn association_capability_struct_tag() -> StructTag {
@@ -103,6 +105,21 @@ pub fn association_capability_struct_tag() -> StructTag {
         address: account_config::CORE_CODE_ADDRESS,
         module: ASSOCIATION_MODULE_NAME.to_owned(),
         name: BASE_ASSOCIATION_CAPABILITY_TYPE_NAME.to_owned(),
+        type_params: vec![],
+    };
+    StructTag {
+        address: account_config::CORE_CODE_ADDRESS,
+        module: ASSOCIATION_MODULE_NAME.to_owned(),
+        name: ASSOCIATION_CAPABILITY_STRUCT_NAME.to_owned(),
+        type_params: vec![TypeTag::Struct(base_association_cap_tag)],
+    }
+}
+
+pub fn association_module_publishing_capability_struct_tag() -> StructTag {
+    let base_association_cap_tag = StructTag {
+        address: account_config::CORE_CODE_ADDRESS,
+        module: ASSOCIATION_MODULE_NAME.to_owned(),
+        name: ASSOCIATION_MODULE_PUBLISHING_TYPE_NAME.to_owned(),
         type_params: vec![],
     };
     StructTag {

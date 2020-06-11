@@ -36,6 +36,11 @@ module Association {
     /// means that the address is an association address.
     struct Association { }
 
+    /// The presence of an instance of an `Association::PublishModule`
+    /// privilege at an address means that that address can publish code to
+    /// the chain.
+    struct PublishModule { }
+
     /// Initialization is called in genesis. It publishes the `Root` resource under `association`
     /// and marks it as an Association account by publishing a `PrivilegedCapability<Association>` resource.
     /// Aborts if the address of `association` is not `root_address`

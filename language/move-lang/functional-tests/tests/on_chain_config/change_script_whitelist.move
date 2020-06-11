@@ -45,4 +45,4 @@ module FooConfig2 {
     }
 }
 
-// check: UNKNOWN_MODULE
+// check: INVALID_MODULE_PUBLISHER

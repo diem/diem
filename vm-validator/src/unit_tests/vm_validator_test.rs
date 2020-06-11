@@ -260,7 +260,7 @@ fn test_validate_unknown_script() {
     );
 }
 
-// Make sure that we can't publish non-whitelisted modules
+// Make sure that we can publish non-whitelisted modules from the association address
 #[cfg(not(feature = "allow_custom_transaction_scripts"))]
 #[cfg(not(feature = "custom_modules"))]
 #[test]
@@ -277,9 +277,29 @@ fn test_validate_module_publishing() {
         Module::new(vec![]),
     );
     let ret = vm_validator.validate_transaction(transaction).unwrap();
+    assert_eq!(ret.status(), None);
+}
+
+// Make sure that we can't publish non-whitelisted modules
+#[cfg(not(feature = "allow_custom_transaction_scripts"))]
+#[cfg(not(feature = "custom_modules"))]
+#[test]
+fn test_validate_module_publishing_non_association() {
+    let (config, key) = config_builder::test_config();
+    let vm_validator = TestValidator::new(&config);
+
+    let address = account_config::treasury_compliance_account_address();
+    let transaction = transaction_test_helpers::get_test_signed_module_publishing_transaction(
+        address,
+        1,
+        &key,
+        key.public_key(),
+        Module::new(vec![]),
+    );
+    let ret = vm_validator.validate_transaction(transaction).unwrap();
     assert_eq!(
         ret.status().unwrap().major_status,
-        StatusCode::UNKNOWN_MODULE
+        StatusCode::INVALID_MODULE_PUBLISHER
     );
 }
 

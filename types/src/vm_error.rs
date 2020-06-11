@@ -255,6 +255,8 @@ pub enum StatusCode {
     UNABLE_TO_DESERIALIZE_ACCOUNT = 19,
     // The currency info was unable to be found
     CURRENCY_INFO_DOES_NOT_EXIST = 20,
+    // The account sender doesn't have permissions to publish modules
+    INVALID_MODULE_PUBLISHER = 21,
 
     // When a code module/script is published it is verified. These are the
     // possible errors that can arise from the verification process.
