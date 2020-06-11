@@ -22,7 +22,7 @@ proptest-derive = { version = "0.2.0", default-features = false, optional = true
 radix_trie = { version = "0.1.6", default-features = false }
 rand = "0.7.3"
 serde = { version = "1.0.111", default-features = false }
-serde_bytes = "0.11.4"
+serde_bytes = "0.11.5"
 thiserror = "1.0.19"
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["sha3"] }
 
