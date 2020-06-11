@@ -43,12 +43,12 @@ error:  This assertion might not hold.
      =         a_ref = <redacted>
      =     at tests/sources/functional/invariants.move:157:19: lifetime_invalid_S_branching
      =         b_ref = <redacted>
-     =     at tests/sources/functional/invariants.move:158:23: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:158:19: lifetime_invalid_S_branching
      =         $t5 = <redacted>,
      =         x_ref = <redacted>
-     =     at tests/sources/functional/invariants.move:160:11: lifetime_invalid_S_branching
-     =     at tests/sources/functional/invariants.move:163:11: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:160:7: lifetime_invalid_S_branching
      =         a_ref = <redacted>,
      =         b_ref = <redacted>,
      =         $t5 = <redacted>,
      =         x_ref = <redacted>
+     =     at tests/sources/functional/invariants.move:163:11: lifetime_invalid_S_branching

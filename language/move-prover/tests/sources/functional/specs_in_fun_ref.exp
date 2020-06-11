@@ -1,16 +1,16 @@
 Move prover returns: exiting with boogie verification errors
 error:  This loop invariant might not be maintained by the loop.
 
-     ┌── tests/sources/functional/specs_in_fun_ref.move:109:17 ───
+     ┌── tests/sources/functional/specs_in_fun_ref.move:113:17 ───
      │
- 109 │                 assert x == 0;
+ 113 │                 assert x == 0;
      │                 ^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/specs_in_fun_ref.move:104:5: simple7 (entry)
-     =     at tests/sources/functional/specs_in_fun_ref.move:105:13: simple7
+     =     at tests/sources/functional/specs_in_fun_ref.move:108:5: simple7 (entry)
+     =     at tests/sources/functional/specs_in_fun_ref.move:109:13: simple7
      =         n = <redacted>
-     =     at tests/sources/functional/specs_in_fun_ref.move:108:13: simple7
+     =     at tests/sources/functional/specs_in_fun_ref.move:112:13: simple7
      =         x = <redacted>
-     =     at tests/sources/functional/specs_in_fun_ref.move:107:9: simple7
+     =     at tests/sources/functional/specs_in_fun_ref.move:111:9: simple7
      =         x = <redacted>
-     =     at tests/sources/functional/specs_in_fun_ref.move:113:19: simple7
+     =     at tests/sources/functional/specs_in_fun_ref.move:117:19: simple7
