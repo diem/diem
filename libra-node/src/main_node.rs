@@ -30,6 +30,8 @@ use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::start_storage_service_with_db;
 use tokio::runtime::{Builder, Runtime};
 
+use debug_interface::libra_trace;
+
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
 
@@ -56,6 +58,9 @@ fn setup_debug_interface(config: &NodeConfig) -> NodeDebugService {
     .unwrap()
     .next()
     .unwrap();
+
+    libra_trace::set_libra_trace(&config.debug_interface.libra_trace.sampling)
+        .expect("Failed to set libra trace sampling rate.");
 
     NodeDebugService::new(addr)
 }

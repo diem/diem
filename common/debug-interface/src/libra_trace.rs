@@ -2,15 +2,39 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::json_log::JsonLogEntry;
+use anyhow::{bail, ensure, Result};
 use std::time::Instant;
 
 pub const TRACE_EVENT: &str = "trace_event";
 pub const TRACE_EDGE: &str = "trace_edge";
 
+use std::{
+    collections::HashMap,
+    sync::atomic::{AtomicUsize, Ordering},
+};
+
+// This is poor's man AtomicReference from crossbeam
+// It have few unsafe lines, but does not require extra dependency
+// Sampling rate is the form of (nominator, denominator)
+static mut SAMPLING_CONFIG: Option<Sampling> = None;
+static LIBRA_TRACE_STATE: AtomicUsize = AtomicUsize::new(UNINITIALIZED);
+const UNINITIALIZED: usize = 0;
+const INITIALIZING: usize = 1;
+const INITIALIZED: usize = 2;
+
+struct Sampling(HashMap<&'static str, CategorySampling>);
+
+struct CategorySampling {
+    denominator: u64,
+    nominator: u64,
+}
+
 #[macro_export]
 macro_rules! trace_event {
     ($stage:expr, $node:tt) => {
-        trace_event!($stage; {$crate::format_node!($node), module_path!(), Option::<u64>::None})
+        if $crate::is_selected($crate::node_sampling_data!($node)) {
+            trace_event!($stage; {$crate::format_node!($node), module_path!(), Option::<u64>::None})
+        }
     };
     ($stage:expr; {$node:expr, $path:expr, $duration:expr}) => {
         $crate::json_log::send_json_log($crate::json_log::JsonLogEntry::new(
@@ -22,6 +46,23 @@ macro_rules! trace_event {
                "duration": $duration,
             }),
         ));
+    }
+}
+
+#[macro_export]
+macro_rules! node_sampling_data {
+    ({$type:expr, $($rest:tt)*}) => {{
+        use std::hash::Hasher;
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        node_sampling_data!(hasher; $($rest)*);
+        ($type, hasher.finish())}
+    };
+    ($hasher:expr; $p:expr, $($rest:tt)*) => {
+        std::hash::Hash::hash(&$p, &mut $hasher);
+        node_sampling_data!($hasher; $($rest)*);
+    };
+    ($hasher:expr; $p:expr) => {
+        std::hash::Hash::hash(&$p, &mut $hasher);
     }
 }
 
@@ -79,30 +120,34 @@ impl Drop for TraceBlockGuard {
 #[macro_export]
 macro_rules! end_trace {
     ($stage:expr, $node:tt) => {
-        $crate::json_log::send_json_log($crate::json_log::JsonLogEntry::new(
-            $crate::libra_trace::TRACE_EVENT,
-            serde_json::json!({
-               "path": module_path!(),
-               "node": $crate::format_node!($node),
-               "stage": $stage,
-               "end": true,
-            }),
-        ));
+        if $crate::is_selected($crate::node_sampling_data!($node)) {
+            $crate::json_log::send_json_log($crate::json_log::JsonLogEntry::new(
+                $crate::libra_trace::TRACE_EVENT,
+                serde_json::json!({
+                    "path": module_path!(),
+                    "node": $crate::format_node!($node),
+                    "stage": $stage,
+                    "end": true,
+                }),
+            ));
+        }
     };
 }
 
 #[macro_export]
 macro_rules! trace_edge {
     ($stage:expr, $node_from:tt, $node_to:tt) => {
-        $crate::json_log::send_json_log($crate::json_log::JsonLogEntry::new(
-            $crate::libra_trace::TRACE_EDGE,
-            serde_json::json!({
-               "path": module_path!(),
-               "node": $crate::format_node!($node_from),
-               "node_to": $crate::format_node!($node_to),
-               "stage": $stage,
-            }),
-        ));
+        if $crate::is_selected($crate::node_sampling_data!($node_from)) {
+            $crate::json_log::send_json_log($crate::json_log::JsonLogEntry::new(
+                $crate::libra_trace::TRACE_EDGE,
+                serde_json::json!({
+                    "path": module_path!(),
+                    "node": $crate::format_node!($node_from),
+                    "node_to": $crate::format_node!($node_to),
+                    "stage": $stage,
+                }),
+            ));
+        }
     };
 }
 
@@ -294,5 +339,71 @@ fn abbreviate_crate(name: &str) -> &str {
     match name {
         "admission_control_service" => "ac",
         _ => name,
+    }
+}
+
+// This is exact copy of similar function in log crate
+/// Sets libra trace config
+pub fn set_libra_trace(config: &HashMap<String, String>) -> Result<()> {
+    match parse_sampling_config(config) {
+        Ok(sampling) => unsafe {
+            match LIBRA_TRACE_STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst)
+            {
+                UNINITIALIZED => {
+                    SAMPLING_CONFIG = Some(sampling);
+                    LIBRA_TRACE_STATE.store(INITIALIZED, Ordering::SeqCst);
+                    Ok(())
+                }
+                INITIALIZING => {
+                    while LIBRA_TRACE_STATE.load(Ordering::SeqCst) == INITIALIZING {}
+                    bail!("Failed to initialize LIBRA_TRACE_STATE");
+                }
+                _ => bail!("Failed to initialize LIBRA_TRACE_STATE"),
+            }
+        },
+        Err(s) => bail!("Failed to parse sampling config: {}", s),
+    }
+}
+
+fn parse_sampling_config(config: &HashMap<String, String>) -> Result<Sampling> {
+    let mut map = HashMap::new();
+    for (category, rate) in config {
+        let k: &'static str = Box::leak(category.clone().into_boxed_str());
+        let v = rate.split('/').collect::<Vec<&str>>();
+        ensure!(
+            v.len() == 2,
+            "Failed to parse {:?} in nominator/denominator format",
+            rate
+        );
+        let v = CategorySampling {
+            nominator: v[0].parse::<u64>()?,
+            denominator: v[1].parse::<u64>()?,
+        };
+        map.insert(k, v);
+    }
+    Ok(Sampling(map))
+}
+
+/// Checks if libra trace is enabled
+pub fn libra_trace_set() -> bool {
+    LIBRA_TRACE_STATE.load(Ordering::SeqCst) == INITIALIZED
+}
+
+pub fn is_selected(node: (&'static str, u64)) -> bool {
+    if !libra_trace_set() {
+        return false;
+    }
+    unsafe {
+        match &SAMPLING_CONFIG {
+            Some(Sampling(sampling)) => {
+                if let Some(sampling_rate) = sampling.get(node.0) {
+                    node.1 % sampling_rate.denominator < sampling_rate.nominator
+                } else {
+                    // assume no sampling if sampling category is not found and return true
+                    true
+                }
+            }
+            None => false,
+        }
     }
 }
