@@ -28,7 +28,7 @@ pub struct FullNodeConfig {
     pub num_full_nodes: usize,
     pub genesis: Option<Transaction>,
     pub listen_address: NetworkAddress,
-    pub enable_remote_authentication: bool,
+    pub mutual_authentication: bool,
     template: NodeConfig,
     validator_config: ValidatorConfig,
 }
@@ -50,7 +50,7 @@ impl Default for FullNodeConfig {
             num_full_nodes: 1,
             genesis: None,
             listen_address: NetworkAddress::from_str(DEFAULT_LISTEN_ADDRESS).unwrap(),
-            enable_remote_authentication: true,
+            mutual_authentication: true,
             template,
             validator_config: ValidatorConfig::new(),
         }
@@ -180,7 +180,7 @@ impl FullNodeConfig {
             network.network_id = NetworkId::vfn_network();
             network.listen_address = utils::get_available_port_in_multiaddr(true);
             network.advertised_address = network.listen_address.clone();
-            network.enable_remote_authentication = self.enable_remote_authentication;
+            network.mutual_authentication = self.mutual_authentication;
 
             network_peers.peers.insert(
                 network.identity.peer_id_from_config().unwrap(),

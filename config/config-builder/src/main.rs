@@ -288,7 +288,7 @@ fn build_full_node_config_builder(args: &FullNodeArgs) -> FullNodeConfig {
     }
 
     if args.public {
-        config_builder.enable_remote_authentication = false;
+        config_builder.mutual_authentication = false;
     }
 
     if let Some(seed) = args.seed.as_ref() {

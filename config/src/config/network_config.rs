@@ -39,19 +39,17 @@ pub struct NetworkConfig {
     pub advertised_address: NetworkAddress,
     pub discovery_interval_ms: u64,
     pub connectivity_check_interval_ms: u64,
-    // If the network uses remote authentication, only trusted peers are allowed to connect.
-    // Otherwise, any node can connect.
-    // TODO(philiphayes): rename this flag. should reflect `AuthenticationMode` in
-    // `NetworkBuilder`, i.e., `Mutual` vs `ServerOnly` authentication.
-    pub enable_remote_authentication: bool,
+    // Select this to enforce that both peers should authenticate each other, otherwise
+    // authentication only occurs for outgoing connections.
+    pub mutual_authentication: bool,
     // Enable this network to use either gossip discovery or onchain discovery.
     pub discovery_method: DiscoveryMethod,
-    // network peers are the nodes allowed to connect when the network is started in authenticated
-    // mode.
+    // Leveraged by mutual_authentication for incoming peers that may not have a well-defined
+    // network address.
     #[serde(skip)]
     pub network_peers: NetworkPeersConfig,
     pub network_peers_file: PathBuf,
-    // seed_peers act as seed nodes for the discovery protocol.
+    // Initial set of peers to connect to
     #[serde(skip)]
     pub seed_peers: SeedPeersConfig,
     pub seed_peers_file: PathBuf,
@@ -73,7 +71,7 @@ impl NetworkConfig {
             advertised_address: "/ip4/127.0.0.1/tcp/6180".parse().unwrap(),
             discovery_interval_ms: 1000,
             connectivity_check_interval_ms: 5000,
-            enable_remote_authentication: true,
+            mutual_authentication: false,
             discovery_method: DiscoveryMethod::Gossip,
             identity: Identity::None,
             network_peers_file: PathBuf::new(),
@@ -96,7 +94,7 @@ impl NetworkConfig {
             advertised_address: self.advertised_address.clone(),
             discovery_interval_ms: self.discovery_interval_ms,
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
-            enable_remote_authentication: self.enable_remote_authentication,
+            mutual_authentication: self.mutual_authentication,
             discovery_method: self.discovery_method,
             identity: Identity::None,
             network_peers_file: self.network_peers_file.clone(),

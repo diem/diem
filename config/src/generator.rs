@@ -4,7 +4,10 @@
 //! Convenience structs and functions for generating a random set of Libra ndoes without the
 //! genesis.blob.
 
-use crate::config::{NetworkConfig, NodeConfig, SeedPeersConfig, TestConfig, HANDSHAKE_VERSION};
+use crate::{
+    config::{NetworkConfig, NodeConfig, SeedPeersConfig, TestConfig, HANDSHAKE_VERSION},
+    network_id::NetworkId,
+};
 use libra_network_address::NetworkAddress;
 use rand::{rngs::StdRng, SeedableRng};
 
@@ -32,6 +35,8 @@ pub fn validator_swarm(
         node.upstream
             .primary_networks
             .push(network.identity.peer_id_from_config().unwrap());
+        network.mutual_authentication = true;
+        network.network_id = NetworkId::Validator;
 
         nodes.push(node);
     }

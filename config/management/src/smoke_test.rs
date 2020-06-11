@@ -74,11 +74,11 @@ fn smoke_test() {
 
         let mut network = NetworkConfig::network_with_id(NetworkId::Validator);
         network.discovery_method = DiscoveryMethod::None;
+        network.mutual_authentication = true;
         config.validator_network = Some(network);
 
         let mut network = NetworkConfig::network_with_id(NetworkId::Public);
         network.discovery_method = DiscoveryMethod::None;
-        network.enable_remote_authentication = false;
         config.full_node_networks = vec![network];
         config.randomize_ports();
 
@@ -225,7 +225,6 @@ fn attach_validator_full_node(
 
     let v_vfn = &mut validator_config.full_node_networks[0];
     v_vfn.discovery_method = DiscoveryMethod::None;
-    v_vfn.enable_remote_authentication = false;
     v_vfn.identity = Identity::from_storage(
         libra_global_constants::FULLNODE_NETWORK_KEY.into(),
         libra_global_constants::OPERATOR_ACCOUNT.into(),
@@ -244,7 +243,6 @@ fn attach_validator_full_node(
 
     let fn_vfn = &mut full_node_config.full_node_networks[0];
     fn_vfn.discovery_method = DiscoveryMethod::None;
-    fn_vfn.enable_remote_authentication = false;
     fn_vfn.seed_peers = seed_peers;
 
     full_node_config.base.waypoint = validator_config.base.waypoint.clone();

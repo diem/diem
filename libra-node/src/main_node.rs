@@ -86,7 +86,7 @@ pub fn setup_network(
     );
     network_builder.add_connection_monitoring();
 
-    if config.enable_remote_authentication {
+    if config.mutual_authentication {
         // Sanity check seed peer addresses.
         config
             .seed_peers
