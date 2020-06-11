@@ -230,6 +230,7 @@
 <span class="doccomment">//! Support for encoding transactions for common situations.</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">account</span>::<span class="ident">Account</span>, <span class="ident">gas_costs</span>};
+<span class="kw">use</span> <span class="ident">compiled_stdlib</span>::<span class="ident">transaction_scripts</span>::<span class="ident">StdlibScript</span>;
 <span class="kw">use</span> <span class="ident">compiler</span>::<span class="ident">Compiler</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
@@ -238,7 +239,6 @@
     <span class="ident">transaction</span>::{<span class="ident">RawTransaction</span>, <span class="ident">SignedTransaction</span>, <span class="ident">TransactionArgument</span>},
 };
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
-<span class="kw">use</span> <span class="ident">stdlib</span>::<span class="ident">transaction_scripts</span>::<span class="ident">StdlibScript</span>;
 
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">CREATE_ACCOUNT_SCRIPT</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
     <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="string">&quot;

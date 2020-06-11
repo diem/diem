@@ -165,7 +165,7 @@
     <span class="string">&quot;signer&quot;</span>,
 ];
 
-<span class="doccomment">/// We need to replicate the specification of the (non-staged) stdlib files here since we can&#39;t</span>
+<span class="doccomment">/// We need to replicate the specification of the (non-compiled) stdlib files here since we can&#39;t</span>
 <span class="doccomment">/// import the stdlib crate: it will create a circular dependency since the stdlib needs the</span>
 <span class="doccomment">/// compiler to compile the stdlib and scripts.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">stdlib_files</span>(<span class="ident">stdlib_dir</span>: <span class="kw">impl</span> <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">Path</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {

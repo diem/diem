@@ -10,6 +10,7 @@ ALIASES["bytecode_verifier_tests"] = {};
 ALIASES["channel"] = {};
 ALIASES["cli"] = {};
 ALIASES["cluster_test"] = {};
+ALIASES["compiled_stdlib"] = {};
 ALIASES["compiler"] = {};
 ALIASES["config_builder"] = {};
 ALIASES["consensus"] = {};

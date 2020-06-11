@@ -268,6 +268,7 @@
     <span class="ident">data_store</span>::{<span class="ident">FakeDataStore</span>, <span class="ident">GENESIS_CHANGE_SET</span>, <span class="ident">GENESIS_CHANGE_SET_FRESH</span>},
 };
 <span class="kw">use</span> <span class="ident">bytecode_verifier</span>::<span class="ident">VerifiedModule</span>;
+<span class="kw">use</span> <span class="ident">compiled_stdlib</span>::{<span class="ident">stdlib_modules</span>, <span class="ident">transaction_scripts</span>::<span class="ident">StdlibScript</span>, <span class="ident">StdLibOptions</span>};
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">generator</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">HashValue</span>;
 <span class="kw">use</span> <span class="ident">libra_state_view</span>::<span class="ident">StateView</span>;
@@ -284,7 +285,6 @@
 };
 <span class="kw">use</span> <span class="ident">libra_vm</span>::{<span class="ident">LibraVM</span>, <span class="ident">VMExecutor</span>, <span class="ident">VMValidator</span>};
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">identifier</span>::<span class="ident">Identifier</span>, <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>};
-<span class="kw">use</span> <span class="ident">stdlib</span>::{<span class="ident">stdlib_modules</span>, <span class="ident">transaction_scripts</span>::<span class="ident">StdlibScript</span>, <span class="ident">StdLibOptions</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">CompiledModule</span>;
 <span class="kw">use</span> <span class="ident">vm_genesis</span>::<span class="ident">GENESIS_KEYPAIR</span>;
 
@@ -320,7 +320,7 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">whitelist_genesis</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span>::<span class="ident">custom_genesis</span>(
-            <span class="ident">stdlib_modules</span>(<span class="ident">StdLibOptions</span>::<span class="ident">Staged</span>).<span class="ident">to_vec</span>(),
+            <span class="ident">stdlib_modules</span>(<span class="ident">StdLibOptions</span>::<span class="ident">Compiled</span>).<span class="ident">to_vec</span>(),
             <span class="prelude-val">None</span>,
             <span class="ident">VMPublishingOption</span>::<span class="ident">Locked</span>(<span class="ident">StdlibScript</span>::<span class="ident">whitelist</span>()),
         )
@@ -335,7 +335,7 @@
         }
 
         <span class="self">Self</span>::<span class="ident">custom_genesis</span>(
-            <span class="ident">stdlib_modules</span>(<span class="ident">StdLibOptions</span>::<span class="ident">Staged</span>).<span class="ident">to_vec</span>(),
+            <span class="ident">stdlib_modules</span>(<span class="ident">StdLibOptions</span>::<span class="ident">Compiled</span>).<span class="ident">to_vec</span>(),
             <span class="prelude-val">None</span>,
             <span class="ident">publishing_options</span>,
         )

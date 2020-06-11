@@ -626,6 +626,7 @@
 <span class="kw">use</span> <span class="ident">bytecode_verifier</span>::<span class="ident">verifier</span>::{
     <span class="ident">verify_module_dependencies</span>, <span class="ident">verify_script_dependencies</span>, <span class="ident">VerifiedModule</span>, <span class="ident">VerifiedScript</span>,
 };
+<span class="kw">use</span> <span class="ident">compiled_stdlib</span>::{<span class="ident">stdlib_modules</span>, <span class="ident">StdLibOptions</span>};
 <span class="kw">use</span> <span class="ident">language_e2e_tests</span>::<span class="ident">executor</span>::<span class="ident">FakeExecutor</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">ed25519</span>::{<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Ed25519PublicKey</span>};
 <span class="kw">use</span> <span class="ident">libra_state_view</span>::<span class="ident">StateView</span>;
@@ -652,7 +653,6 @@
     <span class="ident">str</span>::<span class="ident">FromStr</span>,
     <span class="ident">time</span>::<span class="ident">Duration</span>,
 };
-<span class="kw">use</span> <span class="ident">stdlib</span>::{<span class="ident">stdlib_modules</span>, <span class="ident">StdLibOptions</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::{
     <span class="ident">file_format</span>::{<span class="ident">CompiledModule</span>, <span class="ident">CompiledScript</span>},
     <span class="ident">views</span>::<span class="ident">ModuleView</span>,
@@ -1192,7 +1192,7 @@
 
     <span class="comment">// Set up a fake executor with the genesis block and create the accounts.</span>
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">exec</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">validator_accounts</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
-        <span class="kw">if</span> <span class="ident">compiler</span>.<span class="ident">use_staged_genesis</span>() {
+        <span class="kw">if</span> <span class="ident">compiler</span>.<span class="ident">use_compiled_genesis</span>() {
             <span class="ident">FakeExecutor</span>::<span class="ident">from_genesis_file</span>()
         } <span class="kw">else</span> {
             <span class="ident">FakeExecutor</span>::<span class="ident">from_fresh_genesis</span>()
@@ -1201,8 +1201,8 @@
         <span class="comment">// use custom validator set. this requires dynamically generating a new genesis tx and</span>
         <span class="comment">// is thus more expensive.</span>
         <span class="ident">FakeExecutor</span>::<span class="ident">custom_genesis</span>(
-            <span class="ident">stdlib_modules</span>(<span class="kw">if</span> <span class="ident">compiler</span>.<span class="ident">use_staged_genesis</span>() {
-                <span class="ident">StdLibOptions</span>::<span class="ident">Staged</span>
+            <span class="ident">stdlib_modules</span>(<span class="kw">if</span> <span class="ident">compiler</span>.<span class="ident">use_compiled_genesis</span>() {
+                <span class="ident">StdLibOptions</span>::<span class="ident">Compiled</span>
             } <span class="kw">else</span> {
                 <span class="ident">StdLibOptions</span>::<span class="ident">Fresh</span>
             })

@@ -199,6 +199,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">module_cache</span>::<span class="ident">ModuleCache</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">anyhow</span>, <span class="prelude-ty">Result</span>};
+<span class="kw">use</span> <span class="ident">compiled_stdlib</span>::{<span class="ident">stdlib_modules</span>, <span class="ident">StdLibOptions</span>};
 <span class="kw">use</span> <span class="ident">libra_state_view</span>::<span class="ident">StateView</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">access_path</span>::<span class="ident">AccessPath</span>, <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>};
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{
@@ -207,7 +208,6 @@
 };
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::<span class="ident">loaded_data</span>::<span class="ident">types</span>::{<span class="ident">FatStructType</span>, <span class="ident">FatType</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">rc</span>::<span class="ident">Rc</span>;
-<span class="kw">use</span> <span class="ident">stdlib</span>::{<span class="ident">stdlib_modules</span>, <span class="ident">StdLibOptions</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::{
     <span class="ident">access</span>::<span class="ident">ModuleAccess</span>,
     <span class="ident">file_format</span>::{
@@ -225,7 +225,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">state</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw">dyn</span> <span class="ident">StateView</span>, <span class="ident">use_stdlib</span>: <span class="ident">bool</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">cache</span> <span class="op">=</span> <span class="ident">ModuleCache</span>::<span class="ident">new</span>();
         <span class="kw">if</span> <span class="ident">use_stdlib</span> {
-            <span class="kw">let</span> <span class="ident">modules</span> <span class="op">=</span> <span class="ident">stdlib_modules</span>(<span class="ident">StdLibOptions</span>::<span class="ident">Staged</span>);
+            <span class="kw">let</span> <span class="ident">modules</span> <span class="op">=</span> <span class="ident">stdlib_modules</span>(<span class="ident">StdLibOptions</span>::<span class="ident">Compiled</span>);
             <span class="kw">for</span> <span class="ident">module</span> <span class="kw">in</span> <span class="ident">modules</span> {
                 <span class="ident">cache</span>.<span class="ident">insert</span>(<span class="ident">module</span>.<span class="ident">self_id</span>(), <span class="ident">module</span>.<span class="ident">clone</span>().<span class="ident">into_inner</span>());
             }
