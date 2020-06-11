@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["AccountRole",""]],"struct":[["ChildVASPRole",""],["EmptyRole",""],["ParentVASPRole",""],["UnhostedRole",""]]});
+initSidebarItems({"enum":[["AccountRole","A enum that captures the collection of role-specific resources stored under each account type"]]});

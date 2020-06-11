@@ -591,6 +591,9 @@
 <span id="591">591</span>
 <span id="592">592</span>
 <span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -663,6 +666,8 @@
     <span class="kw">pub</span> <span class="ident">received_events_key</span>: <span class="ident">BytesView</span>,
     <span class="kw">pub</span> <span class="ident">delegated_key_rotation_capability</span>: <span class="ident">bool</span>,
     <span class="kw">pub</span> <span class="ident">delegated_withdrawal_capability</span>: <span class="ident">bool</span>,
+    <span class="kw">pub</span> <span class="ident">is_frozen</span>: <span class="ident">bool</span>,
+    <span class="kw">pub</span> <span class="ident">role_id</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">role</span>: <span class="ident">AccountRoleView</span>,
 }
 
@@ -685,6 +690,8 @@
             <span class="ident">received_events_key</span>: <span class="ident">BytesView</span>::<span class="ident">from</span>(<span class="ident">account</span>.<span class="ident">received_events</span>().<span class="ident">key</span>().<span class="ident">as_bytes</span>()),
             <span class="ident">delegated_key_rotation_capability</span>: <span class="ident">account</span>.<span class="ident">has_delegated_key_rotation_capability</span>(),
             <span class="ident">delegated_withdrawal_capability</span>: <span class="ident">account</span>.<span class="ident">has_delegated_withdrawal_capability</span>(),
+            <span class="ident">is_frozen</span>: <span class="ident">account</span>.<span class="ident">is_frozen</span>(),
+            <span class="ident">role_id</span>: <span class="ident">account</span>.<span class="ident">role_id</span>(),
             <span class="ident">role</span>: <span class="ident">AccountRoleView</span>::<span class="ident">from</span>(<span class="ident">account_role</span>),
         }
     }
@@ -999,7 +1006,6 @@
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">AccountRole</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">AccountRoleView</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">role</span>: <span class="ident">AccountRole</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">match</span> <span class="ident">role</span> {
-            <span class="ident">AccountRole</span>::<span class="ident">Empty</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AccountRoleView</span>::<span class="ident">Empty</span>,
             <span class="ident">AccountRole</span>::<span class="ident">Unhosted</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AccountRoleView</span>::<span class="ident">Unhosted</span>,
             <span class="ident">AccountRole</span>::<span class="ident">Unknown</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AccountRoleView</span>::<span class="ident">Unknown</span>,
             <span class="ident">AccountRole</span>::<span class="ident">ChildVASP</span>(<span class="ident">child_vasp</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">AccountRoleView</span>::<span class="ident">ChildVASP</span> {
