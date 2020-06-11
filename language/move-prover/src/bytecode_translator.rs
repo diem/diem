@@ -873,15 +873,6 @@ impl<'env> ModuleTranslator<'env> {
                         "call $tmp := $CopyOrMoveValue({});",
                         str_local(*src)
                     );
-                    emit!(
-                        self.writer,
-                        &boogie_well_formed_check(
-                            self.module_env.env,
-                            "$tmp",
-                            &func_target.get_local_type(*dest),
-                            WellFormedMode::Default
-                        )
-                    );
                     emitln!(self.writer, &update_and_track_local(*dest, "$tmp"));
                 }
             }

@@ -13,7 +13,7 @@ error:  A postcondition might not hold on this return path.
     =         h1 = <redacted>
     =     at tests/sources/functional/hash_model.move:42:33: hash_test1_incorrect
     =         h2 = <redacted>
-    =     at tests/sources/functional/hash_model.move:43:10: hash_test1_incorrect
+    =     at tests/sources/functional/hash_model.move:43:9: hash_test1_incorrect
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
     =     at tests/sources/functional/hash_model.move:39:5: hash_test1_incorrect (exit)
@@ -32,7 +32,7 @@ error:  A postcondition might not hold on this return path.
     =         h1 = <redacted>
     =     at tests/sources/functional/hash_model.move:85:33: hash_test2_incorrect
     =         h2 = <redacted>
-    =     at tests/sources/functional/hash_model.move:86:10: hash_test2_incorrect
+    =     at tests/sources/functional/hash_model.move:86:9: hash_test2_incorrect
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
     =     at tests/sources/functional/hash_model.move:82:5: hash_test2_incorrect (exit)

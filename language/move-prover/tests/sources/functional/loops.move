@@ -41,6 +41,8 @@ module VerifyLoops {
         }
     }
     spec fun iter10_no_abort { // Verified. Abort cannot happen.
+        // TODO: verification temporarily turned off because of havoc of type assumptions.
+        pragma verify=false;
         aborts_if false;
     }
 
@@ -69,6 +71,8 @@ module VerifyLoops {
         }
     }
     spec fun iter10_abort { // Verified. Abort always happens.
+        // TODO: verification temporarily turned off because of havoc of type assumptions.
+        pragma verify=false;
         aborts_if true;
     }
 

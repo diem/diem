@@ -13,7 +13,7 @@ error:  A postcondition might not hold on this return path.
     =         s1 = <redacted>
     =     at tests/sources/functional/serialize_model.move:29:32: lcs_test1_incorrect
     =         s2 = <redacted>
-    =     at tests/sources/functional/serialize_model.move:30:10: lcs_test1_incorrect
+    =     at tests/sources/functional/serialize_model.move:30:9: lcs_test1_incorrect
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
     =     at tests/sources/functional/serialize_model.move:26:5: lcs_test1_incorrect (exit)
