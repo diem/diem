@@ -947,6 +947,9 @@
 <span id="947">947</span>
 <span id="948">948</span>
 <span id="949">949</span>
+<span id="950">950</span>
+<span id="951">951</span>
+<span id="952">952</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1317,6 +1320,9 @@
                 <span class="string">&quot;[state sync] did not receive ACK for commit notification sent to mempool: {:?}&quot;</span>,
                 <span class="ident">e</span>
             );
+            <span class="ident">counters</span>::<span class="ident">COMMIT_TIMEOUT</span>
+                .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;mempool&quot;</span>])
+                .<span class="ident">inc</span>();
             <span class="ident">msg</span> <span class="op">=</span> <span class="string">&quot;state sync did not receive ACK for commit notification sent to mempool&quot;</span>;
         }
 

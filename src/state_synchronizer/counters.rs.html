@@ -117,6 +117,16 @@
 <span id="117">117</span>
 <span id="118">118</span>
 <span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -236,6 +246,16 @@
         <span class="string">&quot;Number of timeouts that occur during sync&quot;</span>
     )
     .<span class="ident">unwrap</span>()
+});
+
+<span class="doccomment">/// Number of timeouts that occur during the commit flow across consensus, state sync, and mempool</span>
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">COMMIT_TIMEOUT</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
+    <span class="macro">register_int_counter_vec</span><span class="macro">!</span>(
+        <span class="string">&quot;libra_state_sync_commit_timeout_total&quot;</span>,
+        <span class="string">&quot;Number of timeouts that occur during the commit flow across consensus, state sync, and mempool&quot;</span>,
+        <span class="kw-2">&amp;</span>[<span class="string">&quot;component&quot;</span>] <span class="comment">// component with which state sync timed out with: consensus, mempool</span>
+    )
+        .<span class="ident">unwrap</span>()
 });
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "state_synchronizer";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

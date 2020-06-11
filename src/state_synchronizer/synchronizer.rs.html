@@ -198,11 +198,16 @@
 <span id="198">198</span>
 <span id="199">199</span>
 <span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">coordinator</span>::{<span class="ident">CoordinatorMessage</span>, <span class="ident">SyncCoordinator</span>, <span class="ident">SyncRequest</span>},
+    <span class="ident">counters</span>,
     <span class="ident">executor_proxy</span>::{<span class="ident">ExecutorProxy</span>, <span class="ident">ExecutorProxyTrait</span>},
     <span class="ident">network</span>::{<span class="ident">StateSynchronizerEvents</span>, <span class="ident">StateSynchronizerSender</span>},
     <span class="ident">SynchronizerState</span>,
@@ -374,6 +379,9 @@
 
             <span class="kw">match</span> <span class="ident">timeout</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">5</span>), <span class="ident">callback_rcv</span>).<span class="kw">await</span> {
                 <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">counters</span>::<span class="ident">COMMIT_TIMEOUT</span>
+                        .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;consensus&quot;</span>])
+                        .<span class="ident">inc</span>();
                     <span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;[state sync client] failed to receive commit ACK from state synchronizer on time&quot;</span>))
                 }
                 <span class="prelude-val">Ok</span>(<span class="ident">resp</span>) <span class="op">=</span><span class="op">&gt;</span> {
