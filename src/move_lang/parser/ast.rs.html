@@ -1382,6 +1382,10 @@
 <span id="1382">1382</span>
 <span id="1383">1383</span>
 <span id="1384">1384</span>
+<span id="1385">1385</span>
+<span id="1386">1386</span>
+<span id="1387">1387</span>
+<span id="1388">1388</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1889,7 +1893,7 @@
 <span class="comment">// { e1; ... ; en }</span>
 <span class="comment">// { e1; ... ; en; }</span>
 <span class="comment">// The Loc field holds the source location of the final semicolon, if there is one.</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Sequence</span> <span class="op">=</span> (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SequenceItem</span><span class="op">&gt;</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Loc</span><span class="op">&gt;</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span><span class="op">&gt;</span>);
+<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Sequence</span> <span class="op">=</span> (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Use</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SequenceItem</span><span class="op">&gt;</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Loc</span><span class="op">&gt;</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span><span class="op">&gt;</span>);
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">large_enum_variant</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">SequenceItem_</span> {
@@ -2518,9 +2522,13 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SequenceItem</span><span class="op">&gt;</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Loc</span><span class="op">&gt;</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span><span class="op">&gt;</span>) {
+<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> (<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Use</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SequenceItem</span><span class="op">&gt;</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Loc</span><span class="op">&gt;</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span><span class="op">&gt;</span>) {
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
-        <span class="kw">let</span> (<span class="ident">seq</span>, <span class="kw">_</span>, <span class="ident">last_e</span>) <span class="op">=</span> <span class="self">self</span>;
+        <span class="kw">let</span> (<span class="ident">uses</span>, <span class="ident">seq</span>, <span class="kw">_</span>, <span class="ident">last_e</span>) <span class="op">=</span> <span class="self">self</span>;
+        <span class="kw">for</span> <span class="ident">u</span> <span class="kw">in</span> <span class="ident">uses</span> {
+            <span class="ident">u</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+            <span class="ident">w</span>.<span class="ident">new_line</span>();
+        }
         <span class="ident">w</span>.<span class="ident">semicolon</span>(<span class="ident">seq</span>, <span class="op">|</span><span class="ident">w</span>, <span class="ident">item</span><span class="op">|</span> <span class="ident">item</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>));
         <span class="kw">if</span> <span class="op">!</span><span class="ident">seq</span>.<span class="ident">is_empty</span>() {
             <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="string">&quot;;&quot;</span>)

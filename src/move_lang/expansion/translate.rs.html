@@ -1669,6 +1669,13 @@
 <span id="1669">1669</span>
 <span id="1670">1670</span>
 <span id="1671">1671</span>
+<span id="1672">1672</span>
+<span id="1673">1673</span>
+<span id="1674">1674</span>
+<span id="1675">1675</span>
+<span id="1676">1676</span>
+<span id="1677">1677</span>
+<span id="1678">1678</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2635,7 +2642,13 @@
 <span class="comment">// TODO Support uses inside functions. AliasMap will become an accumulator</span>
 
 <span class="kw">fn</span> <span class="ident">sequence</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">loc</span>: <span class="ident">Loc</span>, <span class="ident">seq</span>: <span class="ident">P</span>::<span class="ident">Sequence</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">E</span>::<span class="ident">Sequence</span> {
-    <span class="kw">let</span> (<span class="ident">pitems</span>, <span class="ident">maybe_last_semicolon_loc</span>, <span class="ident">pfinal_item</span>) <span class="op">=</span> <span class="ident">seq</span>;
+    <span class="kw">let</span> (<span class="ident">uses</span>, <span class="ident">pitems</span>, <span class="ident">maybe_last_semicolon_loc</span>, <span class="ident">pfinal_item</span>) <span class="op">=</span> <span class="ident">seq</span>;
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new_scope</span> <span class="op">=</span> <span class="ident">AliasMap</span>::<span class="ident">new</span>();
+    <span class="kw">for</span> <span class="ident">u</span> <span class="kw">in</span> <span class="ident">uses</span> {
+        <span class="ident">use_</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">new_scope</span>, <span class="ident">u</span>);
+    }
+    <span class="kw">let</span> <span class="ident">old_aliases</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">new_alias_scope</span>(<span class="ident">new_scope</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">items</span>: <span class="ident">VecDeque</span><span class="op">&lt;</span><span class="ident">E</span>::<span class="ident">SequenceItem</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">pitems</span>
         .<span class="ident">into_iter</span>()
         .<span class="ident">map</span>(<span class="op">|</span><span class="ident">item</span><span class="op">|</span> <span class="ident">sequence_item</span>(<span class="ident">context</span>, <span class="ident">item</span>))
@@ -2653,6 +2666,7 @@
     };
     <span class="kw">let</span> <span class="ident">final_item</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">final_e</span>.<span class="ident">loc</span>, <span class="ident">E</span>::<span class="ident">SequenceItem_</span>::<span class="ident">Seq</span>(<span class="ident">final_e</span>));
     <span class="ident">items</span>.<span class="ident">push_back</span>(<span class="ident">final_item</span>);
+    <span class="ident">context</span>.<span class="ident">set_to_outer_scope</span>(<span class="ident">old_aliases</span>);
     <span class="ident">items</span>
 }
 

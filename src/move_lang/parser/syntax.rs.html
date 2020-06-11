@@ -2146,6 +2146,11 @@
 <span id="2146">2146</span>
 <span id="2147">2147</span>
 <span id="2148">2148</span>
+<span id="2149">2149</span>
+<span id="2150">2150</span>
+<span id="2151">2151</span>
+<span id="2152">2152</span>
+<span id="2153">2153</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2693,11 +2698,16 @@
 }
 
 <span class="comment">// Parse a sequence:</span>
-<span class="comment">//      Sequence = (&lt;SequenceItem&gt; &quot;;&quot;)* &lt;Exp&gt;? &quot;}&quot;</span>
+<span class="comment">//      Sequence = &lt;UseDecl&gt;* (&lt;SequenceItem&gt; &quot;;&quot;)* &lt;Exp&gt;? &quot;}&quot;</span>
 <span class="comment">//</span>
 <span class="comment">// Note that this does not include the opening brace of a block but it</span>
 <span class="comment">// does consume the closing right brace.</span>
 <span class="kw">fn</span> <span class="ident">parse_sequence</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>(<span class="ident">tokens</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Sequence</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">uses</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="kw">while</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">Use</span> {
+        <span class="ident">uses</span>.<span class="ident">push</span>(<span class="ident">parse_use_decl</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>);
+    }
+
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">seq</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SequenceItem</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">last_semicolon_loc</span> <span class="op">=</span> <span class="prelude-val">None</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">eopt</span> <span class="op">=</span> <span class="prelude-val">None</span>;
@@ -2722,7 +2732,7 @@
         <span class="ident">consume_token</span>(<span class="ident">tokens</span>, <span class="ident">Tok</span>::<span class="ident">Semicolon</span>)<span class="question-mark">?</span>;
     }
     <span class="ident">tokens</span>.<span class="ident">advance</span>()<span class="question-mark">?</span>; <span class="comment">// consume the RBrace</span>
-    <span class="prelude-val">Ok</span>((<span class="ident">seq</span>, <span class="ident">last_semicolon_loc</span>, <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">eopt</span>)))
+    <span class="prelude-val">Ok</span>((<span class="ident">uses</span>, <span class="ident">seq</span>, <span class="ident">last_semicolon_loc</span>, <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">eopt</span>)))
 }
 
 <span class="comment">//**************************************************************************************************</span>
