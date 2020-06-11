@@ -22,6 +22,7 @@ spec:
         - -c
         - |
           set -x
+          if [[ {lsr_backend} = "vault" ]]; then
           while true; do
             health_out=$(wget --content-on-error -O- http://vault-{validator_index}.default.svc.cluster.local:8200/v1/sys/health)
             if [[ "$health_out" != *'"initialized":true'* ]] || [[ "$health_out" != *'"sealed":false'* ]]; then
@@ -42,7 +43,13 @@ spec:
               break
             fi
           done
-          /opt/libra/bin/config-builder safety-rules -n "{num_validators}" -g "{num_validators}" -i "{validator_index}" -s "$VALIDATOR_SEED" -o built/ --safety-rules-addr "0.0.0.0:6185" --safety-rules-backend=vault --safety-rules-host=http://vault-{validator_index}.default.svc.cluster.local:8200 --safety-rules-token=root -d /opt/libra/data
+          until [ $(kubectl get pods -l app=libra-vault | grep ^vault | grep Running | grep '2/2' | wc -l) = "{num_validators}" ]; do
+            sleep 3;
+            echo "Waiting for all vaults to be healthy";
+          done
+          echo "All vaults are healthy.."
+          fi
+          /opt/libra/bin/config-builder safety-rules -n "{num_validators}" -g "{num_validators}" -i "{validator_index}" -s "$VALIDATOR_SEED" -o built/ --safety-rules-addr "0.0.0.0:6185" --safety-rules-backend={lsr_backend} --safety-rules-host=http://vault-{validator_index}.default.svc.cluster.local:8200 --safety-rules-token=root -d /opt/libra/data
       workingDir: /opt/libra/etc
       volumeMounts:
         - name: config-built
@@ -56,12 +63,6 @@ spec:
           value: "{cfg_seed}"
         - name: RUST_BACKTRACE
           value: "1"
-      securityContext:
-        readOnlyRootFilesystem: true
-        allowPrivilegeEscalation: false
-        capabilities:
-          drop:
-            - ALL
   containers:
     - name: safety-rules
       image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_safety_rules:{image_tag}
@@ -72,7 +73,6 @@ spec:
       volumeMounts:
         - name: config-built
           mountPath: /opt/libra/etc
-          readOnly: true
         - name: libra-data
           mountPath: /opt/libra/data
         - name: vault-token
@@ -82,17 +82,6 @@ spec:
           value: debug
         - name: RUST_BACKTRACE
           value: "1"
-      securityContext:
-        readOnlyRootFilesystem: true
-        allowPrivilegeEscalation: false
-        capabilities:
-          drop:
-            - ALL
-  securityContext:
-    runAsNonRoot: true
-    runAsUser: 6180
-    runAsGroup: 6180
-    fsGroup: 6180
   volumes:
     - name: config-built
       emptyDir: {{}}

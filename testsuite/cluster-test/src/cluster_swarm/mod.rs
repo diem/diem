@@ -28,24 +28,28 @@ pub trait ClusterSwarm {
         num_validators: u32,
         num_fullnodes_per_validator: u32,
         enable_lsr: bool,
+        lsr_backend: &str,
         image_tag: &str,
         config_overrides: Vec<String>,
     ) -> Result<Vec<Instance>> {
         let mut lsrs = vec![];
         if enable_lsr {
-            let mut vault_instances: Vec<_> = (0..num_validators)
-                .map(|i| {
-                    let vault_config = VaultConfig { index: i };
-                    self.spawn_new_instance(Vault(vault_config))
-                })
-                .collect();
-            lsrs.append(&mut vault_instances);
+            if lsr_backend == "vault" {
+                let mut vault_instances: Vec<_> = (0..num_validators)
+                    .map(|i| {
+                        let vault_config = VaultConfig { index: i };
+                        self.spawn_new_instance(Vault(vault_config))
+                    })
+                    .collect();
+                lsrs.append(&mut vault_instances);
+            }
             let mut lsr_instances: Vec<_> = (0..num_validators)
                 .map(|i| {
                     let lsr_config = LSRConfig {
                         index: i,
                         num_validators,
                         image_tag: image_tag.to_string(),
+                        lsr_backend: lsr_backend.to_string(),
                     };
                     self.spawn_new_instance(LSR(lsr_config))
                 })
@@ -100,6 +104,7 @@ pub trait ClusterSwarm {
         num_validators: u32,
         num_fullnodes_per_validator: u32,
         enable_lsr: bool,
+        lsr_backend: &str,
         image_tag: &str,
     ) -> Result<(Vec<Instance>, Vec<Instance>)> {
         try_join!(
@@ -107,6 +112,7 @@ pub trait ClusterSwarm {
                 num_validators,
                 num_fullnodes_per_validator,
                 enable_lsr,
+                lsr_backend,
                 image_tag,
                 vec![],
             ),
