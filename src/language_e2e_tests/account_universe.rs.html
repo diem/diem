@@ -316,6 +316,8 @@
 <span id="316">316</span>
 <span id="317">317</span>
 <span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -330,10 +332,12 @@
 <span class="doccomment">//! For examples of property-based tests written against this model, see the</span>
 <span class="doccomment">//! `tests/account_universe` directory.</span>
 
+<span class="kw">mod</span> <span class="ident">bad_transaction</span>;
 <span class="kw">mod</span> <span class="ident">create_account</span>;
 <span class="kw">mod</span> <span class="ident">peer_to_peer</span>;
 <span class="kw">mod</span> <span class="ident">rotate_key</span>;
 <span class="kw">mod</span> <span class="ident">universe</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">bad_transaction</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">create_account</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">peer_to_peer</span>::<span class="kw-2">*</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">rotate_key</span>::<span class="kw-2">*</span>;
