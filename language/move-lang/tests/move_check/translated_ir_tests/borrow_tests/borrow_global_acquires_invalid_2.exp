@@ -2,32 +2,32 @@ error:
 
    ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_2.move:9:9 ───
    │
- 9 │         acquires_t1();
-   │         ^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
+ 9 │         acquires_t1(account);
+   │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
    ·
- 7 │         let x = borrow_global_mut<T1>(Transaction::sender());
-   │                 -------------------------------------------- It is still being mutably borrowed by this reference
+ 7 │         let x = borrow_global_mut<T1>(Signer::address_of(account));
+   │                 -------------------------------------------------- It is still being mutably borrowed by this reference
    │
 
 error: 
 
     ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_2.move:16:9 ───
     │
- 16 │         acquires_t1();
-    │         ^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
+ 16 │         acquires_t1(account);
+    │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
     ·
- 14 │         let x = borrow_global_mut<T1>(Transaction::sender());
-    │                 -------------------------------------------- It is still being mutably borrowed by this reference
+ 14 │         let x = borrow_global_mut<T1>(Signer::address_of(account));
+    │                 -------------------------------------------------- It is still being mutably borrowed by this reference
     │
 
 error: 
 
     ┌── tests/move_check/translated_ir_tests/borrow_tests/borrow_global_acquires_invalid_2.move:22:9 ───
     │
- 22 │         acquires_t1();
-    │         ^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
+ 22 │         acquires_t1(account);
+    │         ^^^^^^^^^^^^^^^^^^^^ Invalid acquiring of resource 'T1'
     ·
- 21 │         let x = borrow_global_mut<T1>(Transaction::sender());
-    │                 -------------------------------------------- It is still being mutably borrowed by this reference
+ 21 │         let x = borrow_global_mut<T1>(Signer::address_of(account));
+    │                 -------------------------------------------------- It is still being mutably borrowed by this reference
     │
 
