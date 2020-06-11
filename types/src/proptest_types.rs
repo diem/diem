@@ -289,15 +289,6 @@ fn new_raw_transaction(
     expiration_time_secs: u64,
 ) -> RawTransaction {
     match payload {
-        TransactionPayload::Program => RawTransaction::new(
-            sender,
-            sequence_number,
-            TransactionPayload::Program,
-            max_gas_amount,
-            gas_unit_price,
-            gas_currency_code,
-            Duration::from_secs(expiration_time_secs),
-        ),
         TransactionPayload::Module(module) => RawTransaction::new_module(
             sender,
             sequence_number,
@@ -543,7 +534,6 @@ impl Arbitrary for TransactionPayload {
             4 => Self::script_strategy(),
             1 => Self::module_strategy(),
             1 => Self::write_set_strategy(),
-            1 => Just(TransactionPayload::Program),
         ]
         .boxed()
     }

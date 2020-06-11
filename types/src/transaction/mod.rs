@@ -255,9 +255,6 @@ impl RawTransaction {
     pub fn format_for_client(&self, get_transaction_name: impl Fn(&[u8]) -> String) -> String {
         let empty_vec = vec![];
         let (code, args) = match &self.payload {
-            TransactionPayload::Program => {
-                return "Deprecated".to_string();
-            }
             TransactionPayload::WriteSet(_) => ("genesis".to_string(), &empty_vec[..]),
             TransactionPayload::Script(script) => {
                 (get_transaction_name(script.code()), script.args())
@@ -300,9 +297,6 @@ impl RawTransaction {
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Serialize, Deserialize)]
 pub enum TransactionPayload {
-    /// Deprecated. See https://developers.libra.org/blog/2019/10/22/simplifying-payloads for more
-    /// details.
-    Program,
     WriteSet(ChangeSet),
     /// A transaction that executes code.
     Script(Script),

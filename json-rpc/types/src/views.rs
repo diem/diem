@@ -428,7 +428,6 @@ impl From<TransactionPayload> for ScriptView {
         let unknown_currency = "unknown_currency".to_string();
 
         let (code, args, ty_args) = match value {
-            TransactionPayload::Program => ("deprecated".to_string(), empty_vec, empty_ty_vec),
             TransactionPayload::WriteSet(_) => ("genesis".to_string(), empty_vec, empty_ty_vec),
             TransactionPayload::Script(script) => (
                 get_transaction_name(script.code()),

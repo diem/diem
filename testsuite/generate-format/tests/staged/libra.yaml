@@ -154,16 +154,14 @@ TransactionAuthenticator:
 TransactionPayload:
   ENUM:
     0:
-      Program: UNIT
-    1:
       WriteSet:
         NEWTYPE:
           TYPENAME: ChangeSet
-    2:
+    1:
       Script:
         NEWTYPE:
           TYPENAME: Script
-    3:
+    2:
       Module:
         NEWTYPE:
           TYPENAME: Module
