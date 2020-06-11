@@ -12,7 +12,7 @@ use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use network::{
-    constants::NETWORK_CHANNEL_SIZE,
+    constants::{CONNECTIVITY_CHECK_INTERNAL_MS, MAX_CONNECTION_DELAY_MS, NETWORK_CHANNEL_SIZE},
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
@@ -127,41 +127,40 @@ pub fn setup_network() -> DummyNetwork {
 
     // Set up the listener network
     let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
         network_id.clone(),
         listener_peer_id,
         RoleType::Validator,
-        listener_addr,
+        listener_addr.clone(),
     );
     network_builder
         .authentication_mode(AuthenticationMode::Mutual(listener_identity_private_key))
         .trusted_peers(trusted_peers.clone())
-        .add_connectivity_manager();
+        .add_connectivity_manager(
+            CONNECTIVITY_CHECK_INTERNAL_MS,
+            MAX_CONNECTION_DELAY_MS,
+            HashMap::new(),
+        );
     let (listener_sender, mut listener_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
-    let listener_addr = network_builder.build();
+    let (_, _) = network_builder.build(runtime.handle());
 
     // Set up the dialer network
-    let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
-        network_id,
-        dialer_peer_id,
-        RoleType::Validator,
-        dialer_addr,
-    );
+    let mut network_builder =
+        NetworkBuilder::new(network_id, dialer_peer_id, RoleType::Validator, dialer_addr);
     network_builder
         .authentication_mode(AuthenticationMode::Mutual(dialer_identity_private_key))
         .trusted_peers(trusted_peers)
-        .seed_peers(
+        .add_connectivity_manager(
+            CONNECTIVITY_CHECK_INTERNAL_MS,
+            MAX_CONNECTION_DELAY_MS,
             [(listener_peer_id, vec![listener_addr])]
                 .iter()
                 .cloned()
                 .collect(),
-        )
-        .add_connectivity_manager();
+        );
     let (dialer_sender, mut dialer_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
-    let _dialer_addr = network_builder.build();
+    let _ = network_builder.build(runtime.handle());
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();

@@ -44,6 +44,7 @@ pub static EVENT_PROCESSING_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy
 /// for the ConnectivityManager.
 pub struct ConfigurationChangeListener {
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
+    reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     role: RoleType,
 }
 
@@ -104,9 +105,14 @@ fn extract_updates(role: RoleType, node_set: ValidatorSet) -> Vec<ConnectivityRe
 
 impl ConfigurationChangeListener {
     /// Creates a new ConfigurationListener
-    pub fn new(conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>, role: RoleType) -> Self {
+    pub fn new(
+        conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
+        reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+        role: RoleType,
+    ) -> Self {
         Self {
             conn_mgr_reqs_tx,
+            reconfig_events,
             role,
         }
     }
@@ -137,13 +143,10 @@ impl ConfigurationChangeListener {
     }
 
     /// Starts the listener to wait on reconfiguration events.  Creates an infinite loop.
-    pub async fn start(
-        mut self,
-        mut reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
-    ) {
+    pub async fn start(mut self) {
         loop {
             let start_idle_time = Instant::now();
-            let payload = reconfig_events.select_next_some().await;
+            let payload = self.reconfig_events.select_next_some().await;
             let idle_duration = start_idle_time.elapsed();
             let start_process_time = Instant::now();
             self.process_payload(payload).await;

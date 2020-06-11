@@ -5,7 +5,8 @@ use crate::{
     peer::DisconnectReason,
     peer_manager::{
         conn_notifs_channel, error::PeerManagerError, ConnectionNotification, ConnectionRequest,
-        PeerManager, PeerManagerNotification, PeerManagerRequest, TransportNotification,
+        PeerManager, PeerManagerConfig, PeerManagerNotification, PeerManagerRequest,
+        TransportNotification,
     },
     protocols::wire::{
         handshake::v1::MessagingProtocolVersion,
@@ -92,19 +93,20 @@ fn build_test_peer_manager(
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
 
-    let peer_manager = PeerManager::new(
-        executor,
-        build_test_transport(),
+    let mut peer_manager_config = PeerManagerConfig::new(
         NetworkContext::new(NetworkId::Validator, RoleType::Validator, peer_id),
         "/memory/0".parse().unwrap(),
-        peer_manager_request_rx,
-        connection_reqs_rx,
-        HashMap::from_iter([(TEST_PROTOCOL, hello_tx)].iter().cloned()),
-        vec![conn_status_tx],
+        1024, /* channel size */
         1024, /* max concurrent network requests */
         1024, /* max concurrent network notifications */
-        1024, /* channel size */
+        peer_manager_request_rx,
+        connection_reqs_rx,
     );
+
+    peer_manager_config.add_connection_event_handler(conn_status_tx);
+    peer_manager_config.add_upstream_handler(TEST_PROTOCOL, hello_tx);
+
+    let peer_manager = PeerManager::new(peer_manager_config, executor, build_test_transport());
 
     (
         peer_manager,

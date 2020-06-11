@@ -19,14 +19,12 @@ use libra_secure_storage::config;
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use network_builder::builder::NetworkBuilder;
-use network_simple_onchain_discovery::{
-    gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
-};
+
 use state_synchronizer::StateSynchronizer;
 use std::{boxed::Box, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_interface::DbReaderWriter;
 use storage_service::start_storage_service_with_db;
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder, Runtime};
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
@@ -127,8 +125,15 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (role, network_config) in network_configs {
+        let runtime = Builder::new()
+            .thread_name("network-")
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .expect("Failed to start runtime. Won't be able to start networking.");
+
         // Perform common instantiation steps
-        let (runtime, mut network_builder) =
+        let mut network_builder =
             NetworkBuilder::create(network_config, role, Arc::clone(&db_rw.reader), waypoint);
         let peer_id = network_builder.peer_id();
 
@@ -154,19 +159,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                     panic!("There can be at most one validator network!");
                 }
 
-                // Set up to listen for network configuration changes from StateSync.
-                // TODO:  move this inside network_builder.
-                if let Some(conn_mgr_reqs_tx) = network_builder.conn_mgr_reqs_tx() {
-                    let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
-                        gen_simple_discovery_reconfig_subscription();
-                    reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
-                    let network_config_listener =
-                        ConfigurationChangeListener::new(conn_mgr_reqs_tx, RoleType::Validator);
-                    runtime
-                        .handle()
-                        .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
-                };
-
                 consensus_network_handles =
                     Some(network_builder.add_protocol_handler(
                         consensus::network_interface::network_endpoint_config(),
@@ -178,7 +170,9 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
         // Start the network and cache the runtime so it does not go out of scope.
         // TODO:  move all 'start' commands to a second phase at the end of setup_environment.  Target is to have one pass to wire the pieces together and a second pass to start processing in an appropriate order.
-        let _listen_addr = network_builder.build();
+        let (_, ref mut reconfig_subs) = network_builder.build(runtime.handle());
+        reconfig_subscriptions.append(reconfig_subs);
+        network_builder.start(runtime.handle());
         network_runtimes.push(runtime);
         debug!("Network started for peer_id: {}", peer_id);
     }

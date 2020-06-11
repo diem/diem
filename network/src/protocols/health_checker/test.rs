@@ -48,14 +48,14 @@ fn setup_permissive_health_checker(
     let hc_network_rx = HealthCheckerNetworkEvents::new(network_notifs_rx, connection_notifs_rx);
     let network_context =
         NetworkContext::new(NetworkId::Validator, RoleType::Validator, PeerId::default());
-    let health_checker = HealthChecker::new(
+
+    let health_checker_config = HealthCheckerConfig::new(
         network_context,
         ticker_rx,
-        hc_network_tx,
-        hc_network_rx,
         PING_TIMEOUT,
         ping_failures_tolerated,
     );
+    let health_checker = HealthChecker::new(health_checker_config, hc_network_tx, hc_network_rx);
     rt.spawn(health_checker.start());
     (
         peer_mgr_reqs_rx,

@@ -130,6 +130,32 @@ pub struct Ping(u32);
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Pong(u32);
 
+pub struct HealthCheckerConfig<TTicker> {
+    network_context: NetworkContext,
+    ticker: TTicker,
+    ping_timeout: Duration,
+    ping_failures_tolerated: u64,
+}
+
+impl<TTicker> HealthCheckerConfig<TTicker>
+where
+    TTicker: Stream + FusedStream + Unpin,
+{
+    pub fn new(
+        network_context: NetworkContext,
+        ticker: TTicker,
+        ping_timeout: Duration,
+        ping_failures_tolerated: u64,
+    ) -> Self {
+        Self {
+            network_context,
+            ticker,
+            ping_timeout,
+            ping_failures_tolerated,
+        }
+    }
+}
+
 /// The actor performing health checks by running the Ping protocol
 pub struct HealthChecker<TTicker> {
     network_context: NetworkContext,
@@ -161,22 +187,19 @@ where
 {
     /// Create new instance of the [`HealthChecker`] actor.
     pub fn new(
-        network_context: NetworkContext,
-        ticker: TTicker,
+        config: HealthCheckerConfig<TTicker>,
         network_tx: HealthCheckerNetworkSender,
         network_rx: HealthCheckerNetworkEvents,
-        ping_timeout: Duration,
-        ping_failures_tolerated: u64,
     ) -> Self {
         HealthChecker {
-            network_context,
-            ticker,
+            network_context: config.network_context,
+            ticker: config.ticker,
             network_tx,
             network_rx,
             connected: HashMap::new(),
             rng: SmallRng::from_entropy(),
-            ping_timeout,
-            ping_failures_tolerated,
+            ping_timeout: config.ping_timeout,
+            ping_failures_tolerated: config.ping_failures_tolerated,
             round: 0,
         }
     }

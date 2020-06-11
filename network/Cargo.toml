@@ -11,6 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.31"
+async-trait = "0.1.35"
 bytes = { version = "0.5.4", features = ["serde"] }
 futures = "0.3.5"
 hex = "0.4.2"

@@ -56,11 +56,14 @@ fn setup_discovery(
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
     let (ticker_tx, ticker_rx) = channel::new_test(0);
+    let discovery_config = DiscoveryConfig::new(
+        NetworkContext::new(NetworkId::Validator, RoleType::Validator, peer_id),
+        addrs,
+        ticker_rx,
+    );
     let discovery = {
         Discovery::new(
-            NetworkContext::new(NetworkId::Validator, RoleType::Validator, peer_id),
-            addrs,
-            ticker_rx,
+            discovery_config,
             DiscoveryNetworkSender::new(
                 PeerManagerRequestSender::new(peer_mgr_reqs_tx),
                 ConnectionRequestSender::new(connection_reqs_tx),

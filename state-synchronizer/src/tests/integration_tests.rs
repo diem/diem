@@ -241,7 +241,7 @@ impl SynchronizerEnv {
             .collect();
 
         // setup network
-        let addr: NetworkAddress = "/memory/0".parse().unwrap();
+        let peer_addr: NetworkAddress = "/memory/0".parse().unwrap();
         let mut seed_peers = HashMap::new();
         if new_peer_idx > 0 {
             seed_peers.insert(
@@ -250,24 +250,27 @@ impl SynchronizerEnv {
             );
         }
         let mut network_builder = NetworkBuilder::new(
-            self.runtime.handle().clone(),
             self.network_id.clone(),
             self.peer_ids[new_peer_idx],
             RoleType::Validator,
-            addr,
+            peer_addr.clone(),
         );
         network_builder
             .authentication_mode(AuthenticationMode::Mutual(
                 self.network_keys[new_peer_idx].clone(),
             ))
             .trusted_peers(trusted_peers)
-            .seed_peers(seed_peers)
-            .add_connectivity_manager()
-            .add_gossip_discovery(constants::DISCOVERY_INTERVAL_MS);
+            .add_connectivity_manager(
+                network::constants::CONNECTIVITY_CHECK_INTERNAL_MS,
+                network::constants::MAX_CONNECTION_DELAY_MS,
+                seed_peers,
+            )
+            .add_gossip_discovery(network::constants::DISCOVERY_INTERVAL_MS);
 
         let (sender, events) =
             network_builder.add_protocol_handler(crate::network::network_endpoint_config());
-        let peer_addr = network_builder.build();
+        let (_, _) = network_builder.build(&self.runtime.handle());
+        network_builder.start(&self.runtime.handle());
 
         let mut config = config_builder::test_config().0;
         let network = config.validator_network.unwrap();

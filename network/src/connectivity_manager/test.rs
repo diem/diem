@@ -45,17 +45,21 @@ fn setup_conn_mgr(
         })
         .collect::<HashMap<_, _>>();
 
+    let conn_mgr_config = ConnectivityManagerConfig::new(
+        network_context,
+        Arc::new(RwLock::new(eligible_peers)),
+        seed_peers,
+        ticker_rx,
+        FixedInterval::from_millis(100),
+        300, /* ms */
+    );
+
     let conn_mgr = {
         ConnectivityManager::new(
-            network_context,
-            Arc::new(RwLock::new(eligible_peers)),
-            seed_peers,
-            ticker_rx,
+            conn_mgr_config,
             ConnectionRequestSender::new(connection_reqs_tx),
             connection_notifs_rx,
             conn_mgr_reqs_rx,
-            FixedInterval::from_millis(100),
-            300, /* ms */
         )
     };
     rt.spawn(conn_mgr.start());

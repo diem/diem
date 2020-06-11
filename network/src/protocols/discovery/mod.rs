@@ -124,6 +124,29 @@ impl DiscoveryNetworkSender {
     }
 }
 
+pub struct DiscoveryConfig<TTicker> {
+    network_context: NetworkContext,
+    self_addrs: Vec<NetworkAddress>,
+    ticker: TTicker,
+}
+
+impl<TTicker> DiscoveryConfig<TTicker>
+where
+    TTicker: Stream + FusedStream + Unpin,
+{
+    pub fn new(
+        network_context: NetworkContext,
+        self_addrs: Vec<NetworkAddress>,
+        ticker: TTicker,
+    ) -> Self {
+        Self {
+            network_context,
+            self_addrs,
+            ticker,
+        }
+    }
+}
+
 /// The actor running the discovery protocol.
 pub struct Discovery<TTicker> {
     /// Note for self, which is prefixed with an underscore as this is not used but is in
@@ -155,18 +178,16 @@ where
     TTicker: Stream + FusedStream + Unpin,
 {
     pub fn new(
-        network_context: NetworkContext,
-        self_addrs: Vec<NetworkAddress>,
-        ticker: TTicker,
+        config: DiscoveryConfig<TTicker>,
         network_reqs_tx: DiscoveryNetworkSender,
         network_notifs_rx: DiscoveryNetworkEvents,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     ) -> Self {
         // TODO(philiphayes): wire through config
         let dns_seed_addr = b"example.com";
-        let self_peer_id = network_context.peer_id();
+        let self_peer_id = config.network_context.peer_id();
         let epoch = get_unix_epoch();
-        let self_note = Note::new(self_peer_id, self_addrs, dns_seed_addr, epoch);
+        let self_note = Note::new(self_peer_id, config.self_addrs, dns_seed_addr, epoch);
 
         let known_peers = vec![(self_peer_id, self_note.clone())]
             .into_iter()
@@ -174,11 +195,11 @@ where
 
         Self {
             note: self_note,
-            network_context,
+            network_context: config.network_context,
             dns_seed_addr: Bytes::from_static(dns_seed_addr),
             known_peers,
             connected_peers: HashSet::new(),
-            ticker,
+            ticker: config.ticker,
             network_reqs_tx,
             network_notifs_rx,
             conn_mgr_reqs_tx,

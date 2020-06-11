@@ -204,6 +204,59 @@ impl ConnectionRequestSender {
     }
 }
 
+pub struct PeerManagerConfig {
+    network_context: NetworkContext,
+    // TODO(philiphayes): peer manager should take `Vec<NetworkAddress>`
+    // (which could be empty, like in client use case)
+    listen_addr: NetworkAddress,
+    channel_size: usize,
+    max_concurrent_network_reqs: usize,
+    max_concurrent_network_notifs: usize,
+
+    pm_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+    connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
+
+    upstream_handlers:
+        HashMap<ProtocolId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+    connection_event_handlers: Vec<conn_notifs_channel::Sender>,
+}
+
+impl PeerManagerConfig {
+    pub fn new(
+        network_context: NetworkContext,
+        listen_addr: NetworkAddress,
+        channel_size: usize,
+        max_concurrent_network_reqs: usize,
+        max_concurrent_network_notifs: usize,
+        pm_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+        connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
+    ) -> Self {
+        Self {
+            network_context,
+            listen_addr,
+            channel_size,
+            max_concurrent_network_reqs,
+            max_concurrent_network_notifs,
+            pm_reqs_rx,
+            connection_reqs_rx,
+            upstream_handlers: HashMap::new(),
+            connection_event_handlers: Vec::new(),
+        }
+    }
+
+    pub fn add_upstream_handler(
+        &mut self,
+        protocol: ProtocolId,
+        handler: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
+    ) {
+        self.upstream_handlers.insert(protocol, handler);
+    }
+
+    pub fn add_connection_event_handler(&mut self, handler: conn_notifs_channel::Sender) {
+        self.connection_event_handlers.push(handler);
+    }
+}
+
 /// Responsible for handling and maintaining connections to other Peers
 pub struct PeerManager<TTransport, TSocket>
 where
@@ -260,59 +313,45 @@ where
     TSocket: transport::TSocket,
 {
     /// Construct a new PeerManager actor
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        executor: Handle,
-        transport: TTransport,
-        network_context: NetworkContext,
-        listen_addr: NetworkAddress,
-        requests_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
-        connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
-        upstream_handlers: HashMap<
-            ProtocolId,
-            libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>,
-        >,
-        connection_event_handlers: Vec<conn_notifs_channel::Sender>,
-        channel_size: usize,
-        max_concurrent_network_reqs: usize,
-        max_concurrent_network_notifs: usize,
-    ) -> Self {
+    pub fn new(config: PeerManagerConfig, executor: Handle, transport: TTransport) -> Self {
         let (transport_notifs_tx, transport_notifs_rx) = channel::new(
-            channel_size,
+            config.channel_size,
             &counters::PENDING_CONNECTION_HANDLER_NOTIFICATIONS,
         );
-        let (transport_reqs_tx, transport_reqs_rx) =
-            channel::new(channel_size, &counters::PENDING_PEER_MANAGER_DIAL_REQUESTS);
+        let (transport_reqs_tx, transport_reqs_rx) = channel::new(
+            config.channel_size,
+            &counters::PENDING_PEER_MANAGER_DIAL_REQUESTS,
+        );
         //TODO now that you can only listen on a socket inside of a tokio runtime we'll need to
         // rethink how we init the PeerManager so we don't have to do this funny thing.
         let transport_notifs_tx_clone = transport_notifs_tx.clone();
         let (transport_handler, listen_addr) = executor.enter(|| {
             TransportHandler::new(
-                network_context.clone(),
+                config.network_context.clone(),
                 transport,
-                listen_addr,
+                config.listen_addr.clone(),
                 transport_reqs_rx,
                 transport_notifs_tx_clone,
             )
         });
         Self {
-            network_context,
+            network_context: config.network_context,
             executor,
             listen_addr,
             transport_handler: Some(transport_handler),
             active_peers: HashMap::new(),
-            requests_rx,
-            connection_reqs_rx,
+            requests_rx: config.pm_reqs_rx,
+            connection_reqs_rx: config.connection_reqs_rx,
             transport_reqs_tx,
             transport_notifs_tx,
             transport_notifs_rx,
             outstanding_disconnect_requests: HashMap::new(),
             phantom_transport: PhantomData,
-            upstream_handlers,
-            connection_event_handlers,
-            max_concurrent_network_reqs,
-            max_concurrent_network_notifs,
-            channel_size,
+            upstream_handlers: config.upstream_handlers,
+            connection_event_handlers: config.connection_event_handlers,
+            max_concurrent_network_reqs: config.max_concurrent_network_reqs,
+            max_concurrent_network_notifs: config.max_concurrent_network_notifs,
+            channel_size: config.channel_size,
         }
     }
 

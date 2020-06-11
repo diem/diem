@@ -130,6 +130,41 @@ struct DialState<TBackoff> {
     addr_idx: usize,
 }
 
+/// The configuration fields for ConnectivityManager
+#[derive(Clone, Debug)]
+pub struct ConnectivityManagerConfig<TTicker, TBackoff> {
+    network_context: NetworkContext,
+    eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+    seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
+    ticker: TTicker,
+    backoff_strategy: TBackoff,
+    max_delay_ms: u64,
+}
+
+impl<TTicker, TBackoff> ConnectivityManagerConfig<TTicker, TBackoff>
+where
+    TTicker: Stream + FusedStream + Unpin + 'static,
+    TBackoff: Iterator<Item = Duration> + Clone,
+{
+    pub fn new(
+        network_context: NetworkContext,
+        eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+        seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
+        ticker: TTicker,
+        backoff_strategy: TBackoff,
+        max_delay_ms: u64,
+    ) -> Self {
+        Self {
+            network_context,
+            eligible,
+            seed_peers,
+            ticker,
+            backoff_strategy,
+            max_delay_ms,
+        }
+    }
+}
+
 impl<TTicker, TBackoff> ConnectivityManager<TTicker, TBackoff>
 where
     TTicker: Stream + FusedStream + Unpin + 'static,
@@ -137,20 +172,15 @@ where
 {
     /// Creates a new instance of the [`ConnectivityManager`] actor.
     pub fn new(
-        network_context: NetworkContext,
-        eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
-        seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
-        ticker: TTicker,
+        config: ConnectivityManagerConfig<TTicker, TBackoff>,
         connection_reqs_tx: ConnectionRequestSender,
         connection_notifs_rx: conn_notifs_channel::Receiver,
         requests_rx: channel::Receiver<ConnectivityRequest>,
-        backoff_strategy: TBackoff,
-        max_delay_ms: u64,
     ) -> Self {
         {
             // Reconcile the keysets eligible is only used to allow us to dial the remote peer
-            let eligible_peers = &mut eligible.write().unwrap();
-            for (id, addr) in &seed_peers {
+            let eligible_peers = &mut config.eligible.write().unwrap();
+            for (id, addr) in &config.seed_peers {
                 let key = addr[0]
                     .find_noise_proto()
                     .expect("Unable to find x25519 key in address");
@@ -162,8 +192,10 @@ where
 
         // Ensure seed peers doesn't contain our own address (we want to avoid
         // pointless self-dials).
+        let network_context = config.network_context.clone();
         let peer_addresses = PeerAddresses(
-            seed_peers
+            config
+                .seed_peers
                 .into_iter()
                 .filter(|(peer_id, _)| peer_id != &network_context.peer_id())
                 .map(|(peer_id, seed_addrs)| {
@@ -183,18 +215,18 @@ where
         );
 
         Self {
-            network_context,
-            eligible,
+            network_context: config.network_context,
+            eligible: config.eligible,
             connected: HashMap::new(),
             peer_addresses,
-            ticker,
+            ticker: config.ticker,
             connection_reqs_tx,
             connection_notifs_rx,
             requests_rx,
             dial_queue: HashMap::new(),
             dial_states: HashMap::new(),
-            backoff_strategy,
-            max_delay_ms,
+            backoff_strategy: config.backoff_strategy,
+            max_delay_ms: config.max_delay_ms,
             event_id: 0,
         }
     }
