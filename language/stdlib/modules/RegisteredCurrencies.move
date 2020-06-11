@@ -1,6 +1,7 @@
 address 0x0 {
 
 module RegisteredCurrencies {
+    use 0x0::CoreAddresses;
     use 0x0::LibraConfig;
     use 0x0::Signer;
     use 0x0::Transaction;
@@ -44,7 +45,7 @@ module RegisteredCurrencies {
 
     /// **Q:** Do we need this function, instead of using default_config_address directly?
     fun singleton_address(): address {
-        LibraConfig::default_config_address()
+        CoreAddresses::DEFAULT_CONFIG_ADDRESS()
     }
 
 
@@ -55,10 +56,7 @@ module RegisteredCurrencies {
     spec module {
         pragma verify = true;
 
-        /// singleton_address() is the spec version of singleton_address, which is
-        /// defined in the LibraConfig module we are in.
-        define spec_singleton_address():address { LibraConfig::spec_default_config_address() }
-
+        define spec_singleton_address(): address { 0xF1A95 }
 
         // spec_is_initialized() is true iff initialize has been called.
         define spec_is_initialized():bool {

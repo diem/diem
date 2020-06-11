@@ -66,7 +66,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_initialize">initialize</a>(association: &signer) {
     // Only callable by the <a href="Association.md#0x0_Association">Association</a> address
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == 0xA550C18, 1);
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1);
 
     // TODO: Should the initialized value be passed in <b>to</b> genesis?
     <b>let</b> timer = <a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> { microseconds: 0 };
@@ -99,10 +99,10 @@
     timestamp: u64
 ) <b>acquires</b> <a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
     // Can only be invoked by LibraVM privilege.
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == 0x0, 33);
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x0_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(), 33);
 
-    <b>let</b> global_timer = borrow_global_mut&lt;<a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(0xA550C18);
-    <b>if</b> (proposer == 0x0) {
+    <b>let</b> global_timer = borrow_global_mut&lt;<a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>());
+    <b>if</b> (proposer == <a href="CoreAddresses.md#0x0_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
         // NIL block with null address <b>as</b> proposer. Timestamp must be equal.
         Transaction::assert(timestamp == global_timer.microseconds, 5001);
     } <b>else</b> {
@@ -133,7 +133,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_now_microseconds">now_microseconds</a>(): u64 <b>acquires</b> <a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
-    borrow_global&lt;<a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(0xA550C18).microseconds
+    borrow_global&lt;<a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()).microseconds
 }
 </code></pre>
 
@@ -157,7 +157,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTimestamp_is_genesis">is_genesis</a>(): bool <b>acquires</b> <a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
-    !exists&lt;<a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(0xA550C18) || <a href="#0x0_LibraTimestamp_now_microseconds">now_microseconds</a>() == 0
+    !exists&lt;<a href="#0x0_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()) || <a href="#0x0_LibraTimestamp_now_microseconds">now_microseconds</a>() == 0
 }
 </code></pre>
 

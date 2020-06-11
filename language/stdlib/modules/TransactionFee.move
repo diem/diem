@@ -1,6 +1,7 @@
 address 0x0 {
 
 module TransactionFee {
+    use 0x0::CoreAddresses;
     use 0x0::Signer;
     use 0x0::Transaction;
     use 0x0::Coin1::Coin1;
@@ -10,9 +11,9 @@ module TransactionFee {
     use 0x0::LibraAccount;
 
     /// The `TransactionFeeCollection` resource holds the
-    /// `LibraAccount::WithdrawCapability` for the `0xFEE` account.
+    /// `LibraAccount::WithdrawCapability` for the `CoreAddresses::TRANSACTION_FEE_ADDRESS()` account.
     /// This is used for the collection of the transaction fees since it
-    /// must be sent from the account at the `0xB1E55ED` address.
+    /// must be sent from the account at the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()` address.
     resource struct TransactionFeeCollection {
         cap: LibraAccount::WithdrawCapability,
     }
@@ -30,9 +31,9 @@ module TransactionFee {
     resource struct LBRIdent<CoinType> { }
 
     /// Called in genesis. Sets up the needed resources to collect
-    /// transaction fees by the `0xB1E55ED` account.
+    /// transaction fees by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()` account.
     public fun initialize(blessed_account: &signer, fee_account: &signer) {
-        Transaction::assert(Signer::address_of(blessed_account) == 0xB1E55ED, 0);
+        Transaction::assert(Signer::address_of(blessed_account) == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), 0);
         let cap = LibraAccount::extract_withdraw_capability(fee_account);
         move_to(blessed_account, TransactionFeeCollection { cap });
         move_to(blessed_account, LBRIdent<LBR>{})
@@ -41,7 +42,7 @@ module TransactionFee {
     /// Sets ups the needed transaction fee state for a given `CoinType`
     /// currency.
     public fun add_txn_fee_currency<CoinType>(fee_account: &signer, burn_cap: &BurnCapability<CoinType>) {
-        Transaction::assert(Signer::address_of(fee_account) == 0xFEE, 0);
+        Transaction::assert(Signer::address_of(fee_account) == CoreAddresses::TRANSACTION_FEE_ADDRESS(), 0);
         LibraAccount::add_currency<CoinType>(fee_account);
         move_to(fee_account, TransactionFeePreburn<CoinType>{
             preburn: Libra::new_preburn_with_capability(burn_cap)
@@ -52,7 +53,7 @@ module TransactionFee {
     /// will need to unpack LBR before burning it when collecting the
     /// transaction fees.
     public fun is_lbr<CoinType>(): bool {
-        exists<LBRIdent<CoinType>>(0xB1E55ED)
+        exists<LBRIdent<CoinType>>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS())
     }
 
     /// Preburns the transaction fees collected in the `CoinType` currency.
@@ -61,7 +62,7 @@ module TransactionFee {
     public fun preburn_fees<CoinType>(blessed_sender: &signer)
     acquires TransactionFeeCollection, TransactionFeePreburn {
         if (is_lbr<CoinType>()) {
-            let amount = LibraAccount::balance<LBR>(0xFEE);
+            let amount = LibraAccount::balance<LBR>(CoreAddresses::TRANSACTION_FEE_ADDRESS());
             let coins = LibraAccount::withdraw_from<LBR>(
                 &borrow_global<TransactionFeeCollection>(Signer::address_of(blessed_sender)).cap,
                 amount
@@ -70,7 +71,7 @@ module TransactionFee {
             preburn_coin<Coin1>(coin1);
             preburn_coin<Coin2>(coin2)
         } else {
-            let amount = LibraAccount::balance<CoinType>(0xFEE);
+            let amount = LibraAccount::balance<CoinType>(CoreAddresses::TRANSACTION_FEE_ADDRESS());
             let coins = LibraAccount::withdraw_from<CoinType>(
                 &borrow_global<TransactionFeeCollection>(Signer::address_of(blessed_sender)).cap,
                 amount
@@ -82,22 +83,22 @@ module TransactionFee {
     /// Burns the already preburned fees from a previous call to `preburn_fees`.
     public fun burn_fees<CoinType>(blessed_account: &signer, burn_cap: &BurnCapability<CoinType>)
     acquires TransactionFeePreburn {
-        Transaction::assert(Signer::address_of(blessed_account) == 0xB1E55ED, 0);
-        let preburn = &mut borrow_global_mut<TransactionFeePreburn<CoinType>>(0xFEE).preburn;
+        Transaction::assert(Signer::address_of(blessed_account) == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), 0);
+        let preburn = &mut borrow_global_mut<TransactionFeePreburn<CoinType>>(CoreAddresses::TRANSACTION_FEE_ADDRESS()).preburn;
         Libra::burn_with_resource_cap(
             preburn,
-            0xFEE,
+            CoreAddresses::TRANSACTION_FEE_ADDRESS(),
             burn_cap
         )
     }
 
     fun preburn_coin<CoinType>(coin: Libra<CoinType>)
     acquires TransactionFeePreburn {
-        let preburn = &mut borrow_global_mut<TransactionFeePreburn<CoinType>>(0xFEE).preburn;
+        let preburn = &mut borrow_global_mut<TransactionFeePreburn<CoinType>>(CoreAddresses::TRANSACTION_FEE_ADDRESS()).preburn;
         Libra::preburn_with_resource(
             coin,
             preburn,
-            0xFEE
+            CoreAddresses::TRANSACTION_FEE_ADDRESS()
         );
     }
 }

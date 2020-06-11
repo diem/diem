@@ -15,6 +15,7 @@ address 0x0 {
 /// ```
 
 module Association {
+    use 0x0::CoreAddresses;
     use 0x0::Signer;
     use 0x0::Transaction;
 
@@ -101,12 +102,12 @@ module Association {
     }
 
     fun treasury_compliance_account(): address {
-        0xB1E55ED
+        CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()
     }
 
     /// The address at which the root account will be published.
     public fun root_address(): address {
-        0xA550C18
+        CoreAddresses::ASSOCIATION_ROOT_ADDRESS()
     }
 
     /// Assert that `addr` is an association account.

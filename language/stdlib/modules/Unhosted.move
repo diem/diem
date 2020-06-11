@@ -1,6 +1,7 @@
 address 0x0 {
 
 module Unhosted {
+    use 0x0::CoreAddresses;
     use 0x0::AccountLimits;
     use 0x0::Signer;
     use 0x0::Testnet;
@@ -31,7 +32,7 @@ module Unhosted {
     }
 
     public fun limits_addr(): address {
-        0xA550C18
+        CoreAddresses::ASSOCIATION_ROOT_ADDRESS()
     }
 }
 }

@@ -6,6 +6,7 @@
 address 0x0 {
 
 module AccountLimits {
+    use 0x0::CoreAddresses;
     use 0x0::Association;
     use 0x0::LibraTimestamp;
     use 0x0::Signer;
@@ -54,7 +55,7 @@ module AccountLimits {
     // Grant a capability to call this module. This does not necessarily
     // need to be a unique capability.
     public fun grant_calling_capability(account: &signer): CallingCapability {
-        Transaction::assert(Signer::address_of(account) == 0xA550C18, 3000);
+        Transaction::assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 3000);
         CallingCapability{}
     }
 
@@ -164,7 +165,7 @@ module AccountLimits {
     // The address where the default (unhosted) account limits are
     // published
     public fun default_limits_addr(): address {
-        0xA550C18
+        CoreAddresses::ASSOCIATION_ROOT_ADDRESS()
     }
 
     ///////////////////////////////////////////////////////////////////////////

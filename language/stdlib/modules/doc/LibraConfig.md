@@ -21,7 +21,6 @@
 -  [Function `reconfigure`](#0x0_LibraConfig_reconfigure)
 -  [Function `reconfigure_`](#0x0_LibraConfig_reconfigure_)
 -  [Function `emit_reconfiguration_event`](#0x0_LibraConfig_emit_reconfiguration_event)
--  [Function `default_config_address`](#0x0_LibraConfig_default_config_address)
 -  [Specification](#0x0_LibraConfig_Specification)
     -  [Function `publish_new_config_with_capability`](#0x0_LibraConfig_Specification_publish_new_config_with_capability)
     -  [Function `publish_new_config`](#0x0_LibraConfig_Specification_publish_new_config)
@@ -198,7 +197,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_initialize">initialize</a>(config_account: &signer, association_account: &signer) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>(), 1);
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(), 1);
     <a href="Association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(association_account, config_account);
     <a href="Association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(association_account, association_account);
 
@@ -234,7 +233,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_get">get</a>&lt;Config: <b>copyable</b>&gt;(): Config <b>acquires</b> <a href="#0x0_LibraConfig">LibraConfig</a> {
-    <b>let</b> addr = <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>();
+    <b>let</b> addr = <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>();
     Transaction::assert(exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
     *&borrow_global&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr).payload
 }
@@ -260,7 +259,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config) <b>acquires</b> <a href="#0x0_LibraConfig">LibraConfig</a>, <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
-    <b>let</b> addr = <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>();
+    <b>let</b> addr = <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>();
     Transaction::assert(exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
     <b>let</b> signer_address = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     Transaction::assert(
@@ -299,7 +298,7 @@
     _cap: &<a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;,
     payload: Config
 ) <b>acquires</b> <a href="#0x0_LibraConfig">LibraConfig</a>, <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
-    <b>let</b> addr = <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>();
+    <b>let</b> addr = <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>();
     Transaction::assert(exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
     <b>let</b> config = borrow_global_mut&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr);
     config.payload = payload;
@@ -493,7 +492,7 @@
        <b>return</b> ()
    };
 
-   <b>let</b> config_ref = borrow_global_mut&lt;<a href="#0x0_LibraConfig_Configuration">Configuration</a>&gt;(<a href="#0x0_LibraConfig_default_config_address">default_config_address</a>());
+   <b>let</b> config_ref = borrow_global_mut&lt;<a href="#0x0_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>());
 
    // Ensure that there is at most one reconfiguration per transaction. This <b>ensures</b> that there is a 1-1
    // correspondence between system reconfigurations and emitted ReconfigurationEvents.
@@ -526,7 +525,7 @@
 
 
 <pre><code><b>fun</b> <a href="#0x0_LibraConfig_emit_reconfiguration_event">emit_reconfiguration_event</a>() <b>acquires</b> <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
-    <b>let</b> config_ref = borrow_global_mut&lt;<a href="#0x0_LibraConfig_Configuration">Configuration</a>&gt;(<a href="#0x0_LibraConfig_default_config_address">default_config_address</a>());
+    <b>let</b> config_ref = borrow_global_mut&lt;<a href="#0x0_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>());
     config_ref.epoch = config_ref.epoch + 1;
 
     <a href="Event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraConfig_NewEpochEvent">NewEpochEvent</a>&gt;(
@@ -535,30 +534,6 @@
             epoch: config_ref.epoch,
         },
     );
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_LibraConfig_default_config_address"></a>
-
-## Function `default_config_address`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>(): address
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_default_config_address">default_config_address</a>(): address {
-    0xF1A95
 }
 </code></pre>
 
@@ -576,11 +551,9 @@ definitions that are used by RegisteredCurrencies
 
 
 <pre><code>pragma verify = <b>true</b>;
-<a name="0x0_LibraConfig_spec_default_config_address"></a>
-<b>define</b> <a href="#0x0_LibraConfig_spec_default_config_address">spec_default_config_address</a>(): address { 0xF1A95 }
 <a name="0x0_LibraConfig_spec_get"></a>
 <b>define</b> <a href="#0x0_LibraConfig_spec_get">spec_get</a>&lt;Config&gt;(): Config {
-    <b>global</b>&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="#0x0_LibraConfig_spec_default_config_address">spec_default_config_address</a>()).payload
+    <b>global</b>&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(0xF1A95).payload
 }
 <a name="0x0_LibraConfig_spec_is_published"></a>
 <b>define</b> <a href="#0x0_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(addr: address): bool {

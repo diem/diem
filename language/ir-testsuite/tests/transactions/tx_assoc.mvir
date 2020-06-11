@@ -1,20 +1,23 @@
+import 0x0.CoreAddresses;
 //! sender: association
 main() {
-    assert(get_txn_sender() == 0xA550C18, 0);
+    assert(get_txn_sender() == CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 0);
     return;
 }
 
 //! new-transaction
+import 0x0.CoreAddresses;
 main() {
-    assert(get_txn_sender() != 0xA550C18, 1);
+    assert(get_txn_sender() != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 1);
     return;
 }
 
 //! new-transaction
 //! account: alice
 //! sender: alice
+import 0x0.CoreAddresses;
 main() {
-    assert(get_txn_sender() != 0xA550C18, 2);
-    assert({{alice}} != 0xA550C18, 3);
+    assert(get_txn_sender() != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 2);
+    assert({{alice}} != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 3);
     return;
 }

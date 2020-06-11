@@ -21,7 +21,6 @@
 -  [Function `expiration_date`](#0x0_VASP_expiration_date)
 -  [Function `rotate_base_url`](#0x0_VASP_rotate_base_url)
 -  [Function `rotate_compliance_public_key`](#0x0_VASP_rotate_compliance_public_key)
--  [Function `singleton_addr`](#0x0_VASP_singleton_addr)
 -  [Function `cert_lifetime`](#0x0_VASP_cert_lifetime)
 
 
@@ -484,30 +483,6 @@ Rotate the compliance public key for
     Transaction::assert(<a href="Signature.md#0x0_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_key), 7004);
     <b>let</b> parent_addr = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(parent_vasp);
     borrow_global_mut&lt;<a href="#0x0_VASP_ParentVASP">ParentVASP</a>&gt;(parent_addr).compliance_public_key = new_key
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_VASP_singleton_addr"></a>
-
-## Function `singleton_addr`
-
-
-
-<pre><code><b>fun</b> <a href="#0x0_VASP_singleton_addr">singleton_addr</a>(): address
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x0_VASP_singleton_addr">singleton_addr</a>(): address {
-    0xA550C18
 }
 </code></pre>
 

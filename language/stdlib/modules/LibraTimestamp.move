@@ -1,6 +1,7 @@
 address 0x0 {
 
 module LibraTimestamp {
+    use 0x0::CoreAddresses;
     use 0x0::Signer;
     use 0x0::Transaction;
 
@@ -12,7 +13,7 @@ module LibraTimestamp {
     // Initialize the global wall clock time resource.
     public fun initialize(association: &signer) {
         // Only callable by the Association address
-        Transaction::assert(Signer::address_of(association) == 0xA550C18, 1);
+        Transaction::assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
 
         // TODO: Should the initialized value be passed in to genesis?
         let timer = CurrentTimeMicroseconds { microseconds: 0 };
@@ -26,10 +27,10 @@ module LibraTimestamp {
         timestamp: u64
     ) acquires CurrentTimeMicroseconds {
         // Can only be invoked by LibraVM privilege.
-        Transaction::assert(Signer::address_of(account) == 0x0, 33);
+        Transaction::assert(Signer::address_of(account) == CoreAddresses::VM_RESERVED_ADDRESS(), 33);
 
-        let global_timer = borrow_global_mut<CurrentTimeMicroseconds>(0xA550C18);
-        if (proposer == 0x0) {
+        let global_timer = borrow_global_mut<CurrentTimeMicroseconds>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
+        if (proposer == CoreAddresses::VM_RESERVED_ADDRESS()) {
             // NIL block with null address as proposer. Timestamp must be equal.
             Transaction::assert(timestamp == global_timer.microseconds, 5001);
         } else {
@@ -41,12 +42,12 @@ module LibraTimestamp {
 
     // Get the timestamp representing `now` in microseconds.
     public fun now_microseconds(): u64 acquires CurrentTimeMicroseconds {
-        borrow_global<CurrentTimeMicroseconds>(0xA550C18).microseconds
+        borrow_global<CurrentTimeMicroseconds>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).microseconds
     }
 
     // Helper function to determine if the blockchain is at genesis state.
     public fun is_genesis(): bool acquires CurrentTimeMicroseconds {
-        !exists<CurrentTimeMicroseconds>(0xA550C18) || now_microseconds() == 0
+        !exists<CurrentTimeMicroseconds>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()) || now_microseconds() == 0
     }
 
     /**

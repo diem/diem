@@ -1,6 +1,7 @@
 address 0x0 {
 
 module LibraWriteSetManager {
+    use 0x0::CoreAddresses;
     use 0x0::LibraAccount;
     use 0x0::Event;
     use 0x0::Hash;
@@ -17,7 +18,7 @@ module LibraWriteSetManager {
     }
 
     public fun initialize(account: &signer) {
-        Transaction::assert(Signer::address_of(account) == 0xA550C18, 1);
+        Transaction::assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
 
         move_to(
             account,
@@ -33,7 +34,7 @@ module LibraWriteSetManager {
         writeset_public_key: vector<u8>,
     ) {
         let sender = Signer::address_of(account);
-        Transaction::assert(sender == 0xA550C18, 33);
+        Transaction::assert(sender == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 33);
 
         let association_auth_key = LibraAccount::authentication_key(sender);
         let sequence_number = LibraAccount::sequence_number(sender);
@@ -48,7 +49,7 @@ module LibraWriteSetManager {
     }
 
     fun epilogue(account: &signer, writeset_payload: vector<u8>) acquires LibraWriteSetManager {
-        let t_ref = borrow_global_mut<LibraWriteSetManager>(0xA550C18);
+        let t_ref = borrow_global_mut<LibraWriteSetManager>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
 
         Event::emit_event<Self::UpgradeEvent>(
             &mut t_ref.upgrade_events,

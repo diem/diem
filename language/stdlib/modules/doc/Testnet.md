@@ -63,7 +63,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Testnet_initialize">initialize</a>(account: &signer) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == 0xA550C18, 0);
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 0);
     move_to(account, <a href="#0x0_Testnet_IsTestnet">IsTestnet</a>{})
 }
 </code></pre>
@@ -88,7 +88,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Testnet_is_testnet">is_testnet</a>(): bool {
-    exists&lt;<a href="#0x0_Testnet_IsTestnet">IsTestnet</a>&gt;(0xA550C18)
+    exists&lt;<a href="#0x0_Testnet_IsTestnet">IsTestnet</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>())
 }
 </code></pre>
 
@@ -113,8 +113,8 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Testnet_remove_testnet">remove_testnet</a>(account: &signer)
 <b>acquires</b> <a href="#0x0_Testnet_IsTestnet">IsTestnet</a> {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == 0xA550C18, 0);
-    <a href="#0x0_Testnet_IsTestnet">IsTestnet</a>{} = move_from&lt;<a href="#0x0_Testnet_IsTestnet">IsTestnet</a>&gt;(0xA550C18);
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 0);
+    <a href="#0x0_Testnet_IsTestnet">IsTestnet</a>{} = move_from&lt;<a href="#0x0_Testnet_IsTestnet">IsTestnet</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>());
 }
 </code></pre>
 
