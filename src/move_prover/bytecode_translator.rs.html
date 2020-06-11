@@ -1675,6 +1675,17 @@
 <span id="1675">1675</span>
 <span id="1676">1676</span>
 <span id="1677">1677</span>
+<span id="1678">1678</span>
+<span id="1679">1679</span>
+<span id="1680">1680</span>
+<span id="1681">1681</span>
+<span id="1682">1682</span>
+<span id="1683">1683</span>
+<span id="1684">1684</span>
+<span id="1685">1685</span>
+<span id="1686">1686</span>
+<span id="1687">1687</span>
+<span id="1688">1688</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2512,6 +2523,17 @@
                 <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">unindent</span>();
                 <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;L{}:&quot;</span>, <span class="ident">label</span>.<span class="ident">as_usize</span>());
                 <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assume !$abort_flag;&quot;</span>);
+                <span class="kw">for</span> <span class="ident">idx</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">func_target</span>.<span class="ident">get_local_count</span>() {
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">ref_proxy_idx</span>) <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_ref_proxy_index</span>(<span class="ident">idx</span>) {
+                        <span class="kw">let</span> <span class="ident">ref_proxy_var_name</span> <span class="op">=</span> <span class="ident">str_local</span>(<span class="kw-2">*</span><span class="ident">ref_proxy_idx</span>);
+                        <span class="kw">let</span> <span class="ident">proxy_idx</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_proxy_index</span>(<span class="ident">idx</span>).<span class="ident">unwrap</span>();
+                        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>,
+                            <span class="string">&quot;assume l#$Reference({}) == $Local({}) &amp;&amp; p#$Reference({}) == $EmptyPath;&quot;</span>,
+                            <span class="ident">ref_proxy_var_name</span>,
+                            <span class="ident">proxy_idx</span>,
+                            <span class="ident">ref_proxy_var_name</span>);
+                    }
+                }
                 <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">indent</span>();
             }
             <span class="ident">Jump</span>(<span class="kw">_</span>, <span class="ident">target</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;goto L{};&quot;</span>, <span class="ident">target</span>.<span class="ident">as_usize</span>()),
