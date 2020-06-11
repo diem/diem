@@ -341,7 +341,7 @@ pub trait PersistableConfig: Serialize + DeserializeOwned {
     }
 
     fn save_config<P: AsRef<Path>>(&self, output_file: P) -> Result<()> {
-        let contents = toml::to_vec(&self)?;
+        let contents = serde_yaml::to_vec(&self)?;
         let mut file = File::create(output_file)?;
         file.write_all(&contents)?;
         // @TODO This causes a major perf regression that needs to be evaluated before enabling
@@ -350,7 +350,7 @@ pub trait PersistableConfig: Serialize + DeserializeOwned {
     }
 
     fn parse(serialized: &str) -> Result<Self> {
-        Ok(toml::from_str(&serialized)?)
+        Ok(serde_yaml::from_str(&serialized)?)
     }
 }
 
@@ -391,110 +391,6 @@ impl RootPath {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    const DEFAULT: &str = "src/config/test_data/single.node.config.toml";
-    const RANDOM_DEFAULT: &str = "src/config/test_data/random.default.node.config.toml";
-    const RANDOM_COMPLETE: &str = "src/config/test_data/random.complete.node.config.toml";
-
-    #[test]
-    fn verify_default_config() {
-        // This test likely failed because there was a breaking change in the NodeConfig. It may be
-        // desirable to reverse the change or to change the test config and potentially documentation.
-        let mut actual = NodeConfig::random();
-        let mut expected = NodeConfig::load(DEFAULT).expect("Unable to load config");
-
-        // These are randomly generated, so let's force them to be the same, perhaps we can use a
-        // random seed so that these can be made uniform...
-        let actual_network = actual
-            .validator_network
-            .as_mut()
-            .expect("Missing actual network config");
-        let expected_network = expected
-            .validator_network
-            .as_mut()
-            .expect("Missing expected network config");
-
-        expected_network.listen_address = actual_network.listen_address.clone();
-        expected_network.identity = actual_network.identity.clone();
-        expected_network.network_peers = actual_network.network_peers.clone();
-        expected_network.seed_peers = actual_network.seed_peers.clone();
-        expected_network.seed_peers_file = actual_network.seed_peers_file.clone();
-
-        expected.set_data_dir(actual.data_dir().clone());
-        compare_configs(&actual, &expected);
-    }
-
-    #[test]
-    fn verify_random_complete_config() {
-        let mut rng = StdRng::from_seed([255u8; 32]);
-        let mut expected = NodeConfig::random_with_rng(&mut rng);
-
-        // Update paths after save
-        let root_dir = RootPath::new(expected.test.as_ref().unwrap().temp_dir().unwrap());
-        let path = root_dir.full_path(&PathBuf::from("node.config.toml"));
-        expected.save(&path).expect("Unable to save config");
-
-        let actual = NodeConfig::load(RANDOM_COMPLETE).expect("Unable to load config");
-        expected.set_data_dir(actual.data_dir().clone());
-        compare_configs(&actual, &expected);
-    }
-
-    #[test]
-    fn verify_random_default_config() {
-        let mut rng = StdRng::from_seed([255u8; 32]);
-        let mut expected = NodeConfig::random_with_rng(&mut rng);
-
-        // Update paths after save
-        let root_dir = RootPath::new(expected.test.as_ref().unwrap().temp_dir().unwrap());
-        let path = root_dir.full_path(&PathBuf::from("node.config.toml"));
-        expected.save(&path).expect("Unable to save config");
-
-        let actual = NodeConfig::load(RANDOM_DEFAULT).expect("Unable to load config");
-        expected.set_data_dir(actual.data_dir().clone());
-        compare_configs(&actual, &expected);
-    }
-
-    fn compare_configs(actual: &NodeConfig, expected: &NodeConfig) {
-        // This is broken down first into smaller evaluations to improve identifying what is broken.
-        // The output for a broken config leveraging assert at the top level config is not readable.
-        assert_eq!(actual.admission_control, expected.admission_control);
-        assert_eq!(actual.base, expected.base);
-        assert_eq!(actual.consensus, expected.consensus);
-        assert_eq!(actual.debug_interface, expected.debug_interface);
-        assert_eq!(actual.execution, expected.execution);
-        assert_eq!(actual.full_node_networks, expected.full_node_networks);
-        assert_eq!(actual.full_node_networks.len(), 0);
-        assert_eq!(actual.logger, expected.logger);
-        assert_eq!(actual.mempool, expected.mempool);
-        assert_eq!(actual.metrics, expected.metrics);
-        assert_eq!(actual.state_sync, expected.state_sync);
-        assert_eq!(actual.storage, expected.storage);
-        assert_eq!(actual.test, expected.test);
-        assert_eq!(actual.validator_network, expected.validator_network);
-        assert_eq!(actual, expected);
-    }
-
-    #[test]
-    fn verify_all_configs() {
-        let _ = vec![
-            // This contains all the default fields written to disk, it verifies that the default
-            // is consistent and can be loaded without failure
-            DEFAULT,
-            // This config leverages default fields but uses the same PeerId and secondary files as
-            // the random.complete.node.config.toml. It verifies the assumptions about loading
-            // files even if the paths aren't present
-            RANDOM_DEFAULT,
-            // This config explicitly writes all the default values for a random peer to disk and
-            // verifies that it correctly loads. It shares the same PeerId as
-            // random.default.node.config.toml
-            RANDOM_COMPLETE,
-        ]
-        .iter()
-        .map(|path| {
-            NodeConfig::load(PathBuf::from(path)).unwrap_or_else(|_| panic!("Error in {}", path))
-        })
-        .collect::<Vec<_>>();
-    }
 
     #[test]
     fn verify_role_type_conversion() {
