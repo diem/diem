@@ -5,7 +5,8 @@ use crate::{BuildSwarm, Error, ValidatorConfig};
 use anyhow::{ensure, Result};
 use libra_config::{
     config::{
-        NetworkPeerInfo, NetworkPeersConfig, NodeConfig, PeerNetworkId, RoleType, UpstreamConfig,
+        DiscoveryMethod, NetworkPeerInfo, NetworkPeersConfig, NodeConfig, PeerNetworkId, RoleType,
+        UpstreamConfig,
     },
     generator,
     network_id::NetworkId,
@@ -93,7 +94,7 @@ impl FullNodeConfig {
             .full_node_networks
             .last_mut()
             .ok_or(Error::MissingFullNodeNetwork)?;
-        network.advertised_address = self.advertised_address.clone();
+        network.discovery_method = DiscoveryMethod::gossip(self.advertised_address.clone());
         network.listen_address = self.listen_address.clone();
         network.seed_peers = seed_peers;
 
@@ -111,7 +112,7 @@ impl FullNodeConfig {
         let seed_peers = generator::build_seed_peers(&seed_config, self.bootstrap.clone());
 
         let mut network = new_net.full_node_networks.swap_remove(0);
-        network.advertised_address = self.advertised_address.clone();
+        network.discovery_method = DiscoveryMethod::gossip(self.advertised_address.clone());
         network.listen_address = self.listen_address.clone();
         network.seed_peers = seed_peers;
         config.full_node_networks.push(network);
@@ -179,7 +180,7 @@ impl FullNodeConfig {
                 .ok_or(Error::MissingFullNodeNetwork)?;
             network.network_id = NetworkId::vfn_network();
             network.listen_address = utils::get_available_port_in_multiaddr(true);
-            network.advertised_address = network.listen_address.clone();
+            network.discovery_method = DiscoveryMethod::gossip(self.advertised_address.clone());
             network.mutual_authentication = self.mutual_authentication;
 
             network_peers.peers.insert(
@@ -252,10 +253,13 @@ mod test {
             &network.identity.peer_id_from_config().unwrap(),
             seed_peer_id
         );
-        assert_ne!(&network.advertised_address, &seed_addrs[0]);
+        assert_ne!(
+            &network.discovery_method.advertised_address(),
+            &seed_addrs[0]
+        );
 
         assert_eq!(
-            network.advertised_address,
+            network.discovery_method.advertised_address(),
             NetworkAddress::from_str(DEFAULT_ADVERTISED_ADDRESS).unwrap()
         );
         assert_eq!(

@@ -108,7 +108,6 @@ pub fn setup_network(
         );
 
         network_builder
-            .advertised_address(config.advertised_address.clone())
             .authentication_mode(AuthenticationMode::Mutual(identity_key))
             .trusted_peers(trusted_peers)
             .seed_peers(seed_peers)
@@ -116,9 +115,7 @@ pub fn setup_network(
             .add_connectivity_manager();
     } else {
         // Enforce the outgoing connection (dialer) verifies the identity of the listener (server)
-        network_builder
-            .authentication_mode(AuthenticationMode::ServerOnly(identity_key))
-            .advertised_address(config.advertised_address.clone());
+        network_builder.authentication_mode(AuthenticationMode::ServerOnly(identity_key));
         if !seed_peers.is_empty() {
             network_builder
                 .seed_peers(seed_peers)
@@ -126,10 +123,11 @@ pub fn setup_network(
         }
     }
 
-    match config.discovery_method {
-        DiscoveryMethod::Gossip => {
+    match &config.discovery_method {
+        DiscoveryMethod::Gossip(gossip_config) => {
             network_builder
-                .discovery_interval_ms(config.discovery_interval_ms)
+                .advertised_address(gossip_config.advertised_address.clone())
+                .discovery_interval_ms(gossip_config.discovery_interval_ms)
                 .add_gossip_discovery();
         }
         DiscoveryMethod::Onchain => {

@@ -332,8 +332,8 @@ impl LibraSwarm {
             full_node_builder.extend_validator(&mut validator_config)?;
             validator_config.save(&upstream_config_file)?;
             full_node_builder.bootstrap = validator_config.full_node_networks[0]
-                .advertised_address
-                .clone();
+                .discovery_method
+                .advertised_address();
             SwarmConfig::build(&full_node_builder, config_path)?
         };
 
