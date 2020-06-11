@@ -363,6 +363,15 @@
 <span id="363">363</span>
 <span id="364">364</span>
 <span id="365">365</span>
+<span id="366">366</span>
+<span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
+<span id="370">370</span>
+<span id="371">371</span>
+<span id="372">372</span>
+<span id="373">373</span>
+<span id="374">374</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -371,6 +380,7 @@
 
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">serde_json</span>::<span class="ident">json</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">env</span>;
 <span class="kw">use</span> <span class="ident">thiserror</span>::<span class="ident">Error</span>;
 
 <span class="doccomment">/// Request timeout for github operations</span>
@@ -539,7 +549,15 @@
             .<span class="ident">set</span>(<span class="string">&quot;Authorization&quot;</span>, <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;token {}&quot;</span>, <span class="self">self</span>.<span class="ident">token</span>))
             .<span class="ident">set</span>(<span class="ident">ACCEPT_HEADER</span>, <span class="ident">ACCEPT_VALUE</span>)
             .<span class="ident">timeout_connect</span>(<span class="ident">TIMEOUT</span>);
-        <span class="ident">request</span>
+        <span class="kw">match</span> <span class="ident">env</span>::<span class="ident">var</span>(<span class="string">&quot;https_proxy&quot;</span>) {
+            <span class="prelude-val">Ok</span>(<span class="ident">proxy</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">request</span>
+                .<span class="ident">set_proxy</span>(
+                    <span class="ident">ureq</span>::<span class="ident">Proxy</span>::<span class="ident">new</span>(<span class="ident">proxy</span>)
+                        .<span class="ident">expect</span>(<span class="string">&quot;Unable to parse https_proxy environment variable&quot;</span>),
+                )
+                .<span class="ident">build</span>(),
+            <span class="prelude-val">Err</span>(<span class="ident">_e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">request</span>,
+        }
     }
 
     <span class="doccomment">/// Get can read files or directories, this makes it easier to use</span>
