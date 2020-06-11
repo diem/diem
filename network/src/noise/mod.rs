@@ -13,14 +13,12 @@
 //! ```
 //! use network::{
 //!     noise::{HandshakeAuthMode, NoiseUpgrader},
-//!     NetworkPublicKeys,
 //! };
 //! use futures::{executor, future, io::{AsyncReadExt, AsyncWriteExt}};
 //! use memsocket::MemorySocket;
 //! use libra_crypto::{x25519, ed25519, Uniform, PrivateKey, test_utils::TEST_SEED};
 //! use rand::{rngs::StdRng, SeedableRng};
 //! use libra_types::PeerId;
-//! use libra_config::config::NetworkPeerInfo;
 //! use std::{collections::HashMap, sync::{Arc, RwLock}};
 //!
 //! fn example() -> std::io::Result<()> {
@@ -37,12 +35,8 @@
 //! // create list of trusted peers
 //! let mut trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 //! {
-//!     trusted_peers.write().unwrap().insert(client_peer_id, NetworkPublicKeys {
-//!        identity_public_key: client_public,
-//!     });
-//!     trusted_peers.write().unwrap().insert(server_peer_id, NetworkPublicKeys {
-//!        identity_public_key: server_public,
-//!     });
+//!     trusted_peers.write().unwrap().insert(client_peer_id, client_public);
+//!     trusted_peers.write().unwrap().insert(server_peer_id, server_public);
 //! }
 //!
 //! let client_auth = HandshakeAuthMode::mutual(trusted_peers.clone());

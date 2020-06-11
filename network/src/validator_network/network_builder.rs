@@ -10,7 +10,6 @@
 //! connect to or accept connections from an end-point running in authenticated mode as
 //! long as the latter is in its trusted peers set.
 use crate::{
-    common::NetworkPublicKeys,
     connectivity_manager::{ConnectivityManager, ConnectivityRequest},
     counters,
     peer_manager::{
@@ -106,7 +105,7 @@ pub struct NetworkBuilder {
     listen_address: NetworkAddress,
     advertised_address: Option<NetworkAddress>,
     seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
-    trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
+    trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
     authentication_mode: Option<AuthenticationMode>,
     channel_size: usize,
     direct_send_protocols: Vec<ProtocolId>,
@@ -202,7 +201,7 @@ impl NetworkBuilder {
     /// Set trusted peers.
     pub fn trusted_peers(
         &mut self,
-        trusted_peers: HashMap<PeerId, NetworkPublicKeys>,
+        trusted_peers: HashMap<PeerId, x25519::PublicKey>,
     ) -> &mut Self {
         *self.trusted_peers.write().unwrap() = trusted_peers;
         self

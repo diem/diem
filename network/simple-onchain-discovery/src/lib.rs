@@ -13,10 +13,7 @@ use libra_types::{
     on_chain_config::{OnChainConfigPayload, ValidatorSet, ON_CHAIN_CONFIG_REGISTRY},
     validator_config::ValidatorConfig,
 };
-use network::{
-    common::NetworkPublicKeys,
-    connectivity_manager::{ConnectivityRequest, DiscoverySource},
-};
+use network::connectivity_manager::{ConnectivityRequest, DiscoverySource};
 use once_cell::sync::Lazy;
 use std::{convert::TryFrom, time::Instant};
 use subscription_service::ReconfigSubscription;
@@ -98,14 +95,7 @@ fn extract_updates(role: RoleType, node_set: ValidatorSet) -> Vec<ConnectivityRe
     updates.push(ConnectivityRequest::UpdateEligibleNodes(
         node_list
             .into_iter()
-            .map(|node| {
-                (
-                    *node.account_address(),
-                    NetworkPublicKeys {
-                        identity_public_key: public_key(role, node.config()),
-                    },
-                )
-            })
+            .map(|node| (*node.account_address(), public_key(role, node.config())))
             .collect(),
     ));
 

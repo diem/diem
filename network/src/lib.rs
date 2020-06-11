@@ -6,8 +6,6 @@
 #![recursion_limit = "1024"]
 // </Black magic>
 
-// Public exports
-pub use common::NetworkPublicKeys;
 pub use interface::NetworkProvider;
 
 pub mod common;

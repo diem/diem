@@ -5,8 +5,7 @@ use crate::{BuildSwarm, Error, ValidatorConfig};
 use anyhow::{ensure, Result};
 use libra_config::{
     config::{
-        DiscoveryMethod, NetworkPeerInfo, NetworkPeersConfig, NodeConfig, PeerNetworkId, RoleType,
-        UpstreamConfig,
+        DiscoveryMethod, NetworkPeersConfig, NodeConfig, PeerNetworkId, RoleType, UpstreamConfig,
     },
     generator,
     network_id::NetworkId,
@@ -185,12 +184,10 @@ impl FullNodeConfig {
 
             network_peers.peers.insert(
                 network.identity.peer_id_from_config().unwrap(),
-                NetworkPeerInfo {
-                    identity_public_key: network
-                        .identity
-                        .public_key_from_config()
-                        .ok_or(Error::MissingNetworkKeyPairs)?,
-                },
+                network
+                    .identity
+                    .public_key_from_config()
+                    .ok_or(Error::MissingNetworkKeyPairs)?,
             );
 
             configs.push(config);

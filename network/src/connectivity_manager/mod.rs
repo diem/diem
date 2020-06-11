@@ -27,16 +27,14 @@
 //! any partitions asap, as we aren't currently gossiping consensus messages or
 //! using a relay protocol.
 
-use crate::{
-    common::NetworkPublicKeys,
-    peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError},
-};
+use crate::peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError};
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
 use libra_config::network_id::NetworkContext;
+use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
@@ -57,7 +55,7 @@ mod test;
 pub struct ConnectivityManager<TTicker, TBackoff> {
     network_context: NetworkContext,
     /// Nodes which are eligible to join the network.
-    eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
+    eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
     /// PeerId and address of remote peers to which this peer is connected.
     connected: HashMap<PeerId, NetworkAddress>,
     /// Addresses of peers received from discovery sources.
@@ -101,7 +99,7 @@ pub enum ConnectivityRequest {
     /// Request to update known addresses of peer with id `PeerId` to given list.
     UpdateAddresses(DiscoverySource, HashMap<PeerId, Vec<NetworkAddress>>),
     /// Update set of nodes eligible to join the network.
-    UpdateEligibleNodes(HashMap<PeerId, NetworkPublicKeys>),
+    UpdateEligibleNodes(HashMap<PeerId, x25519::PublicKey>),
     /// Gets current size of dial queue. This is useful in tests.
     GetDialQueueSize(oneshot::Sender<usize>),
 }
@@ -140,7 +138,7 @@ where
     /// Creates a new instance of the [`ConnectivityManager`] actor.
     pub fn new(
         network_context: NetworkContext,
-        eligible: Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>,
+        eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
         seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
         ticker: TTicker,
         connection_reqs_tx: ConnectionRequestSender,
@@ -157,10 +155,7 @@ where
                     .find_noise_proto()
                     .expect("Unable to find x25519 key in address");
                 if !eligible_peers.contains_key(&id) {
-                    let public_keys = NetworkPublicKeys {
-                        identity_public_key: key,
-                    };
-                    eligible_peers.insert(*id, public_keys);
+                    eligible_peers.insert(*id, key);
                 }
             }
         }
