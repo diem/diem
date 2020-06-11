@@ -267,6 +267,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 error!("Error sending initialization notification");
             }
         } else {
+            assert!(self.initialization_listener.is_none());
             self.initialization_listener = Some(cb_sender);
         }
     }
@@ -866,16 +867,14 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 None => TargetType::HighestAvailable {
                     timeout_ms: self.config.long_poll_timeout_ms,
                 },
-                Some(sync_req) => {
-                    if sync_req.target.ledger_info().version() <= known_version {
-                        debug!(
-                            "[state sync] Reached version {}, no need to send more requests",
-                            known_version
-                        );
-                        return Ok(());
-                    }
-                    TargetType::TargetLedgerInfo(sync_req.target.clone())
+                Some(sync_req) if sync_req.target.ledger_info().version() <= known_version => {
+                    debug!(
+                        "[state sync] Reached version {}, no need to send more requests",
+                        known_version
+                    );
+                    return Ok(());
                 }
+                Some(sync_req) => TargetType::TargetLedgerInfo(sync_req.target.clone()),
             }
         };
 
