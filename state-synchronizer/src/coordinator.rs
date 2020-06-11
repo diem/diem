@@ -8,6 +8,7 @@ use crate::{
     executor_proxy::ExecutorProxyTrait,
     network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
     peer_manager::{PeerManager, PeerScoreUpdateType},
+    state_sync_client::{CoordinatorMessage, SyncRequest},
     PeerId, SynchronizerState,
 };
 use anyhow::{bail, ensure, format_err, Result};
@@ -22,7 +23,6 @@ use libra_config::config::{
 use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
 use libra_types::{
-    contract_event::ContractEvent,
     epoch_change::Verifier,
     ledger_info::LedgerInfoWithSignatures,
     transaction::{Transaction, TransactionListWithProof, Version},
@@ -34,32 +34,6 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::time::{interval, timeout};
-
-pub(crate) struct SyncRequest {
-    // The Result value returned to the caller is Error in case the StateSynchronizer failed to
-    // reach the target (the LI in the storage remains unchanged as if nothing happened).
-    pub callback: oneshot::Sender<Result<()>>,
-    pub target: LedgerInfoWithSignatures,
-    pub last_progress_tst: SystemTime,
-}
-
-/// message used by StateSyncClient for communication with Coordinator
-pub(crate) enum CoordinatorMessage {
-    // used to initiate new sync
-    Request(Box<SyncRequest>),
-    // used to notify about new txn commit
-    Commit(
-        // committed transactions
-        Vec<Transaction>,
-        // reconfiguration events
-        Vec<ContractEvent>,
-        // callback for recipient to send response back to this sender
-        oneshot::Sender<Result<CommitResponse>>,
-    ),
-    GetState(oneshot::Sender<SynchronizerState>),
-    // Receive a notification via a given channel when coordinator is initialized.
-    WaitInitialize(oneshot::Sender<Result<()>>),
-}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct PendingRequestInfo {

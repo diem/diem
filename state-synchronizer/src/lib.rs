@@ -11,7 +11,12 @@ use executor_types::ExecutedTrees;
 use libra_types::{
     account_address::AccountAddress, epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures,
 };
-pub use synchronizer::{StateSyncClient, StateSynchronizer};
+
+/// The state-synchronizer
+pub use synchronizer::StateSynchronizer;
+
+/// An internal client to query the state-synchronizer asynchronously
+pub use state_sync_client::StateSyncClient;
 
 mod chunk_request;
 mod chunk_response;
@@ -20,6 +25,7 @@ mod counters;
 mod executor_proxy;
 pub mod network;
 mod peer_manager;
+mod state_sync_client;
 mod synchronizer;
 
 type PeerId = AccountAddress;

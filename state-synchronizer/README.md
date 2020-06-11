@@ -11,13 +11,14 @@ State synchronizer is used by full nodes and validators to synchronize to the bl
 
 ```
 state-synchronizer/src
-├── chunk_request.rs  # request code
-├── chunk_response.rs # response code
-├── coordinator.rs    # main loop
-├── counter.rs        # counters we update for metrics
-├── executor_proxy.rs # communication with executor and storage
-├── lib.rs            # internal state of state-sync
-├── network.rs        # communication with network
-├── peer_manager.rs   # peer management and scoring
-└── synchronizer.rs   # bootstrapping of state-sync and client handle
+├── chunk_request.rs     # state-sync request
+├── chunk_response.rs    # state-sync response to request
+├── coordinator.rs       # main loop of state-sync
+├── counter.rs           # counters we update for metrics
+├── executor_proxy.rs    # communication with executor and storage
+├── lib.rs               # internal state of state-sync
+├── network.rs           # communication with network
+├── peer_manager.rs      # peer management and scoring
+└── state_sync_client.rs # client handle to query state-sync
+└── synchronizer.rs      # bootstrapping of state-sync
 ```
