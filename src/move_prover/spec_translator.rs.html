@@ -1448,6 +1448,18 @@
 <span id="1448">1448</span>
 <span id="1449">1449</span>
 <span id="1450">1450</span>
+<span id="1451">1451</span>
+<span id="1452">1452</span>
+<span id="1453">1453</span>
+<span id="1454">1454</span>
+<span id="1455">1455</span>
+<span id="1456">1456</span>
+<span id="1457">1457</span>
+<span id="1458">1458</span>
+<span id="1459">1459</span>
+<span id="1460">1460</span>
+<span id="1461">1461</span>
+<span id="1462">1462</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1479,7 +1491,7 @@
     <span class="ident">emit</span>, <span class="ident">emitln</span>,
     <span class="ident">env</span>::{
         <span class="ident">GlobalEnv</span>, <span class="ident">SpecVarId</span>, <span class="ident">ABORTS_IF_IS_PARTIAL_PRAGMA</span>, <span class="ident">ABORTS_IF_IS_STRICT_PRAGMA</span>,
-        <span class="ident">REQUIRES_IF_ABORTS</span>,
+        <span class="ident">REQUIRES_IF_ABORTS</span>, <span class="ident">SMOKE_TEST_PRAGMA</span>,
     },
     <span class="ident">symbol</span>::<span class="ident">Symbol</span>,
     <span class="ident">ty</span>::<span class="ident">TypeDisplayContext</span>,
@@ -1842,6 +1854,18 @@
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;;&quot;</span>)
             });
             <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>);
+        }
+
+        <span class="comment">// Smoke test mode</span>
+        <span class="kw">if</span> <span class="ident">func_target</span>.<span class="ident">is_pragma_true</span>(<span class="ident">SMOKE_TEST_PRAGMA</span>, <span class="op">|</span><span class="op">|</span> <span class="bool-val">false</span>) {
+            <span class="comment">// Generates `ensure $abort_flag;` to check if the move</span>
+            <span class="comment">// prover can prove `ensures false;` because the function</span>
+            <span class="comment">// always aborts.</span>
+            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_ensures</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">true</span>;
+            <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;ensures $abort_flag;\n&quot;</span>);
+            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_ensures</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">false</span>;
+            <span class="comment">// Ignore the post-condition specifications for this function</span>
+            <span class="kw">return</span>;
         }
 
         <span class="comment">// Generate aborts_if. Logically, if we have abort conditions P1..Pn, we have</span>
