@@ -41,7 +41,6 @@ impl CompiledScriptMut {
         ser.common.serialize_header(&mut binary_data)?;
         ser.common.serialize_table_indices(&mut binary_data)?;
 
-        write_u32_as_uleb128(&mut binary_data, temp.len() as u32)?;
         binary_data.extend(temp.as_inner())?;
 
         ser.serialize_main(&mut binary_data, self)?;
@@ -79,7 +78,6 @@ impl CompiledModuleMut {
         ser.common.serialize_header(&mut binary_data)?;
         ser.serialize_table_indices(&mut binary_data)?;
 
-        write_u32_as_uleb128(&mut binary_data, temp.len() as u32)?;
         binary_data.extend(temp.as_inner())?;
 
         write_u16_as_uleb128(&mut binary_data, self.self_module_handle_idx.0)?;

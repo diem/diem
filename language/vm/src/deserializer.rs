@@ -75,8 +75,7 @@ fn deserialize_compiled_script(binary: &[u8]) -> BinaryLoaderResult<CompiledScri
     let table_count = read_uleb_u8_internal(&mut cursor)?;
     let mut tables: Vec<Table> = Vec::new();
     read_tables(&mut cursor, table_count, &mut tables)?;
-    let content_len = read_uleb_u32_internal(&mut cursor)?;
-    check_tables(&mut tables, content_len)?;
+    let content_len = check_tables(&mut tables)?;
 
     let table_contents = read_table_contents(&mut cursor, content_len as usize)?;
 
@@ -97,8 +96,7 @@ fn deserialize_compiled_module(binary: &[u8]) -> BinaryLoaderResult<CompiledModu
     let table_count = read_uleb_u8_internal(&mut cursor)?;
     let mut tables: Vec<Table> = Vec::new();
     read_tables(&mut cursor, table_count, &mut tables)?;
-    let content_len = read_uleb_u32_internal(&mut cursor)?;
-    check_tables(&mut tables, content_len)?;
+    let content_len = check_tables(&mut tables)?;
 
     let table_contents = read_table_contents(&mut cursor, content_len as usize)?;
 
@@ -178,6 +176,7 @@ fn read_table(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Table> {
 
 fn read_table_contents(cursor: &mut Cursor<&[u8]>, n: usize) -> BinaryLoaderResult<Vec<u8>> {
     let mut bytes = vec![];
+    // TODO: can we rewrite this in a better way?
     for _ in 0..n {
         match cursor.read_u8() {
             Ok(b) => bytes.push(b),
@@ -193,7 +192,7 @@ fn read_table_contents(cursor: &mut Cursor<&[u8]>, n: usize) -> BinaryLoaderResu
 /// Verify correctness of tables.
 ///
 /// Tables cannot have duplicates, must cover the entire blob and must be disjoint.
-fn check_tables(tables: &mut Vec<Table>, content_length: u32) -> BinaryLoaderResult<()> {
+fn check_tables(tables: &mut Vec<Table>) -> BinaryLoaderResult<u32> {
     // there is no real reason to pass a mutable reference but we are sorting next line
     tables.sort_by(|t1, t2| t1.offset.cmp(&t2.offset));
 
@@ -209,17 +208,11 @@ fn check_tables(tables: &mut Vec<Table>, content_length: u32) -> BinaryLoaderRes
         if let Some(checked_offset) = current_offset.checked_add(table.count) {
             current_offset = checked_offset;
         }
-        if current_offset > content_length {
-            return Err(VMStatus::new(StatusCode::BAD_HEADER_TABLE));
-        }
         if !table_types.insert(table.kind) {
             return Err(VMStatus::new(StatusCode::DUPLICATE_TABLE));
         }
     }
-    if current_offset != content_length {
-        return Err(VMStatus::new(StatusCode::BAD_HEADER_TABLE));
-    }
-    Ok(())
+    Ok(current_offset)
 }
 
 //
