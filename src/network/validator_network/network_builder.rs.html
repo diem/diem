@@ -555,7 +555,7 @@
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">PING_FAILURES_TOLERATED</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">10</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAX_CONCURRENT_NETWORK_REQS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">100</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAX_CONCURRENT_NETWORK_NOTIFS</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">100</span>;
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAX_CONNECTION_DELAY_MS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">10</span> <span class="op">*</span> <span class="number">60</span> <span class="op">*</span> <span class="number">1000</span> <span class="comment">/* 10 minutes */</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">MAX_CONNECTION_DELAY_MS</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">10_000</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AuthenticationMode</span> {
