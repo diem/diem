@@ -98,7 +98,24 @@ impl TransactionStore {
             ));
         }
 
-        if self.check_if_full(&txn, current_sequence_number) {
+        // checks if Mempool is full
+        // If it's full, tries to free some space by evicting transactions from ParkingLot
+        // We only evict on attempt to insert a transaction that would be ready for broadcast upon insertion
+        if self.system_ttl_index.size() >= self.capacity
+            && self.check_txn_ready(&txn, current_sequence_number)
+        {
+            // try to free some space in Mempool from ParkingLot
+            if let Some((address, sequence_number)) = self.parking_lot_index.pop() {
+                if let Some(txn) = self
+                    .transactions
+                    .get_mut(&address)
+                    .and_then(|txns| txns.remove(&sequence_number))
+                {
+                    self.index_remove(&txn);
+                }
+            }
+        }
+        if self.system_ttl_index.size() >= self.capacity {
             return MempoolStatus::new(MempoolStatusCode::MempoolIsFull).with_message(format!(
                 "mempool size: {}, capacity: {}",
                 self.system_ttl_index.size(),
@@ -141,27 +158,6 @@ impl TransactionStore {
         OP_COUNTERS.set("txn.system_ttl_index", self.system_ttl_index.size());
         OP_COUNTERS.set("txn.parking_lot_index", self.parking_lot_index.size());
         OP_COUNTERS.set("txn.priority_index", self.priority_index.size());
-    }
-
-    /// checks if Mempool is full
-    /// If it's full, tries to free some space by evicting transactions from ParkingLot
-    /// We only evict on attempt to insert a transaction that would be ready for broadcast upon insertion
-    fn check_if_full(&mut self, txn: &MempoolTransaction, curr_sequence_number: u64) -> bool {
-        if self.system_ttl_index.size() >= self.capacity
-            && self.check_txn_ready(txn, curr_sequence_number)
-        {
-            // try to free some space in Mempool from ParkingLot
-            if let Some((address, sequence_number)) = self.parking_lot_index.pop() {
-                if let Some(txn) = self
-                    .transactions
-                    .get_mut(&address)
-                    .and_then(|txns| txns.remove(&sequence_number))
-                {
-                    self.index_remove(&txn);
-                }
-            }
-        }
-        self.system_ttl_index.size() >= self.capacity
     }
 
     /// check if a transaction would be ready for broadcast in mempool upon insertion (without inserting it)
