@@ -12,7 +12,6 @@
 
 use crate::noise::stream::NoiseStream;
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-use libra_config::config::NetworkPeerInfo;
 use libra_crypto::{noise, x25519};
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
@@ -79,7 +78,7 @@ pub enum HandshakeAuthMode {
         // mutual-auth scenarios because we have a bounded set of trusted peers
         // that rarely changes.
         anti_replay_timestamps: RwLock<AntiReplayTimestamps>,
-        trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>,
+        trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
     },
     /// In `ServerOnly` mode, the dialer authenticates the server. However, the
     /// server does not care who connects to them and will allow inbound connections
@@ -88,7 +87,7 @@ pub enum HandshakeAuthMode {
 }
 
 impl HandshakeAuthMode {
-    pub fn mutual(trusted_peers: Arc<RwLock<HashMap<PeerId, NetworkPeerInfo>>>) -> Self {
+    pub fn mutual(trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>) -> Self {
         HandshakeAuthMode::Mutual {
             anti_replay_timestamps: RwLock::new(AntiReplayTimestamps::default()),
             trusted_peers,
@@ -105,7 +104,7 @@ impl HandshakeAuthMode {
         }
     }
 
-    fn trusted_peers(&self) -> Option<&RwLock<HashMap<PeerId, NetworkPeerInfo>>> {
+    fn trusted_peers(&self) -> Option<&RwLock<HashMap<PeerId, x25519::PublicKey>>> {
         match &self {
             HandshakeAuthMode::Mutual { trusted_peers, .. } => Some(&trusted_peers),
             HandshakeAuthMode::ServerOnly => None,
@@ -330,13 +329,13 @@ impl NoiseUpgrader {
                 })?
                 .get(&remote_peer_id)
             {
-                Some(remote_public_keys) => {
-                    if remote_public_keys.identity_public_key != remote_public_key {
+                Some(key) => {
+                    if key != &remote_public_key {
                         return Err(io::Error::new(
                             io::ErrorKind::InvalidData,
                             format!(
                                 "noise: peer id {} connecting to us with an unknown public key: {} (expected: {})",
-                                remote_peer_id, remote_public_key, remote_public_keys.identity_public_key,
+                                remote_peer_id, remote_public_key, key,
                             ),
                         ));
                     }
@@ -428,7 +427,6 @@ impl NoiseUpgrader {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::common::NetworkPublicKeys;
     use futures::{executor::block_on, future::join};
     use libra_crypto::{test_utils::TEST_SEED, traits::Uniform as _};
     use memsocket::MemorySocket;
@@ -452,17 +450,14 @@ mod test {
 
         let (client_auth, server_auth, client_peer_id, server_peer_id) = if is_mutual_auth {
             let client_peer_id = PeerId::random();
-            let client_keys = NetworkPublicKeys {
-                identity_public_key: client_public,
-            };
             let server_peer_id = PeerId::random();
-            let server_keys = NetworkPublicKeys {
-                identity_public_key: server_public,
-            };
             let trusted_peers = Arc::new(RwLock::new(
-                vec![(client_peer_id, client_keys), (server_peer_id, server_keys)]
-                    .into_iter()
-                    .collect(),
+                vec![
+                    (client_peer_id, client_public),
+                    (server_peer_id, server_public),
+                ]
+                .into_iter()
+                .collect(),
             ));
             let client_auth = HandshakeAuthMode::mutual(trusted_peers.clone());
             let server_auth = HandshakeAuthMode::mutual(trusted_peers);

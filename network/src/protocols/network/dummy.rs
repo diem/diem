@@ -13,7 +13,7 @@ use crate::{
     validator_network::network_builder::{
         AuthenticationMode, NetworkBuilder, NETWORK_CHANNEL_SIZE,
     },
-    NetworkPublicKeys, ProtocolId,
+    ProtocolId,
 };
 use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
@@ -116,18 +116,8 @@ pub fn setup_network() -> DummyNetwork {
 
     // Setup trusted peers.
     let trusted_peers: HashMap<_, _> = vec![
-        (
-            dialer_peer_id,
-            NetworkPublicKeys {
-                identity_public_key: dialer_identity_public_key,
-            },
-        ),
-        (
-            listener_peer_id,
-            NetworkPublicKeys {
-                identity_public_key: listener_identity_public_key,
-            },
-        ),
+        (dialer_peer_id, dialer_identity_public_key),
+        (listener_peer_id, listener_identity_public_key),
     ]
     .into_iter()
     .collect();

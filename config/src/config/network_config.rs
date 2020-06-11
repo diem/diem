@@ -224,19 +224,13 @@ impl SeedPeersConfig {
 pub struct NetworkPeersConfig {
     #[serde(flatten)]
     #[serde(serialize_with = "utils::serialize_ordered_map")]
-    pub peers: HashMap<PeerId, NetworkPeerInfo>,
+    pub peers: HashMap<PeerId, x25519::PublicKey>,
 }
 
 impl std::fmt::Debug for NetworkPeersConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "<{} keys>", self.peers.len())
     }
-}
-
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-pub struct NetworkPeerInfo {
-    #[serde(rename = "ni")]
-    pub identity_public_key: x25519::PublicKey,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]

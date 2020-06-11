@@ -41,10 +41,7 @@ fn setup_conn_mgr(
         .into_iter()
         .map(|peer_id| {
             let identity_public_key = x25519::PrivateKey::generate(&mut rng).public_key();
-            let pubkeys = NetworkPublicKeys {
-                identity_public_key,
-            };
-            (peer_id, pubkeys)
+            (peer_id, identity_public_key)
         })
         .collect::<HashMap<_, _>>();
 
@@ -70,16 +67,11 @@ fn setup_conn_mgr(
     )
 }
 
-fn gen_peer() -> (PeerId, NetworkPublicKeys) {
+fn gen_peer() -> (PeerId, x25519::PublicKey) {
     let peer_id = PeerId::random();
     let mut rng = StdRng::from_seed(TEST_SEED);
     let identity_public_key = x25519::PrivateKey::generate(&mut rng).public_key();
-    (
-        peer_id,
-        NetworkPublicKeys {
-            identity_public_key,
-        },
-    )
+    (peer_id, identity_public_key)
 }
 
 async fn get_dial_queue_size(conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>) -> usize {

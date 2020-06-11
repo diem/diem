@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    common::NetworkPublicKeys,
     noise::{stream::NoiseStream, HandshakeAuthMode, NoiseUpgrader},
     protocols::{
         identity::exchange_handshake,
@@ -279,7 +278,7 @@ where
         base_transport: TTransport,
         self_peer_id: PeerId,
         identity_key: x25519::PrivateKey,
-        trusted_peers: Option<Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>>,
+        trusted_peers: Option<Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>>,
         handshake_version: u8,
         network_id: NetworkId,
         application_protocols: SupportedProtocols,
@@ -497,10 +496,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        common::NetworkPublicKeys,
-        protocols::wire::handshake::v1::{ProtocolId, SupportedProtocols},
-    };
+    use crate::protocols::wire::handshake::v1::{ProtocolId, SupportedProtocols};
     use bytes::{Bytes, BytesMut};
     use futures::{executor::block_on, future, io::AsyncWriteExt};
     use libra_crypto::{test_utils::TEST_SEED, traits::Uniform};
@@ -518,15 +514,11 @@ mod test {
         key1: &x25519::PrivateKey,
         id2: PeerId,
         key2: &x25519::PrivateKey,
-    ) -> Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>> {
-        let pubkeys1 = NetworkPublicKeys {
-            identity_public_key: key1.public_key(),
-        };
-        let pubkeys2 = NetworkPublicKeys {
-            identity_public_key: key2.public_key(),
-        };
+    ) -> Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>> {
         Arc::new(RwLock::new(
-            vec![(id1, pubkeys1), (id2, pubkeys2)].into_iter().collect(),
+            vec![(id1, key1.public_key()), (id2, key2.public_key())]
+                .into_iter()
+                .collect(),
         ))
     }
 
@@ -542,7 +534,7 @@ mod test {
         Runtime,
         (PeerId, LibraNetTransport<TTransport>),
         (PeerId, LibraNetTransport<TTransport>),
-        Option<Arc<RwLock<HashMap<PeerId, NetworkPublicKeys>>>>,
+        Option<Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>>,
         SupportedProtocols,
     )
     where

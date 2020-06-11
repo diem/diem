@@ -22,10 +22,7 @@ use libra_types::{
     validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
     validator_verifier::random_validator_verifier, waypoint::Waypoint,
 };
-use network::{
-    validator_network::network_builder::{AuthenticationMode, NetworkBuilder},
-    NetworkPublicKeys,
-};
+use network::validator_network::network_builder::{AuthenticationMode, NetworkBuilder};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::HashMap,
@@ -237,9 +234,7 @@ impl SynchronizerEnv {
             .map(|public_keys| {
                 (
                     *public_keys.account_address(),
-                    NetworkPublicKeys {
-                        identity_public_key: public_keys.network_identity_public_key(),
-                    },
+                    public_keys.network_identity_public_key(),
                 )
             })
             .collect();

@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::ProtocolId;
-use libra_config::config::NetworkPeerInfo;
 use std::fmt;
 
 /// A Negotiated substream encapsulates a protocol and a substream for which that protocol has been
@@ -23,6 +22,3 @@ impl<TSubstream> fmt::Debug for NegotiatedSubstream<TSubstream> {
         )
     }
 }
-
-/// Public keys used at the network layer
-pub type NetworkPublicKeys = NetworkPeerInfo;
