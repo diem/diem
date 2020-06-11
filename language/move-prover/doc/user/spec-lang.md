@@ -4,8 +4,7 @@ The Move Specification language (abbreviated as *Spec language*) is a language f
 contracts. It plays together with the [Move Prover](./prover-guide.md), a tool which can formally verify the
 correctness of such properties. In contrast to traditional testing, verification of properties in the Spec language
 is exhaustive and holds for all possible inputs and blockchain states of a Move contract. This document gives
-an overview of the design and usage of the Spec language. Knowledge of the Move language itself is expected
-from a reader.
+an overview of the design and usage of the Spec language. The reader is expected to have knowledge of the Move language.
 
 - [Type System](#type-system)
 - [Naming](#naming)
@@ -36,13 +35,13 @@ The type system of the Spec language is mostly identical to that of Move. Howeve
 
 - All integer types of Move (`u8`, `u64`, and `u128`) are treated as the same type. In specifications, this
   type is called `num`, which is an arbitrary precision signed integer type. When the Spec language refers to a name
-  which represents an `u8` or such, it will be automatically widened to `num`. This allows to write Spec expressions
+  which represents an `u8` or such, it will be automatically widened to `num`. This allows writing Spec expressions
   like `x + 1 <= max_u128()` or `x - y >= 0` without needing to worry about overflow or underflow.
-- The Move types `&T`, `&mut T`, and `T` are considered to be equivalent for the Spec language.  Equality is interepreted as value equality.  There is no need
-  to dereferencing a reference from the Move program; it will be automatically
-  dereferenced as needed. This simplification is enabled since the Spec language cannot modify values from a Move program and the Move language cannot reason about
-  reference equality (and therefore no need for doing so in the Spec language).
-- There are a few additional types compared to the Move type system. Those will be discussed as we look at expression
+- The Move types `&T`, `&mut T`, and `T` are considered equivalent for the Spec language.  Equality is interepreted as value equality.
+  There is no need to worry about dereferencing a reference from the Move program: these are automatically dereferenced as needed.
+  This simplification is possible because the Spec language cannot modify values from a Move program and the Move language cannot reason about
+  reference equality (which eliminates the for doing so in the Spec language).
+- There are a few additional types compared to the Move type system. These will be discussed when we look at the expression
   constructs which support them.
 
 ## Naming
@@ -59,7 +58,7 @@ if aliased via a Move `use` clause.
 
 ## Expressions
 
-The available expressions in Spec language are a subset of the Move language, plus a set of additional constructs.
+The available expressions in Spec language are a subset of the Move language plus a set of additional constructs.
 
 - All Move operators are supported, except `&`, `&mut`, and `*` (dereference).
 - In addition to the existing operators, vector subscript `v[i]`, slicing `v[i..j]`, and range construction
