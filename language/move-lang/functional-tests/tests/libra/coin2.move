@@ -1,5 +1,5 @@
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
 use 0x0::Libra;
 use 0x0::Coin2::Coin2;

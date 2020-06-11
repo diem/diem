@@ -136,3 +136,19 @@ fn mint_to_new_account() {
         &TransactionStatus::Keep(VMStatus::new(StatusCode::MISSING_DATA))
     ));
 }
+
+#[test]
+fn tiered_update_exchange_rate() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    let blessed = Account::new_blessed_tc();
+
+    // set coin1 rate to 1.23 LBR
+    executor.execute_and_apply(blessed.signed_script_txn(
+        encode_update_exchange_rate(account_config::coin1_tag(), 0, 123, 100),
+        0,
+    ));
+    let post_update = executor
+        .read_account_resource(&blessed)
+        .expect("blessed executed txn");
+    assert_eq!(1, post_update.sequence_number());
+}

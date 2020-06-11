@@ -653,6 +653,7 @@ module Libra {
         account: &signer,
         lbr_exchange_rate: FixedPoint32
     ) acquires CurrencyInfo {
+        Association::assert_account_is_blessed(account);
         assert_assoc_and_currency<FromCoinType>(account);
         let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(currency_addr());
         currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
