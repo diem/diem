@@ -4,6 +4,7 @@
 //! sender: alice
 module FooConfig {
     use 0x0::LibraConfig;
+    use 0x0::CoreAddresses;
 
     struct T {
         version: u64,
@@ -16,7 +17,7 @@ module FooConfig {
     public fun claim(account: &signer) {
         LibraConfig::claim_delegated_modify_config<T>(
             account,
-            LibraConfig::default_config_address()
+            CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
         );
     }
 

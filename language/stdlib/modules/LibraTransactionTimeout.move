@@ -1,6 +1,7 @@
 address 0x0 {
 
 module LibraTransactionTimeout {
+    use 0x0::CoreAddresses;
   use 0x0::Signer;
   use 0x0::Transaction;
   use 0x0::LibraTimestamp;
@@ -12,16 +13,16 @@ module LibraTransactionTimeout {
 
   public fun initialize(association: &signer) {
     // Only callable by the Association address
-    Transaction::assert(Signer::address_of(association) == 0xA550C18, 1);
+    Transaction::assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
     // Currently set to 1day.
     move_to(association, TTL {duration_microseconds: 86400000000});
   }
 
   public fun set_timeout(association: &signer, new_duration: u64) acquires TTL {
     // Only callable by the Association address
-    Transaction::assert(Signer::address_of(association) == 0xA550C18, 1);
+    Transaction::assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
 
-    let timeout = borrow_global_mut<TTL>(0xA550C18);
+    let timeout = borrow_global_mut<TTL>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
     timeout.duration_microseconds = new_duration;
   }
 
@@ -32,7 +33,7 @@ module LibraTransactionTimeout {
     };
 
     let current_block_time = LibraTimestamp::now_microseconds();
-    let timeout = borrow_global<TTL>(0xA550C18).duration_microseconds;
+    let timeout = borrow_global<TTL>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).duration_microseconds;
     let _max_txn_time = current_block_time + timeout;
 
     let txn_time_microseconds = timestamp * 1000000;

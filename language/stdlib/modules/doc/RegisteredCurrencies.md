@@ -177,7 +177,7 @@
 
 
 <pre><code><b>fun</b> <a href="#0x0_RegisteredCurrencies_singleton_address">singleton_address</a>(): address {
-    <a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>()
+    <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>()
 }
 </code></pre>
 
@@ -197,17 +197,8 @@
 
 
 <pre><code>pragma verify = <b>true</b>;
-</code></pre>
-
-
-singleton_address() is the spec version of singleton_address, which is
-defined in the LibraConfig module we are in.
-
-
 <a name="0x0_RegisteredCurrencies_spec_singleton_address"></a>
-
-
-<pre><code><b>define</b> <a href="#0x0_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>():address { <a href="LibraConfig.md#0x0_LibraConfig_spec_default_config_address">LibraConfig::spec_default_config_address</a>() }
+<b>define</b> <a href="#0x0_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>(): address { 0xF1A95 }
 <a name="0x0_RegisteredCurrencies_spec_is_initialized"></a>
 <b>define</b> <a href="#0x0_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>():bool {
     <a href="LibraConfig.md#0x0_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x0_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="#0x0_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>())

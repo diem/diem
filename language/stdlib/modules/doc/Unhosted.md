@@ -114,7 +114,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Unhosted_limits_addr">limits_addr</a>(): address {
-    0xA550C18
+    <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()
 }
 </code></pre>
 

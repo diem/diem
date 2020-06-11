@@ -24,10 +24,10 @@
 The
 <code><a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a></code> resource holds the
 <code><a href="LibraAccount.md#0x0_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a></code> for the
-<code>0xFEE</code> account.
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>()</code> account.
 This is used for the collection of the transaction fees since it
 must be sent from the account at the
-<code>0xB1E55ED</code> address.
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()</code> address.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>
@@ -127,7 +127,7 @@ We then use this to determine if the /
 
 Called in genesis. Sets up the needed resources to collect
 transaction fees by the
-<code>0xB1E55ED</code> account.
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()</code> account.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_initialize">initialize</a>(blessed_account: &signer, fee_account: &signer)
@@ -140,7 +140,7 @@ transaction fees by the
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_initialize">initialize</a>(blessed_account: &signer, fee_account: &signer) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_account) == 0xB1E55ED, 0);
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_account) == <a href="CoreAddresses.md#0x0_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>(), 0);
     <b>let</b> cap = <a href="LibraAccount.md#0x0_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(fee_account);
     move_to(blessed_account, <a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a> { cap });
     move_to(blessed_account, <a href="#0x0_TransactionFee_LBRIdent">LBRIdent</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;{})
@@ -170,7 +170,7 @@ currency.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(fee_account: &signer, burn_cap: &BurnCapability&lt;CoinType&gt;) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(fee_account) == 0xFEE, 0);
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(fee_account) == <a href="CoreAddresses.md#0x0_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>(), 0);
     <a href="LibraAccount.md#0x0_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;CoinType&gt;(fee_account);
     move_to(fee_account, <a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a>&lt;CoinType&gt;{
         preburn: <a href="Libra.md#0x0_Libra_new_preburn_with_capability">Libra::new_preburn_with_capability</a>(burn_cap)
@@ -202,7 +202,7 @@ transaction fees.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_is_lbr">is_lbr</a>&lt;CoinType&gt;(): bool {
-    exists&lt;<a href="#0x0_TransactionFee_LBRIdent">LBRIdent</a>&lt;CoinType&gt;&gt;(0xB1E55ED)
+    exists&lt;<a href="#0x0_TransactionFee_LBRIdent">LBRIdent</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>())
 }
 </code></pre>
 
@@ -233,7 +233,7 @@ underlying fiat.
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_preburn_fees">preburn_fees</a>&lt;CoinType&gt;(blessed_sender: &signer)
 <b>acquires</b> <a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>, <a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a> {
     <b>if</b> (<a href="#0x0_TransactionFee_is_lbr">is_lbr</a>&lt;CoinType&gt;()) {
-        <b>let</b> amount = <a href="LibraAccount.md#0x0_LibraAccount_balance">LibraAccount::balance</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;(0xFEE);
+        <b>let</b> amount = <a href="LibraAccount.md#0x0_LibraAccount_balance">LibraAccount::balance</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>());
         <b>let</b> coins = <a href="LibraAccount.md#0x0_LibraAccount_withdraw_from">LibraAccount::withdraw_from</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;(
             &borrow_global&lt;<a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_sender)).cap,
             amount
@@ -242,7 +242,7 @@ underlying fiat.
         <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>&lt;<a href="Coin1.md#0x0_Coin1">Coin1</a>&gt;(coin1);
         <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;(coin2)
     } <b>else</b> {
-        <b>let</b> amount = <a href="LibraAccount.md#0x0_LibraAccount_balance">LibraAccount::balance</a>&lt;CoinType&gt;(0xFEE);
+        <b>let</b> amount = <a href="LibraAccount.md#0x0_LibraAccount_balance">LibraAccount::balance</a>&lt;CoinType&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>());
         <b>let</b> coins = <a href="LibraAccount.md#0x0_LibraAccount_withdraw_from">LibraAccount::withdraw_from</a>&lt;CoinType&gt;(
             &borrow_global&lt;<a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_sender)).cap,
             amount
@@ -275,11 +275,11 @@ Burns the already preburned fees from a previous call to
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_burn_fees">burn_fees</a>&lt;CoinType&gt;(blessed_account: &signer, burn_cap: &BurnCapability&lt;CoinType&gt;)
 <b>acquires</b> <a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a> {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_account) == 0xB1E55ED, 0);
-    <b>let</b> preburn = &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a>&lt;CoinType&gt;&gt;(0xFEE).preburn;
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_account) == <a href="CoreAddresses.md#0x0_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>(), 0);
+    <b>let</b> preburn = &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>()).preburn;
     <a href="Libra.md#0x0_Libra_burn_with_resource_cap">Libra::burn_with_resource_cap</a>(
         preburn,
-        0xFEE,
+        <a href="CoreAddresses.md#0x0_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>(),
         burn_cap
     )
 }
@@ -306,11 +306,11 @@ Burns the already preburned fees from a previous call to
 
 <pre><code><b>fun</b> <a href="#0x0_TransactionFee_preburn_coin">preburn_coin</a>&lt;CoinType&gt;(coin: <a href="Libra.md#0x0_Libra">Libra</a>&lt;CoinType&gt;)
 <b>acquires</b> <a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a> {
-    <b>let</b> preburn = &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a>&lt;CoinType&gt;&gt;(0xFEE).preburn;
+    <b>let</b> preburn = &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>()).preburn;
     <a href="Libra.md#0x0_Libra_preburn_with_resource">Libra::preburn_with_resource</a>(
         coin,
         preburn,
-        0xFEE
+        <a href="CoreAddresses.md#0x0_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>()
     );
 }
 </code></pre>

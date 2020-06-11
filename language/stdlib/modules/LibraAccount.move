@@ -2,6 +2,7 @@ address 0x0 {
 
 // The module for the account resource that governs every Libra account
 module LibraAccount {
+    use 0x0::CoreAddresses;
     use 0x0::AccountLimits;
     use 0x0::Association;
     use 0x0::Coin1::Coin1;
@@ -142,7 +143,7 @@ module LibraAccount {
         compliance_public_key: vector<u8>,
     ) {
         Transaction::assert(exists_at(addr), 0);
-        Transaction::assert(Signer::address_of(association) == 0xA550C18, 0);
+        Transaction::assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
         let account = create_signer(addr);
         VASP::publish_parent_vasp_credential(
             association, &account, human_name, base_url, compliance_public_key
@@ -151,7 +152,7 @@ module LibraAccount {
     }
 
     public fun initialize(association: &signer) {
-        Transaction::assert(Signer::address_of(association) == 0xA550C18, 0);
+        Transaction::assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
         move_to(
             association,
             AccountOperationsCapability {
@@ -246,12 +247,12 @@ module LibraAccount {
 
         // Ensure that this deposit is compliant with the account limits on
         // this account.
-        let _ = borrow_global<AccountOperationsCapability>(0xA550C18);
+        let _ = borrow_global<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
         /*Transaction::assert(
             AccountLimits::update_deposit_limits<Token>(
                 deposit_value,
                 payee,
-                &borrow_global<AccountOperationsCapability>(0xA550C18).limits_cap
+                &borrow_global<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).limits_cap
             ),
             9
         );*/
@@ -331,11 +332,11 @@ module LibraAccount {
     ): Libra<Token> acquires AccountOperationsCapability {
         // Make sure that this withdrawal is compliant with the limits on
         // the account.
-        let _  = borrow_global<AccountOperationsCapability>(0xA550C18);
+        let _  = borrow_global<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
         /*let can_withdraw = AccountLimits::update_withdrawal_limits<Token>(
             amount,
             addr,
-            &borrow_global<AccountOperationsCapability>(0xA550C18).limits_cap
+            &borrow_global<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).limits_cap
         );
         Transaction::assert(can_withdraw, 11);*/
         Libra::withdraw(&mut balance.coin, amount)
@@ -464,7 +465,7 @@ module LibraAccount {
     ) {
         let new_account_addr = Signer::address_of(&new_account);
         // cannot create an account at the reserved address 0x0
-        Transaction::assert(new_account_addr != 0x0, 0);
+        Transaction::assert(new_account_addr != CoreAddresses::VM_RESERVED_ADDRESS(), 0);
 
         // (1) publish LibraAccount
         let authentication_key = auth_key_prefix;
@@ -703,7 +704,7 @@ module LibraAccount {
         Transaction::assert(frozen_address != Association::root_address(), 14);
         borrow_global_mut<LibraAccount>(frozen_address).is_frozen = true;
         Event::emit_event<FreezeAccountEvent>(
-            &mut borrow_global_mut<AccountOperationsCapability>(0xA550C18).freeze_event_handle,
+            &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).freeze_event_handle,
             FreezeAccountEvent {
                 initiator_address,
                 frozen_address
@@ -718,7 +719,7 @@ module LibraAccount {
         assert_can_freeze(initiator_address);
         borrow_global_mut<LibraAccount>(unfrozen_address).is_frozen = false;
         Event::emit_event<UnfreezeAccountEvent>(
-            &mut borrow_global_mut<AccountOperationsCapability>(0xA550C18).unfreeze_event_handle,
+            &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).unfreeze_event_handle,
             UnfreezeAccountEvent {
                 initiator_address,
                 unfrozen_address
@@ -792,7 +793,7 @@ module LibraAccount {
 
         if (transaction_fee_amount > 0) {
             let transaction_fee = withdraw_from_balance(sender, sender_balance, transaction_fee_amount);
-            Libra::deposit(&mut borrow_global_mut<Balance<Token>>(0xFEE).coin, transaction_fee);
+            Libra::deposit(&mut borrow_global_mut<Balance<Token>>(CoreAddresses::TRANSACTION_FEE_ADDRESS()).coin, transaction_fee);
         }
     }
 

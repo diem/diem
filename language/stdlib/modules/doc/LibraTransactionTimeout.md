@@ -57,7 +57,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTransactionTimeout_initialize">initialize</a>(association: &signer) {
   // Only callable by the <a href="Association.md#0x0_Association">Association</a> address
-  Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == 0xA550C18, 1);
+  Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1);
   // Currently set <b>to</b> 1day.
   move_to(association, <a href="#0x0_LibraTransactionTimeout_TTL">TTL</a> {duration_microseconds: 86400000000});
 }
@@ -84,9 +84,9 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraTransactionTimeout_set_timeout">set_timeout</a>(association: &signer, new_duration: u64) <b>acquires</b> <a href="#0x0_LibraTransactionTimeout_TTL">TTL</a> {
   // Only callable by the <a href="Association.md#0x0_Association">Association</a> address
-  Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == 0xA550C18, 1);
+  Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1);
 
-  <b>let</b> timeout = borrow_global_mut&lt;<a href="#0x0_LibraTransactionTimeout_TTL">TTL</a>&gt;(0xA550C18);
+  <b>let</b> timeout = borrow_global_mut&lt;<a href="#0x0_LibraTransactionTimeout_TTL">TTL</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>());
   timeout.duration_microseconds = new_duration;
 }
 </code></pre>
@@ -117,7 +117,7 @@
   };
 
   <b>let</b> current_block_time = <a href="LibraTimestamp.md#0x0_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
-  <b>let</b> timeout = borrow_global&lt;<a href="#0x0_LibraTransactionTimeout_TTL">TTL</a>&gt;(0xA550C18).duration_microseconds;
+  <b>let</b> timeout = borrow_global&lt;<a href="#0x0_LibraTransactionTimeout_TTL">TTL</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()).duration_microseconds;
   <b>let</b> _max_txn_time = current_block_time + timeout;
 
   <b>let</b> txn_time_microseconds = timestamp * 1000000;

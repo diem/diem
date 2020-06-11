@@ -148,7 +148,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraSystem_initialize_validator_set">initialize_validator_set</a>(config_account: &signer) {
     Transaction::assert(
-        <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(),
+        <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(),
         1
     );
 
@@ -183,7 +183,7 @@
 
 
 <pre><code><b>fun</b> <a href="#0x0_LibraSystem_set_validator_set">set_validator_set</a>(value: <a href="#0x0_LibraSystem">LibraSystem</a>) <b>acquires</b> <a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    <a href="LibraConfig.md#0x0_LibraConfig_set_with_capability">LibraConfig::set_with_capability</a>&lt;<a href="#0x0_LibraSystem">LibraSystem</a>&gt;(&borrow_global&lt;<a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>()).cap, value)
+    <a href="LibraConfig.md#0x0_LibraConfig_set_with_capability">LibraConfig::set_with_capability</a>&lt;<a href="#0x0_LibraSystem">LibraSystem</a>&gt;(&borrow_global&lt;<a href="#0x0_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>()).cap, value)
 }
 </code></pre>
 
@@ -496,7 +496,8 @@
 <pre><code><b>fun</b> <a href="#0x0_LibraSystem_is_authorized_to_reconfigure_">is_authorized_to_reconfigure_</a>(account: &signer): bool {
     <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     // succeed fast
-    <b>if</b> (sender == 0xA550C18 || sender == 0x0) {
+    <b>if</b> (sender == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>() ||
+        sender == <a href="CoreAddresses.md#0x0_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
         <b>return</b> <b>true</b>
     };
     <b>let</b> validators = &<a href="#0x0_LibraSystem_get_validator_set">get_validator_set</a>().validators;

@@ -443,7 +443,7 @@ Return whether the account at
 
 
 <pre><code><b>fun</b> <a href="#0x0_Association_treasury_compliance_account">treasury_compliance_account</a>(): address {
-    0xB1E55ED
+    <a href="CoreAddresses.md#0x0_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()
 }
 </code></pre>
 
@@ -468,7 +468,7 @@ The address at which the root account will be published.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_root_address">root_address</a>(): address {
-    0xA550C18
+    <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()
 }
 </code></pre>
 

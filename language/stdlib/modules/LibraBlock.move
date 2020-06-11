@@ -1,6 +1,7 @@
 address 0x0 {
 
 module LibraBlock {
+    use 0x0::CoreAddresses;
     use 0x0::Event;
     use 0x0::LibraSystem;
     use 0x0::LibraTimestamp;
@@ -28,7 +29,7 @@ module LibraBlock {
     // Currently, it is invoked in the genesis transaction
     public fun initialize_block_metadata(account: &signer) {
       // Only callable by the Association address
-      Transaction::assert(Signer::address_of(account) == 0xA550C18, 1);
+      Transaction::assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
 
       move_to<BlockMetadata>(
           account,
@@ -52,7 +53,7 @@ module LibraBlock {
         proposer: address
     ) acquires BlockMetadata {
         // Can only be invoked by LibraVM privilege.
-        Transaction::assert(Signer::address_of(vm) == 0x0, 33);
+        Transaction::assert(Signer::address_of(vm) == CoreAddresses::VM_RESERVED_ADDRESS(), 33);
 
         process_block_prologue(vm,  round, timestamp, previous_block_votes, proposer);
 
@@ -67,10 +68,10 @@ module LibraBlock {
         previous_block_votes: vector<address>,
         proposer: address
     ) acquires BlockMetadata {
-        let block_metadata_ref = borrow_global_mut<BlockMetadata>(0xA550C18);
+        let block_metadata_ref = borrow_global_mut<BlockMetadata>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
 
         // TODO: Figure out a story for errors in the system transactions.
-        if(proposer != 0x0) Transaction::assert(LibraSystem::is_validator(proposer), 5002);
+        if(proposer != CoreAddresses::VM_RESERVED_ADDRESS()) Transaction::assert(LibraSystem::is_validator(proposer), 5002);
         LibraTimestamp::update_global_time(vm, proposer, timestamp);
         block_metadata_ref.height = block_metadata_ref.height + 1;
         Event::emit_event<NewBlockEvent>(
@@ -86,7 +87,7 @@ module LibraBlock {
 
     // Get the current block height
     public fun get_current_block_height(): u64 acquires BlockMetadata {
-      borrow_global<BlockMetadata>(0xA550C18).height
+      borrow_global<BlockMetadata>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).height
     }
 }
 

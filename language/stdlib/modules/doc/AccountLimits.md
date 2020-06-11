@@ -184,7 +184,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_grant_calling_capability">grant_calling_capability</a>(account: &signer): <a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a> {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == 0xA550C18, 3000);
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 3000);
     <a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a>{}
 }
 </code></pre>
@@ -453,7 +453,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_default_limits_addr">default_limits_addr</a>(): address {
-    0xA550C18
+    <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()
 }
 </code></pre>
 

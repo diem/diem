@@ -138,7 +138,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_publish">publish</a>(creator: &signer, account: &signer) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(creator) == 0xA550C18, 1101);
+    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(creator) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1101);
     move_to(account, <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
         config: <a href="Option.md#0x0_Option_none">Option::none</a>(),
         operator_account: <a href="Option.md#0x0_Option_none">Option::none</a>(),

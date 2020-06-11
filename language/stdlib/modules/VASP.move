@@ -152,10 +152,6 @@ module VASP {
         borrow_global_mut<ParentVASP>(parent_addr).compliance_public_key = new_key
     }
 
-    fun singleton_addr(): address {
-        0xA550C18
-    }
-
     // A year in microseconds
     fun cert_lifetime(): u64 {
         31540000000000

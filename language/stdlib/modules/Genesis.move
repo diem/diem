@@ -5,6 +5,7 @@
 address 0x0 {
 module Genesis {
     use 0x0::Association::{Self, PublishModule};
+    use 0x0::CoreAddresses;
     use 0x0::Coin1::{Self, Coin1};
     use 0x0::Coin2::{Self, Coin2};
     use 0x0::Event;
@@ -64,7 +65,7 @@ module Genesis {
         Libra::grant_mint_capability_to_association<Coin2>(association);
 
         // Register transaction fee accounts
-        LibraAccount::create_testnet_account<LBR>(association, 0xFEE, copy dummy_auth_key_prefix);
+        LibraAccount::create_testnet_account<LBR>(association, CoreAddresses::TRANSACTION_FEE_ADDRESS(), copy dummy_auth_key_prefix);
         TransactionFee::add_txn_fee_currency(fee_account, &coin1_burn_cap);
         TransactionFee::add_txn_fee_currency(fee_account, &coin2_burn_cap);
         TransactionFee::initialize(tc_account, fee_account);
@@ -82,7 +83,7 @@ module Genesis {
 
         // Create the config account
         LibraAccount::create_genesis_account<LBR>(
-            LibraConfig::default_config_address(),
+            CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
             dummy_auth_key_prefix
         );
 

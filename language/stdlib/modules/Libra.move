@@ -1,10 +1,10 @@
 address 0x0 {
 
 module Libra {
+    use 0x0::CoreAddresses;
     use 0x0::Association;
     use 0x0::Event;
     use 0x0::FixedPoint32::{Self, FixedPoint32};
-    use 0x0::LibraConfig;
     use 0x0::RegisteredCurrencies;
     use 0x0::Signer;
     use 0x0::Transaction;
@@ -15,7 +15,7 @@ module Libra {
     /// currency of the coin, and a `value` field specifying the value
     /// of the coin (in the base units of the currency `CoinType`
     /// and specified in the `CurrencyInfo` resource for that `CoinType`
-    /// published under the `currency_addr()` account address).
+    /// published under the `CoreAddresses::CURRENCY_INFO_ADDRESS()` account address).
     resource struct Libra<CoinType> {
         /// The value of this coin in the base units for `CoinType`
         value: u64
@@ -23,18 +23,18 @@ module Libra {
 
     /// The `MintCapability` resource defines a capability to allow minting
     /// of coins of `CoinType` currency by the holder of this capability.
-    /// This capability is held only either by the 0xB1E55ED account or the
-    /// `0x0::LBR` module (and `0xA550C18` in testnet).
+    /// This capability is held only either by the CoreAddresses::TREASURY_COMPLIANCE_ADDRESS() account or the
+    /// `0x0::LBR` module (and `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()` in testnet).
     resource struct MintCapability<CoinType> { }
 
     /// The `BurnCapability` resource defines a capability to allow coins
     /// of `CoinType` currency to be burned by the holder of the
-    /// capability. This capability is only held by the `0xB1E55ED` account,
-    /// and the `0x0::LBR` module (and `0xA550C18` in testnet).
+    /// capability. This capability is only held by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()` account,
+    /// and the `0x0::LBR` module (and `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()` in testnet).
     resource struct BurnCapability<CoinType> { }
 
     /// The `CurrencyRegistrationCapability` is a singleton resource
-    /// published under the `LibraConfig::default_config_address()` and grants
+    /// published under the `CoreAddresses::DEFAULT_CONFIG_ADDRESS()` and grants
     /// the capability to the `0x0::Libra` module to add currencies to the
     /// `0x0::RegisteredCurrencies` on-chain config.
     resource struct CurrencyRegistrationCapability {
@@ -99,7 +99,7 @@ module Libra {
     /// The `CurrencyInfo<CoinType>` resource stores the various
     /// pieces of information needed for a currency (`CoinType`) that is
     /// registered on-chain. This resource _must_ be published under the
-    /// address given by `currency_addr()` in order for the registration of
+    /// address given by `CoreAddresses::CURRENCY_INFO_ADDRESS()` in order for the registration of
     /// `CoinType` as a recognized currency on-chain to be successful. At
     /// the time of registration the `MintCapability<CoinType>` and
     /// `BurnCapability<CoinType>` capabilities are returned to the caller.
@@ -159,7 +159,7 @@ module Libra {
 
     /// An association account holding this privilege can add/remove the
     /// currencies from the system. This must be published under the
-    /// address at `currency_addr()`.
+    /// address at `CoreAddresses::CURRENCY_INFO_ADDRESS()`.
     struct AddCurrency { }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -169,10 +169,10 @@ module Libra {
     /// Initialization of the `Libra` module; initializes the set of
     /// registered currencies in the `0x0::RegisteredCurrencies` on-chain
     /// config, and publishes the `CurrencyRegistrationCapability` under the
-    /// `LibraConfig::default_config_address()`.
+    /// `CoreAddresses::DEFAULT_CONFIG_ADDRESS()`.
     public fun initialize(config_account: &signer) {
         Transaction::assert(
-            Signer::address_of(config_account) == LibraConfig::default_config_address(),
+            Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
             0
         );
         let cap = RegisteredCurrencies::initialize(config_account);
@@ -265,7 +265,7 @@ module Libra {
         Transaction::assert(value <= 1000000000 * 1000000, 11);
         let currency_code = currency_code<CoinType>();
         // update market cap resource to reflect minting
-        let info = borrow_global_mut<CurrencyInfo<CoinType>>(0xA550C18);
+        let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         Transaction::assert(info.can_mint, 4);
         info.total_value = info.total_value + (value as u128);
         // don't emit mint events for synthetic currenices
@@ -308,7 +308,7 @@ module Libra {
             coin
         );
         let currency_code = currency_code<CoinType>();
-        let info = borrow_global_mut<CurrencyInfo<CoinType>>(0xA550C18);
+        let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         info.preburn_value = info.preburn_value + coin_value;
         // don't emit preburn events for synthetic currencies
         if (!info.is_synthetic) {
@@ -329,7 +329,7 @@ module Libra {
 
     /// Publishes a `Preburn` resource under `account`. This function is
     /// used for bootstrapping the designated dealer at account-creation
-    /// time, and the association TC account `creator` (at `0xB1E55ED`) is creating
+    /// time, and the association TC account `creator` (at `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()`) is creating
     /// this resource for the designated dealer.
     public fun publish_preburn_to_account<CoinType>(creator: &signer, account: &signer) {
         Association::assert_account_is_blessed(creator);
@@ -384,7 +384,7 @@ module Libra {
         let Libra { value } = Vector::remove(&mut preburn.requests, 0);
         // update the market cap
         let currency_code = currency_code<CoinType>();
-        let info = borrow_global_mut<CurrencyInfo<CoinType>>(0xA550C18);
+        let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         info.total_value = info.total_value - (value as u128);
         info.preburn_value = info.preburn_value - value;
         // don't emit burn events for synthetic currencies
@@ -416,7 +416,7 @@ module Libra {
         let coin = Vector::remove(&mut preburn.requests, 0);
         // update the market cap
         let currency_code = currency_code<CoinType>();
-        let info = borrow_global_mut<CurrencyInfo<CoinType>>(0xA550C18);
+        let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         let amount = value(&coin);
         info.preburn_value = info.preburn_value - amount;
         // Don't emit cancel burn events for synthetic currencies. cancel burn shouldn't be be used
@@ -474,7 +474,7 @@ module Libra {
     /// preburn requests across all preburn resources for the `CoinType`
     /// currency).
     public fun preburn_value<CoinType>(): u64 acquires CurrencyInfo {
-        borrow_global<CurrencyInfo<CoinType>>(0xA550C18).preburn_value
+        borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).preburn_value
     }
 
     /// Create a new `Libra<CoinType>` with a value of `0`. Anyone can call
@@ -541,13 +541,13 @@ module Libra {
 
     /// Register the type `CoinType` as a currency. Until the type is
     /// registered as a currency it cannot be used as a coin/currency unit in Libra.
-    /// The passed-in `account` must be a specific address (`currency_addr()`) and
+    /// The passed-in `account` must be a specific address (`CoreAddresses::CURRENCY_INFO_ADDRESS()`) and
     /// the `account` must also have the correct `AddCurrency` association
     /// privilege. After the first registration of `CoinType` as a
     /// currency, all subsequent tries to register `CoinType` as a currency
     /// will fail.
     /// When the `CoinType` is registered it publishes the
-    /// `CurrencyInfo<CoinType>` resource under the `currency_addr()` and
+    /// `CurrencyInfo<CoinType>` resource under the `CoreAddresses::CURRENCY_INFO_ADDRESS()` and
     /// adds the currency to the set of `RegisteredCurrencies`. It returns
     /// `MintCapability<CoinType>` and `BurnCapability<CoinType>` resources.
     public fun register_currency<CoinType>(
@@ -561,7 +561,7 @@ module Libra {
     acquires CurrencyRegistrationCapability {
         // And only callable by the designated currency address.
         Transaction::assert(
-            Signer::address_of(account) == currency_addr() &&
+            Signer::address_of(account) == CoreAddresses::CURRENCY_INFO_ADDRESS() &&
             Association::has_privilege<AddCurrency>(Signer::address_of(account)),
             8
         );
@@ -582,7 +582,7 @@ module Libra {
         });
         RegisteredCurrencies::add_currency_code(
             currency_code,
-            &borrow_global<CurrencyRegistrationCapability>(LibraConfig::default_config_address()).cap
+            &borrow_global<CurrencyRegistrationCapability>(CoreAddresses::DEFAULT_CONFIG_ADDRESS()).cap
         );
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
@@ -590,7 +590,7 @@ module Libra {
     /// Returns the total amount of currency minted of type `CoinType`.
     public fun market_cap<CoinType>(): u128
     acquires CurrencyInfo {
-        borrow_global<CurrencyInfo<CoinType>>(currency_addr()).total_value
+        borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).total_value
     }
 
     /// Returns the value of the coin in the `FromCoinType` currency in LBR.
@@ -614,14 +614,14 @@ module Libra {
     /// Returns `true` if the type `CoinType` is a registered currency.
     /// Returns `false` otherwise.
     public fun is_currency<CoinType>(): bool {
-        exists<CurrencyInfo<CoinType>>(currency_addr())
+        exists<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS())
     }
 
     /// Returns `true` if `CoinType` is a synthetic currency as defined in
     /// its `CurrencyInfo`. Returns `false` otherwise.
     public fun is_synthetic_currency<CoinType>(): bool
     acquires CurrencyInfo {
-        let addr = currency_addr();
+        let addr = CoreAddresses::CURRENCY_INFO_ADDRESS();
         exists<CurrencyInfo<CoinType>>(addr) &&
             borrow_global<CurrencyInfo<CoinType>>(addr).is_synthetic
     }
@@ -630,21 +630,21 @@ module Libra {
     /// in its `CurrencyInfo`.
     public fun scaling_factor<CoinType>(): u64
     acquires CurrencyInfo {
-        borrow_global<CurrencyInfo<CoinType>>(currency_addr()).scaling_factor
+        borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).scaling_factor
     }
 
     /// Returns the representable (i.e. real-world) fractional part for the
     /// `CoinType` currency as defined in its `CurrencyInfo`.
     public fun fractional_part<CoinType>(): u64
     acquires CurrencyInfo {
-        borrow_global<CurrencyInfo<CoinType>>(currency_addr()).fractional_part
+        borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).fractional_part
     }
 
     /// Returns the currency code for the registered currency as defined in
     /// its `CurrencyInfo` resource.
     public fun currency_code<CoinType>(): vector<u8>
     acquires CurrencyInfo {
-        *&borrow_global<CurrencyInfo<CoinType>>(currency_addr()).currency_code
+        *&borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).currency_code
     }
 
     /// Updates the `to_lbr_exchange_rate` held in the `CurrencyInfo` for
@@ -655,14 +655,14 @@ module Libra {
     ) acquires CurrencyInfo {
         Association::assert_account_is_blessed(account);
         assert_assoc_and_currency<FromCoinType>(account);
-        let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(currency_addr());
+        let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
     }
 
     /// Returns the (rough) exchange rate between `CoinType` and `LBR`
     public fun lbr_exchange_rate<CoinType>(): FixedPoint32
     acquires CurrencyInfo {
-        *&borrow_global<CurrencyInfo<CoinType>>(currency_addr()).to_lbr_exchange_rate
+        *&borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).to_lbr_exchange_rate
     }
 
     /// There may be situations in which we disallow the further minting of
@@ -675,19 +675,13 @@ module Libra {
     public fun update_minting_ability<CoinType>(account: &signer, can_mint: bool)
     acquires CurrencyInfo {
         assert_assoc_and_currency<CoinType>(account);
-        let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(currency_addr());
+        let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.can_mint = can_mint;
     }
 
     ///////////////////////////////////////////////////////////////////////////
     // Helper functions
     ///////////////////////////////////////////////////////////////////////////
-
-    /// The (singleton) address under which the `CurrencyInfo` resource fo
-    /// every registered currency is published.
-    fun currency_addr(): address {
-        0xA550C18
-    }
 
     /// Asserts that the `account` is an association account, and that
     /// `CoinType` is a registered currency type.
@@ -717,7 +711,7 @@ module Libra {
     // ## Currency registration
 
     spec module {
-        // Address at which currencies should be registered (mirrors currency_addr)
+        // Address at which currencies should be registered (mirrors CoreAddresses::CURRENCY_INFO_ADDRESS)
         define spec_currency_addr(): address { 0xA550C18 }
 
         // Checks whether currency is registered.
@@ -731,13 +725,13 @@ module Libra {
     spec fun register_currency {
         // This doesn't verify because:
         //  1. is_registered assumes the currency is registered at the fixed
-        //     currency_addr()  (0xA550C18).
+        //     CoreAddresses::CURRENCY_INFO_ADDRESS()  (CoreAddresses::CURRENCY_INFO_ADDRESS).
         //  2. The address where the CurrencyInfo<CoinType>> is stored is
         //     determined in Association::initialize()
         //     (address of AddCurrency privilege) and
         //     Genesis::initialize_association(association_root_addr).
         // If the AddCurrency privilege is on an address different from
-        // currency_addr(), the currency will appear not to be registered.
+        // CoreAddresses::CURRENCY_INFO_ADDRESS(), the currency will appear not to be registered.
         // If you change next to "true", prover will report an error.
         pragma verify = false;
 

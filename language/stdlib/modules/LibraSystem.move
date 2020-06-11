@@ -4,6 +4,7 @@
 address 0x0 {
 
 module LibraSystem {
+    use 0x0::CoreAddresses;
     use 0x0::LibraConfig;
     use 0x0::Option::{Self, Option};
     use 0x0::Transaction;
@@ -37,7 +38,7 @@ module LibraSystem {
     // It can only be called a single time. Currently, it is invoked in the genesis transaction.
     public fun initialize_validator_set(config_account: &signer) {
         Transaction::assert(
-            Signer::address_of(config_account) == LibraConfig::default_config_address(),
+            Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
             1
         );
 
@@ -54,7 +55,7 @@ module LibraSystem {
     // This copies the vector of validators into the LibraConfig's resource
     // under ValidatorSet address
     fun set_validator_set(value: LibraSystem) acquires CapabilityHolder {
-        LibraConfig::set_with_capability<LibraSystem>(&borrow_global<CapabilityHolder>(LibraConfig::default_config_address()).cap, value)
+        LibraConfig::set_with_capability<LibraSystem>(&borrow_global<CapabilityHolder>(CoreAddresses::DEFAULT_CONFIG_ADDRESS()).cap, value)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -201,7 +202,8 @@ module LibraSystem {
     fun is_authorized_to_reconfigure_(account: &signer): bool {
         let sender = Signer::address_of(account);
         // succeed fast
-        if (sender == 0xA550C18 || sender == 0x0) {
+        if (sender == CoreAddresses::ASSOCIATION_ROOT_ADDRESS() ||
+            sender == CoreAddresses::VM_RESERVED_ADDRESS()) {
             return true
         };
         let validators = &get_validator_set().validators;

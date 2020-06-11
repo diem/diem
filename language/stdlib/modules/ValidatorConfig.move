@@ -14,6 +14,7 @@ module ValidatorConfig {
     use 0x0::Option::{Self, Option};
     use 0x0::Transaction;
     use 0x0::Signer;
+    use 0x0::CoreAddresses;
 
     struct Config {
         consensus_pubkey: vector<u8>,
@@ -42,7 +43,7 @@ module ValidatorConfig {
     ///////////////////////////////////////////////////////////////////////////
 
     public fun publish(creator: &signer, account: &signer) {
-        Transaction::assert(Signer::address_of(creator) == 0xA550C18, 1101);
+        Transaction::assert(Signer::address_of(creator) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1101);
         move_to(account, ValidatorConfig {
             config: Option::none(),
             operator_account: Option::none(),

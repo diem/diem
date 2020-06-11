@@ -65,7 +65,7 @@
     <a href="Libra.md#0x0_Libra_grant_mint_capability_to_association">Libra::grant_mint_capability_to_association</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;(association);
 
     // Register transaction fee accounts
-    <a href="LibraAccount.md#0x0_LibraAccount_create_testnet_account">LibraAccount::create_testnet_account</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;(association, 0xFEE, <b>copy</b> dummy_auth_key_prefix);
+    <a href="LibraAccount.md#0x0_LibraAccount_create_testnet_account">LibraAccount::create_testnet_account</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;(association, <a href="CoreAddresses.md#0x0_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>(), <b>copy</b> dummy_auth_key_prefix);
     <a href="TransactionFee.md#0x0_TransactionFee_add_txn_fee_currency">TransactionFee::add_txn_fee_currency</a>(fee_account, &coin1_burn_cap);
     <a href="TransactionFee.md#0x0_TransactionFee_add_txn_fee_currency">TransactionFee::add_txn_fee_currency</a>(fee_account, &coin2_burn_cap);
     <a href="TransactionFee.md#0x0_TransactionFee_initialize">TransactionFee::initialize</a>(tc_account, fee_account);
@@ -83,7 +83,7 @@
 
     // Create the config account
     <a href="LibraAccount.md#0x0_LibraAccount_create_genesis_account">LibraAccount::create_genesis_account</a>&lt;<a href="LBR.md#0x0_LBR">LBR</a>&gt;(
-        <a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(),
+        <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(),
         dummy_auth_key_prefix
     );
 

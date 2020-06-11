@@ -57,7 +57,6 @@
 -  [Function `update_lbr_exchange_rate`](#0x0_Libra_update_lbr_exchange_rate)
 -  [Function `lbr_exchange_rate`](#0x0_Libra_lbr_exchange_rate)
 -  [Function `update_minting_ability`](#0x0_Libra_update_minting_ability)
--  [Function `currency_addr`](#0x0_Libra_currency_addr)
 -  [Function `assert_assoc_and_currency`](#0x0_Libra_assert_assoc_and_currency)
 -  [Function `assert_is_coin`](#0x0_Libra_assert_is_coin)
 -  [Specification](#0x0_Libra_Specification)
@@ -84,7 +83,7 @@ and specified in the
 <code><a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a></code> resource for that
 <code>CoinType</code>
 published under the
-<code><a href="#0x0_Libra_currency_addr">currency_addr</a>()</code> account address).
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code> account address).
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;
@@ -118,9 +117,9 @@ The
 <code><a href="#0x0_Libra_MintCapability">MintCapability</a></code> resource defines a capability to allow minting
 of coins of
 <code>CoinType</code> currency by the holder of this capability.
-This capability is held only either by the 0xB1E55ED account or the
+This capability is held only either by the CoreAddresses::TREASURY_COMPLIANCE_ADDRESS() account or the
 <code><a href="LBR.md#0x0_LBR">0x0::LBR</a></code> module (and
-<code>0xA550C18</code> in testnet).
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()</code> in testnet).
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;
@@ -154,10 +153,10 @@ The
 of
 <code>CoinType</code> currency to be burned by the holder of the
 capability. This capability is only held by the
-<code>0xB1E55ED</code> account,
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()</code> account,
 and the
 <code><a href="LBR.md#0x0_LBR">0x0::LBR</a></code> module (and
-<code>0xA550C18</code> in testnet).
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()</code> in testnet).
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
@@ -189,7 +188,7 @@ and the
 The
 <code><a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a></code> is a singleton resource
 published under the
-<code><a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>()</code> and grants
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>()</code> and grants
 the capability to the
 <code><a href="#0x0_Libra">0x0::Libra</a></code> module to add currencies to the
 <code><a href="RegisteredCurrencies.md#0x0_RegisteredCurrencies">0x0::RegisteredCurrencies</a></code> on-chain config.
@@ -432,7 +431,7 @@ pieces of information needed for a currency (
 <code>CoinType</code>) that is
 registered on-chain. This resource _must_ be published under the
 address given by
-<code><a href="#0x0_Libra_currency_addr">currency_addr</a>()</code> in order for the registration of
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code> in order for the registration of
 <code>CoinType</code> as a recognized currency on-chain to be successful. At
 the time of registration the
 <code><a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;</code> and
@@ -607,7 +606,7 @@ including multiple burn requests from the same account. However, burn requests
 An association account holding this privilege can add/remove the
 currencies from the system. This must be published under the
 address at
-<code><a href="#0x0_Libra_currency_addr">currency_addr</a>()</code>.
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code>.
 
 
 <pre><code><b>struct</b> <a href="#0x0_Libra_AddCurrency">AddCurrency</a>
@@ -642,7 +641,7 @@ registered currencies in the
 <code><a href="RegisteredCurrencies.md#0x0_RegisteredCurrencies">0x0::RegisteredCurrencies</a></code> on-chain
 config, and publishes the
 <code><a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a></code> under the
-<code><a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>()</code>.
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>()</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_initialize">initialize</a>(config_account: &signer)
@@ -656,7 +655,7 @@ config, and publishes the
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_initialize">initialize</a>(config_account: &signer) {
     Transaction::assert(
-        <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>(),
+        <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(),
         0
     );
     <b>let</b> cap = <a href="RegisteredCurrencies.md#0x0_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account);
@@ -938,7 +937,7 @@ reference.
     Transaction::assert(<a href="#0x0_Libra_value">value</a> &lt;= 1000000000 * 1000000, 11);
     <b>let</b> currency_code = <a href="#0x0_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
     // <b>update</b> market cap <b>resource</b> <b>to</b> reflect minting
-    <b>let</b> info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(0xA550C18);
+    <b>let</b> info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     Transaction::assert(info.can_mint, 4);
     info.total_value = info.total_value + (value <b>as</b> u128);
     // don't emit mint events for synthetic currenices
@@ -1032,7 +1031,7 @@ the
         coin
     );
     <b>let</b> currency_code = <a href="#0x0_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
-    <b>let</b> info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(0xA550C18);
+    <b>let</b> info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     info.preburn_value = info.preburn_value + coin_value;
     // don't emit preburn events for synthetic currencies
     <b>if</b> (!info.is_synthetic) {
@@ -1062,7 +1061,7 @@ Publishes a
 used for bootstrapping the designated dealer at account-creation
 time, and the association TC account
 <code>creator</code> (at
-<code>0xB1E55ED</code>) is creating
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()</code>) is creating
 this resource for the designated dealer.
 
 
@@ -1201,7 +1200,7 @@ resource under
     <b>let</b> <a href="#0x0_Libra">Libra</a> { value } = <a href="Vector.md#0x0_Vector_remove">Vector::remove</a>(&<b>mut</b> preburn.requests, 0);
     // <b>update</b> the market cap
     <b>let</b> currency_code = <a href="#0x0_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
-    <b>let</b> info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(0xA550C18);
+    <b>let</b> info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     info.total_value = info.total_value - (value <b>as</b> u128);
     info.preburn_value = info.preburn_value - value;
     // don't emit burn events for synthetic currencies
@@ -1258,7 +1257,7 @@ at
     <b>let</b> coin = <a href="Vector.md#0x0_Vector_remove">Vector::remove</a>(&<b>mut</b> preburn.requests, 0);
     // <b>update</b> the market cap
     <b>let</b> currency_code = <a href="#0x0_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
-    <b>let</b> info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(0xA550C18);
+    <b>let</b> info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     <b>let</b> amount = <a href="#0x0_Libra_value">value</a>(&coin);
     info.preburn_value = info.preburn_value - amount;
     // Don't emit cancel burn events for synthetic currencies. cancel burn shouldn't be be used
@@ -1451,7 +1450,7 @@ currency).
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_preburn_value">preburn_value</a>&lt;CoinType&gt;(): u64 <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
-    borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(0xA550C18).preburn_value
+    borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).preburn_value
 }
 </code></pre>
 
@@ -1690,7 +1689,7 @@ Register the type
 registered as a currency it cannot be used as a coin/currency unit in Libra.
 The passed-in
 <code>account</code> must be a specific address (
-<code><a href="#0x0_Libra_currency_addr">currency_addr</a>()</code>) and
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code>) and
 the
 <code>account</code> must also have the correct
 <code><a href="#0x0_Libra_AddCurrency">AddCurrency</a></code> association
@@ -1702,7 +1701,7 @@ will fail.
 When the
 <code>CoinType</code> is registered it publishes the
 <code><a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;</code> resource under the
-<code><a href="#0x0_Libra_currency_addr">currency_addr</a>()</code> and
+<code><a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code> and
 adds the currency to the set of
 <code><a href="RegisteredCurrencies.md#0x0_RegisteredCurrencies">RegisteredCurrencies</a></code>. It returns
 <code><a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;</code> and
@@ -1729,7 +1728,7 @@ adds the currency to the set of
 <b>acquires</b> <a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a> {
     // And only callable by the designated currency address.
     Transaction::assert(
-        <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="#0x0_Libra_currency_addr">currency_addr</a>() &&
+        <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>() &&
         <a href="Association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_Libra_AddCurrency">AddCurrency</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)),
         8
     );
@@ -1750,7 +1749,7 @@ adds the currency to the set of
     });
     <a href="RegisteredCurrencies.md#0x0_RegisteredCurrencies_add_currency_code">RegisteredCurrencies::add_currency_code</a>(
         currency_code,
-        &borrow_global&lt;<a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>&gt;(<a href="LibraConfig.md#0x0_LibraConfig_default_config_address">LibraConfig::default_config_address</a>()).cap
+        &borrow_global&lt;<a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>()).cap
     );
     (<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;{}, <a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;{})
 }
@@ -1779,7 +1778,7 @@ Returns the total amount of currency minted of type
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_market_cap">market_cap</a>&lt;CoinType&gt;(): u128
 <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
-    borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x0_Libra_currency_addr">currency_addr</a>()).total_value
+    borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).total_value
 }
 </code></pre>
 
@@ -1868,7 +1867,7 @@ Returns
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(): bool {
-    exists&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x0_Libra_currency_addr">currency_addr</a>())
+    exists&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>())
 }
 </code></pre>
 
@@ -1899,7 +1898,7 @@ its
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;(): bool
 <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
-    <b>let</b> addr = <a href="#0x0_Libra_currency_addr">currency_addr</a>();
+    <b>let</b> addr = <a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>();
     exists&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(addr) &&
         borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(addr).is_synthetic
 }
@@ -1930,7 +1929,7 @@ in its
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_scaling_factor">scaling_factor</a>&lt;CoinType&gt;(): u64
 <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
-    borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x0_Libra_currency_addr">currency_addr</a>()).scaling_factor
+    borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).scaling_factor
 }
 </code></pre>
 
@@ -1958,7 +1957,7 @@ Returns the representable (i.e. real-world) fractional part for the
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_fractional_part">fractional_part</a>&lt;CoinType&gt;(): u64
 <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
-    borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x0_Libra_currency_addr">currency_addr</a>()).fractional_part
+    borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).fractional_part
 }
 </code></pre>
 
@@ -1986,7 +1985,7 @@ its
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_currency_code">currency_code</a>&lt;CoinType&gt;(): vector&lt;u8&gt;
 <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
-    *&borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x0_Libra_currency_addr">currency_addr</a>()).currency_code
+    *&borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).currency_code
 }
 </code></pre>
 
@@ -2018,8 +2017,9 @@ Updates the
     account: &signer,
     lbr_exchange_rate: <a href="FixedPoint32.md#0x0_FixedPoint32">FixedPoint32</a>
 ) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
+    <a href="Association.md#0x0_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(account);
     <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;FromCoinType&gt;(account);
-    <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;FromCoinType&gt;&gt;(<a href="#0x0_Libra_currency_addr">currency_addr</a>());
+    <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;FromCoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
 }
 </code></pre>
@@ -2048,7 +2048,7 @@ Returns the (rough) exchange rate between
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_lbr_exchange_rate">lbr_exchange_rate</a>&lt;CoinType&gt;(): <a href="FixedPoint32.md#0x0_FixedPoint32">FixedPoint32</a>
 <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
-    *&borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x0_Libra_currency_addr">currency_addr</a>()).to_lbr_exchange_rate
+    *&borrow_global&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()).to_lbr_exchange_rate
 }
 </code></pre>
 
@@ -2084,35 +2084,8 @@ start out in the default state of
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(account: &signer, can_mint: bool)
 <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
     <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(account);
-    <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x0_Libra_currency_addr">currency_addr</a>());
+    <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.can_mint = can_mint;
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_Libra_currency_addr"></a>
-
-## Function `currency_addr`
-
-The (singleton) address under which the
-<code><a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a></code> resource fo
-every registered currency is published.
-
-
-<pre><code><b>fun</b> <a href="#0x0_Libra_currency_addr">currency_addr</a>(): address
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x0_Libra_currency_addr">currency_addr</a>(): address {
-    0xA550C18
 }
 </code></pre>
 
