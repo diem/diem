@@ -27,6 +27,7 @@ use crate::{
 use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::stream::StreamExt;
 use libra_config::{
+    chain_id::ChainId,
     config::{RoleType, HANDSHAKE_VERSION},
     network_id::{NetworkContext, NetworkId},
 };
@@ -100,6 +101,7 @@ impl AuthenticationMode {
 // pretty tangled.
 pub struct NetworkBuilder {
     executor: Handle,
+    chain_id: ChainId,
     network_context: NetworkContext,
     // TODO(philiphayes): better support multiple listening addrs
     listen_address: NetworkAddress,
@@ -132,9 +134,10 @@ impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
     pub fn new(
         executor: Handle,
+        chain_id: ChainId,
         network_id: NetworkId,
-        peer_id: PeerId,
         role: RoleType,
+        peer_id: PeerId,
         listen_address: NetworkAddress,
     ) -> NetworkBuilder {
         // Setup channel to send requests to peer manager.
@@ -151,6 +154,7 @@ impl NetworkBuilder {
         );
         NetworkBuilder {
             executor,
+            chain_id,
             network_context: NetworkContext::new(network_id, role, peer_id),
             listen_address,
             advertised_address: None,
@@ -402,6 +406,7 @@ impl NetworkBuilder {
     pub fn build(mut self) -> NetworkAddress {
         use libra_network_address::Protocol::*;
 
+        let chain_id = self.chain_id.clone();
         let network_id = self.network_context.network_id().clone();
         let protos = self.supported_protocols();
 
@@ -437,6 +442,7 @@ impl NetworkBuilder {
                     key,
                     maybe_trusted_peers,
                     HANDSHAKE_VERSION,
+                    chain_id,
                     network_id,
                     protos,
                 ))
@@ -447,6 +453,7 @@ impl NetworkBuilder {
                 key,
                 maybe_trusted_peers,
                 HANDSHAKE_VERSION,
+                chain_id,
                 network_id,
                 protos,
             )),

@@ -10,7 +10,7 @@
 //! supported over that messaging protocol. On receipt, both ends will determine the highest
 //! intersecting messaging protocol version and use that for the remainder of the session.
 
-use libra_config::network_id::NetworkId;
+use libra_config::{chain_id::ChainId, network_id::NetworkId};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryInto, fmt, iter::Iterator};
 
@@ -62,6 +62,7 @@ pub struct SupportedProtocols(bitvec::BitVec);
 #[derive(Clone, Debug, Deserialize, Serialize, Default)]
 pub struct HandshakeMsg {
     pub supported_protocols: BTreeMap<MessagingProtocolVersion, SupportedProtocols>,
+    pub chain_id: ChainId,
     pub network_id: NetworkId,
 }
 
@@ -106,10 +107,11 @@ impl SupportedProtocols {
 }
 
 impl HandshakeMsg {
-    pub fn new(network_id: NetworkId) -> Self {
+    pub fn new(chain_id: ChainId, network_id: NetworkId) -> Self {
         Self {
             supported_protocols: Default::default(),
             network_id,
+            chain_id,
         }
     }
 
@@ -120,6 +122,10 @@ impl HandshakeMsg {
     ) {
         self.supported_protocols
             .insert(messaging_protocol, application_protocols);
+    }
+
+    pub fn verify(&self, other: &HandshakeMsg) -> bool {
+        self.chain_id == other.chain_id && self.network_id == other.network_id
     }
 
     pub fn find_common_protocols(

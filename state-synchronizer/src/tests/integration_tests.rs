@@ -9,6 +9,7 @@ use anyhow::{bail, Result};
 use executor_types::ExecutedTrees;
 use futures::executor::block_on;
 use libra_config::{
+    chain_id::ChainId,
     config::{PeerNetworkId, RoleType},
     network_id::NetworkId,
 };
@@ -253,9 +254,10 @@ impl SynchronizerEnv {
         }
         let mut network_builder = NetworkBuilder::new(
             self.runtime.handle().clone(),
+            ChainId::default(),
             self.network_id.clone(),
-            self.peer_ids[new_peer_idx],
             RoleType::Validator,
+            self.peer_ids[new_peer_idx],
             addr,
         );
         network_builder

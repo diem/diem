@@ -8,6 +8,7 @@ use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::{
+    chain_id::ChainId,
     config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
 };
@@ -62,8 +63,9 @@ fn setup_debug_interface(config: &NodeConfig) -> NodeDebugService {
 
 // TODO(abhayb): Move to network crate (similar to consensus).
 pub fn setup_network(
-    config: &mut NetworkConfig,
+    chain_id: &ChainId,
     role: RoleType,
+    config: &mut NetworkConfig,
     libra_db: Arc<dyn DbReader>,
     waypoint: Waypoint,
 ) -> (Runtime, NetworkBuilder) {
@@ -79,9 +81,10 @@ pub fn setup_network(
 
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
+        chain_id.clone(),
         config.network_id.clone(),
-        peer_id,
         role,
+        peer_id,
         config.listen_address.clone(),
     );
     network_builder.add_connection_monitoring();
@@ -221,8 +224,13 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (role, network_config) in network_configs {
         // Perform common instantiation steps
-        let (runtime, mut network_builder) =
-            setup_network(network_config, role, Arc::clone(&db_rw.reader), waypoint);
+        let (runtime, mut network_builder) = setup_network(
+            &node_config.base.chain_id,
+            role,
+            network_config,
+            Arc::clone(&db_rw.reader),
+            waypoint,
+        );
         let peer_id = network_builder.peer_id();
 
         // Create the endpoints to connect the Network to StateSynchronizer.

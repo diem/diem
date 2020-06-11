@@ -28,12 +28,16 @@ HandshakeMsg:
             TYPENAME: MessagingProtocolVersion
           VALUE:
             TYPENAME: SupportedProtocols
+    - chain_id:
+        TYPENAME: ChainId
     - network_id:
         TYPENAME: NetworkId
 MessagingProtocolVersion:
   ENUM:
     0:
       V1: UNIT
+ChainId:
+  NEWTYPESTRUCT: STR
 NetworkAddress:
   NEWTYPESTRUCT:
     SEQ:
