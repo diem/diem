@@ -112,6 +112,23 @@
 <span id="112">112</span>
 <span id="113">113</span>
 <span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -211,6 +228,8 @@
     <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;PrivilegedCapability&quot;</span>).<span class="ident">unwrap</span>());
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">BASE_ASSOCIATION_CAPABILITY_TYPE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
     <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;Association&quot;</span>).<span class="ident">unwrap</span>());
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">ASSOCIATION_MODULE_PUBLISHING_TYPE_NAME</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Identifier</span><span class="op">&gt;</span> <span class="op">=</span>
+    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="string">&quot;PublishModule&quot;</span>).<span class="ident">unwrap</span>());
 
 <span class="comment">// TODO Move this somewhere else</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">association_capability_struct_tag</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StructTag</span> {
@@ -218,6 +237,21 @@
         <span class="ident">address</span>: <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>,
         <span class="ident">module</span>: <span class="ident">ASSOCIATION_MODULE_NAME</span>.<span class="ident">to_owned</span>(),
         <span class="ident">name</span>: <span class="ident">BASE_ASSOCIATION_CAPABILITY_TYPE_NAME</span>.<span class="ident">to_owned</span>(),
+        <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+    };
+    <span class="ident">StructTag</span> {
+        <span class="ident">address</span>: <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>,
+        <span class="ident">module</span>: <span class="ident">ASSOCIATION_MODULE_NAME</span>.<span class="ident">to_owned</span>(),
+        <span class="ident">name</span>: <span class="ident">ASSOCIATION_CAPABILITY_STRUCT_NAME</span>.<span class="ident">to_owned</span>(),
+        <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">base_association_cap_tag</span>)],
+    }
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">association_module_publishing_capability_struct_tag</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StructTag</span> {
+    <span class="kw">let</span> <span class="ident">base_association_cap_tag</span> <span class="op">=</span> <span class="ident">StructTag</span> {
+        <span class="ident">address</span>: <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>,
+        <span class="ident">module</span>: <span class="ident">ASSOCIATION_MODULE_NAME</span>.<span class="ident">to_owned</span>(),
+        <span class="ident">name</span>: <span class="ident">ASSOCIATION_MODULE_PUBLISHING_TYPE_NAME</span>.<span class="ident">to_owned</span>(),
         <span class="ident">type_params</span>: <span class="macro">vec</span><span class="macro">!</span>[],
     };
     <span class="ident">StructTag</span> {
