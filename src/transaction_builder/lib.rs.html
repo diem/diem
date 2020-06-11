@@ -616,6 +616,7 @@
 <span id="616">616</span>
 <span id="617">617</span>
 <span id="618">618</span>
+<span id="619">619</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1012,14 +1013,6 @@
 <span class="comment">//  Association-related scripts</span>
 <span class="comment">//...........................................................................</span>
 
-{
-    <span class="ident">script</span>: <span class="ident">UpdateExchangeRate</span>,
-    <span class="ident">builder</span>: <span class="ident">encode_update_exchange_rate</span>,
-    <span class="ident">type_args</span>: [<span class="ident">currency</span>],
-    <span class="ident">args</span>: [<span class="ident">new_exchange_rate_denominator</span>: <span class="ident">U64</span>, <span class="ident">new_exchange_rate_numerator</span>: <span class="ident">U64</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Updates the on-chain exchange rate to LBR for the given `currency` to be given by\
-         `new_exchange_rate_denominator/new_exchange_rate_numerator`.&quot;</span>
-}
 
 {
     <span class="ident">script</span>: <span class="ident">UpdateMintingAbility</span>,
@@ -1101,6 +1094,15 @@
     <span class="ident">args</span>: [<span class="ident">nonce</span>: <span class="ident">U64</span>, <span class="ident">new_hashed_key</span>: <span class="ident">Bytes</span>],
     <span class="ident">doc</span>: <span class="string">&quot;Encode a program that rotates the sender&#39;s authentication key to `new_key`. `new_key`\
           should be a 256 bit sha3 hash of an ed25519 public key. This script also takes nonce&quot;</span>
+}
+
+{
+    <span class="ident">script</span>: <span class="ident">UpdateExchangeRate</span>,
+    <span class="ident">builder</span>: <span class="ident">encode_update_exchange_rate</span>,
+    <span class="ident">type_args</span>: [<span class="ident">currency</span>],
+    <span class="ident">args</span>: [<span class="ident">nonce</span>: <span class="ident">U64</span>, <span class="ident">new_exchange_rate_denominator</span>: <span class="ident">U64</span>, <span class="ident">new_exchange_rate_numerator</span>: <span class="ident">U64</span>],
+    <span class="ident">doc</span>: <span class="string">&quot;Updates the on-chain exchange rate to LBR for the given `currency` to be given by\
+         `new_exchange_rate_denominator/new_exchange_rate_numerator`.&quot;</span>
 }
 
 } <span class="comment">// End of txn scripts</span>
@@ -1221,7 +1223,6 @@
                 <span class="string">&quot;update_libra_version&quot;</span>,
                 <span class="string">&quot;mint_lbr&quot;</span>,
                 <span class="string">&quot;unmint_lbr&quot;</span>,
-                <span class="string">&quot;update_exchange_rate&quot;</span>,
                 <span class="string">&quot;update_minting_ability&quot;</span>,
                 <span class="string">&quot;create_parent_vasp_account&quot;</span>,
                 <span class="string">&quot;create_child_vasp_account&quot;</span>,
@@ -1229,7 +1230,8 @@
                 <span class="string">&quot;create_designated_dealer&quot;</span>,
                 <span class="string">&quot;freeze_account&quot;</span>,
                 <span class="string">&quot;unfreeze_account&quot;</span>,
-                <span class="string">&quot;rotate_authentication_key_with_nonce&quot;</span>
+                <span class="string">&quot;rotate_authentication_key_with_nonce&quot;</span>,
+                <span class="string">&quot;update_exchange_rate&quot;</span>,
             ],
             <span class="ident">abis</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">name</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
         );
