@@ -76,7 +76,7 @@ listen_address = "/ip4/0.0.0.0/tcp/6180"
 advertised_address = "/ip4/127.0.0.1/tcp/6180"
 discovery_interval_ms = 1000
 connectivity_check_interval_ms = 5000
-enable_remote_authentication = true
+mutual_authentication = false
 network_peers_file = ""
 seed_peers_file = "31893204fa402143c11b26ce8a89ea1d.seed_peers.toml"
 
