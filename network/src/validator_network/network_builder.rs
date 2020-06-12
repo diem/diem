@@ -17,7 +17,7 @@ use crate::{
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     protocols::{
-        discovery::{self, DiscoveryBuilderConfig},
+        discovery::{self, DiscoveryBuilderConfig, DiscoveryService},
         health_checker::{self, HealthChecker},
         wire::handshake::v1::SupportedProtocols,
     },
@@ -126,6 +126,9 @@ pub struct NetworkBuilder {
     max_concurrent_network_reqs: usize,
     max_concurrent_network_notifs: usize,
     max_connection_delay_ms: u64,
+
+    discovery_cfg: Option<DiscoveryBuilderConfig>,
+    discovery: Option<DiscoveryService>,
 }
 
 impl NetworkBuilder {
@@ -175,6 +178,8 @@ impl NetworkBuilder {
             max_concurrent_network_reqs: MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
+            discovery_cfg: None,
+            discovery: None,
         }
     }
 
@@ -361,17 +366,33 @@ impl NetworkBuilder {
 
         let addrs = vec![advertised_address];
         let discovery_interval_ms = self.discovery_interval_ms;
-        let discovery_cfg =
-            DiscoveryBuilderConfig::new(self.network_context.clone(), addrs, discovery_interval_ms);
-        let discovery = discovery::build_discovery_from_config(
-            &self.executor,
-            discovery_cfg,
+        let discovery_cfg = DiscoveryBuilderConfig::new(
+            self.network_context.clone(),
+            addrs,
+            discovery_interval_ms,
             discovery_network_tx,
             discovery_network_rx,
             conn_mgr_reqs_tx,
         );
-        self.executor.spawn(discovery.start());
-        debug!("{} Started discovery protocol actor", self.network_context);
+
+        self.discovery_cfg = Some(discovery_cfg);
+
+        self.build_gossip_discovery()
+    }
+
+    fn build_gossip_discovery(&mut self) -> &mut Self {
+        if let Some(discovery_cfg) = self.discovery_cfg.take() {
+            let discovery = discovery::build_discovery_from_config(&self.executor, discovery_cfg);
+            self.discovery = Some(discovery);
+        }
+        self.start_gossip_discovery()
+    }
+
+    fn start_gossip_discovery(&mut self) -> &mut Self {
+        if let Some(discovery) = self.discovery.take() {
+            self.executor.spawn(discovery.start());
+            debug!("{} Started discovery protocol actor", self.network_context);
+        }
         self
     }
 
