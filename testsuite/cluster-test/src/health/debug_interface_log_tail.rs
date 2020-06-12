@@ -20,7 +20,7 @@ use std::{
     },
     time::Duration,
 };
-use tokio::{runtime::Runtime, time};
+use tokio::{runtime::Handle, time};
 
 pub struct DebugPortLogWorker {
     instance: Instance,
@@ -33,7 +33,8 @@ pub struct DebugPortLogWorker {
 }
 
 impl DebugPortLogWorker {
-    pub fn spawn_new(cluster: &Cluster, runtime: &Runtime) -> (LogTail, TraceTail) {
+    pub fn spawn_new(cluster: &Cluster) -> (LogTail, TraceTail) {
+        let runtime = Handle::current();
         let (event_sender, event_receiver) = mpsc::channel();
         let mut started_receivers = vec![];
         let pending_messages = Arc::new(AtomicI64::new(0));
