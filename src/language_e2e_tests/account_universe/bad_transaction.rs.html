@@ -171,6 +171,16 @@
 <span id="171">171</span>
 <span id="172">172</span>
 <span id="173">173</span>
+<span id="174">174</span>
+<span id="175">175</span>
+<span id="176">176</span>
+<span id="177">177</span>
+<span id="178">178</span>
+<span id="179">179</span>
+<span id="180">180</span>
+<span id="181">181</span>
+<span id="182">182</span>
+<span id="183">183</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -195,6 +205,8 @@
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::<span class="ident">gas_schedule</span>::<span class="ident">calculate_intrinsic_gas</span>;
 <span class="kw">use</span> <span class="ident">proptest</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">proptest_derive</span>::<span class="ident">Arbitrary</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
+
 <span class="doccomment">/// Represents a sequence number mismatch transaction</span>
 <span class="doccomment">///</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Arbitrary</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
@@ -344,6 +356,14 @@
             ),
         )
     }
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">bad_txn_strategy</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AUTransactionGen</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="macro">prop_oneof</span><span class="macro">!</span>[
+        <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">any_with</span>::<span class="op">&lt;</span><span class="ident">SequenceNumberMismatchGen</span><span class="op">&gt;</span>((<span class="number">0</span>, <span class="number">10_000</span>)).<span class="ident">prop_map</span>(<span class="ident">SequenceNumberMismatchGen</span>::<span class="ident">arced</span>),
+        <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">any_with</span>::<span class="op">&lt;</span><span class="ident">InvalidAuthkeyGen</span><span class="op">&gt;</span>(()).<span class="ident">prop_map</span>(<span class="ident">InvalidAuthkeyGen</span>::<span class="ident">arced</span>),
+        <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">any_with</span>::<span class="op">&lt;</span><span class="ident">InsufficientBalanceGen</span><span class="op">&gt;</span>((<span class="number">1</span>, <span class="number">20_000</span>)).<span class="ident">prop_map</span>(<span class="ident">InsufficientBalanceGen</span>::<span class="ident">arced</span>),
+    ]
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "language_e2e_tests";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

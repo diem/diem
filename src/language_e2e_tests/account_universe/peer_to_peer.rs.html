@@ -102,6 +102,16 @@
 <span id="102">102</span>
 <span id="103">103</span>
 <span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -116,6 +126,7 @@
 };
 <span class="kw">use</span> <span class="ident">proptest</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">proptest_derive</span>::<span class="ident">Arbitrary</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
 
 <span class="doccomment">/// Represents a peer-to-peer transaction performed in the account universe.</span>
 <span class="doccomment">///</span>
@@ -206,6 +217,15 @@
 
         (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_used</span>))
     }
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">p2p_strategy</span>(
+    <span class="ident">min</span>: <span class="ident">u64</span>,
+    <span class="ident">max</span>: <span class="ident">u64</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AUTransactionGen</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="macro">prop_oneof</span><span class="macro">!</span>[
+        <span class="number">3</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">any_with</span>::<span class="op">&lt;</span><span class="ident">P2PTransferGen</span><span class="op">&gt;</span>((<span class="ident">min</span>, <span class="ident">max</span>)).<span class="ident">prop_map</span>(<span class="ident">P2PTransferGen</span>::<span class="ident">arced</span>),
+    ]
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "language_e2e_tests";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

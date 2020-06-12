@@ -121,6 +121,19 @@
 <span id="121">121</span>
 <span id="122">122</span>
 <span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -140,6 +153,7 @@
 };
 <span class="kw">use</span> <span class="ident">proptest</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">proptest_derive</span>::<span class="ident">Arbitrary</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">Arc</span>;
 
 <span class="doccomment">/// Represents a create-account transaction performed in the account universe.</span>
 <span class="doccomment">///</span>
@@ -244,6 +258,18 @@
 
         (<span class="ident">txn</span>, (<span class="ident">status</span>, <span class="ident">gas_used</span>))
     }
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_account_strategy</span>(
+    <span class="ident">min</span>: <span class="ident">u64</span>,
+    <span class="ident">max</span>: <span class="ident">u64</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">AUTransactionGen</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="macro">prop_oneof</span><span class="macro">!</span>[
+        <span class="number">3</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">any_with</span>::<span class="op">&lt;</span><span class="ident">CreateAccountGen</span><span class="op">&gt;</span>((<span class="ident">min</span>, <span class="ident">max</span>)).<span class="ident">prop_map</span>(<span class="ident">CreateAccountGen</span>::<span class="ident">arced</span>),
+        <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">any_with</span>::<span class="op">&lt;</span><span class="ident">CreateExistingAccountGen</span><span class="op">&gt;</span>((<span class="ident">min</span>, <span class="ident">max</span>)).<span class="ident">prop_map</span>(
+            <span class="ident">CreateExistingAccountGen</span>::<span class="ident">arced</span>,
+        ),
+    ]
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "language_e2e_tests";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

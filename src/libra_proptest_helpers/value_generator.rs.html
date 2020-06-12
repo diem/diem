@@ -43,13 +43,20 @@
 <span id="43">43</span>
 <span id="44">44</span>
 <span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="ident">proptest</span>::{
     <span class="ident">strategy</span>::{<span class="ident">Strategy</span>, <span class="ident">ValueTree</span>},
-    <span class="ident">test_runner</span>::<span class="ident">TestRunner</span>,
+    <span class="ident">test_runner</span>::{<span class="ident">Config</span>, <span class="ident">TestRng</span>, <span class="ident">TestRunner</span>},
 };
 
 <span class="doccomment">/// Context for generating single values out of strategies.</span>
@@ -66,6 +73,13 @@
     <span class="doccomment">/// Creates a new value generator with the default RNG.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">Default</span>::<span class="ident">default</span>()
+    }
+
+    <span class="doccomment">/// Creates a new value generator with provided RNG</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_with_rng</span>(<span class="ident">rng</span>: <span class="ident">TestRng</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">runner</span>: <span class="ident">TestRunner</span>::<span class="ident">new_with_rng</span>(<span class="ident">Config</span>::<span class="ident">default</span>(), <span class="ident">rng</span>),
+        }
     }
 
     <span class="doccomment">/// Creates a new value generator with a deterministic RNG.</span>
