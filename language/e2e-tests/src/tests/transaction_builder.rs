@@ -252,7 +252,12 @@ fn dual_attestation_payment() {
     ));
 
     executor.execute_and_apply(blessed.signed_script_txn(
-        encode_mint_lbr_to_address_script(&payment_sender.address(), vec![], 2_000_000),
+        encode_mint_script(
+            account_config::lbr_type_tag(),
+            &payment_sender.address(),
+            vec![],
+            2_000_000,
+        ),
         0,
     ));
 

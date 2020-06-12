@@ -334,14 +334,6 @@ register_all_txn_scripts! {
 }
 
 {
-    script: MintLbrToAddress,
-    builder: _encode_mint_lbr_to_address_script_internal,
-    type_args: [],
-    args: [address: Address, auth_key_prefix: Bytes, amount: U64],
-    doc: "Encode a program creating `amount` LBR for `address`"
-}
-
-{
     script: ModifyPublishingOption,
     builder: _encode_publishing_option_script_internal,
     type_args: [],
@@ -491,26 +483,16 @@ pub fn encode_stdlib_script(
     Script::new(stdlib_script.compiled_bytes().into_vec(), type_args, args)
 }
 
-// TODO: this should go away once we are no longer using it in tests
+// TODO: this should go away once we are no longer using it in tests/testnet
 /// Encode a program creating `amount` coins for sender
 pub fn encode_mint_script(
     token: TypeTag,
-    sender: &AccountAddress,
+    recipient: &AccountAddress,
     auth_key_prefix: Vec<u8>,
     amount: u64,
 ) -> Script {
     validate_auth_key_prefix(&auth_key_prefix);
-    _encode_mint_script_internal(token, *sender, auth_key_prefix, amount)
-}
-
-/// Encode a program creating `amount` LBR for `address`
-pub fn encode_mint_lbr_to_address_script(
-    address: &AccountAddress,
-    auth_key_prefix: Vec<u8>,
-    amount: u64,
-) -> Script {
-    validate_auth_key_prefix(&auth_key_prefix);
-    _encode_mint_lbr_to_address_script_internal(*address, auth_key_prefix, amount)
+    _encode_mint_script_internal(token, *recipient, auth_key_prefix, amount)
 }
 
 pub fn encode_publishing_option_script(config: VMPublishingOption) -> Script {
@@ -586,7 +568,6 @@ mod tests {
                 "rotate_authentication_key_with_recovery_address",
                 "rotate_shared_ed25519_public_key",
                 "mint",
-                "mint_lbr_to_address",
                 "modify_publishing_option",
                 "update_libra_version",
                 "mint_lbr",

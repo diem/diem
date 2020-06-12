@@ -60,6 +60,12 @@ module LBR {
         move_to(association, Reserve { mint_cap, burn_cap, preburn_cap, coin1, coin2 });
     }
 
+    /// Return true if CoinType is LBR::LBR
+    public fun is_lbr<CoinType>(): bool {
+        Libra::is_currency<CoinType>() &&
+            Libra::currency_code<CoinType>() == Libra::currency_code<LBR>()
+    }
+
     // Given the constituent coins return as much LBR as possible, with any
     // remainder in those coins returned back along with the newly minted LBR.
     public fun swap_into(

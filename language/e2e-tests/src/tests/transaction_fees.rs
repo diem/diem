@@ -18,7 +18,7 @@ use move_core_types::{
     language_storage::{StructTag, TypeTag},
 };
 use std::convert::TryFrom;
-use transaction_builder::{encode_burn_txn_fees_script, encode_mint_lbr_to_address_script};
+use transaction_builder::{encode_burn_txn_fees_script, encode_mint_script};
 
 #[test]
 fn burn_txn_fees() {
@@ -27,7 +27,12 @@ fn burn_txn_fees() {
     let tc = Account::new_blessed_tc();
     executor.add_account_data(&sender);
     executor.execute_and_apply(tc.signed_script_txn(
-        encode_mint_lbr_to_address_script(&sender.account().address(), vec![], 10_000_000),
+        encode_mint_script(
+            account_config::lbr_type_tag(),
+            &sender.account().address(),
+            vec![],
+            10_000_000,
+        ),
         0,
     ));
 

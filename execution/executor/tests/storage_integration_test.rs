@@ -32,9 +32,8 @@ use rand::SeedableRng;
 use std::convert::TryFrom;
 use storage_interface::DbReaderWriter;
 use transaction_builder::{
-    encode_block_prologue_script, encode_mint_lbr_to_address_script,
-    encode_publishing_option_script, encode_rotate_consensus_pubkey_script,
-    encode_transfer_with_metadata_script,
+    encode_block_prologue_script, encode_mint_script, encode_publishing_option_script,
+    encode_rotate_consensus_pubkey_script, encode_transfer_with_metadata_script,
 };
 
 fn create_db_and_executor(config: &NodeConfig) -> (DbReaderWriter, Executor<LibraVM>) {
@@ -556,7 +555,8 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_mint_lbr_to_address_script(
+        Some(encode_mint_script(
+            lbr_type_tag(),
             &account1,
             account1_auth_key.prefix().to_vec(),
             2_000_000,
@@ -569,7 +569,8 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_mint_lbr_to_address_script(
+        Some(encode_mint_script(
+            lbr_type_tag(),
             &account2,
             account2_auth_key.prefix().to_vec(),
             1_200_000,
@@ -582,7 +583,8 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_mint_lbr_to_address_script(
+        Some(encode_mint_script(
+            lbr_type_tag(),
             &account3,
             account3_auth_key.prefix().to_vec(),
             1_000_000,

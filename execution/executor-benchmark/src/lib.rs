@@ -33,9 +33,7 @@ use std::{
 use storage_client::StorageClient;
 use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::start_storage_service_with_db;
-use transaction_builder::{
-    encode_mint_lbr_to_address_script, encode_transfer_with_metadata_script,
-};
+use transaction_builder::{encode_mint_script, encode_transfer_with_metadata_script};
 
 struct AccountData {
     private_key: Ed25519PrivateKey,
@@ -116,7 +114,8 @@ impl TransactionGenerator {
                     (i * block_size + j) as u64,
                     &self.genesis_key,
                     self.genesis_key.public_key(),
-                    encode_mint_lbr_to_address_script(
+                    encode_mint_script(
+                        lbr_type_tag(),
                         &account.address,
                         account.auth_key_prefix(),
                         init_account_balance,

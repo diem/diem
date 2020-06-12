@@ -65,7 +65,12 @@ fn mint_to_existing() {
 
     let mint_amount = 1_000;
     executor.execute_and_apply(association.signed_script_txn(
-        encode_mint_lbr_to_address_script(&receiver.account().address(), vec![], mint_amount),
+        encode_mint_script(
+            account_config::lbr_type_tag(),
+            &receiver.account().address(),
+            vec![],
+            mint_amount,
+        ),
         0,
     ));
 
@@ -100,7 +105,8 @@ fn mint_to_new_account() {
 
     let mint_amount = TXN_RESERVED;
     executor.execute_and_apply(association.signed_script_txn(
-        encode_mint_lbr_to_address_script(
+        encode_mint_script(
+            account_config::lbr_type_tag(),
             &new_account.address(),
             new_account.auth_key_prefix(),
             mint_amount,
@@ -126,7 +132,12 @@ fn mint_to_new_account() {
 
     // Mint can only be called from genesis address;
     let txn = new_account.signed_script_txn(
-        encode_mint_lbr_to_address_script(&new_account.address(), vec![], mint_amount),
+        encode_mint_script(
+            account_config::lbr_type_tag(),
+            &new_account.address(),
+            vec![],
+            mint_amount,
+        ),
         0,
     );
     let output = executor.execute_transaction(txn);

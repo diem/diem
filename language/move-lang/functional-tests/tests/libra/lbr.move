@@ -54,3 +54,18 @@ fun main(account: &signer) {
 }
 }
 // check: MISSING_DATA
+
+// Check that is_lbr only returns true for LBR
+//! new-transaction
+script {
+use 0x1::LBR;
+use 0x1::Coin1::Coin1;
+use 0x1::Coin2::Coin2;
+fun main() {
+    assert(LBR::is_lbr<LBR::LBR>(), 1);
+    assert(!LBR::is_lbr<Coin1>(), 2);
+    assert(!LBR::is_lbr<Coin2>(), 3);
+    assert(!LBR::is_lbr<bool>(), 4);
+}
+}
+// check: EXECUTED

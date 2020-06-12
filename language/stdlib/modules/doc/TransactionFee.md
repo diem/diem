@@ -7,10 +7,8 @@
 
 -  [Struct `TransactionFeeCollection`](#0x1_TransactionFee_TransactionFeeCollection)
 -  [Struct `TransactionFeePreburn`](#0x1_TransactionFee_TransactionFeePreburn)
--  [Struct `LBRIdent`](#0x1_TransactionFee_LBRIdent)
 -  [Function `initialize`](#0x1_TransactionFee_initialize)
 -  [Function `add_txn_fee_currency`](#0x1_TransactionFee_add_txn_fee_currency)
--  [Function `is_lbr`](#0x1_TransactionFee_is_lbr)
 -  [Function `preburn_fees`](#0x1_TransactionFee_preburn_fees)
 -  [Function `burn_fees`](#0x1_TransactionFee_burn_fees)
 -  [Function `preburn_coin`](#0x1_TransactionFee_preburn_coin)
@@ -84,43 +82,6 @@ fiat
 
 </details>
 
-<a name="0x1_TransactionFee_LBRIdent"></a>
-
-## Struct `LBRIdent`
-
-We need to be able to determine if
-<code>CoinType</code> is LBR or not in
-order to unpack it properly before burning it. This resource is
-instantiated with
-<code><a href="LBR.md#0x1_LBR">LBR</a></code> and published in
-<code><a href="#0x1_TransactionFee_initialize">TransactionFee::initialize</a></code>.
-We then use this to determine if the /
-<code>CoinType</code> is LBR in
-<code><a href="#0x1_TransactionFee_is_lbr">TransactionFee::is_lbr</a></code>.
-
-
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_TransactionFee_LBRIdent">LBRIdent</a>&lt;CoinType&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>dummy_field: bool</code>
-</dt>
-<dd>
-
-</dd>
-</dl>
-
-
-</details>
-
 <a name="0x1_TransactionFee_initialize"></a>
 
 ## Function `initialize`
@@ -159,7 +120,6 @@ transaction fees from the
 
     <b>let</b> cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(fee_account);
     move_to(fee_account, <a href="#0x1_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a> { cap });
-    move_to(fee_account, <a href="#0x1_TransactionFee_LBRIdent">LBRIdent</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;{});
 }
 </code></pre>
 
@@ -202,34 +162,6 @@ Sets ups the needed transaction fee state for a given
 
 </details>
 
-<a name="0x1_TransactionFee_is_lbr"></a>
-
-## Function `is_lbr`
-
-Returns whether
-<code>CoinType</code> is LBR or not. This is needed since we
-will need to unpack LBR before burning it when collecting the
-transaction fees.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_is_lbr">is_lbr</a>&lt;CoinType&gt;(): bool
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_is_lbr">is_lbr</a>&lt;CoinType&gt;(): bool {
-    exists&lt;<a href="#0x1_TransactionFee_LBRIdent">LBRIdent</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>())
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_TransactionFee_preburn_fees"></a>
 
 ## Function `preburn_fees`
@@ -256,7 +188,7 @@ underlying fiat.
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(blessed_sender) == <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>(),
         0
     );
-    <b>if</b> (<a href="#0x1_TransactionFee_is_lbr">is_lbr</a>&lt;CoinType&gt;()) {
+    <b>if</b> (<a href="LBR.md#0x1_LBR_is_lbr">LBR::is_lbr</a>&lt;CoinType&gt;()) {
         <b>let</b> amount = <a href="LibraAccount.md#0x1_LibraAccount_balance">LibraAccount::balance</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>());
         <b>let</b> coins = <a href="LibraAccount.md#0x1_LibraAccount_withdraw_from">LibraAccount::withdraw_from</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(
             &borrow_global&lt;<a href="#0x1_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>&gt;(0xFEE).cap,

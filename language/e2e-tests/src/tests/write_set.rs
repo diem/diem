@@ -8,6 +8,7 @@ use crate::{
 };
 use libra_types::{
     access_path::AccessPath,
+    account_config,
     account_config::{lbr_type_tag, CORE_CODE_ADDRESS, LBR_NAME},
     contract_event::ContractEvent,
     on_chain_config::new_epoch_event_key,
@@ -19,7 +20,7 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{ResourceKey, StructTag},
 };
-use transaction_builder::encode_mint_lbr_to_address_script;
+use transaction_builder::encode_mint_script;
 
 #[test]
 fn invalid_write_set_sender() {
@@ -259,7 +260,12 @@ fn transfer_and_execute_writeset() {
     let mint_amount = 1_000_000;
 
     executor.execute_and_apply(blessed_account.signed_script_txn(
-        encode_mint_lbr_to_address_script(genesis_account.address(), vec![], mint_amount),
+        encode_mint_script(
+            account_config::lbr_type_tag(),
+            genesis_account.address(),
+            vec![],
+            mint_amount,
+        ),
         0,
     ));
 

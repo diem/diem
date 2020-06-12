@@ -23,12 +23,6 @@ module TransactionFee {
         preburn: Preburn<CoinType>
     }
 
-    /// We need to be able to determine if `CoinType` is LBR or not in
-    /// order to unpack it properly before burning it. This resource is
-    /// instantiated with `LBR` and published in `TransactionFee::initialize`.
-    /// We then use this to determine if the / `CoinType` is LBR in `TransactionFee::is_lbr`.
-    resource struct LBRIdent<CoinType> { }
-
     /// Called in genesis. Sets up the needed resources to collect
     /// transaction fees from the `0xFEE` account with the `0xB1E55ED` account.
     public fun initialize(association: &signer, fee_account: &signer, auth_key_prefix: vector<u8>) {
@@ -50,7 +44,6 @@ module TransactionFee {
 
         let cap = LibraAccount::extract_withdraw_capability(fee_account);
         move_to(fee_account, TransactionFeeCollection { cap });
-        move_to(fee_account, LBRIdent<LBR>{});
     }
 
     /// Sets ups the needed transaction fee state for a given `CoinType` currency by
@@ -63,13 +56,6 @@ module TransactionFee {
         })
     }
 
-    /// Returns whether `CoinType` is LBR or not. This is needed since we
-    /// will need to unpack LBR before burning it when collecting the
-    /// transaction fees.
-    public fun is_lbr<CoinType>(): bool {
-        exists<LBRIdent<CoinType>>(CoreAddresses::TRANSACTION_FEE_ADDRESS())
-    }
-
     /// Preburns the transaction fees collected in the `CoinType` currency.
     /// If the `CoinType` is LBR, it unpacks the coin and preburns the
     /// underlying fiat.
@@ -79,7 +65,7 @@ module TransactionFee {
             Signer::address_of(blessed_sender) == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(),
             0
         );
-        if (is_lbr<CoinType>()) {
+        if (LBR::is_lbr<CoinType>()) {
             let amount = LibraAccount::balance<LBR>(CoreAddresses::TRANSACTION_FEE_ADDRESS());
             let coins = LibraAccount::withdraw_from<LBR>(
                 &borrow_global<TransactionFeeCollection>(0xFEE).cap,
