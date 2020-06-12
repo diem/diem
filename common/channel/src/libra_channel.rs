@@ -24,22 +24,25 @@ use std::{
 };
 
 /// SharedState is a data structure private to this module which is
-/// shared by the sender and receiver.
+/// shared by the `Receiver` and any `Sender`s.
 #[derive(Debug)]
 struct SharedState<K: Eq + Hash + Clone, M> {
-    /// The internal queue of messages in this Channel
+    /// The internal queue of messages in this channel.
     internal_queue: PerKeyQueue<K, (M, Option<oneshot::Sender<ElementStatus<M>>>)>,
-    /// Waker is needed so that the Sender can notify the task executor/scheduler
-    /// that something has been pushed to the internal_queue and it ready for
-    /// consumption by the Receiver and then the executor/scheduler will wake up
-    /// the Receiver task to process the next item.
+    /// The `Receiver` registers its `Waker` in this slot when the queue is empty.
+    /// `Sender`s will try to wake the `Receiver` (if any) when they push a new
+    /// item onto the queue. The last live `Sender` will also wake the `Receiver`
+    /// as it's tearing down so the `Receiver` can gracefully drain and shutdown
+    /// the channel.
     waker: Option<Waker>,
-
-    /// A boolean which tracks whether the receiver has dropped
+    /// The number of active senders. When this value reaches 0, all senders have
+    /// been dropped.
+    num_senders: usize,
+    /// A boolean which tracks whether the receiver has dropped.
     receiver_dropped: bool,
-    /// A boolean which tracks whether the stream has terminated
-    /// A stream is considered terminated when sender has dropped
-    /// and we have drained everything inside our internal queue
+    /// A boolean which tracks whether the stream has terminated. A stream is
+    /// considered terminated when sender has dropped and we have drained everything
+    /// inside our internal queue.
     stream_terminated: bool,
 }
 
@@ -93,6 +96,8 @@ impl<K: Eq + Hash + Clone, M> Sender<K, M> {
     ) -> Result<()> {
         let mut shared_state = self.shared_state.lock().unwrap();
         ensure!(!shared_state.receiver_dropped, "Channel is closed");
+        debug_assert!(shared_state.num_senders > 0);
+
         let dropped = shared_state.internal_queue.push(key, (message, status_ch));
         // If this or an existing message had to be dropped because of the queue being full, we
         // notify the corresponding status channel if it was registered.
@@ -109,17 +114,27 @@ impl<K: Eq + Hash + Clone, M> Sender<K, M> {
 
 impl<K: Eq + Hash + Clone, M> Clone for Sender<K, M> {
     fn clone(&self) -> Self {
-        Sender {
-            shared_state: self.shared_state.clone(),
+        let shared_state = self.shared_state.clone();
+        {
+            let mut shared_state_lock = shared_state.lock().unwrap();
+            debug_assert!(shared_state_lock.num_senders > 0);
+            shared_state_lock.num_senders += 1;
         }
+        Sender { shared_state }
     }
 }
 
 impl<K: Eq + Hash + Clone, M> Drop for Sender<K, M> {
     fn drop(&mut self) {
         let mut shared_state = self.shared_state.lock().unwrap();
-        if let Some(w) = shared_state.waker.take() {
-            w.wake();
+
+        debug_assert!(shared_state.num_senders > 0);
+        shared_state.num_senders -= 1;
+
+        if shared_state.num_senders == 0 {
+            if let Some(waker) = shared_state.waker.take() {
+                waker.wake();
+            }
         }
     }
 }
@@ -141,6 +156,7 @@ impl<K: Eq + Hash + Clone, M> Receiver<K, M> {
 impl<K: Eq + Hash + Clone, M> Drop for Receiver<K, M> {
     fn drop(&mut self) {
         let mut shared_state = self.shared_state.lock().unwrap();
+        debug_assert!(!shared_state.receiver_dropped);
         shared_state.receiver_dropped = true;
     }
 }
@@ -157,9 +173,8 @@ impl<K: Eq + Hash + Clone, M> Stream for Receiver<K, M> {
                 let _err = status_ch.send(ElementStatus::Dequeued);
             }
             Poll::Ready(Some(val))
-        // if the only Arc reference to `shared_state` is 1, which is this receiver,
-        // this must mean all senders have been dropped (and so the stream is terminated)
-        } else if Arc::strong_count(&self.shared_state) == 1 {
+        // all senders have been dropped (and so the stream is terminated)
+        } else if shared_state.num_senders == 0 {
             shared_state.stream_terminated = true;
             Poll::Ready(None)
         } else {
@@ -184,6 +199,7 @@ pub fn new<K: Eq + Hash + Clone, M>(
     let shared_state = Arc::new(Mutex::new(SharedState {
         internal_queue: PerKeyQueue::new(queue_style, max_queue_size_per_key, counters),
         waker: None,
+        num_senders: 1,
         receiver_dropped: false,
         stream_terminated: false,
     }));
