@@ -435,6 +435,8 @@
 <span id="435">435</span>
 <span id="436">436</span>
 <span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -473,26 +475,21 @@
     <span class="comment">// TODO: Add support for multiple listen/advertised addresses in config.</span>
     <span class="comment">// The address that this node is listening on for new connections.</span>
     <span class="kw">pub</span> <span class="ident">listen_address</span>: <span class="ident">NetworkAddress</span>,
-    <span class="comment">// The address that this node advertises to other nodes for the discovery protocol.</span>
-    <span class="kw">pub</span> <span class="ident">advertised_address</span>: <span class="ident">NetworkAddress</span>,
-    <span class="kw">pub</span> <span class="ident">discovery_interval_ms</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">connectivity_check_interval_ms</span>: <span class="ident">u64</span>,
-    <span class="comment">// If the network uses remote authentication, only trusted peers are allowed to connect.</span>
-    <span class="comment">// Otherwise, any node can connect.</span>
-    <span class="comment">// TODO(philiphayes): rename this flag. should reflect `AuthenticationMode` in</span>
-    <span class="comment">// `NetworkBuilder`, i.e., `Mutual` vs `ServerOnly` authentication.</span>
-    <span class="kw">pub</span> <span class="ident">enable_remote_authentication</span>: <span class="ident">bool</span>,
-    <span class="comment">// Enable this network to use either gossip discovery or onchain discovery.</span>
-    <span class="kw">pub</span> <span class="ident">discovery_method</span>: <span class="ident">DiscoveryMethod</span>,
-    <span class="comment">// network peers are the nodes allowed to connect when the network is started in authenticated</span>
-    <span class="comment">// mode.</span>
+    <span class="comment">// Select this to enforce that both peers should authenticate each other, otherwise</span>
+    <span class="comment">// authentication only occurs for outgoing connections.</span>
+    <span class="kw">pub</span> <span class="ident">mutual_authentication</span>: <span class="ident">bool</span>,
+    <span class="comment">// Leveraged by mutual_authentication for incoming peers that may not have a well-defined</span>
+    <span class="comment">// network address.</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>)]</span>
     <span class="kw">pub</span> <span class="ident">network_peers</span>: <span class="ident">NetworkPeersConfig</span>,
     <span class="kw">pub</span> <span class="ident">network_peers_file</span>: <span class="ident">PathBuf</span>,
-    <span class="comment">// seed_peers act as seed nodes for the discovery protocol.</span>
+    <span class="comment">// Initial set of peers to connect to</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>)]</span>
     <span class="kw">pub</span> <span class="ident">seed_peers</span>: <span class="ident">SeedPeersConfig</span>,
     <span class="kw">pub</span> <span class="ident">seed_peers_file</span>: <span class="ident">PathBuf</span>,
+    <span class="comment">// Enable this network to use either gossip discovery or onchain discovery.</span>
+    <span class="kw">pub</span> <span class="ident">discovery_method</span>: <span class="ident">DiscoveryMethod</span>,
     <span class="kw">pub</span> <span class="ident">identity</span>: <span class="ident">Identity</span>,
     <span class="kw">pub</span> <span class="ident">network_id</span>: <span class="ident">NetworkId</span>,
 }
@@ -508,11 +505,9 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">config</span> <span class="op">=</span> <span class="self">Self</span> {
             <span class="ident">network_id</span>,
             <span class="ident">listen_address</span>: <span class="string">&quot;/ip4/0.0.0.0/tcp/6180&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">advertised_address</span>: <span class="string">&quot;/ip4/127.0.0.1/tcp/6180&quot;</span>.<span class="ident">parse</span>().<span class="ident">unwrap</span>(),
-            <span class="ident">discovery_interval_ms</span>: <span class="number">1000</span>,
             <span class="ident">connectivity_check_interval_ms</span>: <span class="number">5000</span>,
-            <span class="ident">enable_remote_authentication</span>: <span class="bool-val">true</span>,
-            <span class="ident">discovery_method</span>: <span class="ident">DiscoveryMethod</span>::<span class="ident">Gossip</span>,
+            <span class="ident">mutual_authentication</span>: <span class="bool-val">false</span>,
+            <span class="ident">discovery_method</span>: <span class="ident">DiscoveryMethod</span>::<span class="prelude-val">None</span>,
             <span class="ident">identity</span>: <span class="ident">Identity</span>::<span class="prelude-val">None</span>,
             <span class="ident">network_peers_file</span>: <span class="ident">PathBuf</span>::<span class="ident">new</span>(),
             <span class="ident">network_peers</span>: <span class="ident">NetworkPeersConfig</span>::<span class="ident">default</span>(),
@@ -531,11 +526,9 @@
         <span class="self">Self</span> {
             <span class="ident">network_id</span>: <span class="self">self</span>.<span class="ident">network_id</span>.<span class="ident">clone</span>(),
             <span class="ident">listen_address</span>: <span class="self">self</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>(),
-            <span class="ident">advertised_address</span>: <span class="self">self</span>.<span class="ident">advertised_address</span>.<span class="ident">clone</span>(),
-            <span class="ident">discovery_interval_ms</span>: <span class="self">self</span>.<span class="ident">discovery_interval_ms</span>,
             <span class="ident">connectivity_check_interval_ms</span>: <span class="self">self</span>.<span class="ident">connectivity_check_interval_ms</span>,
-            <span class="ident">enable_remote_authentication</span>: <span class="self">self</span>.<span class="ident">enable_remote_authentication</span>,
-            <span class="ident">discovery_method</span>: <span class="self">self</span>.<span class="ident">discovery_method</span>,
+            <span class="ident">mutual_authentication</span>: <span class="self">self</span>.<span class="ident">mutual_authentication</span>,
+            <span class="ident">discovery_method</span>: <span class="self">self</span>.<span class="ident">discovery_method</span>.<span class="ident">clone</span>(),
             <span class="ident">identity</span>: <span class="ident">Identity</span>::<span class="prelude-val">None</span>,
             <span class="ident">network_peers_file</span>: <span class="self">self</span>.<span class="ident">network_peers_file</span>.<span class="ident">clone</span>(),
             <span class="ident">network_peers</span>: <span class="self">self</span>.<span class="ident">network_peers</span>.<span class="ident">clone</span>(),
@@ -553,10 +546,6 @@
             <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">root_dir</span>.<span class="ident">full_path</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">seed_peers_file</span>);
             <span class="self">self</span>.<span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">SeedPeersConfig</span>::<span class="ident">load_config</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>)<span class="question-mark">?</span>;
             <span class="self">self</span>.<span class="ident">seed_peers</span>.<span class="ident">verify_libranet_addrs</span>()<span class="question-mark">?</span>;
-        }
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">advertised_address</span>.<span class="ident">to_string</span>().<span class="ident">is_empty</span>() {
-            <span class="self">self</span>.<span class="ident">advertised_address</span> <span class="op">=</span>
-                <span class="ident">utils</span>::<span class="ident">get_local_ip</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No local IP&quot;</span>))<span class="question-mark">?</span>;
         }
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">listen_address</span>.<span class="ident">to_string</span>().<span class="ident">is_empty</span>() {
             <span class="self">self</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="ident">utils</span>::<span class="ident">get_local_ip</span>().<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">anyhow</span><span class="macro">!</span>(<span class="string">&quot;No local IP&quot;</span>))<span class="question-mark">?</span>;
@@ -675,7 +664,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NetworkPeersConfig</span> {
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">flatten</span>)]</span>
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">serialize_with</span> <span class="op">=</span> <span class="string">&quot;utils::serialize_ordered_map&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">peers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPeerInfo</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">peers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">x25519</span>::<span class="ident">PublicKey</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">NetworkPeersConfig</span> {
@@ -684,25 +673,42 @@
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NetworkPeerInfo</span> {
-    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;ni&quot;</span>)]</span>
-    <span class="kw">pub</span> <span class="ident">identity_public_key</span>: <span class="ident">x25519</span>::<span class="ident">PublicKey</span>,
-}
-
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;snake_case&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;snake_case&quot;</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;type&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">DiscoveryMethod</span> {
     <span class="comment">// default until we can deprecate</span>
-    <span class="ident">Gossip</span>,
+    <span class="ident">Gossip</span>(<span class="ident">GossipConfig</span>),
     <span class="ident">Onchain</span>,
     <span class="prelude-val">None</span>,
 }
 
+<span class="kw">impl</span> <span class="ident">DiscoveryMethod</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">gossip</span>(<span class="ident">advertised_address</span>: <span class="ident">NetworkAddress</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">DiscoveryMethod</span>::<span class="ident">Gossip</span>(<span class="ident">GossipConfig</span> {
+            <span class="ident">advertised_address</span>,
+            <span class="ident">discovery_interval_ms</span>: <span class="number">1000</span>,
+        })
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">advertised_address</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NetworkAddress</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">DiscoveryMethod</span>::<span class="ident">Gossip</span>(<span class="ident">config</span>) <span class="op">=</span> <span class="self">self</span> {
+            <span class="ident">config</span>.<span class="ident">advertised_address</span>.<span class="ident">clone</span>()
+        } <span class="kw">else</span> {
+            <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Invalid discovery method&quot;</span>);
+        }
+    }
+}
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GossipConfig</span> {
+    <span class="comment">// The address that this node advertises to other nodes for the discovery protocol.</span>
+    <span class="kw">pub</span> <span class="ident">advertised_address</span>: <span class="ident">NetworkAddress</span>,
+    <span class="kw">pub</span> <span class="ident">discovery_interval_ms</span>: <span class="ident">u64</span>,
+}
+
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>), <span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>))]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;type&quot;</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;snake_case&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;snake_case&quot;</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;type&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Identity</span> {
     <span class="ident">FromConfig</span>(<span class="ident">IdentityFromConfig</span>),
     <span class="ident">FromStorage</span>(<span class="ident">IdentityFromStorage</span>),
@@ -857,13 +863,11 @@
 
         <span class="comment">// Now reset IP addresses and save</span>
         <span class="ident">config</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>();
-        <span class="ident">config</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>();
         <span class="ident">config</span>.<span class="ident">save</span>(<span class="kw-2">&amp;</span><span class="ident">root_dir</span>).<span class="ident">unwrap</span>();
 
         <span class="comment">// Now load and verify default IP addresses are generated</span>
         <span class="ident">config</span>.<span class="ident">load</span>(<span class="kw-2">&amp;</span><span class="ident">root_dir</span>, <span class="ident">RoleType</span>::<span class="ident">FullNode</span>).<span class="ident">unwrap</span>();
         <span class="macro">assert_ne</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">listen_address</span>.<span class="ident">to_string</span>(), <span class="string">&quot;&quot;</span>);
-        <span class="macro">assert_ne</span><span class="macro">!</span>(<span class="ident">config</span>.<span class="ident">advertised_address</span>.<span class="ident">to_string</span>(), <span class="string">&quot;&quot;</span>);
     }
 
     <span class="kw">fn</span> <span class="ident">generate_config</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">NetworkConfig</span>, <span class="ident">TempPath</span>) {

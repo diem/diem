@@ -514,6 +514,9 @@
 <span id="514">514</span>
 <span id="515">515</span>
 <span id="516">516</span>
+<span id="517">517</span>
+<span id="518">518</span>
+<span id="519">519</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -786,12 +789,16 @@
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">network</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">validator_network</span>.<span class="ident">as_mut</span>() {
             <span class="ident">network</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">get_available_port_in_multiaddr</span>(<span class="bool-val">true</span>);
-            <span class="ident">network</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>();
+            <span class="kw">if</span> <span class="kw">let</span> <span class="ident">DiscoveryMethod</span>::<span class="ident">Gossip</span>(<span class="ident">config</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">network</span>.<span class="ident">discovery_method</span> {
+                <span class="ident">config</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>();
+            }
         }
 
         <span class="kw">for</span> <span class="ident">network</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">full_node_networks</span>.<span class="ident">iter_mut</span>() {
             <span class="ident">network</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="kw">crate</span>::<span class="ident">utils</span>::<span class="ident">get_available_port_in_multiaddr</span>(<span class="bool-val">true</span>);
-            <span class="ident">network</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>();
+            <span class="kw">if</span> <span class="kw">let</span> <span class="ident">DiscoveryMethod</span>::<span class="ident">Gossip</span>(<span class="ident">config</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">network</span>.<span class="ident">discovery_method</span> {
+                <span class="ident">config</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>();
+            }
         }
     }
 
@@ -927,7 +934,6 @@
             .<span class="ident">as_mut</span>()
             .<span class="ident">expect</span>(<span class="string">&quot;Missing expected network config&quot;</span>);
 
-        <span class="ident">expected_network</span>.<span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">advertised_address</span>.<span class="ident">clone</span>();
         <span class="ident">expected_network</span>.<span class="ident">listen_address</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>();
         <span class="ident">expected_network</span>.<span class="ident">identity</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">identity</span>.<span class="ident">clone</span>();
         <span class="ident">expected_network</span>.<span class="ident">network_peers</span> <span class="op">=</span> <span class="ident">actual_network</span>.<span class="ident">network_peers</span>.<span class="ident">clone</span>();

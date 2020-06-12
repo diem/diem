@@ -636,8 +636,8 @@
             <span class="kw">let</span> <span class="ident">identity_key</span> <span class="op">=</span> <span class="ident">network</span>.<span class="ident">identity</span>.<span class="ident">public_key_from_config</span>().<span class="ident">unwrap</span>();
 
             <span class="kw">let</span> <span class="ident">advertised_address</span> <span class="op">=</span> <span class="ident">network</span>
-                .<span class="ident">advertised_address</span>
-                .<span class="ident">clone</span>()
+                .<span class="ident">discovery_method</span>
+                .<span class="ident">advertised_address</span>()
                 .<span class="ident">append_prod_protos</span>(<span class="ident">identity_key</span>, <span class="ident">HANDSHAKE_VERSION</span>);
             <span class="kw">let</span> <span class="ident">raw_advertised_address</span> <span class="op">=</span> <span class="ident">RawNetworkAddress</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span><span class="ident">advertised_address</span>).<span class="ident">unwrap</span>();
 

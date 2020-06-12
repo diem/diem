@@ -174,16 +174,6 @@
 <span id="174">174</span>
 <span id="175">175</span>
 <span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -200,7 +190,7 @@
     <span class="ident">validator_network</span>::<span class="ident">network_builder</span>::{
         <span class="ident">AuthenticationMode</span>, <span class="ident">NetworkBuilder</span>, <span class="ident">NETWORK_CHANNEL_SIZE</span>,
     },
-    <span class="ident">NetworkPublicKeys</span>, <span class="ident">ProtocolId</span>,
+    <span class="ident">ProtocolId</span>,
 };
 <span class="kw">use</span> <span class="ident">channel</span>::<span class="ident">message_queues</span>::<span class="ident">QueueStyle</span>;
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">executor</span>::<span class="ident">block_on</span>, <span class="ident">StreamExt</span>};
@@ -303,18 +293,8 @@
 
     <span class="comment">// Setup trusted peers.</span>
     <span class="kw">let</span> <span class="ident">trusted_peers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
-        (
-            <span class="ident">dialer_peer_id</span>,
-            <span class="ident">NetworkPublicKeys</span> {
-                <span class="ident">identity_public_key</span>: <span class="ident">dialer_identity_public_key</span>,
-            },
-        ),
-        (
-            <span class="ident">listener_peer_id</span>,
-            <span class="ident">NetworkPublicKeys</span> {
-                <span class="ident">identity_public_key</span>: <span class="ident">listener_identity_public_key</span>,
-            },
-        ),
+        (<span class="ident">dialer_peer_id</span>, <span class="ident">dialer_identity_public_key</span>),
+        (<span class="ident">listener_peer_id</span>, <span class="ident">listener_identity_public_key</span>),
     ]
     .<span class="ident">into_iter</span>()
     .<span class="ident">collect</span>();

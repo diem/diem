@@ -488,7 +488,6 @@
 <span id="488">488</span>
 <span id="489">489</span>
 <span id="490">490</span>
-<span id="491">491</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -502,7 +501,6 @@
 <span class="doccomment">//! connect to or accept connections from an end-point running in authenticated mode as</span>
 <span class="doccomment">//! long as the latter is in its trusted peers set.</span>
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">common</span>::<span class="ident">NetworkPublicKeys</span>,
     <span class="ident">connectivity_manager</span>::{<span class="ident">ConnectivityManager</span>, <span class="ident">ConnectivityRequest</span>},
     <span class="ident">counters</span>,
     <span class="ident">peer_manager</span>::{
@@ -598,7 +596,7 @@
     <span class="ident">listen_address</span>: <span class="ident">NetworkAddress</span>,
     <span class="ident">advertised_address</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span>,
     <span class="ident">seed_peers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span><span class="op">&gt;</span>,
-    <span class="ident">trusted_peers</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">trusted_peers</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">x25519</span>::<span class="ident">PublicKey</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">authentication_mode</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AuthenticationMode</span><span class="op">&gt;</span>,
     <span class="ident">channel_size</span>: <span class="ident">usize</span>,
     <span class="ident">direct_send_protocols</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ProtocolId</span><span class="op">&gt;</span>,
@@ -694,7 +692,7 @@
     <span class="doccomment">/// Set trusted peers.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">trusted_peers</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">trusted_peers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">NetworkPublicKeys</span><span class="op">&gt;</span>,
+        <span class="ident">trusted_peers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">x25519</span>::<span class="ident">PublicKey</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
         <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">trusted_peers</span>.<span class="ident">write</span>().<span class="ident">unwrap</span>() <span class="op">=</span> <span class="ident">trusted_peers</span>;
         <span class="self">self</span>

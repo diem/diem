@@ -154,16 +154,6 @@
 <span id="154">154</span>
 <span id="155">155</span>
 <span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -180,10 +170,7 @@
     <span class="ident">on_chain_config</span>::{<span class="ident">OnChainConfigPayload</span>, <span class="ident">ValidatorSet</span>, <span class="ident">ON_CHAIN_CONFIG_REGISTRY</span>},
     <span class="ident">validator_config</span>::<span class="ident">ValidatorConfig</span>,
 };
-<span class="kw">use</span> <span class="ident">network</span>::{
-    <span class="ident">common</span>::<span class="ident">NetworkPublicKeys</span>,
-    <span class="ident">connectivity_manager</span>::{<span class="ident">ConnectivityRequest</span>, <span class="ident">DiscoverySource</span>},
-};
+<span class="kw">use</span> <span class="ident">network</span>::<span class="ident">connectivity_manager</span>::{<span class="ident">ConnectivityRequest</span>, <span class="ident">DiscoverySource</span>};
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">time</span>::<span class="ident">Instant</span>};
 <span class="kw">use</span> <span class="ident">subscription_service</span>::<span class="ident">ReconfigSubscription</span>;
@@ -265,14 +252,7 @@
     <span class="ident">updates</span>.<span class="ident">push</span>(<span class="ident">ConnectivityRequest</span>::<span class="ident">UpdateEligibleNodes</span>(
         <span class="ident">node_list</span>
             .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">node</span><span class="op">|</span> {
-                (
-                    <span class="kw-2">*</span><span class="ident">node</span>.<span class="ident">account_address</span>(),
-                    <span class="ident">NetworkPublicKeys</span> {
-                        <span class="ident">identity_public_key</span>: <span class="ident">public_key</span>(<span class="ident">role</span>, <span class="ident">node</span>.<span class="ident">config</span>()),
-                    },
-                )
-            })
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">node</span><span class="op">|</span> (<span class="kw-2">*</span><span class="ident">node</span>.<span class="ident">account_address</span>(), <span class="ident">public_key</span>(<span class="ident">role</span>, <span class="ident">node</span>.<span class="ident">config</span>())))
             .<span class="ident">collect</span>(),
     ));
 

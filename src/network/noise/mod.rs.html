@@ -90,12 +90,6 @@
 <span id="90">90</span>
 <span id="91">91</span>
 <span id="92">92</span>
-<span id="93">93</span>
-<span id="94">94</span>
-<span id="95">95</span>
-<span id="96">96</span>
-<span id="97">97</span>
-<span id="98">98</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -112,14 +106,12 @@
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//! use network::{</span>
 <span class="doccomment">//!     noise::{HandshakeAuthMode, NoiseUpgrader},</span>
-<span class="doccomment">//!     NetworkPublicKeys,</span>
 <span class="doccomment">//! };</span>
 <span class="doccomment">//! use futures::{executor, future, io::{AsyncReadExt, AsyncWriteExt}};</span>
 <span class="doccomment">//! use memsocket::MemorySocket;</span>
 <span class="doccomment">//! use libra_crypto::{x25519, ed25519, Uniform, PrivateKey, test_utils::TEST_SEED};</span>
 <span class="doccomment">//! use rand::{rngs::StdRng, SeedableRng};</span>
 <span class="doccomment">//! use libra_types::PeerId;</span>
-<span class="doccomment">//! use libra_config::config::NetworkPeerInfo;</span>
 <span class="doccomment">//! use std::{collections::HashMap, sync::{Arc, RwLock}};</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! fn example() -&gt; std::io::Result&lt;()&gt; {</span>
@@ -136,12 +128,8 @@
 <span class="doccomment">//! // create list of trusted peers</span>
 <span class="doccomment">//! let mut trusted_peers = Arc::new(RwLock::new(HashMap::new()));</span>
 <span class="doccomment">//! {</span>
-<span class="doccomment">//!     trusted_peers.write().unwrap().insert(client_peer_id, NetworkPublicKeys {</span>
-<span class="doccomment">//!        identity_public_key: client_public,</span>
-<span class="doccomment">//!     });</span>
-<span class="doccomment">//!     trusted_peers.write().unwrap().insert(server_peer_id, NetworkPublicKeys {</span>
-<span class="doccomment">//!        identity_public_key: server_public,</span>
-<span class="doccomment">//!     });</span>
+<span class="doccomment">//!     trusted_peers.write().unwrap().insert(client_peer_id, client_public);</span>
+<span class="doccomment">//!     trusted_peers.write().unwrap().insert(server_peer_id, server_public);</span>
 <span class="doccomment">//! }</span>
 <span class="doccomment">//!</span>
 <span class="doccomment">//! let client_auth = HandshakeAuthMode::mutual(trusted_peers.clone());</span>
