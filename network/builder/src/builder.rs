@@ -31,7 +31,7 @@ use network::{
     },
     protocols::{
         discovery::{self, Discovery},
-        health_checker::{self, HealthCheckerBuilderConfig},
+        health_checker::{self, HealthCheckerBuilderConfig, HealthCheckerService},
         network::{NewNetworkEvents, NewNetworkSender},
         wire::handshake::v1::SupportedProtocols,
     },
@@ -118,6 +118,9 @@ pub struct NetworkBuilder {
     max_connection_delay_ms: u64,
     /// For now full node connections are limited by
     max_fullnode_connections: usize,
+
+    health_checker_cfg: Option<HealthCheckerBuilderConfig>,
+    health_checker: Option<HealthCheckerService>,
 }
 
 impl NetworkBuilder {
@@ -170,6 +173,8 @@ impl NetworkBuilder {
             max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
             max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
+            health_checker_cfg: None,
+            health_checker: None,
         }
     }
 
@@ -387,15 +392,32 @@ impl NetworkBuilder {
             self.ping_interval_ms,
             self.ping_timeout_ms,
             self.ping_failures_tolerated,
-        );
-        let health_checker = health_checker::build_health_checker_from_config(
-            &self.executor,
-            health_checker_config,
             hc_network_tx,
             hc_network_rx,
         );
-        self.executor.spawn(health_checker.start());
-        debug!("{} Started health checker", self.network_context);
+
+        self.health_checker_cfg = Some(health_checker_config);
+
+        self.build_connection_monitoring()
+    }
+
+    fn build_connection_monitoring(&mut self) -> &mut Self {
+        if let Some(health_checker_config) = self.health_checker_cfg.take() {
+            let health_checker = health_checker::build_health_checker_from_config(
+                &self.executor,
+                health_checker_config,
+            );
+            self.health_checker = Some(health_checker);
+        }
+
+        self.start_connection_monitoring()
+    }
+
+    fn start_connection_monitoring(&mut self) -> &mut Self {
+        if let Some(health_checker) = self.health_checker.take() {
+            self.executor.spawn(health_checker.start());
+            debug!("{} Started health checker", self.network_context);
+        }
         self
     }
 
