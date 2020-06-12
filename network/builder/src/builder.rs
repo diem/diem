@@ -31,7 +31,7 @@ use network::{
     },
     protocols::{
         discovery::{self, Discovery},
-        health_checker::{self, HealthChecker},
+        health_checker::{self, HealthCheckerBuilderConfig},
         network::{NewNetworkEvents, NewNetworkSender},
         wire::handshake::v1::SupportedProtocols,
     },
@@ -382,19 +382,18 @@ impl NetworkBuilder {
         // Initialize and start HealthChecker.
         let (hc_network_tx, hc_network_rx) =
             self.add_protocol_handler(health_checker::network_endpoint_config());
-        let ping_interval_ms = self.ping_interval_ms;
-        let ping_timeout_ms = self.ping_timeout_ms;
-        let ping_failures_tolerated = self.ping_failures_tolerated;
-        let health_checker = self.executor.enter(|| {
-            HealthChecker::new(
-                self.network_context.clone(),
-                interval(Duration::from_millis(ping_interval_ms)).fuse(),
-                hc_network_tx,
-                hc_network_rx,
-                Duration::from_millis(ping_timeout_ms),
-                ping_failures_tolerated,
-            )
-        });
+        let health_checker_config = HealthCheckerBuilderConfig::new(
+            self.network_context.clone(),
+            self.ping_interval_ms,
+            self.ping_timeout_ms,
+            self.ping_failures_tolerated,
+        );
+        let health_checker = health_checker::build_health_checker_from_config(
+            &self.executor,
+            health_checker_config,
+            hc_network_tx,
+            hc_network_rx,
+        );
         self.executor.spawn(health_checker.start());
         debug!("{} Started health checker", self.network_context);
         self
