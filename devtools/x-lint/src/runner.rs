@@ -115,7 +115,7 @@ impl<'cfg> LintEngine<'cfg> {
         if !self.config.package_linters.is_empty() {
             let package_graph = self.project_ctx.package_graph()?;
 
-            for (workspace_path, metadata) in package_graph.workspace().members() {
+            for (workspace_path, metadata) in package_graph.workspace().iter_by_path() {
                 let package_ctx = PackageContext::new(
                     &self.project_ctx,
                     package_graph,
