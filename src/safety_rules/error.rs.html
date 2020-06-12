@@ -117,8 +117,8 @@
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Invalid QC: {}&quot;</span>, {<span class="number">0</span>})]</span>
     <span class="ident">InvalidQuorumCertificate</span>(<span class="ident">String</span>),
 
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;validator_verifier is not set, SafetyRules is not initialized&quot;</span>)]</span>
-    <span class="ident">NotInitialized</span>,
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;{0} is not set, SafetyRules is not initialized&quot;</span>)]</span>
+    <span class="ident">NotInitialized</span>(<span class="ident">String</span>),
 
     <span class="doccomment">/// This proposal&#39;s round is less than round of preferred block.</span>
     <span class="doccomment">/// Returns the id of the preferred block.</span>

@@ -68,6 +68,19 @@
 <span id="68">68</span>
 <span id="69">69</span>
 <span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -86,6 +99,7 @@
     <span class="ident">last_voted_round</span>: <span class="ident">Round</span>,
     <span class="ident">preferred_round</span>: <span class="ident">Round</span>,
     <span class="ident">waypoint</span>: <span class="ident">Waypoint</span>,
+    <span class="ident">in_validator_set</span>: <span class="ident">bool</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Display</span> <span class="kw">for</span> <span class="ident">ConsensusState</span> {
@@ -97,8 +111,13 @@
              \tlast_voted_round = {},\n\
              \tpreferred_round = {}\n\
              \twaypoint = {}\n\
+             \tin_validator_set = {}\n\
              ]&quot;</span>,
-            <span class="self">self</span>.<span class="ident">epoch</span>, <span class="self">self</span>.<span class="ident">last_voted_round</span>, <span class="self">self</span>.<span class="ident">preferred_round</span>, <span class="self">self</span>.<span class="ident">waypoint</span>,
+            <span class="self">self</span>.<span class="ident">epoch</span>,
+            <span class="self">self</span>.<span class="ident">last_voted_round</span>,
+            <span class="self">self</span>.<span class="ident">preferred_round</span>,
+            <span class="self">self</span>.<span class="ident">waypoint</span>,
+            <span class="self">self</span>.<span class="ident">in_validator_set</span>,
         )
     }
 }
@@ -109,12 +128,14 @@
         <span class="ident">last_voted_round</span>: <span class="ident">Round</span>,
         <span class="ident">preferred_round</span>: <span class="ident">Round</span>,
         <span class="ident">waypoint</span>: <span class="ident">Waypoint</span>,
+        <span class="ident">in_validator_set</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">epoch</span>,
             <span class="ident">last_voted_round</span>,
             <span class="ident">preferred_round</span>,
             <span class="ident">waypoint</span>,
+            <span class="ident">in_validator_set</span>,
         }
     }
 
@@ -137,6 +158,11 @@
     <span class="doccomment">/// Last known checkpoint this should map to a LedgerInfo that contains a new ValidatorSet</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">waypoint</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Waypoint</span> {
         <span class="self">self</span>.<span class="ident">waypoint</span>
+    }
+
+    <span class="doccomment">/// Indicating whether the validator is validator set</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">in_validator_set</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="self">self</span>.<span class="ident">in_validator_set</span>
     }
 }
 </pre></div>

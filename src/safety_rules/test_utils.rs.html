@@ -187,6 +187,9 @@
 <span id="187">187</span>
 <span id="188">188</span>
 <span id="189">189</span>
+<span id="190">190</span>
+<span id="191">191</span>
+<span id="192">192</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -205,6 +208,7 @@
 <span class="kw">use</span> <span class="ident">libra_secure_storage</span>::{<span class="ident">BoxedStorage</span>, <span class="ident">InMemoryStorage</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">block_info</span>::<span class="ident">BlockInfo</span>,
+    <span class="ident">epoch_state</span>::<span class="ident">EpochState</span>,
     <span class="ident">ledger_info</span>::{<span class="ident">LedgerInfo</span>, <span class="ident">LedgerInfoWithSignatures</span>},
     <span class="ident">on_chain_config</span>::<span class="ident">ValidatorSet</span>,
     <span class="ident">proof</span>::<span class="ident">AccumulatorExtensionProof</span>,
@@ -261,6 +265,7 @@
     <span class="ident">committed</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">VoteProposal</span><span class="op">&gt;</span>,
     <span class="ident">validator_signer</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorSigner</span>,
     <span class="ident">epoch</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
+    <span class="ident">next_epoch_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochState</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span> {
     <span class="kw">let</span> <span class="ident">block_epoch</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">epoch</span> {
         <span class="prelude-val">Some</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>,
@@ -318,7 +323,7 @@
                 <span class="ident">tree</span>.<span class="ident">root_hash</span>(),
                 <span class="ident">tree</span>.<span class="ident">version</span>(),
                 <span class="ident">committed</span>.<span class="ident">block</span>().<span class="ident">timestamp_usecs</span>(),
-                <span class="prelude-val">None</span>,
+                <span class="ident">next_epoch_state</span>,
             );
             <span class="ident">LedgerInfo</span>::<span class="ident">new</span>(<span class="ident">commit_block_info</span>, <span class="ident">vote_data</span>.<span class="ident">hash</span>())
         }
@@ -355,6 +360,7 @@
         <span class="ident">parent</span>,
         <span class="ident">committed</span>,
         <span class="ident">validator_signer</span>,
+        <span class="prelude-val">None</span>,
         <span class="prelude-val">None</span>,
     )
 }
