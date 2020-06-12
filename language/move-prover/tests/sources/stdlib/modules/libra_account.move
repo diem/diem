@@ -164,7 +164,7 @@ module LibraAccount {
     ) acquires T, Balance {
         // Check that the `to_deposit` coin is non-zero
         let deposit_value = Libra::value(&to_deposit);
-        Transaction::assert(deposit_value > 0, 7);
+        assert(deposit_value > 0, 7);
 
         // Load the sender's account
         let sender_account_ref = borrow_global_mut<T>(sender);
@@ -279,7 +279,7 @@ module LibraAccount {
         let sender_account = borrow_global_mut<T>(Transaction::sender());
         let sender_balance = borrow_global_mut<Balance<Token>>(Transaction::sender());
         // The sender has delegated the privilege to withdraw from her account elsewhere--abort.
-        Transaction::assert(!sender_account.delegated_withdrawal_capability, 11);
+        assert(!sender_account.delegated_withdrawal_capability, 11);
         // The sender has retained her withdrawal privileges--proceed.
         withdraw_from_balance<Token>(sender_balance, amount)
     }
@@ -312,7 +312,7 @@ module LibraAccount {
         let sender_account = borrow_global_mut<T>(sender);
 
         // Abort if we already extracted the unique withdrawal capability for this account.
-        Transaction::assert(!sender_account.delegated_withdrawal_capability, 11);
+        assert(!sender_account.delegated_withdrawal_capability, 11);
 
         // Ensure the uniqueness of the capability
         sender_account.delegated_withdrawal_capability = true;
@@ -469,7 +469,7 @@ module LibraAccount {
 
     fun rotate_authentication_key_for_account(account: &mut T, new_authentication_key: vector<u8>) {
       // Don't allow rotating to clearly invalid key
-      Transaction::assert(Vector::length(&new_authentication_key) == 32, 12);
+      assert(Vector::length(&new_authentication_key) == 32, 12);
       account.authentication_key = new_authentication_key;
     }
     spec fun rotate_authentication_key_for_account {
@@ -482,7 +482,7 @@ module LibraAccount {
     public fun rotate_authentication_key(new_authentication_key: vector<u8>) acquires T {
         let sender_account = borrow_global_mut<T>(Transaction::sender());
         // The sender has delegated the privilege to rotate her key elsewhere--abort
-        Transaction::assert(!sender_account.delegated_key_rotation_capability, 11);
+        assert(!sender_account.delegated_key_rotation_capability, 11);
         // The sender has retained her key rotation privileges--proceed.
         rotate_authentication_key_for_account(
             sender_account,
@@ -517,7 +517,7 @@ module LibraAccount {
         let sender = Transaction::sender();
         let sender_account = borrow_global_mut<T>(sender);
         // Abort if we already extracted the unique key rotation capability for this account.
-        Transaction::assert(!sender_account.delegated_key_rotation_capability, 11);
+        assert(!sender_account.delegated_key_rotation_capability, 11);
         sender_account.delegated_key_rotation_capability = true; // Ensure uniqueness of the capability
         KeyRotationCapability { account_address: sender }
     }
@@ -551,7 +551,7 @@ module LibraAccount {
         let generator = EventHandleGenerator {counter: 0};
         let authentication_key = auth_key_prefix;
         Vector::append(&mut authentication_key, LCS::to_bytes(&fresh_address));
-        Transaction::assert(Vector::length(&authentication_key) == 32, 12);
+        assert(Vector::length(&authentication_key) == 32, 12);
 
         save_account(
             Balance{
@@ -746,13 +746,13 @@ module LibraAccount {
 
         // FUTURE: Make these error codes sequential
         // Verify that the transaction sender's account exists
-        Transaction::assert(exists_at(transaction_sender), 5);
+        assert(exists_at(transaction_sender), 5);
 
         // Load the transaction sender's account
         let sender_account = borrow_global_mut<T>(transaction_sender);
 
         // Check that the hash of the transaction's public key matches the account's auth key
-        Transaction::assert(
+        assert(
             Hash::sha3_256(txn_public_key) == *&sender_account.authentication_key,
             2
         );
@@ -760,12 +760,12 @@ module LibraAccount {
         // Check that the account has enough balance for all of the gas
         let max_transaction_fee = txn_gas_price * txn_max_gas_units;
         let balance_amount = balance<LBR::T>(transaction_sender);
-        Transaction::assert(balance_amount >= max_transaction_fee, 6);
+        assert(balance_amount >= max_transaction_fee, 6);
 
         // Check that the transaction sequence number matches the sequence number of the account
-        Transaction::assert(txn_sequence_number >= sender_account.sequence_number, 3);
-        Transaction::assert(txn_sequence_number == sender_account.sequence_number, 4);
-        Transaction::assert(LibraTransactionTimeout::is_valid_transaction_timestamp(txn_expiration_time), 7);
+        assert(txn_sequence_number >= sender_account.sequence_number, 3);
+        assert(txn_sequence_number == sender_account.sequence_number, 4);
+        assert(LibraTransactionTimeout::is_valid_transaction_timestamp(txn_expiration_time), 7);
     }
 
     // The epilogue is invoked at the end of transactions.
@@ -782,7 +782,7 @@ module LibraAccount {
 
         // Charge for gas
         let transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
-        Transaction::assert(
+        assert(
             balance_for(sender_balance) >= transaction_fee_amount,
             6
         );

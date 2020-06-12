@@ -1,6 +1,6 @@
 script {
 fun main() {
     if (true) return ();
-    0x0::Transaction::assert(false, 42);
+    assert(false, 42);
 }
 }

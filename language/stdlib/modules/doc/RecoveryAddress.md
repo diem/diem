@@ -82,7 +82,7 @@ Aborts if
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_RecoveryAddress_publish">publish</a>(recovery_account: &signer) {
     // Only VASPs can create a recovery address
     // TODO: proper error code
-    Transaction::assert(<a href="VASP.md#0x0_VASP_is_vasp">VASP::is_vasp</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(recovery_account)), 2222);
+    <b>assert</b>(<a href="VASP.md#0x0_VASP_is_vasp">VASP::is_vasp</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(recovery_account)), 2222);
     // put the rotation capability for the recovery account itself in `rotation_caps`. This
     // <b>ensures</b> two things:
     // (1) It's not possible <b>to</b> get into a "recovery cycle" where A is the recovery account for
@@ -134,7 +134,7 @@ Aborts if
     // Both the original owner `to_recover` of the KeyRotationCapability and the
     // `recovery_address` can rotate the authentication key
     // TODO: proper error code
-    Transaction::assert(sender == recovery_address || sender == to_recover, 3333);
+    <b>assert</b>(sender == recovery_address || sender == to_recover, 3333);
 
     <b>let</b> caps = &borrow_global&lt;<a href="#0x0_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps;
     <b>let</b> i = 0;
@@ -190,7 +190,7 @@ Aborts if
 <b>acquires</b> <a href="#0x0_RecoveryAddress">RecoveryAddress</a> {
     <b>let</b> addr = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(to_recover_account);
     // Only accept the rotation capability <b>if</b> both accounts belong <b>to</b> the same <a href="VASP.md#0x0_VASP">VASP</a>
-    Transaction::assert(
+    <b>assert</b>(
         <a href="VASP.md#0x0_VASP_parent_address">VASP::parent_address</a>(recovery_address) ==
             <a href="VASP.md#0x0_VASP_parent_address">VASP::parent_address</a>(addr),
         444 // TODO: proper error code

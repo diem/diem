@@ -1,9 +1,8 @@
 address 0x0 {
 
 module LibraTransactionTimeout {
-    use 0x0::CoreAddresses;
+  use 0x0::CoreAddresses;
   use 0x0::Signer;
-  use 0x0::Transaction;
   use 0x0::LibraTimestamp;
 
   resource struct TTL {
@@ -13,14 +12,14 @@ module LibraTransactionTimeout {
 
   public fun initialize(association: &signer) {
     // Only callable by the Association address
-    Transaction::assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
+    assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
     // Currently set to 1day.
     move_to(association, TTL {duration_microseconds: 86400000000});
   }
 
   public fun set_timeout(association: &signer, new_duration: u64) acquires TTL {
     // Only callable by the Association address
-    Transaction::assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
+    assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
 
     let timeout = borrow_global_mut<TTL>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
     timeout.duration_microseconds = new_duration;

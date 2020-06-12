@@ -26,6 +26,6 @@ fun main() {
     let x = A::new_T(2);
     let y = A::new_K(x);
     let z = A::value(&y);
-    0x0::Transaction::assert(z == 2, 42);
+    assert(z == 2, 42);
 }
 }

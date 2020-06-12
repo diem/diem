@@ -12,7 +12,6 @@ address 0x0 {
 module ValidatorConfig {
     use 0x0::Association;
     use 0x0::Option::{Self, Option};
-    use 0x0::Transaction;
     use 0x0::Signer;
     use 0x0::CoreAddresses;
 
@@ -43,7 +42,7 @@ module ValidatorConfig {
     ///////////////////////////////////////////////////////////////////////////
 
     public fun publish(creator: &signer, account: &signer) {
-        Transaction::assert(Signer::address_of(creator) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1101);
+        assert(Signer::address_of(creator) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1101);
         move_to(account, ValidatorConfig {
             config: Option::none(),
             operator_account: Option::none(),
@@ -85,7 +84,7 @@ module ValidatorConfig {
         full_node_network_identity_pubkey: vector<u8>,
         full_node_network_address: vector<u8>,
     ) acquires ValidatorConfig {
-        Transaction::assert(
+        assert(
             Signer::address_of(signer) == get_operator(validator_account),
             1101
         );
@@ -107,7 +106,7 @@ module ValidatorConfig {
         validator_account: address,
         consensus_pubkey: vector<u8>,
     ) acquires ValidatorConfig {
-        Transaction::assert(
+        assert(
             Signer::address_of(account) == get_operator(validator_account),
             1101
         );
@@ -130,7 +129,7 @@ module ValidatorConfig {
     // Get Config
     // Aborts if there is no ValidatorConfig resource of if its config is empty
     public fun get_config(addr: address): Config acquires ValidatorConfig {
-        Transaction::assert(exists<ValidatorConfig>(addr), 1106);
+        assert(exists<ValidatorConfig>(addr), 1106);
         let config = &borrow_global<ValidatorConfig>(addr).config;
         *Option::borrow(config)
     }
@@ -139,7 +138,7 @@ module ValidatorConfig {
     // Aborts if there is no ValidatorConfig resource, if its operator_account is
     // empty, returns the input
     public fun get_operator(addr: address): address acquires ValidatorConfig {
-        Transaction::assert(exists<ValidatorConfig>(addr), 1106);
+        assert(exists<ValidatorConfig>(addr), 1106);
         let t_ref = borrow_global<ValidatorConfig>(addr);
         *Option::borrow_with_default(&t_ref.operator_account, &addr)
     }
@@ -167,12 +166,12 @@ module ValidatorConfig {
     ///////////////////////////////////////////////////////////////////////////
 
     public fun decertify(account: &signer, addr: address) acquires ValidatorConfig {
-        Transaction::assert(Association::addr_is_association(Signer::address_of(account)), 1002);
+        assert(Association::addr_is_association(Signer::address_of(account)), 1002);
         borrow_global_mut<ValidatorConfig>(addr).is_certified = false;
     }
 
     public fun certify(account: &signer, addr: address) acquires ValidatorConfig {
-        Transaction::assert(Association::addr_is_association(Signer::address_of(account)), 1002);
+        assert(Association::addr_is_association(Signer::address_of(account)), 1002);
         borrow_global_mut<ValidatorConfig>(addr).is_certified = true;
     }
 

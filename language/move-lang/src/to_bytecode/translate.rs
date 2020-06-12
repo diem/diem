@@ -876,8 +876,6 @@ fn call(
 
     match (&m.0.value.address, m.0.value.name.value(), f.value()) {
         (&A::LIBRA_CORE, TXN::MOD, TXN::SENDER) => code.push(sp(f.loc(), B::GetTxnSenderAddress)),
-        (&A::LIBRA_CORE, TXN::MOD, TXN::ASSERT) => panic!("ICE should have been covered in hlir"),
-        (&A::LIBRA_CORE, TXN::MOD, f) => panic!("ICE unknown magic transaction function {}", f),
         _ => module_call(context, code, m, f, tys),
     }
 }

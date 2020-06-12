@@ -19,7 +19,7 @@ module TraceBug {
 
     public fun assert_sender_is_root() {
         // Here we abort if the sender does not have Root privilege.
-        Transaction::assert(exists<Root>(Transaction::sender()), 1001);
+        assert(exists<Root>(Transaction::sender()), 1001);
     }
     spec fun assert_sender_is_root {
         // The following two conditions usually come from invariants, but we have expanded them here for

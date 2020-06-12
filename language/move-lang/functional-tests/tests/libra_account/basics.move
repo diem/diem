@@ -89,16 +89,15 @@ script {
 script {
     use 0x0::LibraAccount;
     use 0x0::Signer;
-    use 0x0::Transaction;
     fun main(sender: &signer) {
         let cap = LibraAccount::extract_key_rotation_capability(sender);
-        Transaction::assert(
+        assert(
             *LibraAccount::key_rotation_capability_address(&cap) == Signer::address_of(sender), 0
         );
         LibraAccount::restore_key_rotation_capability(cap);
         let with_cap = LibraAccount::extract_withdraw_capability(sender);
 
-        Transaction::assert(
+        assert(
             *LibraAccount::withdraw_capability_address(&with_cap) == Signer::address_of(sender),
             0
         );

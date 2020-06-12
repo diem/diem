@@ -93,7 +93,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer): <a href="#0x0_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> {
     // enforce that this is only going <b>to</b> one specific address,
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="#0x0_RegisteredCurrencies_singleton_address">singleton_address</a>(),
         0
     );

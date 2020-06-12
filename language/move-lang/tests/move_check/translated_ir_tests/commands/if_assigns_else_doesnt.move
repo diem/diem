@@ -8,7 +8,7 @@ fun main() {
         y = 0;
         y;
     };
-    0x0::Transaction::assert(x == 42, 42);
+    assert(x == 42, 42);
 }
 }
 

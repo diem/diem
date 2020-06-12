@@ -115,7 +115,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraBlock_initialize_block_metadata">initialize_block_metadata</a>(account: &signer) {
   // Only callable by the <a href="Association.md#0x0_Association">Association</a> address
-  Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1);
+  <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1);
 
   move_to&lt;<a href="#0x0_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(
       account,
@@ -154,7 +154,7 @@
     proposer: address
 ) <b>acquires</b> <a href="#0x0_LibraBlock_BlockMetadata">BlockMetadata</a> {
     // Can only be invoked by LibraVM privilege.
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(vm) == <a href="CoreAddresses.md#0x0_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(), 33);
+    <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(vm) == <a href="CoreAddresses.md#0x0_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(), 33);
 
     <a href="#0x0_LibraBlock_process_block_prologue">process_block_prologue</a>(vm,  round, timestamp, previous_block_votes, proposer);
 
@@ -191,7 +191,7 @@
     <b>let</b> block_metadata_ref = borrow_global_mut&lt;<a href="#0x0_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>());
 
     // TODO: Figure out a story for errors in the system transactions.
-    <b>if</b>(proposer != <a href="CoreAddresses.md#0x0_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) Transaction::assert(<a href="LibraSystem.md#0x0_LibraSystem_is_validator">LibraSystem::is_validator</a>(proposer), 5002);
+    <b>if</b>(proposer != <a href="CoreAddresses.md#0x0_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) <b>assert</b>(<a href="LibraSystem.md#0x0_LibraSystem_is_validator">LibraSystem::is_validator</a>(proposer), 5002);
     <a href="LibraTimestamp.md#0x0_LibraTimestamp_update_global_time">LibraTimestamp::update_global_time</a>(vm, proposer, timestamp);
     block_metadata_ref.height = block_metadata_ref.height + 1;
     <a href="Event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraBlock_NewBlockEvent">NewBlockEvent</a>&gt;(

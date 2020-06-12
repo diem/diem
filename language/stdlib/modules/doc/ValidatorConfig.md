@@ -138,7 +138,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_publish">publish</a>(creator: &signer, account: &signer) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(creator) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1101);
+    <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(creator) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1101);
     move_to(account, <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
         config: <a href="Option.md#0x0_Option_none">Option::none</a>(),
         operator_account: <a href="Option.md#0x0_Option_none">Option::none</a>(),
@@ -226,7 +226,7 @@
     full_node_network_identity_pubkey: vector&lt;u8&gt;,
     full_node_network_address: vector&lt;u8&gt;,
 ) <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(signer) == <a href="#0x0_ValidatorConfig_get_operator">get_operator</a>(validator_account),
         1101
     );
@@ -267,7 +267,7 @@
     validator_account: address,
     consensus_pubkey: vector&lt;u8&gt;,
 ) <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="#0x0_ValidatorConfig_get_operator">get_operator</a>(validator_account),
         1101
     );
@@ -320,7 +320,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_get_config">get_config</a>(addr: address): <a href="#0x0_ValidatorConfig_Config">Config</a> <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
-    Transaction::assert(exists&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr), 1106);
+    <b>assert</b>(exists&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr), 1106);
     <b>let</b> config = &borrow_global&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config;
     *<a href="Option.md#0x0_Option_borrow">Option::borrow</a>(config)
 }
@@ -346,7 +346,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_get_operator">get_operator</a>(addr: address): address <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
-    Transaction::assert(exists&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr), 1106);
+    <b>assert</b>(exists&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr), 1106);
     <b>let</b> t_ref = borrow_global&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr);
     *<a href="Option.md#0x0_Option_borrow_with_default">Option::borrow_with_default</a>(&t_ref.operator_account, &addr)
 }
@@ -444,7 +444,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_decertify">decertify</a>(account: &signer, addr: address) <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
-    Transaction::assert(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), 1002);
+    <b>assert</b>(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), 1002);
     borrow_global_mut&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr).is_certified = <b>false</b>;
 }
 </code></pre>
@@ -469,7 +469,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_ValidatorConfig_certify">certify</a>(account: &signer, addr: address) <b>acquires</b> <a href="#0x0_ValidatorConfig">ValidatorConfig</a> {
-    Transaction::assert(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), 1002);
+    <b>assert</b>(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), 1002);
     borrow_global_mut&lt;<a href="#0x0_ValidatorConfig">ValidatorConfig</a>&gt;(addr).is_certified = <b>true</b>;
 }
 </code></pre>

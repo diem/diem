@@ -8,8 +8,8 @@ use 0x0::LibraSystem;
 use 0x0::ValidatorConfig;
 fun main() {
     // test bob is a validator
-    0x0::Transaction::assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
-    0x0::Transaction::assert(LibraSystem::is_validator({{bob}}) == true, 98);
+    assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
+    assert(LibraSystem::is_validator({{bob}}) == true, 98);
 }
 }
 
@@ -40,14 +40,14 @@ fun main(creator: &signer) {
 //     let config = ValidatorConfig::get_config(0xAA);
 //     let consensus_pk = ValidatorConfig::get_consensus_pubkey(&config);
 //     let expected_pk = x"10";
-//     0x0::Transaction::assert(consensus_pk == &expected_pk, 98);
+//     assert(consensus_pk == &expected_pk, 98);
 //
 //     // add itself as a validator
 //     let validator_size = LibraSystem::validator_set_size();
-//     0x0::Transaction::assert(validator_size == 1, 99);
+//     assert(validator_size == 1, 99);
 //     LibraSystem::add_validator(0xAA);
 //    validator_size = LibraSystem::validator_set_size();
-//     0x0::Transaction::assert(validator_size == 2, 99);
+//     assert(validator_size == 2, 99);
 // }
 // }
 //

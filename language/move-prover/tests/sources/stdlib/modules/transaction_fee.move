@@ -33,7 +33,7 @@ module TransactionFee {
     // encapsulate the withdrawal capability to the transaction fee account so that we can withdraw
     // the fees from this account from block metadata transactions.
     fun initialize_transaction_fees() {
-        Transaction::assert(Transaction::sender() == 0xFEE, 0);
+        assert(Transaction::sender() == 0xFEE, 0);
         move_to_sender<TransactionFees>(TransactionFees {
             fee_withdrawal_capability: LibraAccount::extract_sender_withdrawal_capability(),
         });
@@ -41,7 +41,7 @@ module TransactionFee {
 
     public fun distribute_transaction_fees<Token>() acquires TransactionFees {
       // Can only be invoked by LibraVM privilege.
-      Transaction::assert(Transaction::sender() == 0x0, 33);
+      assert(Transaction::sender() == 0x0, 33);
 
       let num_validators = LibraSystem::validator_set_size();
       let amount_collected = LibraAccount::balance<Token>(0xFEE);
@@ -96,9 +96,9 @@ module TransactionFee {
     // transaction fees collected, then there will be a remainder that is left in the transaction
     // fees pot to be distributed later.
     fun per_validator_distribution_amount(amount_collected: u64, num_validators: u64): u64 {
-        Transaction::assert(num_validators != 0, 0);
+        assert(num_validators != 0, 0);
         let validator_payout = amount_collected / num_validators;
-        Transaction::assert(validator_payout * num_validators <= amount_collected, 1);
+        assert(validator_payout * num_validators <= amount_collected, 1);
         validator_payout
     }
 }

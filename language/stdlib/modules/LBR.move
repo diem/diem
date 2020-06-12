@@ -7,7 +7,6 @@ module LBR {
     use 0x0::FixedPoint32::{Self, FixedPoint32};
     use 0x0::Libra::{Self, Libra};
     use 0x0::Signer;
-    use 0x0::Transaction;
 
     // The type tag for this coin type.
     resource struct LBR { }
@@ -39,7 +38,7 @@ module LBR {
     // both be the correct address and have the correct permissions. These
     // restrictions are enforced in the Libra::register_currency function.
     public fun initialize(association: &signer) {
-        Transaction::assert(Signer::address_of(association) == 0xA550C18, 0);
+        assert(Signer::address_of(association) == 0xA550C18, 0);
         // Register the LBR currency.
         let (mint_cap, burn_cap) = Libra::register_currency<LBR>(
             association,

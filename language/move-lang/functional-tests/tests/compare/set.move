@@ -4,7 +4,6 @@
 module Set {
     use 0x0::Compare;
     use 0x0::LCS;
-    use 0x0::Transaction;
     use 0x0::Vector;
 
     struct T<Elem> { v: vector<Elem> }
@@ -42,7 +41,7 @@ module Set {
                 if (mid == 0) {
                     return (0, false)
                 };
-                Transaction::assert(mid != 0, 88);
+                assert(mid != 0, 88);
                 right = mid -1
             }
         };
@@ -77,13 +76,12 @@ module Set {
 //! new-transaction
 script {
 use {{default}}::Set;
-use 0x0::Transaction;
 fun main() {
     // simple singleton case
     let s = Set::empty<u64>();
     Set::insert(&mut s, 7);
-    Transaction::assert(*Set::borrow(&s, 0) == 7, 7000);
-    Transaction::assert(Set::is_mem(&s, &7), 7001);
+    assert(*Set::borrow(&s, 0) == 7, 7000);
+    assert(Set::is_mem(&s, &7), 7001);
 
     Set::insert(&mut s, 7) // will abort with 999
 }
@@ -96,7 +94,6 @@ fun main() {
 //! gas-price: 0
 script {
 use {{default}}::Set;
-use 0x0::Transaction;
 fun main() {
     // add 10 elements in arbitrary order, check sortedness at the end
     let s = Set::empty<u64>();
@@ -110,11 +107,11 @@ fun main() {
     Set::insert(&mut s, 0);
     Set::insert(&mut s, 2);
     Set::insert(&mut s, 5);
-    Transaction::assert(Set::size(&s) == 10, 70002);
+    assert(Set::size(&s) == 10, 70002);
 
     let i = 0;
     while (i < Set::size(&s)) {
-        Transaction::assert(*Set::borrow(&s, i) == i, 70003);
+        assert(*Set::borrow(&s, i) == i, 70003);
         i = i + 1
     }
 }

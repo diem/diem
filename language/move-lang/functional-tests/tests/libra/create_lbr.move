@@ -36,7 +36,6 @@ use 0x0::Coin1::Coin1;
 use 0x0::Coin2::Coin2;
 use 0x0::LBR;
 use 0x0::LibraAccount;
-use 0x0::Transaction;
 use 0x0::Libra;
 fun main(account: &signer) {
     let amount_lbr = 10;
@@ -47,9 +46,9 @@ fun main(account: &signer) {
     let coin2 = LibraAccount::withdraw_from<Coin2>(&with_cap, coin2_balance);
     LibraAccount::restore_withdraw_capability(with_cap);
     let (lbr, coin1, coin2) = LBR::create(amount_lbr, coin1, coin2);
-    Transaction::assert(Libra::value(&lbr) == 10, 0);
-    Transaction::assert(Libra::value(&coin1) == coin1_balance - 6, 1);
-    Transaction::assert(Libra::value(&coin2) == coin2_balance - 6, 2);
+    assert(Libra::value(&lbr) == 10, 0);
+    assert(Libra::value(&coin1) == coin1_balance - 6, 1);
+    assert(Libra::value(&coin2) == coin2_balance - 6, 2);
     LibraAccount::deposit_to(account, lbr);
     LibraAccount::deposit_to(account, coin1);
     LibraAccount::deposit_to(account, coin2);
@@ -64,16 +63,15 @@ fun main(account: &signer) {
 script {
 use 0x0::LBR::{Self, LBR};
 use 0x0::LibraAccount;
-use 0x0::Transaction;
 use 0x0::Libra;
 fun main(account: &signer) {
     let with_cap = LibraAccount::extract_withdraw_capability(account);
     let lbr = LibraAccount::withdraw_from<LBR>(&with_cap, 10);
     LibraAccount::restore_withdraw_capability(with_cap);
-    Transaction::assert(Libra::value(&lbr) == 10, 3);
+    assert(Libra::value(&lbr) == 10, 3);
     let (coin1, coin2) = LBR::unpack(account, lbr);
-    Transaction::assert(Libra::value(&coin1) == 5, 4);
-    Transaction::assert(Libra::value(&coin2) == 5, 5);
+    assert(Libra::value(&coin1) == 5, 4);
+    assert(Libra::value(&coin2) == 5, 5);
     LibraAccount::deposit(account, {{bob}}, coin1);
     LibraAccount::deposit(account, {{bob}}, coin2);
 }
@@ -91,7 +89,6 @@ use 0x0::Coin1::Coin1;
 use 0x0::Coin2::Coin2;
 use 0x0::LBR;
 use 0x0::LibraAccount;
-use 0x0::Transaction;
 use 0x0::Libra;
 fun main(account: &signer) {
     let amount_lbr = 0;
@@ -102,9 +99,9 @@ fun main(account: &signer) {
     let coin2 = LibraAccount::withdraw_from<Coin2>(&with_cap, coin2_balance);
     LibraAccount::restore_withdraw_capability(with_cap);
     let (lbr, coin1, coin2) = LBR::create(amount_lbr, coin1, coin2);
-    Transaction::assert(Libra::value(&lbr) == 0, 6);
-    Transaction::assert(Libra::value(&coin1) == coin1_balance, 7);
-    Transaction::assert(Libra::value(&coin2) == coin2_balance, 8);
+    assert(Libra::value(&lbr) == 0, 6);
+    assert(Libra::value(&coin1) == coin1_balance, 7);
+    assert(Libra::value(&coin2) == coin2_balance, 8);
     Libra::destroy_zero(lbr);
     LibraAccount::deposit(account, {{bob}}, coin1);
     LibraAccount::deposit(account, {{bob}}, coin2);

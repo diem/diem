@@ -19,6 +19,7 @@ module M {
         foo as borrow_global_mut,
         foo as exists,
         foo as freeze,
+        foo as assert,
         foo as Self,
     };
 }

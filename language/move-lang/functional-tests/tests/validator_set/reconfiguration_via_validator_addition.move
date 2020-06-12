@@ -13,8 +13,8 @@ script{
     use 0x0::LibraSystem;
     fun main(account: &signer) {
         LibraSystem::remove_validator(account, {{alice}});
-        0x0::Transaction::assert(!LibraSystem::is_validator({{alice}}), 77);
-        0x0::Transaction::assert(LibraSystem::is_validator({{bob}}), 78);
+        assert(!LibraSystem::is_validator({{alice}}), 77);
+        assert(LibraSystem::is_validator({{bob}}), 78);
     }
 }
 // check: NewEpochEvent
@@ -49,8 +49,8 @@ script{
     fun main(account: &signer) {
         LibraSystem::add_validator(account, {{alice}});
 
-        0x0::Transaction::assert(LibraSystem::is_validator({{alice}}), 77);
-        0x0::Transaction::assert(LibraSystem::is_validator({{bob}}), 78);
+        assert(LibraSystem::is_validator({{alice}}), 77);
+        assert(LibraSystem::is_validator({{bob}}), 78);
     }
 }
 // check: NewEpochEvent

@@ -31,9 +31,9 @@ fun main(account: &signer) {
 script{
 use 0x0::LibraSystem;
 fun main() {
-    0x0::Transaction::assert(!LibraSystem::is_validator({{vivian}}), 70);
-    0x0::Transaction::assert(!LibraSystem::is_validator({{alice}}), 71);
-    0x0::Transaction::assert(LibraSystem::is_validator({{viola}}), 72);
+    assert(!LibraSystem::is_validator({{vivian}}), 70);
+    assert(!LibraSystem::is_validator({{alice}}), 71);
+    assert(LibraSystem::is_validator({{viola}}), 72);
 }
 }
 

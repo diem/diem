@@ -14,6 +14,6 @@ error: abort not covered by any of the `aborts_if` clauses
 
     ┌── tests/sources/functional/script_provider.move:15:9 ───
     │
- 15 │         Transaction::assert(Transaction::sender() == 0x1, 1);
-    │         ---------------------------------------------------- abort happened here
+ 15 │         assert(Transaction::sender() == 0x1, 1);
+    │         --------------------------------------- abort happened here
     │

@@ -141,11 +141,11 @@ transaction fees from the
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_initialize">initialize</a>(association: &signer, fee_account: &signer, auth_key_prefix: vector&lt;u8&gt;) {
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(),
         0
     );
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(fee_account) == <a href="CoreAddresses.md#0x0_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>(),
         0
     );
@@ -252,7 +252,7 @@ underlying fiat.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_TransactionFee_preburn_fees">preburn_fees</a>&lt;CoinType&gt;(blessed_sender: &signer)
 <b>acquires</b> <a href="#0x0_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a>, <a href="#0x0_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a> {
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(blessed_sender) == <a href="CoreAddresses.md#0x0_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>(),
         0
     );

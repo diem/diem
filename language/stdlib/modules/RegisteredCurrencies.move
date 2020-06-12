@@ -4,7 +4,6 @@ module RegisteredCurrencies {
     use 0x0::CoreAddresses;
     use 0x0::LibraConfig;
     use 0x0::Signer;
-    use 0x0::Transaction;
     use 0x0::Vector;
 
     // An on-chain config holding all of the currency codes for registered
@@ -21,7 +20,7 @@ module RegisteredCurrencies {
 
     public fun initialize(config_account: &signer): RegistrationCapability {
         // enforce that this is only going to one specific address,
-        Transaction::assert(
+        assert(
             Signer::address_of(config_account) == singleton_address(),
             0
         );

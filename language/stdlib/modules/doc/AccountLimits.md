@@ -184,7 +184,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_AccountLimits_grant_calling_capability">grant_calling_capability</a>(account: &signer): <a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a> {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 3000);
+    <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 3000);
     <a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a>{}
 }
 </code></pre>
@@ -213,7 +213,7 @@
     addr: address,
     _cap: &<a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a>,
 ): bool <b>acquires</b> <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="#0x0_AccountLimits_Window">Window</a> {
-    Transaction::assert(<a href="Testnet.md#0x0_Testnet_is_testnet">0x0::Testnet::is_testnet</a>(), 10047);
+    <b>assert</b>(<a href="Testnet.md#0x0_Testnet_is_testnet">0x0::Testnet::is_testnet</a>(), 10047);
     <a href="#0x0_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(
         amount,
         borrow_global_mut&lt;<a href="#0x0_AccountLimits_Window">Window</a>&gt;(addr),
@@ -245,7 +245,7 @@
     addr: address,
     _cap: &<a href="#0x0_AccountLimits_CallingCapability">CallingCapability</a>,
 ): bool <b>acquires</b> <a href="#0x0_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="#0x0_AccountLimits_Window">Window</a> {
-    Transaction::assert(<a href="Testnet.md#0x0_Testnet_is_testnet">0x0::Testnet::is_testnet</a>(), 10048);
+    <b>assert</b>(<a href="Testnet.md#0x0_Testnet_is_testnet">0x0::Testnet::is_testnet</a>(), 10048);
     <a href="#0x0_AccountLimits_can_withdraw">can_withdraw</a>&lt;CoinType&gt;(
         amount,
         borrow_global_mut&lt;<a href="#0x0_AccountLimits_Window">Window</a>&gt;(addr),

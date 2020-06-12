@@ -12,7 +12,7 @@ module LibraTransactionTimeout {
   public fun initialize() {
 
     // Only callable by the Association address
-    Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+    assert(Transaction::sender() == 0xA550C18, 1);
     // Currently set to 1day.
     move_to_sender<TTL>(TTL {duration_microseconds: 86400000000});
   }
@@ -24,7 +24,7 @@ module LibraTransactionTimeout {
 
   public fun set_timeout(new_duration: u64) acquires TTL {
     // Only callable by the Association address
-    Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+    assert(Transaction::sender() == 0xA550C18, 1);
 
     let timeout = borrow_global_mut<TTL>(0xA550C18);
     timeout.duration_microseconds = new_duration;

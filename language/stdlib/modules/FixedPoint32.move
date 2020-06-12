@@ -1,7 +1,6 @@
 address 0x0 {
 
 module FixedPoint32 {
-    use 0x0::Transaction;
 
     // Define a fixed-point numeric type with 32 fractional bits.
     // This is just a u64 integer but it is wrapped in a struct to
@@ -58,7 +57,7 @@ module FixedPoint32 {
         // Check for underflow. Truncating to zero might be the desired result,
         // but if you really want a ratio of zero, it is easy to create that
         // from a raw value.
-        Transaction::assert(quotient != 0 || numerator == 0, 16);
+        assert(quotient != 0 || numerator == 0, 16);
         // Return the quotient as a fixed-point number. The cast will fail
         // with an arithmetic error if the number is too large.
         FixedPoint32 { value: (quotient as u64) }

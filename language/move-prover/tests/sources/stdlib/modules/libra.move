@@ -39,7 +39,7 @@ module Libra {
 
     public fun register<Token>() {
         // Only callable by the Association address
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+        assert(Transaction::sender() == 0xA550C18, 1);
         move_to_sender(MintCapability<Token>{ });
         move_to_sender(Info<Token> { total_value: 0u128, preburn_value: 0 });
     }
@@ -54,7 +54,7 @@ module Libra {
     }
 
     fun assert_is_registered<Token>() {
-        Transaction::assert(exists<Info<Token>>(0xA550C18), 12);
+        assert(exists<Info<Token>>(0xA550C18), 12);
     }
     spec fun assert_is_registered {
         aborts_if !exists<Info<Token>>(0xA550C18);
@@ -141,7 +141,7 @@ module Libra {
         // minting. This will not be a problem in the production Libra system because coins will
         // be backed with real-world assets, and thus minting will be correspondingly rarer.
         // * 1000000 here because the unit is microlibra
-        Transaction::assert(value <= 1000000000 * 1000000, 11);
+        assert(value <= 1000000000 * 1000000, 11);
         // update market cap resource to reflect minting
         let market_cap = borrow_global_mut<Info<Token>>(0xA550C18);
         market_cap.total_value = market_cap.total_value + (value as u128);
@@ -177,7 +177,7 @@ module Libra {
         coin: T<Token>
     ) acquires Info {
         // TODO: bring this back once we can automate approvals in testnet
-        // Transaction::assert(preburn_ref.is_approved, 13);
+        // assert(preburn_ref.is_approved, 13);
         let coin_value = value(&coin);
         Vector::push_back(
             &mut preburn_ref.requests,
@@ -371,7 +371,7 @@ module Libra {
     // Fails if the coins value is less than `value`
     public fun withdraw<Token>(coin_ref: &mut T<Token>, value: u64): T<Token> {
         // Check that `amount` is less than the coin's value
-        Transaction::assert(coin_ref.value >= value, 10);
+        assert(coin_ref.value >= value, 10);
 
         // Split the coin
         coin_ref.value = coin_ref.value - value;
@@ -411,7 +411,7 @@ module Libra {
     // so you cannot "burn" any non-zero amount of Libra::T
     public fun destroy_zero<Token>(coin: T<Token>) {
         let T<Token> { value } = coin;
-        Transaction::assert(value == 0, 11);
+        assert(value == 0, 11);
     }
     spec fun destroy_zero {
         aborts_if coin.value > 0;

@@ -174,7 +174,7 @@
     compliance_public_key: vector&lt;u8&gt;
 ) {
     <a href="Association.md#0x0_Association_assert_is_root">Association::assert_is_root</a>(association);
-    Transaction::assert(<a href="Signature.md#0x0_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> compliance_public_key), 7004);
+    <b>assert</b>(<a href="Signature.md#0x0_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> compliance_public_key), 7004);
     move_to(
         vasp,
         <a href="#0x0_VASP_ParentVASP">ParentVASP</a> {
@@ -213,7 +213,7 @@ Aborts if
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_VASP_publish_child_vasp_credential">publish_child_vasp_credential</a>(parent: &signer, child: &signer) {
     <b>let</b> parent_vasp_addr = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(parent);
-    Transaction::assert(exists&lt;<a href="#0x0_VASP_ParentVASP">ParentVASP</a>&gt;(parent_vasp_addr), 7000);
+    <b>assert</b>(exists&lt;<a href="#0x0_VASP_ParentVASP">ParentVASP</a>&gt;(parent_vasp_addr), 7000);
     move_to(child, <a href="#0x0_VASP_ChildVASP">ChildVASP</a> { parent_vasp_addr });
 }
 </code></pre>
@@ -480,7 +480,7 @@ Rotate the compliance public key for
     parent_vasp: &signer,
     new_key: vector&lt;u8&gt;
 ) <b>acquires</b> <a href="#0x0_VASP_ParentVASP">ParentVASP</a> {
-    Transaction::assert(<a href="Signature.md#0x0_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_key), 7004);
+    <b>assert</b>(<a href="Signature.md#0x0_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_key), 7004);
     <b>let</b> parent_addr = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(parent_vasp);
     borrow_global_mut&lt;<a href="#0x0_VASP_ParentVASP">ParentVASP</a>&gt;(parent_addr).compliance_public_key = new_key
 }

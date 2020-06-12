@@ -14,15 +14,15 @@ script{
     // Decertify two validators to make sure we can remove both
     // from the set and trigger reconfiguration
     fun main(account: &signer) {
-        0x0::Transaction::assert(LibraSystem::is_validator({{alice}}) == true, 98);
-        0x0::Transaction::assert(LibraSystem::is_validator({{vivian}}) == true, 99);
-        0x0::Transaction::assert(LibraSystem::is_validator({{viola}}) == true, 100);
+        assert(LibraSystem::is_validator({{alice}}) == true, 98);
+        assert(LibraSystem::is_validator({{vivian}}) == true, 99);
+        assert(LibraSystem::is_validator({{viola}}) == true, 100);
         ValidatorConfig::decertify(account, {{vivian}});
         ValidatorConfig::decertify(account, {{alice}});
         LibraSystem::update_and_reconfigure(account);
-        0x0::Transaction::assert(LibraSystem::is_validator({{alice}}) == false, 101);
-        0x0::Transaction::assert(LibraSystem::is_validator({{vivian}}) == false, 102);
-        0x0::Transaction::assert(LibraSystem::is_validator({{viola}}) == true, 103);
+        assert(LibraSystem::is_validator({{alice}}) == false, 101);
+        assert(LibraSystem::is_validator({{vivian}}) == false, 102);
+        assert(LibraSystem::is_validator({{viola}}) == true, 103);
     }
 }
 

@@ -242,12 +242,7 @@ mod count {
             name.value(),
         );
         let call_is_pure = match a_m_f {
-            (&Address::LIBRA_CORE, TXN::MOD, TXN::ASSERT) => panic!("ICE should have been inlined"),
-            (&Address::LIBRA_CORE, TXN::MOD, TXN::MAX_GAS)
-            | (&Address::LIBRA_CORE, TXN::MOD, TXN::SENDER)
-            | (&Address::LIBRA_CORE, TXN::MOD, TXN::SEQUENCE_NUM)
-            | (&Address::LIBRA_CORE, TXN::MOD, TXN::PUBLIC_KEY)
-            | (&Address::LIBRA_CORE, TXN::MOD, TXN::GAS_PRICE) => true,
+            (&Address::LIBRA_CORE, TXN::MOD, TXN::SENDER) => true,
             _ => false,
         };
         call_is_pure && can_subst_exp_single(arguments)

@@ -151,7 +151,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LBR_initialize">initialize</a>(association: &signer) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == 0xA550C18, 0);
+    <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == 0xA550C18, 0);
     // Register the <a href="#0x0_LBR">LBR</a> currency.
     <b>let</b> (mint_cap, burn_cap) = <a href="Libra.md#0x0_Libra_register_currency">Libra::register_currency</a>&lt;<a href="#0x0_LBR">LBR</a>&gt;(
         association,

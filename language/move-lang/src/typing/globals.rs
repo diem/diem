@@ -223,7 +223,7 @@ fn builtin_function(
             let msg = mk_msg(N::BuiltinFunction_::EXISTS);
             check_global_access(context, loc, msg, bt);
         }
-        B::Freeze(_) => (),
+        B::Freeze(_) | B::Assert => (),
     }
 }
 

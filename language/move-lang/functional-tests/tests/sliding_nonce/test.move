@@ -9,7 +9,6 @@
 //! sender: bob
 script {
     use 0x0::SlidingNonce;
-    use 0x0::Transaction;
 
     fun main(account: &signer) {
         SlidingNonce::publish(account);
@@ -20,20 +19,20 @@ script {
 
         // Repeating nonce is not allowed
         SlidingNonce::record_nonce_or_abort(account, 1);
-        Transaction::assert(SlidingNonce::try_record_nonce(account, 1) == 10003, 1);
+        assert(SlidingNonce::try_record_nonce(account, 1) == 10003, 1);
         SlidingNonce::record_nonce_or_abort(account, 2);
 
         // Can execute 1000 + 127 once(but not second time) and then 1000, because distance between them is <128
         SlidingNonce::record_nonce_or_abort(account, 1000 + 127);
-        Transaction::assert(SlidingNonce::try_record_nonce(account, 1000 + 127) == 10003, 1);
+        assert(SlidingNonce::try_record_nonce(account, 1000 + 127) == 10003, 1);
         SlidingNonce::record_nonce_or_abort(account, 1000);
 
         // Can execute 2000 + 128 but not 2000, because distance between them is <128
         SlidingNonce::record_nonce_or_abort(account, 2000 + 128);
-        Transaction::assert(SlidingNonce::try_record_nonce(account, 2000) == 10001, 1);
+        assert(SlidingNonce::try_record_nonce(account, 2000) == 10001, 1);
 
         // Big jump is nonce is not allowed
-        Transaction::assert(SlidingNonce::try_record_nonce(account, 20000) == 10002, 1);
+        assert(SlidingNonce::try_record_nonce(account, 20000) == 10002, 1);
     }
 }
 // check: EXECUTED

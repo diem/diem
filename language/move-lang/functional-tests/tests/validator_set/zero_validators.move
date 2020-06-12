@@ -21,7 +21,7 @@ script {
     use 0x0::ValidatorConfig;
     fun main(account: &signer) {
         let num_validators = LibraSystem::validator_set_size();
-        0x0::Transaction::assert(num_validators == 1, 98);
+        assert(num_validators == 1, 98);
         let index = 0;
         while (index < num_validators) {
             let addr = LibraSystem::get_ith_validator_address(index);
@@ -39,7 +39,7 @@ script {
     fun main(account: &signer) {
         LibraSystem::update_and_reconfigure(account);
         let num_validators = LibraSystem::validator_set_size();
-        0x0::Transaction::assert(num_validators == 0, 98);
+        assert(num_validators == 0, 98);
     }
 }
 // check: EXECUTED

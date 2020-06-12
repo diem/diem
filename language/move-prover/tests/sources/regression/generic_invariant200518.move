@@ -9,7 +9,7 @@ module GenericBug {
 
     public fun initialize() {
         let sender = Transaction::sender();
-        Transaction::assert(sender == root_address(), 1000);
+        assert(sender == root_address(), 1000);
         move_to_sender(PrivilegedCapability<T>{ });
     }
 
@@ -23,8 +23,8 @@ module GenericBug {
     // be the root association account.
     public fun remove_privilege<Privilege>(addr: address)
     acquires PrivilegedCapability {
-        Transaction::assert(Transaction::sender() == root_address(), 1001);
-        //Transaction::assert(exists<PrivilegedCapability<Privilege>>(addr), 1004);
+        assert(Transaction::sender() == root_address(), 1001);
+        //assert(exists<PrivilegedCapability<Privilege>>(addr), 1004);
         PrivilegedCapability<Privilege>{ } = move_from<PrivilegedCapability<Privilege>>(addr);
     }
 

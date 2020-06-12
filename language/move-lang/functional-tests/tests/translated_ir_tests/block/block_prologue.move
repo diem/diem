@@ -14,8 +14,8 @@ use 0x0::LibraTimestamp;
 use 0x0::LibraBlock;
 
 fun main() {
-    0x0::Transaction::assert(LibraBlock::get_current_block_height() == 1, 73);
-    0x0::Transaction::assert(LibraTimestamp::now_microseconds() == 1000000, 76);
+    assert(LibraBlock::get_current_block_height() == 1, 73);
+    assert(LibraTimestamp::now_microseconds() == 1000000, 76);
 }
 }
 
@@ -24,7 +24,7 @@ script{
 use 0x0::LibraTimestamp;
 
 fun main() {
-    0x0::Transaction::assert(LibraTimestamp::now_microseconds() != 2000000, 77);
+    assert(LibraTimestamp::now_microseconds() != 2000000, 77);
 }
 }
 //! new-transaction

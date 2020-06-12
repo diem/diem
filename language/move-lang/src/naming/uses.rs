@@ -302,5 +302,6 @@ fn builtin_function(context: &mut Context, sp!(_, bf_): &N::BuiltinFunction) {
         | B::BorrowGlobal(_, bt_opt)
         | B::Exists(bt_opt)
         | B::Freeze(bt_opt) => type_opt(context, bt_opt),
+        B::Assert => (),
     }
 }

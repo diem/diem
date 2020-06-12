@@ -95,7 +95,7 @@
 
 <pre><code><b>fun</b> <a href="#0x0_SharedEd25519PublicKey_rotate_key_">rotate_key_</a>(shared_key: &<b>mut</b> <a href="#0x0_SharedEd25519PublicKey">SharedEd25519PublicKey</a>, new_public_key: vector&lt;u8&gt;) {
     // Cryptographic check of <b>public</b> key validity
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Signature.md#0x0_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_public_key),
         9003, // TODO: proper error code
     );

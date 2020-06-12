@@ -13,7 +13,7 @@ module TestTransaction {
     }
 
     fun check_sender1() {
-        Transaction::assert(Transaction::sender() == 0xdeadbeef, 1);
+        assert(Transaction::sender() == 0xdeadbeef, 1);
     }
     spec fun check_sender1 {
         aborts_if sender() != 0xdeadbeef;

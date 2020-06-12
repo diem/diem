@@ -20,7 +20,7 @@ module Offer {
     let T<Offered> { offered, for } = move_from<T<Offered>>(offer_address);
     let sender = Transaction::sender();
     // fail with INSUFFICIENT_PRIVILEGES
-    Transaction::assert(sender == for || sender == offer_address, 11);
+    assert(sender == for || sender == offer_address, 11);
     offered
   }
 

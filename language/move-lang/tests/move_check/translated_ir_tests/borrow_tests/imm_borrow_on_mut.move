@@ -19,14 +19,14 @@ module Tester {
     }
 
     fun larger_field(account: &signer, point_ref: &mut Point): &u64 acquires Initializer {
-        0x0::Transaction::assert(point_ref.x == 0, 42);
-        0x0::Transaction::assert(point_ref.y == 0, 42);
+        assert(point_ref.x == 0, 42);
+        assert(point_ref.y == 0, 42);
 
         let field_ref = set_and_pick(account, point_ref);
         let returned_ref = bump_and_give(field_ref);
 
         // imagine some more interesting check than this assert
-        0x0::Transaction::assert(
+        assert(
             (*returned_ref == point_ref.x) &&
             (*returned_ref != point_ref.y),
             42

@@ -1468,6 +1468,11 @@ fn builtin_call(
             params_ty = vec![sp(bloc, Type_::Ref(true, Box::new(ty_arg.clone())))];
             ret_ty = sp(loc, Type_::Ref(false, Box::new(ty_arg)));
         }
+        NB::Assert => {
+            b_ = TB::Assert;
+            params_ty = vec![Type_::bool(bloc), Type_::u64(bloc)];
+            ret_ty = sp(loc, Type_::Unit);
+        }
     };
     let (arguments, arg_tys) = call_args(
         context,

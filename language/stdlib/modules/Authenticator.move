@@ -6,7 +6,6 @@ address 0x0 {
 module Authenticator {
     use 0x0::Hash;
     use 0x0::LCS;
-    use 0x0::Transaction;
     use 0x0::Vector;
 
     // A multi-ed25519 public key
@@ -28,11 +27,11 @@ module Authenticator {
     ): MultiEd25519PublicKey {
         // check theshold requirements
         let len = Vector::length(&public_keys);
-        Transaction::assert(threshold != 0, 7001);
-        Transaction::assert((threshold as u64) <= len, 7002);
+        assert(threshold != 0, 7001);
+        assert((threshold as u64) <= len, 7002);
         // TODO: add constant MULTI_ED25519_MAX_KEYS
         // the multied25519 signature scheme allows at most 32 keys
-        Transaction::assert(len <= 32, 7003);
+        assert(len <= 32, 7003);
 
         MultiEd25519PublicKey { public_keys, threshold }
     }

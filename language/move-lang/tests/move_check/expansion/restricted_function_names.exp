@@ -106,7 +106,15 @@ error:
 
     ┌── tests/move_check/expansion/restricted_function_names.move:15:9 ───
     │
- 15 │     fun Self() { abort 0}
+ 15 │     fun assert() { abort 0 }
+    │         ^^^^^^ Invalid module member name 'assert'. 'assert' is restricted and cannot be used to name a module member
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_function_names.move:16:9 ───
+    │
+ 16 │     fun Self() { abort 0}
     │         ^^^^ Invalid module member name 'Self'. 'Self' is restricted and cannot be used to name a module member
     │
 

@@ -33,7 +33,7 @@ fun main(account: &signer) {
     ValidatorConfig::set_consensus_pubkey(account, {{vivian}}, x"40");
     LibraSystem::update_and_reconfigure(account);
     // check that the validator set contains Vivian's new key after reconfiguration
-    0x0::Transaction::assert(*ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{vivian}})) == x"40", 98);
+    assert(*ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{vivian}})) == x"40", 98);
 }
 }
 

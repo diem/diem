@@ -104,9 +104,8 @@ script {
 //! new-transaction
 script {
     use 0x0::AccountLimits;
-    use 0x0::Transaction;
     fun main() {
-        Transaction::assert(AccountLimits::default_limits_addr() == {{association}}, 0);
+        assert(AccountLimits::default_limits_addr() == {{association}}, 0);
     }
 }
 // check: EXECUTED

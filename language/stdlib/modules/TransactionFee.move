@@ -7,7 +7,6 @@ module TransactionFee {
     use 0x0::LBR::{Self, LBR};
     use 0x0::Libra::{Self, Libra, Preburn, BurnCapability};
     use 0x0::LibraAccount;
-    use 0x0::Transaction;
     use 0x0::Signer;
 
     /// The `TransactionFeeCollection` resource holds the
@@ -33,11 +32,11 @@ module TransactionFee {
     /// Called in genesis. Sets up the needed resources to collect
     /// transaction fees from the `0xFEE` account with the `0xB1E55ED` account.
     public fun initialize(association: &signer, fee_account: &signer, auth_key_prefix: vector<u8>) {
-        Transaction::assert(
+        assert(
             Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(),
             0
         );
-        Transaction::assert(
+        assert(
             Signer::address_of(fee_account) == CoreAddresses::TRANSACTION_FEE_ADDRESS(),
             0
         );
@@ -76,7 +75,7 @@ module TransactionFee {
     /// underlying fiat.
     public fun preburn_fees<CoinType>(blessed_sender: &signer)
     acquires TransactionFeeCollection, TransactionFeePreburn {
-        Transaction::assert(
+        assert(
             Signer::address_of(blessed_sender) == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(),
             0
         );

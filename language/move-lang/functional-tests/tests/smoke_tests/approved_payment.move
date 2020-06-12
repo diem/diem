@@ -11,7 +11,6 @@ module ApprovedPayment {
     use 0x0::LibraAccount;
     use 0x0::Signature;
     use 0x0::Signer;
-    use 0x0::Transaction;
     use 0x0::Vector;
 
     // A resource to be published under the payee's account
@@ -34,9 +33,9 @@ module ApprovedPayment {
         signature: vector<u8>
     ) {
         // Sanity check of signature validity
-        Transaction::assert(Vector::length(&signature) == 64, 9001); // TODO: proper error code
+        assert(Vector::length(&signature) == 64, 9001); // TODO: proper error code
         // Cryptographic check of signature validity
-        Transaction::assert(
+        assert(
             Signature::ed25519_verify(
                 signature,
                 *&approved_payment.public_key,
@@ -72,7 +71,7 @@ module ApprovedPayment {
     // that are currently in flight
     public fun rotate_key(approved_payment: &mut T, new_public_key: vector<u8>) {
         // Cryptographic check of public key validity
-        Transaction::assert(
+        assert(
             Signature::ed25519_validate_pubkey(
                 copy new_public_key
             ),
@@ -84,7 +83,7 @@ module ApprovedPayment {
     // Wrapper of `rotate_key` that rotates the sender's key
     public fun rotate_sender_key(sender: &signer, new_public_key: vector<u8>) acquires T {
         // Sanity check for key validity
-        Transaction::assert(Vector::length(&new_public_key) == 32, 9003); // TODO: proper error code
+        assert(Vector::length(&new_public_key) == 32, 9003); // TODO: proper error code
         rotate_key(borrow_global_mut<T>(Signer::address_of(sender)), new_public_key)
     }
 
@@ -92,7 +91,7 @@ module ApprovedPayment {
     // `public_key`
     public fun publish(account: &signer, public_key: vector<u8>) {
         // Sanity check for key validity
-        Transaction::assert(
+        assert(
             Signature::ed25519_validate_pubkey(
                 copy public_key
             ),
@@ -169,14 +168,13 @@ fun main(account: &signer) {
 //! sender: alice1
 script {
 use {{default}}::ApprovedPayment;
-use 0x0::Transaction;
 fun main(account: &signer) {
-    Transaction::assert(!ApprovedPayment::exists_at({{alice1}}), 6001);
+    assert(!ApprovedPayment::exists_at({{alice1}}), 6001);
     let pubkey = x"aa306695ca5ade60240c67b9b886fe240a6f009b03e43e45838334eddeae49fe";
     ApprovedPayment::publish(account, pubkey);
-    Transaction::assert(ApprovedPayment::exists_at({{alice1}}), 6002);
+    assert(ApprovedPayment::exists_at({{alice1}}), 6002);
     ApprovedPayment::unpublish_from_sender(account);
-    Transaction::assert(!ApprovedPayment::exists_at({{alice1}}), 6003);
+    assert(!ApprovedPayment::exists_at({{alice1}}), 6003);
 }
 }
 // check: EXECUTED

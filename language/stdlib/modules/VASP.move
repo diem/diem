@@ -11,7 +11,6 @@ module VASP {
     use 0x0::LibraTimestamp;
     use 0x0::Signer;
     use 0x0::Signature;
-    use 0x0::Transaction;
 
     // A ParentVASP is held only by the root VASP account and holds the
     // VASP-related metadata for the account. It is subject to a time
@@ -67,7 +66,7 @@ module VASP {
         compliance_public_key: vector<u8>
     ) {
         Association::assert_is_root(association);
-        Transaction::assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), 7004);
+        assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), 7004);
         move_to(
             vasp,
             ParentVASP {
@@ -84,7 +83,7 @@ module VASP {
     /// Aborts if `parent` is not a ParentVASP
     public fun publish_child_vasp_credential(parent: &signer, child: &signer) {
         let parent_vasp_addr = Signer::address_of(parent);
-        Transaction::assert(exists<ParentVASP>(parent_vasp_addr), 7000);
+        assert(exists<ParentVASP>(parent_vasp_addr), 7000);
         move_to(child, ChildVASP { parent_vasp_addr });
     }
 
@@ -147,7 +146,7 @@ module VASP {
         parent_vasp: &signer,
         new_key: vector<u8>
     ) acquires ParentVASP {
-        Transaction::assert(Signature::ed25519_validate_pubkey(copy new_key), 7004);
+        assert(Signature::ed25519_validate_pubkey(copy new_key), 7004);
         let parent_addr = Signer::address_of(parent_vasp);
         borrow_global_mut<ParentVASP>(parent_addr).compliance_public_key = new_key
     }

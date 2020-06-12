@@ -51,7 +51,7 @@ script {
 use 0x0::ValidatorConfig;
 fun main(account: &signer) {
     ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
-    0x0::Transaction::assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{bob}})) == x"30", 99);
+    assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{bob}})) == x"30", 99);
 }
 }
 
@@ -64,7 +64,7 @@ script {
 use 0x0::ValidatorConfig;
 fun main(account: &signer) {
     ValidatorConfig::set_consensus_pubkey(account, {{alice}}, x"20");
-    0x0::Transaction::assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"20", 99);
+    assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"20", 99);
 }
 }
 
@@ -77,7 +77,7 @@ script {
 use 0x0::ValidatorConfig;
 fun main(account: &signer) {
     ValidatorConfig::set_consensus_pubkey(account, {{alice}}, x"30");
-    0x0::Transaction::assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"30", 99);
+    assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"30", 99);
 }
 }
 

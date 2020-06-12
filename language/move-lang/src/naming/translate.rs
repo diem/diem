@@ -847,6 +847,10 @@ fn resolve_builtin_function(
         B::BORROW_GLOBAL_MUT => BorrowGlobal(true, check_builtin_ty_arg(context, loc, b, ty_args)),
         B::EXISTS => Exists(check_builtin_ty_arg(context, loc, b, ty_args)),
         B::FREEZE => Freeze(check_builtin_ty_arg(context, loc, b, ty_args)),
+        B::ASSERT => {
+            check_builtin_ty_args(context, loc, b, 0, ty_args);
+            Assert
+        }
         _ => {
             context.error(vec![(b.loc, format!("Unbound function: '{}'", b))]);
             return None;

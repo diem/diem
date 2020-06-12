@@ -48,14 +48,13 @@ script {
 use {{alice}}::AlicePays;
 use 0x0::LBR::LBR;
 use 0x0::LibraAccount;
-use 0x0::Transaction;
 
 fun main() {
     let carol_prev_balance = LibraAccount::balance<LBR>({{carol}});
     let alice_prev_balance = LibraAccount::balance<LBR>({{alice}});
     AlicePays::pay({{carol}}, 10);
-    Transaction::assert(carol_prev_balance + 10 == LibraAccount::balance<LBR>({{carol}}), 0);
-    Transaction::assert(alice_prev_balance - 10 == LibraAccount::balance<LBR>({{alice}}), 1);
+    assert(carol_prev_balance + 10 == LibraAccount::balance<LBR>({{carol}}), 0);
+    assert(alice_prev_balance - 10 == LibraAccount::balance<LBR>({{alice}}), 1);
 }
 }
 
