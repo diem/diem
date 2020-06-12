@@ -1,0 +1,14 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/operators/boolean_not_non_boolean.move:3:6 ───
+   │
+ 3 │     !0;
+   │      ^ Invalid argument to '!'
+   ·
+ 3 │     !0;
+   │      - The type: integer
+   ·
+ 3 │     !0;
+   │      - Is not compatible with: 'bool'
+   │
+
