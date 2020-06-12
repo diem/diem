@@ -11,6 +11,9 @@ use once_cell::sync::Lazy;
 // HEALTH COUNTERS
 //////////////////////
 
+pub static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
+    Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("consensus"));
+
 /// Counter of pending network events to Consensus
 pub static PENDING_CONSENSUS_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(

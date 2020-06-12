@@ -27,6 +27,7 @@ use consensus_types::{
 use futures::{select, StreamExt};
 use libra_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig};
 use libra_logger::prelude::*;
+use libra_metrics::monitor;
 use libra_secure_storage::config;
 use libra_types::{
     account_address::AccountAddress,
@@ -440,11 +441,16 @@ impl EpochManager {
                 Ok(())
             }
             RoundProcessor::Normal(p) => match event {
-                VerifiedEvent::ProposalMsg(proposal) => p.process_proposal_msg(*proposal).await,
-                VerifiedEvent::VoteMsg(vote) => p.process_vote_msg(*vote).await,
-                VerifiedEvent::SyncInfo(sync_info) => {
-                    p.process_sync_info_msg(*sync_info, peer_id).await
+                VerifiedEvent::ProposalMsg(proposal) => {
+                    monitor!("process_proposal", p.process_proposal_msg(*proposal).await)
                 }
+                VerifiedEvent::VoteMsg(vote) => {
+                    monitor!("process_vote", p.process_vote_msg(*vote).await)
+                }
+                VerifiedEvent::SyncInfo(sync_info) => monitor!(
+                    "process_sync_info",
+                    p.process_sync_info_msg(*sync_info, peer_id).await
+                ),
             },
         }
     }
@@ -460,14 +466,19 @@ impl EpochManager {
         request: IncomingBlockRetrievalRequest,
     ) -> anyhow::Result<()> {
         match self.processor_mut() {
-            RoundProcessor::Normal(p) => p.process_block_retrieval(request).await,
+            RoundProcessor::Normal(p) => {
+                monitor!("block_retrieval", p.process_block_retrieval(request).await)
+            }
             _ => bail!("[EpochManager] RoundManager not started yet"),
         }
     }
 
     pub async fn process_local_timeout(&mut self, round: u64) -> anyhow::Result<()> {
         match self.processor_mut() {
-            RoundProcessor::Normal(p) => p.process_local_timeout(round).await,
+            RoundProcessor::Normal(p) => monitor!(
+                "process_local_timeout",
+                p.process_local_timeout(round).await
+            ),
             _ => unreachable!("RoundManager not started yet"),
         }
     }
