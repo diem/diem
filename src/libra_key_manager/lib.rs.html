@@ -333,6 +333,13 @@
 <span id="333">333</span>
 <span id="334">334</span>
 <span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
+<span id="342">342</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -473,7 +480,14 @@
                         <span class="ident">Error</span>::<span class="ident">LivenessError</span>(<span class="ident">last_value</span>, <span class="ident">current_value</span>).<span class="ident">to_string</span>()
                     );
                 }
-                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>), <span class="comment">// Unexpected error that we can&#39;t handle -- throw!</span>
+                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="comment">// Unexpected error that we can&#39;t handle -- throw!</span>
+                    <span class="macro">error</span><span class="macro">!</span>(
+                        <span class="string">&quot;Encountered error, cannot continue to operate: {}&quot;</span>,
+                        <span class="ident">e</span>.<span class="ident">to_string</span>()
+                    );
+                    <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>);
+                }
             };
 
             <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Going to sleep for {} seconds.&quot;</span>, <span class="self">self</span>.<span class="ident">sleep_period_secs</span>);
