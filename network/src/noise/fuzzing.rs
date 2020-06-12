@@ -46,10 +46,10 @@ impl ExposingSocket {
         }
     }
     fn new_pair() -> (Self, Self) {
-        let (dialer_socket, listener_socket) = MemorySocket::new_pair();
+        let (memsocket1, memsocket2) = MemorySocket::new_pair();
         (
-            ExposingSocket::new(dialer_socket),
-            ExposingSocket::new(listener_socket),
+            ExposingSocket::new(memsocket1),
+            ExposingSocket::new(memsocket2),
         )
     }
 }
@@ -87,35 +87,74 @@ impl AsyncRead for ExposingSocket {
 // Actual code to generate corpus
 //
 
-// let's cache the deterministic keypair
-pub static KEYPAIR: Lazy<(x25519::PrivateKey, x25519::PublicKey)> = Lazy::new(|| {
+// cache the deterministic keypairs
+pub static KEYPAIRS: Lazy<(
+    (x25519::PrivateKey, x25519::PublicKey, PeerId),
+    (x25519::PrivateKey, x25519::PublicKey, PeerId),
+)> = Lazy::new(|| {
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
-    let private_key = x25519::PrivateKey::generate(&mut rng);
-    let public_key = private_key.public_key();
-    (private_key, public_key)
+
+    let initiator_private_key = x25519::PrivateKey::generate(&mut rng);
+    let initiator_public_key = initiator_private_key.public_key();
+    let initiator_peer_id = PeerId::from_identity_public_key(initiator_public_key);
+
+    let responder_private_key = x25519::PrivateKey::generate(&mut rng);
+    let responder_public_key = responder_private_key.public_key();
+    let responder_peer_id = PeerId::from_identity_public_key(responder_public_key);
+
+    (
+        (
+            initiator_private_key,
+            initiator_public_key,
+            initiator_peer_id,
+        ),
+        (
+            responder_private_key,
+            responder_public_key,
+            responder_peer_id,
+        ),
+    )
 });
 
 fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
     // build
-    let (private_key, public_key) = KEYPAIR.clone();
-    let peer_id = PeerId::from_identity_public_key(public_key);
-    let initiator = NoiseUpgrader::new(peer_id, private_key.clone(), HandshakeAuthMode::ServerOnly);
-    let responder = NoiseUpgrader::new(peer_id, private_key, HandshakeAuthMode::ServerOnly);
+    let (
+        (initiator_private_key, initiator_public_key, initiator_peer_id),
+        (responder_private_key, responder_public_key, responder_peer_id),
+    ) = KEYPAIRS.clone();
+
+    let initiator = NoiseUpgrader::new(
+        initiator_peer_id,
+        initiator_private_key,
+        HandshakeAuthMode::ServerOnly,
+    );
+    let responder = NoiseUpgrader::new(
+        responder_peer_id,
+        responder_private_key,
+        HandshakeAuthMode::ServerOnly,
+    );
 
     // create exposing socket
-    let (dialer_socket, listener_socket) = ExposingSocket::new_pair();
+    let (initiator_socket, responder_socket) = ExposingSocket::new_pair();
 
     // perform the handshake
-    let (client_session, server_session) = block_on(join(
-        initiator.upgrade_outbound(dialer_socket, public_key, fake_timestamp),
-        responder.upgrade_inbound(listener_socket),
+    let (initiator_session, responder_session) = block_on(join(
+        initiator.upgrade_outbound(initiator_socket, responder_public_key, fake_timestamp),
+        responder.upgrade_inbound(responder_socket),
     ));
 
     // take result
-    let client_session = client_session.unwrap();
-    let (server_session, _peer_id) = server_session.unwrap();
-    let init_msg = client_session.into_socket().written;
-    let resp_msg = server_session.into_socket().written;
+    let initiator_session = initiator_session.unwrap();
+    let (responder_session, peer_id) = responder_session.unwrap();
+
+    // some sanity checks
+    assert_eq!(initiator_session.get_remote_static(), responder_public_key);
+    assert_eq!(responder_session.get_remote_static(), initiator_public_key);
+    assert_eq!(initiator_peer_id, peer_id);
+
+    // extract the bytes written by each side
+    let init_msg = initiator_session.into_socket().written;
+    let resp_msg = responder_session.into_socket().written;
 
     (init_msg, resp_msg)
 }
@@ -188,22 +227,29 @@ fn fake_timestamp() -> [u8; AntiReplayTimestamps::TIMESTAMP_SIZE] {
 
 pub fn fuzz_initiator(data: &[u8]) {
     // setup initiator
-    let (private_key, public_key) = KEYPAIR.clone();
-    let peer_id = PeerId::from_identity_public_key(public_key);
-    let initiator = NoiseUpgrader::new(peer_id, private_key, HandshakeAuthMode::ServerOnly);
+    let ((initiator_private_key, _, initiator_peer_id), (_, responder_public_key, _)) =
+        KEYPAIRS.clone();
+    let initiator = NoiseUpgrader::new(
+        initiator_peer_id,
+        initiator_private_key,
+        HandshakeAuthMode::ServerOnly,
+    );
 
     // setup NoiseStream
     let fake_socket = FakeSocket { content: data };
 
     // send a message, then read fuzz data
-    let _ = block_on(initiator.upgrade_outbound(fake_socket, public_key, fake_timestamp));
+    let _ = block_on(initiator.upgrade_outbound(fake_socket, responder_public_key, fake_timestamp));
 }
 
 pub fn fuzz_responder(data: &[u8]) {
     // setup responder
-    let (private_key, public_key) = KEYPAIR.clone();
-    let peer_id = PeerId::from_identity_public_key(public_key);
-    let responder = NoiseUpgrader::new(peer_id, private_key, HandshakeAuthMode::ServerOnly);
+    let (_, (responder_private_key, _, responder_peer_id)) = KEYPAIRS.clone();
+    let responder = NoiseUpgrader::new(
+        responder_peer_id,
+        responder_private_key,
+        HandshakeAuthMode::ServerOnly,
+    );
 
     // setup NoiseStream
     let fake_socket = FakeSocket { content: data };

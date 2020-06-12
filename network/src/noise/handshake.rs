@@ -304,6 +304,19 @@ impl NoiseUpgrader {
             )
         })?;
 
+        // prevent accidental self-dials
+        // this situation could occur either as a result of our own discovery
+        // mis-configuration or a potentially malicious discovery peer advertising
+        // a (loopback ip or mirror proxy) and our public key.
+        if remote_peer_id == self.self_peer_id {
+            // TODO(philiphayes): security logging. someone should investigate
+            // on-chain reconfiguration history to see if someone is misbehaving.
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "noise: detected accidental self-dial: we have the same peer id as the client",
+            ));
+        }
+
         // verify that this is indeed our public key
         if self_expected_public_key != self.noise_config.public_key().as_slice() {
             // TODO: security logging (mimoo)
@@ -437,7 +450,10 @@ mod test {
     use libra_crypto::{test_utils::TEST_SEED, traits::Uniform as _};
     use memsocket::MemorySocket;
     use rand::SeedableRng as _;
-    use std::sync::{Arc, RwLock};
+    use std::{
+        io,
+        sync::{Arc, RwLock},
+    };
 
     /// helper to setup two testing peers
     fn build_peers(
@@ -448,19 +464,19 @@ mod test {
     ) {
         let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
 
-        let client_private = x25519::PrivateKey::generate(&mut rng);
-        let client_public = client_private.public_key();
+        let client_private_key = x25519::PrivateKey::generate(&mut rng);
+        let client_public_key = client_private_key.public_key();
 
-        let server_private = x25519::PrivateKey::generate(&mut rng);
-        let server_public = server_private.public_key();
+        let server_private_key = x25519::PrivateKey::generate(&mut rng);
+        let server_public_key = server_private_key.public_key();
 
         let (client_auth, server_auth, client_peer_id, server_peer_id) = if is_mutual_auth {
             let client_peer_id = PeerId::random();
             let server_peer_id = PeerId::random();
             let trusted_peers = Arc::new(RwLock::new(
                 vec![
-                    (client_peer_id, client_public),
-                    (server_peer_id, server_public),
+                    (client_peer_id, client_public_key),
+                    (server_peer_id, server_public_key),
                 ]
                 .into_iter()
                 .collect(),
@@ -469,8 +485,8 @@ mod test {
             let server_auth = HandshakeAuthMode::mutual(trusted_peers);
             (client_auth, server_auth, client_peer_id, server_peer_id)
         } else {
-            let client_peer_id = PeerId::from_identity_public_key(client_public);
-            let server_peer_id = PeerId::from_identity_public_key(server_public);
+            let client_peer_id = PeerId::from_identity_public_key(client_public_key);
+            let server_peer_id = PeerId::from_identity_public_key(server_public_key);
             (
                 HandshakeAuthMode::ServerOnly,
                 HandshakeAuthMode::ServerOnly,
@@ -479,50 +495,29 @@ mod test {
             )
         };
 
-        let client = NoiseUpgrader::new(client_peer_id, client_private, client_auth);
-        let server = NoiseUpgrader::new(server_peer_id, server_private, server_auth);
+        let client = NoiseUpgrader::new(client_peer_id, client_private_key, client_auth);
+        let server = NoiseUpgrader::new(server_peer_id, server_private_key, server_auth);
 
-        ((client, client_public), (server, server_public))
+        ((client, client_public_key), (server, server_public_key))
     }
 
     /// helper to perform a noise handshake with two peers
     fn perform_handshake(
-        client: NoiseUpgrader,
-        server: NoiseUpgrader,
+        client: &NoiseUpgrader,
+        server: &NoiseUpgrader,
         server_public_key: x25519::PublicKey,
     ) -> (
-        NoiseStream<MemorySocket>,
-        (NoiseStream<MemorySocket>, PeerId),
+        io::Result<NoiseStream<MemorySocket>>,
+        io::Result<(NoiseStream<MemorySocket>, PeerId)>,
     ) {
         // create an in-memory socket for testing
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
 
         // perform the handshake
-        let (client_session, server_session) = block_on(join(
+        block_on(join(
             client.upgrade_outbound(dialer_socket, server_public_key, AntiReplayTimestamps::now),
             server.upgrade_inbound(listener_socket),
-        ));
-
-        (client_session.unwrap(), server_session.unwrap())
-    }
-
-    fn test_handshake_success(is_mutual_auth: bool) {
-        // perform handshake with two testing peers
-        let ((client, client_public), (server, server_public)) = build_peers(is_mutual_auth);
-        let (client, (server, _)) = perform_handshake(client, server, server_public);
-
-        assert_eq!(client.get_remote_static(), server_public);
-        assert_eq!(server.get_remote_static(), client_public);
-    }
-
-    #[test]
-    fn test_handshake_server_only_auth() {
-        test_handshake_success(false /* is_mutual_auth */);
-    }
-
-    #[test]
-    fn test_handshake_mutual_auth() {
-        test_handshake_success(true /* is_mutual_auth */);
+        ))
     }
 
     /// provide a function that will return the same given value as a timestamp
@@ -533,13 +528,13 @@ mod test {
     #[test]
     fn test_timestamp_replay() {
         // 1. generate peers
-        let ((client, _client_public), (server, server_public)) =
+        let ((client, _), (server, server_public_key)) =
             build_peers(true /* is_mutual_auth */);
 
         // 2. perform the handshake with some timestamp, it should work
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
         let (client_session, server_session) = block_on(join(
-            client.upgrade_outbound(dialer_socket, server_public, bad_timestamp(1)),
+            client.upgrade_outbound(dialer_socket, server_public_key, bad_timestamp(1)),
             server.upgrade_inbound(listener_socket),
         ));
 
@@ -549,31 +544,73 @@ mod test {
         // 3. perform the handshake again with timestamp in the past, it should fail
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
         let (client_session, server_session) = block_on(join(
-            client.upgrade_outbound(dialer_socket, server_public, bad_timestamp(0)),
+            client.upgrade_outbound(dialer_socket, server_public_key, bad_timestamp(0)),
             server.upgrade_inbound(listener_socket),
         ));
 
-        assert!(client_session.is_err());
-        assert!(server_session.is_err());
+        client_session.unwrap_err();
+        server_session.unwrap_err();
 
         // 4. perform the handshake again with the same timestamp, it should fail
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
         let (client_session, server_session) = block_on(join(
-            client.upgrade_outbound(dialer_socket, server_public, bad_timestamp(1)),
+            client.upgrade_outbound(dialer_socket, server_public_key, bad_timestamp(1)),
             server.upgrade_inbound(listener_socket),
         ));
 
-        assert!(client_session.is_err());
-        assert!(server_session.is_err());
+        client_session.unwrap_err();
+        server_session.unwrap_err();
 
         // 5. perform the handshake again with a valid timestamp in the future, it should work
         let (dialer_socket, listener_socket) = MemorySocket::new_pair();
         let (client_session, server_session) = block_on(join(
-            client.upgrade_outbound(dialer_socket, server_public, bad_timestamp(2)),
+            client.upgrade_outbound(dialer_socket, server_public_key, bad_timestamp(2)),
             server.upgrade_inbound(listener_socket),
         ));
 
         client_session.unwrap();
         server_session.unwrap();
+    }
+
+    fn test_handshake_success(is_mutual_auth: bool) {
+        // perform handshake with two testing peers
+        let ((client, client_public_key), (server, server_public_key)) =
+            build_peers(is_mutual_auth);
+
+        let (client_res, server_res) = perform_handshake(&client, &server, server_public_key);
+        let client_stream = client_res.unwrap();
+        let (server_stream, _) = server_res.unwrap();
+
+        assert_eq!(client_stream.get_remote_static(), server_public_key);
+        assert_eq!(server_stream.get_remote_static(), client_public_key);
+    }
+
+    #[test]
+    fn test_handshake_success_server_only_auth() {
+        test_handshake_success(false /* is_mutual_auth */);
+    }
+
+    #[test]
+    fn test_handshake_success_mutual_auth() {
+        test_handshake_success(true /* is_mutual_auth */);
+    }
+
+    fn test_handshake_self_fails(is_mutual_auth: bool) {
+        let (_, (server, server_public_key)) = build_peers(is_mutual_auth);
+
+        let (client_res, server_res) = perform_handshake(&server, &server, server_public_key);
+        // Both sides should error
+        client_res.unwrap_err();
+        server_res.unwrap_err();
+    }
+
+    #[test]
+    fn test_handshake_self_fails_server_only_auth() {
+        test_handshake_self_fails(false /* is_mutual_auth */);
+    }
+
+    #[test]
+    fn test_handshake_self_fails_mutual_auth() {
+        test_handshake_self_fails(true /* is_mutual_auth */);
     }
 }
