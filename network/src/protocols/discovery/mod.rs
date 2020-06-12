@@ -48,6 +48,7 @@ use futures::{
     sink::SinkExt,
     stream::{FusedStream, Stream, StreamExt},
 };
+use futures_util::stream::Fuse;
 use libra_config::network_id::NetworkContext;
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_logger::prelude::*;
@@ -60,7 +61,11 @@ use std::{
     cmp::max,
     collections::{HashMap, HashSet},
     convert::TryInto,
-    time::SystemTime,
+    time::{Duration, SystemTime},
+};
+use tokio::{
+    runtime::Handle,
+    time::{interval, Interval},
 };
 
 #[cfg(test)]
@@ -457,4 +462,47 @@ fn get_unix_epoch() -> u64 {
         .duration_since(SystemTime::UNIX_EPOCH)
         .expect("System clock reset to before unix epoch")
         .as_millis() as u64
+}
+
+/// Configuration object which describes the production Discovery component.
+pub struct DiscoveryBuilderConfig {
+    network_context: NetworkContext,
+    self_addrs: Vec<NetworkAddress>,
+    discovery_interval_ms: u64,
+}
+
+impl DiscoveryBuilderConfig {
+    pub fn new(
+        network_context: NetworkContext,
+        self_addrs: Vec<NetworkAddress>,
+        discovery_interval_ms: u64,
+    ) -> Self {
+        Self {
+            network_context,
+            self_addrs,
+            discovery_interval_ms,
+        }
+    }
+}
+
+pub type DiscoveryService = Discovery<Fuse<Interval>>;
+
+/// Public interface for building a Discovery service
+pub fn build_discovery_from_config(
+    executor: &Handle,
+    config: DiscoveryBuilderConfig,
+    network_reqs_tx: DiscoveryNetworkSender,
+    network_notifs_rx: DiscoveryNetworkEvents,
+    conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
+) -> DiscoveryService {
+    executor.enter(|| {
+        Discovery::new(
+            config.network_context,
+            config.self_addrs,
+            interval(Duration::from_millis(config.discovery_interval_ms)).fuse(),
+            network_reqs_tx,
+            network_notifs_rx,
+            conn_mgr_reqs_tx,
+        )
+    })
 }
