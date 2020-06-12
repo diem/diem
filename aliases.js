@@ -108,6 +108,7 @@ ALIASES["test_generation"] = {};
 ALIASES["test_utils"] = {};
 ALIASES["testsuite"] = {};
 ALIASES["transaction_builder"] = {};
+ALIASES["transaction_builder_generator"] = {};
 ALIASES["utils"] = {};
 ALIASES["vm"] = {};
 ALIASES["vm_genesis"] = {};

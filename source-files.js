@@ -108,6 +108,7 @@ sourcesIndex["test_generation"] = {"name":"","files":["abstract_state.rs","borro
 sourcesIndex["test_utils"] = {"name":"","files":["baseline_test.rs","lib.rs"]};
 sourcesIndex["testsuite"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["transaction_builder"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["transaction_builder_generator"] = {"name":"","files":["lib.rs","python3.rs","rust.rs"]};
 sourcesIndex["utils"] = {"name":"","dirs":[{"name":"module_generation","files":["generator.rs","mod.rs","options.rs","padding.rs","utils.rs"]}],"files":["lib.rs"]};
 sourcesIndex["vm"] = {"name":"","dirs":[{"name":"proptest_types","files":["constants.rs","functions.rs","signature.rs"]}],"files":["access.rs","check_bounds.rs","constant.rs","deserializer.rs","errors.rs","file_format.rs","file_format_common.rs","internals.rs","lib.rs","proptest_types.rs","serializer.rs","views.rs"]};
 sourcesIndex["vm_genesis"] = {"name":"","files":["genesis_context.rs","genesis_gas_schedule.rs","lib.rs"]};

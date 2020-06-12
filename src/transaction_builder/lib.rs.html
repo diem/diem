@@ -616,7 +616,6 @@
 <span id="616">616</span>
 <span id="617">617</span>
 <span id="618">618</span>
-<span id="619">619</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -765,10 +764,10 @@
     <span class="ident">builder</span>: <span class="ident">encode_add_recovery_rotation_capability</span>,
     <span class="ident">type_args</span>: [],
     <span class="ident">args</span>: [<span class="ident">recovery_address</span>: <span class="ident">Address</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Add the `KeyRotationCapability` for `to_recover_account` to the `RecoveryAddress`\
-          resource under `recovery_address`. Aborts if `to_recovery_account` and\
-          `to_recovery_address belong to different VASPs, if `recovery_address` does not have a\
-          `RecoveryAddress` resource, or if `to_recover_account` has already extracted its\
+    <span class="ident">doc</span>: <span class="string">&quot;Add the `KeyRotationCapability` for `to_recover_account` to the `RecoveryAddress` \
+          resource under `recovery_address`. Aborts if `to_recovery_account` and \
+          `to_recovery_address belong to different VASPs, if `recovery_address` does not have a \
+          `RecoveryAddress` resource, or if `to_recover_account` has already extracted its \
           `KeyRotationCapability`.&quot;</span>
 }
 
@@ -777,8 +776,8 @@
     <span class="ident">builder</span>: <span class="ident">encode_add_validator_script</span>,
     <span class="ident">type_args</span>: [],
     <span class="ident">args</span>: [<span class="ident">new_validator</span>: <span class="ident">Address</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Encode a program adding `new_validator` to the pending validator set. Fails if the\
-          `new_validator` address is already in the validator set, already in the pending validator set,\
+    <span class="ident">doc</span>: <span class="string">&quot;Encode a program adding `new_validator` to the pending validator set. Fails if the \
+          `new_validator` address is already in the validator set, already in the pending validator set, \
           or does not have a `ValidatorConfig` resource stored at the address&quot;</span>
 }
 
@@ -787,8 +786,8 @@
     <span class="ident">builder</span>: <span class="ident">encode_burn_script</span>,
     <span class="ident">type_args</span>: [<span class="ident">type_</span>],
     <span class="ident">args</span>: [<span class="ident">nonce</span>: <span class="ident">U64</span>, <span class="ident">preburn_address</span>: <span class="ident">Address</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Permanently destroy the coins stored in the oldest burn request under the `Preburn`\
-          resource stored at `preburn_address`. This will only succeed if the sender has a\
+    <span class="ident">doc</span>: <span class="string">&quot;Permanently destroy the coins stored in the oldest burn request under the `Preburn` \
+          resource stored at `preburn_address`. This will only succeed if the sender has a \
           `MintCapability` stored under their account and `preburn_address` has a pending burn request&quot;</span>
 }
 
@@ -797,7 +796,7 @@
     <span class="ident">builder</span>: <span class="ident">encode_burn_txn_fees_script</span>,
     <span class="ident">type_args</span>: [<span class="ident">currency</span>],
     <span class="ident">args</span>: [],
-    <span class="ident">doc</span>: <span class="string">&quot;Burn transaction fees that have been collected in the given `currency`,\
+    <span class="ident">doc</span>: <span class="string">&quot;Burn transaction fees that have been collected in the given `currency`, \
           and relinquish to the association. The currency must be non-synthetic.&quot;</span>
 }
 
@@ -806,7 +805,7 @@
     <span class="ident">builder</span>: <span class="ident">encode_cancel_burn_script</span>,
     <span class="ident">type_args</span>: [<span class="ident">type_</span>],
     <span class="ident">args</span>: [<span class="ident">preburn_address</span>: <span class="ident">Address</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Cancel the oldest burn request from `preburn_address` and return the funds to\
+    <span class="ident">doc</span>: <span class="string">&quot;Cancel the oldest burn request from `preburn_address` and return the funds to \
           `preburn_address`.  Fails if the sender does not have a published `MintCapability`.&quot;</span>
 }
 
@@ -815,10 +814,10 @@
     <span class="ident">builder</span>: <span class="ident">encode_create_recovery_address</span>,
     <span class="ident">type_args</span>: [],
     <span class="ident">args</span>: [],
-    <span class="ident">doc</span>: <span class="string">&quot;Extract the `KeyRotationCapability` for `recovery_account` and publish it in a\
-          `RecoveryAddress` resource under  `recovery_account`. Aborts if `recovery_account` has\
-           delegated its `KeyRotationCapability`, already has a`RecoveryAddress` resource, or is\
-           not a VASP. Cancel the oldest burn request from `preburn_address` and return the funds\
+    <span class="ident">doc</span>: <span class="string">&quot;Extract the `KeyRotationCapability` for `recovery_account` and publish it in a \
+          `RecoveryAddress` resource under  `recovery_account`. Aborts if `recovery_account` has \
+           delegated its `KeyRotationCapability`, already has a`RecoveryAddress` resource, or is \
+           not a VASP. Cancel the oldest burn request from `preburn_address` and return the funds \
            to `preburn_address`.  Fails if the sender does not have a published `MintCapability`.&quot;</span>
 }
 
@@ -827,11 +826,11 @@
     <span class="ident">builder</span>: <span class="ident">encode_transfer_with_metadata_script</span>,
     <span class="ident">type_args</span>: [<span class="ident">coin_type</span>],
     <span class="ident">args</span>: [<span class="ident">recipient_address</span>: <span class="ident">Address</span>, <span class="ident">amount</span>: <span class="ident">U64</span>, <span class="ident">metadata</span>: <span class="ident">Bytes</span>, <span class="ident">metadata_signature</span>: <span class="ident">Bytes</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Encode a program transferring `amount` coins to `recipient_address` with (optional)\
-          associated metadata `metadata` and (optional) `signature` on the metadata, amount, and\
-          sender address. The `metadata` and `signature` parameters are only required if\
-          `amount` &gt;= 1000 LBR and the sender and recipient of the funds are two distinct VASPs.\
-          Fails if there is no account at the recipient address or if the sender&#39;s balance is lower\
+    <span class="ident">doc</span>: <span class="string">&quot;Encode a program transferring `amount` coins to `recipient_address` with (optional) \
+          associated metadata `metadata` and (optional) `signature` on the metadata, amount, and \
+          sender address. The `metadata` and `signature` parameters are only required if \
+          `amount` &gt;= 1000 LBR and the sender and recipient of the funds are two distinct VASPs. \
+          Fails if there is no account at the recipient address or if the sender&#39;s balance is lower \
           than `amount`&quot;</span>
 }
 
@@ -840,7 +839,7 @@
     <span class="ident">builder</span>: <span class="ident">encode_preburn_script</span>,
     <span class="ident">type_args</span>: [<span class="ident">type_</span>],
     <span class="ident">args</span>: [<span class="ident">amount</span>: <span class="ident">U64</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Preburn `amount` coins from the sender&#39;s account. This will only succeed if the sender\
+    <span class="ident">doc</span>: <span class="string">&quot;Preburn `amount` coins from the sender&#39;s account. This will only succeed if the sender \
           already has a published `Preburn` resource.&quot;</span>
 }
 
@@ -849,10 +848,10 @@
     <span class="ident">builder</span>: <span class="ident">encode_publish_shared_ed25519_public_key_script</span>,
     <span class="ident">type_args</span>: [],
     <span class="ident">args</span>: [<span class="ident">public_key</span>: <span class="ident">Bytes</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;(1) Rotate the authentication key of the sender to `public_key`\
-          (2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability\
-          of the sender under the sender&#39;s address.\
-          Aborts if the sender already has a `SharedEd25519PublicKey` resource.\
+    <span class="ident">doc</span>: <span class="string">&quot;(1) Rotate the authentication key of the sender to `public_key` \
+          (2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability \
+          of the sender under the sender&#39;s address. \
+          Aborts if the sender already has a `SharedEd25519PublicKey` resource. \
           Aborts if the length of `new_public_key` is not 32.&quot;</span>
 }
 
@@ -861,7 +860,7 @@
     <span class="ident">builder</span>: <span class="ident">encode_add_currency_to_account_script</span>,
     <span class="ident">type_args</span>: [<span class="ident">currency</span>],
     <span class="ident">args</span>: [],
-    <span class="ident">doc</span>: <span class="string">&quot;Add the currency identified by the type `currency` to the sending accounts.\
+    <span class="ident">doc</span>: <span class="string">&quot;Add the currency identified by the type `currency` to the sending accounts. \
           Aborts if the account already holds a balance fo `currency` type.&quot;</span>
 }
 
@@ -870,7 +869,7 @@
     <span class="ident">builder</span>: <span class="ident">encode_register_preburner_script</span>,
     <span class="ident">type_args</span>: [<span class="ident">type_</span>],
     <span class="ident">args</span>: [],
-    <span class="ident">doc</span>: <span class="string">&quot;Publish a newly created `Preburn` resource under the sender&#39;s account.\
+    <span class="ident">doc</span>: <span class="string">&quot;Publish a newly created `Preburn` resource under the sender&#39;s account. \
           This will fail if the sender already has a published `Preburn` resource.&quot;</span>
 }
 
@@ -885,8 +884,8 @@
         <span class="ident">fullnodes_network_identity_pubkey</span>: <span class="ident">Bytes</span>,
         <span class="ident">fullnodes_network_address</span>: <span class="ident">Bytes</span>
     ],
-    <span class="ident">doc</span>: <span class="string">&quot;Encode a program registering the sender as a candidate validator with the given key information.\
-         `network_identity_pubkey` should be a X25519 public key\
+    <span class="ident">doc</span>: <span class="string">&quot;Encode a program registering the sender as a candidate validator with the given key information. \
+         `network_identity_pubkey` should be a X25519 public key \
          `consensus_pubkey` should be a Ed25519 public c=key.&quot;</span>
 }
 
@@ -895,7 +894,7 @@
     <span class="ident">builder</span>: <span class="ident">encode_remove_validator_script</span>,
     <span class="ident">type_args</span>: [],
     <span class="ident">args</span>: [<span class="ident">to_remove</span>: <span class="ident">Address</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Encode a program adding `to_remove` to the set of pending validator removals. Fails if\
+    <span class="ident">doc</span>: <span class="string">&quot;Encode a program adding `to_remove` to the set of pending validator removals. Fails if \
           the `to_remove` address is already in the validator set or already in the pending removals.&quot;</span>
 }
 
@@ -928,7 +927,7 @@
     <span class="ident">builder</span>: <span class="ident">encode_rotate_authentication_key_script</span>,
     <span class="ident">type_args</span>: [],
     <span class="ident">args</span>: [<span class="ident">new_hashed_key</span>: <span class="ident">Bytes</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Encode a program that rotates the sender&#39;s authentication key to `new_key`. `new_key`\
+    <span class="ident">doc</span>: <span class="string">&quot;Encode a program that rotates the sender&#39;s authentication key to `new_key`. `new_key` \
           should be a 256 bit sha3 hash of an ed25519 public key.&quot;</span>
 }
 
@@ -937,8 +936,8 @@
     <span class="ident">builder</span>: <span class="ident">encode_rotate_authentication_key_with_recovery_address_script</span>,
     <span class="ident">type_args</span>: [],
     <span class="ident">args</span>: [<span class="ident">recovery_address</span>: <span class="ident">Address</span>, <span class="ident">to_recover</span>: <span class="ident">Address</span>, <span class="ident">new_key</span>: <span class="ident">Bytes</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Rotate the authentication key of `to_recover` to `new_key`. Can be invoked by either\
-          `recovery_address` or `to_recover`. Aborts if `recovery_address` does not have the\
+    <span class="ident">doc</span>: <span class="string">&quot;Rotate the authentication key of `to_recover` to `new_key`. Can be invoked by either \
+          `recovery_address` or `to_recover`. Aborts if `recovery_address` does not have the \
           `KeyRotationCapability` for `to_recover`.&quot;</span>
 }
 
@@ -947,11 +946,11 @@
     <span class="ident">builder</span>: <span class="ident">encode_rotate_shared_ed25519_public_key_script</span>,
     <span class="ident">type_args</span>: [],
     <span class="ident">args</span>: [<span class="ident">new_public_key</span>: <span class="ident">Bytes</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;(1) rotate the public key stored in the sender&#39;s `SharedEd25519PublicKey` resource to\
-          `new_public_key`\
-          (2) rotate the authentication key using the capability stored in the sender&#39;s\
-          `SharedEd25519PublicKey` to a new value derived from `new_public_key`\
-          Aborts if the sender does not have a `SharedEd25519PublicKey` resource.\
+    <span class="ident">doc</span>: <span class="string">&quot;(1) rotate the public key stored in the sender&#39;s `SharedEd25519PublicKey` resource to \
+          `new_public_key` \
+          (2) rotate the authentication key using the capability stored in the sender&#39;s \
+          `SharedEd25519PublicKey` to a new value derived from `new_public_key` \
+          Aborts if the sender does not have a `SharedEd25519PublicKey` resource. \
           Aborts if the length of `new_public_key` is not 32.&quot;</span>
 }
 
@@ -996,7 +995,7 @@
     <span class="ident">builder</span>: <span class="ident">encode_mint_lbr</span>,
     <span class="ident">type_args</span>: [],
     <span class="ident">args</span>: [<span class="ident">amount_lbr</span>: <span class="ident">U64</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Mints `amount_lbr` LBR from the sending account&#39;s constituent coins and deposits the\
+    <span class="ident">doc</span>: <span class="string">&quot;Mints `amount_lbr` LBR from the sending account&#39;s constituent coins and deposits the \
           resulting LBR into the sending account.&quot;</span>
 }
 
@@ -1005,14 +1004,13 @@
     <span class="ident">builder</span>: <span class="ident">encode_unmint_lbr</span>,
     <span class="ident">type_args</span>: [],
     <span class="ident">args</span>: [<span class="ident">amount_lbr</span>: <span class="ident">U64</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Unmints `amount_lbr` LBR from the sending account into the constituent coins and deposits\
+    <span class="ident">doc</span>: <span class="string">&quot;Unmints `amount_lbr` LBR from the sending account into the constituent coins and deposits \
           the resulting coins into the sending account.&quot;</span>
 }
 
 <span class="comment">//...........................................................................</span>
 <span class="comment">//  Association-related scripts</span>
 <span class="comment">//...........................................................................</span>
-
 
 {
     <span class="ident">script</span>: <span class="ident">UpdateMintingAbility</span>,
@@ -1031,9 +1029,9 @@
     <span class="ident">builder</span>: <span class="ident">encode_create_parent_vasp_account</span>,
     <span class="ident">type_args</span>: [<span class="ident">currency</span>],
     <span class="ident">args</span>: [<span class="ident">address</span>: <span class="ident">Address</span>, <span class="ident">auth_key_prefix</span>: <span class="ident">Bytes</span>, <span class="ident">human_name</span>: <span class="ident">Bytes</span>, <span class="ident">base_url</span>: <span class="ident">Bytes</span>, <span class="ident">compliance_public_key</span>: <span class="ident">Bytes</span>, <span class="ident">add_all_currencies</span>: <span class="ident">Bool</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Create an account with the ParentVASP role at `address` with authentication key\
-          `auth_key_prefix` | `new_account_address` and a 0 balance of type `currency`. If\
-          `add_all_currencies` is true, 0 balances for all available currencies in the system will\
+    <span class="ident">doc</span>: <span class="string">&quot;Create an account with the ParentVASP role at `address` with authentication key \
+          `auth_key_prefix` | `new_account_address` and a 0 balance of type `currency`. If \
+          `add_all_currencies` is true, 0 balances for all available currencies in the system will \
           also be added. This can only be invoked by an Association account.&quot;</span>
 }
 
@@ -1042,10 +1040,10 @@
     <span class="ident">builder</span>: <span class="ident">encode_create_child_vasp_account</span>,
     <span class="ident">type_args</span>: [<span class="ident">currency</span>],
     <span class="ident">args</span>: [<span class="ident">address</span>: <span class="ident">Address</span>, <span class="ident">auth_key_prefix</span>: <span class="ident">Bytes</span>, <span class="ident">add_all_currencies</span>: <span class="ident">Bool</span>, <span class="ident">initial_balance</span>: <span class="ident">U64</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Create an account with the ChildVASP role at `address` with authentication key\
-          `auth_key_prefix` | `new_account_address` and `initial_balance` of type `currency`\
-          transferred from the sender. If `add_all_currencies` is true, 0 balances for all\
-          available currencies in the system will also be added to the account. This account will\
+    <span class="ident">doc</span>: <span class="string">&quot;Create an account with the ChildVASP role at `address` with authentication key \
+          `auth_key_prefix` | `new_account_address` and `initial_balance` of type `currency` \
+          transferred from the sender. If `add_all_currencies` is true, 0 balances for all \
+          available currencies in the system will also be added to the account. This account will \
           be a child of the transaction sender, which must be a ParentVASP.&quot;</span>
 }
 
@@ -1058,8 +1056,8 @@
     <span class="ident">builder</span>: <span class="ident">encode_tiered_mint</span>,
     <span class="ident">type_args</span>: [<span class="ident">coin_type</span>],
     <span class="ident">args</span>: [<span class="ident">nonce</span>: <span class="ident">U64</span>, <span class="ident">designated_dealer_address</span>: <span class="ident">Address</span>, <span class="ident">mint_amount</span>: <span class="ident">U64</span>, <span class="ident">tier_index</span>: <span class="ident">U64</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Mints &#39;mint_amount&#39; to &#39;designated_dealer_address&#39; for &#39;tier_index&#39; tier.\
-          Max valid tier index is 3 since there are max 4 tiers per DD.
+    <span class="ident">doc</span>: <span class="string">&quot;Mints &#39;mint_amount&#39; to &#39;designated_dealer_address&#39; for &#39;tier_index&#39; tier. \
+          Max valid tier index is 3 since there are max 4 tiers per DD. \
           Sender should be treasury compliance account and receiver authorized DD&quot;</span>
 }
 
@@ -1092,7 +1090,7 @@
     <span class="ident">builder</span>: <span class="ident">encode_rotate_authentication_key_script_with_nonce</span>,
     <span class="ident">type_args</span>: [],
     <span class="ident">args</span>: [<span class="ident">nonce</span>: <span class="ident">U64</span>, <span class="ident">new_hashed_key</span>: <span class="ident">Bytes</span>],
-    <span class="ident">doc</span>: <span class="string">&quot;Encode a program that rotates the sender&#39;s authentication key to `new_key`. `new_key`\
+    <span class="ident">doc</span>: <span class="string">&quot;Encode a program that rotates the sender&#39;s authentication key to `new_key`. `new_key` \
           should be a 256 bit sha3 hash of an ed25519 public key. This script also takes nonce&quot;</span>
 }
 
