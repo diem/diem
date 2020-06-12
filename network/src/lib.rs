@@ -12,6 +12,7 @@ pub mod common;
 pub mod connectivity_manager;
 pub mod error;
 pub mod interface;
+pub mod logging;
 pub mod peer_manager;
 pub mod protocols;
 pub mod validator_network;

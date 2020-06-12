@@ -35,6 +35,7 @@ use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use netcore::transport::{ConnectionOrigin, Transport};
+use serde::Serialize;
 use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::Debug,
@@ -79,7 +80,7 @@ pub enum ConnectionRequest {
     DisconnectPeer(PeerId, oneshot::Sender<Result<(), PeerManagerError>>),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 pub enum ConnectionNotification {
     /// Connection with a new peer has been established.
     NewPeer(PeerId, NetworkAddress),

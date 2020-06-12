@@ -16,7 +16,7 @@ use futures::{
     stream::{FusedStream, Stream, StreamExt},
 };
 use libra_config::network_id::NetworkContext;
-use libra_logger::prelude::*;
+use libra_logger::{prelude::*, StructuredLogEntry};
 use libra_types::{
     on_chain_config::ValidatorSet,
     trusted_state::{TrustedState, TrustedStateChange},
@@ -25,6 +25,7 @@ use libra_types::{
 };
 use network::{
     connectivity_manager::{ConnectivityRequest, DiscoverySource},
+    logging,
     peer_manager::{conn_notifs_channel, ConnectionNotification},
 };
 use option_future::OptionFuture;
@@ -115,17 +116,30 @@ where
         // we have an up-to-date discovery set to connect with.
         let f_query_storage = self.handle_storage_query_tick().boxed();
         let mut pending_storage_query = OptionFuture::new(Some(f_query_storage));
-
+        send_struct_log!(
+            StructuredLogEntry::new_named(logging::ONCHAIN_DISCOVERY_LOOP)
+                .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                .data(logging::TYPE, logging::START)
+        );
         debug!("{} starting onchain discovery", self.network_context);
         loop {
             self.event_id = self.event_id.wrapping_add(1);
             futures::select! {
                 notif = self.conn_notifs_rx.select_next_some() => {
-                    trace!("{} event id: {}, type: ConnectionNotification", self.network_context, self.event_id);
+                    send_struct_log!(StructuredLogEntry::new_named(logging::ONCHAIN_DISCOVERY_LOOP)
+                        .data(logging::TYPE, "connection_notification")
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .field(&logging::EVENT_ID, &self.event_id)
+                        .field(&logging::CONNECTION_NOTIFICATION, &notif)
+                    );
                     self.handle_connection_notif(notif);
                 },
                 _ = self.peer_query_ticker.select_next_some() => {
-                    trace!("{} event id: {}, type: PeerQueryTick", self.network_context, self.event_id);
+                    send_struct_log!(StructuredLogEntry::new_named(logging::ONCHAIN_DISCOVERY_LOOP)
+                        .data(logging::TYPE, "peer_query_tick")
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .field(&logging::EVENT_ID, &self.event_id)
+                    );
                     pending_outbound_rpc
                         .or_insert_with(|| {
                             self.handle_peer_query_tick()
@@ -133,19 +147,36 @@ where
                         });
                 },
                 query_res = pending_outbound_rpc => {
-                    trace!("{} event id: {}, type: QueryResponse", self.network_context, self.event_id);
+                    send_struct_log!(StructuredLogEntry::new_named(logging::ONCHAIN_DISCOVERY_LOOP)
+                        .data(logging::TYPE, "rpc_query_response")
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .field(&logging::EVENT_ID, &self.event_id)
+                    );
                     self.handle_outbound_query_res(query_res).await;
                 },
                 _ = self.storage_query_ticker.select_next_some() => {
-                    trace!("{} event id: {}, type: StorageQueryTick", self.network_context, self.event_id);
+                    send_struct_log!(StructuredLogEntry::new_named(logging::ONCHAIN_DISCOVERY_LOOP)
+                        .data(logging::TYPE, "storage_query_tick")
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .field(&logging::EVENT_ID, &self.event_id)
+                    );
                     pending_storage_query
                         .or_insert_with(|| Some(self.handle_storage_query_tick().boxed()));
                 },
                 query_res = pending_storage_query => {
-                    trace!("{} event id: {}, type: QueryResponse", self.network_context, self.event_id);
+                    send_struct_log!(StructuredLogEntry::new_named(logging::ONCHAIN_DISCOVERY_LOOP)
+                        .data(logging::TYPE, "storage_query_response")
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .field(&logging::EVENT_ID, &self.event_id)
+                    );
                     self.handle_outbound_query_res(query_res).await;
                 }
                 complete => {
+                    send_struct_log!(StructuredLogEntry::new_named(logging::ONCHAIN_DISCOVERY_LOOP)
+                        .data(logging::TYPE, logging::TERMINATION)
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .critical()
+                    );
                     crit!("{} onchain discovery terminated", self.network_context);
                     break;
                 }
