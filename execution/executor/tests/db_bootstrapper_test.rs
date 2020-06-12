@@ -22,7 +22,8 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
-        association_address, from_currency_code_string, lbr_type_tag, BalanceResource, LBR_NAME,
+        from_currency_code_string, lbr_type_tag, treasury_compliance_account_address,
+        BalanceResource, LBR_NAME,
     },
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
@@ -135,7 +136,7 @@ fn get_mint_transaction(
 ) -> Transaction {
     let account_auth_key = AuthenticationKey::ed25519(&account_key.public_key());
     get_test_signed_transaction(
-        association_address(),
+        treasury_compliance_account_address(),
         /* sequence_number = */ association_seq_num,
         association_key.clone(),
         association_key.public_key(),
@@ -239,8 +240,8 @@ fn test_pre_genesis() {
 
     // Mint for 2 demo accounts.
     let (account1, account1_key, account2, account2_key) = get_demo_accounts();
-    let txn1 = get_mint_transaction(&genesis_key, 1, &account1, &account1_key, 2000);
-    let txn2 = get_mint_transaction(&genesis_key, 2, &account2, &account2_key, 2000);
+    let txn1 = get_mint_transaction(&genesis_key, 0, &account1, &account1_key, 2000);
+    let txn2 = get_mint_transaction(&genesis_key, 1, &account2, &account2_key, 2000);
     execute_and_commit(vec![txn1, txn2], &db_rw, &signer);
     assert_eq!(get_balance(&account1, &db_rw), 2000);
     assert_eq!(get_balance(&account2, &db_rw), 2000);
@@ -314,8 +315,8 @@ fn test_new_genesis() {
 
     // Mint for 2 demo accounts.
     let (account1, account1_key, account2, account2_key) = get_demo_accounts();
-    let txn1 = get_mint_transaction(&genesis_key, 1, &account1, &account1_key, 2_000_000);
-    let txn2 = get_mint_transaction(&genesis_key, 2, &account2, &account2_key, 2_000_000);
+    let txn1 = get_mint_transaction(&genesis_key, 0, &account1, &account1_key, 2_000_000);
+    let txn2 = get_mint_transaction(&genesis_key, 1, &account2, &account2_key, 2_000_000);
     execute_and_commit(vec![txn1, txn2], &db, &signer);
     assert_eq!(get_balance(&account1, &db), 2_000_000);
     assert_eq!(get_balance(&account2, &db), 2_000_000);

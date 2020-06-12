@@ -17,7 +17,6 @@
 -  [Struct `Preburn`](#0x0_Libra_Preburn)
 -  [Struct `AddCurrency`](#0x0_Libra_AddCurrency)
 -  [Function `initialize`](#0x0_Libra_initialize)
--  [Function `grant_mint_capability_to_association`](#0x0_Libra_grant_mint_capability_to_association)
 -  [Function `publish_mint_capability`](#0x0_Libra_publish_mint_capability)
 -  [Function `publish_burn_capability`](#0x0_Libra_publish_burn_capability)
 -  [Function `mint`](#0x0_Libra_mint)
@@ -657,31 +656,6 @@ config, and publishes the
     );
     <b>let</b> cap = <a href="RegisteredCurrencies.md#0x0_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account);
     move_to(config_account, <a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>{ cap })
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x0_Libra_grant_mint_capability_to_association"></a>
-
-## Function `grant_mint_capability_to_association`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_mint_capability_to_association">grant_mint_capability_to_association</a>&lt;CoinType&gt;(association: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_grant_mint_capability_to_association">grant_mint_capability_to_association</a>&lt;CoinType&gt;(association: &signer) {
-    <a href="#0x0_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(association);
-    move_to(association, <a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;{})
 }
 </code></pre>
 

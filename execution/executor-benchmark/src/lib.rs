@@ -12,7 +12,9 @@ use libra_crypto::{
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{association_address, lbr_type_tag, AccountResource, LBR_NAME},
+    account_config::{
+        lbr_type_tag, treasury_compliance_account_address, AccountResource, LBR_NAME,
+    },
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{
@@ -104,14 +106,14 @@ impl TransactionGenerator {
 
     /// Generates transactions that allocate `init_account_balance` to every account.
     fn gen_mint_transactions(&self, init_account_balance: u64, block_size: usize) {
-        let genesis_account = association_address();
+        let genesis_account = treasury_compliance_account_address();
 
         for (i, block) in self.accounts.chunks(block_size).enumerate() {
             let mut transactions = Vec::with_capacity(block_size);
             for (j, account) in block.iter().enumerate() {
                 let txn = create_transaction(
                     genesis_account,
-                    (i * block_size + j + 1) as u64,
+                    (i * block_size + j) as u64,
                     &self.genesis_key,
                     self.genesis_key.public_key(),
                     encode_mint_lbr_to_address_script(

@@ -57,7 +57,7 @@ fn mint_to_existing() {
     // We can't run mint test on terraform genesis as we don't have the private key to sign the
     // mint transaction.
     let mut executor = FakeExecutor::from_genesis_file();
-    let association = Account::new_association();
+    let association = Account::new_blessed_tc();
 
     // create and publish a sender with 1_000_000 coins
     let receiver = AccountData::new(1_000_000, 10);
@@ -66,7 +66,7 @@ fn mint_to_existing() {
     let mint_amount = 1_000;
     executor.execute_and_apply(association.signed_script_txn(
         encode_mint_lbr_to_address_script(&receiver.account().address(), vec![], mint_amount),
-        1,
+        0,
     ));
 
     // check that numbers in stored DB are correct
@@ -82,7 +82,7 @@ fn mint_to_existing() {
         .read_balance_resource(receiver.account(), account::lbr_currency_code())
         .expect("receiver balance must exist");
     assert_eq!(receiver_balance, updated_receiver_balance.coin());
-    assert_eq!(2, updated_sender.sequence_number());
+    assert_eq!(1, updated_sender.sequence_number());
     assert_eq!(10, updated_receiver.sequence_number());
 }
 
@@ -93,7 +93,7 @@ fn mint_to_new_account() {
     // mint transaction.
 
     let mut executor = FakeExecutor::from_genesis_file();
-    let association = Account::new_association();
+    let association = Account::new_blessed_tc();
 
     // create and publish a sender with TXN_RESERVED coins
     let new_account = Account::new();
@@ -105,7 +105,7 @@ fn mint_to_new_account() {
             new_account.auth_key_prefix(),
             mint_amount,
         ),
-        1,
+        0,
     ));
 
     // check that numbers in stored DB are correct
@@ -121,7 +121,7 @@ fn mint_to_new_account() {
         .read_balance_resource(&new_account, account::lbr_currency_code())
         .expect("receiver balance must exist");
     assert_eq!(receiver_balance, updated_receiver_balance.coin());
-    assert_eq!(2, updated_sender.sequence_number());
+    assert_eq!(1, updated_sender.sequence_number());
     assert_eq!(0, updated_receiver.sequence_number());
 
     // Mint can only be called from genesis address;

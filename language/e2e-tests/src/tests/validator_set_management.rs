@@ -18,16 +18,17 @@ use transaction_builder::*;
 #[test]
 fn validator_add() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let genesis_account = Account::new_association();
+    let blessed_account = Account::new_blessed_tc();
+    let assoc_root_account = Account::new_association();
     let validator_account = Account::new();
 
-    let txn = create_validator_account_txn(&genesis_account, &validator_account, 1);
+    let txn = create_validator_account_txn(&assoc_root_account, &validator_account, 1);
     executor.execute_and_apply(txn);
 
     let mint_amount = 10_000_000;
-    executor.execute_and_apply(genesis_account.signed_script_txn(
+    executor.execute_and_apply(blessed_account.signed_script_txn(
         encode_mint_lbr_to_address_script(&validator_account.address(), vec![], mint_amount),
-        2,
+        0,
     ));
     executor.new_block();
 
@@ -55,16 +56,17 @@ fn validator_add() {
 #[test]
 fn validator_rotate_key() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let genesis_account = Account::new_association();
+    let blessed_account = Account::new_blessed_tc();
+    let assoc_root_account = Account::new_association();
     let validator_account = Account::new();
 
-    let txn = create_validator_account_txn(&genesis_account, &validator_account, 1);
+    let txn = create_validator_account_txn(&assoc_root_account, &validator_account, 1);
     executor.execute_and_apply(txn);
 
     let mint_amount = 10_000_000;
-    executor.execute_and_apply(genesis_account.signed_script_txn(
+    executor.execute_and_apply(blessed_account.signed_script_txn(
         encode_mint_lbr_to_address_script(&validator_account.address(), vec![], mint_amount),
-        2,
+        0,
     ));
     executor.new_block();
 

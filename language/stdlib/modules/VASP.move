@@ -65,7 +65,7 @@ module VASP {
         base_url: vector<u8>,
         compliance_public_key: vector<u8>
     ) {
-        Association::assert_is_root(association);
+        Association::assert_is_association(association);
         assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), 7004);
         move_to(
             vasp,

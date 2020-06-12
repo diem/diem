@@ -61,8 +61,6 @@
         <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association),
         <b>copy</b> dummy_auth_key_prefix,
     );
-    <a href="Libra.md#0x0_Libra_grant_mint_capability_to_association">Libra::grant_mint_capability_to_association</a>&lt;<a href="Coin1.md#0x0_Coin1">Coin1</a>&gt;(association);
-    <a href="Libra.md#0x0_Libra_grant_mint_capability_to_association">Libra::grant_mint_capability_to_association</a>&lt;<a href="Coin2.md#0x0_Coin2">Coin2</a>&gt;(association);
 
     // Register transaction fee accounts
     <a href="TransactionFee.md#0x0_TransactionFee_initialize">TransactionFee::initialize</a>(association, fee_account, <b>copy</b> dummy_auth_key_prefix);

@@ -1,19 +1,30 @@
-//! new-transaction
 //! sender: association
+script {
+use 0x0::LibraAccount;
+use 0x0::Coin1::Coin1;
+use 0x0::Coin2::Coin2;
+
+// register blessed as a preburner
+fun main(account: &signer) {
+    LibraAccount::add_preburn_from_association<Coin1>(account, {{blessed}});
+    LibraAccount::add_preburn_from_association<Coin2>(account, {{blessed}});
+}
+}
+// check: EXECUTED
+
+//! new-transaction
+//! sender: blessed
 script {
 use 0x0::Libra;
 use 0x0::Coin1::Coin1;
 use 0x0::Coin2::Coin2;
-//use 0x0::Signer;
 
 // do some preburning
 fun main(account: &signer) {
-    Libra::publish_preburn_to_account<Coin1>(account, account);
-    Libra::publish_preburn_to_account<Coin2>(account, account);
     let coin1_coins = Libra::mint<Coin1>(account, 10);
-    let coin2_coins = Libra::mint<Coin2>(account, 10);
+    let coin2_coins = Libra::mint<Coin2>(account, 100);
     assert(Libra::market_cap<Coin1>() == 10, 7);
-    assert(Libra::market_cap<Coin2>() == 10, 8);
+    assert(Libra::market_cap<Coin2>() == 100, 8);
     Libra::preburn_to(account, coin1_coins);
     Libra::preburn_to(account, coin2_coins);
 }
@@ -29,8 +40,8 @@ use 0x0::Coin1::Coin1;
 use 0x0::Coin2::Coin2;
 
 fun main(account: &signer) {
-    Libra::burn<Coin1>(account, {{association}});
-    Libra::burn<Coin2>(account, {{association}});
+    Libra::burn<Coin1>(account, {{blessed}});
+    Libra::burn<Coin2>(account, {{blessed}});
     assert(Libra::market_cap<Coin1>() == 0, 9);
     assert(Libra::market_cap<Coin2>() == 0, 10);
 }

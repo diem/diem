@@ -1,7 +1,7 @@
 //! account: default, 0, 0
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 import 0x0.LBR;
 import 0x0.LibraAccount;
 import 0x0.Libra;
@@ -16,7 +16,6 @@ main(blessed: &signer) {
 main() {
     return;
 }
-
 
 //! new-transaction
 import 0x0.LibraAccount;

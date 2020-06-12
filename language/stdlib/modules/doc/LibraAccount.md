@@ -16,6 +16,7 @@
 -  [Struct `UnfreezeAccountEvent`](#0x0_LibraAccount_UnfreezeAccountEvent)
 -  [Struct `AccountOperationsCapability`](#0x0_LibraAccount_AccountOperationsCapability)
 -  [Function `add_parent_vasp_role_from_association`](#0x0_LibraAccount_add_parent_vasp_role_from_association)
+-  [Function `add_preburn_from_association`](#0x0_LibraAccount_add_preburn_from_association)
 -  [Function `initialize`](#0x0_LibraAccount_initialize)
 -  [Function `deposit`](#0x0_LibraAccount_deposit)
 -  [Function `deposit_to`](#0x0_LibraAccount_deposit_to)
@@ -503,6 +504,37 @@
     <a href="VASP.md#0x0_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(
         association, &account, human_name, base_url, compliance_public_key
     );
+    <a href="#0x0_LibraAccount_destroy_signer">destroy_signer</a>(account);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x0_LibraAccount_add_preburn_from_association"></a>
+
+## Function `add_preburn_from_association`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_add_preburn_from_association">add_preburn_from_association</a>&lt;Token&gt;(association: &signer, addr: address)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_add_preburn_from_association">add_preburn_from_association</a>&lt;Token&gt;(
+    association: &signer,
+    addr: address,
+) {
+    <b>assert</b>(<a href="#0x0_LibraAccount_exists_at">exists_at</a>(addr), 0);
+    <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 0);
+    <b>let</b> account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(addr);
+    <a href="Libra.md#0x0_Libra_publish_preburn_to_account">Libra::publish_preburn_to_account</a>&lt;Token&gt;(association, &account);
     <a href="#0x0_LibraAccount_destroy_signer">destroy_signer</a>(account);
 }
 </code></pre>

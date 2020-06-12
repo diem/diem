@@ -173,7 +173,7 @@
     base_url: vector&lt;u8&gt;,
     compliance_public_key: vector&lt;u8&gt;
 ) {
-    <a href="Association.md#0x0_Association_assert_is_root">Association::assert_is_root</a>(association);
+    <a href="Association.md#0x0_Association_assert_is_association">Association::assert_is_association</a>(association);
     <b>assert</b>(<a href="Signature.md#0x0_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> compliance_public_key), 7004);
     move_to(
         vasp,

@@ -178,13 +178,6 @@ module Libra {
         move_to(config_account, CurrencyRegistrationCapability{ cap })
     }
 
-
-    // TODO: temporary, we should ideally make MintCapability unique eventually...
-    public fun grant_mint_capability_to_association<CoinType>(association: &signer) {
-        assert_assoc_and_currency<CoinType>(association);
-        move_to(association, MintCapability<CoinType>{})
-    }
-
     /// Publishes the `MintCapability` `cap` for the `CoinType` currency
     /// under `account`. `CoinType`  must be a registered currency type,
     /// and the `account` must be an association account.
