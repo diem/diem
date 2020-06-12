@@ -1,12 +1,23 @@
 // Test the concurrent preburn-burn flow
 
-// register the sender as a preburn entity + perform three preburns: 100, 200, 300
+// register blessed as a preburn entity
 //! sender: association
+script {
+use 0x0::Coin1::Coin1;
+use 0x0::LibraAccount;
+fun main(account: &signer) {
+    LibraAccount::add_preburn_from_association<Coin1>(account, {{blessed}})
+}
+}
+// check: EXECUTED
+
+// perform three preburns: 100, 200, 300
+//! new-transaction
+//! sender: blessed
 script {
 use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 fun main(account: &signer) {
-    Libra::publish_preburn_to_account<Coin1>(account, account);
     let coin100 = Libra::mint<Coin1>(account, 100);
     let coin200 = Libra::mint<Coin1>(account, 200);
     let coin300 = Libra::mint<Coin1>(account, 300);
@@ -29,7 +40,7 @@ script {
 use 0x0::Coin1::Coin1;
 use 0x0::Libra;
 fun main(account: &signer) {
-    let burn_address = {{association}};
+    let burn_address = {{blessed}};
     Libra::burn<Coin1>(account, burn_address);
     assert(Libra::preburn_value<Coin1>() == 500, 8002);
     Libra::burn<Coin1>(account, burn_address);

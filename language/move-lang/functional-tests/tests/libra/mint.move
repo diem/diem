@@ -3,7 +3,7 @@
 //! account: alice, 0Coin1
 
 // Minting from a privileged account should work
-//! sender: association
+//! sender: blessed
 script {
 use 0x0::Coin1::Coin1;
 use 0x0::Libra;

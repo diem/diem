@@ -22,8 +22,8 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
-        association_address, from_currency_code_string, type_tag_for_currency_code,
-        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, LBR_NAME,
+        association_address, from_currency_code_string, treasury_compliance_account_address,
+        type_tag_for_currency_code, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, LBR_NAME,
     },
     account_state::AccountState,
     ledger_info::LedgerInfoWithSignatures,
@@ -105,8 +105,10 @@ pub struct ClientProxy {
     address_to_ref_id: HashMap<AccountAddress, usize>,
     /// Host that operates a faucet service
     faucet_server: String,
-    /// Account used for mint operations.
-    pub faucet_account: Option<AccountData>,
+    /// Account used for AssocRoot operations (e.g., adding a new transaction script)
+    pub assoc_root_account: Option<AccountData>,
+    /// Account used TreasuryCompliance operations (e.g., minting)
+    pub treasury_compliance_account: Option<AccountData>,
     /// Wallet library managing user accounts.
     wallet: WalletLibrary,
     /// Whether to sync with validator on wallet recovery.
@@ -120,7 +122,8 @@ impl ClientProxy {
     /// Construct a new TestClient.
     pub fn new(
         url: &str,
-        faucet_account_file: &str,
+        assoc_root_account_file: &str,
+        treasury_compliance_account_file: &str,
         sync_on_wallet_recovery: bool,
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
@@ -132,20 +135,32 @@ impl ClientProxy {
 
         let accounts = vec![];
 
-        // If we have a faucet account file, then load it to get the keypair
-        let faucet_account = if faucet_account_file.is_empty() {
+        let assoc_root_account = if assoc_root_account_file.is_empty() {
             None
         } else {
-            let faucet_account_key = generate_key::load_key(faucet_account_file);
-            let faucet_account_data = Self::get_account_data_from_address(
+            let assoc_root_account_key = generate_key::load_key(assoc_root_account_file);
+            let assoc_root_account_data = Self::get_account_data_from_address(
                 &mut client,
                 association_address(),
                 true,
-                Some(KeyPair::from(faucet_account_key)),
+                Some(KeyPair::from(assoc_root_account_key)),
                 None,
             )?;
-            // Load the keypair from file
-            Some(faucet_account_data)
+            Some(assoc_root_account_data)
+        };
+        let treasury_compliance_account = if treasury_compliance_account_file.is_empty() {
+            None
+        } else {
+            let treasury_compliance_account_key =
+                generate_key::load_key(treasury_compliance_account_file);
+            let treasury_compliance_account_data = Self::get_account_data_from_address(
+                &mut client,
+                treasury_compliance_account_address(),
+                true,
+                Some(KeyPair::from(treasury_compliance_account_key)),
+                None,
+            )?;
+            Some(treasury_compliance_account_data)
         };
 
         let faucet_server = match faucet_server {
@@ -167,7 +182,8 @@ impl ClientProxy {
             accounts,
             address_to_ref_id,
             faucet_server,
-            faucet_account,
+            assoc_root_account,
+            treasury_compliance_account,
             wallet: Self::get_libra_wallet(mnemonic_file)?,
             sync_on_wallet_recovery,
             temp_files: vec![],
@@ -223,12 +239,20 @@ impl ClientProxy {
             }
         }
 
-        if let Some(faucet_account) = &self.faucet_account {
+        if let Some(assoc_root_account) = &self.assoc_root_account {
             println!(
-                "Faucet account address: {}, sequence_number: {}, status: {:?}",
-                hex::encode(&faucet_account.address),
-                faucet_account.sequence_number,
-                faucet_account.status,
+                "AssocRoot account address: {}, sequence_number: {}, status: {:?}",
+                hex::encode(&assoc_root_account.address),
+                assoc_root_account.sequence_number,
+                assoc_root_account.status,
+            );
+        }
+        if let Some(treasury_compliance_account) = &self.treasury_compliance_account {
+            println!(
+                "TreasuryCompliance account address: {}, sequence_number: {}, status: {:?}",
+                hex::encode(&treasury_compliance_account.address),
+                treasury_compliance_account.sequence_number,
+                treasury_compliance_account.status,
             );
         }
     }
@@ -311,9 +335,15 @@ impl ClientProxy {
             false
         };
         if reset_sequence_number {
-            if let Some(faucet_account) = &mut self.faucet_account {
-                if faucet_account.address == address {
-                    faucet_account.sequence_number = sequence_number;
+            if let Some(assoc_root_account) = &mut self.assoc_root_account {
+                if assoc_root_account.address == address {
+                    assoc_root_account.sequence_number = sequence_number;
+                    return Ok(sequence_number);
+                }
+            }
+            if let Some(treasury_compliance_account) = &mut self.treasury_compliance_account {
+                if treasury_compliance_account.address == address {
+                    treasury_compliance_account.sequence_number = sequence_number;
                     return Ok(sequence_number);
                 }
             }
@@ -423,7 +453,7 @@ impl ClientProxy {
 
         ensure!(num_coins > 0, "Invalid number of coins to mint.");
 
-        match self.faucet_account {
+        match self.treasury_compliance_account {
             Some(_) => {
                 let script = if mint_currency == "LBR" {
                     transaction_builder::encode_mint_lbr_to_address_script(
@@ -439,7 +469,7 @@ impl ClientProxy {
                         num_coins,
                     )
                 };
-                self.association_transaction_with_local_faucet_account(
+                self.association_transaction_with_local_treasury_compliance_account(
                     TransactionPayload::Script(script),
                     is_blocking,
                 )
@@ -468,8 +498,8 @@ impl ClientProxy {
             space_delim_strings.len() == 1,
             "Invalid number of arguments for setting publishing option"
         );
-        match self.faucet_account {
-            Some(_) => self.association_transaction_with_local_faucet_account(
+        match self.assoc_root_account {
+            Some(_) => self.association_transaction_with_local_assoc_root_account(
                 TransactionPayload::Script(transaction_builder::encode_publishing_option_script(
                     VMPublishingOption::CustomScripts,
                 )),
@@ -494,8 +524,8 @@ impl ClientProxy {
             space_delim_strings.len() == 1,
             "Invalid number of arguments for setting publishing option"
         );
-        match self.faucet_account {
-            Some(_) => self.association_transaction_with_local_faucet_account(
+        match self.assoc_root_account {
+            Some(_) => self.association_transaction_with_local_assoc_root_account(
                 TransactionPayload::Script(transaction_builder::encode_publishing_option_script(
                     VMPublishingOption::Locked(StdlibScript::whitelist()),
                 )),
@@ -521,8 +551,8 @@ impl ClientProxy {
             "Invalid number of arguments for upgrading_stdlib_transaction"
         );
 
-        match self.faucet_account {
-            Some(_) => self.association_transaction_with_local_faucet_account(
+        match self.assoc_root_account {
+            Some(_) => self.association_transaction_with_local_assoc_root_account(
                 TransactionPayload::WriteSet(
                     transaction_builder::encode_stdlib_upgrade_transaction(StdLibOptions::Fresh),
                 ),
@@ -1369,21 +1399,50 @@ impl ClientProxy {
         Ok(auth_key)
     }
 
-    fn association_transaction_with_local_faucet_account(
+    fn association_transaction_with_local_assoc_root_account(
         &mut self,
         payload: TransactionPayload,
         is_blocking: bool,
     ) -> Result<()> {
-        ensure!(self.faucet_account.is_some(), "No faucet account loaded");
-        let sender = self.faucet_account.as_ref().unwrap();
+        ensure!(
+            self.assoc_root_account.is_some(),
+            "No assoc root account loaded"
+        );
+        let sender = self.assoc_root_account.as_ref().unwrap();
         let sender_address = sender.address;
         let txn = self.create_txn_to_submit(payload, sender, None, None, None)?;
-        let mut sender_mut = self.faucet_account.as_mut().unwrap();
+        let mut sender_mut = self.assoc_root_account.as_mut().unwrap();
         let resp = self.client.submit_transaction(Some(&mut sender_mut), txn);
         if is_blocking {
             self.wait_for_transaction(
                 sender_address,
-                self.faucet_account.as_ref().unwrap().sequence_number,
+                self.assoc_root_account.as_ref().unwrap().sequence_number,
+            )?;
+        }
+        resp
+    }
+
+    fn association_transaction_with_local_treasury_compliance_account(
+        &mut self,
+        payload: TransactionPayload,
+        is_blocking: bool,
+    ) -> Result<()> {
+        ensure!(
+            self.treasury_compliance_account.is_some(),
+            "No treasury compliance account loaded"
+        );
+        let sender = self.treasury_compliance_account.as_ref().unwrap();
+        let sender_address = sender.address;
+        let txn = self.create_txn_to_submit(payload, sender, None, None, None)?;
+        let mut sender_mut = self.treasury_compliance_account.as_mut().unwrap();
+        let resp = self.client.submit_transaction(Some(&mut sender_mut), txn);
+        if is_blocking {
+            self.wait_for_transaction(
+                sender_address,
+                self.treasury_compliance_account
+                    .as_ref()
+                    .unwrap()
+                    .sequence_number,
             )?;
         }
         resp
@@ -1419,7 +1478,7 @@ impl ClientProxy {
         }
         let sequence_number = body.parse::<u64>()?;
         if is_blocking {
-            self.wait_for_transaction(association_address(), sequence_number)?;
+            self.wait_for_transaction(treasury_compliance_account_address(), sequence_number)?;
         }
 
         Ok(())
@@ -1600,6 +1659,7 @@ mod tests {
         // generate random accounts
         let mut client_proxy = ClientProxy::new(
             "http://localhost:8080",
+            &"",
             &"",
             false,
             None,

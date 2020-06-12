@@ -150,6 +150,18 @@ module LibraAccount {
         destroy_signer(account);
     }
 
+    // TODO: temporary, remove when DD account feature in E2E tests works
+    public fun add_preburn_from_association<Token>(
+        association: &signer,
+        addr: address,
+    ) {
+        assert(exists_at(addr), 0);
+        assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
+        let account = create_signer(addr);
+        Libra::publish_preburn_to_account<Token>(association, &account);
+        destroy_signer(account);
+    }
+
     public fun initialize(association: &signer) {
         assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
         move_to(

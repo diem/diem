@@ -1,13 +1,14 @@
 //! account: bob, 0LBR
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
     use 0x0::LibraAccount;
     fun main(assoc: &signer) {
-        LibraAccount::mint_lbr_to_address(assoc, {{bob}}, 10000);
+        LibraAccount::mint_lbr_to_address(assoc, {{bob}}, 100000);
     }
 }
+// check: EXECUTED
 
 //! new-transaction
 //! sender: bob

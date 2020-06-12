@@ -12,7 +12,10 @@ use executor_types::BlockExecutor;
 use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform};
 use libra_types::{
-    account_config::{association_address, from_currency_code_string, lbr_type_tag, LBR_NAME},
+    account_config::{
+        association_address, from_currency_code_string, lbr_type_tag,
+        treasury_compliance_account_address, LBR_NAME,
+    },
     account_state::AccountState,
     account_state_blob::AccountStateWithProof,
     event::EventKey,
@@ -79,7 +82,6 @@ fn test_reconfiguration() {
     let (_db, mut executor) = create_db_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
 
-    let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
     let validator_account = network_config.peer_id();
     let keys = config
@@ -99,8 +101,8 @@ fn test_reconfiguration() {
 
     // give the validator some money so they can send a tx
     let txn1 = get_test_signed_transaction(
-        genesis_account,
-        /* sequence_number = */ 1,
+        treasury_compliance_account_address(),
+        /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_transfer_with_metadata_script(
@@ -170,6 +172,7 @@ fn test_change_publishing_option_to_custom() {
     let (db, mut executor) = create_db_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
 
+    let treasury_compliance_account = treasury_compliance_account_address();
     let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
     let validator_account = network_config.peer_id();
@@ -187,8 +190,8 @@ fn test_change_publishing_option_to_custom() {
 
     // give the validator some money so they can send a tx
     let txn1 = get_test_signed_transaction(
-        genesis_account,
-        /* sequence_number = */ 1,
+        treasury_compliance_account,
+        /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_transfer_with_metadata_script(
@@ -226,7 +229,7 @@ fn test_change_publishing_option_to_custom() {
 
     let txn5 = get_test_signed_transaction(
         genesis_account,
-        /* sequence_number = */ 2,
+        /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_publishing_option_script(
@@ -267,7 +270,7 @@ fn test_change_publishing_option_to_custom() {
     // Transaction 1 is committed as it's in the whitelist
     let txn1 = db
         .reader
-        .get_txn_by_account(genesis_account, 1, current_version, false)
+        .get_txn_by_account(treasury_compliance_account, 0, current_version, false)
         .unwrap();
     verify_committed_txn_status(txn1.as_ref(), &block1[0]).unwrap();
     // Transaction 2, 3 are rejected
@@ -338,6 +341,7 @@ fn test_extend_whitelist() {
     let (db, mut executor) = create_db_and_executor(&config);
     let parent_block_id = executor.committed_block_id();
 
+    let treasury_compliance_account = treasury_compliance_account_address();
     let genesis_account = association_address();
     let network_config = config.validator_network.as_ref().unwrap();
     let validator_account = network_config.peer_id();
@@ -359,8 +363,8 @@ fn test_extend_whitelist() {
 
     // give the validator some money so they can send a tx
     let txn1 = get_test_signed_transaction(
-        genesis_account,
-        /* sequence_number = */ 1,
+        treasury_compliance_account,
+        /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_transfer_with_metadata_script(
@@ -405,7 +409,7 @@ fn test_extend_whitelist() {
 
     let txn5 = get_test_signed_transaction(
         genesis_account,
-        /* sequence_number = */ 2,
+        /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_publishing_option_script(VMPublishingOption::Locked(
@@ -446,7 +450,7 @@ fn test_extend_whitelist() {
     // Transaction 1 is committed as it's in the whitelist
     let t1 = db
         .reader
-        .get_txn_by_account(genesis_account, 1, current_version, false)
+        .get_txn_by_account(treasury_compliance_account, 0, current_version, false)
         .unwrap();
     verify_committed_txn_status(t1.as_ref(), &block1[0]).unwrap();
 
@@ -544,12 +548,12 @@ fn test_execution_with_storage() {
     let pubkey4 = Ed25519PrivateKey::generate(&mut rng).public_key();
     let account4_auth_key = AuthenticationKey::ed25519(&pubkey4); // non-existent account
     let account4 = account4_auth_key.derived_address();
-    let genesis_account = association_address();
+    let genesis_account = treasury_compliance_account_address();
 
     // Create account1 with 2M coins.
     let txn1 = get_test_signed_transaction(
         genesis_account,
-        /* sequence_number = */ 1,
+        /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_mint_lbr_to_address_script(
@@ -562,7 +566,7 @@ fn test_execution_with_storage() {
     // Create account2 with 1.2M coins.
     let txn2 = get_test_signed_transaction(
         genesis_account,
-        /* sequence_number = */ 2,
+        /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_mint_lbr_to_address_script(
@@ -575,7 +579,7 @@ fn test_execution_with_storage() {
     // Create account3 with 1M coins.
     let txn3 = get_test_signed_transaction(
         genesis_account,
-        /* sequence_number = */ 3,
+        /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_mint_lbr_to_address_script(
@@ -681,25 +685,25 @@ fn test_execution_with_storage() {
 
     let t1 = db
         .reader
-        .get_txn_by_account(genesis_account, 1, current_version, false)
+        .get_txn_by_account(genesis_account, 0, current_version, false)
         .unwrap();
     verify_committed_txn_status(t1.as_ref(), &block1[0]).unwrap();
 
     let t2 = db
         .reader
-        .get_txn_by_account(genesis_account, 2, current_version, false)
+        .get_txn_by_account(genesis_account, 1, current_version, false)
         .unwrap();
     verify_committed_txn_status(t2.as_ref(), &block1[1]).unwrap();
 
     let t3 = db
         .reader
-        .get_txn_by_account(genesis_account, 3, current_version, false)
+        .get_txn_by_account(genesis_account, 2, current_version, false)
         .unwrap();
     verify_committed_txn_status(t3.as_ref(), &block1[2]).unwrap();
 
     let tn = db
         .reader
-        .get_txn_by_account(genesis_account, 4, current_version, false)
+        .get_txn_by_account(genesis_account, 3, current_version, false)
         .unwrap();
     assert!(tn.is_none());
 

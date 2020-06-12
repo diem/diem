@@ -1,7 +1,7 @@
 //! account: default, 0LBR
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 import 0x0.LBR;
 import 0x0.LibraAccount;
 import 0x0.Libra;

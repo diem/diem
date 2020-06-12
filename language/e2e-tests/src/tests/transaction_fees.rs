@@ -24,11 +24,11 @@ use transaction_builder::{encode_burn_txn_fees_script, encode_mint_lbr_to_addres
 fn burn_txn_fees() {
     let mut executor = FakeExecutor::from_genesis_file();
     let sender = AccountData::new(0, 0);
-    let association = Account::new_association();
+    let tc = Account::new_blessed_tc();
     executor.add_account_data(&sender);
-    executor.execute_and_apply(association.signed_script_txn(
+    executor.execute_and_apply(tc.signed_script_txn(
         encode_mint_lbr_to_address_script(&sender.account().address(), vec![], 10_000_000),
-        1,
+        0,
     ));
 
     let gas_used = {
@@ -56,7 +56,6 @@ fn burn_txn_fees() {
         status.gas_used()
     };
 
-    let tc = Account::new_blessed_tc();
     let lbr_ty = TypeTag::Struct(StructTag {
         address: account_config::CORE_CODE_ADDRESS,
         module: Identifier::new("LBR").unwrap(),
@@ -65,7 +64,7 @@ fn burn_txn_fees() {
     });
 
     let output =
-        executor.execute_and_apply(tc.signed_script_txn(encode_burn_txn_fees_script(lbr_ty), 0));
+        executor.execute_and_apply(tc.signed_script_txn(encode_burn_txn_fees_script(lbr_ty), 1));
 
     let burn_events: Vec<_> = output
         .events()

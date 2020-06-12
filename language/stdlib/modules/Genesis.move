@@ -6,8 +6,8 @@ address 0x0 {
 module Genesis {
     use 0x0::Association::{Self, PublishModule};
     use 0x0::CoreAddresses;
-    use 0x0::Coin1::{Self, Coin1};
-    use 0x0::Coin2::{Self, Coin2};
+    use 0x0::Coin1;
+    use 0x0::Coin2;
     use 0x0::Event;
     use 0x0::LBR::{Self, LBR};
     use 0x0::Libra::{Self, AddCurrency};
@@ -61,8 +61,6 @@ module Genesis {
             Signer::address_of(association),
             copy dummy_auth_key_prefix,
         );
-        Libra::grant_mint_capability_to_association<Coin1>(association);
-        Libra::grant_mint_capability_to_association<Coin2>(association);
 
         // Register transaction fee accounts
         TransactionFee::initialize(association, fee_account, copy dummy_auth_key_prefix);

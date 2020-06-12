@@ -1,7 +1,7 @@
 //! account: bob, 0Coin1
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
     use 0x0::LibraAccount;
     use 0x0::Coin1::Coin1;
@@ -9,6 +9,7 @@ script {
         LibraAccount::mint_to_address<Coin1>(assoc, {{bob}}, 10000);
     }
 }
+// check: EXECUTED
 
 //! new-transaction
 //! sender: bob

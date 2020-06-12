@@ -249,6 +249,7 @@ fn transfer_and_execute_writeset() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
     let genesis_account = Account::new_association();
+    let blessed_account = Account::new_blessed_tc();
     executor.new_block();
 
     let receiver = AccountData::new(100_000, 10);
@@ -257,9 +258,9 @@ fn transfer_and_execute_writeset() {
     // (1) Association mint some coin
     let mint_amount = 1_000_000;
 
-    executor.execute_and_apply(genesis_account.signed_script_txn(
+    executor.execute_and_apply(blessed_account.signed_script_txn(
         encode_mint_lbr_to_address_script(genesis_account.address(), vec![], mint_amount),
-        1,
+        0,
     ));
 
     // (2) Create a WriteSet that adds an account on a new address
@@ -269,9 +270,9 @@ fn transfer_and_execute_writeset() {
     let writeset_txn = genesis_account.create_signed_txn_impl(
         *genesis_account.address(),
         TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![])),
-        2,
+        1, // sequence number
         100_000,
-        1,
+        0, // gas unit price
         LBR_NAME.to_owned(),
     );
 
@@ -294,13 +295,13 @@ fn transfer_and_execute_writeset() {
         .read_balance_resource(new_account_data.account(), account::lbr_currency_code())
         .expect("sender balance must exist");
 
-    assert_eq!(3, updated_association_account.sequence_number());
+    assert_eq!(2, updated_association_account.sequence_number());
     assert_eq!(1000, updated_sender_balance.coin());
     assert_eq!(10, updated_sender.sequence_number());
 
     // (3) Create another transfer
     let transfer_amount = 1_000;
-    let txn = peer_to_peer_txn(&genesis_account, receiver.account(), 3, transfer_amount);
+    let txn = peer_to_peer_txn(&genesis_account, receiver.account(), 2, transfer_amount);
 
     // execute transaction
     let output = executor.execute_transaction(txn);

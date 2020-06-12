@@ -20,7 +20,7 @@ use libra_crypto::{
 use libra_logger::*;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{association_address, lbr_type_tag, LBR_NAME},
+    account_config::{lbr_type_tag, treasury_compliance_account_address, LBR_NAME},
     transaction::{
         authenticator::AuthenticationKey, helpers::create_user_txn, Script, TransactionPayload,
     },
@@ -223,7 +223,7 @@ impl TxEmitter {
 
     pub async fn load_faucet_account(&self, instance: &Instance) -> Result<AccountData> {
         let client = instance.json_rpc_client();
-        let address = association_address();
+        let address = treasury_compliance_account_address();
         let sequence_number = query_sequence_numbers(&client, &[address])
             .await
             .map_err(|e| {

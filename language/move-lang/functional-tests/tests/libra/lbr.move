@@ -1,7 +1,6 @@
 //! account: alice
 
 //! new-transaction
-//! sender: association
 script {
 use 0x0::Libra;
 use 0x0::LBR::LBR;
@@ -15,7 +14,7 @@ fun main() {
 
 // minting various amounts of LBR via LBR::mint should work
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
 use 0x0::LibraAccount;
 use 0x0::LBR;
@@ -31,7 +30,7 @@ fun main(account: &signer) {
 
 // minting LBR via Libra::mint should not work
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
 use 0x0::LibraAccount;
 use 0x0::LBR::LBR;
@@ -45,7 +44,7 @@ fun main(account: &signer) {
 // burning LBR via Libra::burn should not work. This is cumbersome to test directly, so instead test
 // that the Association account does not have a BurnCapability
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
 use 0x0::LBR::LBR;
 use 0x0::Libra;

@@ -19,7 +19,7 @@ use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{association_address, LBR_NAME},
+    account_config::{treasury_compliance_account_address, LBR_NAME},
     ledger_info::LedgerInfo,
     transaction::authenticator::AuthenticationKey,
     waypoint::Waypoint,
@@ -138,6 +138,7 @@ impl TestEnvironment {
 
         ClientProxy::new(
             &format!("http://localhost:{}", port),
+            &self.faucet_key.1,
             &self.faucet_key.1,
             false,
             /* faucet server */ None,
@@ -439,7 +440,7 @@ fn test_trace() {
         .transfer_coins(&["t", "0", "1", "1", "LBR"], false)
         .unwrap();
     let events = debug_client.get_events().expect("Failed to get events");
-    let txn_node = format!("txn::{}::{}", association_address(), 1);
+    let txn_node = format!("txn::{}::{}", treasury_compliance_account_address(), 1);
     println!("Tracing {}", txn_node);
     libra_trace::trace_node(&events[..], &txn_node);
 }
@@ -904,9 +905,9 @@ fn test_full_node_basic_flow() {
     let mut full_node_client_2 = env.get_full_node_ac_client(0, None);
 
     // ensure the client has up-to-date sequence number after test_smoke_script(3 minting)
-    let sender_account = association_address();
+    let sender_account = treasury_compliance_account_address();
     full_node_client
-        .wait_for_transaction(sender_account, 4)
+        .wait_for_transaction(sender_account, 3)
         .unwrap();
     for idx in 0..3 {
         validator_ac_client.create_next_account(false).unwrap();
@@ -1050,7 +1051,7 @@ fn test_e2e_reconfiguration() {
     ));
     // wait for the mint txn in node 0
     client_proxy_0
-        .wait_for_transaction(association_address(), 2)
+        .wait_for_transaction(treasury_compliance_account_address(), 1)
         .unwrap();
     assert!(compare_balances(
         vec![(10.0, "LBR".to_string())],
@@ -1082,9 +1083,9 @@ fn test_e2e_reconfiguration() {
     client_proxy_1
         .add_validator(&["add_validator", &peer_id, &operator_private_str], true)
         .unwrap();
-    // Wait for it catches up, mint1 + mint2 => seq == 3
+    // Wait for it catches up, mint1 + mint2 => seq == 2
     client_proxy_0
-        .wait_for_transaction(association_address(), 3)
+        .wait_for_transaction(treasury_compliance_account_address(), 2)
         .unwrap();
     assert!(compare_balances(
         vec![(20.0, "LBR".to_string())],

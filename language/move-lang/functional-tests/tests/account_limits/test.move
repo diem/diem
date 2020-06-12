@@ -29,7 +29,7 @@ script {
 // chec: 10048
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
 use 0x0::LibraAccount;
 fun main(account: &signer) {
@@ -127,7 +127,7 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
 use 0x0::LibraAccount;
 fun main(account: &signer) {
@@ -164,7 +164,7 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
 use 0x0::LibraAccount;
 fun main(account: &signer) {
@@ -237,7 +237,7 @@ script {
 //! block-time: 40001
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
     use 0x0::LibraAccount;
     fun main(account: &signer) {
@@ -247,7 +247,7 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
     use 0x0::LibraAccount;
     fun main(account: &signer) {
@@ -300,7 +300,7 @@ script {
 // chec: 1
 
 //! new-transaction
-//! sender: association
+//! sender: blessed
 script {
     use 0x0::LibraAccount;
     fun main(account: &signer) {

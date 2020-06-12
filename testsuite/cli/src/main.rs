@@ -77,6 +77,8 @@ fn main() {
         .faucet_account_file
         .clone()
         .unwrap_or_else(|| "".to_string());
+    // Faucet and TreasuryCompliance use the same keypair for now
+    let treasury_compliance_account_file = faucet_account_file.clone();
     let mnemonic_file = args.mnemonic_file.clone();
 
     // If waypoint is given explicitly, use its value,
@@ -94,6 +96,7 @@ fn main() {
     let mut client_proxy = ClientProxy::new(
         &args.url,
         &faucet_account_file,
+        &treasury_compliance_account_file,
         args.sync,
         args.faucet_server.clone(),
         mnemonic_file,

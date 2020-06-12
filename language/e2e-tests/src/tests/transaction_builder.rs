@@ -135,6 +135,7 @@ fn create_parent_and_child_vasp() {
 fn create_child_vasp_with_balance() {
     let mut executor = FakeExecutor::from_genesis_file();
     let association = Account::new_association();
+    let blessed = Account::new_blessed_tc();
     let parent = Account::new();
     let child = Account::new();
 
@@ -158,14 +159,14 @@ fn create_child_vasp_with_balance() {
 
     let amount = 100;
     // mint to the parent VASP
-    executor.execute_and_apply(association.signed_script_txn(
+    executor.execute_and_apply(blessed.signed_script_txn(
         encode_mint_script(
             account_config::coin1_tag(),
             parent.address(),
             vec![],
             amount,
         ),
-        2,
+        0,
     ));
 
     assert_eq!(
@@ -206,6 +207,7 @@ fn dual_attestation_payment() {
     let payment_sender = Account::new();
     let sender_child = Account::new();
     let association = Account::new_association();
+    let blessed = Account::new_blessed_tc();
     let unhosted = {
         let data = AccountData::new_unhosted();
         executor.add_account_data(&data);
@@ -249,9 +251,9 @@ fn dual_attestation_payment() {
         2,
     ));
 
-    executor.execute_and_apply(association.signed_script_txn(
+    executor.execute_and_apply(blessed.signed_script_txn(
         encode_mint_lbr_to_address_script(&payment_sender.address(), vec![], 2_000_000),
-        3,
+        0,
     ));
 
     // create a child VASP with a balance of amount
@@ -585,6 +587,7 @@ fn publish_rotate_shared_ed25519_public_key() {
 fn recovery_address() {
     let mut executor = FakeExecutor::from_genesis_file();
     let association = Account::new_association();
+
     let parent = Account::new();
     let mut child = Account::new();
     let other_vasp = Account::new();
