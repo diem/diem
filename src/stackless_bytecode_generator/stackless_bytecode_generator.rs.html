@@ -1094,18 +1094,11 @@
 <span id="1094">1094</span>
 <span id="1095">1095</span>
 <span id="1096">1096</span>
-<span id="1097">1097</span>
-<span id="1098">1098</span>
-<span id="1099">1099</span>
-<span id="1100">1100</span>
-<span id="1101">1101</span>
-<span id="1102">1102</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">annotations</span>::<span class="ident">Annotations</span>,
     <span class="ident">function_target</span>::<span class="ident">FunctionTargetData</span>,
     <span class="ident">stackless_bytecode</span>::{
         <span class="ident">AssignKind</span>, <span class="ident">AttrId</span>,
@@ -1201,19 +1194,14 @@
             <span class="self">self</span>.<span class="ident">code</span>.<span class="ident">push</span>(<span class="ident">bytecode</span>);
         }
 
-        <span class="ident">FunctionTargetData</span> {
-            <span class="ident">code</span>: <span class="self">self</span>.<span class="ident">code</span>,
-            <span class="ident">local_types</span>: <span class="self">self</span>.<span class="ident">local_types</span>,
-            <span class="ident">return_types</span>: <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">get_return_types</span>(),
-            <span class="ident">param_proxy_map</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
-            <span class="ident">ref_param_proxy_map</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
-            <span class="ident">ref_param_return_map</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
-            <span class="ident">acquires_global_resources</span>: <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">get_acquires_global_resources</span>(),
-            <span class="ident">locations</span>: <span class="self">self</span>.<span class="ident">location_table</span>,
-            <span class="ident">annotations</span>: <span class="ident">Annotations</span>::<span class="ident">default</span>(),
+        <span class="ident">FunctionTargetData</span>::<span class="ident">new</span>(
+            <span class="self">self</span>.<span class="ident">code</span>,
+            <span class="self">self</span>.<span class="ident">local_types</span>,
+            <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">get_return_types</span>(),
+            <span class="self">self</span>.<span class="ident">location_table</span>,
+            <span class="self">self</span>.<span class="ident">func_env</span>.<span class="ident">get_acquires_global_resources</span>(),
             <span class="ident">given_spec_blocks</span>,
-            <span class="ident">generated_spec_blocks</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
-        }
+        )
     }
 
     <span class="doccomment">/// Create a new attribute id and populate location table.</span>
