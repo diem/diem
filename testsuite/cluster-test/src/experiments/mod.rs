@@ -58,6 +58,8 @@ pub struct Context<'a> {
     pub global_emit_job_request: &'a mut Option<EmitJobRequest>,
     pub emit_to_validator: bool,
     pub cluster_swarm: &'a ClusterSwarmKube,
+    /// Current docker image tag used by this run
+    pub current_tag: &'a str,
 }
 
 impl<'a> Context<'a> {
@@ -70,6 +72,7 @@ impl<'a> Context<'a> {
         emit_job_request: &'a mut Option<EmitJobRequest>,
         emit_to_validator: bool,
         cluster_swarm: &'a ClusterSwarmKube,
+        current_tag: &'a str,
     ) -> Self {
         Context {
             tx_emitter,
@@ -80,6 +83,7 @@ impl<'a> Context<'a> {
             global_emit_job_request: emit_job_request,
             emit_to_validator,
             cluster_swarm,
+            current_tag,
         }
     }
 }
