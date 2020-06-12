@@ -131,7 +131,7 @@ async fn get_account_state(
 async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Result<BlockMetadata> {
     let (version, timestamp) = match serde_json::from_value::<u64>(request.get_param(0)) {
         Ok(version) => {
-            let li = service.db.get_ledger_info(version)?;
+            let li = service.db.get_nearest_epoch_change_ledger_info(version)?;
             (version, li.ledger_info().timestamp_usecs())
         }
         _ => (

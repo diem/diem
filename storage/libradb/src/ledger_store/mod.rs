@@ -133,6 +133,47 @@ impl LedgerStore {
         Ok((results, false))
     }
 
+    pub fn get_nearest_epoch_change_ledger_info(
+        &self,
+        version: Version,
+    ) -> Result<LedgerInfoWithSignatures> {
+        let epoch = self.get_epoch(version)?;
+        let current_epoch_ledger_info = self.get_latest_ledger_info_in_epoch(epoch)?;
+        let li_version = current_epoch_ledger_info.ledger_info().version();
+        ensure!(
+            li_version >= version,
+            "DB corruption: the ledger_info of epoch {} has version {} < queried version {}",
+            epoch,
+            li_version,
+            version
+        );
+        Ok(
+            if current_epoch_ledger_info
+                .ledger_info()
+                .next_epoch_state()
+                .is_some()
+                && li_version == version
+            {
+                current_epoch_ledger_info
+            } else {
+                ensure!(
+                    epoch > 0,
+                    "DB corruption: the ledger_info of genesis is invalid",
+                );
+                let prev_epoch_ledger_info = self.get_latest_ledger_info_in_epoch(epoch - 1)?;
+                ensure!(
+                    prev_epoch_ledger_info
+                        .ledger_info()
+                        .next_epoch_state()
+                        .is_some(),
+                    "DB corruption: the last ledger info of epoch {} is missing next epoch info",
+                    epoch - 1,
+                );
+                prev_epoch_ledger_info
+            },
+        )
+    }
+
     pub fn get_latest_ledger_info_option(&self) -> Option<LedgerInfoWithSignatures> {
         let ledger_info_ptr = self.latest_ledger_info.load();
         let ledger_info: &Option<_> = ledger_info_ptr.deref();

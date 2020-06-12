@@ -969,10 +969,19 @@ struct BlockInfoGen {
 }
 
 impl BlockInfoGen {
-    pub fn materialize(self, universe: &mut AccountInfoUniverse, block_size: usize) -> BlockInfo {
+    pub fn materialize(
+        self,
+        universe: &mut AccountInfoUniverse,
+        mut block_size: usize,
+    ) -> BlockInfo {
         assert!(block_size > 0, "No empty blocks are allowed.");
 
         let current_epoch = universe.get_epoch();
+
+        if current_epoch == 0 {
+            block_size = 1;
+        }
+
         // The first LedgerInfo should always carry a validator set.
         let (epoch, next_epoch_state) = if current_epoch == 0 || self.new_epoch {
             (

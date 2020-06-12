@@ -175,7 +175,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
     }
 
     fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
-        let waypoint_li = self.storage.get_ledger_info(version)?;
+        let waypoint_li = self.storage.get_nearest_epoch_change_ledger_info(version)?;
         ensure!(
             waypoint_li.ledger_info().version() == version,
             "Version of Waypoint LI {} is different from requested waypoint version {}",

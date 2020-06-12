@@ -91,7 +91,7 @@ prop_compose! {
         max_blocks: usize,
     )(
         mut universe in any_with::<AccountInfoUniverse>(num_accounts).no_shrink(),
-        batches in vec(
+        mut batches in vec(
             (
                 vec(any::<TransactionToCommitGen>(), 1..=max_txn_per_block),
                 any::<LedgerInfoWithSignaturesGen>(),
@@ -104,6 +104,9 @@ prop_compose! {
             LedgerInfoWithSignatures,
         )>
     {
+        // Truncate the first block to have only 1 txn.
+        batches[0].0.truncate(1);
+
         let partial_blocks = batches
             .into_iter()
             .map(|(txn_gens, ledger_info_gen)| {

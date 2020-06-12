@@ -128,6 +128,29 @@ proptest! {
     }
 
     #[test]
+    fn test_get_nearest_epoch_change_ledger_info(
+        (ledger_infos_with_sigs, version) in arb_ledger_infos_with_sigs()
+            .prop_flat_map(|ledger_info_with_sigs| {
+                let last_version = get_last_version(&ledger_info_with_sigs);
+                (
+                    Just(ledger_info_with_sigs),
+                    0..=last_version
+                )
+            })
+    ) {
+        let tmp_dir = TempPath::new();
+        let db = set_up(&tmp_dir, &ledger_infos_with_sigs);
+
+        let actual = db.ledger_store.get_nearest_epoch_change_ledger_info (version).unwrap();
+
+        let expected = ledger_infos_with_sigs
+            .iter().rev()
+            .find(|x| x.ledger_info().version() <= version && x.ledger_info().next_epoch_state().is_some())
+            .unwrap();
+        prop_assert_eq!(&actual, expected);
+    }
+
+    #[test]
     fn test_get_epoch_state(ledger_infos_with_sigs in arb_ledger_infos_with_sigs()) {
         let tmp_dir = TempPath::new();
         let db = set_up(&tmp_dir, &ledger_infos_with_sigs);
