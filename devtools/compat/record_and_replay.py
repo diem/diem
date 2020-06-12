@@ -99,12 +99,13 @@ validator_image = None
 safetyrules_image = None
 logstash_version = None
 validator_versions = []
-safetyrules_version = None
+safetyrules_versions = []
 # Used to match the 'group' in task instance with 'family' in task definition. Why?
 # The index isn't available in task instance but in task definition so we iterate
 # over task definitions in order and use the mapping to extract the image and version
 # from the corresponding task instance
 validator_image_map = {}
+safetyrules_image_map = {}
 
 ecs_tasks = list_tasks(args.source, dir=tf_dir)
 
@@ -119,7 +120,8 @@ for task in ecs_tasks.get('taskArns'):
         if not logstash_image and name == 'logstash':
             logstash_image, logstash_version = extract_image_tag(container)
         elif not safetyrules_image and name == 'safety-rules':
-            safetyrules_image, safetyrules_version = extract_image_tag(container)
+            key = task_details.get("tasks")[0].get("group").split("service:",1)[1]
+            safetyrules_image_map[key] = extract_image_tag(container)
         elif name == 'validator':
             key = task_details.get("tasks")[0].get("group").split("service:",1)[1]
             validator_image_map[key] = extract_image_tag(container)
@@ -130,13 +132,15 @@ for ecs in validators_ecs:
         if key in validator_image_map:
             validator_image, version = validator_image_map[key]
             validator_versions.append(version)
+            safetyrules_image, safetyrules_version = safetyrules_image_map[key]
+            safetyrules_versions.append(safetyrules_version)
         else:
             print(f"ERROR: didn't find task corresponding to definition {key} in {validator_image_map.keys()}")
 
 print(f"logstash_image          : {logstash_image}")
 print(f"logstash_version        : {logstash_version}")
 print(f"safetyrules_image       : {safetyrules_image}")
-print(f"safetyrules_version     : {safetyrules_version}")
+print(f"safetyrules_versions    : {safetyrules_versions}")
 print(f"validator_image         : {validator_image}")
 print(f"validator_versions      : {validator_versions}")
 print(f"validator_ips           : {validator_ips}")
@@ -155,7 +159,7 @@ vars.append(gen_tf_var_list('override_image_tags', validator_versions))
 vars.append(gen_tf_var_str('logstash_image', logstash_image))
 vars.append(gen_tf_var_str('logstash_version', logstash_version))
 vars.append(gen_tf_var_str('safety_rules_image_repo', safetyrules_image))
-vars.append(gen_tf_var_str('safety_rules_image_tag', safetyrules_version))
+vars.append(gen_tf_var_list('override_safety_rules_image_tags', safetyrules_versions))
 
 if args.var_file:
     with open(args.var_file, 'r') as f:
