@@ -6,11 +6,7 @@ use language_e2e_tests::account_universe::{
     all_transactions_strategy, log_balance_strategy, run_and_assert_universe, AccountUniverseGen,
 };
 use libra_proptest_helpers::ValueGenerator;
-use proptest::{
-    collection::vec,
-    strategy::{Strategy, ValueTree},
-    test_runner::{self, TestRunner},
-};
+use proptest::{collection::vec, test_runner};
 use rand::RngCore;
 
 #[derive(Clone, Debug, Default)]
