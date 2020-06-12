@@ -20,6 +20,138 @@ impl CompiledScript {
     }
 }
 
+fn write_as_uleb128<T1, T2>(binary: &mut BinaryData, x: T1, max: T2) -> Result<()>
+where
+    T1: Into<u64>,
+    T2: Into<u64>,
+{
+    let x: u64 = x.into();
+    let max: u64 = max.into();
+    if x > max {
+        bail!("value ({}) cannot exceed ({})", x, max)
+    }
+    write_u64_as_uleb128(binary, x)
+}
+
+fn serialize_signature_index(binary: &mut BinaryData, idx: &SignatureIndex) -> Result<()> {
+    write_as_uleb128(binary, idx.0, SIGNATURE_INDEX_MAX)
+}
+
+fn serialize_module_handle_index(binary: &mut BinaryData, idx: &ModuleHandleIndex) -> Result<()> {
+    write_as_uleb128(binary, idx.0, MODULE_HANDLE_INDEX_MAX)
+}
+
+fn serialize_identifier_index(binary: &mut BinaryData, idx: &IdentifierIndex) -> Result<()> {
+    write_as_uleb128(binary, idx.0, IDENTIFIER_INDEX_MAX)
+}
+
+fn serialize_struct_handle_index(binary: &mut BinaryData, idx: &StructHandleIndex) -> Result<()> {
+    write_as_uleb128(binary, idx.0, STRUCT_HANDLE_INDEX_MAX)
+}
+
+fn serialize_address_identifier_index(
+    binary: &mut BinaryData,
+    idx: &AddressIdentifierIndex,
+) -> Result<()> {
+    write_as_uleb128(binary, idx.0, ADDRESS_INDEX_MAX)
+}
+
+fn serialize_struct_def_index(binary: &mut BinaryData, idx: &StructDefinitionIndex) -> Result<()> {
+    write_as_uleb128(binary, idx.0, STRUCT_DEF_INDEX_MAX)
+}
+
+fn serialize_function_handle_index(
+    binary: &mut BinaryData,
+    idx: &FunctionHandleIndex,
+) -> Result<()> {
+    write_as_uleb128(binary, idx.0, FUNCTION_HANDLE_INDEX_MAX)
+}
+
+fn serialize_field_handle_index(binary: &mut BinaryData, idx: &FieldHandleIndex) -> Result<()> {
+    write_as_uleb128(binary, idx.0, FIELD_HANDLE_INDEX_MAX)
+}
+
+fn serialize_field_inst_index(
+    binary: &mut BinaryData,
+    idx: &FieldInstantiationIndex,
+) -> Result<()> {
+    write_as_uleb128(binary, idx.0, FIELD_INST_INDEX_MAX)
+}
+
+fn serialize_function_inst_index(
+    binary: &mut BinaryData,
+    idx: &FunctionInstantiationIndex,
+) -> Result<()> {
+    write_as_uleb128(binary, idx.0, FUNCTION_INST_INDEX_MAX)
+}
+
+fn serialize_struct_def_inst_index(
+    binary: &mut BinaryData,
+    idx: &StructDefInstantiationIndex,
+) -> Result<()> {
+    write_as_uleb128(binary, idx.0, STRUCT_DEF_INST_INDEX_MAX)
+}
+
+fn seiralize_table_offset(binary: &mut BinaryData, offset: u32) -> Result<()> {
+    write_as_uleb128(binary, offset, TABLE_OFFSET_MAX)
+}
+
+fn serialize_table_size(binary: &mut BinaryData, size: u32) -> Result<()> {
+    write_as_uleb128(binary, size, TABLE_SIZE_MAX)
+}
+
+fn serialize_constant_pool_index(binary: &mut BinaryData, idx: &ConstantPoolIndex) -> Result<()> {
+    write_as_uleb128(binary, idx.0, CONSTANT_INDEX_MAX)
+}
+
+fn serialize_bytecode_count(binary: &mut BinaryData, len: usize) -> Result<()> {
+    write_as_uleb128(binary, len as u64, BYTECODE_COUNT_MAX)
+}
+
+fn serialize_identifier_size(binary: &mut BinaryData, len: usize) -> Result<()> {
+    write_as_uleb128(binary, len as u64, IDENTIFIER_SIZE_MAX)
+}
+
+fn serialize_constant_size(binary: &mut BinaryData, len: usize) -> Result<()> {
+    write_as_uleb128(binary, len as u64, CONSTANT_SIZE_MAX)
+}
+
+fn serialize_field_count(binary: &mut BinaryData, len: usize) -> Result<()> {
+    write_as_uleb128(binary, len as u64, FIELD_COUNT_MAX)
+}
+
+fn serialize_field_offset(binary: &mut BinaryData, offset: u16) -> Result<()> {
+    write_as_uleb128(binary, offset, FIELD_OFFSET_MAX)
+}
+
+fn serialize_acquires_count(binary: &mut BinaryData, len: usize) -> Result<()> {
+    write_as_uleb128(binary, len as u64, ACQUIRES_COUNT_MAX)
+}
+
+fn serialize_signature_size(binary: &mut BinaryData, len: usize) -> Result<()> {
+    write_as_uleb128(binary, len as u64, SIGNATURE_SIZE_MAX)
+}
+
+fn serialize_type_parameter_index(binary: &mut BinaryData, idx: u16) -> Result<()> {
+    write_as_uleb128(binary, idx, TYPE_PARAMETER_INDEX_MAX)
+}
+
+fn serialize_type_parameter_count(binary: &mut BinaryData, len: usize) -> Result<()> {
+    write_as_uleb128(binary, len as u64, TYPE_PARAMETER_COUNT_MAX)
+}
+
+fn serialize_bytecode_offset(binary: &mut BinaryData, offset: u16) -> Result<()> {
+    write_as_uleb128(binary, offset, BYTECODE_INDEX_MAX)
+}
+
+fn serialize_table_count(binary: &mut BinaryData, len: u8) -> Result<()> {
+    write_as_uleb128(binary, len, TABLE_COUNT_MAX)
+}
+
+fn serialize_local_index(binary: &mut BinaryData, idx: u8) -> Result<()> {
+    write_as_uleb128(binary, idx, LOCAL_INDEX_MAX)
+}
+
 impl CompiledScriptMut {
     /// Serializes this into a binary format.
     ///
@@ -31,11 +163,11 @@ impl CompiledScriptMut {
         let mut temp = BinaryData::new();
 
         ser.common.serialize_common_tables(&mut temp, self)?;
-        if temp.len() > u32::max_value() as usize {
+        if temp.len() > TABLE_CONTENT_SIZE_MAX as usize {
             bail!(
                 "table content size ({}) cannot exceed ({})",
                 temp.len(),
-                u32::max_value()
+                TABLE_CONTENT_SIZE_MAX
             );
         }
         ser.common.serialize_header(&mut binary_data)?;
@@ -80,7 +212,7 @@ impl CompiledModuleMut {
 
         binary_data.extend(temp.as_inner())?;
 
-        write_u16_as_uleb128(&mut binary_data, self.self_module_handle_idx.0)?;
+        serialize_module_handle_index(&mut binary_data, &self.self_module_handle_idx)?;
 
         *binary = binary_data.into_inner();
         Ok(())
@@ -148,8 +280,8 @@ fn serialize_table_index(
 ) -> Result<()> {
     if count != 0 {
         binary.push(kind as u8)?;
-        write_u32_as_uleb128(binary, offset)?;
-        write_u32_as_uleb128(binary, count)?;
+        seiralize_table_offset(binary, offset)?;
+        serialize_table_size(binary, count)?;
     }
     Ok(())
 }
@@ -248,8 +380,8 @@ impl CommonTables for CompiledModuleMut {
 /// - `ModuleHandle.address` as a ULEB128 (index into the `AddressPool`)
 /// - `ModuleHandle.name` as a ULEB128 (index into the `IdentifierPool`)
 fn serialize_module_handle(binary: &mut BinaryData, module_handle: &ModuleHandle) -> Result<()> {
-    write_u16_as_uleb128(binary, module_handle.address.0)?;
-    write_u16_as_uleb128(binary, module_handle.name.0)?;
+    serialize_address_identifier_index(binary, &module_handle.address)?;
+    serialize_identifier_index(binary, &module_handle.name)?;
     Ok(())
 }
 
@@ -260,8 +392,8 @@ fn serialize_module_handle(binary: &mut BinaryData, module_handle: &ModuleHandle
 /// - `StructHandle.name` as a ULEB128 (index into the `IdentifierPool`)
 /// - `StructHandle.is_nominal_resource` as a 1 byte boolean (0 for false, 1 for true)
 fn serialize_struct_handle(binary: &mut BinaryData, struct_handle: &StructHandle) -> Result<()> {
-    write_u16_as_uleb128(binary, struct_handle.module.0)?;
-    write_u16_as_uleb128(binary, struct_handle.name.0)?;
+    serialize_module_handle_index(binary, &struct_handle.module)?;
+    serialize_identifier_index(binary, &struct_handle.name)?;
     serialize_nominal_resource_flag(binary, struct_handle.is_nominal_resource)?;
     serialize_kinds(binary, &struct_handle.type_parameters)
 }
@@ -278,10 +410,10 @@ fn serialize_function_handle(
     binary: &mut BinaryData,
     function_handle: &FunctionHandle,
 ) -> Result<()> {
-    write_u16_as_uleb128(binary, function_handle.module.0)?;
-    write_u16_as_uleb128(binary, function_handle.name.0)?;
-    write_u16_as_uleb128(binary, function_handle.parameters.0)?;
-    write_u16_as_uleb128(binary, function_handle.return_.0)?;
+    serialize_module_handle_index(binary, &function_handle.module)?;
+    serialize_identifier_index(binary, &function_handle.name)?;
+    serialize_signature_index(binary, &function_handle.parameters)?;
+    serialize_signature_index(binary, &function_handle.return_)?;
     serialize_kinds(binary, &function_handle.type_parameters)
 }
 
@@ -289,8 +421,9 @@ fn serialize_function_instantiation(
     binary: &mut BinaryData,
     func_inst: &FunctionInstantiation,
 ) -> Result<()> {
-    write_u16_as_uleb128(binary, func_inst.handle.0)?;
-    write_u16_as_uleb128(binary, func_inst.type_parameters.0)
+    serialize_function_handle_index(binary, &func_inst.handle)?;
+    serialize_signature_index(binary, &func_inst.type_parameters)?;
+    Ok(())
 }
 
 /// Serializes a string (identifier or user string).
@@ -298,13 +431,9 @@ fn serialize_function_instantiation(
 /// A `String` gets serialized as follows:
 /// - `String` size as a ULEB128
 /// - `String` bytes - *exact format to be defined, Rust utf8 right now*
-fn serialize_string(binary: &mut BinaryData, string: &str) -> Result<()> {
+fn serialize_identifier(binary: &mut BinaryData, string: &str) -> Result<()> {
     let bytes = string.as_bytes();
-    let len = bytes.len();
-    if len > u32::max_value() as usize {
-        bail!("string size ({}) cannot exceed {}", len, u32::max_value())
-    }
-    write_u32_as_uleb128(binary, len as u32)?;
+    serialize_identifier_size(binary, bytes.len())?;
     for byte in bytes {
         binary.push(*byte)?;
     }
@@ -330,16 +459,7 @@ fn serialize_address(binary: &mut BinaryData, address: &AccountAddress) -> Resul
 /// - `data` bytes in increasing index order
 fn serialize_constant(binary: &mut BinaryData, constant: &Constant) -> Result<()> {
     serialize_signature_token(binary, &constant.type_)?;
-
-    let len = constant.data.len();
-    if len > u32::max_value() as usize {
-        bail!(
-            "constant's value size ({}) cannot exceed {}",
-            len,
-            u32::max_value()
-        )
-    }
-    write_u32_as_uleb128(binary, len as u32)?;
+    serialize_constant_size(binary, constant.data.len())?;
     for byte in &constant.data {
         binary.push(*byte)?;
     }
@@ -357,7 +477,7 @@ fn serialize_struct_definition(
     binary: &mut BinaryData,
     struct_definition: &StructDefinition,
 ) -> Result<()> {
-    write_u16_as_uleb128(binary, struct_definition.struct_handle.0)?;
+    serialize_struct_handle_index(binary, &struct_definition.struct_handle)?;
     match &struct_definition.field_information {
         StructFieldInformation::Native => binary.push(SerializedNativeStructFlag::NATIVE as u8),
         StructFieldInformation::Declared(fields) => {
@@ -371,13 +491,14 @@ fn serialize_struct_def_instantiation(
     binary: &mut BinaryData,
     struct_inst: &StructDefInstantiation,
 ) -> Result<()> {
-    write_u16_as_uleb128(binary, struct_inst.def.0)?;
-    write_u16_as_uleb128(binary, struct_inst.type_parameters.0)
+    serialize_struct_def_index(binary, &struct_inst.def)?;
+    serialize_signature_index(binary, &struct_inst.type_parameters)?;
+    Ok(())
 }
 
 /// Serializes `FieldDefinition` within a struct.
 fn serialize_field_definitions(binary: &mut BinaryData, fields: &[FieldDefinition]) -> Result<()> {
-    write_u32_as_uleb128(binary, fields.len() as u32)?;
+    serialize_field_count(binary, fields.len())?;
     for field_definition in fields {
         serialize_field_definition(binary, field_definition)?;
     }
@@ -394,7 +515,7 @@ fn serialize_field_definition(
     binary: &mut BinaryData,
     field_definition: &FieldDefinition,
 ) -> Result<()> {
-    write_u16_as_uleb128(binary, field_definition.name.0)?;
+    serialize_identifier_index(binary, &field_definition.name)?;
     serialize_signature_token(binary, &field_definition.signature.0)
 }
 
@@ -408,7 +529,7 @@ fn serialize_function_definition(
     binary: &mut BinaryData,
     function_definition: &FunctionDefinition,
 ) -> Result<()> {
-    write_u16_as_uleb128(binary, function_definition.function.0)?;
+    serialize_function_handle_index(binary, &function_definition.function)?;
 
     let is_public = if function_definition.is_public() {
         FunctionDefinition::PUBLIC
@@ -430,31 +551,25 @@ fn serialize_function_definition(
 }
 
 fn serialize_field_handle(binary: &mut BinaryData, field_handle: &FieldHandle) -> Result<()> {
-    write_u16_as_uleb128(binary, field_handle.owner.0)?;
-    write_u16_as_uleb128(binary, field_handle.field)
+    serialize_struct_def_index(binary, &field_handle.owner)?;
+    serialize_field_offset(binary, field_handle.field)?;
+    Ok(())
 }
 
 fn serialize_field_instantiation(
     binary: &mut BinaryData,
     field_inst: &FieldInstantiation,
 ) -> Result<()> {
-    write_u16_as_uleb128(binary, field_inst.handle.0)?;
-    write_u16_as_uleb128(binary, field_inst.type_parameters.0)
+    serialize_field_handle_index(binary, &field_inst.handle)?;
+    serialize_signature_index(binary, &field_inst.type_parameters)?;
+    Ok(())
 }
 
 /// Serializes a `Vec<StructDefinitionIndex>`.
 fn serialize_acquires(binary: &mut BinaryData, indices: &[StructDefinitionIndex]) -> Result<()> {
-    let len = indices.len();
-    if len > u8::max_value() as usize {
-        bail!(
-            "acquires_global_resources size ({}) cannot exceed {}",
-            len,
-            u8::max_value(),
-        )
-    }
-    write_u8_as_uleb128(binary, len as u8)?;
+    serialize_acquires_count(binary, indices.len())?;
     for def_idx in indices {
-        write_u16_as_uleb128(binary, def_idx.0)?;
+        serialize_struct_def_index(binary, def_idx)?;
     }
     Ok(())
 }
@@ -468,15 +583,7 @@ fn serialize_signature(binary: &mut BinaryData, signature: &Signature) -> Result
 
 /// Serializes a slice of `SignatureToken`s.
 fn serialize_signature_tokens(binary: &mut BinaryData, tokens: &[SignatureToken]) -> Result<()> {
-    let len = tokens.len();
-    if len > u8::max_value() as usize {
-        bail!(
-            "arguments/locals size ({}) cannot exceed {}",
-            len,
-            u8::max_value(),
-        )
-    }
-    write_u8_as_uleb128(binary, len as u8)?;
+    serialize_signature_size(binary, tokens.len())?;
     for token in tokens {
         serialize_signature_token(binary, token)?;
     }
@@ -503,20 +610,12 @@ fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) ->
             }
             SignatureToken::Struct(idx) => {
                 binary.push(SerializedType::STRUCT as u8)?;
-                write_u16_as_uleb128(binary, idx.0)?;
+                serialize_struct_handle_index(binary, idx)?;
             }
             SignatureToken::StructInstantiation(idx, type_params) => {
                 binary.push(SerializedType::STRUCT_INST as u8)?;
-                write_u16_as_uleb128(binary, idx.0)?;
-                let len = type_params.len();
-                if len > u8::max_value() as usize {
-                    bail!(
-                        "arguments/locals size ({}) cannot exceed {}",
-                        len,
-                        u8::max_value(),
-                    )
-                }
-                write_u8_as_uleb128(binary, len as u8)?;
+                serialize_struct_handle_index(binary, idx)?;
+                serialize_signature_size(binary, type_params.len())?;
             }
             SignatureToken::Reference(_) => {
                 binary.push(SerializedType::REFERENCE as u8)?;
@@ -526,7 +625,7 @@ fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) ->
             }
             SignatureToken::TypeParameter(idx) => {
                 binary.push(SerializedType::TYPE_PARAMETER as u8)?;
-                write_u16_as_uleb128(binary, *idx)?;
+                serialize_type_parameter_index(binary, *idx)?;
             }
         }
     }
@@ -556,7 +655,7 @@ fn serialize_kind(binary: &mut BinaryData, kind: Kind) -> Result<()> {
 }
 
 fn serialize_kinds(binary: &mut BinaryData, kinds: &[Kind]) -> Result<()> {
-    write_u32_as_uleb128(binary, kinds.len() as u32)?;
+    serialize_type_parameter_count(binary, kinds.len())?;
     for kind in kinds {
         serialize_kind(binary, *kind)?;
     }
@@ -571,7 +670,7 @@ fn serialize_kinds(binary: &mut BinaryData, kinds: &[Kind]) -> Result<()> {
 /// - `CodeUnit.locals` as a ULEB128 (index into the `LocalSignaturePool`)
 /// - `CodeUnit.code` as variable size byte stream for the bytecode
 fn serialize_code_unit(binary: &mut BinaryData, code: &CodeUnit) -> Result<()> {
-    write_u16_as_uleb128(binary, code.locals.0)?;
+    serialize_signature_index(binary, &code.locals)?;
     serialize_code(binary, &code.code)
 }
 
@@ -583,15 +682,15 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
         Bytecode::Ret => binary.push(Opcodes::RET as u8),
         Bytecode::BrTrue(code_offset) => {
             binary.push(Opcodes::BR_TRUE as u8)?;
-            write_u16_as_uleb128(binary, *code_offset)
+            serialize_bytecode_offset(binary, *code_offset)
         }
         Bytecode::BrFalse(code_offset) => {
             binary.push(Opcodes::BR_FALSE as u8)?;
-            write_u16_as_uleb128(binary, *code_offset)
+            serialize_bytecode_offset(binary, *code_offset)
         }
         Bytecode::Branch(code_offset) => {
             binary.push(Opcodes::BRANCH as u8)?;
-            write_u16_as_uleb128(binary, *code_offset)
+            serialize_bytecode_offset(binary, *code_offset)
         }
         Bytecode::LdU8(value) => {
             binary.push(Opcodes::LD_U8 as u8)?;
@@ -608,71 +707,71 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
         Bytecode::CastU8 => binary.push(Opcodes::CAST_U8 as u8),
         Bytecode::CastU64 => binary.push(Opcodes::CAST_U64 as u8),
         Bytecode::CastU128 => binary.push(Opcodes::CAST_U128 as u8),
-        Bytecode::LdConst(byte_array_idx) => {
+        Bytecode::LdConst(const_idx) => {
             binary.push(Opcodes::LD_CONST as u8)?;
-            write_u16_as_uleb128(binary, byte_array_idx.0)
+            serialize_constant_pool_index(binary, const_idx)
         }
         Bytecode::LdTrue => binary.push(Opcodes::LD_TRUE as u8),
         Bytecode::LdFalse => binary.push(Opcodes::LD_FALSE as u8),
         Bytecode::CopyLoc(local_idx) => {
             binary.push(Opcodes::COPY_LOC as u8)?;
-            binary.push(*local_idx)
+            serialize_local_index(binary, *local_idx)
         }
         Bytecode::MoveLoc(local_idx) => {
             binary.push(Opcodes::MOVE_LOC as u8)?;
-            binary.push(*local_idx)
+            serialize_local_index(binary, *local_idx)
         }
         Bytecode::StLoc(local_idx) => {
             binary.push(Opcodes::ST_LOC as u8)?;
-            binary.push(*local_idx)
+            serialize_local_index(binary, *local_idx)
         }
         Bytecode::MutBorrowLoc(local_idx) => {
             binary.push(Opcodes::MUT_BORROW_LOC as u8)?;
-            binary.push(*local_idx)
+            serialize_local_index(binary, *local_idx)
         }
         Bytecode::ImmBorrowLoc(local_idx) => {
             binary.push(Opcodes::IMM_BORROW_LOC as u8)?;
-            binary.push(*local_idx)
+            serialize_local_index(binary, *local_idx)
         }
         Bytecode::MutBorrowField(field_idx) => {
             binary.push(Opcodes::MUT_BORROW_FIELD as u8)?;
-            write_u16_as_uleb128(binary, field_idx.0)
+            serialize_field_handle_index(binary, field_idx)
         }
         Bytecode::MutBorrowFieldGeneric(field_idx) => {
             binary.push(Opcodes::MUT_BORROW_FIELD_GENERIC as u8)?;
-            write_u16_as_uleb128(binary, field_idx.0)
+            serialize_field_inst_index(binary, field_idx)
         }
         Bytecode::ImmBorrowField(field_idx) => {
             binary.push(Opcodes::IMM_BORROW_FIELD as u8)?;
-            write_u16_as_uleb128(binary, field_idx.0)
+            serialize_field_handle_index(binary, field_idx)
         }
         Bytecode::ImmBorrowFieldGeneric(field_idx) => {
             binary.push(Opcodes::IMM_BORROW_FIELD_GENERIC as u8)?;
-            write_u16_as_uleb128(binary, field_idx.0)
+            serialize_field_inst_index(binary, field_idx)
         }
         Bytecode::Call(method_idx) => {
             binary.push(Opcodes::CALL as u8)?;
-            write_u16_as_uleb128(binary, method_idx.0)
+            serialize_function_handle_index(binary, method_idx)
         }
         Bytecode::Pack(class_idx) => {
             binary.push(Opcodes::PACK as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_index(binary, class_idx)
         }
         Bytecode::Unpack(class_idx) => {
             binary.push(Opcodes::UNPACK as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_index(binary, class_idx)
         }
         Bytecode::CallGeneric(method_idx) => {
             binary.push(Opcodes::CALL_GENERIC as u8)?;
-            write_u16_as_uleb128(binary, method_idx.0)
+            serialize_function_inst_index(binary, method_idx)
         }
         Bytecode::PackGeneric(class_idx) => {
             binary.push(Opcodes::PACK_GENERIC as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_inst_index(binary, class_idx)
         }
         Bytecode::UnpackGeneric(class_idx) => {
             binary.push(Opcodes::UNPACK_GENERIC as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_inst_index(binary, class_idx)
         }
         Bytecode::ReadRef => binary.push(Opcodes::READ_REF as u8),
         Bytecode::WriteRef => binary.push(Opcodes::WRITE_REF as u8),
@@ -699,51 +798,51 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
         Bytecode::GetTxnSenderAddress => binary.push(Opcodes::GET_TXN_SENDER as u8),
         Bytecode::Exists(class_idx) => {
             binary.push(Opcodes::EXISTS as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_index(binary, class_idx)
         }
         Bytecode::MutBorrowGlobal(class_idx) => {
             binary.push(Opcodes::MUT_BORROW_GLOBAL as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_index(binary, class_idx)
         }
         Bytecode::ImmBorrowGlobal(class_idx) => {
             binary.push(Opcodes::IMM_BORROW_GLOBAL as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_index(binary, class_idx)
         }
         Bytecode::MoveFrom(class_idx) => {
             binary.push(Opcodes::MOVE_FROM as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_index(binary, class_idx)
         }
         Bytecode::MoveToSender(class_idx) => {
             binary.push(Opcodes::MOVE_TO_SENDER as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_index(binary, class_idx)
         }
         Bytecode::MoveTo(class_idx) => {
             binary.push(Opcodes::MOVE_TO as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_index(binary, class_idx)
         }
         Bytecode::ExistsGeneric(class_idx) => {
             binary.push(Opcodes::EXISTS_GENERIC as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_inst_index(binary, class_idx)
         }
         Bytecode::MutBorrowGlobalGeneric(class_idx) => {
             binary.push(Opcodes::MUT_BORROW_GLOBAL_GENERIC as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_inst_index(binary, class_idx)
         }
         Bytecode::ImmBorrowGlobalGeneric(class_idx) => {
             binary.push(Opcodes::IMM_BORROW_GLOBAL_GENERIC as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_inst_index(binary, class_idx)
         }
         Bytecode::MoveFromGeneric(class_idx) => {
             binary.push(Opcodes::MOVE_FROM_GENERIC as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_inst_index(binary, class_idx)
         }
         Bytecode::MoveToSenderGeneric(class_idx) => {
             binary.push(Opcodes::MOVE_TO_SENDER_GENERIC as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_inst_index(binary, class_idx)
         }
         Bytecode::MoveToGeneric(class_idx) => {
             binary.push(Opcodes::MOVE_TO_GENERIC as u8)?;
-            write_u16_as_uleb128(binary, class_idx.0)
+            serialize_struct_def_inst_index(binary, class_idx)
         }
         Bytecode::Nop => binary.push(Opcodes::NOP as u8),
     };
@@ -753,15 +852,7 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
 
 /// Serializes a `Bytecode` stream. Serialization of the function body.
 fn serialize_code(binary: &mut BinaryData, code: &[Bytecode]) -> Result<()> {
-    let code_size = code.len();
-    if code_size > u16::max_value() as usize {
-        bail!(
-            "code size ({}) cannot exceed {}",
-            code_size,
-            u16::max_value(),
-        )
-    }
-    write_u16_as_uleb128(binary, code_size as u16)?;
+    serialize_bytecode_count(binary, code.len())?;
     for opcode in code {
         serialize_instruction_inner(binary, opcode)?;
     }
@@ -801,7 +892,7 @@ impl CommonSerializer {
 
     /// Common binary header serialization.
     fn serialize_table_indices(&mut self, binary: &mut BinaryData) -> Result<()> {
-        write_u8_as_uleb128(binary, self.table_count)?;
+        serialize_table_count(binary, self.table_count)?;
 
         serialize_table_index(
             binary,
@@ -953,7 +1044,7 @@ impl CommonSerializer {
             self.identifiers.0 = check_index_in_binary(binary.len())?;
             for identifier in identifiers {
                 // User strings and identifiers use the same serialization.
-                serialize_string(binary, identifier.as_str())?;
+                serialize_identifier(binary, identifier.as_str())?;
             }
             self.identifiers.1 = checked_calculate_table_size(binary, self.identifiers.0)?;
         }
@@ -1173,7 +1264,7 @@ impl ScriptSerializer {
         script: &CompiledScriptMut,
     ) -> Result<()> {
         serialize_kinds(binary, &script.type_parameters)?;
-        write_u16_as_uleb128(binary, script.parameters.0)?;
+        serialize_signature_index(binary, &script.parameters)?;
         serialize_code_unit(binary, &script.code)?;
         Ok(())
     }
