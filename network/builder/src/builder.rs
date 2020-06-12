@@ -30,7 +30,7 @@ use network::{
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     protocols::{
-        discovery::{self, Discovery},
+        discovery::{self, DiscoveryBuilderConfig},
         health_checker::{self, HealthCheckerBuilderConfig, HealthCheckerService},
         network::{NewNetworkEvents, NewNetworkSender},
         wire::handshake::v1::SupportedProtocols,
@@ -368,16 +368,15 @@ impl NetworkBuilder {
 
         let addrs = vec![advertised_address];
         let discovery_interval_ms = self.discovery_interval_ms;
-        let discovery = self.executor.enter(|| {
-            Discovery::new(
-                self.network_context.clone(),
-                addrs,
-                interval(Duration::from_millis(discovery_interval_ms)).fuse(),
-                discovery_network_tx,
-                discovery_network_rx,
-                conn_mgr_reqs_tx,
-            )
-        });
+        let discovery_cfg =
+            DiscoveryBuilderConfig::new(self.network_context.clone(), addrs, discovery_interval_ms);
+        let discovery = discovery::build_discovery_from_config(
+            &self.executor,
+            discovery_cfg,
+            discovery_network_tx,
+            discovery_network_rx,
+            conn_mgr_reqs_tx,
+        );
         self.executor.spawn(discovery.start());
         debug!("{} Started discovery protocol actor", self.network_context);
         self
