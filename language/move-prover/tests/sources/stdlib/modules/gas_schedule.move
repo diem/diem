@@ -29,7 +29,7 @@ module GasSchedule {
 
     // Initialize the table under the association account
     fun initialize(gas_schedule: T) {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 0);
+        assert(Transaction::sender() == 0xA550C18, 0);
         move_to_sender<T>(gas_schedule);
     }
 

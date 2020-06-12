@@ -10,6 +10,6 @@ fun main() {
     } else {
         x = 0;
     };
-    0x0::Transaction::assert(copy x == 5, 42);
+    assert(copy x == 5, 42);
 }
 }

@@ -21,7 +21,7 @@ module AddressQuant {
     }
 
     public fun initialize(special_addr: address) {
-        Transaction::assert(Transaction::sender() == special_addr, 0);
+        assert(Transaction::sender() == special_addr, 0);
         move_to_sender<R>(R{x:1});
     }
     spec fun initialize {

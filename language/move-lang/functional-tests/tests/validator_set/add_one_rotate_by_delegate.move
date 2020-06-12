@@ -22,12 +22,12 @@ script {
 use 0x0::ValidatorConfig;
 // test alice can rotate bob's consensus public key
 fun main(account: &signer) {
-    0x0::Transaction::assert(ValidatorConfig::get_operator({{bob}}) == {{alice}}, 44);
+    assert(ValidatorConfig::get_operator({{bob}}) == {{alice}}, 44);
     ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"20");
 
     // check new key is "20"
     let config = ValidatorConfig::get_config({{bob}});
-    0x0::Transaction::assert(*ValidatorConfig::get_consensus_pubkey(&config) == x"20", 99);
+    assert(*ValidatorConfig::get_consensus_pubkey(&config) == x"20", 99);
 }
 }
 
@@ -41,7 +41,7 @@ use 0x0::ValidatorConfig;
 fun main(account: &signer) {
     // check initial key was "beefbeef"
     let config = ValidatorConfig::get_config({{bob}});
-    0x0::Transaction::assert(*ValidatorConfig::get_consensus_pubkey(&config) == x"20", 99);
+    assert(*ValidatorConfig::get_consensus_pubkey(&config) == x"20", 99);
 
     ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
 }
@@ -70,7 +70,7 @@ fun main(account: &signer) {
 
     // check bob's public key is updated
     let validator_config = LibraSystem::get_validator_config({{bob}});
-    0x0::Transaction::assert(*ValidatorConfig::get_consensus_pubkey(&validator_config) == x"30", 99);
+    assert(*ValidatorConfig::get_consensus_pubkey(&validator_config) == x"30", 99);
 
 }
 }

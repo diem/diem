@@ -142,7 +142,7 @@
     // Check for underflow. Truncating <b>to</b> zero might be the desired result,
     // but <b>if</b> you really want a ratio of zero, it is easy <b>to</b> create that
     // from a raw value.
-    Transaction::assert(quotient != 0 || numerator == 0, 16);
+    <b>assert</b>(quotient != 0 || numerator == 0, 16);
     // Return the quotient <b>as</b> a fixed-point number. The cast will fail
     // with an arithmetic error <b>if</b> the number is too large.
     <a href="#0x0_FixedPoint32">FixedPoint32</a> { value: (quotient <b>as</b> u64) }

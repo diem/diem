@@ -197,7 +197,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_initialize">initialize</a>(config_account: &signer, association_account: &signer) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(), 1);
+    <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(), 1);
     <a href="Association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(association_account, config_account);
     <a href="Association.md#0x0_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(association_account, association_account);
 
@@ -234,7 +234,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_get">get</a>&lt;Config: <b>copyable</b>&gt;(): Config <b>acquires</b> <a href="#0x0_LibraConfig">LibraConfig</a> {
     <b>let</b> addr = <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>();
-    Transaction::assert(exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
+    <b>assert</b>(exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
     *&borrow_global&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr).payload
 }
 </code></pre>
@@ -260,9 +260,9 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_set">set</a>&lt;Config: <b>copyable</b>&gt;(account: &signer, payload: Config) <b>acquires</b> <a href="#0x0_LibraConfig">LibraConfig</a>, <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
     <b>let</b> addr = <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>();
-    Transaction::assert(exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
+    <b>assert</b>(exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
     <b>let</b> signer_address = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
-    Transaction::assert(
+    <b>assert</b>(
         exists&lt;<a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address)
          || signer_address == <a href="Association.md#0x0_Association_root_address">Association::root_address</a>(),
         24
@@ -299,7 +299,7 @@
     payload: Config
 ) <b>acquires</b> <a href="#0x0_LibraConfig">LibraConfig</a>, <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
     <b>let</b> addr = <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>();
-    Transaction::assert(exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
+    <b>assert</b>(exists&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
     <b>let</b> config = borrow_global_mut&lt;<a href="#0x0_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr);
     config.payload = payload;
 
@@ -330,7 +330,7 @@
     config_account: &signer,
     payload: Config,
 ): <a href="#0x0_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account)),
         1
     );
@@ -364,7 +364,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config) {
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account)),
         1
     );
@@ -401,7 +401,7 @@
     payload: Config,
     delegate: address,
 ) {
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account)),
         1
     );
@@ -459,7 +459,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraConfig_reconfigure">reconfigure</a>(account: &signer) <b>acquires</b> <a href="#0x0_LibraConfig_Configuration">Configuration</a> {
     // Only callable by association address or by the VM internally.
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_LibraConfig_CreateConfigCapability">Self::CreateConfigCapability</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)),
         1
     );
@@ -498,7 +498,7 @@
    // correspondence between system reconfigurations and emitted ReconfigurationEvents.
 
    <b>let</b> current_block_time = <a href="LibraTimestamp.md#0x0_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
-   Transaction::assert(current_block_time &gt; config_ref.last_reconfiguration_time, 23);
+   <b>assert</b>(current_block_time &gt; config_ref.last_reconfiguration_time, 23);
    config_ref.last_reconfiguration_time = current_block_time;
 
    <a href="#0x0_LibraConfig_emit_reconfiguration_event">emit_reconfiguration_event</a>();

@@ -4,7 +4,6 @@ module DesignatedDealer {
     use 0x0::Libra::{Self, Libra};
     use 0x0::LibraTimestamp;
     use 0x0::Vector;
-    use 0x0::Transaction as Txn;
 
     resource struct Dealer {
         /// Time window start in microseconds
@@ -42,11 +41,11 @@ module DesignatedDealer {
         let tiers = &mut dealer.tiers;
         let number_of_tiers: u64 = Vector::length(tiers);
         // INVALID_TIER_ADDITION
-        Txn::assert(number_of_tiers <= 4, 3);
+        assert(number_of_tiers <= 4, 3);
         if (number_of_tiers > 1) {
             let prev_tier = *Vector::borrow(tiers, number_of_tiers - 1);
             // INVALID_TIER_START
-            Txn::assert(prev_tier < next_tier_upperbound, 4);
+            assert(prev_tier < next_tier_upperbound, 4);
         };
         Vector::push_back(tiers, next_tier_upperbound);
     }
@@ -62,14 +61,14 @@ module DesignatedDealer {
         let tiers = &mut dealer.tiers;
         let number_of_tiers = Vector::length(tiers);
         // INVALID_TIER_INDEX
-        Txn::assert(tier_index <= 4, 3);
-        Txn::assert(tier_index < number_of_tiers, 3);
+        assert(tier_index <= 4, 3);
+        assert(tier_index < number_of_tiers, 3);
         // Make sure that this new start for the tier is consistent
         // with the tier above it.
         let next_tier = tier_index + 1;
         if (next_tier < number_of_tiers) {
             // INVALID_TIER_START
-            Txn::assert(new_upperbound < *Vector::borrow(tiers, next_tier), 4);
+            assert(new_upperbound < *Vector::borrow(tiers, next_tier), 4);
         };
         let tier_mut = Vector::borrow_mut(tiers, tier_index);
         *tier_mut = new_upperbound;
@@ -108,14 +107,14 @@ module DesignatedDealer {
         Association::assert_account_is_blessed(blessed);
 
         // INVALID_MINT_AMOUNT
-        Txn::assert(amount > 0, 6);
+        assert(amount > 0, 6);
 
         // NOT_A_DD
-        Txn::assert(exists_at(addr), 1);
+        assert(exists_at(addr), 1);
 
         let tier_check = tiered_mint_(borrow_global_mut<Dealer>(addr), amount, tier_index);
         // INVALID_AMOUNT_FOR_TIER
-        Txn::assert(tier_check, 5);
+        assert(tier_check, 5);
         Libra::mint<CoinType>(blessed, amount)
     }
 

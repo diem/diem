@@ -85,7 +85,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraWriteSetManager_initialize">initialize</a>(account: &signer) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1);
+    <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1);
 
     move_to(
         account,
@@ -121,15 +121,15 @@
     writeset_public_key: vector&lt;u8&gt;,
 ) {
     <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
-    Transaction::assert(sender == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 33);
+    <b>assert</b>(sender == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 33);
 
     <b>let</b> association_auth_key = <a href="LibraAccount.md#0x0_LibraAccount_authentication_key">LibraAccount::authentication_key</a>(sender);
     <b>let</b> sequence_number = <a href="LibraAccount.md#0x0_LibraAccount_sequence_number">LibraAccount::sequence_number</a>(sender);
 
-    Transaction::assert(writeset_sequence_number &gt;= sequence_number, 3);
+    <b>assert</b>(writeset_sequence_number &gt;= sequence_number, 3);
 
-    Transaction::assert(writeset_sequence_number == sequence_number, 11);
-    Transaction::assert(
+    <b>assert</b>(writeset_sequence_number == sequence_number, 11);
+    <b>assert</b>(
         <a href="Hash.md#0x0_Hash_sha3_256">Hash::sha3_256</a>(writeset_public_key) == association_auth_key,
         2
     );

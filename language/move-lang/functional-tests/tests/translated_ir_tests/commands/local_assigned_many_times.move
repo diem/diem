@@ -23,7 +23,7 @@ fun main() {
         y_ref = &y;
     };
 
-    0x0::Transaction::assert(*x_ref == 2, 42);
+    assert(*x_ref == 2, 42);
     y_ref;
 }
 }

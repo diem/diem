@@ -828,7 +828,6 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
 
         TE::Use(_) => panic!("ICE unexpanded use"),
         TE::ModuleCall(call) => {
-            use crate::shared::fake_natives::transaction as TXN;
             let T::ModuleCall {
                 module,
                 name,
@@ -837,48 +836,6 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
                 parameter_types,
                 acquires,
             } = *call;
-            let (a, m, f) = (
-                &module.0.value.address,
-                module.0.value.name.value(),
-                name.value(),
-            );
-            if let (&Address::LIBRA_CORE, TXN::MOD, TXN::ASSERT) = (a, m, f) {
-                let tbool = N::Type_::bool(eloc);
-                let tu64 = N::Type_::u64(eloc);
-                let tunit = sp(eloc, N::Type_::Unit);
-                let vcond = Var(sp(eloc, new_temp_name()));
-                let vcode = Var(sp(eloc, new_temp_name()));
-
-                let mut stmts = VecDeque::new();
-
-                let bvar = |v, st| sp(eloc, T::LValue_::Var(v, st));
-                let bind_list = sp(
-                    eloc,
-                    vec![
-                        bvar(vcond.clone(), Box::new(tbool.clone())),
-                        bvar(vcode.clone(), Box::new(tu64.clone())),
-                    ],
-                );
-                let tys = vec![Some(tbool.clone()), Some(tu64.clone())];
-                let bind = sp(eloc, T::SequenceItem_::Bind(bind_list, tys, arguments));
-                stmts.push_back(bind);
-
-                let mvar = |var, st| {
-                    let from_user = false;
-                    let mv = TE::Move { from_user, var };
-                    T::exp(st, sp(eloc, mv))
-                };
-                let econd = mvar(vcond, tu64);
-                let ecode = mvar(vcode, tbool);
-                let eabort = T::exp(tunit.clone(), sp(eloc, TE::Abort(Box::new(ecode))));
-                let eunit = T::exp(tunit.clone(), sp(eloc, TE::Unit { trailing: false }));
-                let inlined_ = TE::IfElse(Box::new(econd), Box::new(eunit), Box::new(eabort));
-                let inlined = T::exp(tunit.clone(), sp(eloc, inlined_));
-                stmts.push_back(sp(eloc, T::SequenceItem_::Seq(Box::new(inlined))));
-
-                let block = T::exp(tunit, sp(eloc, TE::Block(stmts)));
-                return exp_impl(context, result, block);
-            }
             let expected_type = H::Type_::from_vec(eloc, single_types(context, parameter_types));
             let htys = base_types(context, type_arguments);
             let harg = exp(context, result, Some(&expected_type), *arguments);
@@ -890,6 +847,43 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
                 acquires,
             };
             HE::ModuleCall(Box::new(call))
+        }
+        TE::Builtin(bt, arguments) if matches!(&*bt, sp!(_, T::BuiltinFunction_::Assert)) => {
+            let tbool = N::Type_::bool(eloc);
+            let tu64 = N::Type_::u64(eloc);
+            let tunit = sp(eloc, N::Type_::Unit);
+            let vcond = Var(sp(eloc, new_temp_name()));
+            let vcode = Var(sp(eloc, new_temp_name()));
+
+            let mut stmts = VecDeque::new();
+
+            let bvar = |v, st| sp(eloc, T::LValue_::Var(v, st));
+            let bind_list = sp(
+                eloc,
+                vec![
+                    bvar(vcond.clone(), Box::new(tbool.clone())),
+                    bvar(vcode.clone(), Box::new(tu64.clone())),
+                ],
+            );
+            let tys = vec![Some(tbool.clone()), Some(tu64.clone())];
+            let bind = sp(eloc, T::SequenceItem_::Bind(bind_list, tys, arguments));
+            stmts.push_back(bind);
+
+            let mvar = |var, st| {
+                let from_user = false;
+                let mv = TE::Move { from_user, var };
+                T::exp(st, sp(eloc, mv))
+            };
+            let econd = mvar(vcond, tu64);
+            let ecode = mvar(vcode, tbool);
+            let eabort = T::exp(tunit.clone(), sp(eloc, TE::Abort(Box::new(ecode))));
+            let eunit = T::exp(tunit.clone(), sp(eloc, TE::Unit { trailing: false }));
+            let inlined_ = TE::IfElse(Box::new(econd), Box::new(eunit), Box::new(eabort));
+            let inlined = T::exp(tunit.clone(), sp(eloc, inlined_));
+            stmts.push_back(sp(eloc, T::SequenceItem_::Seq(Box::new(inlined))));
+
+            let block = T::exp(tunit, sp(eloc, TE::Block(stmts)));
+            return exp_impl(context, result, block);
         }
         TE::Builtin(bf, targ) => builtin(context, result, eloc, *bf, targ),
         TE::Dereference(te) => {
@@ -1241,6 +1235,7 @@ fn builtin(
             let arg = exp(context, result, None, *targ);
             E::Freeze(arg)
         }
+        TB::Assert => unreachable!(),
     }
 }
 

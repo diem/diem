@@ -18,6 +18,7 @@ module M {
         Self as borrow_global_mut,
         Self as exists,
         Self as freeze,
+        Self as assert,
     };
 
     fun t(): u64 {
@@ -35,6 +36,7 @@ module M {
         let borrow_global_mut = 0;
         let exists = 0;
         let freeze = 0;
+        let assert = 0;
 
         address::t() +
         signer::t() +
@@ -48,7 +50,8 @@ module M {
         borrow_global::t() +
         borrow_global_mut::t() +
         exists::t() +
-        freeze::t();
+        freeze::t() +
+        assert::t();
 
         address +
         signer +
@@ -62,7 +65,8 @@ module M {
         borrow_global +
         borrow_global_mut +
         exists +
-        freeze
+        freeze +
+        assert
     }
 }
 }

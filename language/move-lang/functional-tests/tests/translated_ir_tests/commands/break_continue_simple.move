@@ -6,6 +6,6 @@ fun main() {
         x = x + 1;
         continue
     };
-    0x0::Transaction::assert(move x == 5, 42);
+    assert(move x == 5, 42);
 }
 }

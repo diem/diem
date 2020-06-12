@@ -1,7 +1,6 @@
 // Create some valid multisig policies and compute their auth keys
 script {
 use 0x0::Authenticator;
-use 0x0::Transaction;
 use 0x0::Vector;
 fun main() {
     let pubkey1 = x"c48b687a1dd8265101b33df6ae0b6825234e3f28df9ecb38fb286cf76dae919d";
@@ -15,17 +14,17 @@ fun main() {
 
     Vector::push_back(&mut keys, pubkey2);
     t = Authenticator::create_multi_ed25519(copy keys, 1);
-    Transaction::assert(Authenticator::multi_ed25519_authentication_key(&t) != copy auth_key, 3006);
+    assert(Authenticator::multi_ed25519_authentication_key(&t) != copy auth_key, 3006);
     t = Authenticator::create_multi_ed25519(copy keys, 2);
-    Transaction::assert(Authenticator::multi_ed25519_authentication_key(&t) != copy auth_key, 3007);
+    assert(Authenticator::multi_ed25519_authentication_key(&t) != copy auth_key, 3007);
 
     Vector::push_back(&mut keys, copy pubkey3);
     t = Authenticator::create_multi_ed25519(copy keys, 1);
-    Transaction::assert(Authenticator::multi_ed25519_authentication_key(&t) != copy auth_key, 3008);
+    assert(Authenticator::multi_ed25519_authentication_key(&t) != copy auth_key, 3008);
     t = Authenticator::create_multi_ed25519(copy keys, 2);
-    Transaction::assert(Authenticator::multi_ed25519_authentication_key(&t) != copy auth_key, 3009);
+    assert(Authenticator::multi_ed25519_authentication_key(&t) != copy auth_key, 3009);
     // check that auth key matches expect result
-    Transaction::assert(
+    assert(
           Authenticator::multi_ed25519_authentication_key(&t)
           ==
           x"1761bca45f83ecdefe202650ca5ba9518b9c2cc032667a95b275dc3f43173ae0",
@@ -35,10 +34,10 @@ fun main() {
     // duplicate keys are ok
     Vector::push_back(&mut keys, pubkey3);
     t = Authenticator::create_multi_ed25519(copy keys, 3);
-    Transaction::assert(Authenticator::multi_ed25519_authentication_key(&t) != copy auth_key, 3012);
+    assert(Authenticator::multi_ed25519_authentication_key(&t) != copy auth_key, 3012);
 
-    Transaction::assert(Authenticator::threshold(&t) == 3, 3013);
-    Transaction::assert(Authenticator::public_keys(&t) == &keys, 3014);
+    assert(Authenticator::threshold(&t) == 3, 3013);
+    assert(Authenticator::public_keys(&t) == &keys, 3014);
 }
 }
 
@@ -132,7 +131,6 @@ fun main() {
 //! new-transaction
 script {
 use 0x0::Authenticator;
-use 0x0::Transaction;
 use 0x0::Vector;
 fun main() {
     let pubkey = x"c48b687a1dd8265101b33df6ae0b6825234e3f28df9ecb38fb286cf76dae919d";
@@ -143,12 +141,12 @@ fun main() {
     );
 
     let t = Authenticator::create_multi_ed25519(keys, 1);
-    Transaction::assert(
+    assert(
         Authenticator::multi_ed25519_authentication_key(&t) !=
             Authenticator::ed25519_authentication_key(copy pubkey),
         3011
     );
-    Transaction::assert(
+    assert(
         x"ba10abb6d85ea3897baa1cae457fc724a916d258bd47ab852f200c5851a6d057"
         ==
         Authenticator::ed25519_authentication_key(pubkey),

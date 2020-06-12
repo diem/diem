@@ -16,9 +16,9 @@ module LibraConfig {
         let sender = Transaction::sender();
 
         // Only callable by the Association address for now.
-        Transaction::assert(sender == 0xA550C18, 1);
+        assert(sender == 0xA550C18, 1);
 
-        Transaction::assert(exists<T<Config>>(sender), 24);
+        assert(exists<T<Config>>(sender), 24);
         let config = borrow_global_mut<T<Config>>(sender);
         config.payload = payload;
 
@@ -28,7 +28,7 @@ module LibraConfig {
     // Publish a new config item to a new value and trigger a reconfiguration.
     public fun publish_new_config<Config: copyable>(payload: Config) {
         // Only callable by the Association address for now.
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+        assert(Transaction::sender() == 0xA550C18, 1);
 
         move_to_sender(T{ payload });
         LibraSystem::reconfigure();

@@ -5,6 +5,6 @@ fun main() {
         x = x + 1;
         break
     };
-    0x0::Transaction::assert(x == 1, 42);
+    assert(x == 1, 42);
 }
 }

@@ -17,7 +17,6 @@ address 0x0 {
 module Association {
     use 0x0::CoreAddresses;
     use 0x0::Signer;
-    use 0x0::Transaction;
 
     /// The root account privilege. This is created at genesis and has
     /// special privileges (e.g. removing an account as an association
@@ -46,7 +45,7 @@ module Association {
     /// and marks it as an Association account by publishing a `PrivilegedCapability<Association>` resource.
     /// Aborts if the address of `association` is not `root_address`
     public fun initialize(association: &signer) {
-        Transaction::assert(Signer::address_of(association) == root_address(), 1000);
+        assert(Signer::address_of(association) == root_address(), 1000);
         move_to(association, PrivilegedCapability<Association>{ });
         move_to(association, Root{ });
     }
@@ -76,8 +75,8 @@ module Association {
     acquires PrivilegedCapability {
         assert_is_root(association);
         // root should not be able to remove its own privileges
-        Transaction::assert(Signer::address_of(association) != addr, 1005);
-        Transaction::assert(exists<PrivilegedCapability<Privilege>>(addr), 1004);
+        assert(Signer::address_of(association) != addr, 1005);
+        assert(exists<PrivilegedCapability<Privilege>>(addr), 1004);
         PrivilegedCapability<Privilege>{ } = move_from<PrivilegedCapability<Privilege>>(addr);
     }
 
@@ -88,7 +87,7 @@ module Association {
 
     /// Assert that the sender is the root association account.
     public fun assert_is_root(account: &signer) {
-        Transaction::assert(exists<Root>(Signer::address_of(account)), 1001);
+        assert(exists<Root>(Signer::address_of(account)), 1001);
     }
 
     /// Return whether the account at `addr` is an association account.
@@ -98,7 +97,7 @@ module Association {
 
     public fun assert_account_is_blessed(sender_account: &signer) {
         // Verify that the sender is treasury compliant account
-        Transaction::assert(Signer::address_of(sender_account) == treasury_compliance_account(), 0)
+        assert(Signer::address_of(sender_account) == treasury_compliance_account(), 0)
     }
 
     fun treasury_compliance_account(): address {
@@ -112,7 +111,7 @@ module Association {
 
     /// Assert that `addr` is an association account.
     fun assert_addr_is_association(addr: address) {
-        Transaction::assert(addr_is_association(addr), 1002);
+        assert(addr_is_association(addr), 1002);
     }
 
     // **************** SPECIFICATIONS ****************

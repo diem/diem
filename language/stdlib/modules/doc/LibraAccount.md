@@ -497,8 +497,8 @@
     base_url: vector&lt;u8&gt;,
     compliance_public_key: vector&lt;u8&gt;,
 ) {
-    Transaction::assert(<a href="#0x0_LibraAccount_exists_at">exists_at</a>(addr), 0);
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 0);
+    <b>assert</b>(<a href="#0x0_LibraAccount_exists_at">exists_at</a>(addr), 0);
+    <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 0);
     <b>let</b> account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(addr);
     <a href="VASP.md#0x0_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(
         association, &account, human_name, base_url, compliance_public_key
@@ -527,7 +527,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraAccount_initialize">initialize</a>(association: &signer) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 0);
+    <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 0);
     move_to(
         association,
         <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
@@ -653,7 +653,7 @@
 ) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>, <a href="#0x0_LibraAccount_Balance">Balance</a>, <a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     // Check that the `to_deposit` coin is non-zero
     <b>let</b> deposit_value = <a href="Libra.md#0x0_Libra_value">Libra::value</a>(&to_deposit);
-    Transaction::assert(deposit_value &gt; 0, 7);
+    <b>assert</b>(deposit_value &gt; 0, 7);
 
     // TODO: on-chain config for travel rule limit instead of hardcoded value
     // TODO: nail down details of limit (specified in <a href="LBR.md#0x0_LBR">LBR</a>? is 1 <a href="LBR.md#0x0_LBR">LBR</a> a milliLibra or microLibra?)
@@ -673,7 +673,7 @@
         <a href="VASP.md#0x0_VASP_parent_address">VASP::parent_address</a>(sender) != <a href="VASP.md#0x0_VASP_parent_address">VASP::parent_address</a>(payee)
     ) {
         // sanity check of signature validity
-        Transaction::assert(<a href="Vector.md#0x0_Vector_length">Vector::length</a>(&metadata_signature) == 64, 9001);
+        <b>assert</b>(<a href="Vector.md#0x0_Vector_length">Vector::length</a>(&metadata_signature) == 64, 9001);
         // message should be metadata | sender_address | amount | domain_separator
         <b>let</b> domain_separator = b"@@$$LIBRA_ATTEST$$@@";
         <b>let</b> message = <b>copy</b> metadata;
@@ -681,7 +681,7 @@
         <a href="Vector.md#0x0_Vector_append">Vector::append</a>(&<b>mut</b> message, <a href="LCS.md#0x0_LCS_to_bytes">LCS::to_bytes</a>(&deposit_value));
         <a href="Vector.md#0x0_Vector_append">Vector::append</a>(&<b>mut</b> message, domain_separator);
         // cryptographic check of signature validity
-        Transaction::assert(
+        <b>assert</b>(
             <a href="Signature.md#0x0_Signature_ed25519_verify">Signature::ed25519_verify</a>(
                 metadata_signature,
                 <a href="VASP.md#0x0_VASP_compliance_public_key">VASP::compliance_public_key</a>(payee),
@@ -694,7 +694,7 @@
     // Ensure that this deposit is compliant with the account limits on
     // this account.
     <b>let</b> _ = borrow_global&lt;<a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>());
-    /*Transaction::assert(
+    /*<b>assert</b>(
         <a href="AccountLimits.md#0x0_AccountLimits_update_deposit_limits">AccountLimits::update_deposit_limits</a>&lt;Token&gt;(
             deposit_value,
             payee,
@@ -855,7 +855,7 @@
         addr,
         &borrow_global&lt;<a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()).limits_cap
     );
-    Transaction::assert(can_withdraw, 11);*/
+    <b>assert</b>(can_withdraw, 11);*/
     <a href="Libra.md#0x0_Libra_withdraw">Libra::withdraw</a>(&<b>mut</b> balance.coin, amount)
 }
 </code></pre>
@@ -911,7 +911,7 @@
 ): <a href="#0x0_LibraAccount_WithdrawCapability">WithdrawCapability</a> <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
     <b>let</b> sender_addr = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(sender);
     // Abort <b>if</b> we already extracted the unique withdraw capability for this account.
-    Transaction::assert(!<a href="#0x0_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(sender_addr), 11);
+    <b>assert</b>(!<a href="#0x0_LibraAccount_delegated_withdraw_capability">delegated_withdraw_capability</a>(sender_addr), 11);
     <b>let</b> account = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(sender_addr);
     <a href="Option.md#0x0_Option_extract">Option::extract</a>(&<b>mut</b> account.withdrawal_capability)
 }
@@ -1029,7 +1029,7 @@
 ) <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a>  {
     <b>let</b> sender_account_resource = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
     // Don't allow rotating <b>to</b> clearly invalid key
-    Transaction::assert(<a href="Vector.md#0x0_Vector_length">Vector::length</a>(&new_authentication_key) == 32, 12);
+    <b>assert</b>(<a href="Vector.md#0x0_Vector_length">Vector::length</a>(&new_authentication_key) == 32, 12);
     sender_account_resource.authentication_key = new_authentication_key;
 }
 </code></pre>
@@ -1057,7 +1057,7 @@
 <b>acquires</b> <a href="#0x0_LibraAccount">LibraAccount</a> {
     <b>let</b> account_address = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     // Abort <b>if</b> we already extracted the unique key rotation capability for this account.
-    Transaction::assert(!<a href="#0x0_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(account_address), 11);
+    <b>assert</b>(!<a href="#0x0_LibraAccount_delegated_key_rotation_capability">delegated_key_rotation_capability</a>(account_address), 11);
     <b>let</b> account = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(account_address);
     <a href="Option.md#0x0_Option_extract">Option::extract</a>(&<b>mut</b> account.key_rotation_capability)
 }
@@ -1113,10 +1113,10 @@
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;
 ) {
-    Transaction::assert(<a href="Testnet.md#0x0_Testnet_is_testnet">Testnet::is_testnet</a>(), 10042);
+    <b>assert</b>(<a href="Testnet.md#0x0_Testnet_is_testnet">Testnet::is_testnet</a>(), 10042);
     // TODO: refactor so that every attempt <b>to</b> create an existing account hits this check
     // cannot create an account at an address that already has one
-    Transaction::assert(!<a href="#0x0_LibraAccount_exists_at">exists_at</a>(new_account_address), 777777);
+    <b>assert</b>(!<a href="#0x0_LibraAccount_exists_at">exists_at</a>(new_account_address), 777777);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="VASP.md#0x0_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(
         association,
@@ -1171,14 +1171,14 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
 ) {
     <b>let</b> new_account_addr = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(&new_account);
     // cannot create an account at the reserved address 0x0
-    Transaction::assert(new_account_addr != <a href="CoreAddresses.md#0x0_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(), 0);
+    <b>assert</b>(new_account_addr != <a href="CoreAddresses.md#0x0_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(), 0);
 
     // (1) publish <a href="#0x0_LibraAccount">LibraAccount</a>
     <b>let</b> authentication_key = auth_key_prefix;
     <a href="Vector.md#0x0_Vector_append">Vector::append</a>(
         &<b>mut</b> authentication_key, <a href="LCS.md#0x0_LCS_to_bytes">LCS::to_bytes</a>(<a href="Signer.md#0x0_Signer_borrow_address">Signer::borrow_address</a>(&new_account))
     );
-    Transaction::assert(<a href="Vector.md#0x0_Vector_length">Vector::length</a>(&authentication_key) == 32, 12);
+    <b>assert</b>(<a href="Vector.md#0x0_Vector_length">Vector::length</a>(&authentication_key) == 32, 12);
     move_to(
         &new_account,
         <a href="#0x0_LibraAccount">LibraAccount</a> {
@@ -1244,7 +1244,7 @@ Create an account with the AssocRoot role at
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;
 ) {
-    Transaction::assert(<a href="LibraTimestamp.md#0x0_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
+    <b>assert</b>(<a href="LibraTimestamp.md#0x0_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <b>let</b> role_id = 0;
     <a href="#0x0_LibraAccount_make_account">make_account</a>&lt;Token&gt;(new_account, auth_key_prefix, <b>false</b>, role_id)
@@ -1450,8 +1450,8 @@ also be added. This account will be a child of
     auth_key_prefix: vector&lt;u8&gt;,
     add_all_currencies: bool
 ) {
-    Transaction::assert(<a href="Testnet.md#0x0_Testnet_is_testnet">Testnet::is_testnet</a>(), 10042);
-    Transaction::assert(!<a href="#0x0_LibraAccount_exists_at">exists_at</a>(new_account_address), 777777);
+    <b>assert</b>(<a href="Testnet.md#0x0_Testnet_is_testnet">Testnet::is_testnet</a>(), 10042);
+    <b>assert</b>(!<a href="#0x0_LibraAccount_exists_at">exists_at</a>(new_account_address), 777777);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <b>let</b> role_id = 7;
@@ -1817,7 +1817,7 @@ also be added. This account will be a child of
     <b>let</b> initiator_address = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
     <a href="#0x0_LibraAccount_assert_can_freeze">assert_can_freeze</a>(initiator_address);
     // The root association account cannot be frozen
-    Transaction::assert(frozen_address != <a href="Association.md#0x0_Association_root_address">Association::root_address</a>(), 14);
+    <b>assert</b>(frozen_address != <a href="Association.md#0x0_Association_root_address">Association::root_address</a>(), 14);
     borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(frozen_address).is_frozen = <b>true</b>;
     <a href="Event.md#0x0_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x0_LibraAccount_FreezeAccountEvent">FreezeAccountEvent</a>&gt;(
         &<b>mut</b> borrow_global_mut&lt;<a href="#0x0_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()).freeze_event_handle,
@@ -1908,7 +1908,7 @@ also be added. This account will be a child of
 
 
 <pre><code><b>fun</b> <a href="#0x0_LibraAccount_assert_can_freeze">assert_can_freeze</a>(addr: address) {
-    Transaction::assert(<a href="Association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_LibraAccount_FreezingPrivilege">FreezingPrivilege</a>&gt;(addr), 13);
+    <b>assert</b>(<a href="Association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_LibraAccount_FreezingPrivilege">FreezingPrivilege</a>&gt;(addr), 13);
 }
 </code></pre>
 
@@ -1943,15 +1943,15 @@ also be added. This account will be a child of
 
     // FUTURE: Make these error codes sequential
     // Verify that the transaction sender's account exists
-    Transaction::assert(<a href="#0x0_LibraAccount_exists_at">exists_at</a>(transaction_sender), 5);
+    <b>assert</b>(<a href="#0x0_LibraAccount_exists_at">exists_at</a>(transaction_sender), 5);
 
-    Transaction::assert(!<a href="#0x0_LibraAccount_account_is_frozen">account_is_frozen</a>(transaction_sender), 0);
+    <b>assert</b>(!<a href="#0x0_LibraAccount_account_is_frozen">account_is_frozen</a>(transaction_sender), 0);
 
     // Load the transaction sender's account
     <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x0_LibraAccount">LibraAccount</a>&gt;(transaction_sender);
 
     // Check that the hash of the transaction's <b>public</b> key matches the account's auth key
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Hash.md#0x0_Hash_sha3_256">Hash::sha3_256</a>(txn_public_key) == *&sender_account.authentication_key,
         2
     );
@@ -1959,12 +1959,12 @@ also be added. This account will be a child of
     // Check that the account has enough balance for all of the gas
     <b>let</b> max_transaction_fee = txn_gas_price * txn_max_gas_units;
     <b>let</b> balance_amount = <a href="#0x0_LibraAccount_balance">balance</a>&lt;Token&gt;(transaction_sender);
-    Transaction::assert(balance_amount &gt;= max_transaction_fee, 6);
+    <b>assert</b>(balance_amount &gt;= max_transaction_fee, 6);
 
     // Check that the transaction sequence number matches the sequence number of the account
-    Transaction::assert(txn_sequence_number &gt;= sender_account.sequence_number, 3);
-    Transaction::assert(txn_sequence_number == sender_account.sequence_number, 4);
-    Transaction::assert(<a href="LibraTransactionTimeout.md#0x0_LibraTransactionTimeout_is_valid_transaction_timestamp">LibraTransactionTimeout::is_valid_transaction_timestamp</a>(txn_expiration_time), 7);
+    <b>assert</b>(txn_sequence_number &gt;= sender_account.sequence_number, 3);
+    <b>assert</b>(txn_sequence_number == sender_account.sequence_number, 4);
+    <b>assert</b>(<a href="LibraTransactionTimeout.md#0x0_LibraTransactionTimeout_is_valid_transaction_timestamp">LibraTransactionTimeout::is_valid_transaction_timestamp</a>(txn_expiration_time), 7);
 }
 </code></pre>
 
@@ -2038,7 +2038,7 @@ also be added. This account will be a child of
 
     // Charge for gas
     <b>let</b> transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
-    Transaction::assert(
+    <b>assert</b>(
         <a href="#0x0_LibraAccount_balance_for">balance_for</a>(sender_balance) &gt;= transaction_fee_amount,
         6
     );
@@ -2129,7 +2129,7 @@ also be added. This account will be a child of
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
 ) {
-    Transaction::assert(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(creator)), 1002);
+    <b>assert</b>(<a href="Association.md#0x0_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(creator)), 1002);
     <b>let</b> new_account = <a href="#0x0_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x0_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="ValidatorConfig.md#0x0_ValidatorConfig_publish">ValidatorConfig::publish</a>(creator, &new_account);

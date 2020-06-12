@@ -5,7 +5,7 @@ fun main() {
     if (true) {
         ref = &x;
     };
-    0x0::Transaction::assert(*move ref == 5, 42);
+    assert(*move ref == 5, 42);
 }
 }
 

@@ -21,6 +21,6 @@ fun main() {
     let x = M::new(5);
     let x_ref = &x;
     let y = M::value(x_ref);
-    0x0::Transaction::assert(y == 5, 42);
+    assert(y == 5, 42);
 }
 }

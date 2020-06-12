@@ -12,5 +12,6 @@ module M {
     fun borrow_global_mut() { abort 0 }
     fun exists() { abort 0 }
     fun freeze() { abort 0 }
+    fun assert() { abort 0 }
     fun Self() { abort 0}
 }

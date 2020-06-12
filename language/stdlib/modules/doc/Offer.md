@@ -99,7 +99,7 @@
   <b>let</b> <a href="#0x0_Offer">Offer</a>&lt;Offered&gt; { offered, for } = move_from&lt;<a href="#0x0_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
   <b>let</b> sender = <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account);
   // fail with INSUFFICIENT_PRIVILEGES
-  Transaction::assert(sender == for || sender == offer_address, 11);
+  <b>assert</b>(sender == for || sender == offer_address, 11);
   offered
 }
 </code></pre>

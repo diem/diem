@@ -10,7 +10,7 @@ fun main() {
         x = 3;
         break
     };
-    0x0::Transaction::assert(x == 3, 42);
-    0x0::Transaction::assert(y == 5, 42);
+    assert(x == 3, 42);
+    assert(y == 5, 42);
 }
 }

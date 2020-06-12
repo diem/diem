@@ -1,0 +1,120 @@
+error: 
+
+   ┌── tests/move_check/typing/other_builtins_invalid.move:4:10 ───
+   │
+ 4 │         (freeze<u64>(x): &mut u64);
+   │          ^^^^^^^^^^^^^^ Invalid call of 'freeze'. Invalid argument for parameter '0'
+   ·
+ 3 │     fun foo(x: &u64) {
+   │                ---- The type: '&u64'
+   ·
+ 4 │         (freeze<u64>(x): &mut u64);
+   │          ------ Is not a subtype of: '&mut u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/other_builtins_invalid.move:4:26 ───
+   │
+ 4 │         (freeze<u64>(x): &mut u64);
+   │                          ^^^^^^^^ Invalid type annotation
+   ·
+ 4 │         (freeze<u64>(x): &mut u64);
+   │          -------------- The type: '&u64'
+   ·
+ 4 │         (freeze<u64>(x): &mut u64);
+   │                          -------- Is not a subtype of: '&mut u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/other_builtins_invalid.move:5:10 ───
+   │
+ 5 │         (freeze<vector<bool>>(&any()): &mut vector<bool>);
+   │          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'freeze'. Invalid argument for parameter '0'
+   ·
+ 5 │         (freeze<vector<bool>>(&any()): &mut vector<bool>);
+   │                               ------ The type: '&_'
+   ·
+ 5 │         (freeze<vector<bool>>(&any()): &mut vector<bool>);
+   │          ------ Is not a subtype of: '&mut vector<bool>'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/other_builtins_invalid.move:5:32 ───
+   │
+ 5 │         (freeze<vector<bool>>(&any()): &mut vector<bool>);
+   │                                ^^^^^ Could not infer this type. Try adding an annotation
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/other_builtins_invalid.move:5:40 ───
+   │
+ 5 │         (freeze<vector<bool>>(&any()): &mut vector<bool>);
+   │                                        ^^^^^^^^^^^^^^^^^ Invalid type annotation
+   ·
+ 5 │         (freeze<vector<bool>>(&any()): &mut vector<bool>);
+   │          ---------------------------- The type: '&vector<bool>'
+   ·
+ 5 │         (freeze<vector<bool>>(&any()): &mut vector<bool>);
+   │                                        ----------------- Is not a subtype of: '&mut vector<bool>'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/other_builtins_invalid.move:7:10 ───
+   │
+ 7 │         (assert<>(42, true): ());
+   │          ^^^^^^^^^^^^^^^^^^ Invalid call of 'assert'. Invalid argument for parameter '0'
+   ·
+ 7 │         (assert<>(42, true): ());
+   │                   -- The type: integer
+   ·
+ 7 │         (assert<>(42, true): ());
+   │          ------ Is not compatible with: 'bool'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/other_builtins_invalid.move:7:10 ───
+   │
+ 7 │         (assert<>(42, true): ());
+   │          ^^^^^^^^^^^^^^^^^^ Invalid call of 'assert'. Invalid argument for parameter '1'
+   ·
+ 7 │         (assert<>(42, true): ());
+   │                       ---- The type: 'bool'
+   ·
+ 7 │         (assert<>(42, true): ());
+   │          ------ Is not compatible with: 'u64'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/other_builtins_invalid.move:8:37 ───
+   │
+ 8 │         (assert(true && false, *x): bool);
+   │                                     ^^^^ Invalid type annotation
+   ·
+ 8 │         (assert(true && false, *x): bool);
+   │          ------------------------- The type: '()'
+   ·
+ 8 │         (assert(true && false, *x): bool);
+   │                                     ---- Is not compatible with: 'bool'
+   │
+
+error: 
+
+   ┌── tests/move_check/typing/other_builtins_invalid.move:9:9 ───
+   │
+ 9 │         assert(true || false, 0u8);
+   │         ^^^^^^^^^^^^^^^^^^^^^^^^^^ Invalid call of 'assert'. Invalid argument for parameter '1'
+   ·
+ 9 │         assert(true || false, 0u8);
+   │                               --- The type: 'u8'
+   ·
+ 9 │         assert(true || false, 0u8);
+   │         ------ Is not compatible with: 'u64'
+   │
+

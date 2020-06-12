@@ -10,8 +10,8 @@ use 0x0::LibraBlock;
 use 0x0::LibraTimestamp;
 
 fun main() {
-    0x0::Transaction::assert(LibraBlock::get_current_block_height() == 1, 76);
-    0x0::Transaction::assert(LibraTimestamp::now_microseconds() == 100000000, 77);
+    assert(LibraBlock::get_current_block_height() == 1, 76);
+    assert(LibraTimestamp::now_microseconds() == 100000000, 77);
 }
 }
 

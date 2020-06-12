@@ -4,11 +4,10 @@
 //! new-transaction
 //! sender: bob
 script {
-use 0x0::Transaction;
 use 0x0::LibraAccount;
 // not frozen
 fun main() {
-    Transaction::assert(!LibraAccount::account_is_frozen({{bob}}), 0);
+    assert(!LibraAccount::account_is_frozen({{bob}}), 0);
 }
 }
 // check: EXECUTED
@@ -29,13 +28,12 @@ fun main(account: &signer) {
 //! sender: blessed
 script {
 use 0x0::LibraAccount;
-use 0x0::Transaction;
 // Make sure we can freeze and unfreeze accounts.
 fun main(account: &signer) {
     LibraAccount::freeze_account(account, {{bob}});
-    Transaction::assert(LibraAccount::account_is_frozen({{bob}}), 1);
+    assert(LibraAccount::account_is_frozen({{bob}}), 1);
     LibraAccount::unfreeze_account(account, {{bob}});
-    Transaction::assert(!LibraAccount::account_is_frozen({{bob}}), 2);
+    assert(!LibraAccount::account_is_frozen({{bob}}), 2);
     LibraAccount::freeze_account(account, {{bob}});
 }
 }
@@ -113,20 +111,19 @@ fun main(parent_vasp: &signer) {
 //! sender: blessed
 script {
 use 0x0::LibraAccount;
-use 0x0::Transaction;
 // Freezing a child account doesn't freeze the root, freezing the root
 // doesn't freeze the child
 fun main(account: &signer) {
     LibraAccount::freeze_account(account, 0xAA);
-    Transaction::assert(LibraAccount::account_is_frozen(0xAA), 3);
-    Transaction::assert(!LibraAccount::account_is_frozen({{vasp}}), 4);
+    assert(LibraAccount::account_is_frozen(0xAA), 3);
+    assert(!LibraAccount::account_is_frozen({{vasp}}), 4);
     LibraAccount::unfreeze_account(account, 0xAA);
-    Transaction::assert(!LibraAccount::account_is_frozen(0xAA), 5);
+    assert(!LibraAccount::account_is_frozen(0xAA), 5);
     LibraAccount::freeze_account(account, {{vasp}});
-    Transaction::assert(LibraAccount::account_is_frozen({{vasp}}), 6);
-    Transaction::assert(!LibraAccount::account_is_frozen(0xAA), 7);
+    assert(LibraAccount::account_is_frozen({{vasp}}), 6);
+    assert(!LibraAccount::account_is_frozen(0xAA), 7);
     LibraAccount::unfreeze_account(account, {{vasp}});
-    Transaction::assert(!LibraAccount::account_is_frozen({{vasp}}), 8);
+    assert(!LibraAccount::account_is_frozen({{vasp}}), 8);
 }
 }
 

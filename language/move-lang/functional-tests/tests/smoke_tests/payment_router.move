@@ -11,7 +11,6 @@
 // 3 -> ADDRESS_IS_NOT_ROUTED
 module PaymentRouter {
     use 0x0::LibraAccount;
-    use 0x0::Transaction;
     use 0x0::Libra::Libra;
     use 0x0::Vector;
     use 0x0::Signer;
@@ -84,7 +83,7 @@ module PaymentRouter {
         let sender_addr = Signer::address_of(sender);
         let router_info = borrow_global_mut<PaymentRouterInfo>(router_account_addr);
         let (has, index) = Vector::index_of(&router_info.allowed_addresses, &sender_addr);
-        Transaction::assert(has, 0);
+        assert(has, 0);
         let account_info = borrow_global_mut<AccountInfo<Token>>(router_account_addr);
         Vector::swap_remove(&mut router_info.allowed_addresses, index);
         Vector::push_back(
@@ -101,7 +100,7 @@ module PaymentRouter {
     public fun deposit<Token>(sender: &signer, router_account_addr: address, coin: Libra<Token>)
     acquires AccountInfo {
         let addrs = &borrow_global<AccountInfo<Token>>(router_account_addr).child_accounts;
-        Transaction::assert(!Vector::is_empty(addrs), 1);
+        assert(!Vector::is_empty(addrs), 1);
         // TODO: policy around how to rotate through different accounts
         let index = 0;
         LibraAccount::deposit(
@@ -118,7 +117,7 @@ module PaymentRouter {
     acquires PaymentRouterInfo, RoutedAccount {
         let routed_info = borrow_global<RoutedAccount<Token>>(Signer::address_of(account));
         let router_info = borrow_global<PaymentRouterInfo>(*&routed_info.router_account_addr);
-        Transaction::assert(!router_info.exclusive_withdrawals_only, 2);
+        assert(!router_info.exclusive_withdrawals_only, 2);
         LibraAccount::withdraw_from(
             &routed_info.withdrawal_cap,
             amount
@@ -130,7 +129,7 @@ module PaymentRouter {
     public fun withdraw<Token>(account: &signer, amount: u64): Libra<Token>
     acquires AccountInfo, RoutedAccount {
         let addrs = &borrow_global<AccountInfo<Token>>(Signer::address_of(account)).child_accounts;
-        Transaction::assert(!Vector::is_empty(addrs), 1);
+        assert(!Vector::is_empty(addrs), 1);
         // TODO: policy around how to rotate through different accounts
         let index = 0;
         let addr = Vector::borrow(addrs, index);
@@ -156,7 +155,7 @@ module PaymentRouter {
     // Return the router address for the account.
     public fun router_address<Token>(addr: address): address
     acquires RoutedAccount {
-        Transaction::assert(is_routed<Token>(addr), 3);
+        assert(is_routed<Token>(addr), 3);
         *&borrow_global<RoutedAccount<Token>>(addr).router_account_addr
     }
 }
@@ -186,10 +185,9 @@ fun main(account: &signer) {
 //! max-gas: 100000
 script {
 use {{default}}::PaymentRouter;
-use 0x0::Transaction;
 fun main(account: &signer) {
     PaymentRouter::allow_account_address(account, {{bob}});
-    Transaction::assert(PaymentRouter::exclusive_withdrawals_only({{bob}}), 0);
+    assert(PaymentRouter::exclusive_withdrawals_only({{bob}}), 0);
 }
 }
 
@@ -253,7 +251,6 @@ fun main(sender: &signer) {
 //! sender: bob
 script {
 use 0x0::Vector;
-use 0x0::Transaction;
 use {{default}}::PaymentRouter;
 use 0x0::Coin1::Coin1;
 use 0x0::Coin2::Coin2;
@@ -265,16 +262,15 @@ fun main(account: &signer) {
     let addrs_coin2 = PaymentRouter::addresses_for_currency<Coin2>(sender);
     let addrs_lbr = PaymentRouter::addresses_for_currency<LBR>(sender);
 
-    Transaction::assert(Vector::length(&addrs_coin1) == 2, 0);
-    Transaction::assert(Vector::length(&addrs_coin2) == 1, 1);
-    Transaction::assert(Vector::length(&addrs_lbr) == 1, 2);
+    assert(Vector::length(&addrs_coin1) == 2, 0);
+    assert(Vector::length(&addrs_coin2) == 1, 1);
+    assert(Vector::length(&addrs_lbr) == 1, 2);
 }
 }
 
 //! new-transaction
 //! sender: bob
 script {
-use 0x0::Transaction;
 use {{default}}::PaymentRouter;
 use 0x0::Coin1::Coin1;
 use 0x0::LibraAccount;
@@ -283,10 +279,10 @@ fun main(account: &signer) {
     let prev_balance = LibraAccount::balance<Coin1>({{alice}});
     let x_coins = PaymentRouter::withdraw<Coin1>(account, 10);
     let new_balance = LibraAccount::balance<Coin1>({{alice}});
-    Transaction::assert(prev_balance - new_balance == 10, 0);
+    assert(prev_balance - new_balance == 10, 0);
     PaymentRouter::deposit<Coin1>(account, {{bob}}, x_coins);
     new_balance = LibraAccount::balance<Coin1>({{alice}});
-    Transaction::assert(prev_balance - new_balance == 0, 1);
+    assert(prev_balance - new_balance == 0, 1);
 }
 }
 
@@ -334,7 +330,6 @@ fun main(account: &signer) {
 //! sender: alice
 //! gas-currency: Coin1
 script {
-use 0x0::Transaction;
 use {{default}}::PaymentRouter;
 use 0x0::Coin1::Coin1;
 use 0x0::LibraAccount;
@@ -344,10 +339,10 @@ fun main(account: &signer) {
     let prev_balance = LibraAccount::balance<Coin1>({{alice}});
     let x_coins = PaymentRouter::withdraw_through<Coin1>(account, 10);
     let new_balance = LibraAccount::balance<Coin1>({{alice}});
-    Transaction::assert(prev_balance - new_balance == 10, 0);
+    assert(prev_balance - new_balance == 10, 0);
     PaymentRouter::deposit<Coin1>(account, {{bob}}, x_coins);
     new_balance = LibraAccount::balance<Coin1>({{alice}});
-    Transaction::assert(prev_balance - new_balance == 0, 1);
+    assert(prev_balance - new_balance == 0, 1);
 }
 }
 
@@ -470,18 +465,17 @@ fun main(account: &signer) {
 script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin1::Coin1;
-use 0x0::Transaction;
 fun main() {
-    Transaction::assert(PaymentRouter::is_routed<Coin1>({{bob1}}), 0);
-    Transaction::assert(PaymentRouter::is_routed<Coin1>({{gary1}}), 0);
-    Transaction::assert(PaymentRouter::is_routed<Coin1>({{alice1}}), 0);
-    Transaction::assert(PaymentRouter::is_routed<Coin1>({{vivian1}}), 0);
-    Transaction::assert(!PaymentRouter::is_routed<Coin1>({{nope1}}), 1);
+    assert(PaymentRouter::is_routed<Coin1>({{bob1}}), 0);
+    assert(PaymentRouter::is_routed<Coin1>({{gary1}}), 0);
+    assert(PaymentRouter::is_routed<Coin1>({{alice1}}), 0);
+    assert(PaymentRouter::is_routed<Coin1>({{vivian1}}), 0);
+    assert(!PaymentRouter::is_routed<Coin1>({{nope1}}), 1);
 
-    Transaction::assert(PaymentRouter::router_address<Coin1>({{bob1}}) == {{bob1}}, 2);
-    Transaction::assert(PaymentRouter::router_address<Coin1>({{gary1}}) == {{bob1}}, 2);
-    Transaction::assert(PaymentRouter::router_address<Coin1>({{alice1}}) == {{alice1}}, 2);
-    Transaction::assert(PaymentRouter::router_address<Coin1>({{vivian1}}) == {{alice1}}, 2);
+    assert(PaymentRouter::router_address<Coin1>({{bob1}}) == {{bob1}}, 2);
+    assert(PaymentRouter::router_address<Coin1>({{gary1}}) == {{bob1}}, 2);
+    assert(PaymentRouter::router_address<Coin1>({{alice1}}) == {{alice1}}, 2);
+    assert(PaymentRouter::router_address<Coin1>({{vivian1}}) == {{alice1}}, 2);
 }
 }
 
@@ -518,14 +512,13 @@ script {
 use {{default}}::PaymentRouter;
 use 0x0::Coin1::Coin1;
 use 0x0::Vector;
-use 0x0::Transaction;
 fun main() {
     let bob1s = PaymentRouter::addresses_for_currency<Coin1>({{bob1}});
     let alice1s = PaymentRouter::addresses_for_currency<Coin1>({{alice1}});
 
     // alice1s addresses for Coin1 should have nope1, but bob1's should not
-    Transaction::assert(!Vector::contains(&bob1s, &{{nope1}}), 3);
-    Transaction::assert(Vector::contains(&alice1s, &{{nope1}}), 4);
+    assert(!Vector::contains(&bob1s, &{{nope1}}), 3);
+    assert(Vector::contains(&alice1s, &{{nope1}}), 4);
 }
 }
 

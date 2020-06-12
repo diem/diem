@@ -109,13 +109,7 @@ pub enum BuiltinFunction_ {
     BorrowGlobal(bool, Type),
     Exists(Type),
     Freeze(Type),
-    /* GetHeight,
-     * GetMaxGasPrice,
-     * GetMaxGasUnits,
-     * GetPublicKey,
-     * GetSender,
-     * GetSequenceNumber,
-     * EmitEvent, */
+    Assert,
 }
 pub type BuiltinFunction = Spanned<BuiltinFunction_>;
 
@@ -215,6 +209,7 @@ impl fmt::Display for BuiltinFunction_ {
             BorrowGlobal(true, _) => NB::BORROW_GLOBAL_MUT,
             Exists(_) => NB::EXISTS,
             Freeze(_) => NB::FREEZE,
+            Assert => NB::ASSERT,
         };
         write!(f, "{}", s)
     }
@@ -555,19 +550,22 @@ impl AstDebug for BuiltinFunction_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         use crate::naming::ast::BuiltinFunction_ as NF;
         use BuiltinFunction_ as F;
-        let (n, bt) = match self {
-            F::MoveToSender(bt) => (NF::MOVE_TO_SENDER, bt),
-            F::MoveTo(bt) => (NF::MOVE_TO, bt),
-            F::MoveFrom(bt) => (NF::MOVE_FROM, bt),
-            F::BorrowGlobal(true, bt) => (NF::BORROW_GLOBAL_MUT, bt),
-            F::BorrowGlobal(false, bt) => (NF::BORROW_GLOBAL, bt),
-            F::Exists(bt) => (NF::EXISTS, bt),
-            F::Freeze(bt) => (NF::FREEZE, bt),
+        let (n, bt_opt) = match self {
+            F::MoveToSender(bt) => (NF::MOVE_TO_SENDER, Some(bt)),
+            F::MoveTo(bt) => (NF::MOVE_TO, Some(bt)),
+            F::MoveFrom(bt) => (NF::MOVE_FROM, Some(bt)),
+            F::BorrowGlobal(true, bt) => (NF::BORROW_GLOBAL_MUT, Some(bt)),
+            F::BorrowGlobal(false, bt) => (NF::BORROW_GLOBAL, Some(bt)),
+            F::Exists(bt) => (NF::EXISTS, Some(bt)),
+            F::Freeze(bt) => (NF::FREEZE, Some(bt)),
+            F::Assert => (NF::ASSERT, None),
         };
         w.write(n);
-        w.write("<");
-        bt.ast_debug(w);
-        w.write(">");
+        if let Some(bt) = bt_opt {
+            w.write("<");
+            bt.ast_debug(w);
+            w.write(">");
+        }
     }
 }
 

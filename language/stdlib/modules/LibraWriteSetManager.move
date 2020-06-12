@@ -6,7 +6,6 @@ module LibraWriteSetManager {
     use 0x0::Event;
     use 0x0::Hash;
     use 0x0::Signer;
-    use 0x0::Transaction;
     use 0x0::LibraConfig;
 
     resource struct LibraWriteSetManager {
@@ -18,7 +17,7 @@ module LibraWriteSetManager {
     }
 
     public fun initialize(account: &signer) {
-        Transaction::assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
+        assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
 
         move_to(
             account,
@@ -34,15 +33,15 @@ module LibraWriteSetManager {
         writeset_public_key: vector<u8>,
     ) {
         let sender = Signer::address_of(account);
-        Transaction::assert(sender == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 33);
+        assert(sender == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 33);
 
         let association_auth_key = LibraAccount::authentication_key(sender);
         let sequence_number = LibraAccount::sequence_number(sender);
 
-        Transaction::assert(writeset_sequence_number >= sequence_number, 3);
+        assert(writeset_sequence_number >= sequence_number, 3);
 
-        Transaction::assert(writeset_sequence_number == sequence_number, 11);
-        Transaction::assert(
+        assert(writeset_sequence_number == sequence_number, 11);
+        assert(
             Hash::sha3_256(writeset_public_key) == association_auth_key,
             2
         );

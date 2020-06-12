@@ -10,7 +10,6 @@ module AccountLimits {
     use 0x0::Association;
     use 0x0::LibraTimestamp;
     use 0x0::Signer;
-    use 0x0::Transaction;
 
     // An operations capability that restricts callers of this module since
     // the operations can mutate account states.
@@ -55,7 +54,7 @@ module AccountLimits {
     // Grant a capability to call this module. This does not necessarily
     // need to be a unique capability.
     public fun grant_calling_capability(account: &signer): CallingCapability {
-        Transaction::assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 3000);
+        assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 3000);
         CallingCapability{}
     }
 
@@ -67,7 +66,7 @@ module AccountLimits {
         addr: address,
         _cap: &CallingCapability,
     ): bool acquires LimitsDefinition, Window {
-        Transaction::assert(0x0::Testnet::is_testnet(), 10047);
+        assert(0x0::Testnet::is_testnet(), 10047);
         can_receive<CoinType>(
             amount,
             borrow_global_mut<Window>(addr),
@@ -83,7 +82,7 @@ module AccountLimits {
         addr: address,
         _cap: &CallingCapability,
     ): bool acquires LimitsDefinition, Window {
-        Transaction::assert(0x0::Testnet::is_testnet(), 10048);
+        assert(0x0::Testnet::is_testnet(), 10048);
         can_withdraw<CoinType>(
             amount,
             borrow_global_mut<Window>(addr),

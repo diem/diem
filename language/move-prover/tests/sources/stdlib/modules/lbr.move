@@ -7,7 +7,7 @@ module LBR {
     struct T { }
 
     public fun initialize() {
-        Transaction::assert(Transaction::sender() == 0xA550C18, 0);
+        assert(Transaction::sender() == 0xA550C18, 0);
         Libra::register<T>();
     }
     spec fun initialize {

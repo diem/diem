@@ -106,7 +106,15 @@ error:
 
     ┌── tests/move_check/expansion/restricted_alias_names.move:22:16 ───
     │
- 22 │         foo as Self,
+ 22 │         foo as assert,
+    │                ^^^^^^ Invalid module member name 'assert'. 'assert' is restricted and cannot be used to name a module member
+    │
+
+error: 
+
+    ┌── tests/move_check/expansion/restricted_alias_names.move:23:16 ───
+    │
+ 23 │         foo as Self,
     │                ^^^^ Invalid module member name 'Self'. 'Self' is restricted and cannot be used to name a module member
     │
 

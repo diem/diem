@@ -2,7 +2,6 @@ address 0x0 {
 module SlidingNonce {
     use 0x0::Association;
     use 0x0::Signer;
-    use 0x0::Transaction;
 
     // This struct keep last 128 nonce values in a bit map nonce_mask
     // We assume that nonce are generated incrementally, but certain permutation is allowed when nonce are recorded
@@ -18,7 +17,7 @@ module SlidingNonce {
     // Calls try_record_nonce and aborts transaction if returned code is non-0
     public fun record_nonce_or_abort(account: &signer, seq_nonce: u64) acquires SlidingNonce {
         let code = try_record_nonce(account, seq_nonce);
-        Transaction::assert(code == 0, code);
+        assert(code == 0, code);
     }
 
     // Tries to record this nonce in the account.

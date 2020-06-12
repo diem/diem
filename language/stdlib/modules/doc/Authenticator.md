@@ -70,11 +70,11 @@
 ): <a href="#0x0_Authenticator_MultiEd25519PublicKey">MultiEd25519PublicKey</a> {
     // check theshold requirements
     <b>let</b> len = <a href="Vector.md#0x0_Vector_length">Vector::length</a>(&public_keys);
-    Transaction::assert(threshold != 0, 7001);
-    Transaction::assert((threshold <b>as</b> u64) &lt;= len, 7002);
+    <b>assert</b>(threshold != 0, 7001);
+    <b>assert</b>((threshold <b>as</b> u64) &lt;= len, 7002);
     // TODO: add constant MULTI_ED25519_MAX_KEYS
     // the multied25519 signature scheme allows at most 32 keys
-    Transaction::assert(len &lt;= 32, 7003);
+    <b>assert</b>(len &lt;= 32, 7003);
 
     <a href="#0x0_Authenticator_MultiEd25519PublicKey">MultiEd25519PublicKey</a> { public_keys, threshold }
 }

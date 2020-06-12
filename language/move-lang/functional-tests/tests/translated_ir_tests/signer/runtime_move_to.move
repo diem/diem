@@ -25,13 +25,13 @@ script {
 use {{default}}::M;
 fun main(sender: &signer) {
     M::store(sender, false);
-    0x0::Transaction::assert(M::read(sender) == false, 42);
+    assert(M::read(sender) == false, 42);
 
     M::store_gen<bool>(sender, true);
-    0x0::Transaction::assert(M::read_gen<bool>(sender) == true, 42);
+    assert(M::read_gen<bool>(sender) == true, 42);
 
     M::store_gen<u64>(sender, 112);
-    0x0::Transaction::assert(M::read_gen<u64>(sender) == 112, 42)
+    assert(M::read_gen<u64>(sender) == 112, 42)
 }
 }
 
@@ -52,8 +52,8 @@ fun main(sender: &signer) {
 script {
 use {{default}}::M;
 fun main(sender: &signer) {
-    0x0::Transaction::assert(M::read(sender) == false, 42);
-    0x0::Transaction::assert(M::read_gen<bool>(sender) == true, 42);
-    0x0::Transaction::assert(M::read_gen<u64>(sender) == 112, 42)
+    assert(M::read(sender) == false, 42);
+    assert(M::read_gen<bool>(sender) == true, 42);
+    assert(M::read_gen<u64>(sender) == 112, 42)
 }
 }

@@ -5,7 +5,6 @@
 script {
 use 0x0::Coin1::Coin1;
 use 0x0::Libra;
-use 0x0::Transaction;
 fun main(account: &signer) {
     Libra::publish_preburn_to_account<Coin1>(account, account);
     let coin100 = Libra::mint<Coin1>(account, 100);
@@ -14,7 +13,7 @@ fun main(account: &signer) {
     Libra::preburn_to<Coin1>(account, coin100);
     Libra::preburn_to<Coin1>(account, coin200);
     Libra::preburn_to<Coin1>(account, coin300);
-    Transaction::assert(Libra::preburn_value<Coin1>() == 600, 8001)
+    assert(Libra::preburn_value<Coin1>() == 600, 8001)
 }
 }
 
@@ -29,15 +28,14 @@ fun main(account: &signer) {
 script {
 use 0x0::Coin1::Coin1;
 use 0x0::Libra;
-use 0x0::Transaction;
 fun main(account: &signer) {
     let burn_address = {{association}};
     Libra::burn<Coin1>(account, burn_address);
-    Transaction::assert(Libra::preburn_value<Coin1>() == 500, 8002);
+    assert(Libra::preburn_value<Coin1>() == 500, 8002);
     Libra::burn<Coin1>(account, burn_address);
-    Transaction::assert(Libra::preburn_value<Coin1>() == 300, 8003);
+    assert(Libra::preburn_value<Coin1>() == 300, 8003);
     Libra::burn<Coin1>(account, burn_address);
-    Transaction::assert(Libra::preburn_value<Coin1>() == 0, 8004)
+    assert(Libra::preburn_value<Coin1>() == 0, 8004)
 }
 }
 

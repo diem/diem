@@ -57,7 +57,7 @@ module LibraSystem {
     // Currently, it is invoked in the genesis transaction
     public fun initialize_validator_set() {
       // Only callable by the validator set address
-      Transaction::assert(Transaction::sender() == 0x1D8, 1);
+      assert(Transaction::sender() == 0x1D8, 1);
 
       move_to_sender<ValidatorSet>(ValidatorSet {
           scheme: 0,
@@ -69,7 +69,7 @@ module LibraSystem {
 
     public fun initialize_discovery_set() {
         // Only callable by the discovery set address
-        Transaction::assert(Transaction::sender() == 0xD15C0, 1);
+        assert(Transaction::sender() == 0xD15C0, 1);
 
         move_to_sender<DiscoverySet>(DiscoverySet {
             discovery_set: Vector::empty(),
@@ -80,7 +80,7 @@ module LibraSystem {
     public fun reconfigure() acquires ValidatorSet {
         // TODO: Transform this method to user capability pattern.
         // Only the Association can emit reconfiguration event for now
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+        assert(Transaction::sender() == 0xA550C18, 1);
 
         reconfigure_()
     }
@@ -159,7 +159,7 @@ module LibraSystem {
     // Get the ValidatorInfo for the ith validator
     public fun get_ith_validator_info(i: u64): ValidatorInfo acquires ValidatorSet {
       let validators_vec_ref = &borrow_global<ValidatorSet>(0x1D8).validators;
-      Transaction::assert(i < Vector::length(validators_vec_ref), 3);
+      assert(i < Vector::length(validators_vec_ref), 3);
       *Vector::borrow(validators_vec_ref, i)
     }
 
@@ -167,14 +167,14 @@ module LibraSystem {
     public fun get_ith_validator_address(i: u64): address acquires ValidatorSet {
       let validator_set = borrow_global<ValidatorSet>(0x1D8);
       let len = Vector::length(&validator_set.validators);
-      Transaction::assert(i < len, 3);
+      assert(i < len, 3);
       Vector::borrow(&validator_set.validators, i).addr
     }
 
     // Get the DiscoveryInfo for the ith validator
     public fun get_ith_discovery_info(i: u64): DiscoveryInfo acquires DiscoverySet {
         let discovery_vec_ref = &borrow_global<DiscoverySet>(0xD15C0).discovery_set;
-        Transaction::assert(i < Vector::length(discovery_vec_ref), 4);
+        assert(i < Vector::length(discovery_vec_ref), 4);
         *Vector::borrow(discovery_vec_ref, i)
     }
 
@@ -225,15 +225,15 @@ module LibraSystem {
 
    fun add_validator_(account_address: address) acquires ValidatorSet, DiscoverySet {
        // Only the Association can add new validators
-       Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+       assert(Transaction::sender() == 0xA550C18, 1);
        // A prospective validator must have a validator config resource
-       Transaction::assert(ValidatorConfig::has(account_address), 17);
+       assert(ValidatorConfig::has(account_address), 17);
 
        let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
 
        // Ensure that this address is not already a validator
-       Transaction::assert(
+       assert(
            !is_validator_(&account_address, &validator_set_ref.validators),
            18
        );
@@ -250,12 +250,12 @@ module LibraSystem {
 
    public fun remove_validator(account_address: address) acquires ValidatorSet, DiscoverySet {
        // Only the Association can remove validators
-       Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+       assert(Transaction::sender() == 0xA550C18, 1);
 
        let validator_set_ref = borrow_global_mut<ValidatorSet>(0x1D8);
        let discovery_set_ref = borrow_global_mut<DiscoverySet>(0xD15C0);
        // Ensure that this address is already a validator
-       Transaction::assert(
+       assert(
            is_validator_(&account_address, &validator_set_ref.validators),
            21
        );
@@ -284,7 +284,7 @@ module LibraSystem {
        let account_address = Transaction::sender();
 
        // Ensure that this address is already a validator
-       Transaction::assert(
+       assert(
            is_validator_(&account_address, &validator_set_ref.validators),
            21
        );
@@ -349,7 +349,7 @@ module LibraSystem {
        // correspondence between system reconfigurations and emitted ReconfigurationEvents.
 
        let current_block_time = LibraTimestamp::now_microseconds();
-       Transaction::assert(current_block_time > validator_set_ref.last_reconfiguration_time, 23);
+       assert(current_block_time > validator_set_ref.last_reconfiguration_time, 23);
        validator_set_ref.last_reconfiguration_time = current_block_time;
 
        emit_reconfiguration_event();

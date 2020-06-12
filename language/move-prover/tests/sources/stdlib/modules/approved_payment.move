@@ -37,9 +37,9 @@ module ApprovedPayment {
         signature: vector<u8>
     ) {
         // Sanity check of signature validity
-        Transaction::assert(Vector::length(&signature) == 64, 9001); // TODO: proper error code
+        assert(Vector::length(&signature) == 64, 9001); // TODO: proper error code
         // Cryptographic check of signature validity
-        Transaction::assert(
+        assert(
             Signature::ed25519_verify(
                 signature,
                 *&approved_payment.public_key,
@@ -71,7 +71,7 @@ module ApprovedPayment {
     // that are currently in flight
     public fun rotate_key(approved_payment: &mut T, new_public_key: vector<u8>) {
         // Cryptographic check of public key validity
-        Transaction::assert(
+        assert(
             Signature::ed25519_validate_pubkey(
                 copy new_public_key
             ),
@@ -83,7 +83,7 @@ module ApprovedPayment {
     // Wrapper of `rotate_key` that rotates the sender's key
     public fun rotate_sender_key(new_public_key: vector<u8>) acquires T {
         // Sanity check for key validity
-        Transaction::assert(Vector::length(&new_public_key) == 32, 9003); // TODO: proper error code
+        assert(Vector::length(&new_public_key) == 32, 9003); // TODO: proper error code
         rotate_key(borrow_global_mut<T>(Transaction::sender()), new_public_key)
     }
 
@@ -91,7 +91,7 @@ module ApprovedPayment {
     // `public_key`
     public fun publish(public_key: vector<u8>) {
         // Sanity check for key validity
-        Transaction::assert(Vector::length(&public_key) == 32, 9003); // TODO: proper error code
+        assert(Vector::length(&public_key) == 32, 9003); // TODO: proper error code
         move_to_sender(T { public_key })
     }
 

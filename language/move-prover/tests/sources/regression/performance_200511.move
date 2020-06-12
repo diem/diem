@@ -1,7 +1,6 @@
 // A test case which reproduces a performance/non-termination problem. See the spec of fun create for details.
 
 module Test {
-    use 0x0::Transaction;
     use 0x0::LCS;
     use 0x0::Vector;
 
@@ -60,7 +59,7 @@ module Test {
         let generator = EventHandleGenerator{counter: 0};
         let authentication_key = auth_key_prefix;
         Vector::append(&mut authentication_key, LCS::to_bytes(&fresh_address));
-        Transaction::assert(Vector::length(&authentication_key) == 32, 12);
+        assert(Vector::length(&authentication_key) == 32, 12);
 
 
         move_to_sender<T>(T{

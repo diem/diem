@@ -1,22 +1,21 @@
 module M {
     use 0x0::Vector;
-    use 0x0::Transaction;
 
     struct Foo {}
     resource struct Bar {}
 
     fun test_natives<T>(x1: T, x2: T): (T, T) {
         let v: vector<T> = Vector::empty();
-        Transaction::assert(Vector::length(&v) == 0, 100);
+        assert(Vector::length(&v) == 0, 100);
         Vector::push_back(&mut v, x1);
-        Transaction::assert(Vector::length(&v) == 1, 101);
+        assert(Vector::length(&v) == 1, 101);
         Vector::push_back(&mut v, x2);
-        Transaction::assert(Vector::length(&v) == 2, 102);
+        assert(Vector::length(&v) == 2, 102);
         Vector::swap(&mut v, 0, 1);
         x1 = Vector::pop_back(&mut v);
-        Transaction::assert(Vector::length(&v) == 1, 103);
+        assert(Vector::length(&v) == 1, 103);
         x2 = Vector::pop_back(&mut v);
-        Transaction::assert(Vector::length(&v) == 0, 104);
+        assert(Vector::length(&v) == 0, 104);
         Vector::destroy_empty(v);
         (x1, x2)
     }

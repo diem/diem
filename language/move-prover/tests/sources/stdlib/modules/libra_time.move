@@ -11,7 +11,7 @@ module LibraTimestamp {
     // Initialize the global wall clock time resource.
     public fun initialize() {
         // Only callable by the Association address
-        Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+        assert(Transaction::sender() == 0xA550C18, 1);
 
         // TODO: Should the initialized value be passed in to genesis?
         let timer = CurrentTimeMicroseconds {microseconds: 0};
@@ -27,15 +27,15 @@ module LibraTimestamp {
     // Update the wall clock time by consensus. Requires VM privilege and will be invoked during block prologue.
     public fun update_global_time(proposer: address, timestamp: u64) acquires CurrentTimeMicroseconds {
         // Can only be invoked by LibraVM privilege.
-        Transaction::assert(Transaction::sender() == 0x0, 33);
+        assert(Transaction::sender() == 0x0, 33);
 
         let global_timer = borrow_global_mut<CurrentTimeMicroseconds>(0xA550C18);
         if (proposer == 0x0) {
             // NIL block with null address as proposer. Timestamp must be equal.
-            Transaction::assert(timestamp == global_timer.microseconds, 5001);
+            assert(timestamp == global_timer.microseconds, 5001);
         } else {
             // Normal block. Time must advance
-            Transaction::assert(global_timer.microseconds < timestamp, 5001);
+            assert(global_timer.microseconds < timestamp, 5001);
         };
         global_timer.microseconds = timestamp;
     }

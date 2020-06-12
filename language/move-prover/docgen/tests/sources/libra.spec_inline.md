@@ -446,7 +446,7 @@ resolved in FIFO order.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraDocTest_register">register</a>&lt;Token&gt;() {
     // Only callable by the Association address
-    Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+    <b>assert</b>(Transaction::sender() == 0xA550C18, 1);
     move_to_sender(<a href="#0x0_LibraDocTest_MintCapability">MintCapability</a>&lt;Token&gt;{ });
     move_to_sender(<a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt; { total_value: 0u128, preburn_value: 0 });
 }
@@ -484,7 +484,7 @@ resolved in FIFO order.
 
 
 <pre><code><b>fun</b> <a href="#0x0_LibraDocTest_assert_is_registered">assert_is_registered</a>&lt;Token&gt;() {
-    Transaction::assert(exists&lt;<a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt;&gt;(0xA550C18), 12);
+    <b>assert</b>(exists&lt;<a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt;&gt;(0xA550C18), 12);
 }
 </code></pre>
 
@@ -804,7 +804,7 @@ Only the Association account can acquire such a reference, and it can do so only
     // minting. This will not be a problem in the production Libra system because coins will
     // be backed with real-world assets, and thus minting will be correspondingly rarer.
     // * 1000000 here because the unit is microlibra
-    Transaction::assert(<a href="#0x0_LibraDocTest_value">value</a> &lt;= 1000000000 * 1000000, 11);
+    <b>assert</b>(<a href="#0x0_LibraDocTest_value">value</a> &lt;= 1000000000 * 1000000, 11);
     // <b>update</b> market cap <b>resource</b> <b>to</b> reflect minting
     <b>let</b> market_cap = borrow_global_mut&lt;<a href="#0x0_LibraDocTest_Info">Info</a>&lt;Token&gt;&gt;(0xA550C18);
     market_cap.total_value = market_cap.total_value + (value <b>as</b> u128);
@@ -879,7 +879,7 @@ Send coin to the preburn holding area
     coin: <a href="#0x0_LibraDocTest_T">T</a>&lt;Token&gt;
 ) <b>acquires</b> <a href="#0x0_LibraDocTest_Info">Info</a> {
     // TODO: bring this back once we can automate approvals in testnet
-    // Transaction::assert(preburn_ref.is_approved, 13);
+    // <b>assert</b>(preburn_ref.is_approved, 13);
     <b>let</b> coin_value = <a href="#0x0_LibraDocTest_value">value</a>(&coin);
     <a href="#0x0_Vector_push_back">Vector::push_back</a>(
         &<b>mut</b> preburn_ref.requests,
@@ -1478,7 +1478,7 @@ Fails if the coins value is less than
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraDocTest_withdraw">withdraw</a>&lt;Token&gt;(coin_ref: &<b>mut</b> <a href="#0x0_LibraDocTest_T">T</a>&lt;Token&gt;, value: u64): <a href="#0x0_LibraDocTest_T">T</a>&lt;Token&gt; {
     // Check that `amount` is less than the coin's value
-    Transaction::assert(coin_ref.value &gt;= value, 10);
+    <b>assert</b>(coin_ref.value &gt;= value, 10);
 
     // Split the coin
     coin_ref.value = coin_ref.value - value;
@@ -1606,7 +1606,7 @@ so you cannot "burn" any non-zero amount of
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_LibraDocTest_destroy_zero">destroy_zero</a>&lt;Token&gt;(coin: <a href="#0x0_LibraDocTest_T">T</a>&lt;Token&gt;) {
     <b>let</b> <a href="#0x0_LibraDocTest_T">T</a>&lt;Token&gt; { value } = coin;
-    Transaction::assert(value == 0, 11);
+    <b>assert</b>(value == 0, 11);
 }
 </code></pre>
 

@@ -2,7 +2,7 @@ script {
 fun main() {
     let x = 0;
     let y = if (true) 0 else move x; y;
-    0x0::Transaction::assert(x == 0, 42);
+    assert(x == 0, 42);
 }
 }
 

@@ -18,15 +18,15 @@ module Tester {
         let b1 = move_from<Box>(sender);
         let b2 = move_from<Box>(drop);
 
-        0x0::Transaction::assert(b1.f == 0, 42);
-        0x0::Transaction::assert(b2.f == 0, 42);
+        assert(b1.f == 0, 42);
+        assert(b2.f == 0, 42);
 
         let returned_ref = bump_and_pick(account, &mut b1, &mut b2);
 
         // imagine some more interesting check than these asserts
-        0x0::Transaction::assert(b1.f != 0, 42);
-        0x0::Transaction::assert(b2.f != 0, 42);
-        0x0::Transaction::assert(
+        assert(b1.f != 0, 42);
+        assert(b2.f != 0, 42);
+        assert(
             (returned_ref == &(&mut b1).f) != (returned_ref == &(&mut b2).f),
             42
         );

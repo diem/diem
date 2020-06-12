@@ -3,7 +3,6 @@ address 0x0 {
 module LibraTimestamp {
     use 0x0::CoreAddresses;
     use 0x0::Signer;
-    use 0x0::Transaction;
 
     // A singleton resource holding the current Unix time in microseconds
     resource struct CurrentTimeMicroseconds {
@@ -13,7 +12,7 @@ module LibraTimestamp {
     // Initialize the global wall clock time resource.
     public fun initialize(association: &signer) {
         // Only callable by the Association address
-        Transaction::assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
+        assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
 
         // TODO: Should the initialized value be passed in to genesis?
         let timer = CurrentTimeMicroseconds { microseconds: 0 };
@@ -27,15 +26,15 @@ module LibraTimestamp {
         timestamp: u64
     ) acquires CurrentTimeMicroseconds {
         // Can only be invoked by LibraVM privilege.
-        Transaction::assert(Signer::address_of(account) == CoreAddresses::VM_RESERVED_ADDRESS(), 33);
+        assert(Signer::address_of(account) == CoreAddresses::VM_RESERVED_ADDRESS(), 33);
 
         let global_timer = borrow_global_mut<CurrentTimeMicroseconds>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
         if (proposer == CoreAddresses::VM_RESERVED_ADDRESS()) {
             // NIL block with null address as proposer. Timestamp must be equal.
-            Transaction::assert(timestamp == global_timer.microseconds, 5001);
+            assert(timestamp == global_timer.microseconds, 5001);
         } else {
             // Normal block. Time must advance
-            Transaction::assert(global_timer.microseconds < timestamp, 5001);
+            assert(global_timer.microseconds < timestamp, 5001);
         };
         global_timer.microseconds = timestamp;
     }

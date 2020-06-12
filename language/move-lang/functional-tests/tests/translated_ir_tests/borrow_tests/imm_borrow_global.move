@@ -18,7 +18,7 @@ module A {
 
     public fun split(c1: Coin, amt: u64): (Coin, Coin) {
         let Coin { u } = c1;
-        0x0::Transaction::assert(u >= amt, 42);
+        assert(u >= amt, 42);
         (Coin { u: u - amt }, Coin { u: amt })
     }
 }
@@ -29,7 +29,6 @@ module A {
 module Tester {
     use {{alice}}::A;
     use 0x0::Signer;
-    use 0x0::Transaction;
 
     resource struct Pair { x: A::Coin, y: A::Coin }
 
@@ -41,7 +40,7 @@ module Tester {
 
     public fun test(account: &signer) acquires Pair {
         move_to<Pair>(account, Pair { x: A::new(), y: A::new() });
-        Transaction::assert(test_eq(Signer::address_of(account), Signer::address_of(account)), 42);
+        assert(test_eq(Signer::address_of(account), Signer::address_of(account)), 42);
     }
 
 }

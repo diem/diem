@@ -19,8 +19,8 @@ use 0x0::ValidatorConfig;
 use 0x0::LibraSystem;
 fun main(account: &signer) {
     // assert alice is a validator
-    0x0::Transaction::assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
-    0x0::Transaction::assert(LibraSystem::is_validator({{bob}}) == true, 98);
+    assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
+    assert(LibraSystem::is_validator({{bob}}) == true, 98);
 
     // bob rotates his public key
     ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
@@ -30,7 +30,7 @@ fun main(account: &signer) {
 
     // check bob's public key
     let validator_config = LibraSystem::get_validator_config({{bob}});
-    0x0::Transaction::assert(*ValidatorConfig::get_consensus_pubkey(&validator_config) == x"30", 99);
+    assert(*ValidatorConfig::get_consensus_pubkey(&validator_config) == x"30", 99);
 }
 }
 

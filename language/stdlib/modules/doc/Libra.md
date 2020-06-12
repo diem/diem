@@ -651,7 +651,7 @@ config, and publishes the
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_initialize">initialize</a>(config_account: &signer) {
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x0_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(),
         0
     );
@@ -931,11 +931,11 @@ reference.
     // minting. This will not be a problem in the production <a href="#0x0_Libra">Libra</a> system because coins will
     // be backed with real-world assets, and thus minting will be correspondingly rarer.
     // * 1000000 here because the unit is microlibra
-    Transaction::assert(<a href="#0x0_Libra_value">value</a> &lt;= 1000000000 * 1000000, 11);
+    <b>assert</b>(<a href="#0x0_Libra_value">value</a> &lt;= 1000000000 * 1000000, 11);
     <b>let</b> currency_code = <a href="#0x0_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
     // <b>update</b> market cap <b>resource</b> <b>to</b> reflect minting
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
-    Transaction::assert(info.can_mint, 4);
+    <b>assert</b>(info.can_mint, 4);
     info.total_value = info.total_value + (value <b>as</b> u128);
     // don't emit mint events for synthetic currenices
     <b>if</b> (!info.is_synthetic) {
@@ -1035,7 +1035,7 @@ Create a
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(creator: &signer): <a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt; {
     // TODO: this should check for AssocRoot in the future
     <a href="Association.md#0x0_Association_assert_is_association">Association::assert_is_association</a>(creator);
-    Transaction::assert(<a href="#0x0_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(), 201);
+    <b>assert</b>(<a href="#0x0_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(), 201);
     <a href="#0x0_Libra_Preburn">Preburn</a>&lt;CoinType&gt; { requests: <a href="Vector.md#0x0_Vector_empty">Vector::empty</a>() }
 }
 </code></pre>
@@ -1070,7 +1070,7 @@ this resource for the designated dealer.
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_publish_preburn_to_account">publish_preburn_to_account</a>&lt;CoinType&gt;(
     creator: &signer, account: &signer
 ) <b>acquires</b> <a href="#0x0_Libra_CurrencyInfo">CurrencyInfo</a> {
-    Transaction::assert(!<a href="#0x0_Libra_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;(), 202);
+    <b>assert</b>(!<a href="#0x0_Libra_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;(), 202);
     move_to(account, <a href="#0x0_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(creator))
 }
 </code></pre>
@@ -1489,7 +1489,7 @@ value of the passed-in
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_withdraw">withdraw</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;, amount: u64): <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt; {
     // Check that `amount` is less than the coin's value
-    Transaction::assert(coin.value &gt;= amount, 10);
+    <b>assert</b>(coin.value &gt;= amount, 10);
     coin.value = coin.value - amount;
     <a href="#0x0_Libra">Libra</a> { value: amount }
 }
@@ -1583,7 +1583,7 @@ a
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Libra_destroy_zero">destroy_zero</a>&lt;CoinType&gt;(coin: <a href="#0x0_Libra">Libra</a>&lt;CoinType&gt;) {
     <b>let</b> <a href="#0x0_Libra">Libra</a> { value } = coin;
-    Transaction::assert(value == 0, 5)
+    <b>assert</b>(value == 0, 5)
 }
 </code></pre>
 
@@ -1638,7 +1638,7 @@ adds the currency to the set of
 ): (<a href="#0x0_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;, <a href="#0x0_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;)
 <b>acquires</b> <a href="#0x0_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a> {
     // And only callable by the designated currency address.
-    Transaction::assert(
+    <b>assert</b>(
         <a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x0_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>() &&
         <a href="Association.md#0x0_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x0_Libra_AddCurrency">AddCurrency</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)),
         8
@@ -2050,7 +2050,7 @@ Asserts that
 
 
 <pre><code><b>fun</b> <a href="#0x0_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;() {
-    Transaction::assert(<a href="#0x0_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(), 1);
+    <b>assert</b>(<a href="#0x0_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(), 1);
 }
 </code></pre>
 

@@ -113,11 +113,11 @@
     <b>let</b> tiers = &<b>mut</b> dealer.tiers;
     <b>let</b> number_of_tiers: u64 = <a href="Vector.md#0x0_Vector_length">Vector::length</a>(tiers);
     // INVALID_TIER_ADDITION
-    Txn::assert(number_of_tiers &lt;= 4, 3);
+    <b>assert</b>(number_of_tiers &lt;= 4, 3);
     <b>if</b> (number_of_tiers &gt; 1) {
         <b>let</b> prev_tier = *<a href="Vector.md#0x0_Vector_borrow">Vector::borrow</a>(tiers, number_of_tiers - 1);
         // INVALID_TIER_START
-        Txn::assert(prev_tier &lt; next_tier_upperbound, 4);
+        <b>assert</b>(prev_tier &lt; next_tier_upperbound, 4);
     };
     <a href="Vector.md#0x0_Vector_push_back">Vector::push_back</a>(tiers, next_tier_upperbound);
 }
@@ -173,14 +173,14 @@
     <b>let</b> tiers = &<b>mut</b> dealer.tiers;
     <b>let</b> number_of_tiers = <a href="Vector.md#0x0_Vector_length">Vector::length</a>(tiers);
     // INVALID_TIER_INDEX
-    Txn::assert(tier_index &lt;= 4, 3);
-    Txn::assert(tier_index &lt; number_of_tiers, 3);
+    <b>assert</b>(tier_index &lt;= 4, 3);
+    <b>assert</b>(tier_index &lt; number_of_tiers, 3);
     // Make sure that this new start for the tier is consistent
     // with the tier above it.
     <b>let</b> next_tier = tier_index + 1;
     <b>if</b> (next_tier &lt; number_of_tiers) {
         // INVALID_TIER_START
-        Txn::assert(new_upperbound &lt; *<a href="Vector.md#0x0_Vector_borrow">Vector::borrow</a>(tiers, next_tier), 4);
+        <b>assert</b>(new_upperbound &lt; *<a href="Vector.md#0x0_Vector_borrow">Vector::borrow</a>(tiers, next_tier), 4);
     };
     <b>let</b> tier_mut = <a href="Vector.md#0x0_Vector_borrow_mut">Vector::borrow_mut</a>(tiers, tier_index);
     *tier_mut = new_upperbound;
@@ -279,14 +279,14 @@
     <a href="Association.md#0x0_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(blessed);
 
     // INVALID_MINT_AMOUNT
-    Txn::assert(amount &gt; 0, 6);
+    <b>assert</b>(amount &gt; 0, 6);
 
     // NOT_A_DD
-    Txn::assert(<a href="#0x0_DesignatedDealer_exists_at">exists_at</a>(addr), 1);
+    <b>assert</b>(<a href="#0x0_DesignatedDealer_exists_at">exists_at</a>(addr), 1);
 
     <b>let</b> tier_check = <a href="#0x0_DesignatedDealer_tiered_mint_">tiered_mint_</a>(borrow_global_mut&lt;<a href="#0x0_DesignatedDealer_Dealer">Dealer</a>&gt;(addr), amount, tier_index);
     // INVALID_AMOUNT_FOR_TIER
-    Txn::assert(tier_check, 5);
+    <b>assert</b>(tier_check, 5);
     <a href="Libra.md#0x0_Libra_mint">Libra::mint</a>&lt;CoinType&gt;(blessed, amount)
 }
 </code></pre>

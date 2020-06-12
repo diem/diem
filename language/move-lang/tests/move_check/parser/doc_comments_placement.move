@@ -4,7 +4,7 @@
 /** They may use different limiters. */
 module M {
     /** There can be no doc comment on uses. */
-    use 0x0::Transaction;
+    use 0x0::LibraAccount;
 
     /// This is f.
     fun f() { }

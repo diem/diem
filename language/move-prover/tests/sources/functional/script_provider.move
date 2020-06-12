@@ -12,7 +12,7 @@ module ScriptProvider {
     resource struct Info<T> {}
 
     public fun register<T>() {
-        Transaction::assert(Transaction::sender() == 0x1, 1);
+        assert(Transaction::sender() == 0x1, 1);
         move_to_sender(Info<T>{})
     }
     spec schema RegisterConditions<T> {

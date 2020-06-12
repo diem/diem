@@ -1,7 +1,6 @@
 address 0x0 {
 module LibraConfig {
     use 0x0::CoreAddresses;
-    use 0x0::Transaction;
     use 0x0::Event;
     use 0x0::LibraTimestamp;
     use 0x0::Signer;
@@ -30,7 +29,7 @@ module LibraConfig {
     // This can only be invoked by the config address, and only a single time.
     // Currently, it is invoked in the genesis transaction
     public fun initialize(config_account: &signer, association_account: &signer) {
-        Transaction::assert(Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
+        assert(Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
         Association::grant_privilege<CreateConfigCapability>(association_account, config_account);
         Association::grant_privilege<CreateConfigCapability>(association_account, association_account);
 
@@ -48,7 +47,7 @@ module LibraConfig {
     // Get a copy of `Config` value stored under `addr`.
     public fun get<Config: copyable>(): Config acquires LibraConfig {
         let addr = CoreAddresses::DEFAULT_CONFIG_ADDRESS();
-        Transaction::assert(exists<LibraConfig<Config>>(addr), 24);
+        assert(exists<LibraConfig<Config>>(addr), 24);
         *&borrow_global<LibraConfig<Config>>(addr).payload
     }
 
@@ -56,9 +55,9 @@ module LibraConfig {
     // reconfiguration.
     public fun set<Config: copyable>(account: &signer, payload: Config) acquires LibraConfig, Configuration {
         let addr = CoreAddresses::DEFAULT_CONFIG_ADDRESS();
-        Transaction::assert(exists<LibraConfig<Config>>(addr), 24);
+        assert(exists<LibraConfig<Config>>(addr), 24);
         let signer_address = Signer::address_of(account);
-        Transaction::assert(
+        assert(
             exists<ModifyConfigCapability<Config>>(signer_address)
              || signer_address == Association::root_address(),
             24
@@ -76,7 +75,7 @@ module LibraConfig {
         payload: Config
     ) acquires LibraConfig, Configuration {
         let addr = CoreAddresses::DEFAULT_CONFIG_ADDRESS();
-        Transaction::assert(exists<LibraConfig<Config>>(addr), 24);
+        assert(exists<LibraConfig<Config>>(addr), 24);
         let config = borrow_global_mut<LibraConfig<Config>>(addr);
         config.payload = payload;
 
@@ -89,7 +88,7 @@ module LibraConfig {
         config_account: &signer,
         payload: Config,
     ): ModifyConfigCapability<Config> {
-        Transaction::assert(
+        assert(
             Association::has_privilege<CreateConfigCapability>(Signer::address_of(config_account)),
             1
         );
@@ -104,7 +103,7 @@ module LibraConfig {
 
     // Publish a new config item. Only the config address can modify such config.
     public fun publish_new_config<Config: copyable>(config_account: &signer, payload: Config) {
-        Transaction::assert(
+        assert(
             Association::has_privilege<CreateConfigCapability>(Signer::address_of(config_account)),
             1
         );
@@ -122,7 +121,7 @@ module LibraConfig {
         payload: Config,
         delegate: address,
     ) {
-        Transaction::assert(
+        assert(
             Association::has_privilege<CreateConfigCapability>(Signer::address_of(config_account)),
             1
         );
@@ -141,7 +140,7 @@ module LibraConfig {
 
     public fun reconfigure(account: &signer) acquires Configuration {
         // Only callable by association address or by the VM internally.
-        Transaction::assert(
+        assert(
             Association::has_privilege<Self::CreateConfigCapability>(Signer::address_of(account)),
             1
         );
@@ -160,7 +159,7 @@ module LibraConfig {
        // correspondence between system reconfigurations and emitted ReconfigurationEvents.
 
        let current_block_time = LibraTimestamp::now_microseconds();
-       Transaction::assert(current_block_time > config_ref.last_reconfiguration_time, 23);
+       assert(current_block_time > config_ref.last_reconfiguration_time, 23);
        config_ref.last_reconfiguration_time = current_block_time;
 
        emit_reconfiguration_event();

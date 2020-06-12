@@ -198,7 +198,7 @@ Aborts if the address of
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_initialize">initialize</a>(association: &signer) {
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="#0x0_Association_root_address">root_address</a>(), 1000);
+    <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) == <a href="#0x0_Association_root_address">root_address</a>(), 1000);
     move_to(association, <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;<a href="#0x0_Association">Association</a>&gt;{ });
     move_to(association, <a href="#0x0_Association_Root">Root</a>{ });
 }
@@ -316,8 +316,8 @@ Aborts if
 <b>acquires</b> <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a> {
     <a href="#0x0_Association_assert_is_root">assert_is_root</a>(association);
     // root should not be able <b>to</b> remove its own privileges
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) != addr, 1005);
-    Transaction::assert(exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr), 1004);
+    <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(association) != addr, 1005);
+    <b>assert</b>(exists&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr), 1004);
     <a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;{ } = move_from&lt;<a href="#0x0_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;Privilege&gt;&gt;(addr);
 }
 </code></pre>
@@ -368,7 +368,7 @@ Assert that the sender is the root association account.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_is_root">assert_is_root</a>(account: &signer) {
-    Transaction::assert(exists&lt;<a href="#0x0_Association_Root">Root</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), 1001);
+    <b>assert</b>(exists&lt;<a href="#0x0_Association_Root">Root</a>&gt;(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(account)), 1001);
 }
 </code></pre>
 
@@ -419,7 +419,7 @@ Return whether the account at
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_Association_assert_account_is_blessed">assert_account_is_blessed</a>(sender_account: &signer) {
     // Verify that the sender is treasury compliant account
-    Transaction::assert(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(sender_account) == <a href="#0x0_Association_treasury_compliance_account">treasury_compliance_account</a>(), 0)
+    <b>assert</b>(<a href="Signer.md#0x0_Signer_address_of">Signer::address_of</a>(sender_account) == <a href="#0x0_Association_treasury_compliance_account">treasury_compliance_account</a>(), 0)
 }
 </code></pre>
 
@@ -494,7 +494,7 @@ Assert that
 
 
 <pre><code><b>fun</b> <a href="#0x0_Association_assert_addr_is_association">assert_addr_is_association</a>(addr: address) {
-    Transaction::assert(<a href="#0x0_Association_addr_is_association">addr_is_association</a>(addr), 1002);
+    <b>assert</b>(<a href="#0x0_Association_addr_is_association">addr_is_association</a>(addr), 1002);
 }
 </code></pre>
 

@@ -11,6 +11,6 @@ fun main() {
             z = z + 1;
         }
     };
-    0x0::Transaction::assert(z == 21, 42)
+    assert(z == 21, 42)
 }
 }

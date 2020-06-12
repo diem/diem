@@ -1,5 +1,4 @@
 script {
-use 0x0::Transaction;
 use 0x0::Vector;
 
 fun main() {
@@ -8,6 +7,6 @@ fun main() {
     while (!Vector::is_empty(&v)) {
         sum = sum + (Vector::pop_back(&mut v) as u64);
     };
-    Transaction::assert(sum == 10, sum);
+    assert(sum == 10, sum);
 }
 }

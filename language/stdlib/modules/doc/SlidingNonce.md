@@ -65,7 +65,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x0_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64) <b>acquires</b> <a href="#0x0_SlidingNonce">SlidingNonce</a> {
     <b>let</b> code = <a href="#0x0_SlidingNonce_try_record_nonce">try_record_nonce</a>(account, seq_nonce);
-    Transaction::assert(code == 0, code);
+    <b>assert</b>(code == 0, code);
 }
 </code></pre>
 

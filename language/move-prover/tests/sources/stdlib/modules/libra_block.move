@@ -33,7 +33,7 @@ module LibraBlock {
     // Currently, it is invoked in the genesis transaction
     public fun initialize_block_metadata() {
       // Only callable by the Association address
-      Transaction::assert(Transaction::sender() == 0xA550C18, 1);
+      assert(Transaction::sender() == 0xA550C18, 1);
 
       move_to_sender<BlockMetadata>(BlockMetadata {
         height: 0,
@@ -53,7 +53,7 @@ module LibraBlock {
         proposer: address
     ) acquires BlockMetadata {
       // Can only be invoked by LibraVM privilege.
-      Transaction::assert(Transaction::sender() == 0x0, 33);
+      assert(Transaction::sender() == 0x0, 33);
 
       process_block_prologue(round, timestamp, previous_block_votes, proposer);
 
@@ -72,7 +72,7 @@ module LibraBlock {
         let block_metadata_ref = borrow_global_mut<BlockMetadata>(0xA550C18);
 
         // TODO: Figure out a story for errors in the system transactions.
-        if(proposer != 0x0) Transaction::assert(LibraSystem::is_validator(proposer), 5002);
+        if(proposer != 0x0) assert(LibraSystem::is_validator(proposer), 5002);
         LibraTimestamp::update_global_time(proposer, timestamp);
         block_metadata_ref.height = block_metadata_ref.height + 1;
         LibraAccount::emit_event<NewBlockEvent>(

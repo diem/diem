@@ -9,6 +9,6 @@ fun main() {
     } else {
         ref = &y;
     };
-    0x0::Transaction::assert(*ref == 1, 42);
+    assert(*ref == 1, 42);
 }
 }

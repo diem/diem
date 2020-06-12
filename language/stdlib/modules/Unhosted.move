@@ -5,7 +5,6 @@ module Unhosted {
     use 0x0::AccountLimits;
     use 0x0::Signer;
     use 0x0::Testnet;
-    use 0x0::Transaction;
 
     // An unhosted account is subject to account holding/velocity limits.
     // This holds the metadata about the account transactions during a
@@ -14,7 +13,7 @@ module Unhosted {
     }
 
     public fun publish_global_limits_definition(account: &signer) {
-        Transaction::assert(Signer::address_of(account) == limits_addr(), 100042);
+        assert(Signer::address_of(account) == limits_addr(), 100042);
         // These are limits for testnet _only_.
         AccountLimits::publish_unrestricted_limits(account);
         /*AccountLimits::publish_limits_definition(
@@ -27,7 +26,7 @@ module Unhosted {
     }
 
     public fun create(): Unhosted {
-        Transaction::assert(Testnet::is_testnet(), 10041);
+        assert(Testnet::is_testnet(), 10041);
         Unhosted {  }
     }
 
