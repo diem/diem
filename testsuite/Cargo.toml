@@ -14,7 +14,7 @@ edition = "2018"
 # should have their crates listed as dev-dependencies.
 [dev-dependencies]
 num = "0.2.1"
-num-traits = "0.2.11"
+num-traits = "0.2.12"
 rust_decimal = "1.6.0"
 statistical = "1.0.0"
 
