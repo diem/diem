@@ -454,6 +454,23 @@
 <span id="454">454</span>
 <span id="455">455</span>
 <span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -501,6 +518,8 @@
     <span class="ident">CreateWaypoint</span>(<span class="kw">crate</span>::<span class="ident">waypoint</span>::<span class="ident">CreateWaypoint</span>),
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Retrieves data from a store to produce genesis&quot;</span>)]</span>
     <span class="ident">Genesis</span>(<span class="kw">crate</span>::<span class="ident">genesis</span>::<span class="ident">Genesis</span>),
+    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Insert a waypoint&quot;</span>)]</span>
+    <span class="ident">InsertWaypoint</span>(<span class="kw">crate</span>::<span class="ident">waypoint</span>::<span class="ident">InsertWaypoint</span>),
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Submits an Ed25519PublicKey for the operator&quot;</span>)]</span>
     <span class="ident">OperatorKey</span>(<span class="kw">crate</span>::<span class="ident">key</span>::<span class="ident">OperatorKey</span>),
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Submits an Ed25519PublicKey for the owner&quot;</span>)]</span>
@@ -518,6 +537,7 @@
     <span class="ident">AssociationKey</span>,
     <span class="ident">CreateWaypoint</span>,
     <span class="ident">Genesis</span>,
+    <span class="ident">InsertWaypoint</span>,
     <span class="ident">OperatorKey</span>,
     <span class="ident">OwnerKey</span>,
     <span class="ident">SetLayout</span>,
@@ -531,6 +551,7 @@
             <span class="ident">Command</span>::<span class="ident">AssociationKey</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">AssociationKey</span>,
             <span class="ident">Command</span>::<span class="ident">CreateWaypoint</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">CreateWaypoint</span>,
             <span class="ident">Command</span>::<span class="ident">Genesis</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">Genesis</span>,
+            <span class="ident">Command</span>::<span class="ident">InsertWaypoint</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">InsertWaypoint</span>,
             <span class="ident">Command</span>::<span class="ident">OperatorKey</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">OperatorKey</span>,
             <span class="ident">Command</span>::<span class="ident">OwnerKey</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">OwnerKey</span>,
             <span class="ident">Command</span>::<span class="ident">SetLayout</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">SetLayout</span>,
@@ -546,6 +567,7 @@
             <span class="ident">CommandName</span>::<span class="ident">AssociationKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;association-key&quot;</span>,
             <span class="ident">CommandName</span>::<span class="ident">CreateWaypoint</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create-waypoint&quot;</span>,
             <span class="ident">CommandName</span>::<span class="ident">Genesis</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;genesis&quot;</span>,
+            <span class="ident">CommandName</span>::<span class="ident">InsertWaypoint</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;insert-waypoint&quot;</span>,
             <span class="ident">CommandName</span>::<span class="ident">OperatorKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;operator-key&quot;</span>,
             <span class="ident">CommandName</span>::<span class="ident">OwnerKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;owner-key&quot;</span>,
             <span class="ident">CommandName</span>::<span class="ident">SetLayout</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;set-layout&quot;</span>,
@@ -562,6 +584,7 @@
             <span class="ident">Command</span>::<span class="ident">AssociationKey</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">association_key</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
             <span class="ident">Command</span>::<span class="ident">CreateWaypoint</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">create_waypoint</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
             <span class="ident">Command</span>::<span class="ident">Genesis</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.<span class="ident">genesis</span>().<span class="ident">unwrap</span>()),
+            <span class="ident">Command</span>::<span class="ident">InsertWaypoint</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">insert_waypoint</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
             <span class="ident">Command</span>::<span class="ident">OperatorKey</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">operator_key</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
             <span class="ident">Command</span>::<span class="ident">OwnerKey</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">owner_key</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
             <span class="ident">Command</span>::<span class="ident">SetLayout</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">set_layout</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
@@ -598,6 +621,17 @@
         } <span class="kw">else</span> {
             <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedCommand</span>(
                 <span class="ident">CommandName</span>::<span class="ident">Genesis</span>,
+                <span class="ident">CommandName</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>),
+            ))
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_waypoint</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Waypoint</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Command</span>::<span class="ident">InsertWaypoint</span>(<span class="ident">insert_waypoint</span>) <span class="op">=</span> <span class="self">self</span> {
+            <span class="ident">insert_waypoint</span>.<span class="ident">execute</span>()
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedCommand</span>(
+                <span class="ident">CommandName</span>::<span class="ident">InsertWaypoint</span>,
                 <span class="ident">CommandName</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>),
             ))
         }

@@ -31,6 +31,8 @@
 <span id="31">31</span>
 <span id="32">32</span>
 <span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -46,17 +48,19 @@
     <span class="ident">BackendMissingBackendKey</span>,
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Backend parsing error: {0}&quot;</span>)]</span>
     <span class="ident">BackendParsingError</span>(<span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Invalid arguments: {0}&quot;</span>)]</span>
+    <span class="ident">CommandArgumentError</span>(<span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Local storage unavailable, please check your configuration: {0}&quot;</span>)]</span>
     <span class="ident">LocalStorageUnavailable</span>(<span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to read, {0}, from local storage: {1}&quot;</span>)]</span>
     <span class="ident">LocalStorageReadError</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to sign {0} with {1} using local storage: {2}&quot;</span>)]</span>
     <span class="ident">LocalStorageSigningError</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">String</span>),
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to write, {0}, to local storage: {0}&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to write, {0}, to local storage: {1}&quot;</span>)]</span>
     <span class="ident">LocalStorageWriteError</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">String</span>),
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to read, {0}, from remote storage: {0}&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to read, {0}, from remote storage: {1}&quot;</span>)]</span>
     <span class="ident">RemoteStorageReadError</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">String</span>),
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to write, {0}, to remote storage: {0}&quot;</span>)]</span>
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Failed to write, {0}, to remote storage: {1}&quot;</span>)]</span>
     <span class="ident">RemoteStorageWriteError</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Remote storage unavailable, please check your configuration: {0}&quot;</span>)]</span>
     <span class="ident">RemoteStorageUnavailable</span>(<span class="ident">String</span>),
