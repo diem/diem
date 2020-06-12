@@ -36,6 +36,7 @@ use futures::{
     future::{BoxFuture, FutureExt},
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
+use futures_util::stream::Fuse;
 use libra_config::network_id::NetworkContext;
 use libra_crypto::x25519;
 use libra_logger::{prelude::*, StructuredLogEntry};
@@ -54,7 +55,12 @@ use std::{
     sync::{Arc, RwLock},
     time::{Duration, Instant},
 };
-use tokio::time;
+use tokio::{
+    runtime::Handle,
+    time,
+    time::{interval, Interval},
+};
+use tokio_retry::strategy::ExponentialBackoff;
 
 #[cfg(test)]
 mod test;
@@ -677,4 +683,68 @@ where
     fn next_backoff_delay(&mut self, max_delay: Duration) -> Duration {
         min(max_delay, self.backoff.next().unwrap_or(max_delay))
     }
+}
+
+/// The configuration fields for ConnectivityManager
+pub struct ConnectivityManagerBuilderConfig {
+    network_context: Arc<NetworkContext>,
+    eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+    seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
+    connectivity_check_interval_ms: u64,
+    backoff_base: u64,
+    max_connection_delay_ms: u64,
+    connection_reqs_tx: ConnectionRequestSender,
+    connection_notifs_rx: conn_notifs_channel::Receiver,
+    requests_rx: channel::Receiver<ConnectivityRequest>,
+    connection_limit: Option<usize>,
+}
+
+impl ConnectivityManagerBuilderConfig {
+    pub fn new(
+        network_context: Arc<NetworkContext>,
+        eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+        seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
+        connectivity_check_interval_ms: u64,
+        backoff_base: u64,
+        max_connection_delay_ms: u64,
+        connection_reqs_tx: ConnectionRequestSender,
+        connection_notifs_rx: conn_notifs_channel::Receiver,
+        requests_rx: channel::Receiver<ConnectivityRequest>,
+        connection_limit: Option<usize>,
+    ) -> Self {
+        Self {
+            network_context,
+            eligible,
+            seed_peers,
+            connectivity_check_interval_ms,
+            backoff_base,
+            max_connection_delay_ms,
+            connection_reqs_tx,
+            connection_notifs_rx,
+            requests_rx,
+            connection_limit,
+        }
+    }
+}
+
+pub type ConnectivityManagerService = ConnectivityManager<Fuse<Interval>, ExponentialBackoff>;
+
+pub fn build_connectivity_manager_from_config(
+    executor: &Handle,
+    config: ConnectivityManagerBuilderConfig,
+) -> ConnectivityManagerService {
+    executor.enter(|| {
+        ConnectivityManager::new(
+            config.network_context,
+            config.eligible,
+            config.seed_peers,
+            interval(Duration::from_millis(config.connectivity_check_interval_ms)).fuse(),
+            config.connection_reqs_tx,
+            config.connection_notifs_rx,
+            config.requests_rx,
+            ExponentialBackoff::from_millis(config.backoff_base).factor(1000),
+            config.max_connection_delay_ms,
+            config.connection_limit,
+        )
+    })
 }

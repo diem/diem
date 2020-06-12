@@ -10,7 +10,6 @@
 //! connect to or accept connections from an end-point running in authenticated mode as
 //! long as the latter is in its trusted peers set.
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::stream::StreamExt;
 use libra_config::{
     chain_id::ChainId,
     config::{DiscoveryMethod, NetworkConfig, RoleType, HANDSHAKE_VERSION},
@@ -23,7 +22,10 @@ use libra_network_address::NetworkAddress;
 use libra_types::{waypoint::Waypoint, PeerId};
 use netcore::transport::{memory, Transport};
 use network::{
-    connectivity_manager::{ConnectivityManager, ConnectivityRequest},
+    connectivity_manager,
+    connectivity_manager::{
+        ConnectivityManagerBuilderConfig, ConnectivityManagerService, ConnectivityRequest,
+    },
     constants, counters,
     peer_manager::{
         conn_notifs_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
@@ -44,14 +46,9 @@ use std::{
     collections::HashMap,
     num::NonZeroUsize,
     sync::{Arc, RwLock},
-    time::Duration,
 };
 use storage_interface::DbReader;
-use tokio::{
-    runtime::{Builder, Handle, Runtime},
-    time::interval,
-};
-use tokio_retry::strategy::ExponentialBackoff;
+use tokio::runtime::{Builder, Handle, Runtime};
 
 #[derive(Debug)]
 pub enum AuthenticationMode {
@@ -119,10 +116,12 @@ pub struct NetworkBuilder {
     /// For now full node connections are limited by
     max_fullnode_connections: usize,
 
-    health_checker_cfg: Option<HealthCheckerBuilderConfig>,
-    health_checker: Option<HealthCheckerService>,
+    connectivity_manager_config: Option<ConnectivityManagerBuilderConfig>,
+    connectivity_manager: Option<ConnectivityManagerService>,
     discovery_cfg: Option<DiscoveryBuilderConfig>,
     discovery: Option<DiscoveryService>,
+    health_checker_cfg: Option<HealthCheckerBuilderConfig>,
+    health_checker: Option<HealthCheckerService>,
 }
 
 impl NetworkBuilder {
@@ -175,10 +174,12 @@ impl NetworkBuilder {
             max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
             max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
+            connectivity_manager: None,
+            connectivity_manager_config: None,
+            discovery: None,
+            discovery_cfg: None,
             health_checker_cfg: None,
             health_checker: None,
-            discovery_cfg: None,
-            discovery: None,
         }
     }
 
@@ -305,31 +306,48 @@ impl NetworkBuilder {
             &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
         );
         self.conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx);
-        let trusted_peers = self.trusted_peers.clone();
-        let seed_peers = self.seed_peers.clone();
-        let max_connection_delay_ms = self.max_connection_delay_ms;
-        let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
-        let conn_mgr = self.executor.enter(|| {
-            let connection_limit = if let RoleType::FullNode = self.network_context.role() {
-                Some(self.max_fullnode_connections)
-            } else {
-                None
-            };
-            ConnectivityManager::new(
-                self.network_context.clone(),
-                trusted_peers,
-                seed_peers,
-                interval(Duration::from_millis(connectivity_check_interval_ms)).fuse(),
-                ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
-                pm_conn_mgr_notifs_rx,
-                conn_mgr_reqs_rx,
-                ExponentialBackoff::from_millis(2).factor(1000),
-                max_connection_delay_ms,
-                connection_limit,
-            )
-        });
-        self.executor.spawn(conn_mgr.start());
+
+        let connection_limit = if let RoleType::FullNode = self.network_context.role() {
+            Some(self.max_fullnode_connections)
+        } else {
+            None
+        };
+        let config = ConnectivityManagerBuilderConfig::new(
+            self.network_context(),
+            self.trusted_peers.clone(),
+            self.seed_peers.clone(),
+            self.connectivity_check_interval_ms,
+            2, // Hard-coded constant
+            self.max_connection_delay_ms,
+            ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
+            pm_conn_mgr_notifs_rx,
+            conn_mgr_reqs_rx,
+            connection_limit,
+        );
+
+        self.connectivity_manager_config = Some(config);
+        self.build_connectivity_manager()
+    }
+
+    /// Build the ConnectivityManager from the provided configuration.
+    fn build_connectivity_manager(&mut self) -> &mut Self {
+        if let Some(config) = self.connectivity_manager_config.take() {
+            let conn_mgr = connectivity_manager::build_connectivity_manager_from_config(
+                &self.executor,
+                config,
+            );
+            self.connectivity_manager = Some(conn_mgr);
+        }
+        self.start_connectivity_manager()
+    }
+
+    /// Start the ConnectivityManager
+    fn start_connectivity_manager(&mut self) -> &mut Self {
+        if let Some(conn_mgr) = self.connectivity_manager.take() {
+            self.executor.spawn(conn_mgr.start());
+            debug!("Started ConnectivityManager");
+        }
         self
     }
 
