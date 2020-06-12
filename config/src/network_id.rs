@@ -89,7 +89,7 @@ impl fmt::Display for NetworkId {
 impl NetworkId {
     /// Convenience function to specify the VFN network
     pub fn vfn_network() -> NetworkId {
-        NetworkId::private_network("VFN")
+        NetworkId::private_network("vfn")
     }
 
     /// Creates a private network so we don't have to keep track of `NetworkInfo` outside of here.
@@ -101,7 +101,7 @@ impl NetworkId {
 }
 
 #[derive(Serialize, Deserialize)]
-#[serde(tag = "type", rename = "NetworkId")]
+#[serde(rename = "NetworkId", rename_all = "snake_case", tag = "type")]
 enum HumanReadableNetworkId {
     Validator,
     Public,

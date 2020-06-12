@@ -1,0 +1,18 @@
+base:
+    data_dir: "/opt/libra/data/common"
+    role: "full_node"
+    waypoint:
+        type: "from_config"
+        waypoint:
+            version: 0
+            value: "01234567890ABCDEFFEDCA098765421001234567890ABCDEFFEDCA0987654210"
+
+execution:
+    genesis_file_location: "relative/path/to/genesis"
+
+full_node_networks:
+    - discovery_method:
+        type: "onchain"
+      listen_address: "/ip4/0.0.0.0/tcp/6180"
+      network_id:
+          type: "public"

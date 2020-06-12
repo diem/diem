@@ -386,6 +386,10 @@ impl RootPath {
 mod test {
     use super::*;
 
+    const PUBLIC_FULL_NODE: &str = "src/config/test_data/public_full_node.config.yaml";
+    const VALIDATOR: &str = "src/config/test_data/validator.config.yaml";
+    const VALIDATOR_FULL_NODE: &str = "src/config/test_data/validator_full_node.config.yaml";
+
     #[test]
     fn verify_role_type_conversion() {
         // Verify relationship between RoleType and as_string() is reflexive
@@ -405,5 +409,17 @@ mod test {
             Err(ParseRoleError(_)) => { /* the expected error was thrown! */ }
             _ => panic!("A ParseRoleError should have been thrown on the invalid role type!"),
         }
+    }
+
+    #[test]
+    fn verify_configs() {
+        let _ = vec![
+            PUBLIC_FULL_NODE,
+            VALIDATOR,
+            VALIDATOR_FULL_NODE,
+        ].iter().map(|path| {
+            NodeConfig::load_config(PathBuf::from(path)).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+        })
+        .collect::<Vec<_>>();
     }
 }
