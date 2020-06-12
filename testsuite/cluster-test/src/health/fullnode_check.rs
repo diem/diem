@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+use libra_logger::{info, warn};
 use crate::prometheus::Prometheus;
 use crate::util::unix_timestamp_now;
 use crate::{
@@ -55,11 +56,13 @@ impl FullNodeHealthCheck {
 pub fn node_index(peer_name: String) -> String {
     info!("hhhhhh node_index = {:?}, version = {:?}", peer_name);
     if let Some(cap) = VAL_REGEX.captures(peer_name.as_ref()) {
+        info!("hhhhhh node_index cap1 = {:?}", cap);
         if let Some(cap) = cap.get(1) {
             return cap.as_str().to_string();
         }
     }
     if let Some(cap) = FULLNODE_REGEX.captures(peer_name.as_ref()) {
+        info!("hhhhhh node_index cap2 = {:?}", cap);
         if let Some(cap) = cap.get(1) {
             return cap.as_str().to_string();
         }
