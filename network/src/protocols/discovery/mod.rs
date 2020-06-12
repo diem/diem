@@ -470,6 +470,9 @@ pub struct DiscoveryBuilderConfig {
     network_context: Arc<NetworkContext>,
     self_addrs: Vec<NetworkAddress>,
     discovery_interval_ms: u64,
+    network_reqs_tx: DiscoveryNetworkSender,
+    network_notifs_rx: DiscoveryNetworkEvents,
+    conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
 }
 
 impl DiscoveryBuilderConfig {
@@ -477,11 +480,17 @@ impl DiscoveryBuilderConfig {
         network_context: Arc<NetworkContext>,
         self_addrs: Vec<NetworkAddress>,
         discovery_interval_ms: u64,
+        network_reqs_tx: DiscoveryNetworkSender,
+        network_notifs_rx: DiscoveryNetworkEvents,
+        conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     ) -> Self {
         Self {
             network_context,
             self_addrs,
             discovery_interval_ms,
+            network_reqs_tx,
+            network_notifs_rx,
+            conn_mgr_reqs_tx,
         }
     }
 }
@@ -492,18 +501,15 @@ pub type DiscoveryService = Discovery<Fuse<Interval>>;
 pub fn build_discovery_from_config(
     executor: &Handle,
     config: DiscoveryBuilderConfig,
-    network_reqs_tx: DiscoveryNetworkSender,
-    network_notifs_rx: DiscoveryNetworkEvents,
-    conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
 ) -> DiscoveryService {
     executor.enter(|| {
         Discovery::new(
             config.network_context,
             config.self_addrs,
             interval(Duration::from_millis(config.discovery_interval_ms)).fuse(),
-            network_reqs_tx,
-            network_notifs_rx,
-            conn_mgr_reqs_tx,
+            config.network_reqs_tx,
+            config.network_notifs_rx,
+            config.conn_mgr_reqs_tx,
         )
     })
 }

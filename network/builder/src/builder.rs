@@ -30,7 +30,7 @@ use network::{
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     protocols::{
-        discovery::{self, DiscoveryBuilderConfig},
+        discovery::{self, DiscoveryBuilderConfig, DiscoveryService},
         health_checker::{self, HealthCheckerBuilderConfig, HealthCheckerService},
         network::{NewNetworkEvents, NewNetworkSender},
         wire::handshake::v1::SupportedProtocols,
@@ -121,6 +121,8 @@ pub struct NetworkBuilder {
 
     health_checker_cfg: Option<HealthCheckerBuilderConfig>,
     health_checker: Option<HealthCheckerService>,
+    discovery_cfg: Option<DiscoveryBuilderConfig>,
+    discovery: Option<DiscoveryService>,
 }
 
 impl NetworkBuilder {
@@ -175,6 +177,8 @@ impl NetworkBuilder {
             max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
             health_checker_cfg: None,
             health_checker: None,
+            discovery_cfg: None,
+            discovery: None,
         }
     }
 
@@ -368,17 +372,33 @@ impl NetworkBuilder {
 
         let addrs = vec![advertised_address];
         let discovery_interval_ms = self.discovery_interval_ms;
-        let discovery_cfg =
-            DiscoveryBuilderConfig::new(self.network_context.clone(), addrs, discovery_interval_ms);
-        let discovery = discovery::build_discovery_from_config(
-            &self.executor,
-            discovery_cfg,
+        let discovery_cfg = DiscoveryBuilderConfig::new(
+            self.network_context.clone(),
+            addrs,
+            discovery_interval_ms,
             discovery_network_tx,
             discovery_network_rx,
             conn_mgr_reqs_tx,
         );
-        self.executor.spawn(discovery.start());
-        debug!("{} Started discovery protocol actor", self.network_context);
+
+        self.discovery_cfg = Some(discovery_cfg);
+
+        self.build_gossip_discovery()
+    }
+
+    fn build_gossip_discovery(&mut self) -> &mut Self {
+        if let Some(discovery_cfg) = self.discovery_cfg.take() {
+            let discovery = discovery::build_discovery_from_config(&self.executor, discovery_cfg);
+            self.discovery = Some(discovery);
+        }
+        self.start_gossip_discovery()
+    }
+
+    fn start_gossip_discovery(&mut self) -> &mut Self {
+        if let Some(discovery) = self.discovery.take() {
+            self.executor.spawn(discovery.start());
+            debug!("{} Started discovery protocol actor", self.network_context);
+        }
         self
     }
 
