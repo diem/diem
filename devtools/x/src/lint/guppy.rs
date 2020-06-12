@@ -52,7 +52,7 @@ impl<'cfg> ProjectLinter for BannedDeps<'cfg> {
             // Look at the reverse direct dependencies of this package.
             for link in package.reverse_direct_links() {
                 let from = link.from();
-                if let Some(workspace_path) = from.workspace_path() {
+                if let Some(workspace_path) = from.source().workspace_path() {
                     out.write_kind(
                         LintKind::Package {
                             name: from.name(),

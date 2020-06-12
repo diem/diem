@@ -11,15 +11,13 @@ use guppy::{
     PackageId,
 };
 use serde::Deserialize;
-use std::{collections::HashSet, fs, path::Path};
+use std::{fs, path::Path};
 use toml::de;
 
 /// Information collected about a subset of members of a workspace.
 ///
 /// Some subsets of this workspace have special properties that are enforced through linters.
 pub struct WorkspaceSubset<'g> {
-    package_graph: &'g PackageGraph,
-    members: HashSet<&'g PackageId>,
     build_set: CargoSet<'g>,
     unified_set: FeatureSet<'g>,
 }
@@ -33,25 +31,7 @@ impl<'g> WorkspaceSubset<'g> {
         feature_filter: impl FeatureFilter<'g>,
         cargo_opts: &CargoOptions<'_>,
     ) -> Result<Self, guppy::Error> {
-        // For each workspace member, match the path to a package ID.
-        let workspace = package_graph.workspace();
-        let members = paths
-            .into_iter()
-            .map(|path| {
-                Ok(workspace
-                    .member_by_path(path)
-                    .ok_or_else(|| {
-                        // TODO: should have a custom error for this (move into guppy?)
-                        guppy::Error::UnknownWorkspaceName(format!(
-                            "unknown workspace member by path: {}",
-                            path.display()
-                        ))
-                    })?
-                    .id())
-            })
-            .collect::<Result<HashSet<_>, guppy::Error>>()?;
-        let package_query = package_graph.query_forward(members.iter().copied())?;
-
+        let package_query = package_graph.query_workspace_paths(paths)?;
         // Use the Cargo resolver to figure out which packages will be included.
         let build_set = package_graph
             .feature_graph()
@@ -60,8 +40,6 @@ impl<'g> WorkspaceSubset<'g> {
         let unified_set = build_set.host_features().union(build_set.target_features());
 
         Ok(Self {
-            package_graph,
-            members,
             build_set,
             unified_set,
         })
@@ -102,9 +80,19 @@ impl<'g> WorkspaceSubset<'g> {
 
     /// Returns the status of the given package ID in the subset.
     pub fn status_of(&self, package_id: &PackageId) -> WorkspaceStatus {
-        if self.members.contains(package_id) {
+        if self
+            .build_set
+            .original_query()
+            .starts_from_package(package_id)
+            .unwrap_or_else(|_| false)
+        {
             WorkspaceStatus::RootMember
-        } else if self.unified_set.features_for(package_id).is_some() {
+        } else if self
+            .unified_set
+            .features_for(package_id)
+            .unwrap_or_else(|_| None)
+            .is_some()
+        {
             WorkspaceStatus::Dependency
         } else {
             WorkspaceStatus::Absent
@@ -113,12 +101,7 @@ impl<'g> WorkspaceSubset<'g> {
 
     /// Returns a list of root packages in this subset, ignoring transitive dependencies.
     pub fn root_members<'a>(&'a self) -> impl Iterator<Item = PackageMetadata<'g>> + 'a {
-        let package_graph = self.package_graph;
-        self.members.iter().map(move |package_id| {
-            package_graph
-                .metadata(package_id)
-                .expect("valid package ID")
-        })
+        self.build_set.original_query().initial_packages()
     }
 
     /// Returns the set of packages and features that would be built from this subset.
@@ -127,15 +110,6 @@ impl<'g> WorkspaceSubset<'g> {
     /// outside it.
     pub fn build_set(&self) -> &CargoSet<'g> {
         &self.build_set
-    }
-
-    /// Returns the set of packages and features that would be built from this subset, not making a
-    /// distinction between host and target features.
-    ///
-    /// This contains information about transitive dependencies, both within the workspace and
-    /// outside it.
-    pub fn unified_set(&self) -> &FeatureSet<'g> {
-        &self.unified_set
     }
 }
 
