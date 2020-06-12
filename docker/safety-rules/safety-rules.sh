@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 set -e
 
+# Parse parameters and execute config builder
 declare -a params
 if [ -n "${CFG_BASE_CONFIG}" ]; then # Path to base config
 	    echo "${CFG_BASE_CONFIG}" > /opt/libra/etc/base.config.toml
@@ -38,4 +39,15 @@ fi
     --output-dir /opt/libra/etc/ \
     ${params[@]}
 
-exec /opt/libra/bin/safety-rules /opt/libra/etc/node.config.toml
+# Parse logger environment variables and execute safety rules
+declare logger
+if [ -n "${STRUCT_LOGGER}" ]; then
+    if [ -n "${STRUCT_LOGGER_LOCATION}" ]; then
+      logger="env ${STRUCT_LOGGER}=${STRUCT_LOGGER_LOCATION}"
+    else
+      echo "STRUCT_LOGGER has been set but STRUCT_LOGGER_LOCATION is not set!"
+      exit 1
+    fi
+fi
+
+exec ${logger} /opt/libra/bin/safety-rules /opt/libra/etc/node.config.toml
