@@ -10,7 +10,10 @@
 //! connect to or accept connections from an end-point running in authenticated mode as
 //! long as the latter is in its trusted peers set.
 use crate::{
-    connectivity_manager::{ConnectivityManager, ConnectivityRequest},
+    connectivity_manager,
+    connectivity_manager::{
+        ConnectivityManagerBuilderConfig, ConnectivityManagerService, ConnectivityRequest,
+    },
     counters,
     peer_manager::{
         conn_notifs_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
@@ -44,7 +47,6 @@ use std::{
     time::Duration,
 };
 use tokio::{runtime::Handle, time::interval};
-use tokio_retry::strategy::ExponentialBackoff;
 
 // NB: Almost all of these values are educated guesses, and not determined using any empirical
 // data. If you run into a limit and believe that it is unreasonably tight, please submit a PR
@@ -126,6 +128,9 @@ pub struct NetworkBuilder {
     max_concurrent_network_reqs: usize,
     max_concurrent_network_notifs: usize,
     max_connection_delay_ms: u64,
+
+    connectivity_manager_config: Option<ConnectivityManagerBuilderConfig>,
+    connectivity_manager: Option<ConnectivityManagerService>,
 }
 
 impl NetworkBuilder {
@@ -175,6 +180,8 @@ impl NetworkBuilder {
             max_concurrent_network_reqs: MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: MAX_CONNECTION_DELAY_MS,
+            connectivity_manager_config: None,
+            connectivity_manager: None,
         }
     }
 
@@ -301,25 +308,42 @@ impl NetworkBuilder {
             &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
         );
         self.conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx);
-        let trusted_peers = self.trusted_peers.clone();
-        let seed_peers = self.seed_peers.clone();
-        let max_connection_delay_ms = self.max_connection_delay_ms;
-        let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
-        let conn_mgr = self.executor.enter(|| {
-            ConnectivityManager::new(
-                self.network_context.clone(),
-                trusted_peers,
-                seed_peers,
-                interval(Duration::from_millis(connectivity_check_interval_ms)).fuse(),
-                ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
-                pm_conn_mgr_notifs_rx,
-                conn_mgr_reqs_rx,
-                ExponentialBackoff::from_millis(2).factor(1000),
-                max_connection_delay_ms,
-            )
-        });
-        self.executor.spawn(conn_mgr.start());
+
+        let config = ConnectivityManagerBuilderConfig::new(
+            self.network_context().clone(),
+            self.trusted_peers.clone(),
+            self.seed_peers.clone(),
+            self.connectivity_check_interval_ms,
+            2, // Hard-coded constant
+            self.max_connection_delay_ms,
+            ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
+            pm_conn_mgr_notifs_rx,
+            conn_mgr_reqs_rx,
+        );
+
+        self.connectivity_manager_config = Some(config);
+        self.build_connectivity_manager()
+    }
+
+    /// Build the ConnectivityManager from the provided configuration.
+    fn build_connectivity_manager(&mut self) -> &mut Self {
+        if let Some(config) = self.connectivity_manager_config.take() {
+            let conn_mgr = connectivity_manager::build_connectivity_manager_from_config(
+                &self.executor,
+                config,
+            );
+            self.connectivity_manager = Some(conn_mgr);
+        }
+        self.start_connectivity_manager()
+    }
+
+    /// Start the ConnectivityManager
+    fn start_connectivity_manager(&mut self) -> &mut Self {
+        if let Some(conn_mgr) = self.connectivity_manager.take() {
+            self.executor.spawn(conn_mgr.start());
+            debug!("Started ConnectivityManager");
+        }
         self
     }
 
