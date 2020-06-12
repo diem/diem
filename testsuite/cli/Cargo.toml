@@ -16,7 +16,7 @@ hex = "0.4.2"
 proptest = { version = "0.10.0", optional = true }
 rustyline = "6.2.0"
 rust_decimal = "1.6.0"
-num-traits = "0.2.11"
+num-traits = "0.2.12"
 reqwest = { version = "0.10.6", features = ["blocking", "json", "rustls-tls"], default-features = false }
 serde = { version = "1.0.111", features = ["derive"] }
 structopt = "0.3.14"
