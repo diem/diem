@@ -20,16 +20,22 @@ use proptest::prelude::*;
 use std::{collections::HashMap, convert::TryFrom};
 
 fn verify_epochs(db: &LibraDB, ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) {
-    let (_, _, actual_epoch_change_lis, _) = db.update_to_latest_ledger(0, Vec::new()).unwrap();
+    let (actual_epoch_change_lis, _) = db
+        .get_epoch_change_ledger_infos(
+            0,
+            ledger_infos_with_sigs
+                .last()
+                .unwrap()
+                .ledger_info()
+                .next_block_epoch(),
+        )
+        .unwrap();
     let expected_epoch_change_lis: Vec<_> = ledger_infos_with_sigs
         .iter()
         .filter(|info| info.ledger_info().next_epoch_state().is_some())
         .cloned()
         .collect();
-    assert_eq!(
-        actual_epoch_change_lis.ledger_info_with_sigs,
-        expected_epoch_change_lis,
-    );
+    assert_eq!(actual_epoch_change_lis, expected_epoch_change_lis,);
 }
 
 pub fn test_save_blocks_impl(input: Vec<(Vec<TransactionToCommit>, LedgerInfoWithSignatures)>) {
@@ -400,19 +406,6 @@ fn test_too_many_requested() {
     let tmp_dir = TempPath::new();
     let db = LibraDB::new_for_test(&tmp_dir);
 
-    assert!(db
-        .update_to_latest_ledger(
-            0,
-            vec![
-                RequestItem::GetTransactions {
-                    start_version: 0,
-                    limit: 100,
-                    fetch_events: false,
-                };
-                101
-            ]
-        )
-        .is_err());
     assert!(db.get_transactions(0, 1001 /* limit */, 0, true).is_err());
     assert!(db
         .get_events_by_query_path(
