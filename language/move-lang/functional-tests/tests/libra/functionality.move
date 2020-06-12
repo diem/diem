@@ -107,8 +107,12 @@ script {
 //! sender: association
 script {
     use 0x1::Libra;
+    use 0x1::LibraConfig::CreateOnChainConfig;
+    use 0x1::Roles;
     fun main(account: &signer)  {
-        Libra::initialize(account);
+        let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
+        Libra::initialize(account, &r);
+        Roles::restore_capability_to_privilege(account, r);
     }
 }
 // check: ABORTED
@@ -131,11 +135,15 @@ fun main(account: &signer)  {
 script {
     use 0x1::Libra;
     use 0x1::Coin1::Coin1;
+    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(account: &signer)  {
+        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
         Libra::publish_mint_capability(
             account,
-            Libra::remove_mint_capability<Coin1>(account)
+            Libra::remove_mint_capability<Coin1>(account),
+            &tc_capability,
         );
+        Roles::restore_capability_to_privilege(account, tc_capability);
     }
 }
 // check: EXECUTED

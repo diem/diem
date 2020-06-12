@@ -213,7 +213,7 @@ Aborts if
 <code>association</code> is not an Association account
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(association: &signer, vasp: &signer, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(vasp: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -223,13 +223,12 @@ Aborts if
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(
-    association: &signer,
     vasp: &signer,
+    _: &Capability&lt;AssociationRootRole&gt;,
     human_name: vector&lt;u8&gt;,
     base_url: vector&lt;u8&gt;,
     compliance_public_key: vector&lt;u8&gt;
 ) {
-    <a href="Association.md#0x1_Association_assert_is_association">Association::assert_is_association</a>(association);
     <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> compliance_public_key), 7004);
     move_to(
         vasp,
@@ -241,7 +240,7 @@ Aborts if
             compliance_public_key,
             num_children: 0
         }
-    )
+    );
 }
 </code></pre>
 
@@ -259,7 +258,7 @@ Aborts if
 <code>parent</code> is not a ParentVASP
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_child_vasp_credential">publish_child_vasp_credential</a>(parent: &signer, child: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_child_vasp_credential">publish_child_vasp_credential</a>(parent: &signer, child: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_ParentVASPRole">Roles::ParentVASPRole</a>&gt;)
 </code></pre>
 
 
@@ -268,7 +267,11 @@ Aborts if
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_child_vasp_credential">publish_child_vasp_credential</a>(parent: &signer, child: &signer) <b>acquires</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_child_vasp_credential">publish_child_vasp_credential</a>(
+    parent: &signer,
+    child: &signer,
+    _: &Capability&lt;ParentVASPRole&gt;,
+) <b>acquires</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
     <b>let</b> parent_vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(parent);
     <b>assert</b>(exists&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent_vasp_addr), 7000);
     <b>let</b> num_children = &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent_vasp_addr).num_children;

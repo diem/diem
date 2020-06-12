@@ -3,14 +3,17 @@
 
 //! sender: alice
 module FooConfig {
-    use 0x1::LibraConfig;
+    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
+    use 0x1::Roles;
 
     struct T {
         version: u64,
     }
 
     public fun new(account: &signer, version: u64) {
-        LibraConfig::publish_new_config<T>(account, T { version: version });
+        let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
+        LibraConfig::publish_new_config<T>(account, &r, T { version: version });
+        Roles::restore_capability_to_privilege(account, r);
     }
 
     public fun set(account: &signer, version: u64) {

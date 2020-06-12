@@ -198,7 +198,7 @@ fn mint_to_new_account() {
 
     assert!(transaction_status_eq(
         &output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::MISSING_DATA))
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(3))
     ));
 }
 

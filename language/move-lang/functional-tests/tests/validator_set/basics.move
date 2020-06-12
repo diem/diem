@@ -5,8 +5,12 @@
 //! new-transaction
 script {
 use 0x1::LibraSystem;
+use 0x1::LibraConfig::CreateOnChainConfig;
+use 0x1::Roles;
 fun main(account: &signer) {
-    LibraSystem::initialize_validator_set(account);
+    let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
+    LibraSystem::initialize_validator_set(account, &r);
+    Roles::restore_capability_to_privilege(account, r);
 }
 }
 // check: ABORTED

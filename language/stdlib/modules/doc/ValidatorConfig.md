@@ -5,8 +5,12 @@
 
 ### Table of Contents
 
+-  [Struct `UpdateValidatorConfig`](#0x1_ValidatorConfig_UpdateValidatorConfig)
+-  [Struct `DecertifyValidator`](#0x1_ValidatorConfig_DecertifyValidator)
+-  [Struct `CertifyValidator`](#0x1_ValidatorConfig_CertifyValidator)
 -  [Struct `Config`](#0x1_ValidatorConfig_Config)
 -  [Struct `ValidatorConfig`](#0x1_ValidatorConfig_ValidatorConfig)
+-  [Function `grant_privileges`](#0x1_ValidatorConfig_grant_privileges)
 -  [Function `publish`](#0x1_ValidatorConfig_publish)
 -  [Function `set_operator`](#0x1_ValidatorConfig_set_operator)
 -  [Function `remove_operator`](#0x1_ValidatorConfig_remove_operator)
@@ -23,6 +27,90 @@
 -  [Function `is_certified`](#0x1_ValidatorConfig_is_certified)
 
 
+
+<a name="0x1_ValidatorConfig_UpdateValidatorConfig"></a>
+
+## Struct `UpdateValidatorConfig`
+
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_ValidatorConfig_UpdateValidatorConfig">UpdateValidatorConfig</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>dummy_field: bool</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x1_ValidatorConfig_DecertifyValidator"></a>
+
+## Struct `DecertifyValidator`
+
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_ValidatorConfig_DecertifyValidator">DecertifyValidator</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>dummy_field: bool</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x1_ValidatorConfig_CertifyValidator"></a>
+
+## Struct `CertifyValidator`
+
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_ValidatorConfig_CertifyValidator">CertifyValidator</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>dummy_field: bool</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
 
 <a name="0x1_ValidatorConfig_Config"></a>
 
@@ -122,13 +210,13 @@
 
 </details>
 
-<a name="0x1_ValidatorConfig_publish"></a>
+<a name="0x1_ValidatorConfig_grant_privileges"></a>
 
-## Function `publish`
+## Function `grant_privileges`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(creator: &signer, account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_grant_privileges">grant_privileges</a>(account: &signer)
 </code></pre>
 
 
@@ -137,13 +225,38 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(creator: &signer, account: &signer) {
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creator) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1101);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_grant_privileges">grant_privileges</a>(account: &signer) {
+    <a href="Roles.md#0x1_Roles_add_privilege_to_account_association_root_role">Roles::add_privilege_to_account_association_root_role</a>(account, <a href="#0x1_ValidatorConfig_CertifyValidator">CertifyValidator</a>{});
+    <a href="Roles.md#0x1_Roles_add_privilege_to_account_association_root_role">Roles::add_privilege_to_account_association_root_role</a>(account, <a href="#0x1_ValidatorConfig_DecertifyValidator">DecertifyValidator</a>{});
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_ValidatorConfig_publish"></a>
+
+## Function `publish`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, _: &Capability&lt;AssociationRootRole&gt;) {
     move_to(account, <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
         config: <a href="Option.md#0x1_Option_none">Option::none</a>(),
         operator_account: <a href="Option.md#0x1_Option_none">Option::none</a>(),
         is_certified: <b>true</b>
     });
+    <a href="Roles.md#0x1_Roles_add_privilege_to_account_validator_role">Roles::add_privilege_to_account_validator_role</a>(account, <a href="#0x1_ValidatorConfig_UpdateValidatorConfig">UpdateValidatorConfig</a>{})
 }
 </code></pre>
 
@@ -434,7 +547,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_decertify">decertify</a>(account: &signer, addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_decertify">decertify</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_ValidatorConfig_DecertifyValidator">ValidatorConfig::DecertifyValidator</a>&gt;, addr: address)
 </code></pre>
 
 
@@ -443,8 +556,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_decertify">decertify</a>(account: &signer, addr: address) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>assert</b>(<a href="Association.md#0x1_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), 1002);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_decertify">decertify</a>(_: &Capability&lt;<a href="#0x1_ValidatorConfig_DecertifyValidator">DecertifyValidator</a>&gt;, addr: address) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
     borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).is_certified = <b>false</b>;
 }
 </code></pre>
@@ -459,7 +571,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_certify">certify</a>(account: &signer, addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_certify">certify</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_ValidatorConfig_CertifyValidator">ValidatorConfig::CertifyValidator</a>&gt;, addr: address)
 </code></pre>
 
 
@@ -468,8 +580,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_certify">certify</a>(account: &signer, addr: address) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>assert</b>(<a href="Association.md#0x1_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), 1002);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_certify">certify</a>(_: &Capability&lt;<a href="#0x1_ValidatorConfig_CertifyValidator">CertifyValidator</a>&gt;, addr: address) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
     borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).is_certified = <b>true</b>;
 }
 </code></pre>

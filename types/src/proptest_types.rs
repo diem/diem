@@ -108,7 +108,6 @@ struct AccountInfo {
     sequence_number: u64,
     sent_event_handle: EventHandle,
     received_event_handle: EventHandle,
-    role_id: u64,
 }
 
 impl AccountInfo {
@@ -121,7 +120,6 @@ impl AccountInfo {
             sequence_number: 0,
             sent_event_handle: EventHandle::new_from_address(&address, 0),
             received_event_handle: EventHandle::new_from_address(&address, 1),
-            role_id: 5, // XXX support types other than ParentVASP
         }
     }
 }
@@ -651,7 +649,6 @@ impl AccountResourceGen {
             account_info.sent_event_handle.clone(),
             account_info.received_event_handle.clone(),
             false,
-            account_info.role_id,
         )
     }
 }

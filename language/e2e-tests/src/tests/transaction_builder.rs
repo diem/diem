@@ -132,6 +132,77 @@ fn create_parent_and_child_vasp() {
 }
 
 #[test]
+fn create_child_vasp_all_currencies() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    let association = Account::new_association();
+    let blessed = Account::new_blessed_tc();
+    let parent = Account::new();
+    let child = Account::new();
+
+    let mut keygen = KeyGen::from_seed([9u8; 32]);
+    let (_vasp_compliance_private_key, vasp_compliance_public_key) = keygen.generate_keypair();
+
+    // create a parent VASP
+    let add_all_currencies = true;
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_create_parent_vasp_account(
+            account_config::coin1_tag(),
+            *parent.address(),
+            parent.auth_key_prefix(),
+            vec![],
+            vec![],
+            vasp_compliance_public_key.to_bytes().to_vec(),
+            add_all_currencies,
+        ),
+        1,
+    ));
+
+    let amount = 100;
+    // mint to the parent VASP
+    executor.execute_and_apply(blessed.signed_script_txn(
+        encode_mint_script(
+            account_config::coin1_tag(),
+            parent.address(),
+            vec![],
+            amount,
+        ),
+        0,
+    ));
+
+    assert!(executor
+        .read_balance_resource(&parent, account::coin1_currency_code())
+        .is_some());
+    assert!(executor
+        .read_balance_resource(&parent, account::coin2_currency_code())
+        .is_some());
+    assert!(executor
+        .read_balance_resource(&parent, account::lbr_currency_code())
+        .is_some());
+
+    // create a child VASP with a balance of amount
+    executor.execute_and_apply(parent.signed_script_txn(
+        encode_create_child_vasp_account(
+            account_config::coin1_tag(),
+            *child.address(),
+            child.auth_key_prefix(),
+            add_all_currencies,
+            amount,
+        ),
+        0,
+    ));
+
+    assert!(executor
+        .read_balance_resource(&parent, account::coin1_currency_code())
+        .is_some());
+    assert!(executor
+        .read_balance_resource(&child, account::coin2_currency_code())
+        .is_some());
+    assert!(executor
+        .read_balance_resource(&child, account::lbr_currency_code())
+        .is_some());
+}
+
+#[test]
 fn create_child_vasp_with_balance() {
     let mut executor = FakeExecutor::from_genesis_file();
     let association = Account::new_association();

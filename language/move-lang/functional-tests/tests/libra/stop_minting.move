@@ -1,13 +1,16 @@
-//! sender: association
+//! sender: blessed
 script {
 use 0x1::LibraAccount;
 use 0x1::Coin1::Coin1;
 use 0x1::Coin2::Coin2;
+use 0x1::Roles::{Self, TreasuryComplianceRole};
 
 // register blessed as a preburner
 fun main(account: &signer) {
-    LibraAccount::add_preburn_from_association<Coin1>(account, {{blessed}});
-    LibraAccount::add_preburn_from_association<Coin2>(account, {{blessed}});
+    let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
+    LibraAccount::add_preburn_from_tc<Coin1>(&tc_capability, {{blessed}});
+    LibraAccount::add_preburn_from_tc<Coin2>(&tc_capability, {{blessed}});
+    Roles::restore_capability_to_privilege(account, tc_capability);
 }
 }
 // check: EXECUTED
@@ -54,11 +57,14 @@ fun main(account: &signer) {
 script {
 use 0x1::Libra;
 use 0x1::Coin1::Coin1;
+use 0x1::Roles::{Self, TreasuryComplianceRole};
 
 fun main(account: &signer) {
-    Libra::update_minting_ability<Coin1>(account, false);
+    let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
+    Libra::update_minting_ability<Coin1>(&tc_capability, false);
     let coin = Libra::mint<Coin1>(account, 10); // will abort here
-    Libra::destroy_zero(coin)
+    Libra::destroy_zero(coin);
+    Roles::restore_capability_to_privilege(account, tc_capability);
 }
 }
 // check: ABORTED

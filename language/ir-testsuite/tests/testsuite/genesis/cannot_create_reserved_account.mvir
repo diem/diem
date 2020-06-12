@@ -3,11 +3,11 @@ import 0x1.LCS;
 import 0x1.Vector;
 import 0x1.LBR;
 
-main() {
+main(account: &signer) {
   let addr: address;
   addr = 0x0;
   // try to create account on 0x0.
-  LibraAccount.create_unhosted_account<LBR.LBR>(copy(addr), LCS.to_bytes<address>(&addr), false);
+  LibraAccount.create_unhosted_account<LBR.LBR>(copy(account), copy(addr), LCS.to_bytes<address>(&addr), false);
 
   return;
 }

@@ -7,10 +7,10 @@
 address 0x1 {
 
 module VASP {
-    use 0x1::Association;
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
     use 0x1::Signature;
+    use 0x1::Roles::{Capability, AssociationRootRole, ParentVASPRole};
 
     /// Each VASP has a unique root account that holds a `ParentVASP` resource. This resource holds
     /// the VASP's globally unique name and all of the metadata that other VASPs need to perform
@@ -65,13 +65,12 @@ module VASP {
     /// Create a new `ParentVASP` resource under `vasp`
     /// Aborts if `association` is not an Association account
     public fun publish_parent_vasp_credential(
-        association: &signer,
         vasp: &signer,
+        _: &Capability<AssociationRootRole>,
         human_name: vector<u8>,
         base_url: vector<u8>,
         compliance_public_key: vector<u8>
     ) {
-        Association::assert_is_association(association);
         assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), 7004);
         move_to(
             vasp,
@@ -83,12 +82,16 @@ module VASP {
                 compliance_public_key,
                 num_children: 0
             }
-        )
+        );
     }
 
     /// Create a child VASP resource for the `parent`
     /// Aborts if `parent` is not a ParentVASP
-    public fun publish_child_vasp_credential(parent: &signer, child: &signer) acquires ParentVASP {
+    public fun publish_child_vasp_credential(
+        parent: &signer,
+        child: &signer,
+        _: &Capability<ParentVASPRole>,
+    ) acquires ParentVASP {
         let parent_vasp_addr = Signer::address_of(parent);
         assert(exists<ParentVASP>(parent_vasp_addr), 7000);
         let num_children = &mut borrow_global_mut<ParentVASP>(parent_vasp_addr).num_children;

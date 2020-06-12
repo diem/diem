@@ -349,6 +349,14 @@ register_all_txn_scripts! {
     doc: "Update Libra version"
 }
 
+{
+    script: CreateValidatorAccount,
+    builder: encode_create_validator_account,
+    type_args: [currency],
+    args: [new_validator_address: Address, auth_key_prefix: Bytes],
+    doc: "Creates a validator account at `new_validator_address` with `auth_key_prefix`"
+}
+
 //...........................................................................
 // on-chain LBR scripts
 //...........................................................................
@@ -587,6 +595,7 @@ mod tests {
                 "mint",
                 "modify_publishing_option",
                 "update_libra_version",
+                "create_validator_account",
                 "mint_lbr",
                 "unmint_lbr",
                 "update_minting_ability",

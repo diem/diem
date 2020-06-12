@@ -10,7 +10,6 @@
 -  [Function `initialize`](#0x1_RegisteredCurrencies_initialize)
 -  [Function `empty`](#0x1_RegisteredCurrencies_empty)
 -  [Function `add_currency_code`](#0x1_RegisteredCurrencies_add_currency_code)
--  [Function `singleton_address`](#0x1_RegisteredCurrencies_singleton_address)
 -  [Specification](#0x1_RegisteredCurrencies_Specification)
     -  [Module specifications](#0x1_RegisteredCurrencies_@Module_specifications)
     -  [Function `initialize`](#0x1_RegisteredCurrencies_Specification_initialize)
@@ -82,7 +81,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegisteredCurrencies::RegistrationCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer, create_config_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="LibraConfig.md#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegisteredCurrencies::RegistrationCapability</a>
 </code></pre>
 
 
@@ -91,13 +90,20 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(
+    config_account: &signer,
+    create_config_capability: &Capability&lt;CreateOnChainConfig&gt;,
+): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> {
     // enforce that this is only going <b>to</b> one specific address,
     <b>assert</b>(
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="#0x1_RegisteredCurrencies_singleton_address">singleton_address</a>(),
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(),
         0
     );
-    <b>let</b> cap = <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>(config_account, <a href="#0x1_RegisteredCurrencies_empty">empty</a>());
+    <b>let</b> cap = <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>(
+        config_account,
+        create_config_capability,
+        <a href="#0x1_RegisteredCurrencies_empty">empty</a>()
+    );
 
     <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> { cap }
 }
@@ -160,31 +166,6 @@
 
 </details>
 
-<a name="0x1_RegisteredCurrencies_singleton_address"></a>
-
-## Function `singleton_address`
-
-**Q:** Do we need this function, instead of using default_config_address directly?
-
-
-<pre><code><b>fun</b> <a href="#0x1_RegisteredCurrencies_singleton_address">singleton_address</a>(): address
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_RegisteredCurrencies_singleton_address">singleton_address</a>(): address {
-    <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>()
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_RegisteredCurrencies_Specification"></a>
 
 ## Specification
@@ -212,7 +193,7 @@
 ### Function `initialize`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegisteredCurrencies::RegistrationCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer, create_config_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="LibraConfig.md#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegisteredCurrencies::RegistrationCapability</a>
 </code></pre>
 
 

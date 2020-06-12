@@ -5,11 +5,13 @@
 
 ### Table of Contents
 
+-  [Struct `CreateOnChainConfig`](#0x1_LibraConfig_CreateOnChainConfig)
 -  [Struct `LibraConfig`](#0x1_LibraConfig_LibraConfig)
 -  [Struct `NewEpochEvent`](#0x1_LibraConfig_NewEpochEvent)
 -  [Struct `Configuration`](#0x1_LibraConfig_Configuration)
--  [Struct `CreateConfigCapability`](#0x1_LibraConfig_CreateConfigCapability)
 -  [Struct `ModifyConfigCapability`](#0x1_LibraConfig_ModifyConfigCapability)
+-  [Function `grant_privileges`](#0x1_LibraConfig_grant_privileges)
+-  [Function `grant_privileges_for_config_TESTNET_HACK_REMOVE`](#0x1_LibraConfig_grant_privileges_for_config_TESTNET_HACK_REMOVE)
 -  [Function `initialize`](#0x1_LibraConfig_initialize)
 -  [Function `get`](#0x1_LibraConfig_get)
 -  [Function `set`](#0x1_LibraConfig_set)
@@ -27,6 +29,34 @@
     -  [Function `publish_new_config`](#0x1_LibraConfig_Specification_publish_new_config)
 
 
+
+<a name="0x1_LibraConfig_CreateOnChainConfig"></a>
+
+## Struct `CreateOnChainConfig`
+
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>dummy_field: bool</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
 
 <a name="0x1_LibraConfig_LibraConfig"></a>
 
@@ -126,34 +156,6 @@
 
 </details>
 
-<a name="0x1_LibraConfig_CreateConfigCapability"></a>
-
-## Struct `CreateConfigCapability`
-
-
-
-<pre><code><b>struct</b> <a href="#0x1_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>dummy_field: bool</code>
-</dt>
-<dd>
-
-</dd>
-</dl>
-
-
-</details>
-
 <a name="0x1_LibraConfig_ModifyConfigCapability"></a>
 
 ## Struct `ModifyConfigCapability`
@@ -182,13 +184,14 @@
 
 </details>
 
-<a name="0x1_LibraConfig_initialize"></a>
+<a name="0x1_LibraConfig_grant_privileges"></a>
 
-## Function `initialize`
+## Function `grant_privileges`
+
+Will fail if the account is not association root
 
 
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_initialize">initialize</a>(config_account: &signer, association_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_grant_privileges">grant_privileges</a>(account: &signer)
 </code></pre>
 
 
@@ -197,12 +200,61 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_initialize">initialize</a>(config_account: &signer, association_account: &signer) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_grant_privileges">grant_privileges</a>(account: &signer) {
+    <a href="Roles.md#0x1_Roles_add_privilege_to_account_association_root_role">Roles::add_privilege_to_account_association_root_role</a>(account, <a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>{});
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraConfig_grant_privileges_for_config_TESTNET_HACK_REMOVE"></a>
+
+## Function `grant_privileges_for_config_TESTNET_HACK_REMOVE`
+
+> TODO(tzakian): This needs to be removed
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_grant_privileges_for_config_TESTNET_HACK_REMOVE">grant_privileges_for_config_TESTNET_HACK_REMOVE</a>(account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_grant_privileges_for_config_TESTNET_HACK_REMOVE">grant_privileges_for_config_TESTNET_HACK_REMOVE</a>(account: &signer) {
+    <a href="Roles.md#0x1_Roles_add_privilege_to_account_parent_vasp_role">Roles::add_privilege_to_account_parent_vasp_role</a>(account, <a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>{});
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraConfig_initialize"></a>
+
+## Function `initialize`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_initialize">initialize</a>(config_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_initialize">initialize</a>(
+    config_account: &signer,
+    _: &Capability&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>&gt;,
+) {
+    // Operational constraint
     <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(), 1);
-    <a href="Association.md#0x1_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x1_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(association_account, config_account);
-    <a href="Association.md#0x1_Association_grant_privilege">Association::grant_privilege</a>&lt;<a href="#0x1_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(association_account, association_account);
-
-
     move_to&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(
         config_account,
         <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
@@ -263,11 +315,7 @@
     <b>let</b> addr = <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>();
     <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
     <b>let</b> signer_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>assert</b>(
-        exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address)
-        || <a href="Association.md#0x1_Association_addr_is_association">Association::addr_is_association</a>(signer_address),
-        24
-    );
+    <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;&gt;(signer_address), 24);
 
     <b>let</b> config = borrow_global_mut&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr);
     config.payload = payload;
@@ -303,7 +351,6 @@
     <b>assert</b>(exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr), 24);
     <b>let</b> config = borrow_global_mut&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr);
     config.payload = payload;
-
     <a href="#0x1_LibraConfig_reconfigure_">reconfigure_</a>();
 }
 </code></pre>
@@ -318,7 +365,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config): <a href="#0x1_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;Config&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, payload: Config): <a href="#0x1_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;Config&gt;
 </code></pre>
 
 
@@ -329,18 +376,14 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(
     config_account: &signer,
+    _: &Capability&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>&gt;,
     payload: Config,
 ): <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {
-    <b>assert</b>(
-        <a href="Association.md#0x1_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x1_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account)),
-        1
-    );
-
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(), 1);
     move_to(config_account, <a href="#0x1_LibraConfig">LibraConfig</a> { payload });
     // We don't trigger reconfiguration here, instead we'll wait for all validators <b>update</b> the binary
     // <b>to</b> register this config into ON_CHAIN_CONFIG_REGISTRY then send another transaction <b>to</b> change
     // the value which triggers the reconfiguration.
-
     <b>return</b> <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {}
 }
 </code></pre>
@@ -355,7 +398,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_treasury_compliance_config">publish_new_treasury_compliance_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, tc_account: &signer, payload: Config)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_treasury_compliance_config">publish_new_treasury_compliance_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, tc_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, payload: Config)
 </code></pre>
 
 
@@ -367,12 +410,9 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_treasury_compliance_config">publish_new_treasury_compliance_config</a>&lt;Config: <b>copyable</b>&gt;(
     config_account: &signer,
     tc_account: &signer,
+    _: &Capability&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>&gt;,
     payload: Config,
 ) {
-    <b>assert</b>(
-        <a href="Association.md#0x1_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x1_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account)),
-        1
-    );
     move_to(config_account, <a href="#0x1_LibraConfig">LibraConfig</a> { payload });
     move_to(tc_account, <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {});
 }
@@ -388,7 +428,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, payload: Config)
 </code></pre>
 
 
@@ -397,12 +437,12 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config) {
-    <b>assert</b>(
-        <a href="Association.md#0x1_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x1_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account)),
-        1
-    );
-
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(
+    config_account: &signer,
+    _: &Capability&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>&gt;,
+    payload: Config
+) {
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(), 1);
     move_to(config_account, <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {});
     move_to(config_account, <a href="#0x1_LibraConfig">LibraConfig</a>{ payload });
     // We don't trigger reconfiguration here, instead we'll wait for all validators <b>update</b> the binary
@@ -421,7 +461,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_delegate">publish_new_config_with_delegate</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config, delegate: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_delegate">publish_new_config_with_delegate</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, payload: Config, delegate: address)
 </code></pre>
 
 
@@ -432,14 +472,11 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_delegate">publish_new_config_with_delegate</a>&lt;Config: <b>copyable</b>&gt;(
     config_account: &signer,
+    _: &Capability&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>&gt;,
     payload: Config,
     delegate: address,
 ) {
-    <b>assert</b>(
-        <a href="Association.md#0x1_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x1_LibraConfig_CreateConfigCapability">CreateConfigCapability</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account)),
-        1
-    );
-
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(), 1);
     <a href="Offer.md#0x1_Offer_create">Offer::create</a>(config_account, <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;{}, delegate);
     move_to(config_account, <a href="#0x1_LibraConfig">LibraConfig</a> { payload });
     // We don't trigger reconfiguration here, instead we'll wait for all validators <b>update</b> the
@@ -482,7 +519,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_reconfigure">reconfigure</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_reconfigure">reconfigure</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;)
 </code></pre>
 
 
@@ -491,12 +528,10 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_reconfigure">reconfigure</a>(account: &signer) <b>acquires</b> <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_reconfigure">reconfigure</a>(
+    _: &Capability&lt;AssociationRootRole&gt;,
+) <b>acquires</b> <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
     // Only callable by association address or by the VM internally.
-    <b>assert</b>(
-        <a href="Association.md#0x1_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x1_LibraConfig_CreateConfigCapability">Self::CreateConfigCapability</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)),
-        1
-    );
     <a href="#0x1_LibraConfig_reconfigure_">reconfigure_</a>();
 }
 </code></pre>
@@ -602,7 +637,7 @@ definitions that are used by RegisteredCurrencies
 ### Function `publish_new_config_with_capability`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config): <a href="#0x1_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;Config&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, payload: Config): <a href="#0x1_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;Config&gt;
 </code></pre>
 
 
@@ -619,7 +654,7 @@ definitions that are used by RegisteredCurrencies
 ### Function `publish_new_config`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, payload: Config)
 </code></pre>
 
 

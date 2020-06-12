@@ -184,7 +184,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(config_account: &signer, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(config_account: &signer, association_root_account: &signer, create_config_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="LibraConfig.md#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -195,6 +195,8 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(
     config_account: &signer,
+    association_root_account: &signer,
+    create_config_capability: &Capability&lt;CreateOnChainConfig&gt;,
     publishing_option: vector&lt;u8&gt;,
     instruction_schedule: vector&lt;u8&gt;,
     native_schedule: vector&lt;u8&gt;,
@@ -212,8 +214,9 @@
     };
 
 
-    <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config">LibraConfig::publish_new_config</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;(
+    <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_with_delegate">LibraConfig::publish_new_config_with_delegate</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;(
         config_account,
+        create_config_capability,
         <a href="#0x1_LibraVMConfig">LibraVMConfig</a> {
             publishing_option,
             gas_schedule: <a href="#0x1_LibraVMConfig_GasSchedule">GasSchedule</a> {
@@ -222,7 +225,9 @@
                 gas_constants,
             }
         },
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association_root_account),
     );
+    <a href="LibraConfig.md#0x1_LibraConfig_claim_delegated_modify_config">LibraConfig::claim_delegated_modify_config</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;(association_root_account, <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account));
 }
 </code></pre>
 

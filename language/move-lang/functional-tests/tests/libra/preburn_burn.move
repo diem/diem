@@ -1,12 +1,17 @@
 // Test the end-to-end preburn-burn flow
 
 // register blessed as a preburn entity
-//! sender: association
+//! sender: blessed
 script {
-use 0x1::Coin1::Coin1;
 use 0x1::LibraAccount;
+use 0x1::Coin1::Coin1;
+use 0x1::Roles::{Self, TreasuryComplianceRole};
+
+// register blessed as a preburner
 fun main(account: &signer) {
-    LibraAccount::add_preburn_from_association<Coin1>(account, {{blessed}});
+    let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
+    LibraAccount::add_preburn_from_tc<Coin1>(&tc_capability, {{blessed}});
+    Roles::restore_capability_to_privilege(account, tc_capability);
 }
 }
 // check: EXECUTED

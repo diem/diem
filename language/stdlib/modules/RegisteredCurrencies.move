@@ -2,9 +2,10 @@ address 0x1 {
 
 module RegisteredCurrencies {
     use 0x1::CoreAddresses;
-    use 0x1::LibraConfig;
+    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
     use 0x1::Signer;
     use 0x1::Vector;
+    use 0x1::Roles::Capability;
 
     // An on-chain config holding all of the currency codes for registered
     // currencies. The inner vector<u8>'s are string representations of
@@ -18,13 +19,20 @@ module RegisteredCurrencies {
         cap: LibraConfig::ModifyConfigCapability<Self::RegisteredCurrencies>,
     }
 
-    public fun initialize(config_account: &signer): RegistrationCapability {
+    public fun initialize(
+        config_account: &signer,
+        create_config_capability: &Capability<CreateOnChainConfig>,
+    ): RegistrationCapability {
         // enforce that this is only going to one specific address,
         assert(
-            Signer::address_of(config_account) == singleton_address(),
+            Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
             0
         );
-        let cap = LibraConfig::publish_new_config_with_capability(config_account, empty());
+        let cap = LibraConfig::publish_new_config_with_capability(
+            config_account,
+            create_config_capability,
+            empty()
+        );
 
         RegistrationCapability { cap }
     }
@@ -41,12 +49,6 @@ module RegisteredCurrencies {
         Vector::push_back(&mut config.currency_codes, currency_code);
         LibraConfig::set_with_capability(&cap.cap, config);
     }
-
-    /// **Q:** Do we need this function, instead of using default_config_address directly?
-    fun singleton_address(): address {
-        CoreAddresses::DEFAULT_CONFIG_ADDRESS()
-    }
-
 
     // **************** Specifications ****************
 

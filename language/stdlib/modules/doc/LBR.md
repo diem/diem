@@ -142,7 +142,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_initialize">initialize</a>(association: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_initialize">initialize</a>(association: &signer, register_currency_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Libra.md#0x1_Libra_RegisterNewCurrency">Libra::RegisterNewCurrency</a>&gt;, tc_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;)
 </code></pre>
 
 
@@ -151,18 +151,24 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_initialize">initialize</a>(association: &signer) {
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == 0xA550C18, 0);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_initialize">initialize</a>(
+    association: &signer,
+    register_currency_capability: &Capability&lt;RegisterNewCurrency&gt;,
+    tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
+) {
+    // Opertational constraint
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>(), 0);
     // Register the <a href="#0x1_LBR">LBR</a> currency.
     <b>let</b> (mint_cap, burn_cap) = <a href="Libra.md#0x1_Libra_register_currency">Libra::register_currency</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;(
         association,
+        register_currency_capability,
         <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 1), // exchange rate <b>to</b> <a href="#0x1_LBR">LBR</a>
         <b>true</b>,    // is_synthetic
         1000000, // scaling_factor = 10^6
         1000,    // fractional_part = 10^3
         b"<a href="#0x1_LBR">LBR</a>"
     );
-    <b>let</b> preburn_cap = <a href="Libra.md#0x1_Libra_create_preburn">Libra::create_preburn</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;(association);
+    <b>let</b> preburn_cap = <a href="Libra.md#0x1_Libra_create_preburn">Libra::create_preburn</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;(tc_capability);
     <b>let</b> coin1 = <a href="#0x1_LBR_ReserveComponent">ReserveComponent</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt; {
         ratio: <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 2),
         backing: <a href="Libra.md#0x1_Libra_zero">Libra::zero</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(),

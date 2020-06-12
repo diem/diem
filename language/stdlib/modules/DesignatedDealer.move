@@ -1,10 +1,10 @@
 address 0x1 {
 module DesignatedDealer {
-    use 0x1::Association;
     use 0x1::Libra::{Self, Libra};
     use 0x1::LibraTimestamp;
     use 0x1::Vector;
     use 0x1::Event;
+    use 0x1::Roles::{Capability, TreasuryComplianceRole};
 
     resource struct Dealer {
         /// Time window start in microseconds
@@ -30,9 +30,7 @@ module DesignatedDealer {
     // To-be designated-dealer called functions
     ///////////////////////////////////////////////////////////////////////////
 
-    public fun publish_designated_dealer_credential(association: &signer, dd: &signer) {
-        // TODO: this should check for AssocRoot in the future
-        Association::assert_is_association(association);
+    public fun publish_designated_dealer_credential(dd: &signer, _: &Capability<TreasuryComplianceRole>) {
         move_to(
             dd,
             Dealer {
@@ -62,9 +60,11 @@ module DesignatedDealer {
         Vector::push_back(tiers, next_tier_upperbound);
     }
 
-    public fun add_tier(blessed: &signer, addr: address, tier_upperbound: u64
+    public fun add_tier(
+        _: &Capability<TreasuryComplianceRole>,
+        addr: address,
+        tier_upperbound: u64
     ) acquires Dealer {
-        Association::assert_account_is_blessed(blessed);
         let dealer = borrow_global_mut<Dealer>(addr);
         add_tier_(dealer, tier_upperbound)
     }
@@ -87,9 +87,11 @@ module DesignatedDealer {
     }
 
     public fun update_tier(
-        blessed: &signer, addr: address, tier_index: u64, new_upperbound: u64
+        _update_tier_capability: &Capability<TreasuryComplianceRole>,
+        addr: address,
+        tier_index: u64,
+        new_upperbound: u64
     ) acquires Dealer {
-        Association::assert_account_is_blessed(blessed);
         let dealer = borrow_global_mut<Dealer>(addr);
         update_tier_(dealer, tier_index, new_upperbound)
     }
@@ -116,9 +118,16 @@ module DesignatedDealer {
     }
 
     public fun tiered_mint<CoinType>(
-        blessed: &signer, amount: u64, dd_addr: address, tier_index: u64
+        blessed: &signer,
+        _: &Capability<TreasuryComplianceRole>,
+        amount: u64,
+        dd_addr: address,
+        tier_index: u64,
     ): Libra<CoinType> acquires Dealer {
-        Association::assert_account_is_blessed(blessed);
+
+        // INVALID_MINT_AMOUNT
+        assert(amount > 0, 6);
+
         // NOT_A_DD
         assert(exists_at(dd_addr), 1);
         let tier_check = tiered_mint_(borrow_global_mut<Dealer>(dd_addr), amount, tier_index);

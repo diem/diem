@@ -71,7 +71,6 @@ pub struct AccountView {
     pub delegated_key_rotation_capability: bool,
     pub delegated_withdrawal_capability: bool,
     pub is_frozen: bool,
-    pub role_id: u64,
     pub role: AccountRoleView,
 }
 
@@ -95,7 +94,6 @@ impl AccountView {
             delegated_key_rotation_capability: account.has_delegated_key_rotation_capability(),
             delegated_withdrawal_capability: account.has_delegated_withdrawal_capability(),
             is_frozen: account.is_frozen(),
-            role_id: account.role_id(),
             role: AccountRoleView::from(account_role),
         }
     }
