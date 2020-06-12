@@ -15,6 +15,7 @@
 -  [Function `publish_limits_definition`](#0x1_AccountLimits_publish_limits_definition)
 -  [Function `publish_unrestricted_limits`](#0x1_AccountLimits_publish_unrestricted_limits)
 -  [Function `unpublish_limits_definition`](#0x1_AccountLimits_unpublish_limits_definition)
+-  [Function `update_limits_definition`](#0x1_AccountLimits_update_limits_definition)
 -  [Function `certify_limits_definition`](#0x1_AccountLimits_certify_limits_definition)
 -  [Function `decertify_limits_definition`](#0x1_AccountLimits_decertify_limits_definition)
 -  [Function `default_limits_addr`](#0x1_AccountLimits_default_limits_addr)
@@ -74,14 +75,7 @@
 <dl>
 <dt>
 
-<code>max_outflow: u64</code>
-</dt>
-<dd>
-
-</dd>
-<dt>
-
-<code>max_inflow: u64</code>
+<code>max_total_flow: u64</code>
 </dt>
 <dd>
 
@@ -137,14 +131,7 @@
 </dd>
 <dt>
 
-<code>window_outflow: u64</code>
-</dt>
-<dd>
-
-</dd>
-<dt>
-
-<code>window_inflow: u64</code>
+<code>window_total_flow: u64</code>
 </dt>
 <dd>
 
@@ -277,8 +264,7 @@
         to_limit,
         <a href="#0x1_AccountLimits_Window">Window</a> {
             window_start: <a href="#0x1_AccountLimits_current_time">current_time</a>(),
-            window_outflow: 0,
-            window_inflow: 0,
+            window_total_flow: 0,
             tracked_balance: 0,
             limits_definition: <a href="#0x1_AccountLimits_default_limits_addr">default_limits_addr</a>()
         }
@@ -296,7 +282,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_limits_definition">publish_limits_definition</a>(account: &signer, max_outflow: u64, max_inflow: u64, max_holding: u64, time_period: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_limits_definition">publish_limits_definition</a>(account: &signer, max_total_flow: u64, max_holding: u64, time_period: u64)
 </code></pre>
 
 
@@ -307,16 +293,14 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_limits_definition">publish_limits_definition</a>(
     account: &signer,
-    max_outflow: u64,
-    max_inflow: u64,
+    max_total_flow: u64,
     max_holding: u64,
     time_period: u64
 ) {
     move_to(
         account,
         <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-            max_outflow,
-            max_inflow,
+            max_total_flow,
             max_holding,
             time_period,
             is_certified: <b>false</b>,
@@ -346,7 +330,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>(account: &signer) {
     <b>let</b> u64_max = 18446744073709551615u64;
-    <a href="#0x1_AccountLimits_publish_limits_definition">publish_limits_definition</a>(account, u64_max, u64_max, u64_max, u64_max)
+    <a href="#0x1_AccountLimits_publish_limits_definition">publish_limits_definition</a>(account, u64_max, u64_max, u64_max)
 }
 </code></pre>
 
@@ -372,12 +356,47 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_unpublish_limits_definition">unpublish_limits_definition</a>(account: &signer)
 <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
     <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-        max_outflow: _,
-        max_inflow: _,
+        max_total_flow: _,
         max_holding: _,
         time_period: _,
         is_certified: _,
     } = move_from&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account));
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_AccountLimits_update_limits_definition"></a>
+
+## Function `update_limits_definition`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>(tc_account: &signer, new_max_total_flow: u64, new_max_holding_balance: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>(tc_account: &signer,
+    new_max_total_flow: u64,
+    new_max_holding_balance: u64,
+) <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
+    <b>let</b> tc_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(tc_account);
+    <b>assert</b>(tc_address == <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>(), 302);
+    // As we don't have Optionals for txn scripts, in update_unhosted_wallet_limits.<b>move</b>
+    // we <b>use</b> 0 value <b>to</b> represent a None (ie no <b>update</b> <b>to</b> that variable)
+    <b>if</b> (new_max_total_flow != 0) {
+        borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(tc_address).max_total_flow = new_max_total_flow;
+    };
+    <b>if</b> (new_max_holding_balance != 0) {
+        borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(tc_address).max_holding = new_max_holding_balance;
+    };
 }
 </code></pre>
 
@@ -453,7 +472,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_default_limits_addr">default_limits_addr</a>(): address {
-    <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()
+    <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()
 }
 </code></pre>
 
@@ -480,8 +499,7 @@
     <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
     <b>if</b> (current_time &gt; window.window_start + limits_definition.time_period) {
         window.window_start = current_time;
-        window.window_inflow = 0;
-        window.window_outflow = 0;
+        window.window_total_flow = 0;
     }
 }
 </code></pre>
@@ -514,16 +532,16 @@
     <b>if</b> (<a href="#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>(limits_definition)) <b>return</b> <b>true</b>;
 
     <a href="#0x1_AccountLimits_reset_window">reset_window</a>(receiving, limits_definition);
-    // Check that the max inflow is OK
-    <b>let</b> inflow_ok = receiving.window_inflow + amount &lt;= limits_definition.max_inflow;
+    // Check that the max total flow is OK
+    <b>let</b> total_flow_ok = receiving.window_total_flow + amount &lt;= limits_definition.max_total_flow;
     // Check that the holding after the deposit is OK
     <b>let</b> holding_ok = receiving.tracked_balance + amount &lt;= limits_definition.max_holding;
     // The account with `receiving` window can receive the payment so record it.
-    <b>if</b> (inflow_ok && holding_ok) {
-        receiving.window_inflow = receiving.window_inflow + amount;
+    <b>if</b> (total_flow_ok && holding_ok) {
+        receiving.window_total_flow = receiving.window_total_flow + amount;
         receiving.tracked_balance = receiving.tracked_balance + amount;
     };
-    inflow_ok && holding_ok
+    total_flow_ok && holding_ok
 }
 </code></pre>
 
@@ -555,16 +573,15 @@
     <b>if</b> (<a href="#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>(limits_definition)) <b>return</b> <b>true</b>;
 
     <a href="#0x1_AccountLimits_reset_window">reset_window</a>(sending, limits_definition);
-    // Check max outlflow
-    <b>let</b> outflow = sending.window_outflow + amount;
-    <b>let</b> outflow_ok = outflow &lt;= limits_definition.max_outflow;
-    // Outflow is OK, so record it.
-    <b>if</b> (outflow_ok) {
-        sending.window_outflow = outflow;
+    // Check total flow OK
+    <b>let</b> total_flow_ok = sending.window_total_flow + amount &lt;= limits_definition.max_total_flow;
+    // Flow is OK, so record it.
+    <b>if</b> (total_flow_ok) {
+        sending.window_total_flow = sending.window_total_flow + amount;
         sending.tracked_balance = <b>if</b> (amount &gt;= sending.tracked_balance) 0
                                    <b>else</b> sending.tracked_balance - amount;
     };
-    outflow_ok
+    total_flow_ok
 }
 </code></pre>
 
@@ -589,8 +606,7 @@
 
 <pre><code><b>fun</b> <a href="#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>(limits_def: &<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>): bool {
     <b>let</b> u64_max = 18446744073709551615u64;
-    limits_def.max_inflow == u64_max &&
-    limits_def.max_outflow == u64_max &&
+    limits_def.max_total_flow == u64_max &&
     limits_def.max_holding == u64_max &&
     limits_def.time_period == u64_max
 }

@@ -62,7 +62,6 @@
     <a href="LBR.md#0x1_LBR_initialize">LBR::initialize</a>(association);
 
     <a href="LibraAccount.md#0x1_LibraAccount_initialize">LibraAccount::initialize</a>(association);
-    <a href="Unhosted.md#0x1_Unhosted_publish_global_limits_definition">Unhosted::publish_global_limits_definition</a>(association);
     <a href="LibraAccount.md#0x1_LibraAccount_create_genesis_account">LibraAccount::create_genesis_account</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association),
         <b>copy</b> dummy_auth_key_prefix,
@@ -87,6 +86,8 @@
         coin2_mint_cap,
         coin2_burn_cap,
     );
+    <a href="AccountLimits.md#0x1_AccountLimits_publish_unrestricted_limits">AccountLimits::publish_unrestricted_limits</a>(tc_account);
+    <a href="AccountLimits.md#0x1_AccountLimits_certify_limits_definition">AccountLimits::certify_limits_definition</a>(tc_account, tc_addr);
 
     // Create the config account
     <a href="LibraAccount.md#0x1_LibraAccount_create_genesis_account">LibraAccount::create_genesis_account</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(

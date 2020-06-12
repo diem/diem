@@ -9,6 +9,7 @@
 -  [Function `publish_global_limits_definition`](#0x1_Unhosted_publish_global_limits_definition)
 -  [Function `create`](#0x1_Unhosted_create)
 -  [Function `limits_addr`](#0x1_Unhosted_limits_addr)
+-  [Function `window_length`](#0x1_Unhosted_window_length)
 
 
 
@@ -114,7 +115,32 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Unhosted_limits_addr">limits_addr</a>(): address {
-    <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()
+    <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Unhosted_window_length"></a>
+
+## Function `window_length`
+
+
+
+<pre><code><b>fun</b> <a href="#0x1_Unhosted_window_length">window_length</a>(): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x1_Unhosted_window_length">window_length</a>(): u64 {
+    // number of microseconds in a day
+    86400000000
 }
 </code></pre>
 
