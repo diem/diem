@@ -52,10 +52,17 @@ impl CurrencyInfoResource {
         self.fractional_part
     }
 
+    pub fn exchange_rate(&self) -> f32 {
+        // Exchange rates are represented as 32|32 fixed-point numbers on-chain. So we divide by the scaling
+        // factor (2^32) of the number to arrive at the floating point representation of the number.
+        // The exchange rate returned is the on-chain rate to two decimal places rounded up (e.g. 1.3333
+        // would be rounded to 1.34).
+        let unrounded = (self.to_lbr_exchange_rate as f32) / 2f32.powf(32f32);
+        (unrounded * 100.0).round() / 100.0
+    }
+
     pub fn convert_to_lbr(&self, amount: u64) -> u64 {
-        let mut mult = (amount as u128) * (self.to_lbr_exchange_rate as u128);
-        mult >>= 32;
-        mult as u64
+        (self.exchange_rate() * (amount as f32)) as u64
     }
 
     pub fn struct_tag_for(currency_code: Identifier) -> StructTag {
