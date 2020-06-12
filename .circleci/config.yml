@@ -256,8 +256,16 @@ jobs:
       - build_setup
       - restore_cargo_package_cache
       - run:
+          name: Build release --lib
+          command: |
+            cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes
+            RUST_BACKTRACE=1 cargo build --release --lib
+            cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes
+      - run:
           name: Build release
-          command: RUST_BACKTRACE=1 cargo build -j 8 --release
+          command: |
+            RUST_BACKTRACE=1 cargo build --release -j 8
+            cat /sys/fs/cgroup/memory/memory.max_usage_in_bytes
       - build_teardown
   run-e2e-test:
     executor: build-executor
@@ -617,43 +625,43 @@ jobs:
 workflows:
   commit-workflow:
     jobs:
-      - build-docker
-      - validate-cluster-test-dockerfile
-      - terraform
+      #- build-docker
+      #- validate-cluster-test-dockerfile
+      #- terraform
       - prefetch-crates
-      - lint:
-          requires:
-            - prefetch-crates
-      - build-dev:
-          requires:
-            - prefetch-crates
+        #- lint:
+        #  requires:
+        #    - prefetch-crates
+        #- build-dev:
+        #  requires:
+        #    - prefetch-crates
       - build-release:
           requires:
             - prefetch-crates
-      - run-e2e-test:
-          requires:
-            - prefetch-crates
-      - run-unit-test:
-          requires:
-            - prefetch-crates
-      - run-crypto-unit-test:
-          requires:
-            - prefetch-crates
-      - build-docs:
-          requires:
-            - lint
-      - deploy-docs:
-          requires:
-            - build-docs
-          filters:
-            branches:
-              only: master
-      - check-breaking-change:
-          requires:
-            - prefetch-crates
-          filters:
-           branches:
-             only: master
+#      - run-e2e-test:
+#          requires:
+#            - prefetch-crates
+#      - run-unit-test:
+#          requires:
+#            - prefetch-crates
+#      - run-crypto-unit-test:
+#          requires:
+#            - prefetch-crates
+#      - build-docs:
+#          requires:
+#            - lint
+#      - deploy-docs:
+#          requires:
+#            - build-docs
+#          filters:
+#            branches:
+#              only: master
+#      - check-breaking-change:
+#          requires:
+#            - prefetch-crates
+#          filters:
+#           branches:
+#             only: master
 
   scheduled-workflow:
     triggers:
