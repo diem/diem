@@ -88,11 +88,14 @@
 <span id="88">88</span>
 <span id="89">89</span>
 <span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">Error</span>;
+<span class="kw">use</span> <span class="ident">enum_dispatch</span>::<span class="ident">enum_dispatch</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{
     <span class="ident">ed25519</span>::{<span class="ident">Ed25519PrivateKey</span>, <span class="ident">Ed25519PublicKey</span>, <span class="ident">Ed25519Signature</span>},
     <span class="ident">HashValue</span>,
@@ -103,6 +106,7 @@
 <span class="doccomment">/// keys securely. The API offered here is inspired by the &#39;Transit Secret Engine&#39; provided by</span>
 <span class="doccomment">/// Vault: a production-ready storage engine for cloud infrastructures (e.g., see</span>
 <span class="doccomment">/// https://www.vaultproject.io/docs/secrets/transit/index.html).</span>
+<span class="attribute">#[<span class="ident">enum_dispatch</span>]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CryptoStorage</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
     <span class="doccomment">/// Securely generates a new named Ed25519 key pair and returns the corresponding public key.</span>
     <span class="doccomment">/// There are no guarantees about the state of the system after calling this multiple times.</span>

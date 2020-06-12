@@ -44,17 +44,21 @@
 <span id="44">44</span>
 <span id="45">45</span>
 <span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">Error</span>, <span class="ident">Value</span>};
+<span class="kw">use</span> <span class="ident">enum_dispatch</span>::<span class="ident">enum_dispatch</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
 <span class="doccomment">/// A secure key/value storage engine. Create takes a policy that is enforced internally by the</span>
 <span class="doccomment">/// actual backend. The policy contains public identities that the backend can translate into a</span>
 <span class="doccomment">/// unique and private token for another service. Hence get and set internally will pass the</span>
 <span class="doccomment">/// current service private token to the backend to gain its permissions.</span>
+<span class="attribute">#[<span class="ident">enum_dispatch</span>]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">KVStorage</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
     <span class="doccomment">/// Returns an error if the backend service is not online and available.</span>
     <span class="kw">fn</span> <span class="ident">available</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span>;
