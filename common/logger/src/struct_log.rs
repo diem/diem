@@ -11,6 +11,7 @@ use std::{
     fs::{File, OpenOptions},
     io,
     io::Write as IoWrite,
+    marker::PhantomData,
     net::UdpSocket,
     str::FromStr,
     sync::{
@@ -98,6 +99,10 @@ impl StructuredLogEntry {
         self
     }
 
+    pub fn field<D: Serialize>(self, field: &LoggingField<D>, value: D) -> Self {
+        self.data(field.0, value)
+    }
+
     #[doc(hidden)] // set from macro
     pub fn log(&mut self, log: String) -> &mut Self {
         self.log = Some(log);
@@ -141,6 +146,27 @@ impl StructuredLogEntry {
     #[doc(hidden)]
     pub fn send(self) {
         struct_logger().send(self);
+    }
+}
+
+/// Field is similar to .data but restricts type of the value to a specific type.
+///
+/// Example:
+///
+/// mod logging {
+///    pub const MY_FIELD:LoggingField<u64> = LoggingField::new("my_field");
+/// }
+///
+/// mod my_code {
+///    fn my_fn() {
+///        send_struct_log!(StructuredLogEntry::new(...).field(&logging::MY_FIELD, 0))
+///    }
+/// }
+pub struct LoggingField<D>(&'static str, PhantomData<D>);
+
+impl<D> LoggingField<D> {
+    pub const fn new(name: &'static str) -> Self {
+        Self(name, PhantomData)
     }
 }
 

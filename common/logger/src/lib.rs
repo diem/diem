@@ -125,7 +125,7 @@ mod struct_log;
 
 pub use struct_log::{
     init_file_struct_log, init_println_struct_log, init_struct_log_from_env, set_struct_logger,
-    struct_logger_enabled, struct_logger_set, StructLogSink, StructuredLogEntry,
+    struct_logger_enabled, struct_logger_set, LoggingField, StructLogSink, StructuredLogEntry,
 };
 
 mod text_log;
