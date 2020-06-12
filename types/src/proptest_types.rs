@@ -11,13 +11,11 @@ use crate::{
     block_info::{BlockInfo, Round},
     block_metadata::BlockMetadata,
     contract_event::ContractEvent,
-    epoch_change::EpochChangeProof,
     epoch_state::EpochState,
     event::{EventHandle, EventKey},
-    get_with_proof::{ResponseItem, UpdateToLatestLedgerResponse},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
-    proof::{AccumulatorConsistencyProof, TransactionListProof},
+    proof::TransactionListProof,
     transaction::{
         ChangeSet, Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction,
         Transaction, TransactionArgument, TransactionListWithProof, TransactionPayload,
@@ -599,31 +597,6 @@ impl Arbitrary for LedgerInfoWithSignatures {
                 LedgerInfoWithSignatures::new(ledger_info, signatures.into_iter().collect())
             })
             .boxed()
-    }
-
-    type Strategy = BoxedStrategy<Self>;
-}
-
-prop_compose! {
-    fn arb_update_to_latest_ledger_response()(
-        response_items in vec(any::<ResponseItem>(), 0..10),
-        ledger_info_with_sigs in any::<LedgerInfoWithSignatures>(),
-        epoch_change_proof in any::<EpochChangeProof>(),
-        ledger_consistency_proof in any::<AccumulatorConsistencyProof>(),
-    ) -> UpdateToLatestLedgerResponse {
-        UpdateToLatestLedgerResponse::new(
-            response_items,
-            ledger_info_with_sigs,
-            epoch_change_proof,
-            ledger_consistency_proof,
-        )
-    }
-}
-
-impl Arbitrary for UpdateToLatestLedgerResponse {
-    type Parameters = ();
-    fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        arb_update_to_latest_ledger_response().boxed()
     }
 
     type Strategy = BoxedStrategy<Self>;

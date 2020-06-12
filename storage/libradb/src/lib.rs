@@ -56,13 +56,11 @@ use libra_metrics::{
     IntGaugeVec, OpMetrics,
 };
 use libra_types::{
-    access_path::AccessPath,
     account_address::AccountAddress,
     account_state_blob::{AccountStateBlob, AccountStateWithProof},
     contract_event::{ContractEvent, EventWithProof},
     epoch_change::EpochChangeProof,
     event::EventKey,
-    get_with_proof::{RequestItem, ResponseItem},
     ledger_info::LedgerInfoWithSignatures,
     proof::{
         AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
@@ -109,7 +107,6 @@ pub static LIBRA_STORAGE_LATEST_TXN_VERSION: Lazy<IntGauge> = Lazy::new(|| {
 });
 
 const MAX_LIMIT: u64 = 1000;
-const MAX_REQUEST_ITEMS: u64 = 100;
 
 // TODO: Either implement an iteration API to allow a very old client to loop through a long history
 // or guarantee that there is always a recent enough waypoint and client knows to boot from there.
@@ -237,144 +234,6 @@ impl LibraDB {
         })
     }
 
-    /// This backs the `UpdateToLatestLedger` public read API which returns the latest
-    /// [`LedgerInfoWithSignatures`] together with items requested and proofs relative to the same
-    /// ledger info.
-    pub fn update_to_latest_ledger(
-        &self,
-        client_known_version: Version,
-        request_items: Vec<RequestItem>,
-    ) -> Result<(
-        Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        EpochChangeProof,
-        AccumulatorConsistencyProof,
-    )> {
-        error_if_too_many_requested(request_items.len() as u64, MAX_REQUEST_ITEMS)?;
-
-        // Get the latest ledger info and signatures
-        let ledger_info_with_sigs = self.ledger_store.get_latest_ledger_info()?;
-        let ledger_info = ledger_info_with_sigs.ledger_info();
-        let ledger_version = ledger_info.version();
-
-        // TODO: cache last epoch change version to avoid a DB access in most cases.
-        let client_epoch = self.ledger_store.get_epoch(client_known_version)?;
-        let epoch_change_proof = if client_epoch < ledger_info.next_block_epoch() {
-            let (ledger_infos_with_sigs, more) =
-                self.get_epoch_change_ledger_infos(client_epoch, ledger_info.next_block_epoch())?;
-            EpochChangeProof::new(ledger_infos_with_sigs, more)
-        } else {
-            EpochChangeProof::new(vec![], /* more = */ false)
-        };
-
-        let client_new_version = if !epoch_change_proof.more {
-            ledger_version
-        } else {
-            epoch_change_proof
-                .ledger_info_with_sigs
-                .last()
-                .expect("Must have at least one LedgerInfo.")
-                .ledger_info()
-                .version()
-        };
-        let ledger_consistency_proof = self
-            .ledger_store
-            .get_consistency_proof(client_known_version, client_new_version)?;
-
-        // If the epoch change proof in the response is enough for the client to update to
-        // latest LedgerInfo, fulfill all request items. Otherwise the client will not be able to
-        // verify the latest LedgerInfo, so do not send response items back.
-        let response_items = if !epoch_change_proof.more {
-            self.get_response_items(request_items, ledger_version)?
-        } else {
-            vec![]
-        };
-
-        Ok((
-            response_items,
-            ledger_info_with_sigs,
-            epoch_change_proof,
-            ledger_consistency_proof,
-        ))
-    }
-
-    fn get_response_items(
-        &self,
-        request_items: Vec<RequestItem>,
-        ledger_version: Version,
-    ) -> Result<Vec<ResponseItem>> {
-        request_items
-            .into_iter()
-            .map(|request_item| match request_item {
-                RequestItem::GetAccountState { address } => Ok(ResponseItem::GetAccountState {
-                    account_state_with_proof: self.get_account_state_with_proof(
-                        address,
-                        ledger_version,
-                        ledger_version,
-                    )?,
-                }),
-                RequestItem::GetAccountTransactionBySequenceNumber {
-                    account,
-                    sequence_number,
-                    fetch_events,
-                } => {
-                    let transaction_with_proof = self.get_txn_by_account(
-                        account,
-                        sequence_number,
-                        ledger_version,
-                        fetch_events,
-                    )?;
-
-                    let proof_of_current_sequence_number = match transaction_with_proof {
-                        Some(_) => None,
-                        None => Some(self.get_account_state_with_proof(
-                            account,
-                            ledger_version,
-                            ledger_version,
-                        )?),
-                    };
-
-                    Ok(ResponseItem::GetAccountTransactionBySequenceNumber {
-                        transaction_with_proof,
-                        proof_of_current_sequence_number,
-                    })
-                }
-
-                RequestItem::GetEventsByEventAccessPath {
-                    access_path,
-                    start_event_seq_num,
-                    ascending,
-                    limit,
-                } => {
-                    let (events_with_proof, proof_of_latest_event) = self
-                        .get_events_by_query_path(
-                            &access_path,
-                            start_event_seq_num,
-                            ascending,
-                            limit,
-                            ledger_version,
-                        )?;
-                    Ok(ResponseItem::GetEventsByEventAccessPath {
-                        events_with_proof,
-                        proof_of_latest_event,
-                    })
-                }
-                RequestItem::GetTransactions {
-                    start_version,
-                    limit,
-                    fetch_events,
-                } => {
-                    let txn_list_with_proof =
-                        self.get_transactions(start_version, limit, ledger_version, fetch_events)?;
-
-                    Ok(ResponseItem::GetTransactions {
-                        txn_list_with_proof,
-                    })
-                }
-            })
-            .collect::<Result<Vec<_>>>()
-    }
-
     // ================================== Backup APIs ===================================
 
     /// Gets an instance of `BackupHandler` for data backup purpose.
@@ -410,44 +269,6 @@ impl LibraDB {
     }
 
     // ================================== Private APIs ==================================
-    /// Returns events specified by `query_path` with sequence number in range designated by
-    /// `start_seq_num`, `ascending` and `limit`. If ascending is true this query will return up to
-    /// `limit` events that were emitted after `start_event_seq_num`. Otherwise, it will return up
-    /// to `limit` events in the reverse order. Both cases are inclusive.
-    fn get_events_by_query_path(
-        &self,
-        query_path: &AccessPath,
-        start_seq_num: u64,
-        ascending: bool,
-        limit: u64,
-        ledger_version: Version,
-    ) -> Result<(Vec<EventWithProof>, AccountStateWithProof)> {
-        let account_state_with_proof =
-            self.get_account_state_with_proof(query_path.address, ledger_version, ledger_version)?;
-
-        let event_key = {
-            let (event_key_opt, _count) =
-                account_state_with_proof.get_event_key_and_count_by_query_path(&query_path.path)?;
-            if let Some(event_key) = event_key_opt {
-                event_key
-            } else {
-                return Ok((Vec::new(), account_state_with_proof));
-            }
-        };
-
-        let events_with_proof = self.get_events_by_event_key(
-            &event_key,
-            start_seq_num,
-            ascending,
-            limit,
-            ledger_version,
-        )?;
-
-        // We always need to return the account blob to prove that this is indeed the event that was
-        // being queried.
-        Ok((events_with_proof, account_state_with_proof))
-    }
-
     fn get_events_by_event_key(
         &self,
         event_key: &EventKey,
@@ -631,19 +452,6 @@ impl LibraDB {
 }
 
 impl DbReader for LibraDB {
-    fn update_to_latest_ledger(
-        &self,
-        client_known_version: Version,
-        request_items: Vec<RequestItem>,
-    ) -> Result<(
-        Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        EpochChangeProof,
-        AccumulatorConsistencyProof,
-    )> {
-        Self::update_to_latest_ledger(&self, client_known_version, request_items)
-    }
-
     fn get_epoch_change_ledger_infos(
         &self,
         start_epoch: u64,

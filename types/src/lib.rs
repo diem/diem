@@ -14,7 +14,6 @@ pub mod contract_event;
 pub mod epoch_change;
 pub mod epoch_state;
 pub mod event;
-pub mod get_with_proof;
 pub mod ledger_info;
 pub mod libra_timestamp;
 pub mod mempool_status;

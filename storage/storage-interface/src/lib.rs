@@ -13,7 +13,6 @@ use libra_types::{
     epoch_change::EpochChangeProof,
     epoch_state::EpochState,
     event::EventKey,
-    get_with_proof::{RequestItem, ResponseItem},
     ledger_info::LedgerInfoWithSignatures,
     move_resource::MoveStorage,
     proof::{definition::LeafCount, AccumulatorConsistencyProof, SparseMerkleProof},
@@ -129,20 +128,6 @@ impl From<libra_secure_net::Error> for Error {
 /// Trait that is implemented by a DB that supports certain public (to client) read APIs
 /// expected of a Libra DB
 pub trait DbReader: Send + Sync {
-    // TODO: Remove this API after deprecating AC.
-    fn update_to_latest_ledger(
-        &self,
-        _client_known_version: Version,
-        _request_items: Vec<RequestItem>,
-    ) -> Result<(
-        Vec<ResponseItem>,
-        LedgerInfoWithSignatures,
-        EpochChangeProof,
-        AccumulatorConsistencyProof,
-    )> {
-        unimplemented!()
-    }
-
     /// See [`LibraDB::get_epoch_change_ledger_infos`].
     ///
     /// [`LibraDB::get_epoch_change_ledger_infos`]:
