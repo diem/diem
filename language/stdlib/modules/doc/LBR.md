@@ -9,6 +9,7 @@
 -  [Struct `ReserveComponent`](#0x1_LBR_ReserveComponent)
 -  [Struct `Reserve`](#0x1_LBR_Reserve)
 -  [Function `initialize`](#0x1_LBR_initialize)
+-  [Function `is_lbr`](#0x1_LBR_is_lbr)
 -  [Function `swap_into`](#0x1_LBR_swap_into)
 -  [Function `create`](#0x1_LBR_create)
 -  [Function `unpack`](#0x1_LBR_unpack)
@@ -171,6 +172,32 @@
         backing: <a href="Libra.md#0x1_Libra_zero">Libra::zero</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(),
     };
     move_to(association, <a href="#0x1_LBR_Reserve">Reserve</a> { mint_cap, burn_cap, preburn_cap, coin1, coin2 });
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LBR_is_lbr"></a>
+
+## Function `is_lbr`
+
+Return true if CoinType is LBR::LBR
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_is_lbr">is_lbr</a>&lt;CoinType&gt;(): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_is_lbr">is_lbr</a>&lt;CoinType&gt;(): bool {
+    <a href="Libra.md#0x1_Libra_is_currency">Libra::is_currency</a>&lt;CoinType&gt;() &&
+        <a href="Libra.md#0x1_Libra_currency_code">Libra::currency_code</a>&lt;CoinType&gt;() == <a href="Libra.md#0x1_Libra_currency_code">Libra::currency_code</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;()
 }
 </code></pre>
 

@@ -9,6 +9,7 @@ use crate::{
     executor::FakeExecutor,
 };
 use libra_types::{
+    account_config,
     on_chain_config::new_epoch_event_key,
     transaction::TransactionStatus,
     vm_error::{StatusCode, VMStatus},
@@ -27,7 +28,12 @@ fn validator_add() {
 
     let mint_amount = 10_000_000;
     executor.execute_and_apply(blessed_account.signed_script_txn(
-        encode_mint_lbr_to_address_script(&validator_account.address(), vec![], mint_amount),
+        encode_mint_script(
+            account_config::lbr_type_tag(),
+            &validator_account.address(),
+            vec![],
+            mint_amount,
+        ),
         0,
     ));
     executor.new_block();
@@ -65,7 +71,12 @@ fn validator_rotate_key() {
 
     let mint_amount = 10_000_000;
     executor.execute_and_apply(blessed_account.signed_script_txn(
-        encode_mint_lbr_to_address_script(&validator_account.address(), vec![], mint_amount),
+        encode_mint_script(
+            account_config::lbr_type_tag(),
+            &validator_account.address(),
+            vec![],
+            mint_amount,
+        ),
         0,
     ));
     executor.new_block();

@@ -455,20 +455,12 @@ impl ClientProxy {
 
         match self.treasury_compliance_account {
             Some(_) => {
-                let script = if mint_currency == "LBR" {
-                    transaction_builder::encode_mint_lbr_to_address_script(
-                        &receiver,
-                        receiver_auth_key.prefix().to_vec(),
-                        num_coins,
-                    )
-                } else {
-                    transaction_builder::encode_mint_script(
-                        type_tag_for_currency_code(currency_code),
-                        &receiver,
-                        receiver_auth_key.prefix().to_vec(),
-                        num_coins,
-                    )
-                };
+                let script = transaction_builder::encode_mint_script(
+                    type_tag_for_currency_code(currency_code),
+                    &receiver,
+                    receiver_auth_key.prefix().to_vec(),
+                    num_coins,
+                );
                 self.association_transaction_with_local_treasury_compliance_account(
                     TransactionPayload::Script(script),
                     is_blocking,
