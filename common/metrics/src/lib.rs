@@ -117,3 +117,20 @@ pub fn dump_all_metrics_to_file_periodically<P: AsRef<Path>>(
         thread::sleep(time::Duration::from_millis(interval));
     });
 }
+
+/// Helper function to record metrics for external calls.
+/// Include call counts, time, and whether it's inside or not (1 or 0).
+/// It assumes a OpMetrics defined as OP_COUNTERS in crate::counters;
+#[macro_export]
+macro_rules! monitor {
+    ( $name:literal, $fn:expr ) => {{
+        use crate::counters::OP_COUNTERS;
+        OP_COUNTERS.inc(concat!($name, "_count"));
+        let _timer = OP_COUNTERS.timer(concat!($name, "_time"));
+        let gauge = OP_COUNTERS.gauge(concat!($name, "_running"));
+        gauge.inc();
+        let result = $fn;
+        gauge.dec();
+        result
+    }};
+}
