@@ -778,7 +778,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">hash</span>::<span class="ident">HashValue</span>, <span class="ident">hkdf</span>::<span class="ident">Hkdf</span>, <span class="ident">traits</span>::<span class="ident">Uniform</span> <span class="kw">as</span> <span class="kw">_</span>, <span class="ident">x25519</span>};
 
 <span class="kw">use</span> <span class="ident">aes_gcm</span>::{
-    <span class="ident">aead</span>::{<span class="ident">generic_array</span>::<span class="ident">GenericArray</span>, <span class="ident">Aead</span>, <span class="ident">NewAead</span>, <span class="ident">Payload</span>},
+    <span class="ident">aead</span>::{<span class="ident">generic_array</span>::<span class="ident">GenericArray</span>, <span class="ident">Aead</span>, <span class="ident">AeadInPlace</span>, <span class="ident">NewAead</span>, <span class="ident">Payload</span>},
     <span class="ident">Aes256Gcm</span>,
 };
 <span class="kw">use</span> <span class="ident">sha2</span>::<span class="ident">Digest</span>;
@@ -1009,7 +1009,7 @@
         <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="ident">mix_key</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ck</span>, <span class="kw-2">&amp;</span><span class="ident">dh_output</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// -&gt; s</span>
-        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>));
+        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>));
 
         <span class="kw">let</span> <span class="ident">msg_and_ad</span> <span class="op">=</span> <span class="ident">Payload</span> {
             <span class="ident">msg</span>: <span class="self">self</span>.<span class="ident">public_key</span>.<span class="ident">as_slice</span>(),
@@ -1030,7 +1030,7 @@
         <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="ident">mix_key</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ck</span>, <span class="kw-2">&amp;</span><span class="ident">dh_output</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// -&gt; payload</span>
-        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>));
+        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>));
 
         <span class="kw">let</span> <span class="ident">msg_and_ad</span> <span class="op">=</span> <span class="ident">Payload</span> {
             <span class="ident">msg</span>: <span class="ident">payload</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="kw-2">&amp;</span>[]),
@@ -1091,7 +1091,7 @@
         <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="kw">as</span> <span class="ident">usize</span>;
         <span class="kw">let</span> <span class="ident">received_encrypted_payload</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">cursor</span>.<span class="ident">into_inner</span>()[<span class="ident">offset</span>..];
 
-        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>));
+        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>));
 
         <span class="kw">let</span> <span class="ident">nonce</span> <span class="op">=</span> <span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span>[<span class="number">0u8</span>; <span class="ident">AES_NONCE_SIZE</span>]);
         <span class="kw">let</span> <span class="ident">ct_and_ad</span> <span class="op">=</span> <span class="ident">Payload</span> {
@@ -1170,7 +1170,7 @@
             .<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">encrypted_remote_static</span>)
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">NoiseError</span>::<span class="ident">MsgTooShort</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>));
+        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>));
 
         <span class="kw">let</span> <span class="ident">nonce</span> <span class="op">=</span> <span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span>[<span class="number">0u8</span>; <span class="ident">AES_NONCE_SIZE</span>]);
         <span class="kw">let</span> <span class="ident">ct_and_ad</span> <span class="op">=</span> <span class="ident">Payload</span> {
@@ -1196,7 +1196,7 @@
         <span class="kw">let</span> <span class="ident">offset</span> <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="kw">as</span> <span class="ident">usize</span>;
         <span class="kw">let</span> <span class="ident">received_encrypted_payload</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">cursor</span>.<span class="ident">into_inner</span>()[<span class="ident">offset</span>..];
 
-        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>));
+        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>));
 
         <span class="kw">let</span> <span class="ident">nonce</span> <span class="op">=</span> <span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span>[<span class="number">0u8</span>; <span class="ident">AES_NONCE_SIZE</span>]);
         <span class="kw">let</span> <span class="ident">ct_and_ad</span> <span class="op">=</span> <span class="ident">Payload</span> {
@@ -1263,7 +1263,7 @@
         <span class="kw">let</span> <span class="ident">k</span> <span class="op">=</span> <span class="ident">mix_key</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">ck</span>, <span class="kw-2">&amp;</span><span class="ident">dh_output</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// -&gt; payload</span>
-        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>));
+        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">k</span>));
 
         <span class="kw">let</span> <span class="ident">msg_and_ad</span> <span class="op">=</span> <span class="ident">Payload</span> {
             <span class="ident">msg</span>: <span class="ident">payload</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="kw-2">&amp;</span>[]),
@@ -1362,7 +1362,7 @@
         }
 
         <span class="comment">// encrypt in place</span>
-        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">write_key</span>));
+        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">write_key</span>));
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nonce</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">4</span>].<span class="ident">to_vec</span>();
         <span class="ident">nonce</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">write_nonce</span>.<span class="ident">to_be_bytes</span>());
         <span class="kw">let</span> <span class="ident">nonce</span> <span class="op">=</span> <span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">nonce</span>);
@@ -1398,7 +1398,7 @@
         }
 
         <span class="comment">// decrypt in place</span>
-        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="kw-2">*</span><span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">read_key</span>));
+        <span class="kw">let</span> <span class="ident">aead</span> <span class="op">=</span> <span class="ident">Aes256Gcm</span>::<span class="ident">new</span>(<span class="ident">GenericArray</span>::<span class="ident">from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">read_key</span>));
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">nonce</span> <span class="op">=</span> [<span class="number">0u8</span>; <span class="number">4</span>].<span class="ident">to_vec</span>();
         <span class="ident">nonce</span>.<span class="ident">extend_from_slice</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">read_nonce</span>.<span class="ident">to_be_bytes</span>());
