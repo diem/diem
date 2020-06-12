@@ -150,6 +150,7 @@
 <span id="150">150</span>
 <span id="151">151</span>
 <span id="152">152</span>
+<span id="153">153</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -173,7 +174,7 @@
     },
     <span class="ident">time</span>::<span class="ident">Duration</span>,
 };
-<span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">runtime</span>::<span class="ident">Runtime</span>, <span class="ident">time</span>};
+<span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">runtime</span>::<span class="ident">Handle</span>, <span class="ident">time</span>};
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">DebugPortLogWorker</span> {
     <span class="ident">instance</span>: <span class="ident">Instance</span>,
@@ -186,7 +187,8 @@
 }
 
 <span class="kw">impl</span> <span class="ident">DebugPortLogWorker</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">spawn_new</span>(<span class="ident">cluster</span>: <span class="kw-2">&amp;</span><span class="ident">Cluster</span>, <span class="ident">runtime</span>: <span class="kw-2">&amp;</span><span class="ident">Runtime</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">LogTail</span>, <span class="ident">TraceTail</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">spawn_new</span>(<span class="ident">cluster</span>: <span class="kw-2">&amp;</span><span class="ident">Cluster</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">LogTail</span>, <span class="ident">TraceTail</span>) {
+        <span class="kw">let</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="ident">Handle</span>::<span class="ident">current</span>();
         <span class="kw">let</span> (<span class="ident">event_sender</span>, <span class="ident">event_receiver</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">channel</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">started_receivers</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">let</span> <span class="ident">pending_messages</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicI64</span>::<span class="ident">new</span>(<span class="number">0</span>));
