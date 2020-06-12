@@ -3,7 +3,7 @@
 
 use proptest::{
     strategy::{Strategy, ValueTree},
-    test_runner::TestRunner,
+    test_runner::{Config, TestRng, TestRunner},
 };
 
 /// Context for generating single values out of strategies.
@@ -20,6 +20,13 @@ impl ValueGenerator {
     /// Creates a new value generator with the default RNG.
     pub fn new() -> Self {
         Default::default()
+    }
+
+    /// Creates a new value generator with provided RNG
+    pub fn new_with_rng(rng: TestRng) -> Self {
+        Self {
+            runner: TestRunner::new_with_rng(Config::default(), rng),
+        }
     }
 
     /// Creates a new value generator with a deterministic RNG.
