@@ -498,6 +498,7 @@ pub struct CurrencyInfoView {
     pub code: String,
     pub scaling_factor: u64,
     pub fractional_part: u64,
+    pub to_lbr_exchange_rate: f32,
 }
 
 impl From<CurrencyInfoResource> for CurrencyInfoView {
@@ -506,6 +507,7 @@ impl From<CurrencyInfoResource> for CurrencyInfoView {
             code: info.currency_code().to_string(),
             scaling_factor: info.scaling_factor(),
             fractional_part: info.fractional_part(),
+            to_lbr_exchange_rate: info.exchange_rate(),
         }
     }
 }
