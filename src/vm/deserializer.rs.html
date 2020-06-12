@@ -1349,13 +1349,6 @@
 <span id="1349">1349</span>
 <span id="1350">1350</span>
 <span id="1351">1351</span>
-<span id="1352">1352</span>
-<span id="1353">1353</span>
-<span id="1354">1354</span>
-<span id="1355">1355</span>
-<span id="1356">1356</span>
-<span id="1357">1357</span>
-<span id="1358">1358</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1434,8 +1427,7 @@
     <span class="kw">let</span> <span class="ident">table_count</span> <span class="op">=</span> <span class="ident">read_uleb_u8_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tables</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Table</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
     <span class="ident">read_tables</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>, <span class="ident">table_count</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tables</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">content_len</span> <span class="op">=</span> <span class="ident">read_uleb_u32_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
-    <span class="ident">check_tables</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tables</span>, <span class="ident">content_len</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">content_len</span> <span class="op">=</span> <span class="ident">check_tables</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tables</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="ident">table_contents</span> <span class="op">=</span> <span class="ident">read_table_contents</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>, <span class="ident">content_len</span> <span class="kw">as</span> <span class="ident">usize</span>)<span class="question-mark">?</span>;
 
@@ -1456,8 +1448,7 @@
     <span class="kw">let</span> <span class="ident">table_count</span> <span class="op">=</span> <span class="ident">read_uleb_u8_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">tables</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Table</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
     <span class="ident">read_tables</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>, <span class="ident">table_count</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tables</span>)<span class="question-mark">?</span>;
-    <span class="kw">let</span> <span class="ident">content_len</span> <span class="op">=</span> <span class="ident">read_uleb_u32_internal</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
-    <span class="ident">check_tables</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tables</span>, <span class="ident">content_len</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">content_len</span> <span class="op">=</span> <span class="ident">check_tables</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">tables</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> <span class="ident">table_contents</span> <span class="op">=</span> <span class="ident">read_table_contents</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>, <span class="ident">content_len</span> <span class="kw">as</span> <span class="ident">usize</span>)<span class="question-mark">?</span>;
 
@@ -1537,6 +1528,7 @@
 
 <span class="kw">fn</span> <span class="ident">read_table_contents</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>, <span class="ident">n</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="comment">// TODO: can we rewrite this in a better way?</span>
     <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">n</span> {
         <span class="kw">match</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
             <span class="prelude-val">Ok</span>(<span class="ident">b</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">bytes</span>.<span class="ident">push</span>(<span class="ident">b</span>),
@@ -1552,7 +1544,7 @@
 <span class="doccomment">/// Verify correctness of tables.</span>
 <span class="doccomment">///</span>
 <span class="doccomment">/// Tables cannot have duplicates, must cover the entire blob and must be disjoint.</span>
-<span class="kw">fn</span> <span class="ident">check_tables</span>(<span class="ident">tables</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Table</span><span class="op">&gt;</span>, <span class="ident">content_length</span>: <span class="ident">u32</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">check_tables</span>(<span class="ident">tables</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Table</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">u32</span><span class="op">&gt;</span> {
     <span class="comment">// there is no real reason to pass a mutable reference but we are sorting next line</span>
     <span class="ident">tables</span>.<span class="ident">sort_by</span>(<span class="op">|</span><span class="ident">t1</span>, <span class="ident">t2</span><span class="op">|</span> <span class="ident">t1</span>.<span class="ident">offset</span>.<span class="ident">cmp</span>(<span class="kw-2">&amp;</span><span class="ident">t2</span>.<span class="ident">offset</span>));
 
@@ -1568,17 +1560,11 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">checked_offset</span>) <span class="op">=</span> <span class="ident">current_offset</span>.<span class="ident">checked_add</span>(<span class="ident">table</span>.<span class="ident">count</span>) {
             <span class="ident">current_offset</span> <span class="op">=</span> <span class="ident">checked_offset</span>;
         }
-        <span class="kw">if</span> <span class="ident">current_offset</span> <span class="op">&gt;</span> <span class="ident">content_length</span> {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_HEADER_TABLE</span>));
-        }
         <span class="kw">if</span> <span class="op">!</span><span class="ident">table_types</span>.<span class="ident">insert</span>(<span class="ident">table</span>.<span class="ident">kind</span>) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">DUPLICATE_TABLE</span>));
         }
     }
-    <span class="kw">if</span> <span class="ident">current_offset</span> <span class="op">!</span><span class="op">=</span> <span class="ident">content_length</span> {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_HEADER_TABLE</span>));
-    }
-    <span class="prelude-val">Ok</span>(())
+    <span class="prelude-val">Ok</span>(<span class="ident">current_offset</span>)
 }
 
 <span class="comment">//</span>
