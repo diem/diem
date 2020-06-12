@@ -12,6 +12,7 @@ module Unhosted {
     struct Unhosted {
     }
 
+    // Global limits published during genesis
     public fun publish_global_limits_definition(account: &signer) {
         assert(Signer::address_of(account) == limits_addr(), 100042);
         // These are limits for testnet _only_.
@@ -25,13 +26,20 @@ module Unhosted {
         AccountLimits::certify_limits_definition(account, limits_addr());
     }
 
+    // Regular unhosted wallet accounts are currently Testnet only
     public fun create(): Unhosted {
         assert(Testnet::is_testnet(), 10041);
         Unhosted {  }
     }
 
     public fun limits_addr(): address {
-        CoreAddresses::ASSOCIATION_ROOT_ADDRESS()
+        CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()
     }
+
+    fun window_length(): u64 {
+        // number of microseconds in a day
+        86400000000
+    }
+
 }
 }

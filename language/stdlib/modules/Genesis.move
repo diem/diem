@@ -4,6 +4,7 @@
 // genesis (for now).
 address 0x1 {
 module Genesis {
+    use 0x1::AccountLimits;
     use 0x1::Association::{Self, PublishModule};
     use 0x1::CoreAddresses;
     use 0x1::Coin1;
@@ -23,7 +24,6 @@ module Genesis {
     use 0x1::Signer;
     use 0x1::Testnet;
     use 0x1::TransactionFee;
-    use 0x1::Unhosted;
 
     fun initialize(
         association: &signer,
@@ -63,7 +63,6 @@ module Genesis {
         LBR::initialize(association);
 
         LibraAccount::initialize(association);
-        Unhosted::publish_global_limits_definition(association);
         LibraAccount::create_genesis_account<LBR>(
             Signer::address_of(association),
             copy dummy_auth_key_prefix,
@@ -88,6 +87,8 @@ module Genesis {
             coin2_mint_cap,
             coin2_burn_cap,
         );
+        AccountLimits::publish_unrestricted_limits(tc_account);
+        AccountLimits::certify_limits_definition(tc_account, tc_addr);
 
         // Create the config account
         LibraAccount::create_genesis_account<LBR>(

@@ -474,6 +474,15 @@ register_all_txn_scripts! {
     doc: "Encode a program that updates the travel rule limit to 'new_micro_lbr_limit'"
 }
 
+{
+    script: UpdateUnhostedWalletLimits,
+    builder: encode_update_unhosted_wallet_limits,
+    type_args: [],
+    args: [nonce: U64, new_max_total_flow: U64, new_max_holding_balance: U64],
+    doc: "Updates the nonzero thresholds for regular (unhosted) accounts. If the U64 holds the value 0,
+          the script ignores the update to that threshold"
+}
+
 } // End of txn scripts
 
 //...........................................................................
@@ -589,7 +598,8 @@ mod tests {
                 "unfreeze_account",
                 "rotate_authentication_key_with_nonce",
                 "update_exchange_rate",
-                "update_travel_rule_limit"
+                "update_travel_rule_limit",
+                "update_unhosted_wallet_limits"
             ],
             abis.iter().map(|x| x.name()).collect::<Vec<_>>()
         );
