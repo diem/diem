@@ -4,7 +4,7 @@
 use crate::{constants, error::Error, layout::Layout, SingleBackend};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{ASSOCIATION_KEY, OPERATOR_KEY};
-use libra_secure_storage::{BoxedStorage, KVStorage};
+use libra_secure_storage::{KVStorage, Storage};
 use libra_types::transaction::{Transaction, TransactionPayload};
 use std::{convert::TryInto, fs::File, io::Write, path::PathBuf};
 use structopt::StructOpt;
@@ -55,7 +55,7 @@ impl Genesis {
         association_config
             .parameters
             .insert("namespace".into(), layout.association[0].clone());
-        let association: BoxedStorage = association_config.try_into()?;
+        let association: Storage = association_config.try_into()?;
 
         let association_key = association
             .get(ASSOCIATION_KEY)
@@ -72,7 +72,7 @@ impl Genesis {
         common_config
             .parameters
             .insert("namespace".into(), constants::COMMON_NS.into());
-        let common: BoxedStorage = common_config.try_into()?;
+        let common: Storage = common_config.try_into()?;
 
         let layout = common
             .get(constants::LAYOUT)
@@ -90,7 +90,7 @@ impl Genesis {
             validator_config
                 .parameters
                 .insert("namespace".into(), operator.into());
-            let validator: BoxedStorage = validator_config.try_into()?;
+            let validator: Storage = validator_config.try_into()?;
 
             let key = validator
                 .get(OPERATOR_KEY)

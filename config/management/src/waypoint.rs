@@ -4,7 +4,7 @@
 use crate::{error::Error, secure_backend::RelativePosition, SecureBackends, SingleBackend};
 use executor::db_bootstrapper;
 use libra_global_constants::WAYPOINT;
-use libra_secure_storage::{BoxedStorage, KVStorage, Value};
+use libra_secure_storage::{KVStorage, Storage, Value};
 use libra_temppath::TempPath;
 use libra_types::waypoint::Waypoint;
 use libra_vm::LibraVM;
@@ -41,7 +41,7 @@ impl CreateWaypoint {
             .ok_or_else(|| Error::UnexpectedError("Unable to generate a waypoint".to_string()))?;
 
         if let Some(remote) = self.secure_backends.remote {
-            let mut remote_storage: BoxedStorage = remote.try_into()?;
+            let mut remote_storage: Storage = remote.try_into()?;
             InsertWaypoint::insert_waypoint_to_backend(
                 &waypoint,
                 &mut remote_storage,
@@ -72,7 +72,7 @@ impl InsertWaypoint {
         let waypoint_string = if let Some(waypoint_string) = self.waypoint {
             waypoint_string
         } else if let Some(remote_backend) = self.secure_backends.remote {
-            TryInto::<BoxedStorage>::try_into(remote_backend)?
+            TryInto::<Storage>::try_into(remote_backend)?
                 .get(WAYPOINT)
                 .and_then(|v| v.value.string())
                 .map_err(|e| Error::RemoteStorageReadError(WAYPOINT, e.to_string()))?
@@ -84,14 +84,14 @@ impl InsertWaypoint {
 
         let waypoint = Waypoint::from_str(&waypoint_string)
             .map_err(|e| Error::UnexpectedError(e.to_string()))?;
-        let mut local_storage: BoxedStorage = self.secure_backends.local.try_into()?;
+        let mut local_storage: Storage = self.secure_backends.local.try_into()?;
         Self::insert_waypoint_to_backend(&waypoint, &mut local_storage, RelativePosition::Local)?;
         Ok(waypoint)
     }
 
     fn insert_waypoint_to_backend(
         waypoint: &Waypoint,
-        backend_storage: &mut BoxedStorage,
+        backend_storage: &mut Storage,
         backend_location: RelativePosition,
     ) -> Result<(), Error> {
         backend_storage

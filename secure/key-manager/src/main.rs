@@ -11,7 +11,7 @@ use libra_key_manager::{
 };
 use libra_logger::info;
 use libra_secure_push_metrics::MetricsPusher;
-use libra_secure_storage::BoxedStorage;
+use libra_secure_storage::Storage;
 use libra_secure_time::RealTimeService;
 use std::{convert::TryInto, env, process};
 
@@ -46,7 +46,7 @@ fn main() {
 
 fn create_and_execute_key_manager(key_manager_config: KeyManagerConfig) -> Result<(), Error> {
     let libra_interface = create_libra_interface(key_manager_config.json_rpc_endpoint);
-    let storage: BoxedStorage = (&key_manager_config.secure_backend)
+    let storage: Storage = (&key_manager_config.secure_backend)
         .try_into()
         .expect("Unable to initialize storage");
     let time_service = RealTimeService::new();

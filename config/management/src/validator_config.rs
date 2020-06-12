@@ -8,7 +8,7 @@ use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
 };
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
-use libra_secure_storage::{BoxedStorage, CryptoStorage, KVStorage, Value};
+use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
     account_address::{self, AccountAddress},
@@ -35,7 +35,7 @@ pub struct ValidatorConfig {
 
 impl ValidatorConfig {
     pub fn execute(self) -> Result<Transaction, Error> {
-        let mut local: BoxedStorage = self.backends.local.try_into()?;
+        let mut local: Storage = self.backends.local.try_into()?;
         local
             .available()
             .map_err(|e| Error::LocalStorageUnavailable(e.to_string()))?;
@@ -101,7 +101,7 @@ impl ValidatorConfig {
         // Step 3) Submit to remote storage
 
         if let Some(remote) = self.backends.remote {
-            let mut remote: BoxedStorage = remote.try_into()?;
+            let mut remote: Storage = remote.try_into()?;
             remote
                 .available()
                 .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
@@ -117,7 +117,7 @@ impl ValidatorConfig {
 
 fn ed25519_from_storage(
     key_name: &'static str,
-    storage: &BoxedStorage,
+    storage: &Storage,
 ) -> Result<Ed25519PublicKey, Error> {
     Ok(storage
         .get_public_key(key_name)
@@ -127,7 +127,7 @@ fn ed25519_from_storage(
 
 fn x25519_from_storage(
     key_name: &'static str,
-    storage: &BoxedStorage,
+    storage: &Storage,
 ) -> Result<x25519::PublicKey, Error> {
     let edkey = ed25519_from_storage(key_name, storage)?;
     x25519::PublicKey::from_ed25519_public_bytes(&edkey.to_bytes())

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{tests::suite, PersistentSafetyStorage, SafetyRulesManager, TSafetyRules};
-use libra_secure_storage::{BoxedStorage, KVStorage, VaultStorage};
+use libra_secure_storage::{KVStorage, Storage, VaultStorage};
 use libra_types::{validator_signer::ValidatorSigner, waypoint::Waypoint};
 
 /// A test for verifying VaultStorage properly supports the SafetyRule backend.  This test
@@ -18,7 +18,7 @@ fn safety_rules() -> (Box<dyn TSafetyRules>, ValidatorSigner) {
     let signer = ValidatorSigner::from_int(0);
     let host = "http://localhost:8200".to_string();
     let token = "root_token".to_string();
-    let mut storage = BoxedStorage::from(VaultStorage::new(host, token, None, None));
+    let mut storage = Storage::from(VaultStorage::new(host, token, None, None));
     storage.reset_and_clear().unwrap();
 
     let waypoint = Waypoint::default();

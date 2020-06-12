@@ -5,7 +5,7 @@ use anyhow::Result;
 use consensus_types::common::Round;
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_global_constants::{CONSENSUS_KEY, EPOCH, LAST_VOTED_ROUND, PREFERRED_ROUND, WAYPOINT};
-use libra_secure_storage::{BoxedStorage, CryptoStorage, InMemoryStorage, KVStorage, Value};
+use libra_secure_storage::{CryptoStorage, InMemoryStorage, KVStorage, Storage, Value};
 use libra_types::waypoint::Waypoint;
 use std::str::FromStr;
 
@@ -15,19 +15,19 @@ use std::str::FromStr;
 /// @TODO add access to private key from persistent store
 /// @TODO add retrieval of private key based upon public key to persistent store
 pub struct PersistentSafetyStorage {
-    internal_store: BoxedStorage,
+    internal_store: Storage,
 }
 
 impl PersistentSafetyStorage {
     pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
-        let storage = BoxedStorage::from(InMemoryStorage::new());
+        let storage = Storage::from(InMemoryStorage::new());
         Self::initialize(storage, private_key, Waypoint::default())
     }
 
     /// Use this to instantiate a PersistentStorage for a new data store, one that has no
     /// SafetyRules values set.
     pub fn initialize(
-        mut internal_store: BoxedStorage,
+        mut internal_store: Storage,
         private_key: Ed25519PrivateKey,
         waypoint: Waypoint,
     ) -> Self {
@@ -37,7 +37,7 @@ impl PersistentSafetyStorage {
     }
 
     fn initialize_(
-        internal_store: &mut BoxedStorage,
+        internal_store: &mut Storage,
         private_key: Ed25519PrivateKey,
         waypoint: Waypoint,
     ) -> Result<()> {
@@ -51,7 +51,7 @@ impl PersistentSafetyStorage {
 
     /// Use this to instantiate a PersistentStorage with an existing data store. This is intended
     /// for constructed environments.
-    pub fn new(internal_store: BoxedStorage) -> Self {
+    pub fn new(internal_store: Storage) -> Self {
         Self { internal_store }
     }
 
@@ -115,7 +115,7 @@ impl PersistentSafetyStorage {
     }
 
     #[cfg(any(test, feature = "testing"))]
-    pub fn internal_store(&mut self) -> &mut BoxedStorage {
+    pub fn internal_store(&mut self) -> &mut Storage {
         &mut self.internal_store
     }
 }
