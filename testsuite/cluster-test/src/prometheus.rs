@@ -7,6 +7,7 @@ use anyhow::{bail, format_err, Result};
 use reqwest::Url;
 use serde::Deserialize;
 use std::{collections::HashMap, time::Duration};
+use libra_logger::{info, warn};
 
 #[derive(Clone)]
 pub struct Prometheus {
@@ -139,7 +140,9 @@ impl MatrixResponse {
                     cur_max = *v;
                 }
             }
+
             max.insert(peer_id.clone(), cur_max);
+            info!("hhhhhh peer_id = {:?}, version = {:?}", peer_id, cur_max);
             count += 1;
         }
         if count == 0 {
