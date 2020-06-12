@@ -78,8 +78,8 @@ script {
 script {
     use 0x1::LibraAccount;
     use 0x1::LBR::LBR;
-    fun main() {
-        LibraAccount::create_unhosted_account<LBR>(0xDEADBEEF, x"", false);
+    fun main(account: &signer) {
+        LibraAccount::create_unhosted_account<LBR>(account, 0xDEADBEEF, x"", false);
     }
 }
 // check: ABORTED
@@ -112,10 +112,13 @@ script {
     use 0x1::LibraAccount;
     use 0x1::LBR::LBR;
     use 0x1::Testnet;
+    use 0x1::Roles::{Self, AssociationRootRole};
     fun main(account: &signer) {
         Testnet::remove_testnet(account);
-        LibraAccount::create_testnet_account<LBR>(account, 0xDEADBEEF, x"");
+        let r = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        LibraAccount::create_testnet_account<LBR>(account, &r, 0xDEADBEEF, x"");
         Testnet::initialize(account);
+        Roles::restore_capability_to_privilege(account, r);
     }
 }
 // check: ABORTED

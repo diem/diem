@@ -257,6 +257,8 @@ pub enum StatusCode {
     CURRENCY_INFO_DOES_NOT_EXIST = 20,
     // The account sender doesn't have permissions to publish modules
     INVALID_MODULE_PUBLISHER = 21,
+    // The sending account has no role
+    NO_ACCOUNT_ROLE = 22,
 
     // When a code module/script is published it is verified. These are the
     // possible errors that can arise from the verification process.

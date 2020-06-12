@@ -5,6 +5,7 @@
 
 ### Table of Contents
 
+-  [Struct `RegisterNewCurrency`](#0x1_Libra_RegisterNewCurrency)
 -  [Struct `Libra`](#0x1_Libra_Libra)
 -  [Struct `MintCapability`](#0x1_Libra_MintCapability)
 -  [Struct `BurnCapability`](#0x1_Libra_BurnCapability)
@@ -16,7 +17,7 @@
 -  [Struct `ToLBRExchangeRateUpdateEvent`](#0x1_Libra_ToLBRExchangeRateUpdateEvent)
 -  [Struct `CurrencyInfo`](#0x1_Libra_CurrencyInfo)
 -  [Struct `Preburn`](#0x1_Libra_Preburn)
--  [Struct `AddCurrency`](#0x1_Libra_AddCurrency)
+-  [Function `grant_privileges`](#0x1_Libra_grant_privileges)
 -  [Function `initialize`](#0x1_Libra_initialize)
 -  [Function `publish_mint_capability`](#0x1_Libra_publish_mint_capability)
 -  [Function `publish_burn_capability`](#0x1_Libra_publish_burn_capability)
@@ -54,7 +55,6 @@
 -  [Function `update_lbr_exchange_rate`](#0x1_Libra_update_lbr_exchange_rate)
 -  [Function `lbr_exchange_rate`](#0x1_Libra_lbr_exchange_rate)
 -  [Function `update_minting_ability`](#0x1_Libra_update_minting_ability)
--  [Function `assert_assoc_and_currency`](#0x1_Libra_assert_assoc_and_currency)
 -  [Function `assert_is_coin`](#0x1_Libra_assert_is_coin)
 -  [Specification](#0x1_Libra_Specification)
     -  [Module specifications](#0x1_Libra_@Module_specifications)
@@ -63,6 +63,34 @@
     -  [Struct `Libra`](#0x1_Libra_Specification_Libra)
 
 
+
+<a name="0x1_Libra_RegisterNewCurrency"></a>
+
+## Struct `RegisterNewCurrency`
+
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Libra_RegisterNewCurrency">RegisterNewCurrency</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>dummy_field: bool</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
 
 <a name="0x1_Libra_Libra"></a>
 
@@ -644,34 +672,33 @@ including multiple burn requests from the same account. However, burn requests
 
 </details>
 
-<a name="0x1_Libra_AddCurrency"></a>
+<a name="0x1_Libra_grant_privileges"></a>
 
-## Struct `AddCurrency`
+## Function `grant_privileges`
 
-An association account holding this privilege can add/remove the
-currencies from the system. This must be published under the
-address at
-<code><a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code>.
+Grants the
+<code><a href="#0x1_Libra_RegisterNewCurrency">RegisterNewCurrency</a></code> privilege to
+the calling account as long as it has the correct role (TC).
+Aborts if
+<code>account</code> does not have a
+<code>RoleId</code> that corresponds with
+the treacury compliance role.
 
 
-<pre><code><b>struct</b> <a href="#0x1_Libra_AddCurrency">AddCurrency</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_grant_privileges">grant_privileges</a>(account: &signer)
 </code></pre>
 
 
 
 <details>
-<summary>Fields</summary>
+<summary>Implementation</summary>
 
 
-<dl>
-<dt>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_grant_privileges">grant_privileges</a>(account: &signer) {
+    <a href="Roles.md#0x1_Roles_add_privilege_to_account_treasury_compliance_role">Roles::add_privilege_to_account_treasury_compliance_role</a>(account, <a href="#0x1_Libra_RegisterNewCurrency">RegisterNewCurrency</a>{});
+}
+</code></pre>
 
-<code>dummy_field: bool</code>
-</dt>
-<dd>
-
-</dd>
-</dl>
 
 
 </details>
@@ -689,7 +716,7 @@ config, and publishes the
 <code><a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>()</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_initialize">initialize</a>(config_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_initialize">initialize</a>(config_account: &signer, create_config_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="LibraConfig.md#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;)
 </code></pre>
 
 
@@ -698,12 +725,16 @@ config, and publishes the
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_initialize">initialize</a>(config_account: &signer) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_initialize">initialize</a>(
+    config_account: &signer,
+    create_config_capability: &Capability&lt;CreateOnChainConfig&gt;,
+) {
+    // Operational constraint
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(),
         0
     );
-    <b>let</b> cap = <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account);
+    <b>let</b> cap = <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account, create_config_capability);
     move_to(config_account, <a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>{ cap })
 }
 </code></pre>
@@ -727,7 +758,7 @@ and the
 <code>account</code> must be an association account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;)
 </code></pre>
 
 
@@ -736,8 +767,12 @@ and the
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;) {
-    <a href="#0x1_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(account);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(
+    account: &signer,
+    cap: <a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;,
+    _: &Capability&lt;TreasuryComplianceRole&gt;,
+) {
+    <a href="#0x1_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;();
     move_to(account, cap)
 }
 </code></pre>
@@ -761,7 +796,7 @@ must be a registered currency type, and the
 association account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;)
 </code></pre>
 
 
@@ -770,8 +805,12 @@ association account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;(account: &signer, cap: <a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;) {
-    <a href="#0x1_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(account);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_burn_capability">publish_burn_capability</a>&lt;CoinType&gt;(
+    account: &signer,
+    cap: <a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;,
+    _: &Capability&lt;TreasuryComplianceRole&gt;,
+) {
+    <a href="#0x1_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;();
     move_to(account, cap)
 }
 </code></pre>
@@ -1046,7 +1085,7 @@ Create a
 <code><a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;</code> resource
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(creator: &signer): <a href="#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;): <a href="#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -1055,9 +1094,9 @@ Create a
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(creator: &signer): <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; {
-    // TODO: this should check for AssocRoot in the future
-    <a href="Association.md#0x1_Association_assert_is_association">Association::assert_is_association</a>(creator);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(
+    _: &Capability&lt;TreasuryComplianceRole&gt;
+): <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; {
     <b>assert</b>(<a href="#0x1_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(), 201);
     <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; { requests: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>() }
 }
@@ -1081,7 +1120,7 @@ time, and the association TC account
 this resource for the designated dealer.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_preburn_to_account">publish_preburn_to_account</a>&lt;CoinType&gt;(creator: &signer, account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_preburn_to_account">publish_preburn_to_account</a>&lt;CoinType&gt;(account: &signer, tc_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;)
 </code></pre>
 
 
@@ -1091,10 +1130,11 @@ this resource for the designated dealer.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_preburn_to_account">publish_preburn_to_account</a>&lt;CoinType&gt;(
-    creator: &signer, account: &signer
+    account: &signer,
+    tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
     <b>assert</b>(!<a href="#0x1_Libra_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;(), 202);
-    move_to(account, <a href="#0x1_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(creator))
+    move_to(account, <a href="#0x1_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(tc_capability))
 }
 </code></pre>
 
@@ -1626,8 +1666,8 @@ The passed-in
 <code><a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()</code>) and
 the
 <code>account</code> must also have the correct
-<code><a href="#0x1_Libra_AddCurrency">AddCurrency</a></code> association
-privilege. After the first registration of
+<code><a href="#0x1_Libra_RegisterNewCurrency">RegisterNewCurrency</a></code> capability.
+After the first registration of
 <code>CoinType</code> as a
 currency, all subsequent tries to register
 <code>CoinType</code> as a currency
@@ -1642,7 +1682,7 @@ adds the currency to the set of
 <code><a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code> resources.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(account: &signer, to_lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, <a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_Libra_RegisterNewCurrency">Libra::RegisterNewCurrency</a>&gt;, to_lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>, is_synthetic: bool, scaling_factor: u64, fractional_part: u64, currency_code: vector&lt;u8&gt;): (<a href="#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, <a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
 </code></pre>
 
 
@@ -1653,6 +1693,7 @@ adds the currency to the set of
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_register_currency">register_currency</a>&lt;CoinType&gt;(
     account: &signer,
+    _: &Capability&lt;<a href="#0x1_Libra_RegisterNewCurrency">RegisterNewCurrency</a>&gt;,
     to_lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>,
     is_synthetic: bool,
     scaling_factor: u64,
@@ -1660,10 +1701,10 @@ adds the currency to the set of
     currency_code: vector&lt;u8&gt;,
 ): (<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;, <a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;)
 <b>acquires</b> <a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a> {
-    // And only callable by the designated currency address.
+    // Operational constraint that it must be stored under a specific
+    // address.
     <b>assert</b>(
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>() &&
-        <a href="Association.md#0x1_Association_has_privilege">Association::has_privilege</a>&lt;<a href="#0x1_Libra_AddCurrency">AddCurrency</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)),
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>(),
         8
     );
 
@@ -1939,7 +1980,7 @@ Updates the
 <code>lbr_exchange_rate</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(account: &signer, lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>)
 </code></pre>
 
 
@@ -1949,11 +1990,10 @@ Updates the
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_lbr_exchange_rate">update_lbr_exchange_rate</a>&lt;FromCoinType&gt;(
-    account: &signer,
+    _: &Capability&lt;TreasuryComplianceRole&gt;,
     lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
-    <a href="Association.md#0x1_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(account);
-    <a href="#0x1_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;FromCoinType&gt;(account);
+    <a href="#0x1_Libra_assert_is_coin">assert_is_coin</a>&lt;FromCoinType&gt;();
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;FromCoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
     <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>(
@@ -2015,7 +2055,7 @@ start out in the default state of
 <code>can_mint = <b>true</b></code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(account: &signer, can_mint: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, can_mint: bool)
 </code></pre>
 
 
@@ -2024,39 +2064,11 @@ start out in the default state of
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(account: &signer, can_mint: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_update_minting_ability">update_minting_ability</a>&lt;CoinType&gt;(_: &Capability&lt;TreasuryComplianceRole&gt;, can_mint: bool)
 <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
-    <a href="#0x1_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(account);
+    <a href="#0x1_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;();
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.can_mint = can_mint;
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_Libra_assert_assoc_and_currency"></a>
-
-## Function `assert_assoc_and_currency`
-
-Asserts that the
-<code>account</code> is an association account, and that
-<code>CoinType</code> is a registered currency type.
-
-
-<pre><code><b>fun</b> <a href="#0x1_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(account: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;CoinType&gt;(account: &signer) {
-    <a href="Association.md#0x1_Association_assert_is_association">Association::assert_is_association</a>(account);
-    <a href="#0x1_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;();
 }
 </code></pre>
 
@@ -2134,72 +2146,6 @@ Mirrors
 <a name="0x1_Libra_@Management_of_capabilities"></a>
 
 #### Management of capabilities
-
-
-
-<a name="0x1_Libra_OnlyAssocHasMintCapabilityInvariant"></a>
-
-Before a currency is registered, there is no mint capability for that currency.
-
-
-<pre><code><b>schema</b> <a href="#0x1_Libra_OnlyAssocHasMintCapabilityInvariant">OnlyAssocHasMintCapabilityInvariant</a> {
-    <b>invariant</b> <b>module</b> forall coin_type: type, addr1: address:
-        !<a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;coin_type&gt;() ==&gt; !exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1);
-}
-</code></pre>
-
-
-After a currency is registered, only accounts with association privilege
-have the mint capability for that currency.
-
-
-<pre><code><b>schema</b> <a href="#0x1_Libra_OnlyAssocHasMintCapabilityInvariant">OnlyAssocHasMintCapabilityInvariant</a> {
-    <b>invariant</b> <b>module</b> forall coin_type: type, addr1: address
-        where <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;coin_type&gt;():
-            exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;coin_type&gt;&gt;(addr1)
-                ==&gt; <a href="Association.md#0x1_Association_spec_addr_is_association">Association::spec_addr_is_association</a>(addr1);
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_Libra_OnlyAssocHasMintCapabilityInvariant">OnlyAssocHasMintCapabilityInvariant</a> <b>to</b> *, *&lt;CoinType&gt;;
-</code></pre>
-
-
-
-
-<a name="0x1_Libra_OnlyAssocHasBurnCapabilityInvariant"></a>
-
-Before a currency is registered, there is no burn capability for that currency.
-
-
-<pre><code><b>schema</b> <a href="#0x1_Libra_OnlyAssocHasBurnCapabilityInvariant">OnlyAssocHasBurnCapabilityInvariant</a> {
-    <b>invariant</b> <b>module</b> forall coin_type: type, addr1: address:
-        !<a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;coin_type&gt;() ==&gt; !exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;coin_type&gt;&gt;(addr1);
-}
-</code></pre>
-
-
-After a currency is registered, only accounts with association privileges
-has the burn capability for that currency.
-
-
-<pre><code><b>schema</b> <a href="#0x1_Libra_OnlyAssocHasBurnCapabilityInvariant">OnlyAssocHasBurnCapabilityInvariant</a> {
-    <b>invariant</b> <b>module</b> forall coin_type: type, addr1: address
-        where <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;coin_type&gt;():
-            exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;coin_type&gt;&gt;(addr1)
-                ==&gt; <a href="Association.md#0x1_Association_spec_addr_is_association">Association::spec_addr_is_association</a>(addr1);
-}
-</code></pre>
-
-
-
-
-<pre><code><b>apply</b> <a href="#0x1_Libra_OnlyAssocHasBurnCapabilityInvariant">OnlyAssocHasBurnCapabilityInvariant</a> <b>to</b> *, *&lt;CoinType&gt;;
-</code></pre>
-
 
 
 <a name="0x1_Libra_@Conservation_of_currency"></a>

@@ -92,7 +92,7 @@ transaction fees from the
 <code>0xB1E55ED</code> account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_initialize">initialize</a>(association: &signer, fee_account: &signer, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_initialize">initialize</a>(creating_account: &signer, fee_account: &signer, assoc_root_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;, tc_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, auth_key_prefix: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -101,22 +101,27 @@ transaction fees from the
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_initialize">initialize</a>(association: &signer, fee_account: &signer, auth_key_prefix: vector&lt;u8&gt;) {
-    <b>assert</b>(
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(),
-        0
-    );
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_initialize">initialize</a>(
+    creating_account: &signer,
+    fee_account: &signer,
+    assoc_root_capability: &Capability&lt;AssociationRootRole&gt;,
+    tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
+    auth_key_prefix: vector&lt;u8&gt;
+) {
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(fee_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_TRANSACTION_FEE_ADDRESS">CoreAddresses::TRANSACTION_FEE_ADDRESS</a>(),
         0
     );
 
     <a href="LibraAccount.md#0x1_LibraAccount_create_testnet_account">LibraAccount::create_testnet_account</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(
-        association, <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(fee_account), auth_key_prefix
+        creating_account,
+        assoc_root_capability,
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(fee_account),
+        auth_key_prefix
     );
     // accept fees in all the currencies. No need <b>to</b> do this for <a href="LBR.md#0x1_LBR">LBR</a>
-    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(association, fee_account);
-    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(association, fee_account);
+    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(fee_account, tc_capability);
+    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(fee_account, tc_capability);
 
     <b>let</b> cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(fee_account);
     move_to(fee_account, <a href="#0x1_TransactionFee_TransactionFeeCollection">TransactionFeeCollection</a> { cap });
@@ -141,7 +146,7 @@ Sets ups the needed transaction fee state for a given
 <code>fee_account</code>
 
 
-<pre><code><b>fun</b> <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(association: &signer, fee_account: &signer)
+<pre><code><b>fun</b> <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(fee_account: &signer, tc_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;)
 </code></pre>
 
 
@@ -150,10 +155,13 @@ Sets ups the needed transaction fee state for a given
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(association: &signer, fee_account: &signer) {
+<pre><code><b>fun</b> <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(
+    fee_account: &signer,
+    tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
+) {
     <a href="LibraAccount.md#0x1_LibraAccount_add_currency">LibraAccount::add_currency</a>&lt;CoinType&gt;(fee_account);
     move_to(fee_account, <a href="#0x1_TransactionFee_TransactionFeePreburn">TransactionFeePreburn</a>&lt;CoinType&gt; {
-        preburn: <a href="Libra.md#0x1_Libra_create_preburn">Libra::create_preburn</a>(association)
+        preburn: <a href="Libra.md#0x1_Libra_create_preburn">Libra::create_preburn</a>(tc_capability)
     })
 }
 </code></pre>

@@ -7,9 +7,9 @@ address 0x1 {
 
 module AccountLimits {
     use 0x1::CoreAddresses;
-    use 0x1::Association;
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
+    use 0x1::Roles::{Capability, TreasuryComplianceRole};
 
     // An operations capability that restricts callers of this module since
     // the operations can mutate account states.
@@ -17,7 +17,7 @@ module AccountLimits {
 
     // A resource specifying the account limits. There is a default
     // `LimitsDefinition` resource for unhosted accounts published at
-    // `default_limits_addr()`, but other not-unhosted accounts may have
+    // `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()`, but other not-unhosted accounts may have
     // different account limit definitons. In such cases, they will have a
     // `LimitsDefinition` published under their (root) account. Note that
     // empty accounts do _not_ have a published LimitsDefinition for
@@ -96,7 +96,7 @@ module AccountLimits {
                 window_start: current_time(),
                 window_total_flow: 0,
                 tracked_balance: 0,
-                limits_definition: default_limits_addr()
+                limits_definition: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()
             }
         )
     }
@@ -138,42 +138,33 @@ module AccountLimits {
         } = move_from<LimitsDefinition>(Signer::address_of(account));
     }
 
-    public fun update_limits_definition(tc_account: &signer,
+    public fun update_limits_definition(
+        _: &Capability<TreasuryComplianceRole>,
         new_max_total_flow: u64,
         new_max_holding_balance: u64,
     ) acquires LimitsDefinition {
-        let tc_address = Signer::address_of(tc_account);
-        assert(tc_address == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), 302);
         // As we don't have Optionals for txn scripts, in update_unhosted_wallet_limits.move
         // we use 0 value to represent a None (ie no update to that variable)
         if (new_max_total_flow != 0) {
-            borrow_global_mut<LimitsDefinition>(tc_address).max_total_flow = new_max_total_flow;
+            borrow_global_mut<LimitsDefinition>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).max_total_flow = new_max_total_flow;
         };
         if (new_max_holding_balance != 0) {
-            borrow_global_mut<LimitsDefinition>(tc_address).max_holding = new_max_holding_balance;
+            borrow_global_mut<LimitsDefinition>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).max_holding = new_max_holding_balance;
         };
     }
 
     // Certify the limits definition published under the account at
-    // `limits_addr`. Only callable by the association.
-    public fun certify_limits_definition(account: &signer, limits_addr: address)
+    // `limits_addr`.
+    public fun certify_limits_definition(_: &Capability<TreasuryComplianceRole>, limits_addr: address)
     acquires LimitsDefinition {
-        Association::assert_is_association(account);
         borrow_global_mut<LimitsDefinition>(limits_addr).is_certified = true;
     }
 
     // Decertify the limits_definition published under the account at
-    // `limits_addr`. Only callable by the association.
-    public fun decertify_limits_definition(account: &signer, limits_addr: address)
+    // `limits_addr`.
+    public fun decertify_limits_definition(_: &Capability<TreasuryComplianceRole>, limits_addr: address)
     acquires LimitsDefinition {
-        Association::assert_is_association(account);
         borrow_global_mut<LimitsDefinition>(limits_addr).is_certified = false;
-    }
-
-    // The address where the default (unhosted) account limits are
-    // published
-    public fun default_limits_addr(): address {
-        CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()
     }
 
     ///////////////////////////////////////////////////////////////////////////

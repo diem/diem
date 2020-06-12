@@ -51,6 +51,8 @@ fn create_account() {
 fn create_account_with_exec() {
     let mut executor = FakeExecutor::from_genesis_file();
     let new_account = Account::new();
+    let sender = AccountData::new(1_000_000, 10);
+    executor.add_account_data(&sender);
 
     // create an hosted account via function invokation.
     executor.exec(
@@ -58,6 +60,7 @@ fn create_account_with_exec() {
         "create_unhosted_account",
         vec![lbr_type_tag()],
         vec![
+            Value::transaction_argument_signer_reference(*sender.address()),
             Value::address(*new_account.address()),
             Value::vector_u8(new_account.auth_key_prefix()),
             Value::bool(false),

@@ -15,7 +15,7 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config,
+    account_config::{self, RoleId},
     block_metadata::BlockMetadata,
     on_chain_config::{LibraVersion, OnChainConfig, VMConfig},
     transaction::{
@@ -30,7 +30,9 @@ use move_core_types::{
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     identifier::IdentStr,
     language_storage::{ResourceKey, StructTag, TypeTag},
+    move_resource::MoveResource,
 };
+
 use move_vm_runtime::{
     data_cache::{RemoteCache, TransactionDataCache},
     move_vm::MoveVM,
@@ -42,6 +44,10 @@ use move_vm_types::{
 use rayon::prelude::*;
 use std::{collections::HashSet, convert::TryFrom, sync::Arc};
 use vm::errors::{convert_prologue_runtime_error, VMResult};
+
+/// Any transation sent from an account with a role id below this cutoff will be priorited over
+/// other transactions.
+const PRIORITIZED_TRANSACTION_ROLE_CUTOFF: u64 = 5;
 
 #[derive(Clone)]
 /// A wrapper to make VMRuntime standalone and thread safe.
@@ -966,7 +972,7 @@ impl VMValidator for LibraVM {
             );
         };
 
-        let is_governance_txn = is_governance_txn(txn_sender, &data_cache);
+        let is_prioritized_txn = is_prioritized_txn(txn_sender, &data_cache);
         let normalized_gas_price = match normalize_gas_price(gas_price, &currency_code, &data_cache)
         {
             Ok(price) => price,
@@ -1000,7 +1006,7 @@ impl VMValidator for LibraVM {
             .with_label_values(&[counter_label])
             .inc();
 
-        VMValidatorResult::new(res, normalized_gas_price, is_governance_txn)
+        VMValidatorResult::new(res, normalized_gas_price, is_prioritized_txn)
     }
 }
 
@@ -1056,24 +1062,23 @@ impl<'a> LibraVMInternals<'a> {
     }
 }
 
-fn is_governance_txn(sender: AccountAddress, remote_cache: &dyn RemoteCache) -> bool {
-    let association_capability_path =
-        create_access_path(sender, association_capability_struct_tag());
-    if let Ok(Some(blob)) = remote_cache.get(&association_capability_path) {
-        return lcs::from_bytes::<account_config::AssociationCapabilityResource>(&blob).is_ok();
+fn is_prioritized_txn(sender: AccountAddress, remote_cache: &dyn RemoteCache) -> bool {
+    let role_access_path = create_access_path(sender, RoleId::struct_tag());
+    if let Ok(Some(blob)) = remote_cache.get(&role_access_path) {
+        return lcs::from_bytes::<account_config::RoleId>(&blob)
+            .map(|role_id| role_id.role_id() < PRIORITIZED_TRANSACTION_ROLE_CUTOFF)
+            .unwrap_or(false);
     }
     false
 }
 
 fn can_publish_modules(sender: AccountAddress, remote_cache: &dyn RemoteCache) -> bool {
-    let association_capability_path = create_access_path(
-        sender,
-        association_module_publishing_capability_struct_tag(),
-    );
-    if let Ok(Some(blob)) = remote_cache.get(&association_capability_path) {
-        return lcs::from_bytes::<account_config::AssociationCapabilityResource>(&blob).is_ok();
+    let module_publishing_priv_path =
+        create_access_path(sender, module_publishing_capability_struct_tag());
+    match remote_cache.get(&module_publishing_priv_path) {
+        Ok(Some(_)) => true,
+        _ => false,
     }
-    false
 }
 
 fn normalize_gas_price(

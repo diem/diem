@@ -157,12 +157,14 @@
 
 <pre><code><b>fun</b> <a href="#0x1_LibraWriteSetManager_epilogue">epilogue</a>(account: &signer, writeset_payload: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a> {
     <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>());
+    <b>let</b> association_root_capability = <a href="Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>(account);
 
     <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x1_LibraWriteSetManager_UpgradeEvent">Self::UpgradeEvent</a>&gt;(
         &<b>mut</b> t_ref.upgrade_events,
         <a href="#0x1_LibraWriteSetManager_UpgradeEvent">UpgradeEvent</a> { writeset_payload },
     );
-    <a href="LibraConfig.md#0x1_LibraConfig_reconfigure">LibraConfig::reconfigure</a>(account);
+    <a href="LibraConfig.md#0x1_LibraConfig_reconfigure">LibraConfig::reconfigure</a>(&association_root_capability);
+    <a href="Roles.md#0x1_Roles_restore_capability_to_privilege">Roles::restore_capability_to_privilege</a>(account, association_root_capability);
 }
 </code></pre>
 

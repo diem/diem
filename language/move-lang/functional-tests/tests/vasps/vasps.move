@@ -9,12 +9,14 @@ use 0x1::LBR::LBR;
 use 0x1::LibraAccount;
 use 0x1::LibraTimestamp;
 use 0x1::VASP;
+use 0x1::Roles::{Self, AssociationRootRole};
 fun main(assoc: &signer) {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     let add_all_currencies = false;
+    let r = Roles::extract_privilege_to_capability<AssociationRootRole>(assoc);
     LibraAccount::create_parent_vasp_account<LBR>(
-        assoc, 0xA, copy dummy_auth_key_prefix, x"A1", x"A2", copy pubkey, add_all_currencies
+        assoc, &r, 0xA, copy dummy_auth_key_prefix, x"A1", x"A2", copy pubkey, add_all_currencies
     );
 
     assert(VASP::is_vasp(0xA), 2001);
@@ -33,8 +35,9 @@ fun main(assoc: &signer) {
     // set up parent account as a VASP
     // TODO: remove this once //! account works
     LibraAccount::add_parent_vasp_role_from_association(
-        assoc, {{parent}}, x"A1", x"A2", pubkey,
+        &r, {{parent}}, x"A1", x"A2", pubkey,
     );
+    Roles::restore_capability_to_privilege(assoc, r);
 }
 }
 // check: EXECUTED
@@ -46,20 +49,23 @@ script {
 use 0x1::LibraAccount;
 use 0x1::LBR::LBR;
 use 0x1::VASP;
+use 0x1::Roles::{Self, ParentVASPRole};
 fun main(parent_vasp: &signer) {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
     let add_all_currencies = false;
+    let r = Roles::extract_privilege_to_capability<ParentVASPRole>(parent_vasp);
     assert(VASP::num_children({{parent}}) == 0, 2010);
     LibraAccount::create_child_vasp_account<LBR>(
-        parent_vasp, 0xAA, copy dummy_auth_key_prefix, add_all_currencies
+        parent_vasp, &r, 0xAA, copy dummy_auth_key_prefix, add_all_currencies
     );
     assert(VASP::num_children({{parent}}) == 1, 2011);
     assert(VASP::parent_address(0xAA) == {{parent}}, 2012);
     LibraAccount::create_child_vasp_account<LBR>(
-        parent_vasp, 0xBB, dummy_auth_key_prefix, add_all_currencies
+        parent_vasp, &r, 0xBB, dummy_auth_key_prefix, add_all_currencies
     );
     assert(VASP::num_children({{parent}}) == 2, 2013);
     assert(VASP::parent_address(0xBB) == {{parent}}, 2014);
+    Roles::restore_capability_to_privilege(parent_vasp, r);
 }
 }
 // check: EXECUTED

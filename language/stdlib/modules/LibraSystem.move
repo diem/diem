@@ -5,11 +5,12 @@ address 0x1 {
 
 module LibraSystem {
     use 0x1::CoreAddresses;
-    use 0x1::LibraConfig;
+    use 0x1::LibraConfig::{Self, CreateOnChainConfig, ModifyConfigCapability};
     use 0x1::Option::{Self, Option};
     use 0x1::Signer;
     use 0x1::ValidatorConfig;
     use 0x1::Vector;
+    use 0x1::Roles::Capability;
 
     struct ValidatorInfo {
         addr: address,
@@ -18,7 +19,7 @@ module LibraSystem {
     }
 
     resource struct CapabilityHolder {
-        cap: LibraConfig::ModifyConfigCapability<LibraSystem>,
+        cap: ModifyConfigCapability<LibraSystem>,
     }
 
     struct LibraSystem {
@@ -35,7 +36,10 @@ module LibraSystem {
     // This can only be invoked by the ValidatorSet address to instantiate
     // the resource under that address.
     // It can only be called a single time. Currently, it is invoked in the genesis transaction.
-    public fun initialize_validator_set(config_account: &signer) {
+    public fun initialize_validator_set(
+        config_account: &signer,
+        create_config_capability: &Capability<CreateOnChainConfig>,
+    ) {
         assert(
             Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
             1
@@ -43,6 +47,7 @@ module LibraSystem {
 
         let cap = LibraConfig::publish_new_config_with_capability<LibraSystem>(
             config_account,
+            create_config_capability,
             LibraSystem {
                 scheme: 0,
                 validators: Vector::empty(),

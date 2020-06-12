@@ -482,7 +482,6 @@ mod test {
             EventHandle::random_handle(100),
             EventHandle::random_handle(100),
             false,
-            5, // PARENT_VASP_ROLE_ID
         )
     }
 

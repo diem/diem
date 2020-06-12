@@ -8,6 +8,7 @@ module TransactionFee {
     use 0x1::Libra::{Self, Libra, Preburn, BurnCapability};
     use 0x1::LibraAccount;
     use 0x1::Signer;
+    use 0x1::Roles::{Capability, AssociationRootRole, TreasuryComplianceRole};
 
     /// The `TransactionFeeCollection` resource holds the
     /// `LibraAccount::WithdrawCapability` for the `CoreAddresses::TRANSACTION_FEE_ADDRESS()` account.
@@ -25,22 +26,27 @@ module TransactionFee {
 
     /// Called in genesis. Sets up the needed resources to collect
     /// transaction fees from the `0xFEE` account with the `0xB1E55ED` account.
-    public fun initialize(association: &signer, fee_account: &signer, auth_key_prefix: vector<u8>) {
-        assert(
-            Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(),
-            0
-        );
+    public fun initialize(
+        creating_account: &signer,
+        fee_account: &signer,
+        assoc_root_capability: &Capability<AssociationRootRole>,
+        tc_capability: &Capability<TreasuryComplianceRole>,
+        auth_key_prefix: vector<u8>
+    ) {
         assert(
             Signer::address_of(fee_account) == CoreAddresses::TRANSACTION_FEE_ADDRESS(),
             0
         );
 
         LibraAccount::create_testnet_account<LBR>(
-            association, Signer::address_of(fee_account), auth_key_prefix
+            creating_account,
+            assoc_root_capability,
+            Signer::address_of(fee_account),
+            auth_key_prefix
         );
         // accept fees in all the currencies. No need to do this for LBR
-        add_txn_fee_currency<Coin1>(association, fee_account);
-        add_txn_fee_currency<Coin2>(association, fee_account);
+        add_txn_fee_currency<Coin1>(fee_account, tc_capability);
+        add_txn_fee_currency<Coin2>(fee_account, tc_capability);
 
         let cap = LibraAccount::extract_withdraw_capability(fee_account);
         move_to(fee_account, TransactionFeeCollection { cap });
@@ -49,10 +55,13 @@ module TransactionFee {
     /// Sets ups the needed transaction fee state for a given `CoinType` currency by
     /// (1) configuring `fee_account` to accept `CoinType`
     /// (2) publishing a wrapper of the `Preburn<CoinType>` resource under `fee_account`
-    fun add_txn_fee_currency<CoinType>(association: &signer, fee_account: &signer) {
+    fun add_txn_fee_currency<CoinType>(
+        fee_account: &signer,
+        tc_capability: &Capability<TreasuryComplianceRole>,
+    ) {
         LibraAccount::add_currency<CoinType>(fee_account);
         move_to(fee_account, TransactionFeePreburn<CoinType> {
-            preburn: Libra::create_preburn(association)
+            preburn: Libra::create_preburn(tc_capability)
         })
     }
 

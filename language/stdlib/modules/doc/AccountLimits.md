@@ -18,7 +18,6 @@
 -  [Function `update_limits_definition`](#0x1_AccountLimits_update_limits_definition)
 -  [Function `certify_limits_definition`](#0x1_AccountLimits_certify_limits_definition)
 -  [Function `decertify_limits_definition`](#0x1_AccountLimits_decertify_limits_definition)
--  [Function `default_limits_addr`](#0x1_AccountLimits_default_limits_addr)
 -  [Function `reset_window`](#0x1_AccountLimits_reset_window)
 -  [Function `can_receive`](#0x1_AccountLimits_can_receive)
 -  [Function `can_withdraw`](#0x1_AccountLimits_can_withdraw)
@@ -266,7 +265,7 @@
             window_start: <a href="#0x1_AccountLimits_current_time">current_time</a>(),
             window_total_flow: 0,
             tracked_balance: 0,
-            limits_definition: <a href="#0x1_AccountLimits_default_limits_addr">default_limits_addr</a>()
+            limits_definition: <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()
         }
     )
 }
@@ -374,7 +373,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>(tc_account: &signer, new_max_total_flow: u64, new_max_holding_balance: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, new_max_total_flow: u64, new_max_holding_balance: u64)
 </code></pre>
 
 
@@ -383,19 +382,18 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>(tc_account: &signer,
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>(
+    _: &Capability&lt;TreasuryComplianceRole&gt;,
     new_max_total_flow: u64,
     new_max_holding_balance: u64,
 ) <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-    <b>let</b> tc_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(tc_account);
-    <b>assert</b>(tc_address == <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>(), 302);
     // As we don't have Optionals for txn scripts, in update_unhosted_wallet_limits.<b>move</b>
     // we <b>use</b> 0 value <b>to</b> represent a None (ie no <b>update</b> <b>to</b> that variable)
     <b>if</b> (new_max_total_flow != 0) {
-        borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(tc_address).max_total_flow = new_max_total_flow;
+        borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()).max_total_flow = new_max_total_flow;
     };
     <b>if</b> (new_max_holding_balance != 0) {
-        borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(tc_address).max_holding = new_max_holding_balance;
+        borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()).max_holding = new_max_holding_balance;
     };
 }
 </code></pre>
@@ -410,7 +408,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_certify_limits_definition">certify_limits_definition</a>(account: &signer, limits_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_certify_limits_definition">certify_limits_definition</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, limits_addr: address)
 </code></pre>
 
 
@@ -419,9 +417,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_certify_limits_definition">certify_limits_definition</a>(account: &signer, limits_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_certify_limits_definition">certify_limits_definition</a>(_: &Capability&lt;TreasuryComplianceRole&gt;, limits_addr: address)
 <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-    <a href="Association.md#0x1_Association_assert_is_association">Association::assert_is_association</a>(account);
     borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(limits_addr).is_certified = <b>true</b>;
 }
 </code></pre>
@@ -436,7 +433,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_decertify_limits_definition">decertify_limits_definition</a>(account: &signer, limits_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_decertify_limits_definition">decertify_limits_definition</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, limits_addr: address)
 </code></pre>
 
 
@@ -445,34 +442,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_decertify_limits_definition">decertify_limits_definition</a>(account: &signer, limits_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_decertify_limits_definition">decertify_limits_definition</a>(_: &Capability&lt;TreasuryComplianceRole&gt;, limits_addr: address)
 <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-    <a href="Association.md#0x1_Association_assert_is_association">Association::assert_is_association</a>(account);
     borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(limits_addr).is_certified = <b>false</b>;
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_AccountLimits_default_limits_addr"></a>
-
-## Function `default_limits_addr`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_default_limits_addr">default_limits_addr</a>(): address
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_default_limits_addr">default_limits_addr</a>(): address {
-    <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()
 }
 </code></pre>
 

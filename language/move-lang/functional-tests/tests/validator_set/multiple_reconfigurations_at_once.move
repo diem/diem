@@ -10,15 +10,18 @@
 //! sender: association
 script{
     use 0x1::LibraSystem;
-    use 0x1::ValidatorConfig;
+    use 0x1::ValidatorConfig::{Self, DecertifyValidator};
+    use 0x1::Roles;
     // Decertify two validators to make sure we can remove both
     // from the set and trigger reconfiguration
     fun main(account: &signer) {
         assert(LibraSystem::is_validator({{alice}}) == true, 98);
         assert(LibraSystem::is_validator({{vivian}}) == true, 99);
         assert(LibraSystem::is_validator({{viola}}) == true, 100);
-        ValidatorConfig::decertify(account, {{vivian}});
-        ValidatorConfig::decertify(account, {{alice}});
+        let cap = Roles::extract_privilege_to_capability<DecertifyValidator>(account);
+        ValidatorConfig::decertify(&cap, {{vivian}});
+        ValidatorConfig::decertify(&cap, {{alice}});
+        Roles::restore_capability_to_privilege(account, cap);
         LibraSystem::update_and_reconfigure(account);
         assert(LibraSystem::is_validator({{alice}}) == false, 101);
         assert(LibraSystem::is_validator({{vivian}}) == false, 102);

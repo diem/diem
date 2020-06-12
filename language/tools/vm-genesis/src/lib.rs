@@ -84,9 +84,13 @@ pub fn encode_genesis_change_set(
     });
 
     // generate the genesis WriteSet
-    create_and_initialize_main_accounts(&mut genesis_context, &public_key, &lbr_ty);
-    initialize_validators(&mut genesis_context, &validators, &lbr_ty);
-    setup_vm_config(&mut genesis_context, vm_publishing_option);
+    create_and_initialize_main_accounts(
+        &mut genesis_context,
+        &public_key,
+        vm_publishing_option,
+        &lbr_ty,
+    );
+    create_and_initialize_validators(&mut genesis_context, &validators);
     reconfigure(&mut genesis_context);
 
     let mut interpreter_context = genesis_context.into_data_store();
@@ -125,6 +129,7 @@ pub fn encode_genesis_transaction(
 fn create_and_initialize_main_accounts(
     context: &mut GenesisContext,
     public_key: &Ed25519PublicKey,
+    publishing_option: VMPublishingOption,
     lbr_ty: &TypeTag,
 ) {
     let genesis_auth_key = AuthenticationKey::ed25519(public_key);
@@ -132,6 +137,9 @@ fn create_and_initialize_main_accounts(
     let root_association_address = account_config::association_address();
     let tc_account_address = account_config::treasury_compliance_account_address();
     let fee_account_address = account_config::transaction_fee_address();
+
+    let option_bytes =
+        lcs::to_bytes(&publishing_option).expect("Cannot serialize publishing option");
 
     context.set_sender(root_association_address);
     context.exec(
@@ -146,6 +154,9 @@ fn create_and_initialize_main_accounts(
             Value::transaction_argument_signer_reference(tc_account_address),
             Value::address(tc_account_address),
             Value::vector_u8(genesis_auth_key.to_vec()),
+            Value::vector_u8(option_bytes),
+            Value::vector_u8(INITIAL_GAS_SCHEDULE.0.clone()),
+            Value::vector_u8(INITIAL_GAS_SCHEDULE.1.clone()),
         ],
     );
 
@@ -169,50 +180,31 @@ fn create_and_initialize_main_accounts(
 }
 
 /// Initialize each validator.
-fn initialize_validators(
+fn create_and_initialize_validators(
     context: &mut GenesisContext,
     validators: &[ValidatorRegistration],
-    lbr_ty: &TypeTag,
 ) {
+    let lbr_ty = TypeTag::Struct(StructTag {
+        address: *account_config::LBR_MODULE.address(),
+        module: account_config::LBR_MODULE.name().to_owned(),
+        name: account_config::LBR_STRUCT_NAME.to_owned(),
+        type_params: vec![],
+    });
     for (account_key, registration) in validators {
         context.set_sender(account_config::association_address());
+
         let auth_key = AuthenticationKey::ed25519(&account_key);
         let account = auth_key.derived_address();
-
-        // Create an account
-
-        context.exec(
-            "LibraAccount",
-            "create_validator_account",
-            vec![lbr_ty.clone()],
-            vec![
-                Value::transaction_argument_signer_reference(account_config::association_address()),
-                Value::address(account),
-                Value::vector_u8(auth_key.prefix().to_vec()),
-            ],
+        let create_script = transaction_builder::encode_create_validator_account(
+            lbr_ty.clone(),
+            account,
+            auth_key.prefix().to_vec(),
         );
+        context.exec_script(&create_script);
 
         context.set_sender(account);
         context.exec_script(registration);
     }
-}
-
-fn setup_vm_config(context: &mut GenesisContext, publishing_option: VMPublishingOption) {
-    context.set_sender(config_address());
-
-    let option_bytes =
-        lcs::to_bytes(&publishing_option).expect("Cannot serialize publishing option");
-    context.exec(
-        "LibraVMConfig",
-        "initialize",
-        vec![],
-        vec![
-            Value::transaction_argument_signer_reference(config_address()),
-            Value::vector_u8(option_bytes),
-            Value::vector_u8(INITIAL_GAS_SCHEDULE.0.clone()),
-            Value::vector_u8(INITIAL_GAS_SCHEDULE.1.clone()),
-        ],
-    );
 }
 
 fn remove_genesis(stdlib_modules: &[VerifiedModule]) -> impl Iterator<Item = &VerifiedModule> {
@@ -316,14 +308,14 @@ pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegi
             // TODO(philiphayes): do something with n.full_node_networks instead
             // of ignoring them?
 
-            let script = transaction_builder::encode_register_validator_script(
+            let register_script = transaction_builder::encode_register_validator_script(
                 consensus_key.to_bytes().to_vec(),
                 identity_key.to_bytes(),
                 raw_advertised_address.clone().into(),
                 identity_key.to_bytes(),
                 raw_advertised_address.into(),
             );
-            (account_key, script)
+            (account_key, register_script)
         })
         .collect::<Vec<_>>()
 }

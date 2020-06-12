@@ -141,7 +141,6 @@ fn get_mock_account_state_blob() -> AccountStateBlob {
         EventHandle::random_handle(0),
         EventHandle::random_handle(0),
         false,
-        5, // PARENT_VASP_ROLE_ID
     );
 
     let mut account_state = AccountState::default();

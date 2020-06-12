@@ -4,10 +4,9 @@ address 0x1 {
 module LibraAccount {
     use 0x1::CoreAddresses;
     use 0x1::AccountLimits;
-    use 0x1::Association;
     use 0x1::Coin1::Coin1;
     use 0x1::Coin2::Coin2;
-    use 0x1::Event;
+    use 0x1::Event::{Self, EventHandle};
     use 0x1::Hash;
     use 0x1::LBR::{Self, LBR};
     use 0x1::LCS;
@@ -24,6 +23,13 @@ module LibraAccount {
     use 0x1::Libra::{Self, Libra};
     use 0x1::Option::{Self, Option};
     use 0x1::DualAttestationLimit;
+    use 0x1::Roles::{Self, Capability, AssociationRootRole, ParentVASPRole, TreasuryComplianceRole};
+    use 0x1::SlidingNonce::CreateSlidingNonce;
+    use 0x1::LibraConfig::CreateOnChainConfig;
+
+    resource struct AccountFreezing {}
+    resource struct AccountUnfreezing {}
+    resource struct PublishModule {}
 
     // Every Libra account has a LibraAccount resource
     resource struct LibraAccount {
@@ -44,25 +50,14 @@ module LibraAccount {
         // `restore_key_rotation_capability`.
         key_rotation_capability: Option<KeyRotationCapability>,
         // Event handle for received event
-        received_events: Event::EventHandle<ReceivedPaymentEvent>,
+        received_events: EventHandle<ReceivedPaymentEvent>,
         // Event handle for sent event
-        sent_events: Event::EventHandle<SentPaymentEvent>,
+        sent_events: EventHandle<SentPaymentEvent>,
         // The current sequence number.
         // Incremented by one each time a transaction is submitted
         sequence_number: u64,
         // If true, the account cannot be used to send transactions or receiver funds
         is_frozen: bool,
-        /// Integer specifying the account's role in Libra. The roles are:
-        /// 0 AssocRoot
-        /// 1 TreasuryCompliance
-        /// 2 DesignatedDealer
-        /// 3 Validator
-        /// 4 ValidatorOperator
-        /// 5 ParentVASP
-        /// 6 ChildVASP
-        /// 7 Unhosted
-        // TODO: extract these to a constant
-        role_id: u64,
     }
 
     // A resource that holds the coins stored in this account
@@ -82,6 +77,12 @@ module LibraAccount {
     // There is at most one KeyRotationCapability in existence for a given address.
     resource struct KeyRotationCapability {
         account_address: address,
+    }
+
+    resource struct AccountOperationsCapability {
+        limits_cap: AccountLimits::CallingCapability,
+        freeze_event_handle: EventHandle<FreezeAccountEvent>,
+        unfreeze_event_handle: EventHandle<UnfreezeAccountEvent>,
     }
 
     // Message for sent events
@@ -119,7 +120,6 @@ module LibraAccount {
         frozen_address: address,
     }
 
-
     // Message for freeze account events
     struct UnfreezeAccountEvent {
         // The address that initiated unfreeze txn
@@ -128,42 +128,50 @@ module LibraAccount {
         unfrozen_address: address,
     }
 
-    resource struct AccountOperationsCapability {
-        limits_cap: AccountLimits::CallingCapability,
-        freeze_event_handle: Event::EventHandle<FreezeAccountEvent>,
-        unfreeze_event_handle: Event::EventHandle<UnfreezeAccountEvent>,
+    /// Grants `AccountFreezing` and `AccountUnfreezing` privileges to the calling `account`.
+    /// Aborts if the `account` does not have the correct role (association root).
+    public fun grant_association_privileges(account: &signer) {
+        // TODO: Need to also grant this to the core code address account.
+        Roles::add_privilege_to_account_association_root_role(account, PublishModule{});
+    }
+
+    /// Grants `AccountFreezing` and `AccountUnfreezing` privileges to the calling `account`.
+    /// Aborts if the `account` does not have the correct role (treasury compliance).
+    public fun grant_treasury_compliance_privileges(account: &signer) {
+        Roles::add_privilege_to_account_treasury_compliance_role(account, AccountFreezing{});
+        Roles::add_privilege_to_account_treasury_compliance_role(account, AccountUnfreezing{});
     }
 
     // TODO: temporary, remove when VASP account feature in E2E tests works
     public fun add_parent_vasp_role_from_association(
-        association: &signer,
+        parent_vasp_creation_capability: &Capability<AssociationRootRole>,
         addr: address,
         human_name: vector<u8>,
         base_url: vector<u8>,
         compliance_public_key: vector<u8>,
     ) {
         assert(exists_at(addr), 0);
-        assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
         let account = create_signer(addr);
         VASP::publish_parent_vasp_credential(
-            association, &account, human_name, base_url, compliance_public_key
+            &account, parent_vasp_creation_capability, human_name, base_url, compliance_public_key
         );
+        Roles::add_privilege_to_account_parent_vasp_role(&account, Roles::parent_vasp_role_TESTNET_HACK());
         destroy_signer(account);
     }
 
     // TODO: temporary, remove when DD account feature in E2E tests works
-    public fun add_preburn_from_association<Token>(
-        association: &signer,
+    public fun add_preburn_from_tc<Token>(
+        preburn_creation_capability: &Capability<TreasuryComplianceRole>,
         addr: address,
     ) {
         assert(exists_at(addr), 0);
-        assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
         let account = create_signer(addr);
-        Libra::publish_preburn_to_account<Token>(association, &account);
+        Libra::publish_preburn_to_account<Token>(&account, preburn_creation_capability);
         destroy_signer(account);
     }
 
     public fun initialize(association: &signer) {
+        // Operational constraint, not a privilege constraint.
         assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
         move_to(
             association,
@@ -438,7 +446,8 @@ module LibraAccount {
     // Trying to create an account at address 0x1 will cause runtime failure as it is a
     // reserved address for the MoveVM.
     public fun create_testnet_account<Token>(
-        association: &signer,
+        creator_account: &signer,
+        parent_vasp_creation_capability: &Capability<AssociationRootRole>,
         new_account_address: address,
         auth_key_prefix: vector<u8>
     ) {
@@ -447,20 +456,24 @@ module LibraAccount {
         // cannot create an account at an address that already has one
         assert(!exists_at(new_account_address), 777777);
         let new_account = create_signer(new_account_address);
-        VASP::publish_parent_vasp_credential(
-            association,
+        Roles::new_role(
+            creator_account,
             &new_account,
+            Roles::PARENT_VASP_ROLE_ID()
+        );
+        VASP::publish_parent_vasp_credential(
+            &new_account,
+            parent_vasp_creation_capability,
             b"testnet",
             b"https://libra.org",
             // A bogus (but valid ed25519) compliance public key
             x"b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde"
         );
         Event::publish_generator(&new_account);
-        let role_id = 5;
-        make_account<Token>(new_account, auth_key_prefix, false, role_id)
+        make_account<Token>(new_account, auth_key_prefix, false)
     }
 
-    /// Creates a new account with account type `role_id` at `new_account_address` with a balance of
+    /// Creates a new account with account at `new_account_address` with a balance of
     /// zero in `Token` and authentication key `auth_key_prefix` | `fresh_address`. If
     /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
     /// also be added.
@@ -470,7 +483,6 @@ module LibraAccount {
         new_account: signer,
         auth_key_prefix: vector<u8>,
         add_all_currencies: bool,
-        role_id: u64,
     ) {
         let new_account_addr = Signer::address_of(&new_account);
         // cannot create an account at the reserved address 0x0
@@ -498,7 +510,6 @@ module LibraAccount {
                 sent_events: Event::new_event_handle<SentPaymentEvent>(&new_account),
                 sequence_number: 0,
                 is_frozen: false,
-                role_id,
             }
         );
         // (2) publish Balance resource(s)
@@ -519,24 +530,45 @@ module LibraAccount {
         destroy_signer(new_account);
     }
 
-    /// Create an account with the AssocRoot role at `new_account_address` with authentication key
-    /// `auth_key_prefix` | `new_account_address`
+    /// Create an account for the on-chain config account at
+    /// `CoreAddresses::DEFAULT_CONFIG_ADDRESS()` with authentication key
+    /// `auth_key_prefix` | `new_account_address`. Called in genesis.
     // TODO: can we get rid of this? the main thing this does is create an account without an
     // EventGenerator resource (which is just needed to avoid circular dep issues in gensis)
-    public fun create_genesis_account<Token>(
+    public fun create_config_account<Token>(
+        creator_account: &signer,
+        _: &Capability<CreateOnChainConfig>,
         new_account_address: address,
         auth_key_prefix: vector<u8>
     ) {
         assert(LibraTimestamp::is_genesis(), 0);
+        assert(new_account_address == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
         let new_account = create_signer(new_account_address);
-        let role_id = 0;
-        make_account<Token>(new_account, auth_key_prefix, false, role_id)
+        Roles::new_role(
+            creator_account,
+            &new_account,
+            Roles::PARENT_VASP_ROLE_ID(),
+        );
+        make_account<Token>(new_account, auth_key_prefix, false)
+    }
+
+    /// Creates the root association account in genesis.
+    public fun create_root_association_account<Token>(
+        new_account_address: address,
+        auth_key_prefix: vector<u8>,
+    ) {
+        assert(LibraTimestamp::is_genesis(), 0);
+        assert(new_account_address == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
+        let new_account = create_signer(new_account_address);
+        make_account<Token>(new_account, auth_key_prefix, false)
     }
 
     /// Create a treasury/compliance account at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address`
     public fun create_treasury_compliance_account<Token>(
-        association: &signer,
+        _: &Capability<AssociationRootRole>,
+        tc_capability: &Capability<TreasuryComplianceRole>,
+        sliding_nonce_creation_capability: &Capability<CreateSlidingNonce>,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         coin1_mint_cap: Libra::MintCapability<Coin1>,
@@ -544,18 +576,15 @@ module LibraAccount {
         coin2_mint_cap: Libra::MintCapability<Coin2>,
         coin2_burn_cap: Libra::BurnCapability<Coin2>,
     ) {
-        Association::assert_is_root(association);
+        assert(LibraTimestamp::is_genesis(), 0);
         let new_account = create_signer(new_account_address);
-        Association::grant_association_address(association, &new_account);
-        Association::grant_privilege<FreezingPrivilege>(association, &new_account);
-        Libra::publish_mint_capability<Coin1>(&new_account, coin1_mint_cap);
-        Libra::publish_burn_capability<Coin1>(&new_account, coin1_burn_cap);
-        Libra::publish_mint_capability<Coin2>(&new_account, coin2_mint_cap);
-        Libra::publish_burn_capability<Coin2>(&new_account, coin2_burn_cap);
-        SlidingNonce::publish_nonce_resource(association, &new_account);
+        Libra::publish_mint_capability<Coin1>(&new_account, coin1_mint_cap, tc_capability);
+        Libra::publish_burn_capability<Coin1>(&new_account, coin1_burn_cap, tc_capability);
+        Libra::publish_mint_capability<Coin2>(&new_account, coin2_mint_cap, tc_capability);
+        Libra::publish_burn_capability<Coin2>(&new_account, coin2_burn_cap, tc_capability);
+        SlidingNonce::publish_nonce_resource(sliding_nonce_creation_capability, &new_account);
         Event::publish_generator(&new_account);
-        let role_id = 1;
-        make_account<Token>(new_account, auth_key_prefix, false, role_id)
+        make_account<Token>(new_account, auth_key_prefix, false)
     }
 
 
@@ -567,18 +596,21 @@ module LibraAccount {
     /// `auth_key_prefix` | `new_account_address`, for non synthetic CoinType.
     /// Creates Preburn resource under account 'new_account_address'
     public fun create_designated_dealer<CoinType>(
-        association: &signer,
+        creator_account: &signer,
+        tc_capability: &Capability<TreasuryComplianceRole>,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
-        // TODO: this should check for AssocRoot in the future
-        Association::assert_is_association(association);
         let new_dd_account = create_signer(new_account_address);
         Event::publish_generator(&new_dd_account);
-        Libra::publish_preburn_to_account<CoinType>(association, &new_dd_account);
-        DesignatedDealer::publish_designated_dealer_credential(association, &new_dd_account);
-        let role_id = 2;
-        make_account<CoinType>(new_dd_account, auth_key_prefix, false, role_id)
+        Libra::publish_preburn_to_account<CoinType>(&new_dd_account, tc_capability);
+        DesignatedDealer::publish_designated_dealer_credential(&new_dd_account, tc_capability);
+        Roles::new_role(
+            creator_account,
+            &new_dd_account,
+            Roles::DESIGNATED_DEALER_ROLE_ID(),
+        );
+        make_account<CoinType>(new_dd_account, auth_key_prefix, false)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -588,9 +620,9 @@ module LibraAccount {
     /// Create an account with the ParentVASP role at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address`.  If `add_all_currencies` is true, 0 balances for
     /// all available currencies in the system will also be added.
-    /// This can only be invoked by an Association account.
     public fun create_parent_vasp_account<Token>(
-        association: &signer,
+        creator_account: &signer,
+        parent_vasp_creation_capability: &Capability<AssociationRootRole>,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
@@ -598,15 +630,21 @@ module LibraAccount {
         compliance_public_key: vector<u8>,
         add_all_currencies: bool
     ) {
-        // TODO: this should check for AssocRoot in the future
-        Association::assert_is_association(association);
         let new_account = create_signer(new_account_address);
+        Roles::new_role(
+            creator_account,
+            &new_account,
+            Roles::PARENT_VASP_ROLE_ID(),
+        );
         VASP::publish_parent_vasp_credential(
-            association, &new_account, human_name, base_url, compliance_public_key
+            &new_account,
+            parent_vasp_creation_capability,
+            human_name,
+            base_url,
+            compliance_public_key
         );
         Event::publish_generator(&new_account);
-        let role_id = 5;
-        make_account<Token>(new_account, auth_key_prefix, add_all_currencies, role_id)
+        make_account<Token>(new_account, auth_key_prefix, add_all_currencies)
     }
 
     /// Create an account with the ChildVASP role at `new_account_address` with authentication key
@@ -615,15 +653,24 @@ module LibraAccount {
     /// also be added. This account will be a child of `creator`, which must be a ParentVASP.
     public fun create_child_vasp_account<Token>(
         parent: &signer,
+        child_vasp_creation_capability: &Capability<ParentVASPRole>,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         add_all_currencies: bool,
     ) {
         let new_account = create_signer(new_account_address);
-        VASP::publish_child_vasp_credential(parent, &new_account);
+        Roles::new_role(
+            parent,
+            &new_account,
+            Roles::CHILD_VASP_ROLE_ID(),
+        );
+        VASP::publish_child_vasp_credential(
+            parent,
+            &new_account,
+            child_vasp_creation_capability,
+        );
         Event::publish_generator(&new_account);
-        let role_id = 6;
-        make_account<Token>(new_account, auth_key_prefix, add_all_currencies, role_id)
+        make_account<Token>(new_account, auth_key_prefix, add_all_currencies)
     }
 
     // TODO: who can create an unhosted account?
@@ -631,7 +678,11 @@ module LibraAccount {
     // Unhosted methods
     ///////////////////////////////////////////////////////////////////////////
 
+    // For now, only the association root can
+    // > TODO(tzakian): For now we make it so that anyone can create an unhosted
+    // account. This needs to be updated
     public fun create_unhosted_account<Token>(
+        creator_account: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         add_all_currencies: bool
@@ -639,9 +690,13 @@ module LibraAccount {
         assert(Testnet::is_testnet(), 10042);
         assert(!exists_at(new_account_address), 777777);
         let new_account = create_signer(new_account_address);
+        Roles::new_role(
+            creator_account,
+            &new_account,
+            Roles::UNHOSTED_ROLE_ID(),
+        );
         Event::publish_generator(&new_account);
-        let role_id = 7;
-        make_account<Token>(new_account, auth_key_prefix, add_all_currencies, role_id)
+        make_account<Token>(new_account, auth_key_prefix, add_all_currencies)
     }
 
 
@@ -719,12 +774,15 @@ module LibraAccount {
     ///////////////////////////////////////////////////////////////////////////
 
     // Freeze the account at `addr`.
-    public fun freeze_account(account: &signer, frozen_address: address)
+    public fun freeze_account(
+        account: &signer,
+        _freezing_capability: &Capability<AccountFreezing>,
+        frozen_address: address,
+    )
     acquires LibraAccount, AccountOperationsCapability {
         let initiator_address = Signer::address_of(account);
-        assert_can_freeze(initiator_address);
         // The root association account cannot be frozen
-        assert(frozen_address != Association::root_address(), 14);
+        assert(frozen_address != CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 14);
         borrow_global_mut<LibraAccount>(frozen_address).is_frozen = true;
         Event::emit_event<FreezeAccountEvent>(
             &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).freeze_event_handle,
@@ -736,10 +794,13 @@ module LibraAccount {
     }
 
     // Unfreeze the account at `addr`.
-    public fun unfreeze_account(account: &signer, unfrozen_address: address)
+    public fun unfreeze_account(
+        account: &signer,
+        _unfreezing_capability: &Capability<AccountUnfreezing>,
+        unfrozen_address: address,
+    )
     acquires LibraAccount, AccountOperationsCapability {
         let initiator_address = Signer::address_of(account);
-        assert_can_freeze(initiator_address);
         borrow_global_mut<LibraAccount>(unfrozen_address).is_frozen = false;
         Event::emit_event<UnfreezeAccountEvent>(
             &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).unfreeze_event_handle,
@@ -755,10 +816,6 @@ module LibraAccount {
     acquires LibraAccount {
         borrow_global<LibraAccount>(addr).is_frozen
      }
-
-    fun assert_can_freeze(addr: address) {
-        assert(Association::has_privilege<FreezingPrivilege>(addr), 13);
-    }
 
     // The prologue is invoked at the beginning of every transaction
     // It verifies:
@@ -869,21 +926,24 @@ module LibraAccount {
     ///////////////////////////////////////////////////////////////////////////
 
     public fun create_validator_account<Token>(
-        creator: &signer,
+        creator_account: &signer,
+        assoc_root_capability: &Capability<AssociationRootRole>,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
-        assert(Association::addr_is_association(Signer::address_of(creator)), 1002);
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
-        ValidatorConfig::publish(creator, &new_account);
-        let role_id = 3;
-        make_account<Token>(new_account, auth_key_prefix, false, role_id)
+        Roles::new_role(
+            creator_account,
+            &new_account,
+            Roles::VALIDATOR_ROLE_ID(),
+        );
+        ValidatorConfig::publish(&new_account, assoc_root_capability);
+        make_account<Token>(new_account, auth_key_prefix, false)
     }
 
     ///////////////////////////////////////////////////////////////////////////
     // End of the proof of concept code
     ///////////////////////////////////////////////////////////////////////////
 }
-
 }

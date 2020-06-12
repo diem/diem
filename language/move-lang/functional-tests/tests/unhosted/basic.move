@@ -1,8 +1,11 @@
 //! new-transaction
 script {
     use 0x1::Unhosted;
+    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(account: &signer) {
-        Unhosted::publish_global_limits_definition(account);
+        let r = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
+        Unhosted::publish_global_limits_definition(account, &r);
+        Roles::restore_capability_to_privilege(account, r)
     }
 }
 // check: ABORTED

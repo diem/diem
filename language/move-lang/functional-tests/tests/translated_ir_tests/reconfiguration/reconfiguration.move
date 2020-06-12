@@ -10,9 +10,12 @@
 // Reconfiguration can only be invoked by association.
 script {
 use 0x1::LibraConfig;
+use 0x1::Roles::{Self, AssociationRootRole};
 
 fun main(account: &signer) {
-    LibraConfig::reconfigure(account)
+    let r = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+    LibraConfig::reconfigure(&r);
+    Roles::restore_capability_to_privilege(account, r);
 }
 }
 
@@ -20,30 +23,34 @@ fun main(account: &signer) {
 // check: 1
 
 //! new-transaction
-//! sender: config
+//! sender: association
 script {
 use 0x1::LibraConfig;
+use 0x1::Roles::{Self, AssociationRootRole};
 
 fun main(account: &signer) {
-    LibraConfig::reconfigure(account)
+    let r = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+    LibraConfig::reconfigure(&r);
+    Roles::restore_capability_to_privilege(account, r);
 }
 }
-
 // check: NewEpochEvent
 // check: EXECUTED
 
 //! new-transaction
-//! sender: config
+//! sender: association
 // Cannot trigger two reconfiguration within the same block.
 script {
 use 0x1::LibraConfig;
+use 0x1::Roles::{Self, AssociationRootRole};
 
 fun main(account: &signer) {
-    LibraConfig::reconfigure(account)
+    let r = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+    LibraConfig::reconfigure(&r);
+    Roles::restore_capability_to_privilege(account, r);
 }
 }
-
-// check: ABORT
+// check: ABORTED
 // check: 23
 
 //! block-prologue
@@ -51,14 +58,16 @@ fun main(account: &signer) {
 //! block-time: 3
 
 //! new-transaction
-//! sender: config
+//! sender: association
 script {
 use 0x1::LibraConfig;
+use 0x1::Roles::{Self, AssociationRootRole};
 
 fun main(account: &signer) {
-    LibraConfig::reconfigure(account)
+    let r = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+    LibraConfig::reconfigure(&r);
+    Roles::restore_capability_to_privilege(account, r);
 }
 }
-
 // check: NewEpochEvent
 // check: EXECUTED
