@@ -15,10 +15,7 @@ use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_network_address::NetworkAddress;
 use libra_types::transaction::Transaction;
 use rand::{rngs::StdRng, SeedableRng};
-use std::{
-    collections::{HashMap, HashSet},
-    str::FromStr,
-};
+use std::{collections::HashSet, str::FromStr};
 
 pub struct FullNodeConfig {
     pub advertised_address: NetworkAddress,
@@ -153,9 +150,7 @@ impl FullNodeConfig {
 
         let mut rng = StdRng::from_seed(self.full_node_seed);
         let mut configs = Vec::new();
-        let mut network_peers = NetworkPeersConfig {
-            peers: HashMap::new(),
-        };
+        let mut network_peers = NetworkPeersConfig::default();
 
         // @TODO The last one is the upstream peer, note at some point we'll have to support taking
         // in a genesis instead at which point we may not have an upstream peer config
@@ -182,7 +177,7 @@ impl FullNodeConfig {
             network.discovery_method = DiscoveryMethod::gossip(self.advertised_address.clone());
             network.mutual_authentication = self.mutual_authentication;
 
-            network_peers.peers.insert(
+            network_peers.insert(
                 network.identity.peer_id_from_config().unwrap(),
                 network
                     .identity
@@ -243,8 +238,8 @@ mod test {
         let config = FullNodeConfig::new().build().unwrap();
         let network = &config.full_node_networks[0];
 
-        network.seed_peers.verify_libranet_addrs().unwrap();
-        let (seed_peer_id, seed_addrs) = network.seed_peers.seed_peers.iter().next().unwrap();
+        network.verify_seed_peer_addrs().unwrap();
+        let (seed_peer_id, seed_addrs) = network.seed_peers.iter().next().unwrap();
         assert_eq!(seed_addrs.len(), 1);
         assert_ne!(
             &network.identity.peer_id_from_config().unwrap(),
