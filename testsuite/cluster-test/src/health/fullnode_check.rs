@@ -54,15 +54,15 @@ impl FullNodeHealthCheck {
 }
 
 pub fn node_index(peer_name: String) -> String {
-    info!("hhhhhh node_index = {:?}, version = {:?}", peer_name);
+    //info!("hhhhhh node_index = {:?}", peer_name);
     if let Some(cap) = VAL_REGEX.captures(peer_name.as_ref()) {
-        info!("hhhhhh node_index cap1 = {:?}", cap);
+        //info!("hhhhhh node_index cap1 = {:?}", cap);
         if let Some(cap) = cap.get(1) {
             return cap.as_str().to_string();
         }
     }
     if let Some(cap) = FULLNODE_REGEX.captures(peer_name.as_ref()) {
-        info!("hhhhhh node_index cap2 = {:?}", cap);
+        //info!("hhhhhh node_index cap2 = {:?}", cap);
         if let Some(cap) = cap.get(1) {
             return cap.as_str().to_string();
         }
@@ -77,8 +77,8 @@ pub fn convert_index(input: HashMap<String, f64>) -> HashMap<String, f64> {
     let mut res = HashMap::new();
     for (peer_name, version) in input {
         let peer_name = node_index(peer_name);
-        info!("hhhhhh convert_index after = {:?}, version = {:?}", peer_name);
-        res.insert(node_index(peer_name), version);
+        //info!("hhhhhh convert_index after = {:?}, version = {:?}", peer_name);
+        res.insert(peer_name, version);
     }
     res
 }
