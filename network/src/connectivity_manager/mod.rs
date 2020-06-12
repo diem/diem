@@ -27,7 +27,10 @@
 //! any partitions asap, as we aren't currently gossiping consensus messages or
 //! using a relay protocol.
 
-use crate::peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError};
+use crate::{
+    logging,
+    peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError},
+};
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},
@@ -35,10 +38,11 @@ use futures::{
 };
 use libra_config::network_id::NetworkContext;
 use libra_crypto::x25519;
-use libra_logger::prelude::*;
+use libra_logger::{prelude::*, StructuredLogEntry};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use num_variants::NumVariants;
+use serde::Serialize;
 use std::{
     cmp::min,
     collections::HashMap,
@@ -86,7 +90,7 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
 /// Different sources for peer addresses, ordered by priority (Onchain=highest,
 /// Config=lowest).
 #[repr(u8)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, NumVariants)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, NumVariants, Serialize)]
 pub enum DiscoverySource {
     OnChain,
     Gossip,
@@ -94,13 +98,14 @@ pub enum DiscoverySource {
 }
 
 /// Requests received by the [`ConnectivityManager`] manager actor from upstream modules.
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum ConnectivityRequest {
     /// Request to update known addresses of peer with id `PeerId` to given list.
     UpdateAddresses(DiscoverySource, HashMap<PeerId, Vec<NetworkAddress>>),
     /// Update set of nodes eligible to join the network.
     UpdateEligibleNodes(HashMap<PeerId, x25519::PublicKey>),
     /// Gets current size of dial queue. This is useful in tests.
+    #[serde(skip)]
     GetDialQueueSize(oneshot::Sender<usize>),
 }
 
@@ -211,29 +216,56 @@ where
 
         // When we first startup, let's attempt to connect with our seed peers.
         self.check_connectivity(&mut pending_dials).await;
-
-        trace!("{} Starting connection manager", self.network_context);
+        send_struct_log!(
+            StructuredLogEntry::new_named(logging::CONNECTIVITY_MANAGER_LOOP)
+                .data(logging::TYPE, logging::START)
+                .field(&logging::NETWORK_CONTEXT, &self.network_context)
+        );
         loop {
             self.event_id = self.event_id.wrapping_add(1);
             ::futures::select! {
                 _ = self.ticker.select_next_some() => {
-                    trace!("{} Event Id: {}, type: Tick", self.network_context, self.event_id);
+                    send_struct_log!(StructuredLogEntry::new_named(logging::CONNECTIVITY_MANAGER_LOOP)
+                        .data(logging::TYPE, "tick")
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .field(&logging::EVENT_ID, &self.event_id)
+                    );
                     self.check_connectivity(&mut pending_dials).await;
                 },
                 req = self.requests_rx.select_next_some() => {
-                    trace!("{} Event Id: {}, type: ConnectivityRequest, req: {:?}", self.network_context, self.event_id, req);
+                    send_struct_log!(StructuredLogEntry::new_named(logging::CONNECTIVITY_MANAGER_LOOP)
+                        .data(logging::TYPE, "connectivity_request")
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .field(&logging::CONNECTIVITY_REQUEST, &req)
+                        .field(&logging::EVENT_ID, &self.event_id)
+                    );
                     self.handle_request(req);
                 },
                 notif = self.connection_notifs_rx.select_next_some() => {
-                    trace!("{} Event Id: {}, type: peer_manager::ConnectionNotification, notif: {:?}", self.network_context, self.event_id, notif);
+                    send_struct_log!(StructuredLogEntry::new_named(logging::CONNECTIVITY_MANAGER_LOOP)
+                        .data(logging::TYPE, "connection_notification")
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .field(&logging::EVENT_ID, &self.event_id)
+                        .field(&logging::CONNECTION_NOTIFICATION, &notif)
+                    );
                     self.handle_control_notification(notif);
                 },
                 peer_id = pending_dials.select_next_some() => {
-                    trace!("{} Event Id: {}, type: Dial complete, peer: {}", self.network_context, self.event_id, peer_id.short_str());
+                    send_struct_log!(StructuredLogEntry::new_named(logging::CONNECTIVITY_MANAGER_LOOP)
+                        .data(logging::TYPE, "dial_complete")
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .field(&logging::EVENT_ID, &self.event_id)
+                        .field(&logging::REMOTE_PEER, &peer_id)
+                    );
                     self.dial_queue.remove(&peer_id);
                 },
                 complete => {
-                    crit!("{} Connectivity manager actor terminated", self.network_context);
+                    send_struct_log!(StructuredLogEntry::new_named(logging::CONNECTIVITY_MANAGER_LOOP)
+                        .data(logging::TYPE, logging::TERMINATION)
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .critical()
+                    );
+                    crit!("{} Connectivity manager actor terminated", &self.network_context);
                     break;
                 }
             }

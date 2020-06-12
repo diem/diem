@@ -22,6 +22,7 @@ use futures::{
 use libra_logger::prelude::*;
 use libra_types::PeerId;
 use netcore::compat::IoCompat;
+use serde::Serialize;
 use std::{fmt::Debug, io, time::Duration};
 use stream_ratelimiter::*;
 use tokio::runtime::Handle;
@@ -44,7 +45,7 @@ pub enum PeerRequest {
     CloseConnection,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum DisconnectReason {
     Requested,
     ConnectionLost,

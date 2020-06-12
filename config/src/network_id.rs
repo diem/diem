@@ -8,7 +8,7 @@ use std::fmt;
 /// A grouping of common information between all networking code for logging.
 /// This should greatly reduce the groupings between these given everywhere, and will allow
 /// for logging accordingly.  TODO: Figure out how to split these as structured logging
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub struct NetworkContext {
     network_id: NetworkId,
     role: RoleType,
