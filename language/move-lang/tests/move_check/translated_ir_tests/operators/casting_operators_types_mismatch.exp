@@ -1,0 +1,88 @@
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/operators/casting_operators_types_mismatch.move:4:10 ───
+   │
+ 4 │         (S { x: true } as u8);
+   │          ^^^^^^^^^^^^^ Invalid argument to 'as'
+   ·
+ 4 │         (S { x: true } as u8);
+   │          ------------- Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/operators/casting_operators_types_mismatch.move:5:10 ───
+   │
+ 5 │         (S { x: true } as u64);
+   │          ^^^^^^^^^^^^^ Invalid argument to 'as'
+   ·
+ 5 │         (S { x: true } as u64);
+   │          ------------- Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/operators/casting_operators_types_mismatch.move:6:10 ───
+   │
+ 6 │         (S { x: true } as u128);
+   │          ^^^^^^^^^^^^^ Invalid argument to 'as'
+   ·
+ 6 │         (S { x: true } as u128);
+   │          ------------- Found: '0x8675309::M::S'. But expected: 'u8', 'u64', 'u128'
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/operators/casting_operators_types_mismatch.move:7:10 ───
+   │
+ 7 │         (true as u8);
+   │          ^^^^ Invalid argument to 'as'
+   ·
+ 7 │         (true as u8);
+   │          ---- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/operators/casting_operators_types_mismatch.move:8:10 ───
+   │
+ 8 │         (true as u64);
+   │          ^^^^ Invalid argument to 'as'
+   ·
+ 8 │         (true as u64);
+   │          ---- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+   │
+
+error: 
+
+   ┌── tests/move_check/translated_ir_tests/operators/casting_operators_types_mismatch.move:9:10 ───
+   │
+ 9 │         (true as u128);
+   │          ^^^^ Invalid argument to 'as'
+   ·
+ 9 │         (true as u128);
+   │          ---- Found: 'bool'. But expected: 'u8', 'u64', 'u128'
+   │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/operators/casting_operators_types_mismatch.move:10:10 ───
+    │
+ 10 │         (0x0 as u64);
+    │          ^^^ Invalid argument to 'as'
+    ·
+ 10 │         (0x0 as u64);
+    │          --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+    │
+
+error: 
+
+    ┌── tests/move_check/translated_ir_tests/operators/casting_operators_types_mismatch.move:11:10 ───
+    │
+ 11 │         (0x0 as u128);
+    │          ^^^ Invalid argument to 'as'
+    ·
+ 11 │         (0x0 as u128);
+    │          --- Found: 'address'. But expected: 'u8', 'u64', 'u128'
+    │
+

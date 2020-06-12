@@ -101,4 +101,4 @@ fn functional_testsuite(path: &Path) -> datatest_stable::Result<()> {
     testsuite::functional_tests(MoveSourceCompiler::new(stdlib_files(STD_LIB_DIR)), path)
 }
 
-datatest_stable::harness!(functional_testsuite, FUNCTIONAL_TEST_DIR, r".*\.move");
+datatest_stable::harness!(functional_testsuite, FUNCTIONAL_TEST_DIR, r".*\.move$");
