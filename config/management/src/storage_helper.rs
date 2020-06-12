@@ -9,7 +9,7 @@ use libra_global_constants::{
 };
 use libra_network_address::NetworkAddress;
 use libra_secure_storage::{
-    BoxedStorage, CryptoStorage, KVStorage, NamespacedStorage, OnDiskStorage, Value,
+    CryptoStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage, Value,
 };
 use libra_types::{account_address::AccountAddress, transaction::Transaction, waypoint::Waypoint};
 use std::{fs::File, path::Path};
@@ -27,9 +27,9 @@ impl StorageHelper {
         Self { temppath }
     }
 
-    pub fn storage(&self, namespace: String) -> BoxedStorage {
+    pub fn storage(&self, namespace: String) -> Storage {
         let storage = OnDiskStorage::new(self.temppath.path().to_path_buf());
-        BoxedStorage::from(NamespacedStorage::new(Box::new(storage), namespace))
+        Storage::from(NamespacedStorage::new(Box::new(storage), namespace))
     }
 
     pub fn path(&self) -> &Path {

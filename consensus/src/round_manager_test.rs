@@ -41,7 +41,7 @@ use futures::{
     Stream, StreamExt, TryStreamExt,
 };
 use libra_crypto::{hash::CryptoHash, HashValue};
-use libra_secure_storage::BoxedStorage;
+use libra_secure_storage::Storage;
 use libra_types::{
     epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -103,7 +103,7 @@ impl NodeSetup {
 
             let author = signer.author();
             let safety_storage = PersistentSafetyStorage::initialize(
-                BoxedStorage::from(libra_secure_storage::InMemoryStorage::new()),
+                Storage::from(libra_secure_storage::InMemoryStorage::new()),
                 signer.private_key().clone(),
                 waypoint,
             );

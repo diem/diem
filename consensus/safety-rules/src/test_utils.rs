@@ -12,7 +12,7 @@ use consensus_types::{
     vote_proposal::VoteProposal,
 };
 use libra_crypto::hash::{CryptoHash, TransactionAccumulatorHasher};
-use libra_secure_storage::{BoxedStorage, InMemoryStorage};
+use libra_secure_storage::{InMemoryStorage, Storage};
 use libra_types::{
     block_info::BlockInfo,
     epoch_state::EpochState,
@@ -187,6 +187,6 @@ pub fn validator_signers_to_waypoints(signers: &[&ValidatorSigner]) -> Waypoint 
 
 pub fn test_storage(signer: &ValidatorSigner) -> PersistentSafetyStorage {
     let waypoint = validator_signers_to_waypoints(&[signer]);
-    let storage = BoxedStorage::from(InMemoryStorage::new());
+    let storage = Storage::from(InMemoryStorage::new());
     PersistentSafetyStorage::initialize(storage, signer.private_key().clone(), waypoint)
 }

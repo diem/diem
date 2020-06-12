@@ -4,7 +4,7 @@
 use consensus_types::block::{block_test_utils, block_test_utils::random_payload, Block};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use libra_config::config::{OnDiskStorageConfig, SecureBackend};
-use libra_secure_storage::{BoxedStorage, InMemoryStorage, OnDiskStorage};
+use libra_secure_storage::{InMemoryStorage, OnDiskStorage, Storage};
 use libra_types::validator_signer::ValidatorSigner;
 use safety_rules::{
     process_client_wrapper::ProcessClientWrapper, test_utils, PersistentSafetyStorage,
@@ -54,7 +54,7 @@ fn in_memory(n: u64) {
     let signer = ValidatorSigner::from_int(0);
     let waypoint = test_utils::validator_signers_to_waypoints(&[&signer]);
     let storage = PersistentSafetyStorage::initialize(
-        BoxedStorage::from(InMemoryStorage::new()),
+        Storage::from(InMemoryStorage::new()),
         signer.private_key().clone(),
         waypoint,
     );
@@ -67,7 +67,7 @@ fn on_disk(n: u64) {
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
     let waypoint = test_utils::validator_signers_to_waypoints(&[&signer]);
     let storage = PersistentSafetyStorage::initialize(
-        BoxedStorage::from(OnDiskStorage::new(file_path)),
+        Storage::from(OnDiskStorage::new(file_path)),
         signer.private_key().clone(),
         waypoint,
     );
@@ -80,7 +80,7 @@ fn serializer(n: u64) {
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
     let waypoint = test_utils::validator_signers_to_waypoints(&[&signer]);
     let storage = PersistentSafetyStorage::initialize(
-        BoxedStorage::from(OnDiskStorage::new(file_path)),
+        Storage::from(OnDiskStorage::new(file_path)),
         signer.private_key().clone(),
         waypoint,
     );
@@ -93,7 +93,7 @@ fn thread(n: u64) {
     let file_path = NamedTempFile::new().unwrap().into_temp_path().to_path_buf();
     let waypoint = test_utils::validator_signers_to_waypoints(&[&signer]);
     let storage = PersistentSafetyStorage::initialize(
-        BoxedStorage::from(OnDiskStorage::new(file_path)),
+        Storage::from(OnDiskStorage::new(file_path)),
         signer.private_key().clone(),
         waypoint,
     );

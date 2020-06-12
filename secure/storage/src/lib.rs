@@ -30,12 +30,12 @@ pub use crate::{
     namespaced_storage::NamespacedStorage,
     on_disk::{OnDiskStorage, OnDiskStorageInternal},
     policy::{Capability, Identity, Permission, Policy},
-    storage::BoxedStorage,
+    storage::Storage,
     value::Value,
     vault::VaultStorage,
 };
 
-impl From<&SecureBackend> for BoxedStorage {
+impl From<&SecureBackend> for Storage {
     fn from(backend: &SecureBackend) -> Self {
         match backend {
             SecureBackend::GitHub(config) => {
@@ -45,21 +45,21 @@ impl From<&SecureBackend> for BoxedStorage {
                     config.token.read_token().expect("Unable to read token"),
                 );
                 if let Some(namespace) = &config.namespace {
-                    BoxedStorage::from(NamespacedStorage::new(Box::new(storage), namespace.clone()))
+                    Storage::from(NamespacedStorage::new(Box::new(storage), namespace.clone()))
                 } else {
-                    BoxedStorage::from(storage)
+                    Storage::from(storage)
                 }
             }
-            SecureBackend::InMemoryStorage => BoxedStorage::from(InMemoryStorage::new()),
+            SecureBackend::InMemoryStorage => Storage::from(InMemoryStorage::new()),
             SecureBackend::OnDiskStorage(config) => {
                 let storage = OnDiskStorage::new(config.path());
                 if let Some(namespace) = &config.namespace {
-                    BoxedStorage::from(NamespacedStorage::new(Box::new(storage), namespace.clone()))
+                    Storage::from(NamespacedStorage::new(Box::new(storage), namespace.clone()))
                 } else {
-                    BoxedStorage::from(storage)
+                    Storage::from(storage)
                 }
             }
-            SecureBackend::Vault(config) => BoxedStorage::from(VaultStorage::new(
+            SecureBackend::Vault(config) => Storage::from(VaultStorage::new(
                 config.server.clone(),
                 config.token.read_token().expect("Unable to read token"),
                 config.namespace.clone(),
