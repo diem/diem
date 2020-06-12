@@ -31,6 +31,45 @@ impl BinaryConstants {
     pub const TABLE_HEADER_SIZE: u8 = size_of::<u32>() as u8 * 2 + 1;
 }
 
+pub const TABLE_COUNT_MAX: u64 = 255;
+
+pub const TABLE_OFFSET_MAX: u64 = 0xffff_ffff;
+pub const TABLE_SIZE_MAX: u64 = 0xffff_ffff;
+pub const TABLE_CONTENT_SIZE_MAX: u64 = 0xffff_ffff;
+
+pub const TABLE_INDEX_MAX: u64 = 65535;
+pub const SIGNATURE_INDEX_MAX: u64 = TABLE_INDEX_MAX;
+pub const ADDRESS_INDEX_MAX: u64 = TABLE_INDEX_MAX;
+pub const IDENTIFIER_INDEX_MAX: u64 = TABLE_INDEX_MAX;
+pub const MODULE_HANDLE_INDEX_MAX: u64 = TABLE_INDEX_MAX;
+pub const STRUCT_HANDLE_INDEX_MAX: u64 = TABLE_INDEX_MAX;
+pub const STRUCT_DEF_INDEX_MAX: u64 = TABLE_INDEX_MAX;
+pub const FUNCTION_HANDLE_INDEX_MAX: u64 = TABLE_INDEX_MAX;
+pub const FUNCTION_INST_INDEX_MAX: u64 = TABLE_INDEX_MAX;
+pub const FIELD_HANDLE_INDEX_MAX: u64 = TABLE_INDEX_MAX;
+pub const FIELD_INST_INDEX_MAX: u64 = TABLE_INDEX_MAX;
+pub const STRUCT_DEF_INST_INDEX_MAX: u64 = TABLE_INDEX_MAX;
+pub const CONSTANT_INDEX_MAX: u64 = TABLE_INDEX_MAX;
+
+pub const BYTECODE_COUNT_MAX: u64 = 65535;
+pub const BYTECODE_INDEX_MAX: u64 = 65535;
+
+pub const LOCAL_INDEX_MAX: u64 = 255;
+
+pub const IDENTIFIER_SIZE_MAX: u64 = 65535;
+
+pub const CONSTANT_SIZE_MAX: u64 = 65535;
+
+pub const SIGNATURE_SIZE_MAX: u64 = 255;
+
+pub const ACQUIRES_COUNT_MAX: u64 = 255;
+
+pub const FIELD_COUNT_MAX: u64 = 255;
+pub const FIELD_OFFSET_MAX: u64 = 255;
+
+pub const TYPE_PARAMETER_COUNT_MAX: u64 = 255;
+pub const TYPE_PARAMETER_INDEX_MAX: u64 = 65536;
+
 /// Constants for table types in the binary.
 ///
 /// The binary contains a subset of those tables. A table specification is a tuple (table type,
@@ -249,27 +288,14 @@ impl From<Vec<u8>> for BinaryData {
     }
 }
 
-pub fn write_u8_as_uleb128(binary: &mut BinaryData, value: u8) -> Result<()> {
-    write_u32_as_uleb128(binary, u32::from(value))
-}
-
-/// Take a `Vec<u8>` and a value to write to that vector and applies LEB128 logic to
-/// compress the u16.
-pub fn write_u16_as_uleb128(binary: &mut BinaryData, value: u16) -> Result<()> {
-    write_u32_as_uleb128(binary, u32::from(value))
-}
-
-/// Take a `Vec<u8>` and a value to write to that vector and applies LEB128 logic to
-/// compress the u32.
-pub fn write_u32_as_uleb128(binary: &mut BinaryData, value: u32) -> Result<()> {
-    let mut val = value;
+pub fn write_u64_as_uleb128(binary: &mut BinaryData, mut val: u64) -> Result<()> {
     loop {
-        let v: u8 = (val & 0x7f) as u8;
-        if u32::from(v) != val {
-            binary.push(v | 0x80)?;
+        let cur = val & 0x7f;
+        if cur != val {
+            binary.push((cur | 0x80) as u8)?;
             val >>= 7;
         } else {
-            binary.push(v)?;
+            binary.push(cur as u8)?;
             break;
         }
     }
@@ -296,85 +322,29 @@ pub fn write_u128(binary: &mut BinaryData, value: u128) -> Result<()> {
     binary.extend(&value.to_le_bytes())
 }
 
-/// Reads a `u8` in ULEB128 format from a `binary`.
-///
-/// Takes a `&mut Cursor<&[u8]>` and returns a pair:
-///
-/// u16 - value read
-///
-/// Return an error on an invalid representation.
-pub fn read_uleb128_as_u8(cursor: &mut Cursor<&[u8]>) -> Result<u8> {
-    let mut value: u16 = 0;
-    let mut shift: u8 = 0;
-    while let Ok(byte) = cursor.read_u8() {
-        let val = byte & 0x7f;
-        value |= u16::from(val) << shift;
-        if val == byte {
-            if (shift > 0 && val == 0) || value > u16::from(std::u8::MAX) {
-                bail!("invalid ULEB128 representation for u8");
-            }
-            return Ok(value as u8);
-        }
-        shift += 7;
-        if shift > 7 {
-            break;
-        }
-    }
-    bail!("invalid ULEB128 representation for u8")
-}
-
-/// Reads a `u16` in ULEB128 format from a `binary`.
-///
-/// Takes a `&mut Cursor<&[u8]>` and returns a pair:
-///
-/// u16 - value read
-///
-/// Return an error on an invalid representation.
-pub fn read_uleb128_as_u16(cursor: &mut Cursor<&[u8]>) -> Result<u16> {
-    let mut value: u32 = 0;
-    let mut shift: u8 = 0;
-    while let Ok(byte) = cursor.read_u8() {
-        let val = byte & 0x7f;
-        value |= u32::from(val) << shift;
-        if val == byte {
-            if (shift > 0 && val == 0) || value > u32::from(std::u16::MAX) {
-                bail!("invalid ULEB128 representation for u16");
-            }
-            return Ok(value as u16);
-        }
-        shift += 7;
-        if shift > 14 {
-            break;
-        }
-    }
-    bail!("invalid ULEB128 representation for u16")
-}
-
-/// Reads a `u32` in ULEB128 format from a `binary`.
-///
-/// Takes a `&mut Cursor<&[u8]>` and returns a pair:
-///
-/// u32 - value read
-///
-/// Return an error on an invalid representation.
-pub fn read_uleb128_as_u32(cursor: &mut Cursor<&[u8]>) -> Result<u32> {
+pub fn read_uleb128_as_u64(cursor: &mut Cursor<&[u8]>) -> Result<u64> {
     let mut value: u64 = 0;
-    let mut shift: u8 = 0;
+    let mut shift = 0;
     while let Ok(byte) = cursor.read_u8() {
-        let val = byte & 0x7f;
-        value |= u64::from(val) << shift;
-        if val == byte {
-            if (shift > 0 && val == 0) || value > std::u32::MAX.into() {
-                bail!("invalid ULEB128 representation for u32");
-            }
-            return Ok(value as u32);
+        let cur = (byte & 0x7f) as u64;
+        if (cur << shift) >> shift != cur {
+            bail!("invalid ULEB128 repr for usize");
         }
+        value |= cur << shift;
+
+        if (byte & 0x80) == 0 {
+            if shift > 0 && cur == 0 {
+                bail!("invalid ULEB128 repr for usize");
+            }
+            return Ok(value);
+        }
+
         shift += 7;
-        if shift > 28 {
+        if shift > size_of::<u64>() * 8 {
             break;
         }
     }
-    bail!("invalid ULEB128 representation for u32")
+    bail!("invalid ULEB128 repr for usize");
 }
 
 /// The encoding of the instruction is the serialized form of it, but disregarding the
