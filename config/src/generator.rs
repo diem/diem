@@ -76,12 +76,9 @@ pub fn build_seed_peers(
     let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
 
     let mut seed_peers = SeedPeersConfig::default();
-    seed_peers.seed_peers.insert(
+    seed_peers.insert(
         seed_config.identity.peer_id_from_config().unwrap(),
         vec![seed_addr],
     );
-    seed_peers
-        .verify_libranet_addrs()
-        .expect("Expect LibraNet addresses");
     seed_peers
 }

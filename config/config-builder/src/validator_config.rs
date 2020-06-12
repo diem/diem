@@ -243,8 +243,8 @@ mod test {
         let config = validator_config.build().unwrap();
         let network = config.validator_network.as_ref().unwrap();
 
-        network.seed_peers.verify_libranet_addrs().unwrap();
-        let (seed_peer_id, seed_addrs) = network.seed_peers.seed_peers.iter().next().unwrap();
+        network.verify_seed_peer_addrs().unwrap();
+        let (seed_peer_id, seed_addrs) = network.seed_peers.iter().next().unwrap();
         assert_eq!(seed_addrs.len(), 1);
         assert_ne!(&network.peer_id(), seed_peer_id);
         assert_ne!(

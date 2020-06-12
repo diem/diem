@@ -240,9 +240,7 @@ fn attach_validator_full_node(
         v_vfn_network_address.append_prod_protos(v_vfn_pub_key, HANDSHAKE_VERSION);
     let v_vfn_id = libra_secure_storage::config::peer_id(v_vfn);
     let mut seed_peers = SeedPeersConfig::default();
-    seed_peers
-        .seed_peers
-        .insert(v_vfn_id, vec![v_vfn_network_address]);
+    seed_peers.insert(v_vfn_id, vec![v_vfn_network_address]);
 
     let fn_vfn = &mut full_node_config.full_node_networks[0];
     fn_vfn.discovery_method = DiscoveryMethod::None;

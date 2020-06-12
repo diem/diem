@@ -224,11 +224,11 @@ impl NodeConfig {
         let input_dir = RootPath::new(input_path);
         config.execution.load(&input_dir)?;
         if let Some(network) = &mut config.validator_network {
-            network.load(&input_dir, RoleType::Validator)?;
+            network.load(RoleType::Validator)?;
             network_ids.insert(network.network_id.clone());
         }
         for network in &mut config.full_node_networks {
-            network.load(&input_dir, RoleType::FullNode)?;
+            network.load(RoleType::FullNode)?;
 
             // Validate that a network isn't repeated
             let network_id = network.network_id.clone();
@@ -245,12 +245,6 @@ impl NodeConfig {
     pub fn save<P: AsRef<Path>>(&mut self, output_path: P) -> Result<()> {
         let output_dir = RootPath::new(&output_path);
         self.execution.save(&output_dir)?;
-        if let Some(network) = &mut self.validator_network {
-            network.save(&output_dir)?;
-        }
-        for network in &mut self.full_node_networks {
-            network.save(&output_dir)?;
-        }
         // This must be last as calling save on subconfigs may change their fields
         self.save_config(&output_path)?;
         Ok(())
@@ -413,13 +407,12 @@ mod test {
 
     #[test]
     fn verify_configs() {
-        let _ = vec![
-            PUBLIC_FULL_NODE,
-            VALIDATOR,
-            VALIDATOR_FULL_NODE,
-        ].iter().map(|path| {
-            NodeConfig::load_config(PathBuf::from(path)).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
-        })
-        .collect::<Vec<_>>();
+        let _ = vec![PUBLIC_FULL_NODE, VALIDATOR, VALIDATOR_FULL_NODE]
+            .iter()
+            .map(|path| {
+                NodeConfig::load_config(PathBuf::from(path))
+                    .unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+            })
+            .collect::<Vec<_>>();
     }
 }

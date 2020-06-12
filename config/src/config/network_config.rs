@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::{PersistableConfig, RoleType, RootPath, SecureBackend},
+    config::{RoleType, SecureBackend},
     keys::KeyPair,
     network_id::NetworkId,
     utils,
@@ -16,10 +16,7 @@ use rand::{
     Rng, SeedableRng,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::TryFrom, path::PathBuf, string::ToString};
-
-const NETWORK_PEERS_DEFAULT: &str = "network_peers.config.toml";
-const SEED_PEERS_DEFAULT: &str = "seed_peers.toml";
+use std::{collections::HashMap, convert::TryFrom, string::ToString};
 
 /// Current supported protocol negotiation handshake version.
 ///
@@ -27,6 +24,9 @@ const SEED_PEERS_DEFAULT: &str = "seed_peers.toml";
 // TODO(philiphayes): ideally this constant lives somewhere in network/ ...
 // might need to extract into a separate network_constants crate or something.
 pub const HANDSHAKE_VERSION: u8 = 0;
+
+pub type NetworkPeersConfig = HashMap<PeerId, x25519::PublicKey>;
+pub type SeedPeersConfig = HashMap<PeerId, Vec<NetworkAddress>>;
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
 #[derive(Debug, Deserialize, Serialize)]
@@ -41,13 +41,9 @@ pub struct NetworkConfig {
     pub mutual_authentication: bool,
     // Leveraged by mutual_authentication for incoming peers that may not have a well-defined
     // network address.
-    #[serde(skip)]
     pub network_peers: NetworkPeersConfig,
-    pub network_peers_file: PathBuf,
     // Initial set of peers to connect to
-    #[serde(skip)]
     pub seed_peers: SeedPeersConfig,
-    pub seed_peers_file: PathBuf,
     // Enable this network to use either gossip discovery or onchain discovery.
     pub discovery_method: DiscoveryMethod,
     pub identity: Identity,
@@ -69,10 +65,8 @@ impl NetworkConfig {
             mutual_authentication: false,
             discovery_method: DiscoveryMethod::None,
             identity: Identity::None,
-            network_peers_file: PathBuf::new(),
-            network_peers: NetworkPeersConfig::default(),
-            seed_peers_file: PathBuf::new(),
-            seed_peers: SeedPeersConfig::default(),
+            network_peers: HashMap::default(),
+            seed_peers: HashMap::default(),
         };
         config.prepare_identity();
         config
@@ -90,34 +84,19 @@ impl NetworkConfig {
             mutual_authentication: self.mutual_authentication,
             discovery_method: self.discovery_method.clone(),
             identity: Identity::None,
-            network_peers_file: self.network_peers_file.clone(),
             network_peers: self.network_peers.clone(),
-            seed_peers_file: self.seed_peers_file.clone(),
             seed_peers: self.seed_peers.clone(),
         }
     }
 
-    pub fn load(&mut self, root_dir: &RootPath, network_role: RoleType) -> Result<()> {
-        if !self.network_peers_file.as_os_str().is_empty() {
-            let path = root_dir.full_path(&self.network_peers_file);
-            self.network_peers = NetworkPeersConfig::load_config(&path)?;
-        }
-        if !self.seed_peers_file.as_os_str().is_empty() {
-            let path = root_dir.full_path(&self.seed_peers_file);
-            self.seed_peers = SeedPeersConfig::load_config(&path)?;
-            self.seed_peers.verify_libranet_addrs()?;
-        }
+    pub fn load(&mut self, network_role: RoleType) -> Result<()> {
         if self.listen_address.to_string().is_empty() {
             self.listen_address = utils::get_local_ip().ok_or_else(|| anyhow!("No local IP"))?;
         }
 
         if network_role.is_validator() {
             ensure!(
-                self.network_peers_file.as_os_str().is_empty(),
-                "Validators should not define network_peers_file"
-            );
-            ensure!(
-                self.network_peers.peers.is_empty(),
+                self.network_peers.is_empty(),
                 "Validators should not define network_peers"
             );
         }
@@ -150,30 +129,6 @@ impl NetworkConfig {
         };
     }
 
-    fn default_path(&self, config_path: &str) -> String {
-        let peer_id = self.identity.peer_id_from_config().unwrap_or_default();
-        format!("{}.{}", peer_id.to_string(), config_path)
-    }
-
-    pub fn save(&mut self, root_dir: &RootPath) -> Result<()> {
-        if self.network_peers != NetworkPeersConfig::default() {
-            if self.network_peers_file.as_os_str().is_empty() {
-                let file_name = self.default_path(NETWORK_PEERS_DEFAULT);
-                self.network_peers_file = PathBuf::from(file_name);
-            }
-            let path = root_dir.full_path(&self.network_peers_file);
-            self.network_peers.save_config(&path)?;
-        }
-
-        if self.seed_peers_file.as_os_str().is_empty() {
-            let file_name = self.default_path(SEED_PEERS_DEFAULT);
-            self.seed_peers_file = PathBuf::from(file_name);
-        }
-        let path = root_dir.full_path(&self.seed_peers_file);
-        self.seed_peers.save_config(&path)?;
-        Ok(())
-    }
-
     pub fn random(&mut self, rng: &mut StdRng) {
         self.random_with_peer_id(rng, None);
     }
@@ -194,18 +149,9 @@ impl NetworkConfig {
     pub fn peer_id(&self) -> PeerId {
         self.identity.peer_id_from_config().unwrap()
     }
-}
 
-// This is separated to another config so that it can be written to its own file
-#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
-pub struct SeedPeersConfig {
-    // All peers config. Key:a unique peer id, will be PK in future, Value: peer discovery info
-    pub seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
-}
-
-impl SeedPeersConfig {
     /// Check that all seed peer addresses look like canonical LibraNet addresses
-    pub fn verify_libranet_addrs(&self) -> Result<()> {
+    pub fn verify_seed_peer_addrs(&self) -> Result<()> {
         for (peer_id, addrs) in self.seed_peers.iter() {
             for addr in addrs {
                 ensure!(
@@ -217,19 +163,6 @@ impl SeedPeersConfig {
             }
         }
         Ok(())
-    }
-}
-
-#[derive(Clone, Default, Deserialize, PartialEq, Serialize)]
-pub struct NetworkPeersConfig {
-    #[serde(flatten)]
-    #[serde(serialize_with = "utils::serialize_ordered_map")]
-    pub peers: HashMap<PeerId, x25519::PublicKey>,
-}
-
-impl std::fmt::Debug for NetworkPeersConfig {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "<{} keys>", self.peers.len())
     }
 }
 
@@ -321,119 +254,4 @@ pub struct IdentityFromStorage {
     pub key_name: String,
     pub peer_id_name: String,
     pub backend: SecureBackend,
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::config::RoleType;
-    use libra_temppath::TempPath;
-    use rand::{rngs::StdRng, SeedableRng};
-
-    #[test]
-    fn test_with_defaults() {
-        // Assert default exists
-        let (mut config, path) = generate_config();
-        assert_eq!(config.network_peers, NetworkPeersConfig::default());
-        assert_eq!(config.network_peers_file, PathBuf::new());
-        assert_ne!(config.identity, Identity::None);
-        assert_eq!(config.seed_peers, SeedPeersConfig::default());
-        assert_eq!(config.seed_peers_file, PathBuf::new());
-        let identity = config.identity.clone();
-
-        // Assert default loading doesn't affect paths and defaults remain in place
-        let root_dir = RootPath::new_path(path.path());
-        config.load(&root_dir, RoleType::FullNode).unwrap();
-        assert_eq!(config.network_peers, NetworkPeersConfig::default());
-        assert_eq!(config.network_peers_file, PathBuf::new());
-        assert_eq!(config.identity, identity);
-        assert_eq!(config.seed_peers_file, PathBuf::new());
-        assert_eq!(config.seed_peers, SeedPeersConfig::default());
-
-        // Assert saving updates paths
-        config.save(&root_dir).unwrap();
-        assert_eq!(config.seed_peers, SeedPeersConfig::default());
-        assert_eq!(
-            config.seed_peers_file,
-            PathBuf::from(config.default_path(SEED_PEERS_DEFAULT))
-        );
-
-        // Assert paths and values are not set (i.e., no defaults apply)
-        assert_eq!(config.identity, identity);
-        assert_eq!(config.network_peers, NetworkPeersConfig::default());
-        assert_eq!(config.network_peers_file, PathBuf::new());
-    }
-
-    #[test]
-    fn test_with_random() {
-        let (mut config, path) = generate_config();
-        config.network_peers = NetworkPeersConfig::default();
-        let mut rng = StdRng::from_seed([5u8; 32]);
-        config.random(&mut rng);
-        // This is default (empty) otherwise
-        let peer_id = config.identity.peer_id_from_config().unwrap();
-        config.seed_peers.seed_peers.insert(peer_id, vec![]);
-
-        let identity = config.identity.clone();
-        let peers = config.network_peers.clone();
-        let seed_peers = config.seed_peers.clone();
-
-        // Assert empty paths
-        assert_eq!(config.network_peers_file, PathBuf::new());
-        assert_eq!(config.seed_peers_file, PathBuf::new());
-
-        // Assert saving updates paths
-        let root_dir = RootPath::new_path(path.path());
-        config.save(&root_dir).unwrap();
-        assert_eq!(config.identity, identity);
-        assert_eq!(config.network_peers, peers);
-        assert_eq!(config.network_peers_file, PathBuf::new());
-        assert_eq!(config.seed_peers, seed_peers);
-        assert_eq!(
-            config.seed_peers_file,
-            PathBuf::from(config.default_path(SEED_PEERS_DEFAULT))
-        );
-
-        // Assert a fresh load correctly populates the config
-        let mut new_config = NetworkConfig::default();
-        // First that paths are empty
-        assert_eq!(new_config.network_peers_file, PathBuf::new());
-        assert_eq!(new_config.seed_peers_file, PathBuf::new());
-        // Loading populates things correctly
-        let result = new_config.load(&root_dir, RoleType::Validator);
-        result.unwrap();
-        assert_eq!(config.identity, identity);
-        assert_eq!(config.network_peers, peers);
-        assert_eq!(config.network_peers_file, PathBuf::new(),);
-        assert_eq!(config.seed_peers, seed_peers);
-        assert_eq!(
-            config.seed_peers_file,
-            PathBuf::from(config.default_path(SEED_PEERS_DEFAULT))
-        );
-        assert_eq!(new_config.network_id, config.network_id)
-    }
-
-    #[test]
-    fn test_generate_ip_addresses_on_load() {
-        // Generate a random node
-        let (mut config, path) = generate_config();
-        let mut rng = StdRng::from_seed([32u8; 32]);
-        config.random(&mut rng);
-        let root_dir = RootPath::new_path(path.path());
-
-        // Now reset IP addresses and save
-        config.listen_address = NetworkAddress::mock();
-        config.save(&root_dir).unwrap();
-
-        // Now load and verify default IP addresses are generated
-        config.load(&root_dir, RoleType::FullNode).unwrap();
-        assert_ne!(config.listen_address.to_string(), "");
-    }
-
-    fn generate_config() -> (NetworkConfig, TempPath) {
-        let temp_dir = TempPath::new();
-        temp_dir.create_as_dir().expect("error creating tempdir");
-        let config = NetworkConfig::default();
-        (config, temp_dir)
-    }
 }

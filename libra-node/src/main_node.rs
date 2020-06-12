@@ -88,13 +88,12 @@ pub fn setup_network(
 
     // Sanity check seed peer addresses.
     config
-        .seed_peers
-        .verify_libranet_addrs()
+        .verify_seed_peer_addrs()
         .expect("Seed peer addresses must be well-formed");
-    let seed_peers = config.seed_peers.seed_peers.clone();
+    let seed_peers = config.seed_peers.clone();
 
     if config.mutual_authentication {
-        let network_peers = config.network_peers.peers.clone();
+        let network_peers = config.network_peers.clone();
         let trusted_peers = if role == RoleType::Validator {
             // for validators, trusted_peers is empty will be populated from consensus
             HashMap::new()
