@@ -160,10 +160,10 @@
                 <span class="kw">break</span>;
             }
         };
-
         <span class="comment">// Use the SHA-1 of the result as the file name.</span>
-        <span class="ident">sha1</span>.<span class="ident">input</span>(<span class="kw-2">&amp;</span><span class="ident">result</span>);
-        <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="ident">sha1</span>.<span class="ident">result_reset</span>();
+        <span class="ident">sha1</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="ident">result</span>);
+
+        <span class="kw">let</span> <span class="ident">hash</span> <span class="op">=</span> <span class="ident">sha1</span>.<span class="ident">finalize_reset</span>();
         <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">hex</span>::<span class="ident">encode</span>(<span class="ident">hash</span>.<span class="ident">as_slice</span>());
         <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">corpus_dir</span>.<span class="ident">join</span>(<span class="ident">name</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">f</span> <span class="op">=</span> <span class="ident">fs</span>::<span class="ident">File</span>::<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">path</span>)

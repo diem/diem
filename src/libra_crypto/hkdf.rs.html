@@ -194,6 +194,9 @@
 <span id="194">194</span>
 <span id="195">195</span>
 <span id="196">196</span>
+<span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -274,10 +277,12 @@
 
 <span class="kw">use</span> <span class="ident">digest</span>::{
     <span class="ident">generic_array</span>::{<span class="self">self</span>, <span class="ident">ArrayLength</span>, <span class="ident">GenericArray</span>},
-    <span class="ident">BlockInput</span>, <span class="ident">FixedOutput</span>, <span class="ident">Input</span>, <span class="ident">Reset</span>,
+    <span class="ident">BlockInput</span>, <span class="ident">FixedOutput</span>, <span class="ident">Reset</span>, <span class="ident">Update</span>,
 };
+
 <span class="kw">use</span> <span class="ident">generic_array</span>::<span class="ident">typenum</span>::<span class="ident">Unsigned</span>;
-<span class="kw">use</span> <span class="ident">hmac</span>::{<span class="ident">Hmac</span>, <span class="ident">Mac</span>};
+<span class="kw">use</span> <span class="ident">hmac</span>::{<span class="ident">Hmac</span>, <span class="ident">Mac</span>, <span class="ident">NewMac</span>};
+
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">marker</span>::<span class="ident">PhantomData</span>;
 <span class="kw">use</span> <span class="ident">thiserror</span>::<span class="ident">Error</span>;
 
@@ -286,7 +291,8 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Hkdf</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">D</span>: <span class="ident">Input</span> <span class="op">+</span> <span class="ident">BlockInput</span> <span class="op">+</span> <span class="ident">FixedOutput</span> <span class="op">+</span> <span class="ident">Reset</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Clone</span>,
+    <span class="ident">D</span>: <span class="ident">Update</span> <span class="op">+</span> <span class="ident">BlockInput</span> <span class="op">+</span> <span class="ident">FixedOutput</span> <span class="op">+</span> <span class="ident">Reset</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Clone</span>,
+    <span class="ident">D</span>::<span class="ident">BlockSize</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">D</span>::<span class="ident">OutputSize</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 {
     <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>,
@@ -294,7 +300,7 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span> <span class="ident">Hkdf</span><span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>
 <span class="kw">where</span>
-    <span class="ident">D</span>: <span class="ident">Input</span> <span class="op">+</span> <span class="ident">BlockInput</span> <span class="op">+</span> <span class="ident">FixedOutput</span> <span class="op">+</span> <span class="ident">Reset</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Clone</span>,
+    <span class="ident">D</span>: <span class="ident">Update</span> <span class="op">+</span> <span class="ident">BlockInput</span> <span class="op">+</span> <span class="ident">FixedOutput</span> <span class="op">+</span> <span class="ident">Reset</span> <span class="op">+</span> <span class="ident">Default</span> <span class="op">+</span> <span class="ident">Clone</span>,
     <span class="ident">D</span>::<span class="ident">BlockSize</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Clone</span>,
     <span class="ident">D</span>::<span class="ident">OutputSize</span>: <span class="ident">ArrayLength</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
 {
@@ -313,9 +319,9 @@
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Hmac</span>::<span class="op">&lt;</span><span class="ident">D</span><span class="op">&gt;</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">Default</span>::<span class="ident">default</span>()),
         };
 
-        <span class="ident">hmac</span>.<span class="ident">input</span>(<span class="ident">ikm</span>);
+        <span class="ident">hmac</span>.<span class="ident">update</span>(<span class="ident">ikm</span>);
 
-        <span class="prelude-val">Ok</span>(<span class="ident">hmac</span>.<span class="ident">result</span>().<span class="ident">code</span>().<span class="ident">to_vec</span>())
+        <span class="prelude-val">Ok</span>(<span class="ident">hmac</span>.<span class="ident">finalize</span>().<span class="ident">into_bytes</span>().<span class="ident">to_vec</span>())
     }
 
     <span class="doccomment">/// The RFC5869 HKDF-Expand operation.</span>
@@ -335,14 +341,14 @@
 
         <span class="kw">for</span> (<span class="ident">blocknum</span>, <span class="ident">okm_block</span>) <span class="kw">in</span> <span class="ident">okm</span>.<span class="ident">chunks_mut</span>(<span class="ident">hmac_output_bytes</span>).<span class="ident">enumerate</span>() {
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">ref</span> <span class="ident">prev</span>) <span class="op">=</span> <span class="ident">prev</span> {
-                <span class="ident">hmac</span>.<span class="ident">input</span>(<span class="ident">prev</span>)
+                <span class="ident">hmac</span>.<span class="ident">update</span>(<span class="ident">prev</span>)
             }
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">_info</span>) <span class="op">=</span> <span class="ident">info</span> {
-                <span class="ident">hmac</span>.<span class="ident">input</span>(<span class="ident">_info</span>);
+                <span class="ident">hmac</span>.<span class="ident">update</span>(<span class="ident">_info</span>);
             }
-            <span class="ident">hmac</span>.<span class="ident">input</span>(<span class="kw-2">&amp;</span>[<span class="ident">blocknum</span> <span class="kw">as</span> <span class="ident">u8</span> <span class="op">+</span> <span class="number">1</span>]);
+            <span class="ident">hmac</span>.<span class="ident">update</span>(<span class="kw-2">&amp;</span>[<span class="ident">blocknum</span> <span class="kw">as</span> <span class="ident">u8</span> <span class="op">+</span> <span class="number">1</span>]);
 
-            <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">hmac</span>.<span class="ident">result_reset</span>().<span class="ident">code</span>();
+            <span class="kw">let</span> <span class="ident">output</span> <span class="op">=</span> <span class="ident">hmac</span>.<span class="ident">finalize_reset</span>().<span class="ident">into_bytes</span>();
             <span class="ident">okm_block</span>.<span class="ident">copy_from_slice</span>(<span class="kw-2">&amp;</span><span class="ident">output</span>[..<span class="ident">okm_block</span>.<span class="ident">len</span>()]);
 
             <span class="ident">prev</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">output</span>);
