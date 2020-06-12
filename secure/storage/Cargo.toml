@@ -15,7 +15,7 @@ chrono = "0.4.11"
 enum_dispatch = "0.3.1"
 rand = "0.7.3"
 serde = { version = "1.0.111", features = ["rc"], default-features = false }
-serde_json = "1.0.54"
+serde_json = "1.0.55"
 thiserror = "1.0.19"
 
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
