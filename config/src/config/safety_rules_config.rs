@@ -31,8 +31,7 @@ impl SafetyRulesConfig {
 
 /// Defines how safety rules should be executed
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(tag = "type")]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case", tag = "type")]
 pub enum SafetyRulesService {
     /// This runs safety rules in the same thread as event processor
     Local,

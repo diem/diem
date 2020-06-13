@@ -6,8 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::PathBuf};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(tag = "type")]
-#[serde(rename_all = "snake_case")]
+#[serde(rename_all = "snake_case", tag = "type")]
 pub enum SecureBackend {
     GitHub(GitHubConfig),
     InMemoryStorage,
