@@ -44,8 +44,8 @@ pub fn peer_id(config: &NetworkConfig) -> PeerId {
 
 pub fn waypoint(config: &WaypointConfig) -> Waypoint {
     let waypoint = match &config {
-        WaypointConfig::FromConfig { waypoint } => Some(*waypoint),
-        WaypointConfig::FromStorage { backend } => {
+        WaypointConfig::FromConfig(waypoint) => Some(*waypoint),
+        WaypointConfig::FromStorage(backend) => {
             let storage: Storage = backend.into();
             let waypoint = storage
                 .get(libra_global_constants::WAYPOINT)
