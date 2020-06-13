@@ -56,6 +56,7 @@ use std::{
     thread, time,
 };
 use transaction_builder::encode_set_validator_config_script;
+use libra_types::on_chain_config::{LibraVersion, config_address};
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
 const GAS_UNIT_PRICE: u64 = 0;
@@ -550,6 +551,32 @@ impl ClientProxy {
             Some(_) => self.association_transaction_with_local_assoc_root_account(
                 TransactionPayload::Script(transaction_builder::encode_publishing_option_script(
                     VMPublishingOption::Locked(StdlibScript::whitelist()),
+                )),
+                is_blocking,
+            ),
+            None => unimplemented!(),
+        }
+    }
+
+    /// Modify the stored LibraVersion on chain.
+    pub fn change_libra_version(
+        &mut self,
+        space_delim_strings: &[&str],
+        is_blocking: bool,
+    ) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "change_libra_version",
+            "inconsistent command '{}' for change_libra_version",
+            space_delim_strings[0]
+        );
+        ensure!(
+            space_delim_strings.len() == 2,
+            "Invalid number of arguments for changing libra_version"
+        );
+        match self.assoc_root_account {
+            Some(_) => self.association_transaction_with_local_assoc_root_account(
+                TransactionPayload::Script(transaction_builder::encode_update_libra_version(
+                    LibraVersion { major: space_delim_strings[1].parse::<u64>().unwrap()}
                 )),
                 is_blocking,
             ),
