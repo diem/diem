@@ -82,9 +82,6 @@
 <span id="82">82</span>
 <span id="83">83</span>
 <span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -164,13 +161,10 @@
     <span class="kw">let</span> <span class="ident">seed_addr</span> <span class="op">=</span> <span class="ident">seed_base_addr</span>.<span class="ident">append_prod_protos</span>(<span class="ident">seed_pubkey</span>, <span class="ident">HANDSHAKE_VERSION</span>);
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">SeedPeersConfig</span>::<span class="ident">default</span>();
-    <span class="ident">seed_peers</span>.<span class="ident">seed_peers</span>.<span class="ident">insert</span>(
+    <span class="ident">seed_peers</span>.<span class="ident">insert</span>(
         <span class="ident">seed_config</span>.<span class="ident">identity</span>.<span class="ident">peer_id_from_config</span>().<span class="ident">unwrap</span>(),
         <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">seed_addr</span>],
     );
-    <span class="ident">seed_peers</span>
-        .<span class="ident">verify_libranet_addrs</span>()
-        .<span class="ident">expect</span>(<span class="string">&quot;Expect LibraNet addresses&quot;</span>);
     <span class="ident">seed_peers</span>
 }
 </pre></div>

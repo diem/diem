@@ -211,8 +211,6 @@
 <span id="211">211</span>
 <span id="212">212</span>
 <span id="213">213</span>
-<span id="214">214</span>
-<span id="215">215</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -372,19 +370,18 @@
             },
         };
 
-        <span class="kw">let</span> <span class="ident">text_from_config</span> <span class="op">=</span> <span class="string">&quot;
-[vault]
-server = \&quot;127.0.0.1:8200\&quot;
+        <span class="kw">let</span> <span class="ident">text_from_config</span> <span class="op">=</span> <span class="string">r#&quot;
+vault:
+    server: &quot;127.0.0.1:8200&quot;
+    token:
+        type: &quot;from_config&quot;
+        token: &quot;test&quot;
+        &quot;#</span>;
 
-[vault.token]
-type = \&quot;from_config\&quot;
-token = \&quot;test\&quot;
-        &quot;</span>;
-
-        <span class="kw">let</span> <span class="ident">de_from_config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">toml</span>::<span class="ident">from_str</span>(<span class="ident">text_from_config</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">de_from_config</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_yaml</span>::<span class="ident">from_str</span>(<span class="ident">text_from_config</span>).<span class="ident">unwrap</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">de_from_config</span>, <span class="ident">from_config</span>);
         <span class="comment">// Just assert that it can be serialized, not about to do string comparison</span>
-        <span class="ident">toml</span>::<span class="ident">to_string</span>(<span class="kw-2">&amp;</span><span class="ident">from_config</span>).<span class="ident">unwrap</span>();
+        <span class="ident">serde_yaml</span>::<span class="ident">to_string</span>(<span class="kw-2">&amp;</span><span class="ident">from_config</span>).<span class="ident">unwrap</span>();
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -400,19 +397,18 @@ token = \&quot;test\&quot;
             },
         };
 
-        <span class="kw">let</span> <span class="ident">text_from_disk</span> <span class="op">=</span> <span class="string">&quot;
-[vault]
-server = \&quot;127.0.0.1:8200\&quot;
+        <span class="kw">let</span> <span class="ident">text_from_disk</span> <span class="op">=</span> <span class="string">r#&quot;
+vault:
+    server: &quot;127.0.0.1:8200&quot;
+    token:
+        type: &quot;from_disk&quot;
+        path: &quot;/token&quot;
+        &quot;#</span>;
 
-[vault.token]
-type = \&quot;from_disk\&quot;
-path = \&quot;/token\&quot;
-        &quot;</span>;
-
-        <span class="kw">let</span> <span class="ident">de_from_disk</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">toml</span>::<span class="ident">from_str</span>(<span class="ident">text_from_disk</span>).<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">de_from_disk</span>: <span class="ident">Config</span> <span class="op">=</span> <span class="ident">serde_yaml</span>::<span class="ident">from_str</span>(<span class="ident">text_from_disk</span>).<span class="ident">unwrap</span>();
         <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">de_from_disk</span>, <span class="ident">from_disk</span>);
         <span class="comment">// Just assert that it can be serialized, not about to do string comparison</span>
-        <span class="ident">toml</span>::<span class="ident">to_string</span>(<span class="kw-2">&amp;</span><span class="ident">from_disk</span>).<span class="ident">unwrap</span>();
+        <span class="ident">serde_yaml</span>::<span class="ident">to_string</span>(<span class="kw-2">&amp;</span><span class="ident">from_disk</span>).<span class="ident">unwrap</span>();
     }
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
