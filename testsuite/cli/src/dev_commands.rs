@@ -29,6 +29,7 @@ impl Command for DevCommand {
             Box::new(DevCommandRemoveValidator {}),
             Box::new(DevCommandGenWaypoint {}),
             Box::new(DevCommandRegisterValidator {}),
+            Box::new(DevCommandChangeLibraVersion {}),
         ];
         subcommand_execute(&params[0], commands, client, &params[1..]);
     }
@@ -169,6 +170,33 @@ impl Command for DevCommandDisableCustomScript {
             return;
         }
         match client.disable_custom_script(params, true) {
+            Ok(_) => println!("Successfully finished execution"),
+            Err(e) => println!("{}", e),
+        }
+    }
+}
+
+pub struct DevCommandChangeLibraVersion {}
+
+impl Command for DevCommandChangeLibraVersion {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["change_libra_version"]
+    }
+
+    fn get_params_help(&self) -> &'static str {
+        "<new_libra_version>"
+    }
+
+    fn get_description(&self) -> &'static str {
+        "Change the libra_version stored on chain"
+    }
+
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        if params.len() != 2 {
+            println!("Invalid number of arguments");
+            return;
+        }
+        match client.change_libra_version(params, true) {
             Ok(_) => println!("Successfully finished execution"),
             Err(e) => println!("{}", e),
         }

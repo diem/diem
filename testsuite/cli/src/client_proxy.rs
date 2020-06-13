@@ -35,7 +35,7 @@ use libra_types::{
     account_state::AccountState,
     chain_id::ChainId,
     ledger_info::LedgerInfoWithSignatures,
-    on_chain_config::VMPublishingOption,
+    on_chain_config::{LibraVersion, VMPublishingOption},
     transaction::{
         authenticator::AuthenticationKey,
         helpers::{create_unsigned_txn, create_user_txn, TransactionSigner},
@@ -569,6 +569,37 @@ impl ClientProxy {
                 TransactionPayload::Script(
                     transaction_builder::encode_modify_publishing_option_script(
                         VMPublishingOption::locked(StdlibScript::allowlist()),
+                    ),
+                ),
+                is_blocking,
+            ),
+            None => unimplemented!(),
+        }
+    }
+
+    /// Modify the stored LibraVersion on chain.
+    pub fn change_libra_version(
+        &mut self,
+        space_delim_strings: &[&str],
+        is_blocking: bool,
+    ) -> Result<()> {
+        ensure!(
+            space_delim_strings[0] == "change_libra_version",
+            "inconsistent command '{}' for change_libra_version",
+            space_delim_strings[0]
+        );
+        ensure!(
+            space_delim_strings.len() == 2,
+            "Invalid number of arguments for changing libra_version"
+        );
+        match self.libra_root_account {
+            Some(_) => self.association_transaction_with_local_libra_root_account(
+                TransactionPayload::Script(
+                    transaction_builder::encode_update_libra_version_script(
+                        self.libra_root_account.as_ref().unwrap().sequence_number,
+                        LibraVersion {
+                            major: space_delim_strings[1].parse::<u64>().unwrap(),
+                        },
                     ),
                 ),
                 is_blocking,
