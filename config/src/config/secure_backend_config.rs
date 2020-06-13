@@ -67,27 +67,18 @@ pub struct OnDiskStorageConfig {
 
 /// Tokens can either be directly within this config or stored somewhere on disk.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(tag = "type")]
 #[serde(rename_all = "snake_case")]
 pub enum Token {
-    FromConfig(TokenFromConfig),
+    FromConfig(String),
     /// This is an absolute path and not relative to data_dir
-    FromDisk(TokenFromDisk),
+    FromDisk(PathBuf),
 }
 
 impl Token {
-    pub fn new_config(token: String) -> Token {
-        Token::FromConfig(TokenFromConfig { token })
-    }
-
-    pub fn new_disk(path: PathBuf) -> Token {
-        Token::FromDisk(TokenFromDisk { path })
-    }
-
     pub fn read_token(&self) -> Result<String> {
         match self {
-            Token::FromDisk(from_disk) => read_file(&from_disk.path),
-            Token::FromConfig(from_config) => Ok(from_config.token.clone()),
+            Token::FromDisk(path) => read_file(path),
+            Token::FromConfig(token) => Ok(token.clone()),
         }
     }
 }
@@ -150,9 +141,7 @@ mod tests {
                 namespace: None,
                 server: "127.0.0.1:8200".to_string(),
                 ca_certificate: None,
-                token: Token::FromConfig(TokenFromConfig {
-                    token: "test".to_string(),
-                }),
+                token: Token::FromConfig("test".to_string()),
             },
         };
 
@@ -160,8 +149,7 @@ mod tests {
 vault:
     server: "127.0.0.1:8200"
     token:
-        type: "from_config"
-        token: "test"
+        from_config: "test"
         "#;
 
         let de_from_config: Config = serde_yaml::from_str(text_from_config).unwrap();
@@ -177,9 +165,7 @@ vault:
                 namespace: None,
                 server: "127.0.0.1:8200".to_string(),
                 ca_certificate: None,
-                token: Token::FromDisk(TokenFromDisk {
-                    path: PathBuf::from("/token"),
-                }),
+                token: Token::FromDisk(PathBuf::from("/token")),
             },
         };
 
@@ -187,8 +173,7 @@ vault:
 vault:
     server: "127.0.0.1:8200"
     token:
-        type: "from_disk"
-        path: "/token"
+        from_disk: "/token"
         "#;
 
         let de_from_disk: Config = serde_yaml::from_str(text_from_disk).unwrap();
@@ -204,10 +189,10 @@ vault:
         let mut file = File::create(temppath.path()).unwrap();
         file.write_all(b"disk_token").unwrap();
 
-        let disk = Token::new_disk(temppath.path().to_path_buf());
+        let disk = Token::FromDisk(temppath.path().to_path_buf());
         assert_eq!("disk_token", disk.read_token().unwrap());
 
-        let config = Token::new_config("config_token".to_string());
+        let config = Token::FromConfig("config_token".to_string());
         assert_eq!("config_token", config.read_token().unwrap());
     }
 }
