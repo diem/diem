@@ -58,11 +58,10 @@ where
 
             Ok((Bytes::from(size_bytes.to_vec()), Bytes::from(record_bytes)))
         })
-        .map(|res: Result<(Bytes, Bytes)>| match res {
+        .flat_map(|res: Result<(Bytes, Bytes)>| match res {
             Ok((size_bytes, record_bytes)) => vec![Ok(size_bytes), Ok(record_bytes)],
             Err(e) => vec![Err(e)],
-        })
-        .flatten();
+        });
     Box::new(Response::new(Body::wrap_stream(stream::iter(iter))))
 }
 
