@@ -9,8 +9,7 @@ execution:
     genesis_file_location: "relative/path/to/genesis"
 
 full_node_networks:
-    - discovery_method:
-        type: "onchain"
+    - discovery_method: "onchain"
       listen_address: "/ip4/0.0.0.0/tcp/6180"
       network_id:
           type: "public"

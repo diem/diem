@@ -167,7 +167,7 @@ impl NetworkConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case", tag = "type")]
+#[serde(rename_all = "snake_case")]
 pub enum DiscoveryMethod {
     // default until we can deprecate
     Gossip(GossipConfig),
