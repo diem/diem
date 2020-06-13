@@ -117,6 +117,23 @@
 <span id="117">117</span>
 <span id="118">118</span>
 <span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
+<span id="129">129</span>
+<span id="130">130</span>
+<span id="131">131</span>
+<span id="132">132</span>
+<span id="133">133</span>
+<span id="134">134</span>
+<span id="135">135</span>
+<span id="136">136</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -236,6 +253,23 @@
         }
         <span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="ident">interval</span>));
     });
+}
+
+<span class="doccomment">/// Helper function to record metrics for external calls.</span>
+<span class="doccomment">/// Include call counts, time, and whether it&#39;s inside or not (1 or 0).</span>
+<span class="doccomment">/// It assumes a OpMetrics defined as OP_COUNTERS in crate::counters;</span>
+<span class="attribute">#[<span class="ident">macro_export</span>]</span>
+<span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">monitor</span> {
+    ( <span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>:<span class="ident">literal</span>, <span class="macro-nonterminal">$</span><span class="kw">fn</span>:<span class="macro-nonterminal">expr</span> ) <span class="op">=</span><span class="op">&gt;</span> {{
+        <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">counters</span>::<span class="ident">OP_COUNTERS</span>;
+        <span class="ident">OP_COUNTERS</span>.<span class="ident">inc</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>, <span class="string">&quot;_count&quot;</span>));
+        <span class="kw">let</span> <span class="ident">_timer</span> <span class="op">=</span> <span class="ident">OP_COUNTERS</span>.<span class="ident">timer</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>, <span class="string">&quot;_time&quot;</span>));
+        <span class="kw">let</span> <span class="ident">gauge</span> <span class="op">=</span> <span class="ident">OP_COUNTERS</span>.<span class="ident">gauge</span>(<span class="macro">concat</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>, <span class="string">&quot;_running&quot;</span>));
+        <span class="ident">gauge</span>.<span class="ident">inc</span>();
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="kw">fn</span>;
+        <span class="macro-nonterminal">gauge</span>.<span class="ident">dec</span>();
+        <span class="ident">result</span>
+    }};
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "libra_metrics";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

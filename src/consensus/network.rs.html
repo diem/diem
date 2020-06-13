@@ -287,6 +287,10 @@
 <span id="287">287</span>
 <span id="288">288</span>
 <span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -307,6 +311,7 @@
 };
 <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">channel</span>::<span class="ident">oneshot</span>, <span class="ident">stream</span>::<span class="ident">select</span>, <span class="ident">SinkExt</span>, <span class="ident">Stream</span>, <span class="ident">StreamExt</span>, <span class="ident">TryStreamExt</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">libra_metrics</span>::<span class="ident">monitor</span>;
 <span class="kw">use</span> <span class="ident">libra_security_logger</span>::{<span class="ident">security_log</span>, <span class="ident">SecurityEvent</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">epoch_change</span>::<span class="ident">EpochChangeProof</span>,
@@ -377,7 +382,10 @@
         <span class="ident">counters</span>::<span class="ident">BLOCK_RETRIEVAL_COUNT</span>.<span class="ident">inc_by</span>(<span class="ident">retrieval_request</span>.<span class="ident">num_blocks</span>() <span class="kw">as</span> <span class="ident">i64</span>);
         <span class="kw">let</span> <span class="ident">pre_retrieval_instant</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">ConsensusMsg</span>::<span class="ident">BlockRetrievalRequest</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">retrieval_request</span>.<span class="ident">clone</span>()));
-        <span class="kw">let</span> <span class="ident">response_msg</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_sender</span>.<span class="ident">send_rpc</span>(<span class="ident">from</span>, <span class="ident">msg</span>, <span class="ident">timeout</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">response_msg</span> <span class="op">=</span> <span class="macro">monitor</span><span class="macro">!</span>(
+            <span class="string">&quot;block_retrieval&quot;</span>,
+            <span class="self">self</span>.<span class="ident">network_sender</span>.<span class="ident">send_rpc</span>(<span class="ident">from</span>, <span class="ident">msg</span>, <span class="ident">timeout</span>).<span class="kw">await</span><span class="question-mark">?</span>
+        );
         <span class="ident">counters</span>::<span class="ident">BLOCK_RETRIEVAL_DURATION_S</span>.<span class="ident">observe_duration</span>(<span class="ident">pre_retrieval_instant</span>.<span class="ident">elapsed</span>());
         <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">response_msg</span> {
             <span class="ident">ConsensusMsg</span>::<span class="ident">BlockRetrievalResponse</span>(<span class="ident">resp</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">*</span><span class="ident">resp</span>,

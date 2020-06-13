@@ -420,6 +420,9 @@
 <span id="420">420</span>
 <span id="421">421</span>
 <span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -433,6 +436,9 @@
 <span class="comment">//////////////////////</span>
 <span class="comment">// HEALTH COUNTERS</span>
 <span class="comment">//////////////////////</span>
+
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">OP_COUNTERS</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">libra_metrics</span>::<span class="ident">OpMetrics</span><span class="op">&gt;</span> <span class="op">=</span>
+    <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">libra_metrics</span>::<span class="ident">OpMetrics</span>::<span class="ident">new_and_registered</span>(<span class="string">&quot;consensus&quot;</span>));
 
 <span class="doccomment">/// Counter of pending network events to Consensus</span>
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">PENDING_CONSENSUS_NETWORK_EVENTS</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntCounterVec</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
