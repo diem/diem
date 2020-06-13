@@ -897,6 +897,10 @@
 <span id="897">897</span>
 <span id="898">898</span>
 <span id="899">899</span>
+<span id="900">900</span>
+<span id="901">901</span>
+<span id="902">902</span>
+<span id="903">903</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1747,6 +1751,10 @@
         <span class="ident">B</span>::<span class="ident">BORROW_GLOBAL_MUT</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">BorrowGlobal</span>(<span class="bool-val">true</span>, <span class="ident">check_builtin_ty_arg</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">b</span>, <span class="ident">ty_args</span>)),
         <span class="ident">B</span>::<span class="ident">EXISTS</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Exists</span>(<span class="ident">check_builtin_ty_arg</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">b</span>, <span class="ident">ty_args</span>)),
         <span class="ident">B</span>::<span class="ident">FREEZE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Freeze</span>(<span class="ident">check_builtin_ty_arg</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">b</span>, <span class="ident">ty_args</span>)),
+        <span class="ident">B</span>::<span class="ident">ASSERT</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">check_builtin_ty_args</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">b</span>, <span class="number">0</span>, <span class="ident">ty_args</span>);
+            <span class="ident">Assert</span>
+        }
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">b</span>.<span class="ident">loc</span>, <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Unbound function: &#39;{}&#39;&quot;</span>, <span class="ident">b</span>))]);
             <span class="kw">return</span> <span class="prelude-val">None</span>;

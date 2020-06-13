@@ -1546,6 +1546,11 @@
 <span id="1546">1546</span>
 <span id="1547">1547</span>
 <span id="1548">1548</span>
+<span id="1549">1549</span>
+<span id="1550">1550</span>
+<span id="1551">1551</span>
+<span id="1552">1552</span>
+<span id="1553">1553</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -3016,6 +3021,11 @@
             <span class="ident">b_</span> <span class="op">=</span> <span class="ident">TB</span>::<span class="ident">Freeze</span>(<span class="ident">ty_arg</span>.<span class="ident">clone</span>());
             <span class="ident">params_ty</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">sp</span>(<span class="ident">bloc</span>, <span class="ident">Type_</span>::<span class="ident">Ref</span>(<span class="bool-val">true</span>, <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">ty_arg</span>.<span class="ident">clone</span>())))];
             <span class="ident">ret_ty</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">Type_</span>::<span class="ident">Ref</span>(<span class="bool-val">false</span>, <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">ty_arg</span>)));
+        }
+        <span class="ident">NB</span>::<span class="ident">Assert</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">b_</span> <span class="op">=</span> <span class="ident">TB</span>::<span class="ident">Assert</span>;
+            <span class="ident">params_ty</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">bloc</span>), <span class="ident">Type_</span>::<span class="ident">u64</span>(<span class="ident">bloc</span>)];
+            <span class="ident">ret_ty</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">Type_</span>::<span class="ident">Unit</span>);
         }
     };
     <span class="kw">let</span> (<span class="ident">arguments</span>, <span class="ident">arg_tys</span>) <span class="op">=</span> <span class="ident">call_args</span>(

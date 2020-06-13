@@ -559,7 +559,7 @@
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">mk_msg</span>(<span class="ident">N</span>::<span class="ident">BuiltinFunction_</span>::<span class="ident">EXISTS</span>);
             <span class="ident">check_global_access</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">bt</span>);
         }
-        <span class="ident">B</span>::<span class="ident">Freeze</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
+        <span class="ident">B</span>::<span class="ident">Freeze</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">B</span>::<span class="ident">Assert</span> <span class="op">=</span><span class="op">&gt;</span> (),
     }
 }
 

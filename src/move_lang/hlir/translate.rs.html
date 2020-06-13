@@ -1638,11 +1638,6 @@
 <span id="1638">1638</span>
 <span id="1639">1639</span>
 <span id="1640">1640</span>
-<span id="1641">1641</span>
-<span id="1642">1642</span>
-<span id="1643">1643</span>
-<span id="1644">1644</span>
-<span id="1645">1645</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2474,7 +2469,6 @@
 
         <span class="ident">TE</span>::<span class="ident">Use</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;ICE unexpanded use&quot;</span>),
         <span class="ident">TE</span>::<span class="ident">ModuleCall</span>(<span class="ident">call</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">shared</span>::<span class="ident">fake_natives</span>::<span class="ident">transaction</span> <span class="kw">as</span> <span class="ident">TXN</span>;
             <span class="kw">let</span> <span class="ident">T</span>::<span class="ident">ModuleCall</span> {
                 <span class="ident">module</span>,
                 <span class="ident">name</span>,
@@ -2483,48 +2477,6 @@
                 <span class="ident">parameter_types</span>,
                 <span class="ident">acquires</span>,
             } <span class="op">=</span> <span class="kw-2">*</span><span class="ident">call</span>;
-            <span class="kw">let</span> (<span class="ident">a</span>, <span class="ident">m</span>, <span class="ident">f</span>) <span class="op">=</span> (
-                <span class="kw-2">&amp;</span><span class="ident">module</span>.<span class="number">0</span>.<span class="ident">value</span>.<span class="ident">address</span>,
-                <span class="ident">module</span>.<span class="number">0</span>.<span class="ident">value</span>.<span class="ident">name</span>.<span class="ident">value</span>(),
-                <span class="ident">name</span>.<span class="ident">value</span>(),
-            );
-            <span class="kw">if</span> <span class="kw">let</span> (<span class="kw-2">&amp;</span><span class="ident">Address</span>::<span class="ident">LIBRA_CORE</span>, <span class="ident">TXN</span>::<span class="ident">MOD</span>, <span class="ident">TXN</span>::<span class="ident">ASSERT</span>) <span class="op">=</span> (<span class="ident">a</span>, <span class="ident">m</span>, <span class="ident">f</span>) {
-                <span class="kw">let</span> <span class="ident">tbool</span> <span class="op">=</span> <span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">eloc</span>);
-                <span class="kw">let</span> <span class="ident">tu64</span> <span class="op">=</span> <span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">u64</span>(<span class="ident">eloc</span>);
-                <span class="kw">let</span> <span class="ident">tunit</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">Unit</span>);
-                <span class="kw">let</span> <span class="ident">vcond</span> <span class="op">=</span> <span class="ident">Var</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">new_temp_name</span>()));
-                <span class="kw">let</span> <span class="ident">vcode</span> <span class="op">=</span> <span class="ident">Var</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">new_temp_name</span>()));
-
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stmts</span> <span class="op">=</span> <span class="ident">VecDeque</span>::<span class="ident">new</span>();
-
-                <span class="kw">let</span> <span class="ident">bvar</span> <span class="op">=</span> <span class="op">|</span><span class="ident">v</span>, <span class="ident">st</span><span class="op">|</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">T</span>::<span class="ident">LValue_</span>::<span class="ident">Var</span>(<span class="ident">v</span>, <span class="ident">st</span>));
-                <span class="kw">let</span> <span class="ident">bind_list</span> <span class="op">=</span> <span class="ident">sp</span>(
-                    <span class="ident">eloc</span>,
-                    <span class="macro">vec</span><span class="macro">!</span>[
-                        <span class="ident">bvar</span>(<span class="ident">vcond</span>.<span class="ident">clone</span>(), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">tbool</span>.<span class="ident">clone</span>())),
-                        <span class="ident">bvar</span>(<span class="ident">vcode</span>.<span class="ident">clone</span>(), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">tu64</span>.<span class="ident">clone</span>())),
-                    ],
-                );
-                <span class="kw">let</span> <span class="ident">tys</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="prelude-val">Some</span>(<span class="ident">tbool</span>.<span class="ident">clone</span>()), <span class="prelude-val">Some</span>(<span class="ident">tu64</span>.<span class="ident">clone</span>())];
-                <span class="kw">let</span> <span class="ident">bind</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">T</span>::<span class="ident">SequenceItem_</span>::<span class="ident">Bind</span>(<span class="ident">bind_list</span>, <span class="ident">tys</span>, <span class="ident">arguments</span>));
-                <span class="ident">stmts</span>.<span class="ident">push_back</span>(<span class="ident">bind</span>);
-
-                <span class="kw">let</span> <span class="ident">mvar</span> <span class="op">=</span> <span class="op">|</span><span class="ident">var</span>, <span class="ident">st</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">from_user</span> <span class="op">=</span> <span class="bool-val">false</span>;
-                    <span class="kw">let</span> <span class="ident">mv</span> <span class="op">=</span> <span class="ident">TE</span>::<span class="ident">Move</span> { <span class="ident">from_user</span>, <span class="ident">var</span> };
-                    <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">st</span>, <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">mv</span>))
-                };
-                <span class="kw">let</span> <span class="ident">econd</span> <span class="op">=</span> <span class="ident">mvar</span>(<span class="ident">vcond</span>, <span class="ident">tu64</span>);
-                <span class="kw">let</span> <span class="ident">ecode</span> <span class="op">=</span> <span class="ident">mvar</span>(<span class="ident">vcode</span>, <span class="ident">tbool</span>);
-                <span class="kw">let</span> <span class="ident">eabort</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Abort</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">ecode</span>))));
-                <span class="kw">let</span> <span class="ident">eunit</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> }));
-                <span class="kw">let</span> <span class="ident">inlined_</span> <span class="op">=</span> <span class="ident">TE</span>::<span class="ident">IfElse</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">econd</span>), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">eunit</span>), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">eabort</span>));
-                <span class="kw">let</span> <span class="ident">inlined</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">inlined_</span>));
-                <span class="ident">stmts</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">T</span>::<span class="ident">SequenceItem_</span>::<span class="ident">Seq</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">inlined</span>))));
-
-                <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>, <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Block</span>(<span class="ident">stmts</span>)));
-                <span class="kw">return</span> <span class="ident">exp_impl</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">block</span>);
-            }
             <span class="kw">let</span> <span class="ident">expected_type</span> <span class="op">=</span> <span class="ident">H</span>::<span class="ident">Type_</span>::<span class="ident">from_vec</span>(<span class="ident">eloc</span>, <span class="ident">single_types</span>(<span class="ident">context</span>, <span class="ident">parameter_types</span>));
             <span class="kw">let</span> <span class="ident">htys</span> <span class="op">=</span> <span class="ident">base_types</span>(<span class="ident">context</span>, <span class="ident">type_arguments</span>);
             <span class="kw">let</span> <span class="ident">harg</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">expected_type</span>), <span class="kw-2">*</span><span class="ident">arguments</span>);
@@ -2536,6 +2488,43 @@
                 <span class="ident">acquires</span>,
             };
             <span class="ident">HE</span>::<span class="ident">ModuleCall</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">call</span>))
+        }
+        <span class="ident">TE</span>::<span class="ident">Builtin</span>(<span class="ident">bt</span>, <span class="ident">arguments</span>) <span class="kw">if</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">bt</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">T</span>::<span class="ident">BuiltinFunction_</span>::<span class="ident">Assert</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">tbool</span> <span class="op">=</span> <span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">eloc</span>);
+            <span class="kw">let</span> <span class="ident">tu64</span> <span class="op">=</span> <span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">u64</span>(<span class="ident">eloc</span>);
+            <span class="kw">let</span> <span class="ident">tunit</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">Unit</span>);
+            <span class="kw">let</span> <span class="ident">vcond</span> <span class="op">=</span> <span class="ident">Var</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">new_temp_name</span>()));
+            <span class="kw">let</span> <span class="ident">vcode</span> <span class="op">=</span> <span class="ident">Var</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">new_temp_name</span>()));
+
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stmts</span> <span class="op">=</span> <span class="ident">VecDeque</span>::<span class="ident">new</span>();
+
+            <span class="kw">let</span> <span class="ident">bvar</span> <span class="op">=</span> <span class="op">|</span><span class="ident">v</span>, <span class="ident">st</span><span class="op">|</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">T</span>::<span class="ident">LValue_</span>::<span class="ident">Var</span>(<span class="ident">v</span>, <span class="ident">st</span>));
+            <span class="kw">let</span> <span class="ident">bind_list</span> <span class="op">=</span> <span class="ident">sp</span>(
+                <span class="ident">eloc</span>,
+                <span class="macro">vec</span><span class="macro">!</span>[
+                    <span class="ident">bvar</span>(<span class="ident">vcond</span>.<span class="ident">clone</span>(), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">tbool</span>.<span class="ident">clone</span>())),
+                    <span class="ident">bvar</span>(<span class="ident">vcode</span>.<span class="ident">clone</span>(), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">tu64</span>.<span class="ident">clone</span>())),
+                ],
+            );
+            <span class="kw">let</span> <span class="ident">tys</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="prelude-val">Some</span>(<span class="ident">tbool</span>.<span class="ident">clone</span>()), <span class="prelude-val">Some</span>(<span class="ident">tu64</span>.<span class="ident">clone</span>())];
+            <span class="kw">let</span> <span class="ident">bind</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">T</span>::<span class="ident">SequenceItem_</span>::<span class="ident">Bind</span>(<span class="ident">bind_list</span>, <span class="ident">tys</span>, <span class="ident">arguments</span>));
+            <span class="ident">stmts</span>.<span class="ident">push_back</span>(<span class="ident">bind</span>);
+
+            <span class="kw">let</span> <span class="ident">mvar</span> <span class="op">=</span> <span class="op">|</span><span class="ident">var</span>, <span class="ident">st</span><span class="op">|</span> {
+                <span class="kw">let</span> <span class="ident">from_user</span> <span class="op">=</span> <span class="bool-val">false</span>;
+                <span class="kw">let</span> <span class="ident">mv</span> <span class="op">=</span> <span class="ident">TE</span>::<span class="ident">Move</span> { <span class="ident">from_user</span>, <span class="ident">var</span> };
+                <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">st</span>, <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">mv</span>))
+            };
+            <span class="kw">let</span> <span class="ident">econd</span> <span class="op">=</span> <span class="ident">mvar</span>(<span class="ident">vcond</span>, <span class="ident">tu64</span>);
+            <span class="kw">let</span> <span class="ident">ecode</span> <span class="op">=</span> <span class="ident">mvar</span>(<span class="ident">vcode</span>, <span class="ident">tbool</span>);
+            <span class="kw">let</span> <span class="ident">eabort</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Abort</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">ecode</span>))));
+            <span class="kw">let</span> <span class="ident">eunit</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> }));
+            <span class="kw">let</span> <span class="ident">inlined_</span> <span class="op">=</span> <span class="ident">TE</span>::<span class="ident">IfElse</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">econd</span>), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">eunit</span>), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">eabort</span>));
+            <span class="kw">let</span> <span class="ident">inlined</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">inlined_</span>));
+            <span class="ident">stmts</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">T</span>::<span class="ident">SequenceItem_</span>::<span class="ident">Seq</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">inlined</span>))));
+
+            <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>, <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Block</span>(<span class="ident">stmts</span>)));
+            <span class="kw">return</span> <span class="ident">exp_impl</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">block</span>);
         }
         <span class="ident">TE</span>::<span class="ident">Builtin</span>(<span class="ident">bf</span>, <span class="ident">targ</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">builtin</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">eloc</span>, <span class="kw-2">*</span><span class="ident">bf</span>, <span class="ident">targ</span>),
         <span class="ident">TE</span>::<span class="ident">Dereference</span>(<span class="ident">te</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -2887,6 +2876,7 @@
             <span class="kw">let</span> <span class="ident">arg</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="prelude-val">None</span>, <span class="kw-2">*</span><span class="ident">targ</span>);
             <span class="ident">E</span>::<span class="ident">Freeze</span>(<span class="ident">arg</span>)
         }
+        <span class="ident">TB</span>::<span class="ident">Assert</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
     }
 }
 

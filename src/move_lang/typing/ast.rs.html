@@ -644,8 +644,6 @@
 <span id="644">644</span>
 <span id="645">645</span>
 <span id="646">646</span>
-<span id="647">647</span>
-<span id="648">648</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -758,13 +756,7 @@
     <span class="ident">BorrowGlobal</span>(<span class="ident">bool</span>, <span class="ident">Type</span>),
     <span class="ident">Exists</span>(<span class="ident">Type</span>),
     <span class="ident">Freeze</span>(<span class="ident">Type</span>),
-    <span class="comment">/* GetHeight,
-     * GetMaxGasPrice,
-     * GetMaxGasUnits,
-     * GetPublicKey,
-     * GetSender,
-     * GetSequenceNumber,
-     * EmitEvent, */</span>
+    <span class="ident">Assert</span>,
 }
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">BuiltinFunction</span> <span class="op">=</span> <span class="ident">Spanned</span><span class="op">&lt;</span><span class="ident">BuiltinFunction_</span><span class="op">&gt;</span>;
 
@@ -864,6 +856,7 @@
             <span class="ident">BorrowGlobal</span>(<span class="bool-val">true</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">BORROW_GLOBAL_MUT</span>,
             <span class="ident">Exists</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">EXISTS</span>,
             <span class="ident">Freeze</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">FREEZE</span>,
+            <span class="ident">Assert</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">ASSERT</span>,
         };
         <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">s</span>)
     }
@@ -1204,19 +1197,22 @@
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
         <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">naming</span>::<span class="ident">ast</span>::<span class="ident">BuiltinFunction_</span> <span class="kw">as</span> <span class="ident">NF</span>;
         <span class="kw">use</span> <span class="ident">BuiltinFunction_</span> <span class="kw">as</span> <span class="ident">F</span>;
-        <span class="kw">let</span> (<span class="ident">n</span>, <span class="ident">bt</span>) <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">F</span>::<span class="ident">MoveToSender</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">MOVE_TO_SENDER</span>, <span class="ident">bt</span>),
-            <span class="ident">F</span>::<span class="ident">MoveTo</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">MOVE_TO</span>, <span class="ident">bt</span>),
-            <span class="ident">F</span>::<span class="ident">MoveFrom</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">MOVE_FROM</span>, <span class="ident">bt</span>),
-            <span class="ident">F</span>::<span class="ident">BorrowGlobal</span>(<span class="bool-val">true</span>, <span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">BORROW_GLOBAL_MUT</span>, <span class="ident">bt</span>),
-            <span class="ident">F</span>::<span class="ident">BorrowGlobal</span>(<span class="bool-val">false</span>, <span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">BORROW_GLOBAL</span>, <span class="ident">bt</span>),
-            <span class="ident">F</span>::<span class="ident">Exists</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">EXISTS</span>, <span class="ident">bt</span>),
-            <span class="ident">F</span>::<span class="ident">Freeze</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">FREEZE</span>, <span class="ident">bt</span>),
+        <span class="kw">let</span> (<span class="ident">n</span>, <span class="ident">bt_opt</span>) <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">F</span>::<span class="ident">MoveToSender</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">MOVE_TO_SENDER</span>, <span class="prelude-val">Some</span>(<span class="ident">bt</span>)),
+            <span class="ident">F</span>::<span class="ident">MoveTo</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">MOVE_TO</span>, <span class="prelude-val">Some</span>(<span class="ident">bt</span>)),
+            <span class="ident">F</span>::<span class="ident">MoveFrom</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">MOVE_FROM</span>, <span class="prelude-val">Some</span>(<span class="ident">bt</span>)),
+            <span class="ident">F</span>::<span class="ident">BorrowGlobal</span>(<span class="bool-val">true</span>, <span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">BORROW_GLOBAL_MUT</span>, <span class="prelude-val">Some</span>(<span class="ident">bt</span>)),
+            <span class="ident">F</span>::<span class="ident">BorrowGlobal</span>(<span class="bool-val">false</span>, <span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">BORROW_GLOBAL</span>, <span class="prelude-val">Some</span>(<span class="ident">bt</span>)),
+            <span class="ident">F</span>::<span class="ident">Exists</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">EXISTS</span>, <span class="prelude-val">Some</span>(<span class="ident">bt</span>)),
+            <span class="ident">F</span>::<span class="ident">Freeze</span>(<span class="ident">bt</span>) <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">FREEZE</span>, <span class="prelude-val">Some</span>(<span class="ident">bt</span>)),
+            <span class="ident">F</span>::<span class="ident">Assert</span> <span class="op">=</span><span class="op">&gt;</span> (<span class="ident">NF</span>::<span class="ident">ASSERT</span>, <span class="prelude-val">None</span>),
         };
         <span class="ident">w</span>.<span class="ident">write</span>(<span class="ident">n</span>);
-        <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;&lt;&quot;</span>);
-        <span class="ident">bt</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
-        <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;&gt;&quot;</span>);
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">bt</span>) <span class="op">=</span> <span class="ident">bt_opt</span> {
+            <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;&lt;&quot;</span>);
+            <span class="ident">bt</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+            <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;&gt;&quot;</span>);
+        }
     }
 }
 

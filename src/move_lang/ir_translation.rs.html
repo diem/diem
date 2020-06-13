@@ -42,8 +42,6 @@
 <span id="42">42</span>
 <span id="43">43</span>
 <span id="44">44</span>
-<span id="45">45</span>
-<span id="46">46</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -67,8 +65,6 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fix_syntax_and_write</span>(<span class="ident">out_path</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>, <span class="ident">contents</span>: <span class="ident">String</span>) {
     <span class="comment">// get_txn_sender() ~&gt; 0x0::Transaction::sender()</span>
     <span class="kw">let</span> <span class="ident">contents</span> <span class="op">=</span> <span class="macro">replace</span><span class="macro">!</span>(<span class="ident">contents</span>, <span class="string">r&quot;get_txn_sender\(&quot;</span>, <span class="ident">NoExpand</span>(<span class="kw-2">&amp;</span><span class="ident">txn</span>(<span class="ident">TXN</span>::<span class="ident">SENDER</span>)));
-    <span class="comment">// assert(c, u) ~&gt; 0x0::Transaction::assert(c, u)</span>
-    <span class="kw">let</span> <span class="ident">contents</span> <span class="op">=</span> <span class="macro">replace</span><span class="macro">!</span>(<span class="ident">contents</span>, <span class="string">r&quot;assert\(&quot;</span>, <span class="ident">NoExpand</span>(<span class="kw-2">&amp;</span><span class="ident">txn</span>(<span class="ident">TXN</span>::<span class="ident">ASSERT</span>)));
     <span class="comment">// move(x) ~&gt; move x</span>
     <span class="kw">let</span> <span class="ident">contents</span> <span class="op">=</span> <span class="macro">replace</span><span class="macro">!</span>(<span class="ident">contents</span>, <span class="string">r&quot;move\((\w+)\)&quot;</span>, <span class="string">&quot;move $1&quot;</span>);
     <span class="comment">// copy(x) ~&gt; copy x</span>
