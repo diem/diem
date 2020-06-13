@@ -16,6 +16,7 @@ mod clippy;
 mod config;
 mod context;
 mod fmt;
+mod generate_summaries;
 mod lint;
 mod test;
 mod utils;
@@ -48,6 +49,9 @@ enum Command {
     #[structopt(name = "lint")]
     /// Run lints
     Lint(lint::Args),
+    #[structopt(name = "generate-summaries")]
+    /// Generate build summaries for important subsets
+    GenerateSummaries(generate_summaries::Args),
 }
 
 fn main() -> Result<()> {
@@ -82,5 +86,6 @@ fn main() -> Result<()> {
         Command::Fmt(args) => fmt::run(args, xctx),
         Command::Bench(args) => bench::run(args, xctx),
         Command::Lint(args) => lint::run(args, xctx),
+        Command::GenerateSummaries(args) => generate_summaries::run(args, xctx),
     }
 }
