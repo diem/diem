@@ -3,8 +3,7 @@ base:
     data_dir: "/opt/libra/data/common"
     role: "full_node"
     waypoint:
-        type: "from_storage"
-        backend:
+        from_storage:
             type: "vault"
             server: "https://127.0.0.1:8200"
             ca_certificate: "/full/path/to/certificate"

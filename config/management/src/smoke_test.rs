@@ -133,10 +133,10 @@ fn smoke_test() {
 
         if i == 0 {
             // This is unfortunate due to the way SwarmConfig works
-            config.base.waypoint = WaypointConfig::FromConfig { waypoint };
+            config.base.waypoint = WaypointConfig::FromConfig(waypoint);
         } else {
             let backend = secure_backend(helper.path(), &swarm_path, &ns, "waypoint");
-            config.base.waypoint = WaypointConfig::FromStorage { backend };
+            config.base.waypoint = WaypointConfig::FromStorage(backend);
         }
         config.execution.genesis = Some(genesis.clone());
     }

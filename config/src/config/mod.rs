@@ -106,16 +106,16 @@ impl Default for BaseConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(rename_all = "snake_case", tag = "type")]
+#[serde(rename_all = "snake_case")]
 pub enum WaypointConfig {
-    FromConfig { waypoint: Waypoint },
-    FromStorage { backend: SecureBackend },
+    FromConfig(Waypoint),
+    FromStorage(SecureBackend),
     None,
 }
 
 impl WaypointConfig {
     pub fn waypoint_from_config(&self) -> Option<Waypoint> {
-        if let WaypointConfig::FromConfig { waypoint } = self {
+        if let WaypointConfig::FromConfig(waypoint) = self {
             Some(*waypoint)
         } else {
             None
