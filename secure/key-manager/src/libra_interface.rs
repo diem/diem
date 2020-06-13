@@ -144,8 +144,7 @@ impl LibraInterface for JsonRpcLibraInterface {
 
         match validator_config_resource {
             Ok(config_resource) => config_resource
-                .map(|config_resource| config_resource.validator_config)
-                .flatten()
+                .and_then(|config_resource| config_resource.validator_config)
                 .ok_or_else(|| {
                     Error::DataDoesNotExist(format!(
                         "ValidatorConfigResource not found for account: {:?}",

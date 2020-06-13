@@ -1138,8 +1138,7 @@ impl ClientProxy {
                 account_data
                     .authentication_key
                     .clone()
-                    .map(|bytes| AuthenticationKey::try_from(bytes).ok())
-                    .flatten(),
+                    .and_then(|bytes| AuthenticationKey::try_from(bytes).ok()),
             ))
         }
     }

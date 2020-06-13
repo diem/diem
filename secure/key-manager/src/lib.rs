@@ -307,10 +307,8 @@ where
             .get(OPERATOR_ACCOUNT)
             .and_then(|response| response.value.string())
         {
-            Ok(account_address) => match AccountAddress::from_str(&account_address) {
-                Ok(account_address) => Ok(account_address),
-                Err(e) => Err(Error::UnknownError(e.to_string())),
-            },
+            Ok(account_address) => AccountAddress::from_str(&account_address)
+                .map_err(|e| Error::UnknownError(e.to_string())),
             Err(e) => Err(Error::MissingAccountAddress(e)),
         }
     }
