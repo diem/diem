@@ -115,7 +115,7 @@ function {:inline} $IsValidU8(v: $Value): bool {
 
 function {:inline} $IsValidU8Vector(vec: $Value): bool {
   $Vector_is_well_formed(vec)
-  && (forall i: int :: {$vmap(vec)[i]} 0 <= i && i < $vlen(vec) ==> $IsValidU8($vmap(vec)[i]))
+  && (forall i: int :: {$select_vector(vec, i)} 0 <= i && i < $vlen(vec) ==> $IsValidU8($select_vector(vec, i)))
 }
 
 function {:inline} $IsValidU64(v: $Value): bool {
@@ -137,10 +137,22 @@ function {:inline} $IsValidNum(v: $Value): bool {
 type {:datatype} $ValueArray;
 
 function {:constructor} $ValueArray(v: [int]$Value, l: int): $ValueArray;
-const $EmptyValueArray: $ValueArray;
 
+const $EmptyValueArray: $ValueArray;
 axiom l#$ValueArray($EmptyValueArray) == 0;
 axiom v#$ValueArray($EmptyValueArray) == $MapConstValue($Error());
+
+function {{backend.func_inline}} $ReadValueArray(a: $ValueArray, i: int): $Value {
+    (
+        v#$ValueArray(a)[i]
+    )
+}
+
+function {{backend.func_inline}} $LenValueArray(a: $ValueArray): int {
+    (
+        l#$ValueArray(a)
+    )
+}
 
 function {{backend.func_inline}} $RemoveValueArray(a: $ValueArray): $ValueArray {
     (
@@ -152,6 +164,7 @@ function {{backend.func_inline}} $RemoveValueArray(a: $ValueArray): $ValueArray 
         )
     )
 }
+
 function {{backend.func_inline}} $RemoveIndexValueArray(a: $ValueArray, i: int): $ValueArray {
     (
         var l := l#$ValueArray(a) - 1;
@@ -164,6 +177,7 @@ function {{backend.func_inline}} $RemoveIndexValueArray(a: $ValueArray, i: int):
         )
     )
 }
+
 function {{backend.func_inline}} $ConcatValueArray(a1: $ValueArray, a2: $ValueArray): $ValueArray {
     (
         var l1, l2 := l#$ValueArray(a1), l#$ValueArray(a2);
@@ -176,6 +190,7 @@ function {{backend.func_inline}} $ConcatValueArray(a1: $ValueArray, a2: $ValueAr
             l1 + l2)
     )
 }
+
 function {{backend.func_inline}} $ReverseValueArray(a: $ValueArray): $ValueArray {
     (
         var l := l#$ValueArray(a);
@@ -185,21 +200,32 @@ function {{backend.func_inline}} $ReverseValueArray(a: $ValueArray): $ValueArray
         )
     )
 }
+
 function {{backend.func_inline}} $SliceValueArray(a: $ValueArray, i: int, j: int): $ValueArray { // return the sliced vector of a for the range [i, j)
     $ValueArray((lambda k:int :: if 0 <= k && k < j-i then v#$ValueArray(a)[i+k] else $DefaultValue()), (if j-i < 0 then 0 else j-i))
 }
+
 function {{backend.func_inline}} $ExtendValueArray(a: $ValueArray, elem: $Value): $ValueArray {
     (var len := l#$ValueArray(a);
      $ValueArray(v#$ValueArray(a)[len := elem], len + 1))
 }
+
 function {{backend.func_inline}} $UpdateValueArray(a: $ValueArray, i: int, elem: $Value): $ValueArray {
     $ValueArray(v#$ValueArray(a)[i := elem], l#$ValueArray(a))
 }
+
 function {{backend.func_inline}} $SwapValueArray(a: $ValueArray, i: int, j: int): $ValueArray {
     $ValueArray(v#$ValueArray(a)[i := v#$ValueArray(a)[j]][j := v#$ValueArray(a)[i]], l#$ValueArray(a))
 }
+
 function {:inline} $IsEmpty(a: $ValueArray): bool {
     l#$ValueArray(a) == 0
+}
+
+// All invalid elements of array are DefaultValue. This is useful in specialized
+// cases. This is used to defined normalization for $Vector
+function {:inline} $IsNormalizedValueArray(a: $ValueArray, len: int): bool {
+    (forall i: int :: i < 0 || i >= len ==> v#$ValueArray(a)[i] == $DefaultValue())
 }
 
 // Stratified Functions on Values
@@ -229,7 +255,7 @@ function {{backend.aggressive_backend.func_inline}} $IsEqual_{{@this_suffix}}(v1
     (is#$Vector(v1) &&
      is#$Vector(v2) &&
      $vlen(v1) == $vlen(v2) &&
-     (forall i: int :: 0 <= i && i < $vlen(v1) ==> $IsEqual_{{@next_suffix}}($vmap(v1)[i], $vmap(v2)[i])))
+     (forall i: int :: 0 <= i && i < $vlen(v1) ==> $IsEqual_{{@next_suffix}}($select_vector(v1,i), $select_vector(v2,i))))
 }
 {{else}}
 function {:inline} $IsEqual_{{@this_suffix}}(v1: $Value, v2: $Value): bool {
@@ -250,7 +276,7 @@ function {{backend.aggressive_backend.func_inline}} $ReadValue_{{@this_suffix}}(
     if ({{@this_level}} == size#$Path(p)) then
         v
     else
-        $ReadValue_{{@next_suffix}}(p, $vmap(v)[$path_index_at(p, {{@this_level}})])
+        $ReadValue_{{@next_suffix}}(p, $select_vector(v,$path_index_at(p, {{@this_level}})))
 }
 {{else}}
 function {:inline} $ReadValue_{{@this_suffix}}(p: $Path, v: $Value): $Value {
@@ -271,7 +297,7 @@ function {{backend.aggressive_backend.func_inline}} $UpdateValue_{{@this_suffix}
         new_v
     else
         $update_vector(v, $path_index_at(p, poffset),
-                       $UpdateValue_{{@next_suffix}}(p, offset, $vmap(v)[$path_index_at(p, poffset)], new_v)))
+                       $UpdateValue_{{@next_suffix}}(p, offset, $select_vector(v,$path_index_at(p, poffset)), new_v)))
 }
 {{else}}
 function {:inline} $UpdateValue_{{@this_suffix}}(p: $Path, offset: int, v: $Value, new_v: $Value): $Value {
@@ -326,22 +352,13 @@ function {:inline} $ConcatPath(p1: $Path, p2: $Path): $Path {
 // Vector related functions on Values
 // ----------------------------------
 
-function {:inline} $vmap(v: $Value): [int]$Value {
-    v#$ValueArray(v#$Vector(v))
-}
 function {:inline} $vlen(v: $Value): int {
-    l#$ValueArray(v#$Vector(v))
-}
-
-// All invalid elements of array are DefaultValue. This is useful in specialized
-// cases
-function {:inline} $IsNormalizedMap(va: [int]$Value, len: int): bool {
-    (forall i: int :: i < 0 || i >= len ==> va[i] == $DefaultValue())
+    $LenValueArray(v#$Vector(v))
 }
 
 // Check that all invalid elements of vector are DefaultValue
 function {:inline} $is_normalized_vector(v: $Value): bool {
-    $IsNormalizedMap($vmap(v), $vlen(v))
+    $IsNormalizedValueArray(v#$Vector(v), $vlen(v))
 }
 
 // Sometimes, we need the length as a Value, not an int.
@@ -371,11 +388,11 @@ function {:inline} $update_vector_by_value(v: $Value, i: $Value, elem: $Value): 
     $Vector($UpdateValueArray(v#$Vector(v), i#$Integer(i), elem))
 }
 function {:inline} $select_vector(v: $Value, i: int) : $Value {
-    $vmap(v)[i]
+    $ReadValueArray(v#$Vector(v), i)
 }
 // $select_vector_by_value requires index to be a Value, not int.
 function {:inline} $select_vector_by_value(v: $Value, i: $Value) : $Value {
-    $vmap(v)[i#$Integer(i)]
+    $select_vector(v, i#$Integer(i))
 }
 function {:inline} $swap_vector(v: $Value, i: int, j: int): $Value {
     $Vector($SwapValueArray(v#$Vector(v), i, j))
@@ -390,7 +407,7 @@ function {:inline} $remove_vector(v: $Value, i:int): $Value {
     $Vector($RemoveIndexValueArray(v#$Vector(v), i))
 }
 function {:inline} $contains_vector(v: $Value, e: $Value): bool {
-    (exists i:int :: 0<=i && i<$vlen(v) && $IsEqual($vmap(v)[i], e))
+    (exists i:int :: 0 <= i && i < $vlen(v) && $IsEqual($select_vector(v,i), e))
 }
 
 function {:inline} $InRange(r: $Value, i: int): bool {
@@ -449,8 +466,8 @@ function {:inline} $ResourceValue(m: $Memory, resource: $TypeValue, address: $Va
 }
 
 // Applies a field selection to a Value.
-function {:inline} $SelectField(val: $Value, field: $FieldName): $Value {
-    $vmap(val)[field]
+function {:inline} $SelectField(val: $Value, field: $FieldName): $Value { //breaks abstracts, we don't know $Fieldname = int
+    $select_vector(val, field)
 }
 
 // Dereferences a reference.
@@ -550,7 +567,7 @@ procedure {:inline 1} $BorrowField(src: $Reference, f: $FieldName) returns (dst:
     p := p#$Reference(src);
     size := size#$Path(p);
     p := $Path(p#$Path(p)[size := f], size+1);
-    dst := $Reference(l#$Reference(src), p, $vmap(v#$Reference(src))[f]);
+    dst := $Reference(l#$Reference(src), p, $select_vector(v#$Reference(src), f)); //breaks abstraction
 }
 
 procedure {:inline 1} $GetGlobal(address: $Value, ta: $TypeValue) returns (dst: $Value)
@@ -572,7 +589,7 @@ procedure {:inline 1} $GetFieldFromReference(src: $Reference, f: $FieldName) ret
 
 procedure {:inline 1} $GetFieldFromValue(src: $Value, f: $FieldName) returns (dst: $Value)
 {
-    dst := $vmap(src)[f];
+    dst := $select_vector(src, f); //breaks abstraction
 }
 
 procedure {:inline 1} $WriteRef(to: $Reference, new_v: $Value) returns (to': $Reference)
@@ -886,7 +903,7 @@ procedure {:inline 1} $Vector_pop_back(ta: $TypeValue, v: $Value) returns (e: $V
         $abort_flag := true;
         return;
     }
-    e := $vmap(v)[len-1];
+    e := $select_vector(v, len-1);
     v' := $pop_back_vector(v);
 }
 
@@ -916,7 +933,7 @@ procedure {:inline 1} $Vector_borrow(ta: $TypeValue, src: $Value, i: $Value) ret
         $abort_flag := true;
         return;
     }
-    dst := $vmap(src)[i_ind];
+    dst := $select_vector(src, i_ind);
 }
 
 procedure {:inline 1} $Vector_borrow_mut(ta: $TypeValue, v: $Value, index: $Value) returns (dst: $Reference, v': $Value)
@@ -930,7 +947,7 @@ procedure {:inline 1} $Vector_borrow_mut(ta: $TypeValue, v: $Value, index: $Valu
         $abort_flag := true;
         return;
     }
-    dst := $Reference($Local(0), $Path(p#$Path($EmptyPath)[0 := i_ind], 1), $vmap(v)[i_ind]);
+    dst := $Reference($Local(0), $Path(p#$Path($EmptyPath)[0 := i_ind], 1), $select_vector(v, i_ind));
     v' := v;
 }
 
@@ -966,7 +983,7 @@ procedure {:inline 1} $Vector_remove(ta: $TypeValue, v: $Value, i: $Value) retur
         $abort_flag := true;
         return;
     }
-    e := $vmap(v)[i_ind];
+    e := $select_vector(v, i_ind);
     v' := $remove_vector(v, i_ind);
 }
 
@@ -983,7 +1000,7 @@ procedure {:inline 1} $Vector_swap_remove(ta: $TypeValue, v: $Value, i: $Value) 
         $abort_flag := true;
         return;
     }
-    e := $vmap(v)[i_ind];
+    e := $select_vector(v, i_ind);
     v' := $pop_back_vector($swap_vector(v, i_ind, len-1));
 }
 
@@ -1000,8 +1017,8 @@ ensures is#$Boolean(res1);
 ensures is#$Integer(res2);
 ensures 0 <= i#$Integer(res2) && i#$Integer(res2) < $vlen(v);
 ensures res1 == $Boolean($contains_vector(v, e));
-ensures b#$Boolean(res1) ==> $IsEqual($vmap(v)[i#$Integer(res2)], e);
-ensures b#$Boolean(res1) ==> (forall i:int :: 0<=i && i<i#$Integer(res2) ==> !$IsEqual($vmap(v)[i], e));
+ensures b#$Boolean(res1) ==> $IsEqual($select_vector(v,i#$Integer(res2)), e);
+ensures b#$Boolean(res1) ==> (forall i:int :: 0<=i && i<i#$Integer(res2) ==> !$IsEqual($select_vector(v,i), e));
 ensures !b#$Boolean(res1) ==> i#$Integer(res2) == 0;
 
 // FIXME: This alternative definition has the same issue as the other one above.
@@ -1014,8 +1031,8 @@ ensures !b#$Boolean(res1) ==> i#$Integer(res2) == 0;
 //    if (b) {
 //        havoc i;
 //        assume 0 <= i && i < $vlen(v);
-//        assume $IsEqual($vmap(v)[i], e);
-//        assume (forall j:int :: 0<=j && j<i ==> !$IsEqual($vmap(v)[j], e));
+//        assume $IsEqual($select_vector(v,i), e);
+//        assume (forall j:int :: 0<=j && j<i ==> !$IsEqual($select_vector(v,j), e));
 //    }
 //    else {
 //        i := 0;
