@@ -42,8 +42,7 @@ impl KeyManagerConfig {
     /// Reads the key manager config file from the given input_path. Paths used in the config are
     /// either absolute or relative to the config location
     pub fn load<P: AsRef<Path>>(input_path: P) -> Result<Self> {
-        let config = Self::load_config(&input_path)?;
-        Ok(config)
+        Self::load_config(&input_path)
     }
 
     /// Saves the key manager config file to the given output_path.
