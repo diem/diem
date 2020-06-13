@@ -331,7 +331,7 @@ jobs:
       - run:
           name: Run all unit tests
           command: |
-            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --unit
+            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 8 --unit
   run-crypto-unit-test:
     executor: audit-executor
     description: Run crypto unit tests without formally verified crypto, to insulate against a curve25519 "default" backend regression

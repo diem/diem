@@ -32,6 +32,9 @@ pub struct Args {
     #[structopt(long)]
     /// Do not run tests, only compile the test executables
     no_run: bool,
+    #[structopt(long, short)]
+    /// Number of parallel jobs, defaults to # of CPUs
+    jobs: Option<u16>,
     #[structopt(long, parse(from_os_str))]
     /// Directory to output HTML coverage report to (using grcov)
     html_cov_dir: Option<OsString>,
@@ -75,7 +78,12 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
     };
     if args.lib {
         direct_args.push(OsString::from("--lib"));
-    }
+    };
+
+    if let Some(jobs) = args.jobs {
+        direct_args.push(OsString::from("--jobs"));
+        direct_args.push(OsString::from(jobs.to_string()));
+    };
 
     let cmd = CargoCommand::Test {
         direct_args: direct_args.as_slice(),
