@@ -78,7 +78,7 @@ impl ExecutionConfig {
 
 /// Defines how execution correctness should be run
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(rename_all = "snake_case", tag = "type")]
 pub enum ExecutionCorrectnessService {
     /// This runs execution correctness in the same thread as event processor.
     Local,
