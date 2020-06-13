@@ -263,7 +263,7 @@ impl MoveStorage for &dyn DbReader {
         let addresses: Vec<AccountAddress> = access_paths
             .iter()
             .collect::<HashSet<_>>()
-            .into_iter()
+            .iter()
             .map(|path| path.address)
             .collect();
 
@@ -274,7 +274,7 @@ impl MoveStorage for &dyn DbReader {
 
         // Account address --> AccountState
         let account_states = addresses
-            .into_iter()
+            .iter()
             .zip_eq(results)
             .map(|(addr, result)| {
                 let account_state = AccountState::try_from(&result.blob.ok_or_else(|| {
@@ -285,7 +285,7 @@ impl MoveStorage for &dyn DbReader {
             .collect::<Result<HashMap<_, AccountState>>>()?;
 
         access_paths
-            .into_iter()
+            .iter()
             .map(|path| {
                 Ok(account_states
                     .get(&path.address)

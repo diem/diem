@@ -195,7 +195,7 @@ impl ExecutorProxyTrait for ExecutorProxy {
             return Ok(());
         }
         let event_keys = events
-            .into_iter()
+            .iter()
             .map(|event| *event.key())
             .collect::<HashSet<_>>();
 

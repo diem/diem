@@ -60,7 +60,7 @@ fn compute_num_variants(data: &Data, span: Span) -> Result<usize> {
 /// Computes the name of the constant.
 fn compute_const_name(attrs: Vec<Attribute>) -> Result<Ident> {
     let mut const_names: Vec<_> = attrs
-        .into_iter()
+        .iter()
         .filter(|attr| attr.path.is_ident("num_variants"))
         .map(|attr| match attr.parse_meta() {
             Ok(Meta::NameValue(MetaNameValue {

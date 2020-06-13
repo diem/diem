@@ -82,7 +82,7 @@ impl AccountView {
     ) -> Self {
         Self {
             balances: balances
-                .into_iter()
+                .iter()
                 .map(|(currency_code, balance)| {
                     AmountView::new(balance.coin(), &currency_code.as_str())
                 })

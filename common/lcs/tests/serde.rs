@@ -217,8 +217,8 @@ proptest! {
         let mut expected = Vec::with_capacity(bytes.len());
         expected.extend_from_slice(&(m.len() as u8).to_le_bytes());
         for (key, value) in m {
-            expected.extend(key.into_iter());
-            expected.extend(value.into_iter());
+            expected.extend(key.iter());
+            expected.extend(value.iter());
         }
 
         assert_eq!(expected, bytes);

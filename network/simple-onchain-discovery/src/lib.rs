@@ -94,7 +94,7 @@ fn extract_updates(role: RoleType, node_set: ValidatorSet) -> Vec<ConnectivityRe
     // Collect the set of EligibleNodes
     updates.push(ConnectivityRequest::UpdateEligibleNodes(
         node_list
-            .into_iter()
+            .iter()
             .map(|node| (*node.account_address(), public_key(role, node.config())))
             .collect(),
     ));
