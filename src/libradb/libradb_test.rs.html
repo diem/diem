@@ -427,86 +427,6 @@
 <span id="427">427</span>
 <span id="428">428</span>
 <span id="429">429</span>
-<span id="430">430</span>
-<span id="431">431</span>
-<span id="432">432</span>
-<span id="433">433</span>
-<span id="434">434</span>
-<span id="435">435</span>
-<span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
-<span id="453">453</span>
-<span id="454">454</span>
-<span id="455">455</span>
-<span id="456">456</span>
-<span id="457">457</span>
-<span id="458">458</span>
-<span id="459">459</span>
-<span id="460">460</span>
-<span id="461">461</span>
-<span id="462">462</span>
-<span id="463">463</span>
-<span id="464">464</span>
-<span id="465">465</span>
-<span id="466">466</span>
-<span id="467">467</span>
-<span id="468">468</span>
-<span id="469">469</span>
-<span id="470">470</span>
-<span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
-<span id="474">474</span>
-<span id="475">475</span>
-<span id="476">476</span>
-<span id="477">477</span>
-<span id="478">478</span>
-<span id="479">479</span>
-<span id="480">480</span>
-<span id="481">481</span>
-<span id="482">482</span>
-<span id="483">483</span>
-<span id="484">484</span>
-<span id="485">485</span>
-<span id="486">486</span>
-<span id="487">487</span>
-<span id="488">488</span>
-<span id="489">489</span>
-<span id="490">490</span>
-<span id="491">491</span>
-<span id="492">492</span>
-<span id="493">493</span>
-<span id="494">494</span>
-<span id="495">495</span>
-<span id="496">496</span>
-<span id="497">497</span>
-<span id="498">498</span>
-<span id="499">499</span>
-<span id="500">500</span>
-<span id="501">501</span>
-<span id="502">502</span>
-<span id="503">503</span>
-<span id="504">504</span>
-<span id="505">505</span>
-<span id="506">506</span>
-<span id="507">507</span>
-<span id="508">508</span>
-<span id="509">509</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -527,19 +447,25 @@
     <span class="ident">proof</span>::<span class="ident">SparseMerkleLeafNode</span>, <span class="ident">vm_error</span>::<span class="ident">StatusCode</span>,
 };
 <span class="kw">use</span> <span class="ident">proptest</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">convert</span>::<span class="ident">TryFrom</span>};
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashMap</span>;
 
 <span class="kw">fn</span> <span class="ident">verify_epochs</span>(<span class="ident">db</span>: <span class="kw-2">&amp;</span><span class="ident">LibraDB</span>, <span class="ident">ledger_infos_with_sigs</span>: <span class="kw-2">&amp;</span>[<span class="ident">LedgerInfoWithSignatures</span>]) {
-    <span class="kw">let</span> (<span class="kw">_</span>, <span class="kw">_</span>, <span class="ident">actual_epoch_change_lis</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">db</span>.<span class="ident">update_to_latest_ledger</span>(<span class="number">0</span>, <span class="ident">Vec</span>::<span class="ident">new</span>()).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> (<span class="ident">actual_epoch_change_lis</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">db</span>
+        .<span class="ident">get_epoch_change_ledger_infos</span>(
+            <span class="number">0</span>,
+            <span class="ident">ledger_infos_with_sigs</span>
+                .<span class="ident">last</span>()
+                .<span class="ident">unwrap</span>()
+                .<span class="ident">ledger_info</span>()
+                .<span class="ident">next_block_epoch</span>(),
+        )
+        .<span class="ident">unwrap</span>();
     <span class="kw">let</span> <span class="ident">expected_epoch_change_lis</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">ledger_infos_with_sigs</span>
         .<span class="ident">iter</span>()
         .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">info</span><span class="op">|</span> <span class="ident">info</span>.<span class="ident">ledger_info</span>().<span class="ident">next_epoch_state</span>().<span class="ident">is_some</span>())
         .<span class="ident">cloned</span>()
         .<span class="ident">collect</span>();
-    <span class="macro">assert_eq</span><span class="macro">!</span>(
-        <span class="ident">actual_epoch_change_lis</span>.<span class="ident">ledger_info_with_sigs</span>,
-        <span class="ident">expected_epoch_change_lis</span>,
-    );
+    <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">actual_epoch_change_lis</span>, <span class="ident">expected_epoch_change_lis</span>,);
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_save_blocks_impl</span>(<span class="ident">input</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionToCommit</span><span class="op">&gt;</span>, <span class="ident">LedgerInfoWithSignatures</span>)<span class="op">&gt;</span>) {
@@ -629,10 +555,10 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">get_events_by_query_path</span>(
+<span class="kw">fn</span> <span class="ident">get_events_by_event_key</span>(
     <span class="ident">db</span>: <span class="kw-2">&amp;</span><span class="ident">LibraDB</span>,
     <span class="ident">ledger_info</span>: <span class="kw-2">&amp;</span><span class="ident">LedgerInfo</span>,
-    <span class="ident">query_path</span>: <span class="kw-2">&amp;</span><span class="ident">AccessPath</span>,
+    <span class="ident">event_key</span>: <span class="kw-2">&amp;</span><span class="ident">EventKey</span>,
     <span class="ident">first_seq_num</span>: <span class="ident">u64</span>,
     <span class="ident">last_seq_num</span>: <span class="ident">u64</span>,
     <span class="ident">ascending</span>: <span class="ident">bool</span>,
@@ -651,21 +577,10 @@
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ret</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">new</span>();
     <span class="kw">loop</span> {
-        <span class="kw">let</span> (<span class="ident">events_with_proof</span>, <span class="ident">proof_of_latest_event</span>) <span class="op">=</span> <span class="ident">db</span>.<span class="ident">get_events_by_query_path</span>(
-            <span class="ident">query_path</span>,
-            <span class="ident">cursor</span>,
-            <span class="ident">ascending</span>,
-            <span class="ident">LIMIT</span>,
-            <span class="ident">ledger_info</span>.<span class="ident">version</span>(),
-        )<span class="question-mark">?</span>;
-
-        <span class="kw">let</span> (<span class="ident">expected_event_key_opt</span>, <span class="ident">_count</span>) <span class="op">=</span> <span class="ident">proof_of_latest_event</span>
-            .<span class="ident">get_event_key_and_count_by_query_path</span>(<span class="kw-2">&amp;</span><span class="ident">query_path</span>.<span class="ident">path</span>)
-            .<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">events_with_proof</span> <span class="op">=</span>
+            <span class="ident">db</span>.<span class="ident">get_events_by_event_key</span>(<span class="ident">event_key</span>, <span class="ident">cursor</span>, <span class="ident">ascending</span>, <span class="ident">LIMIT</span>, <span class="ident">ledger_info</span>.<span class="ident">version</span>())<span class="question-mark">?</span>;
 
         <span class="kw">let</span> <span class="ident">num_events</span> <span class="op">=</span> <span class="ident">events_with_proof</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>;
-        <span class="ident">proof_of_latest_event</span>.<span class="ident">verify</span>(<span class="ident">ledger_info</span>, <span class="ident">ledger_info</span>.<span class="ident">version</span>(), <span class="ident">query_path</span>.<span class="ident">address</span>)<span class="question-mark">?</span>;
-
         <span class="kw">if</span> <span class="ident">cursor</span> <span class="op">=</span><span class="op">=</span> <span class="ident">u64</span>::<span class="ident">max_value</span>() {
             <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">last_seq_num</span>;
         }
@@ -679,8 +594,7 @@
             .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">e</span>, <span class="ident">seq_num</span>)<span class="op">|</span> {
                 <span class="ident">e</span>.<span class="ident">verify</span>(
                     <span class="ident">ledger_info</span>,
-                    <span class="kw-2">&amp;</span><span class="ident">expected_event_key_opt</span>
-                        .<span class="ident">expect</span>(<span class="string">&quot;Event stream is nonempty, but event key doesn&#39;t exist&quot;</span>),
+                    <span class="kw-2">&amp;</span><span class="ident">event_key</span>,
                     <span class="ident">seq_num</span>,
                     <span class="ident">e</span>.<span class="ident">transaction_version</span>,
                     <span class="ident">e</span>.<span class="ident">event_index</span>,
@@ -731,9 +645,9 @@
     <span class="prelude-val">Ok</span>(<span class="ident">ret</span>)
 }
 
-<span class="kw">fn</span> <span class="ident">verify_events_by_query_path</span>(
+<span class="kw">fn</span> <span class="ident">verify_events_by_event_key</span>(
     <span class="ident">db</span>: <span class="kw-2">&amp;</span><span class="ident">LibraDB</span>,
-    <span class="ident">events</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">AccessPath</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ContractEvent</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
+    <span class="ident">events</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">EventKey</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ContractEvent</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
     <span class="ident">ledger_info</span>: <span class="kw-2">&amp;</span><span class="ident">LedgerInfo</span>,
     <span class="ident">is_latest</span>: <span class="ident">bool</span>,
 ) {
@@ -746,7 +660,7 @@
                 .<span class="ident">sequence_number</span>();
             <span class="kw">let</span> <span class="ident">last_seq</span> <span class="op">=</span> <span class="ident">events</span>.<span class="ident">last</span>().<span class="ident">expect</span>(<span class="string">&quot;Shouldn&#39;t be empty&quot;</span>).<span class="ident">sequence_number</span>();
 
-            <span class="kw">let</span> <span class="ident">traversed</span> <span class="op">=</span> <span class="ident">get_events_by_query_path</span>(
+            <span class="kw">let</span> <span class="ident">traversed</span> <span class="op">=</span> <span class="ident">get_events_by_event_key</span>(
                 <span class="ident">db</span>,
                 <span class="ident">ledger_info</span>,
                 <span class="kw-2">&amp;</span><span class="ident">access_path</span>,
@@ -758,7 +672,7 @@
             .<span class="ident">unwrap</span>();
             <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">events</span>, <span class="ident">traversed</span>);
 
-            <span class="kw">let</span> <span class="ident">rev_traversed</span> <span class="op">=</span> <span class="ident">get_events_by_query_path</span>(
+            <span class="kw">let</span> <span class="ident">rev_traversed</span> <span class="op">=</span> <span class="ident">get_events_by_event_key</span>(
                 <span class="ident">db</span>,
                 <span class="ident">ledger_info</span>,
                 <span class="kw-2">&amp;</span><span class="ident">access_path</span>,
@@ -775,37 +689,19 @@
         .<span class="ident">unwrap</span>();
 }
 
-<span class="kw">fn</span> <span class="ident">group_events_by_query_path</span>(
+<span class="kw">fn</span> <span class="ident">group_events_by_event_key</span>(
     <span class="ident">txns_to_commit</span>: <span class="kw-2">&amp;</span>[<span class="ident">TransactionToCommit</span>],
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">AccessPath</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ContractEvent</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">event_key_to_query_path</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
-    <span class="kw">for</span> <span class="ident">txn</span> <span class="kw">in</span> <span class="ident">txns_to_commit</span> {
-        <span class="kw">for</span> (<span class="ident">address</span>, <span class="ident">account_blob</span>) <span class="kw">in</span> <span class="ident">txn</span>.<span class="ident">account_states</span>().<span class="ident">iter</span>() {
-            <span class="kw">let</span> <span class="ident">account</span> <span class="op">=</span> <span class="ident">AccountResource</span>::<span class="ident">try_from</span>(<span class="ident">account_blob</span>).<span class="ident">unwrap</span>();
-            <span class="ident">event_key_to_query_path</span>.<span class="ident">insert</span>(
-                <span class="kw-2">*</span><span class="ident">account</span>.<span class="ident">sent_events</span>().<span class="ident">key</span>(),
-                <span class="ident">AccessPath</span>::<span class="ident">new_for_sent_event</span>(<span class="kw-2">*</span><span class="ident">address</span>),
-            );
-            <span class="ident">event_key_to_query_path</span>.<span class="ident">insert</span>(
-                <span class="kw-2">*</span><span class="ident">account</span>.<span class="ident">received_events</span>().<span class="ident">key</span>(),
-                <span class="ident">AccessPath</span>::<span class="ident">new_for_received_event</span>(<span class="kw-2">*</span><span class="ident">address</span>),
-            );
-        }
-    }
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">query_path_to_events</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">AccessPath</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ContractEvent</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">EventKey</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ContractEvent</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">event_key_to_events</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">EventKey</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ContractEvent</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
     <span class="kw">for</span> <span class="ident">txn</span> <span class="kw">in</span> <span class="ident">txns_to_commit</span> {
         <span class="kw">for</span> <span class="ident">event</span> <span class="kw">in</span> <span class="ident">txn</span>.<span class="ident">events</span>() {
-            <span class="kw">let</span> <span class="ident">query_path</span> <span class="op">=</span> <span class="ident">event_key_to_query_path</span>
-                .<span class="ident">get</span>(<span class="ident">event</span>.<span class="ident">key</span>())
-                .<span class="ident">expect</span>(<span class="string">&quot;Unknown Event Key&quot;</span>)
-                .<span class="ident">clone</span>();
-            <span class="ident">query_path_to_events</span>
-                .<span class="ident">entry</span>(<span class="ident">query_path</span>)
+            <span class="ident">event_key_to_events</span>
+                .<span class="ident">entry</span>(<span class="kw-2">*</span><span class="ident">event</span>.<span class="ident">key</span>())
                 .<span class="ident">or_default</span>()
                 .<span class="ident">push</span>(<span class="ident">event</span>.<span class="ident">clone</span>());
         }
     }
-    <span class="ident">query_path_to_events</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>()
+    <span class="ident">event_key_to_events</span>.<span class="ident">into_iter</span>().<span class="ident">collect</span>()
 }
 
 <span class="kw">fn</span> <span class="ident">verify_committed_transactions</span>(
@@ -868,9 +764,9 @@
 
     <span class="comment">// Fetch and verify events.</span>
     <span class="comment">// TODO: verify events are saved to correct transaction version.</span>
-    <span class="ident">verify_events_by_query_path</span>(
+    <span class="ident">verify_events_by_event_key</span>(
         <span class="ident">db</span>,
-        <span class="ident">group_events_by_query_path</span>(<span class="ident">txns_to_commit</span>),
+        <span class="ident">group_events_by_event_key</span>(<span class="ident">txns_to_commit</span>),
         <span class="ident">ledger_info</span>,
         <span class="ident">is_latest</span>,
     );
@@ -910,63 +806,7 @@
     <span class="kw">let</span> <span class="ident">tmp_dir</span> <span class="op">=</span> <span class="ident">TempPath</span>::<span class="ident">new</span>();
     <span class="kw">let</span> <span class="ident">db</span> <span class="op">=</span> <span class="ident">LibraDB</span>::<span class="ident">new_for_test</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_dir</span>);
 
-    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">db</span>
-        .<span class="ident">update_to_latest_ledger</span>(
-            <span class="number">0</span>,
-            <span class="macro">vec</span><span class="macro">!</span>[
-                <span class="ident">RequestItem</span>::<span class="ident">GetTransactions</span> {
-                    <span class="ident">start_version</span>: <span class="number">0</span>,
-                    <span class="ident">limit</span>: <span class="number">100</span>,
-                    <span class="ident">fetch_events</span>: <span class="bool-val">false</span>,
-                };
-                <span class="number">101</span>
-            ]
-        )
-        .<span class="ident">is_err</span>());
     <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">db</span>.<span class="ident">get_transactions</span>(<span class="number">0</span>, <span class="number">1001</span> <span class="comment">/* limit */</span>, <span class="number">0</span>, <span class="bool-val">true</span>).<span class="ident">is_err</span>());
-    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">db</span>
-        .<span class="ident">get_events_by_query_path</span>(
-            <span class="kw-2">&amp;</span><span class="ident">AccessPath</span>::<span class="ident">new_for_sent_event</span>(<span class="ident">AccountAddress</span>::<span class="ident">random</span>()),
-            <span class="number">0</span>,
-            <span class="bool-val">true</span>,
-            <span class="number">1001</span>, <span class="comment">/* limit */</span>
-            <span class="number">0</span>
-        )
-        .<span class="ident">is_err</span>());
-}
-
-<span class="macro">proptest</span><span class="macro">!</span> {
-    <span class="attribute">#![<span class="ident">proptest_config</span>(<span class="ident">ProptestConfig</span>::<span class="ident">with_cases</span>(<span class="number">1</span>))]</span>
-
-    <span class="attribute">#[<span class="ident">test</span>]</span>
-    <span class="kw">fn</span> <span class="ident">test_get_events_from_non_existent_account</span>(
-        (<span class="ident">genesis_txn_to_commit</span>, <span class="ident">ledger_info_with_sigs</span>) <span class="kw">in</span> <span class="ident">arb_mock_genesis</span>(),
-        <span class="ident">non_existent_address</span> <span class="kw">in</span> <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>(),
-    ) {
-        <span class="kw">let</span> <span class="ident">tmp_dir</span> <span class="op">=</span> <span class="ident">TempPath</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="ident">db</span> <span class="op">=</span> <span class="ident">LibraDB</span>::<span class="ident">new_for_test</span>(<span class="kw-2">&amp;</span><span class="ident">tmp_dir</span>);
-
-        <span class="ident">db</span>.<span class="ident">save_transactions</span>(<span class="kw-2">&amp;</span>[<span class="ident">genesis_txn_to_commit</span>], <span class="number">0</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">ledger_info_with_sigs</span>)).<span class="ident">unwrap</span>();
-        <span class="macro">prop_assume</span><span class="macro">!</span>(
-            <span class="ident">db</span>.<span class="ident">get_account_state_with_proof</span>(<span class="ident">non_existent_address</span>, <span class="number">0</span>, <span class="number">0</span>).<span class="ident">unwrap</span>().<span class="ident">blob</span>.<span class="ident">is_none</span>()
-        );
-
-        <span class="kw">let</span> (<span class="ident">events</span>, <span class="ident">account_state_with_proof</span>) <span class="op">=</span> <span class="ident">db</span>
-            .<span class="ident">get_events_by_query_path</span>(
-                <span class="kw-2">&amp;</span><span class="ident">AccessPath</span>::<span class="ident">new_for_sent_event</span>(<span class="ident">non_existent_address</span>),
-                <span class="number">0</span>,
-                <span class="bool-val">true</span>,
-                <span class="number">100</span>,
-                <span class="number">0</span>,
-            )
-            .<span class="ident">unwrap</span>();
-
-        <span class="ident">account_state_with_proof</span>
-            .<span class="ident">verify</span>(<span class="ident">ledger_info_with_sigs</span>.<span class="ident">ledger_info</span>(), <span class="number">0</span>, <span class="ident">non_existent_address</span>)
-            .<span class="ident">unwrap</span>();
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">account_state_with_proof</span>.<span class="ident">blob</span>.<span class="ident">is_none</span>());
-        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">events</span>.<span class="ident">is_empty</span>());
-    }
 }
 
 <span class="attribute">#[<span class="ident">test</span>]</span>

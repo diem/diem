@@ -391,21 +391,6 @@
 <span id="391">391</span>
 <span id="392">392</span>
 <span id="393">393</span>
-<span id="394">394</span>
-<span id="395">395</span>
-<span id="396">396</span>
-<span id="397">397</span>
-<span id="398">398</span>
-<span id="399">399</span>
-<span id="400">400</span>
-<span id="401">401</span>
-<span id="402">402</span>
-<span id="403">403</span>
-<span id="404">404</span>
-<span id="405">405</span>
-<span id="406">406</span>
-<span id="407">407</span>
-<span id="408">408</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -422,7 +407,6 @@
     <span class="ident">epoch_change</span>::<span class="ident">EpochChangeProof</span>,
     <span class="ident">epoch_state</span>::<span class="ident">EpochState</span>,
     <span class="ident">event</span>::<span class="ident">EventKey</span>,
-    <span class="ident">get_with_proof</span>::{<span class="ident">RequestItem</span>, <span class="ident">ResponseItem</span>},
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
     <span class="ident">move_resource</span>::<span class="ident">MoveStorage</span>,
     <span class="ident">proof</span>::{<span class="ident">definition</span>::<span class="ident">LeafCount</span>, <span class="ident">AccumulatorConsistencyProof</span>, <span class="ident">SparseMerkleProof</span>},
@@ -538,20 +522,6 @@
 <span class="doccomment">/// Trait that is implemented by a DB that supports certain public (to client) read APIs</span>
 <span class="doccomment">/// expected of a Libra DB</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">DbReader</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
-    <span class="comment">// TODO: Remove this API after deprecating AC.</span>
-    <span class="kw">fn</span> <span class="ident">update_to_latest_ledger</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">_client_known_version</span>: <span class="ident">Version</span>,
-        <span class="ident">_request_items</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">RequestItem</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(
-        <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ResponseItem</span><span class="op">&gt;</span>,
-        <span class="ident">LedgerInfoWithSignatures</span>,
-        <span class="ident">EpochChangeProof</span>,
-        <span class="ident">AccumulatorConsistencyProof</span>,
-    )<span class="op">&gt;</span> {
-        <span class="macro">unimplemented</span><span class="macro">!</span>()
-    }
-
     <span class="doccomment">/// See [`LibraDB::get_epoch_change_ledger_infos`].</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// [`LibraDB::get_epoch_change_ledger_infos`]:</span>
