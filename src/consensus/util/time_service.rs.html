@@ -133,70 +133,6 @@
 <span id="133">133</span>
 <span id="134">134</span>
 <span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
-<span id="142">142</span>
-<span id="143">143</span>
-<span id="144">144</span>
-<span id="145">145</span>
-<span id="146">146</span>
-<span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
-<span id="154">154</span>
-<span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
-<span id="167">167</span>
-<span id="168">168</span>
-<span id="169">169</span>
-<span id="170">170</span>
-<span id="171">171</span>
-<span id="172">172</span>
-<span id="173">173</span>
-<span id="174">174</span>
-<span id="175">175</span>
-<span id="176">176</span>
-<span id="177">177</span>
-<span id="178">178</span>
-<span id="179">179</span>
-<span id="180">180</span>
-<span id="181">181</span>
-<span id="182">182</span>
-<span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
-<span id="186">186</span>
-<span id="187">187</span>
-<span id="188">188</span>
-<span id="189">189</span>
-<span id="190">190</span>
-<span id="191">191</span>
-<span id="192">192</span>
-<span id="193">193</span>
-<span id="194">194</span>
-<span id="195">195</span>
-<span id="196">196</span>
-<span id="197">197</span>
-<span id="198">198</span>
-<span id="199">199</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -205,9 +141,11 @@
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">pin</span>::<span class="ident">Pin</span>,
-    <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>, <span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>},
+    <span class="ident">thread</span>,
+    <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">SystemTime</span>, <span class="ident">UNIX_EPOCH</span>},
 };
-<span class="kw">use</span> <span class="ident">thiserror</span>::<span class="ident">Error</span>;
+
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">counters</span>;
 <span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">runtime</span>::<span class="ident">Handle</span>, <span class="ident">time</span>::<span class="ident">delay_for</span>};
 
 <span class="doccomment">/// Time service is an abstraction for operations that depend on time</span>
@@ -231,7 +169,22 @@
     <span class="doccomment">/// time_service::sleep(Y).await;</span>
     <span class="doccomment">/// Z = time_service::get_current_timestamp();</span>
     <span class="doccomment">/// assert(Z &gt;= X + Y)</span>
-    <span class="kw">fn</span> <span class="ident">sleep</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">t</span>: <span class="ident">Duration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">sleep</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">t</span>: <span class="ident">Duration</span>);
+
+    <span class="doccomment">/// Wait until the Duration t since UNIX_EPOCH pass at least 1ms.</span>
+    <span class="kw">fn</span> <span class="ident">wait_until</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">t</span>: <span class="ident">Duration</span>) {
+        <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="kw-2">mut</span> <span class="ident">wait_duration</span>) <span class="op">=</span> <span class="ident">t</span>.<span class="ident">checked_sub</span>(<span class="self">self</span>.<span class="ident">get_current_timestamp</span>()) {
+            <span class="ident">wait_duration</span> <span class="op">+</span><span class="op">=</span> <span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">1</span>);
+            <span class="kw">if</span> <span class="ident">wait_duration</span> <span class="op">&gt;</span> <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">10</span>) {
+                <span class="macro">error</span><span class="macro">!</span>(
+                    <span class="string">&quot;[TimeService] long wait time {} seconds required&quot;</span>,
+                    <span class="ident">wait_duration</span>.<span class="ident">as_secs</span>()
+                );
+            }
+            <span class="ident">counters</span>::<span class="ident">WAIT_DURATION_MS</span>.<span class="ident">observe_duration</span>(<span class="ident">wait_duration</span>);
+            <span class="self">self</span>.<span class="ident">sleep</span>(<span class="ident">wait_duration</span>);
+        }
+    }
 }
 
 <span class="doccomment">/// This trait represents abstract task that can be submitted to TimeService::run_after</span>
@@ -305,8 +258,8 @@
         <span class="ident">duration_since_epoch</span>()
     }
 
-    <span class="kw">fn</span> <span class="ident">sleep</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">t</span>: <span class="ident">Duration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Pin</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">Future</span><span class="op">&lt;</span><span class="ident">Output</span> <span class="op">=</span> ()<span class="op">&gt;</span> <span class="op">+</span> <span class="ident">Send</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="kw">async</span> <span class="kw">move</span> { <span class="ident">delay_for</span>(<span class="ident">t</span>).<span class="kw">await</span> }.<span class="ident">boxed</span>()
+    <span class="kw">fn</span> <span class="ident">sleep</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">t</span>: <span class="ident">Duration</span>) {
+        <span class="ident">thread</span>::<span class="ident">sleep</span>(<span class="ident">t</span>)
     }
 }
 
@@ -315,87 +268,6 @@
     <span class="ident">SystemTime</span>::<span class="ident">now</span>()
         .<span class="ident">duration_since</span>(<span class="ident">UNIX_EPOCH</span>)
         .<span class="ident">expect</span>(<span class="string">&quot;Timestamp generated is before the UNIX_EPOCH!&quot;</span>)
-}
-
-<span class="doccomment">/// Success states for wait_if_possible</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">WaitingSuccess</span> {
-    <span class="doccomment">/// No waiting to complete and includes the current duration since epoch and the difference</span>
-    <span class="doccomment">/// between the current duration since epoch and min_duration_since_epoch</span>
-    <span class="ident">NoWaitRequired</span> {
-        <span class="ident">current_duration_since_epoch</span>: <span class="ident">Duration</span>,
-        <span class="ident">early_duration</span>: <span class="ident">Duration</span>,
-    },
-    <span class="doccomment">/// Waiting was required and includes the current duration since epoch and the duration</span>
-    <span class="doccomment">/// slept to finish waiting</span>
-    <span class="ident">WaitWasRequired</span> {
-        <span class="ident">current_duration_since_epoch</span>: <span class="ident">Duration</span>,
-        <span class="ident">wait_duration</span>: <span class="ident">Duration</span>,
-    },
-}
-
-<span class="doccomment">/// Error states for wait_if_possible</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Error</span>)]</span>
-<span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">WaitingError</span> {
-    <span class="doccomment">/// The waiting period exceeds the maximum allowed duration, returning immediately</span>
-    <span class="ident">MaxWaitExceeded</span>,
-    <span class="doccomment">/// Waiting to ensure the current time exceeds min_duration_since_epoch failed</span>
-    <span class="ident">WaitFailed</span> {
-        <span class="ident">current_duration_since_epoch</span>: <span class="ident">Duration</span>,
-        <span class="ident">wait_duration</span>: <span class="ident">Duration</span>,
-    },
-}
-
-<span class="doccomment">/// Attempt to wait until the current time exceeds the min_duration_since_epoch if possible</span>
-<span class="doccomment">///</span>
-<span class="doccomment">/// If the waiting time exceeds max_instant then fail immediately.</span>
-<span class="doccomment">/// There are 4 potential outcomes, 2 successful and 2 errors, each represented by</span>
-<span class="doccomment">/// WaitingSuccess and WaitingError.</span>
-<span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">wait_if_possible</span>(
-    <span class="ident">time_service</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">TimeService</span>,
-    <span class="ident">min_duration_since_epoch</span>: <span class="ident">Duration</span>,
-    <span class="ident">max_instant</span>: <span class="ident">Instant</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">WaitingSuccess</span>, <span class="ident">WaitingError</span><span class="op">&gt;</span> {
-    <span class="comment">// Fail early if waiting for min_duration_since_epoch would exceed max_instant</span>
-    <span class="comment">// Ideally, comparing min_duration_since_epoch and max_instant would be straightforward, but</span>
-    <span class="comment">// min_duration_since_epoch is relative to UNIX_EPOCH and Instant is not comparable.  Therefore,</span>
-    <span class="comment">// we use relative differences to do the comparison.</span>
-    <span class="kw">let</span> <span class="ident">current_instant</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
-    <span class="kw">let</span> <span class="ident">current_duration_since_epoch</span> <span class="op">=</span> <span class="ident">time_service</span>.<span class="ident">get_current_timestamp</span>();
-    <span class="kw">if</span> <span class="ident">current_instant</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">max_instant</span> {
-        <span class="kw">let</span> <span class="ident">duration_to_max_time</span> <span class="op">=</span> <span class="ident">max_instant</span>.<span class="ident">duration_since</span>(<span class="ident">current_instant</span>);
-        <span class="kw">if</span> <span class="ident">current_duration_since_epoch</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">min_duration_since_epoch</span> {
-            <span class="kw">let</span> <span class="ident">duration_to_min_time</span> <span class="op">=</span> <span class="ident">min_duration_since_epoch</span> <span class="op">-</span> <span class="ident">current_duration_since_epoch</span>;
-            <span class="kw">if</span> <span class="ident">duration_to_max_time</span> <span class="op">&lt;</span> <span class="ident">duration_to_min_time</span> {
-                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">WaitingError</span>::<span class="ident">MaxWaitExceeded</span>);
-            }
-        }
-    }
-
-    <span class="kw">if</span> <span class="ident">current_duration_since_epoch</span> <span class="op">&lt;</span><span class="op">=</span> <span class="ident">min_duration_since_epoch</span> {
-        <span class="comment">// Delay has millisecond granularity, add 1 millisecond to ensure a higher timestamp</span>
-        <span class="kw">let</span> <span class="ident">sleep_duration</span> <span class="op">=</span>
-            <span class="ident">min_duration_since_epoch</span> <span class="op">-</span> <span class="ident">current_duration_since_epoch</span> <span class="op">+</span> <span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">1</span>);
-        <span class="ident">time_service</span>.<span class="ident">sleep</span>(<span class="ident">sleep_duration</span>).<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">waited_duration_since_epoch</span> <span class="op">=</span> <span class="ident">time_service</span>.<span class="ident">get_current_timestamp</span>();
-        <span class="kw">if</span> <span class="ident">waited_duration_since_epoch</span> <span class="op">&gt;</span> <span class="ident">min_duration_since_epoch</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">WaitingSuccess</span>::<span class="ident">WaitWasRequired</span> {
-                <span class="ident">current_duration_since_epoch</span>: <span class="ident">waited_duration_since_epoch</span>,
-                <span class="ident">wait_duration</span>: <span class="ident">sleep_duration</span>,
-            })
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">WaitingError</span>::<span class="ident">WaitFailed</span> {
-                <span class="ident">current_duration_since_epoch</span>: <span class="ident">waited_duration_since_epoch</span>,
-                <span class="ident">wait_duration</span>: <span class="ident">sleep_duration</span>,
-            })
-        }
-    } <span class="kw">else</span> {
-        <span class="prelude-val">Ok</span>(<span class="ident">WaitingSuccess</span>::<span class="ident">NoWaitRequired</span> {
-            <span class="ident">current_duration_since_epoch</span>,
-            <span class="ident">early_duration</span>: <span class="ident">current_duration_since_epoch</span> <span class="op">-</span> <span class="ident">min_duration_since_epoch</span>,
-        })
-    }
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../";window.currentCrate = "consensus";</script><script src="../../../aliases.js"></script><script src="../../../main.js"></script><script src="../../../source-script.js"></script><script src="../../../source-files.js"></script><script defer src="../../../search-index.js"></script></body></html>

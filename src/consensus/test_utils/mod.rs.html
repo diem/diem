@@ -220,6 +220,8 @@
 <span id="220">220</span>
 <span id="221">221</span>
 <span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -243,6 +245,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">mod</span> <span class="ident">mock_txn_manager</span>;
 
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">util</span>::<span class="ident">mock_time_service</span>::<span class="ident">SimulatedTimeService</span>;
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{<span class="ident">block</span>::<span class="ident">block_test_utils</span>::<span class="ident">gen_test_certificate</span>, <span class="ident">common</span>::<span class="ident">Payload</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">block_info</span>::<span class="ident">BlockInfo</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">mock_state_computer</span>::{<span class="ident">EmptyStateComputer</span>, <span class="ident">MockStateComputer</span>};
@@ -300,6 +303,7 @@
         <span class="ident">initial_data</span>,
         <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">EmptyStateComputer</span>),
         <span class="number">10</span>, <span class="comment">// max pruned blocks in mem</span>
+        <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">SimulatedTimeService</span>::<span class="ident">new</span>()),
     ))
 }
 

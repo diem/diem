@@ -315,9 +315,6 @@
 <span id="315">315</span>
 <span id="316">316</span>
 <span id="317">317</span>
-<span id="318">318</span>
-<span id="319">319</span>
-<span id="320">320</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -330,11 +327,7 @@
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{<span class="ident">common</span>::<span class="ident">Round</span>, <span class="ident">sync_info</span>::<span class="ident">SyncInfo</span>, <span class="ident">vote</span>::<span class="ident">Vote</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">validator_verifier</span>::<span class="ident">ValidatorVerifier</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">fmt</span>,
-    <span class="ident">sync</span>::<span class="ident">Arc</span>,
-    <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
-};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">fmt</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 
 <span class="doccomment">/// A reason for starting a new round: introduced for monitoring / debug purposes.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Eq</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
@@ -464,7 +457,8 @@
     <span class="ident">current_round</span>: <span class="ident">Round</span>,
     <span class="comment">// The deadline for the next local timeout event. It is reset every time a new round start, or</span>
     <span class="comment">// a previous deadline expires.</span>
-    <span class="ident">current_round_deadline</span>: <span class="ident">Instant</span>,
+    <span class="comment">// Represents as Duration since UNIX_EPOCH.</span>
+    <span class="ident">current_round_deadline</span>: <span class="ident">Duration</span>,
     <span class="comment">// Service for timer</span>
     <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
     <span class="comment">// To send local timeout events to the subscriber (e.g., SMR)</span>
@@ -513,7 +507,7 @@
             <span class="ident">time_interval</span>,
             <span class="ident">highest_committed_round</span>: <span class="number">0</span>,
             <span class="ident">current_round</span>: <span class="number">0</span>,
-            <span class="ident">current_round_deadline</span>: <span class="ident">Instant</span>::<span class="ident">now</span>(),
+            <span class="ident">current_round_deadline</span>: <span class="ident">time_service</span>.<span class="ident">get_current_timestamp</span>(),
             <span class="ident">time_service</span>,
             <span class="ident">timeout_sender</span>,
             <span class="ident">pending_votes</span>: <span class="ident">PendingVotes</span>::<span class="ident">new</span>(),
@@ -527,7 +521,7 @@
     }
 
     <span class="doccomment">/// Returns deadline for current round</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">current_round_deadline</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Instant</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">current_round_deadline</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Duration</span> {
         <span class="self">self</span>.<span class="ident">current_round_deadline</span>
     }
 
@@ -628,10 +622,10 @@
         <span class="kw">let</span> <span class="ident">timeout</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">time_interval</span>
             .<span class="ident">get_round_duration</span>(<span class="ident">round_index_after_committed_round</span>);
-        <span class="kw">let</span> <span class="ident">now</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
+        <span class="kw">let</span> <span class="ident">now</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">time_service</span>.<span class="ident">get_current_timestamp</span>();
         <span class="macro">debug</span><span class="macro">!</span>(
             <span class="string">&quot;{:?} passed since the previous deadline.&quot;</span>,
-            <span class="ident">now</span>.<span class="ident">checked_duration_since</span>(<span class="self">self</span>.<span class="ident">current_round_deadline</span>)
+            <span class="ident">now</span>.<span class="ident">checked_sub</span>(<span class="self">self</span>.<span class="ident">current_round_deadline</span>)
                 .<span class="ident">map_or</span>(<span class="string">&quot;0 ms&quot;</span>.<span class="ident">to_string</span>(), <span class="op">|</span><span class="ident">v</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">v</span>))
         );
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Set round deadline to {:?} from now&quot;</span>, <span class="ident">timeout</span>);

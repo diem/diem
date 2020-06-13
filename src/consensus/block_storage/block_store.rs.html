@@ -480,6 +480,17 @@
 <span id="480">480</span>
 <span id="481">481</span>
 <span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -491,7 +502,7 @@
         <span class="ident">PersistentLivenessStorage</span>, <span class="ident">RecoveryData</span>, <span class="ident">RootInfo</span>, <span class="ident">RootMetadata</span>,
     },
     <span class="ident">state_replication</span>::<span class="ident">StateComputer</span>,
-    <span class="ident">util</span>::<span class="ident">time_service</span>::<span class="ident">duration_since_epoch</span>,
+    <span class="ident">util</span>::<span class="ident">time_service</span>::{<span class="ident">duration_since_epoch</span>, <span class="ident">TimeService</span>},
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">bail</span>, <span class="ident">ensure</span>, <span class="ident">format_err</span>, <span class="ident">Context</span>};
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
@@ -500,6 +511,7 @@
 };
 <span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">executor_types</span>::<span class="ident">StateComputeResult</span>;
+
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">HashValue</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
@@ -572,6 +584,8 @@
     <span class="doccomment">/// The persistent storage backing up the in-memory data structure, every write should go</span>
     <span class="doccomment">/// through this before in-memory tree.</span>
     <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Used to ensure that any block stored will have a timestamp &lt; the local time</span>
+    <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">BlockStore</span> {
@@ -580,6 +594,7 @@
         <span class="ident">initial_data</span>: <span class="ident">RecoveryData</span>,
         <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&gt;</span>,
         <span class="ident">max_pruned_blocks_in_mem</span>: <span class="ident">usize</span>,
+        <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">highest_tc</span> <span class="op">=</span> <span class="ident">initial_data</span>.<span class="ident">highest_timeout_certificate</span>();
         <span class="kw">let</span> (<span class="ident">root</span>, <span class="ident">root_metadata</span>, <span class="ident">blocks</span>, <span class="ident">quorum_certs</span>) <span class="op">=</span> <span class="ident">initial_data</span>.<span class="ident">take</span>();
@@ -592,6 +607,7 @@
             <span class="ident">state_computer</span>,
             <span class="ident">storage</span>,
             <span class="ident">max_pruned_blocks_in_mem</span>,
+            <span class="ident">time_service</span>,
         )
     }
 
@@ -604,6 +620,7 @@
         <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&gt;</span>,
         <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
         <span class="ident">max_pruned_blocks_in_mem</span>: <span class="ident">usize</span>,
+        <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">RootInfo</span>(<span class="ident">root_block</span>, <span class="ident">root_qc</span>, <span class="ident">root_li</span>) <span class="op">=</span> <span class="ident">root</span>;
         <span class="comment">//verify root is correct</span>
@@ -645,6 +662,7 @@
             <span class="ident">inner</span>: <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">RwLock</span>::<span class="ident">new</span>(<span class="ident">tree</span>)),
             <span class="ident">state_computer</span>,
             <span class="ident">storage</span>,
+            <span class="ident">time_service</span>,
         };
         <span class="kw">for</span> <span class="ident">block</span> <span class="kw">in</span> <span class="ident">blocks</span> {
             <span class="ident">block_store</span>
@@ -720,6 +738,7 @@
             <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">state_computer</span>),
             <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">storage</span>),
             <span class="ident">max_pruned_blocks_in_mem</span>,
+            <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">time_service</span>),
         );
         <span class="kw">let</span> <span class="ident">to_remove</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">inner</span>.<span class="ident">read</span>().<span class="ident">unwrap</span>().<span class="ident">get_all_block_id</span>();
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">prune_tree</span>(<span class="ident">to_remove</span>) {
@@ -757,6 +776,9 @@
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">existing_block</span>);
         }
         <span class="kw">let</span> <span class="ident">executed_block</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute_block</span>(<span class="ident">block</span>)<span class="question-mark">?</span>;
+        <span class="comment">// ensure local time past the block time</span>
+        <span class="kw">let</span> <span class="ident">block_time</span> <span class="op">=</span> <span class="ident">Duration</span>::<span class="ident">from_micros</span>(<span class="ident">executed_block</span>.<span class="ident">timestamp_usecs</span>());
+        <span class="self">self</span>.<span class="ident">time_service</span>.<span class="ident">wait_until</span>(<span class="ident">block_time</span>);
         <span class="self">self</span>.<span class="ident">storage</span>
             .<span class="ident">save_tree</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">executed_block</span>.<span class="ident">block</span>().<span class="ident">clone</span>()], <span class="macro">vec</span><span class="macro">!</span>[])
             .<span class="ident">context</span>(<span class="string">&quot;Insert block failed when saving block&quot;</span>)<span class="question-mark">?</span>;

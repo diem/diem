@@ -202,6 +202,8 @@
 <span id="202">202</span>
 <span id="203">203</span>
 <span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -218,7 +220,7 @@
     <span class="ident">persistent_liveness_storage</span>::{<span class="ident">PersistentLivenessStorage</span>, <span class="ident">RecoveryData</span>},
     <span class="ident">round_manager</span>::<span class="ident">RoundManager</span>,
     <span class="ident">test_utils</span>::{<span class="ident">EmptyStateComputer</span>, <span class="ident">MockStorage</span>, <span class="ident">MockTransactionManager</span>},
-    <span class="ident">util</span>::<span class="ident">mock_time_service</span>::<span class="ident">SimulatedTimeService</span>,
+    <span class="ident">util</span>::{<span class="ident">mock_time_service</span>::<span class="ident">SimulatedTimeService</span>, <span class="ident">time_service</span>::<span class="ident">TimeService</span>},
 };
 <span class="kw">use</span> <span class="ident">channel</span>::{<span class="self">self</span>, <span class="ident">libra_channel</span>, <span class="ident">message_queues</span>::<span class="ident">QueueStyle</span>};
 <span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">proposal_msg</span>::<span class="ident">ProposalMsg</span>;
@@ -235,7 +237,7 @@
 <span class="kw">use</span> <span class="ident">network</span>::<span class="ident">peer_manager</span>::{<span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerRequestSender</span>};
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 <span class="kw">use</span> <span class="ident">safety_rules</span>::{<span class="ident">test_utils</span>, <span class="ident">SafetyRules</span>, <span class="ident">TSafetyRules</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">BTreeMap</span>, <span class="ident">num</span>::<span class="ident">NonZeroUsize</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">BTreeMap</span>, <span class="ident">num</span>::<span class="ident">NonZeroUsize</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Runtime</span>;
 
 <span class="comment">// This generates a proposal for round 1</span>
@@ -270,6 +272,7 @@
         <span class="ident">initial_data</span>,
         <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">EmptyStateComputer</span>),
         <span class="number">10</span>, <span class="comment">// max pruned blocks in mem</span>
+        <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">SimulatedTimeService</span>::<span class="ident">new</span>()),
     ))
 }
 
@@ -336,13 +339,14 @@
 
     <span class="comment">// TODO: remove</span>
     <span class="kw">let</span> <span class="ident">time_service</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">SimulatedTimeService</span>::<span class="ident">new</span>());
+    <span class="ident">time_service</span>.<span class="ident">sleep</span>(<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">1</span>));
 
     <span class="comment">// TODO: remove</span>
     <span class="kw">let</span> <span class="ident">proposal_generator</span> <span class="op">=</span> <span class="ident">ProposalGenerator</span>::<span class="ident">new</span>(
         <span class="ident">signer</span>.<span class="ident">author</span>(),
         <span class="ident">block_store</span>.<span class="ident">clone</span>(),
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">MockTransactionManager</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>)),
-        <span class="ident">time_service</span>.<span class="ident">clone</span>(),
+        <span class="ident">time_service</span>,
         <span class="number">1</span>,
     );
 
@@ -363,7 +367,6 @@
         <span class="ident">network</span>,
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">MockTransactionManager</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>)),
         <span class="ident">storage</span>,
-        <span class="ident">time_service</span>,
     )
 }
 
@@ -384,7 +387,8 @@
 
     <span class="kw">let</span> <span class="ident">proposal</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">proposal</span>.<span class="ident">verify_well_formed</span>() {
         <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">proposal</span>,
-        <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>);
             <span class="kw">if</span> <span class="macro">cfg</span><span class="macro">!</span>(<span class="ident">test</span>) {
                 <span class="macro">panic</span><span class="macro">!</span>();
             }
