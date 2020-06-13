@@ -6,7 +6,7 @@
 ### Table of Contents
 
 -  [Struct `RegisteredCurrencies`](#0x1_RegisteredCurrencies_RegisteredCurrencies)
--  [Struct `RegistrationCapability`](#0x1_RegisteredCurrencies_RegistrationCapability)
+-  [Resource `RegistrationCapability`](#0x1_RegisteredCurrencies_RegistrationCapability)
 -  [Function `initialize`](#0x1_RegisteredCurrencies_initialize)
 -  [Function `empty`](#0x1_RegisteredCurrencies_empty)
 -  [Function `add_currency_code`](#0x1_RegisteredCurrencies_add_currency_code)
@@ -15,7 +15,7 @@
     -  [Function `initialize`](#0x1_RegisteredCurrencies_Specification_initialize)
         -  [Initialization](#0x1_RegisteredCurrencies_@Initialization)
         -  [Uniqueness of the RegisteredCurrencies config.](#0x1_RegisteredCurrencies_@Uniqueness_of_the_RegisteredCurrencies_config.)
-        -  [Currency codes](#0x1_RegisteredCurrencies_@Currency_codes)
+        -  [Currency Codes](#0x1_RegisteredCurrencies_@Currency_Codes)
 
 
 
@@ -49,7 +49,7 @@
 
 <a name="0x1_RegisteredCurrencies_RegistrationCapability"></a>
 
-## Struct `RegistrationCapability`
+## Resource `RegistrationCapability`
 
 
 
@@ -178,11 +178,17 @@
 
 
 <pre><code>pragma verify = <b>true</b>;
-<a name="0x1_RegisteredCurrencies_spec_singleton_address"></a>
-<b>define</b> <a href="#0x1_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>(): address { 0xA550C18 }
+</code></pre>
+
+
+Returns true iff initialize has been called.
+
+
 <a name="0x1_RegisteredCurrencies_spec_is_initialized"></a>
-<b>define</b> <a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>():bool {
-    <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="#0x1_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>())
+
+
+<pre><code><b>define</b> <a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>(): bool {
+    <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::SPEC_ASSOCIATION_ROOT_ADDRESS</a>())
 }
 </code></pre>
 
@@ -203,12 +209,17 @@
 #### Initialization
 
 
-After
-<code>initialize</code> is called, the module is initialized.
-
 
 <pre><code>pragma aborts_if_is_partial = <b>true</b>;
-<b>aborts_if</b> <a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>();
+</code></pre>
+
+
+After
+<code>initialize</code> is called, the module is initialized.
+<code>initialize</code> aborts if already initialized
+
+
+<pre><code><b>aborts_if</b> <a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>();
 <b>ensures</b> <a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>();
 </code></pre>
 
@@ -240,45 +251,52 @@ initialized, forever.
 
 
 
-<a name="0x1_RegisteredCurrencies_OnlySingletonHasRegisteredCurrencies"></a>
+<a name="0x1_RegisteredCurrencies_OnlyConfigAddressHasRegisteredCurrencies"></a>
+
+There is no address with a RegisteredCurrencies value before initialization.
 
 
-<pre><code><b>schema</b> <a href="#0x1_RegisteredCurrencies_OnlySingletonHasRegisteredCurrencies">OnlySingletonHasRegisteredCurrencies</a> {
+<pre><code><b>schema</b> <a href="#0x1_RegisteredCurrencies_OnlyConfigAddressHasRegisteredCurrencies">OnlyConfigAddressHasRegisteredCurrencies</a> {
     <b>invariant</b> !<a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>()
         ==&gt; (forall addr: address: !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(addr));
+}
+</code></pre>
+
+
+*Informally:* After initialization, only singleton_address() has a RegisteredCurrencies value.
+
+
+<pre><code><b>schema</b> <a href="#0x1_RegisteredCurrencies_OnlyConfigAddressHasRegisteredCurrencies">OnlyConfigAddressHasRegisteredCurrencies</a> {
     <b>invariant</b> <a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>()
-        ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="#0x1_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>())
+        ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::SPEC_ASSOCIATION_ROOT_ADDRESS</a>())
             && (forall addr: address:
                    <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(addr)
-                              ==&gt; addr == <a href="#0x1_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>());
+                              ==&gt; addr == <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::SPEC_ASSOCIATION_ROOT_ADDRESS</a>());
 }
 </code></pre>
 
 
 
 
-<pre><code><b>apply</b> <a href="#0x1_RegisteredCurrencies_OnlySingletonHasRegisteredCurrencies">OnlySingletonHasRegisteredCurrencies</a> <b>to</b> *;
+<pre><code><b>apply</b> <a href="#0x1_RegisteredCurrencies_OnlyConfigAddressHasRegisteredCurrencies">OnlyConfigAddressHasRegisteredCurrencies</a> <b>to</b> *;
 </code></pre>
 
 
 
-<a name="0x1_RegisteredCurrencies_@Currency_codes"></a>
+<a name="0x1_RegisteredCurrencies_@Currency_Codes"></a>
 
-#### Currency codes
+#### Currency Codes
 
-Attempting to specify that only
-<code>add_currency</code> changes the currency_codes
-vector.
-**Confused:** I think
-<code>initialize</code> should violate this property unless it
-checks whether the module is already initialized, because it can be
-called a second time, overwriting existing currency_codes.
+> TODO: currency_code vector is a set (no dups).  (Not satisfied now.)
+> TODO: add_currency just pushes one thing.
+Only
+<code>Self::add_currency</code> changes the currency_codes vector.
 
 
-<a name="0x1_RegisteredCurrencies_OnlyAddCurrencyChangesT"></a>
+<a name="0x1_RegisteredCurrencies_OnlyAddCurrencyChangesRegistration"></a>
 
 
-<pre><code><b>schema</b> <a href="#0x1_RegisteredCurrencies_OnlyAddCurrencyChangesT">OnlyAddCurrencyChangesT</a> {
+<pre><code><b>schema</b> <a href="#0x1_RegisteredCurrencies_OnlyAddCurrencyChangesRegistration">OnlyAddCurrencyChangesRegistration</a> {
     <b>ensures</b> <b>old</b>(<a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>())
                  ==&gt; <b>old</b>(<a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;().currency_codes)
                       == <a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;().currency_codes;
@@ -288,9 +306,5 @@ called a second time, overwriting existing currency_codes.
 
 
 
-<code>add_currency_code</code> and
-<code>initialize</code> change the currency_code vector.
-
-
-<pre><code><b>apply</b> <a href="#0x1_RegisteredCurrencies_OnlyAddCurrencyChangesT">OnlyAddCurrencyChangesT</a> <b>to</b> * <b>except</b> add_currency_code;
+<pre><code><b>apply</b> <a href="#0x1_RegisteredCurrencies_OnlyAddCurrencyChangesRegistration">OnlyAddCurrencyChangesRegistration</a> <b>to</b> * <b>except</b> add_currency_code;
 </code></pre>

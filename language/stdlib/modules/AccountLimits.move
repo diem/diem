@@ -247,7 +247,7 @@ module AccountLimits {
     }
 
     fun current_time(): u64 {
-        if (LibraTimestamp::is_genesis()) 0 else LibraTimestamp::now_microseconds()
+        if (LibraTimestamp::is_not_initialized()) 0 else LibraTimestamp::now_microseconds()
     }
 }
 

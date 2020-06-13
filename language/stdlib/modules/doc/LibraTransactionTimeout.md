@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `TTL`](#0x1_LibraTransactionTimeout_TTL)
+-  [Resource `TTL`](#0x1_LibraTransactionTimeout_TTL)
 -  [Function `initialize`](#0x1_LibraTransactionTimeout_initialize)
 -  [Function `set_timeout`](#0x1_LibraTransactionTimeout_set_timeout)
 -  [Function `is_valid_transaction_timestamp`](#0x1_LibraTransactionTimeout_is_valid_transaction_timestamp)
@@ -14,7 +14,7 @@
 
 <a name="0x1_LibraTransactionTimeout_TTL"></a>
 
-## Struct `TTL`
+## Resource `TTL`
 
 
 

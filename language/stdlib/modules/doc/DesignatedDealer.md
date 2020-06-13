@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `Dealer`](#0x1_DesignatedDealer_Dealer)
+-  [Resource `Dealer`](#0x1_DesignatedDealer_Dealer)
 -  [Struct `ReceivedMintEvent`](#0x1_DesignatedDealer_ReceivedMintEvent)
 -  [Function `publish_designated_dealer_credential`](#0x1_DesignatedDealer_publish_designated_dealer_credential)
 -  [Function `add_tier_`](#0x1_DesignatedDealer_add_tier_)
@@ -22,7 +22,7 @@
 
 <a name="0x1_DesignatedDealer_Dealer"></a>
 
-## Struct `Dealer`
+## Resource `Dealer`
 
 
 

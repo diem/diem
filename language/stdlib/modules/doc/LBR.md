@@ -5,9 +5,9 @@
 
 ### Table of Contents
 
--  [Struct `LBR`](#0x1_LBR_LBR)
--  [Struct `ReserveComponent`](#0x1_LBR_ReserveComponent)
--  [Struct `Reserve`](#0x1_LBR_Reserve)
+-  [Resource `LBR`](#0x1_LBR_LBR)
+-  [Resource `ReserveComponent`](#0x1_LBR_ReserveComponent)
+-  [Resource `Reserve`](#0x1_LBR_Reserve)
 -  [Function `initialize`](#0x1_LBR_initialize)
 -  [Function `is_lbr`](#0x1_LBR_is_lbr)
 -  [Function `swap_into`](#0x1_LBR_swap_into)
@@ -37,7 +37,7 @@ amount of each coin is returned when an
 
 <a name="0x1_LBR_LBR"></a>
 
-## Struct `LBR`
+## Resource `LBR`
 
 The type tag representing the
 <code><a href="#0x1_LBR">LBR</a></code> currency on-chain.
@@ -67,7 +67,7 @@ The type tag representing the
 
 <a name="0x1_LBR_ReserveComponent"></a>
 
-## Struct `ReserveComponent`
+## Resource `ReserveComponent`
 
 A
 <code><a href="#0x1_LBR_ReserveComponent">ReserveComponent</a></code> holds one part of the on-chain reserve that backs
@@ -118,7 +118,7 @@ For example, if
 
 <a name="0x1_LBR_Reserve"></a>
 
-## Struct `Reserve`
+## Resource `Reserve`
 
 The on-chain reserve for the
 <code><a href="#0x1_LBR">LBR</a></code> holds both the capability for minting

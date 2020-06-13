@@ -9,6 +9,7 @@
 -  [Function `CURRENCY_INFO_ADDRESS`](#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS)
 -  [Function `TREASURY_COMPLIANCE_ADDRESS`](#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS)
 -  [Function `VM_RESERVED_ADDRESS`](#0x1_CoreAddresses_VM_RESERVED_ADDRESS)
+-  [Specification](#0x1_CoreAddresses_Specification)
 
 
 
@@ -124,3 +125,58 @@ is no signer for the transaction.
 
 
 </details>
+
+<a name="0x1_CoreAddresses_Specification"></a>
+
+## Specification
+
+Specification version of
+<code><a href="#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">Self::ASSOCIATION_ROOT_ADDRESS</a></code>.
+
+
+<a name="0x1_CoreAddresses_SPEC_ASSOCIATION_ROOT_ADDRESS"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_CoreAddresses_SPEC_ASSOCIATION_ROOT_ADDRESS">SPEC_ASSOCIATION_ROOT_ADDRESS</a>(): address {
+    0xA550C18
+}
+</code></pre>
+
+
+Specification version of
+<code><a href="#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">Self::CURRENCY_INFO_ADDRESS</a></code>.
+
+
+<a name="0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">SPEC_CURRENCY_INFO_ADDRESS</a>(): address {
+    0xA550C18
+}
+</code></pre>
+
+
+Specification version of
+<code><a href="#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">Self::TREASURY_COMPLIANCE_ADDRESS</a></code>.
+
+
+<a name="0x1_CoreAddresses_SPEC_TREASURY_COMPLIANCE_ADDRESS"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_CoreAddresses_SPEC_TREASURY_COMPLIANCE_ADDRESS">SPEC_TREASURY_COMPLIANCE_ADDRESS</a>(): address {
+    0xB1E55ED
+}
+</code></pre>
+
+
+Specification version of
+<code><a href="#0x1_CoreAddresses_VM_RESERVED_ADDRESS">Self::VM_RESERVED_ADDRESS</a></code>.
+
+
+<a name="0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">SPEC_VM_RESERVED_ADDRESS</a>(): address {
+    0x0
+}
+</code></pre>

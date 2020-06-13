@@ -5,17 +5,17 @@
 
 ### Table of Contents
 
--  [Struct `RoleId`](#0x1_Roles_RoleId)
--  [Struct `Capability`](#0x1_Roles_Capability)
--  [Struct `Privilege`](#0x1_Roles_Privilege)
--  [Struct `AssociationRootRole`](#0x1_Roles_AssociationRootRole)
--  [Struct `TreasuryComplianceRole`](#0x1_Roles_TreasuryComplianceRole)
--  [Struct `DesignatedDealerRole`](#0x1_Roles_DesignatedDealerRole)
--  [Struct `ValidatorRole`](#0x1_Roles_ValidatorRole)
--  [Struct `ValidatorOperatorRole`](#0x1_Roles_ValidatorOperatorRole)
--  [Struct `ParentVASPRole`](#0x1_Roles_ParentVASPRole)
--  [Struct `ChildVASPRole`](#0x1_Roles_ChildVASPRole)
--  [Struct `UnhostedRole`](#0x1_Roles_UnhostedRole)
+-  [Resource `RoleId`](#0x1_Roles_RoleId)
+-  [Resource `Capability`](#0x1_Roles_Capability)
+-  [Resource `Privilege`](#0x1_Roles_Privilege)
+-  [Resource `AssociationRootRole`](#0x1_Roles_AssociationRootRole)
+-  [Resource `TreasuryComplianceRole`](#0x1_Roles_TreasuryComplianceRole)
+-  [Resource `DesignatedDealerRole`](#0x1_Roles_DesignatedDealerRole)
+-  [Resource `ValidatorRole`](#0x1_Roles_ValidatorRole)
+-  [Resource `ValidatorOperatorRole`](#0x1_Roles_ValidatorOperatorRole)
+-  [Resource `ParentVASPRole`](#0x1_Roles_ParentVASPRole)
+-  [Resource `ChildVASPRole`](#0x1_Roles_ChildVASPRole)
+-  [Resource `UnhostedRole`](#0x1_Roles_UnhostedRole)
 -  [Function `ASSOCIATION_ROOT_ROLE_ID`](#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID)
 -  [Function `TREASURY_COMPLIANCE_ROLE_ID`](#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID)
 -  [Function `DESIGNATED_DEALER_ROLE_ID`](#0x1_Roles_DESIGNATED_DEALER_ROLE_ID)
@@ -87,7 +87,7 @@ a
 
 <a name="0x1_Roles_RoleId"></a>
 
-## Struct `RoleId`
+## Resource `RoleId`
 
 The roleId contains the role id for the account. This is only moved
 to an account as a top-level resource, and is otherwise immovable.
@@ -117,7 +117,7 @@ to an account as a top-level resource, and is otherwise immovable.
 
 <a name="0x1_Roles_Capability"></a>
 
-## Struct `Capability`
+## Resource `Capability`
 
 Privileges are extracted in to capabilities. Capabilities hold /
 the account address that they were extracted from (i.e. tagged or
@@ -149,7 +149,7 @@ from which they were extracted.
 
 <a name="0x1_Roles_Privilege"></a>
 
-## Struct `Privilege`
+## Resource `Privilege`
 
 The internal representation of of a privilege. We wrap every
 privilege witness resource here to avoid having to write extractors/restorers
@@ -187,7 +187,7 @@ for each privilege, but can instead write this generically.
 
 <a name="0x1_Roles_AssociationRootRole"></a>
 
-## Struct `AssociationRootRole`
+## Resource `AssociationRootRole`
 
 Every role is granted a "default privilege" for that role. This can
 be seen as a base-permission for every account of that role type.
@@ -219,7 +219,7 @@ correspond precisely to the RoleId.
 
 <a name="0x1_Roles_TreasuryComplianceRole"></a>
 
-## Struct `TreasuryComplianceRole`
+## Resource `TreasuryComplianceRole`
 
 
 
@@ -247,7 +247,7 @@ correspond precisely to the RoleId.
 
 <a name="0x1_Roles_DesignatedDealerRole"></a>
 
-## Struct `DesignatedDealerRole`
+## Resource `DesignatedDealerRole`
 
 
 
@@ -275,7 +275,7 @@ correspond precisely to the RoleId.
 
 <a name="0x1_Roles_ValidatorRole"></a>
 
-## Struct `ValidatorRole`
+## Resource `ValidatorRole`
 
 
 
@@ -303,7 +303,7 @@ correspond precisely to the RoleId.
 
 <a name="0x1_Roles_ValidatorOperatorRole"></a>
 
-## Struct `ValidatorOperatorRole`
+## Resource `ValidatorOperatorRole`
 
 
 
@@ -331,7 +331,7 @@ correspond precisely to the RoleId.
 
 <a name="0x1_Roles_ParentVASPRole"></a>
 
-## Struct `ParentVASPRole`
+## Resource `ParentVASPRole`
 
 
 
@@ -359,7 +359,7 @@ correspond precisely to the RoleId.
 
 <a name="0x1_Roles_ChildVASPRole"></a>
 
-## Struct `ChildVASPRole`
+## Resource `ChildVASPRole`
 
 
 
@@ -387,7 +387,7 @@ correspond precisely to the RoleId.
 
 <a name="0x1_Roles_UnhostedRole"></a>
 
-## Struct `UnhostedRole`
+## Resource `UnhostedRole`
 
 
 
@@ -854,7 +854,7 @@ privileges need to be created before accounts can be made
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_grant_root_association_role">grant_root_association_role</a>(
     association: &signer,
 ) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_is_genesis">LibraTimestamp::assert_is_genesis</a>();
     <b>let</b> owner_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association);
     <b>assert</b>(owner_address == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 0);
     // Grant the role <b>to</b> the association root account
@@ -890,7 +890,7 @@ and roles.
     treasury_compliance_account: &signer,
     _: &<a href="#0x1_Roles_Capability">Capability</a>&lt;<a href="#0x1_Roles_AssociationRootRole">AssociationRootRole</a>&gt;,
 ) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_is_genesis">LibraTimestamp::assert_is_genesis</a>();
     <b>let</b> owner_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(treasury_compliance_account);
     <b>assert</b>(owner_address == <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>(), 0);
     // Grant the TC role <b>to</b> the treasury_compliance_account

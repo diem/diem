@@ -5,11 +5,11 @@
 
 ### Table of Contents
 
--  [Struct `CreateOnChainConfig`](#0x1_LibraConfig_CreateOnChainConfig)
--  [Struct `LibraConfig`](#0x1_LibraConfig_LibraConfig)
+-  [Resource `CreateOnChainConfig`](#0x1_LibraConfig_CreateOnChainConfig)
+-  [Resource `LibraConfig`](#0x1_LibraConfig_LibraConfig)
 -  [Struct `NewEpochEvent`](#0x1_LibraConfig_NewEpochEvent)
--  [Struct `Configuration`](#0x1_LibraConfig_Configuration)
--  [Struct `ModifyConfigCapability`](#0x1_LibraConfig_ModifyConfigCapability)
+-  [Resource `Configuration`](#0x1_LibraConfig_Configuration)
+-  [Resource `ModifyConfigCapability`](#0x1_LibraConfig_ModifyConfigCapability)
 -  [Function `grant_privileges`](#0x1_LibraConfig_grant_privileges)
 -  [Function `initialize`](#0x1_LibraConfig_initialize)
 -  [Function `get`](#0x1_LibraConfig_get)
@@ -31,7 +31,7 @@
 
 <a name="0x1_LibraConfig_CreateOnChainConfig"></a>
 
-## Struct `CreateOnChainConfig`
+## Resource `CreateOnChainConfig`
 
 
 
@@ -59,7 +59,7 @@
 
 <a name="0x1_LibraConfig_LibraConfig"></a>
 
-## Struct `LibraConfig`
+## Resource `LibraConfig`
 
 
 
@@ -115,7 +115,7 @@
 
 <a name="0x1_LibraConfig_Configuration"></a>
 
-## Struct `Configuration`
+## Resource `Configuration`
 
 
 
@@ -157,7 +157,7 @@
 
 <a name="0x1_LibraConfig_ModifyConfigCapability"></a>
 
-## Struct `ModifyConfigCapability`
+## Resource `ModifyConfigCapability`
 
 
 
@@ -531,7 +531,7 @@ Will fail if the account is not association root
 
 <pre><code><b>fun</b> <a href="#0x1_LibraConfig_reconfigure_">reconfigure_</a>() <b>acquires</b> <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
    // Do not do anything <b>if</b> time is not set up yet, this is <b>to</b> avoid genesis emit too many epochs.
-   <b>if</b> (<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>()) {
+   <b>if</b> (<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_not_initialized">LibraTimestamp::is_not_initialized</a>()) {
        <b>return</b> ()
    };
 
@@ -594,12 +594,30 @@ definitions that are used by RegisteredCurrencies
 
 
 <pre><code>pragma verify = <b>true</b>;
+</code></pre>
+
+
+Spec version of
+<code><a href="#0x1_LibraConfig_get">LibraConfig::get</a>&lt;Config&gt;</code>.
+
+
 <a name="0x1_LibraConfig_spec_get"></a>
-<b>define</b> <a href="#0x1_LibraConfig_spec_get">spec_get</a>&lt;Config&gt;(): Config {
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraConfig_spec_get">spec_get</a>&lt;Config&gt;(): Config {
     <b>global</b>&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(0xA550C18).payload
 }
+</code></pre>
+
+
+Spec version of
+<code>LibraConfig::is_published&lt;Config&gt;</code>.
+
+
 <a name="0x1_LibraConfig_spec_is_published"></a>
-<b>define</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(addr: address): bool {
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(addr: address): bool {
     exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr)
 }
 </code></pre>

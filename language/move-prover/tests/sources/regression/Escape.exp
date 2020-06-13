@@ -1,0 +1,13 @@
+Move prover returns: exiting with boogie verification errors
+error: post-condition does not hold
+
+    ┌── tests/sources/regression/Escape.move:50:9 ───
+    │
+ 50 │         invariant module forall addr: address where exists<Wrapper<IndoorThing>>(addr): addr == 0x123;
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/regression/Escape.move:24:5: install (entry)
+    =     at tests/sources/regression/Escape.move:25:9: install
+    =         account = <redacted>,
+    =         thing = <redacted>
+    =     at tests/sources/regression/Escape.move:24:5: install (exit)

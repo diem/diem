@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `RecoveryAddress`](#0x1_RecoveryAddress_RecoveryAddress)
+-  [Resource `RecoveryAddress`](#0x1_RecoveryAddress_RecoveryAddress)
 -  [Function `publish`](#0x1_RecoveryAddress_publish)
 -  [Function `rotate_authentication_key`](#0x1_RecoveryAddress_rotate_authentication_key)
 -  [Function `add_rotation_capability`](#0x1_RecoveryAddress_add_rotation_capability)
@@ -24,7 +24,7 @@
 
 <a name="0x1_RecoveryAddress_RecoveryAddress"></a>
 
-## Struct `RecoveryAddress`
+## Resource `RecoveryAddress`
 
 A resource that holds the
 <code>KeyRotationCapability</code>s for several accounts belonging to the

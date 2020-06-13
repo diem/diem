@@ -146,6 +146,9 @@ module Genesis {
 
         Roles::restore_capability_to_privilege(tc_account, currency_registration_capability);
         Roles::restore_capability_to_privilege(tc_account, tc_capability);
+
+        // Mark that genesis has finished. This must appear as the last call.
+        LibraTimestamp::set_time_has_started(association);
     }
 
 }

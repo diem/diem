@@ -5,9 +5,9 @@
 
 ### Table of Contents
 
--  [Struct `UpdateValidatorConfig`](#0x1_ValidatorConfig_UpdateValidatorConfig)
+-  [Resource `UpdateValidatorConfig`](#0x1_ValidatorConfig_UpdateValidatorConfig)
 -  [Struct `Config`](#0x1_ValidatorConfig_Config)
--  [Struct `ValidatorConfig`](#0x1_ValidatorConfig_ValidatorConfig)
+-  [Resource `ValidatorConfig`](#0x1_ValidatorConfig_ValidatorConfig)
 -  [Function `publish`](#0x1_ValidatorConfig_publish)
 -  [Function `set_operator`](#0x1_ValidatorConfig_set_operator)
 -  [Function `remove_operator`](#0x1_ValidatorConfig_remove_operator)
@@ -23,7 +23,7 @@
 
 <a name="0x1_ValidatorConfig_UpdateValidatorConfig"></a>
 
-## Struct `UpdateValidatorConfig`
+## Resource `UpdateValidatorConfig`
 
 
 
@@ -107,7 +107,7 @@
 
 <a name="0x1_ValidatorConfig_ValidatorConfig"></a>
 
-## Struct `ValidatorConfig`
+## Resource `ValidatorConfig`
 
 
 

@@ -5,9 +5,9 @@
 
 ### Table of Contents
 
--  [Struct `CallingCapability`](#0x1_AccountLimits_CallingCapability)
--  [Struct `LimitsDefinition`](#0x1_AccountLimits_LimitsDefinition)
--  [Struct `Window`](#0x1_AccountLimits_Window)
+-  [Resource `CallingCapability`](#0x1_AccountLimits_CallingCapability)
+-  [Resource `LimitsDefinition`](#0x1_AccountLimits_LimitsDefinition)
+-  [Resource `Window`](#0x1_AccountLimits_Window)
 -  [Function `grant_calling_capability`](#0x1_AccountLimits_grant_calling_capability)
 -  [Function `update_deposit_limits`](#0x1_AccountLimits_update_deposit_limits)
 -  [Function `update_withdrawal_limits`](#0x1_AccountLimits_update_withdrawal_limits)
@@ -30,7 +30,7 @@
 
 <a name="0x1_AccountLimits_CallingCapability"></a>
 
-## Struct `CallingCapability`
+## Resource `CallingCapability`
 
 
 
@@ -58,7 +58,7 @@
 
 <a name="0x1_AccountLimits_LimitsDefinition"></a>
 
-## Struct `LimitsDefinition`
+## Resource `LimitsDefinition`
 
 
 
@@ -107,7 +107,7 @@
 
 <a name="0x1_AccountLimits_Window"></a>
 
-## Struct `Window`
+## Resource `Window`
 
 
 
@@ -651,7 +651,7 @@
 
 
 <pre><code><b>fun</b> <a href="#0x1_AccountLimits_current_time">current_time</a>(): u64 {
-    <b>if</b> (<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>()) 0 <b>else</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>()
+    <b>if</b> (<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_not_initialized">LibraTimestamp::is_not_initialized</a>()) 0 <b>else</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>()
 }
 </code></pre>
 

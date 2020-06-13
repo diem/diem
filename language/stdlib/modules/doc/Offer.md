@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `Offer`](#0x1_Offer_Offer)
+-  [Resource `Offer`](#0x1_Offer_Offer)
 -  [Function `create`](#0x1_Offer_create)
 -  [Function `redeem`](#0x1_Offer_redeem)
 -  [Function `exists_at`](#0x1_Offer_exists_at)
@@ -23,7 +23,7 @@
 
 <a name="0x1_Offer_Offer"></a>
 
-## Struct `Offer`
+## Resource `Offer`
 
 
 

@@ -57,21 +57,19 @@ module RegisteredCurrencies {
     spec module {
         pragma verify = true;
 
-        define spec_singleton_address(): address { 0xA550C18 }
-
-        // spec_is_initialized() is true iff initialize has been called.
-        define spec_is_initialized():bool {
-            LibraConfig::spec_is_published<RegisteredCurrencies>(spec_singleton_address())
+        /// Returns true iff initialize has been called.
+        define spec_is_initialized(): bool {
+            LibraConfig::spec_is_published<RegisteredCurrencies>(CoreAddresses::SPEC_ASSOCIATION_ROOT_ADDRESS())
         }
     }
 
     /// ## Initialization
 
     spec fun initialize {
-        /// After `initialize` is called, the module is initialized.
         pragma aborts_if_is_partial = true;
 
-        // `initialize` aborts if already initialized
+        /// After `initialize` is called, the module is initialized.
+        /// `initialize` aborts if already initialized
         aborts_if spec_is_initialized();
         ensures spec_is_initialized();
     }
@@ -87,40 +85,36 @@ module RegisteredCurrencies {
 
     /// ## Uniqueness of the RegisteredCurrencies config.
 
-    spec schema OnlySingletonHasRegisteredCurrencies {
-        // *Informally:* There is no address with a RegisteredCurrencies value before initialization.
+    spec schema OnlyConfigAddressHasRegisteredCurrencies {
+        /// There is no address with a RegisteredCurrencies value before initialization.
         invariant !spec_is_initialized()
             ==> (forall addr: address: !LibraConfig::spec_is_published<RegisteredCurrencies>(addr));
-        // *Informally:* After initialization, only singleton_address() has a RegisteredCurrencies value.
+
+        /// *Informally:* After initialization, only singleton_address() has a RegisteredCurrencies value.
         invariant spec_is_initialized()
-            ==> LibraConfig::spec_is_published<RegisteredCurrencies>(spec_singleton_address())
+            ==> LibraConfig::spec_is_published<RegisteredCurrencies>(CoreAddresses::SPEC_ASSOCIATION_ROOT_ADDRESS())
                 && (forall addr: address:
                        LibraConfig::spec_is_published<RegisteredCurrencies>(addr)
-                                  ==> addr == spec_singleton_address());
+                                  ==> addr == CoreAddresses::SPEC_ASSOCIATION_ROOT_ADDRESS());
     }
     spec module {
-        apply OnlySingletonHasRegisteredCurrencies to *;
+        apply OnlyConfigAddressHasRegisteredCurrencies to *;
     }
 
-    /// ## Currency codes
+    /// ## Currency Codes
 
-    /// Attempting to specify that only `add_currency` changes the currency_codes
-    /// vector.
-    /// **Confused:** I think `initialize` should violate this property unless it
-    /// checks whether the module is already initialized, because it can be
-    /// called a second time, overwriting existing currency_codes.
-    spec schema OnlyAddCurrencyChangesT {
+    /// > TODO: currency_code vector is a set (no dups).  (Not satisfied now.)
+    /// > TODO: add_currency just pushes one thing.
+
+    /// Only `Self::add_currency` changes the currency_codes vector.
+    spec schema OnlyAddCurrencyChangesRegistration {
         ensures old(spec_is_initialized())
                      ==> old(LibraConfig::spec_get<RegisteredCurrencies>().currency_codes)
                           == LibraConfig::spec_get<RegisteredCurrencies>().currency_codes;
     }
     spec module {
-        /// `add_currency_code` and `initialize` change the currency_code vector.
-        apply OnlyAddCurrencyChangesT to * except add_currency_code;
+        apply OnlyAddCurrencyChangesRegistration to * except add_currency_code;
     }
-
-    // TODO: currency_code vector is a set (no dups).  (Not satisfied now.)
-    // TODO: add_currency just pushes one thing.
 
 }
 

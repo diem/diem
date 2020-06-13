@@ -7,10 +7,10 @@
 
 -  [Note](#0x1_LibraDocTest_@Note)
 -  [Settings for Verification](#0x1_LibraDocTest_@Settings_for_Verification)
--  [Struct `T`](#0x1_LibraDocTest_T)
--  [Struct `MintCapability`](#0x1_LibraDocTest_MintCapability)
--  [Struct `Info`](#0x1_LibraDocTest_Info)
--  [Struct `Preburn`](#0x1_LibraDocTest_Preburn)
+-  [Resource `T`](#0x1_LibraDocTest_T)
+-  [Resource `MintCapability`](#0x1_LibraDocTest_MintCapability)
+-  [Resource `Info`](#0x1_LibraDocTest_Info)
+-  [Resource `Preburn`](#0x1_LibraDocTest_Preburn)
 -  [Function `register`](#0x1_LibraDocTest_register)
 -  [Function `assert_is_registered`](#0x1_LibraDocTest_assert_is_registered)
 -  [Function `mint`](#0x1_LibraDocTest_mint)
@@ -76,7 +76,7 @@ Verify also private functions.
 
 <a name="0x1_LibraDocTest_T"></a>
 
-## Struct `T`
+## Resource `T`
 
 A resource representing a fungible token
 
@@ -171,7 +171,7 @@ State machine with two states (not registered/registered), so write as two invar
 
 <a name="0x1_LibraDocTest_MintCapability"></a>
 
-## Struct `MintCapability`
+## Resource `MintCapability`
 
 A singleton resource that grants access to
 <code><a href="#0x1_LibraDocTest_mint">LibraDocTest::mint</a></code>. Only the Association has one.
@@ -270,7 +270,7 @@ If token is registered, there is exactly one capability.
 
 <a name="0x1_LibraDocTest_Info"></a>
 
-## Struct `Info`
+## Resource `Info`
 
 
 
@@ -339,7 +339,7 @@ Once registered, a token stays registered forever.
 
 <a name="0x1_LibraDocTest_Preburn"></a>
 
-## Struct `Preburn`
+## Resource `Preburn`
 
 A holding area where funds that will subsequently be burned wait while their underyling
 assets are sold off-chain.

@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `SharedEd25519PublicKey`](#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey)
+-  [Resource `SharedEd25519PublicKey`](#0x1_SharedEd25519PublicKey_SharedEd25519PublicKey)
 -  [Function `publish`](#0x1_SharedEd25519PublicKey_publish)
 -  [Function `rotate_key_`](#0x1_SharedEd25519PublicKey_rotate_key_)
 -  [Function `rotate_key`](#0x1_SharedEd25519PublicKey_rotate_key)
@@ -16,7 +16,7 @@
 
 <a name="0x1_SharedEd25519PublicKey_SharedEd25519PublicKey"></a>
 
-## Struct `SharedEd25519PublicKey`
+## Resource `SharedEd25519PublicKey`
 
 
 

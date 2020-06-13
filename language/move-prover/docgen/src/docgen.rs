@@ -392,7 +392,7 @@ impl<'env> Docgen<'env> {
     fn gen_struct(&self, spec_block_map: &SpecBlockMap<'_>, struct_env: &StructEnv<'_>) {
         let name = struct_env.get_name();
         self.section_header(
-            &format!("Struct `{}`", self.name_string(name)),
+            &self.struct_title(struct_env),
             &self.label_for_module_item(&struct_env.module_env, name),
         );
         self.increment_section_nest();
@@ -419,6 +419,19 @@ impl<'env> Docgen<'env> {
             );
         }
         self.decrement_section_nest();
+    }
+
+    /// Returns "Struct `N`" or "Resource `N`".
+    fn struct_title(&self, struct_env: &StructEnv<'_>) -> String {
+        format!(
+            "{} `{}`",
+            if struct_env.is_resource() {
+                "Resource"
+            } else {
+                "Struct"
+            },
+            self.name_string(struct_env.get_name())
+        )
     }
 
     /// Generates code signature for a struct.
@@ -651,7 +664,7 @@ impl<'env> Docgen<'env> {
             if spec_block_map.contains_key(&target) {
                 let name = self.name_string(struct_env.get_name());
                 self.section_header(
-                    &format!("Struct `{}`", name),
+                    &self.struct_title(&struct_env),
                     &format!("{}_{}", section_label, name),
                 );
                 self.code_block(module_env, &self.struct_header_display(&struct_env));
