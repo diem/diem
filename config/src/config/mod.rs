@@ -382,9 +382,9 @@ impl RootPath {
 mod test {
     use super::*;
 
-    const PUBLIC_FULL_NODE: &str = "src/config/test_data/public_full_node.config.yaml";
-    const VALIDATOR: &str = "src/config/test_data/validator.config.yaml";
-    const VALIDATOR_FULL_NODE: &str = "src/config/test_data/validator_full_node.config.yaml";
+    const PUBLIC_FULL_NODE: &str = "src/config/test_data/public_full_node.yaml";
+    const VALIDATOR: &str = "src/config/test_data/validator.yaml";
+    const VALIDATOR_FULL_NODE: &str = "src/config/test_data/validator_full_node.yaml";
 
     #[test]
     fn verify_role_type_conversion() {
