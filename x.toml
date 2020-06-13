@@ -12,6 +12,31 @@ allowed = [
     "clippy::eval-order-dependence",
 ]
 
+# This follows the same syntax as CargoOptionsSummary in guppy.
+[summaries.default]
+version = "v2"
+include-dev = false
+proc-macros-on-target = false
+
+[summaries.default.target-platform]
+triple = "x86_64-unknown-linux-gnu"
+target-features = "all"
+
+[summaries.default.host-platform]
+triple = "x86_64-unknown-linux-gnu"
+target-features = "all"
+
+[[summaries.default.omitted-packages]]
+name = "libra-workspace-hack"
+version = "0.1.0"
+workspace-path = "common/workspace-hack"
+
+[summaries.full]
+version = "v2"
+include-dev = true
+proc-macros-on-target = false
+# Don't set target or host platforms, or omitted packages, for the full set.
+
 [workspace.enforced-attributes]
 authors = ["Libra Association <opensource@libra.org>"]
 license = "Apache-2.0"
@@ -68,4 +93,15 @@ members = [
     "testsuite/libra-swarm",
 ]
 
-[workspace.banned-default-deps]
+# Interesting subsets of the workspace, in this case representing parts of the TCB.
+[workspace.subsets.lsr]
+# The Libra safety rules TCB.
+members = [
+    "consensus/safety-rules",
+]
+
+[workspace.subsets.lec]
+# The Libra execution correctness TCB.
+members = [
+    "execution/execution-correctness"
+]

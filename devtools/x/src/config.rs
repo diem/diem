@@ -2,9 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{utils::project_root, Result};
+use guppy::graph::summaries::CargoOptionsSummary;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     fs,
     path::{Path, PathBuf},
 };
@@ -14,6 +15,8 @@ use std::{
 pub struct Config {
     /// Package exceptions which need to be run special
     package_exceptions: HashMap<String, Package>,
+    /// Configuration for generating summaries
+    summaries: SummariesConfig,
     /// Workspace configuration
     workspace: WorkspaceConfig,
     /// Clippy configureation
@@ -37,6 +40,15 @@ fn default_as_true() -> bool {
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
+pub struct SummariesConfig {
+    /// Config for default members and subsets
+    pub default: CargoOptionsSummary,
+    /// Config for the full workspace
+    pub full: CargoOptionsSummary,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
 pub struct WorkspaceConfig {
     /// Attributes to enforce on workspace crates
     pub enforced_attributes: EnforcedAttributesConfig,
@@ -46,6 +58,8 @@ pub struct WorkspaceConfig {
     pub overlay: OverlayConfig,
     /// Test-only config in this workspace
     pub test_only: TestOnlyConfig,
+    /// Subsets of this workspace
+    pub subsets: BTreeMap<String, SubsetConfig>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
@@ -82,6 +96,13 @@ pub struct TestOnlyConfig {
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
+pub struct SubsetConfig {
+    /// The members in this subset
+    pub members: HashSet<PathBuf>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
 pub struct Clippy {
     allowed: Vec<String>,
 }
@@ -106,6 +127,10 @@ impl Config {
 
     pub fn package_exceptions(&self) -> &HashMap<String, Package> {
         &self.package_exceptions
+    }
+
+    pub fn summaries_config(&self) -> &SummariesConfig {
+        &self.summaries
     }
 
     pub fn workspace_config(&self) -> &WorkspaceConfig {
