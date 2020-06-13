@@ -203,7 +203,7 @@ impl ValidatorConfig {
                         .ok_or_else(|| Error::MissingSafetyRulesHost)?
                         .clone(),
                     ca_certificate: None,
-                    token: Token::new_config(
+                    token: Token::FromConfig(
                         self.safety_rules_token
                             .as_ref()
                             .ok_or_else(|| Error::MissingSafetyRulesToken)?

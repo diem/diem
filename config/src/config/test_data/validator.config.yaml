@@ -9,8 +9,7 @@ base:
             server: "https://127.0.0.1:8200"
             ca_certificate: "/full/path/to/certificate"
             token:
-                type: "from_disk"
-                path: "/full/path/to/token"
+                from_disk: "/full/path/to/token"
 
 consensus:
     safety_rules:
@@ -34,8 +33,7 @@ full_node_networks:
               server: "https://127.0.0.1:8200"
               ca_certificate: "/full/path/to/certificate"
               token:
-                  type: "from_disk"
-                  path: "/full/path/to/token"
+                  from_disk: "/full/path/to/token"
       network_id:
           type: "private"
           name: "vfn"
@@ -51,8 +49,7 @@ validator_network:
             server: "https://127.0.0.1:8200"
             ca_certificate: "/full/path/to/certificate"
             token:
-                type: "from_disk"
-                path: "/full/path/to/token"
+                from_disk: "/full/path/to/token"
     mutual_authentication: true
     network_id:
         type: "validator"

@@ -102,7 +102,7 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                     namespace: self.parameters.remove("namespace"),
                     owner,
                     repository,
-                    token: Token::new_disk(PathBuf::from(token)),
+                    token: Token::FromDisk(PathBuf::from(token)),
                 })
             }
             MEMORY => config::SecureBackend::InMemoryStorage,
@@ -120,7 +120,7 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                     namespace: self.parameters.remove("namespace"),
                     server,
                     ca_certificate: certificate,
-                    token: Token::new_disk(PathBuf::from(token)),
+                    token: Token::FromDisk(PathBuf::from(token)),
                 })
             }
             _ => panic!("Invalid backend: {}", self.backend),
