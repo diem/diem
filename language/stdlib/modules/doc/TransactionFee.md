@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `TransactionFee`](#0x1_TransactionFee_TransactionFee)
+-  [Resource `TransactionFee`](#0x1_TransactionFee_TransactionFee)
 -  [Function `initialize`](#0x1_TransactionFee_initialize)
 -  [Function `add_txn_fee_currency`](#0x1_TransactionFee_add_txn_fee_currency)
 -  [Function `pay_fee`](#0x1_TransactionFee_pay_fee)
@@ -16,7 +16,7 @@
 
 <a name="0x1_TransactionFee_TransactionFee"></a>
 
-## Struct `TransactionFee`
+## Resource `TransactionFee`
 
 The
 <code><a href="#0x1_TransactionFee">TransactionFee</a></code> resource holds a preburn resource for each

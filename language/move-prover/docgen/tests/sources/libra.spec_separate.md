@@ -6,10 +6,10 @@
 ### Table of Contents
 
 -  [Note](#0x1_LibraDocTest_@Note)
--  [Struct `T`](#0x1_LibraDocTest_T)
--  [Struct `MintCapability`](#0x1_LibraDocTest_MintCapability)
--  [Struct `Info`](#0x1_LibraDocTest_Info)
--  [Struct `Preburn`](#0x1_LibraDocTest_Preburn)
+-  [Resource `T`](#0x1_LibraDocTest_T)
+-  [Resource `MintCapability`](#0x1_LibraDocTest_MintCapability)
+-  [Resource `Info`](#0x1_LibraDocTest_Info)
+-  [Resource `Preburn`](#0x1_LibraDocTest_Preburn)
 -  [Function `register`](#0x1_LibraDocTest_register)
 -  [Function `assert_is_registered`](#0x1_LibraDocTest_assert_is_registered)
 -  [Function `mint`](#0x1_LibraDocTest_mint)
@@ -37,9 +37,9 @@
 -  [Function `destroy_zero`](#0x1_LibraDocTest_destroy_zero)
 -  [Specification](#0x1_LibraDocTest_Specification)
     -  [Settings for Verification](#0x1_LibraDocTest_@Settings_for_Verification)
-    -  [Struct `T`](#0x1_LibraDocTest_Specification_T)
-    -  [Struct `MintCapability`](#0x1_LibraDocTest_Specification_MintCapability)
-    -  [Struct `Info`](#0x1_LibraDocTest_Specification_Info)
+    -  [Resource `T`](#0x1_LibraDocTest_Specification_T)
+    -  [Resource `MintCapability`](#0x1_LibraDocTest_Specification_MintCapability)
+    -  [Resource `Info`](#0x1_LibraDocTest_Specification_Info)
     -  [Function `register`](#0x1_LibraDocTest_Specification_register)
     -  [Function `assert_is_registered`](#0x1_LibraDocTest_Specification_assert_is_registered)
     -  [Function `mint`](#0x1_LibraDocTest_Specification_mint)
@@ -87,7 +87,7 @@ of the
 
 <a name="0x1_LibraDocTest_T"></a>
 
-## Struct `T`
+## Resource `T`
 
 A resource representing a fungible token
 
@@ -116,7 +116,7 @@ A resource representing a fungible token
 
 <a name="0x1_LibraDocTest_MintCapability"></a>
 
-## Struct `MintCapability`
+## Resource `MintCapability`
 
 A singleton resource that grants access to
 <code><a href="#0x1_LibraDocTest_mint">LibraDocTest::mint</a></code>. Only the Association has one.
@@ -153,7 +153,7 @@ A singleton resource that grants access to
 
 <a name="0x1_LibraDocTest_Info"></a>
 
-## Struct `Info`
+## Resource `Info`
 
 
 
@@ -189,7 +189,7 @@ A singleton resource that grants access to
 
 <a name="0x1_LibraDocTest_Preburn"></a>
 
-## Struct `Preburn`
+## Resource `Preburn`
 
 A holding area where funds that will subsequently be burned wait while their underyling
 assets are sold off-chain.
@@ -999,7 +999,7 @@ Verify also private functions.
 
 <a name="0x1_LibraDocTest_Specification_T"></a>
 
-### Struct `T`
+### Resource `T`
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_LibraDocTest_T">T</a>&lt;Token&gt;
@@ -1086,7 +1086,7 @@ State machine with two states (not registered/registered), so write as two invar
 
 <a name="0x1_LibraDocTest_Specification_MintCapability"></a>
 
-### Struct `MintCapability`
+### Resource `MintCapability`
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_LibraDocTest_MintCapability">MintCapability</a>&lt;Token&gt;
@@ -1169,7 +1169,7 @@ If token is registered, there is exactly one capability.
 
 <a name="0x1_LibraDocTest_Specification_Info"></a>
 
-### Struct `Info`
+### Resource `Info`
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_LibraDocTest_Info">Info</a>&lt;Token&gt;

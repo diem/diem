@@ -150,7 +150,7 @@ module LibraConfig {
 
     fun reconfigure_() acquires Configuration {
        // Do not do anything if time is not set up yet, this is to avoid genesis emit too many epochs.
-       if (LibraTimestamp::is_genesis()) {
+       if (LibraTimestamp::is_not_initialized()) {
            return ()
        };
 
@@ -189,11 +189,12 @@ module LibraConfig {
 
         pragma verify = true;
 
-        // spec_get is the spec version of get<Config>
+        /// Spec version of `LibraConfig::get<Config>`.
         define spec_get<Config>(): Config {
             global<LibraConfig<Config>>(0xA550C18).payload
         }
 
+        /// Spec version of `LibraConfig::is_published<Config>`.
         define spec_is_published<Config>(addr: address): bool {
             exists<LibraConfig<Config>>(addr)
         }

@@ -5,18 +5,18 @@
 
 ### Table of Contents
 
--  [Struct `RegisterNewCurrency`](#0x1_Libra_RegisterNewCurrency)
--  [Struct `Libra`](#0x1_Libra_Libra)
--  [Struct `MintCapability`](#0x1_Libra_MintCapability)
--  [Struct `BurnCapability`](#0x1_Libra_BurnCapability)
--  [Struct `CurrencyRegistrationCapability`](#0x1_Libra_CurrencyRegistrationCapability)
+-  [Resource `RegisterNewCurrency`](#0x1_Libra_RegisterNewCurrency)
+-  [Resource `Libra`](#0x1_Libra_Libra)
+-  [Resource `MintCapability`](#0x1_Libra_MintCapability)
+-  [Resource `BurnCapability`](#0x1_Libra_BurnCapability)
+-  [Resource `CurrencyRegistrationCapability`](#0x1_Libra_CurrencyRegistrationCapability)
 -  [Struct `MintEvent`](#0x1_Libra_MintEvent)
 -  [Struct `BurnEvent`](#0x1_Libra_BurnEvent)
 -  [Struct `PreburnEvent`](#0x1_Libra_PreburnEvent)
 -  [Struct `CancelBurnEvent`](#0x1_Libra_CancelBurnEvent)
 -  [Struct `ToLBRExchangeRateUpdateEvent`](#0x1_Libra_ToLBRExchangeRateUpdateEvent)
--  [Struct `CurrencyInfo`](#0x1_Libra_CurrencyInfo)
--  [Struct `Preburn`](#0x1_Libra_Preburn)
+-  [Resource `CurrencyInfo`](#0x1_Libra_CurrencyInfo)
+-  [Resource `Preburn`](#0x1_Libra_Preburn)
 -  [Function `grant_privileges`](#0x1_Libra_grant_privileges)
 -  [Function `initialize`](#0x1_Libra_initialize)
 -  [Function `publish_mint_capability`](#0x1_Libra_publish_mint_capability)
@@ -61,13 +61,19 @@
     -  [Module specifications](#0x1_Libra_@Module_specifications)
         -  [Management of capabilities](#0x1_Libra_@Management_of_capabilities)
         -  [Conservation of currency](#0x1_Libra_@Conservation_of_currency)
-    -  [Struct `Libra`](#0x1_Libra_Specification_Libra)
+    -  [Resource `Libra`](#0x1_Libra_Specification_Libra)
 
+The
+<code><a href="#0x1_Libra">Libra</a></code> module describes the concept of a coin in the Libra framework. It introduces the
+resource
+<code><a href="#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;</code>, representing a coin of given coin type.
+The module defines functions operating on coins as well as functionality like
+minting and burning of coins.
 
 
 <a name="0x1_Libra_RegisterNewCurrency"></a>
 
-## Struct `RegisterNewCurrency`
+## Resource `RegisterNewCurrency`
 
 
 
@@ -95,7 +101,7 @@
 
 <a name="0x1_Libra_Libra"></a>
 
-## Struct `Libra`
+## Resource `Libra`
 
 The
 <code><a href="#0x1_Libra">Libra</a></code> resource defines the Libra coin for each currency in
@@ -137,15 +143,18 @@ published under the
 
 <a name="0x1_Libra_MintCapability"></a>
 
-## Struct `MintCapability`
+## Resource `MintCapability`
 
 The
 <code><a href="#0x1_Libra_MintCapability">MintCapability</a></code> resource defines a capability to allow minting
 of coins of
 <code>CoinType</code> currency by the holder of this capability.
-This capability is held only either by the CoreAddresses::TREASURY_COMPLIANCE_ADDRESS() account or the
+This capability is held only either by the
+<code><a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>()</code> account or the
 <code><a href="LBR.md#0x1_LBR">0x1::LBR</a></code> module (and
 <code><a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()</code> in testnet).
+
+> TODO(wrwg): what does it mean that a capability is held by a module? Consider to remove?
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;
@@ -172,7 +181,7 @@ This capability is held only either by the CoreAddresses::TREASURY_COMPLIANCE_AD
 
 <a name="0x1_Libra_BurnCapability"></a>
 
-## Struct `BurnCapability`
+## Resource `BurnCapability`
 
 The
 <code><a href="#0x1_Libra_BurnCapability">BurnCapability</a></code> resource defines a capability to allow coins
@@ -209,7 +218,7 @@ and the
 
 <a name="0x1_Libra_CurrencyRegistrationCapability"></a>
 
-## Struct `CurrencyRegistrationCapability`
+## Resource `CurrencyRegistrationCapability`
 
 The
 <code><a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a></code> is a singleton resource
@@ -490,7 +499,7 @@ rate for the currency given by
 
 <a name="0x1_Libra_CurrencyInfo"></a>
 
-## Struct `CurrencyInfo`
+## Resource `CurrencyInfo`
 
 The
 <code><a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;</code> resource stores the various
@@ -558,6 +567,8 @@ currency would be the LBR.
  to get to the human-readable representation for this currency).
  e.g. 10^6 for
 <code><a href="Coin1.md#0x1_Coin1">Coin1</a></code>
+
+ > TODO(wrwg): should the above be "to divide by"?
 </dd>
 <dt>
 
@@ -636,7 +647,7 @@ currency would be the LBR.
 
 <a name="0x1_Libra_Preburn"></a>
 
-## Struct `Preburn`
+## Resource `Preburn`
 
 A holding area where funds that will subsequently be burned wait while their underlying
 assets are moved off-chain.
@@ -2199,7 +2210,7 @@ all coins of a currency type.
 
 <a name="0x1_Libra_Specification_Libra"></a>
 
-### Struct `Libra`
+### Resource `Libra`
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;
@@ -2278,6 +2289,6 @@ that call functions in
 <code><a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a></code>.
 
 
-<pre><code><b>apply</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_OnlySingletonHasRegisteredCurrencies">RegisteredCurrencies::OnlySingletonHasRegisteredCurrencies</a> <b>to</b>
+<pre><code><b>apply</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_OnlyConfigAddressHasRegisteredCurrencies">RegisteredCurrencies::OnlyConfigAddressHasRegisteredCurrencies</a> <b>to</b>
     initialize, <a href="#0x1_Libra_register_currency">register_currency</a>&lt;CoinType&gt;;
 </code></pre>

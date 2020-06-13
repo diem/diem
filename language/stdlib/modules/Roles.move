@@ -163,7 +163,7 @@ module Roles {
     public fun grant_root_association_role(
         association: &signer,
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
+        LibraTimestamp::assert_is_genesis();
         let owner_address = Signer::address_of(association);
         assert(owner_address == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
         // Grant the role to the association root account
@@ -178,7 +178,7 @@ module Roles {
         treasury_compliance_account: &signer,
         _: &Capability<AssociationRootRole>,
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
+        LibraTimestamp::assert_is_genesis();
         let owner_address = Signer::address_of(treasury_compliance_account);
         assert(owner_address == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), 0);
         // Grant the TC role to the treasury_compliance_account

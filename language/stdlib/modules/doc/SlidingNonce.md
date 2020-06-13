@@ -5,8 +5,8 @@
 
 ### Table of Contents
 
--  [Struct `CreateSlidingNonce`](#0x1_SlidingNonce_CreateSlidingNonce)
--  [Struct `SlidingNonce`](#0x1_SlidingNonce_SlidingNonce)
+-  [Resource `CreateSlidingNonce`](#0x1_SlidingNonce_CreateSlidingNonce)
+-  [Resource `SlidingNonce`](#0x1_SlidingNonce_SlidingNonce)
 -  [Function `grant_privileges`](#0x1_SlidingNonce_grant_privileges)
 -  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_record_nonce_or_abort)
 -  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
@@ -17,7 +17,7 @@
 
 <a name="0x1_SlidingNonce_CreateSlidingNonce"></a>
 
-## Struct `CreateSlidingNonce`
+## Resource `CreateSlidingNonce`
 
 
 
@@ -45,7 +45,7 @@
 
 <a name="0x1_SlidingNonce_SlidingNonce"></a>
 
-## Struct `SlidingNonce`
+## Resource `SlidingNonce`
 
 This struct keep last 128 nonce values in a bit map nonce_mask
 We assume that nonce are generated incrementally, but certain permutation is allowed when nonce are recorded

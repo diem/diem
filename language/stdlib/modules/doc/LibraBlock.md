@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `BlockMetadata`](#0x1_LibraBlock_BlockMetadata)
+-  [Resource `BlockMetadata`](#0x1_LibraBlock_BlockMetadata)
 -  [Struct `NewBlockEvent`](#0x1_LibraBlock_NewBlockEvent)
 -  [Function `initialize_block_metadata`](#0x1_LibraBlock_initialize_block_metadata)
 -  [Function `block_prologue`](#0x1_LibraBlock_block_prologue)
@@ -16,7 +16,7 @@
 
 <a name="0x1_LibraBlock_BlockMetadata"></a>
 
-## Struct `BlockMetadata`
+## Resource `BlockMetadata`
 
 
 

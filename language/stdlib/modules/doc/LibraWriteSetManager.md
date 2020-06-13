@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `LibraWriteSetManager`](#0x1_LibraWriteSetManager_LibraWriteSetManager)
+-  [Resource `LibraWriteSetManager`](#0x1_LibraWriteSetManager_LibraWriteSetManager)
 -  [Struct `UpgradeEvent`](#0x1_LibraWriteSetManager_UpgradeEvent)
 -  [Function `initialize`](#0x1_LibraWriteSetManager_initialize)
 -  [Function `prologue`](#0x1_LibraWriteSetManager_prologue)
@@ -15,7 +15,7 @@
 
 <a name="0x1_LibraWriteSetManager_LibraWriteSetManager"></a>
 
-## Struct `LibraWriteSetManager`
+## Resource `LibraWriteSetManager`
 
 
 

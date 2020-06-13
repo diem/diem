@@ -6,7 +6,7 @@
 ### Table of Contents
 
 -  [Struct `ValidatorInfo`](#0x1_LibraSystem_ValidatorInfo)
--  [Struct `CapabilityHolder`](#0x1_LibraSystem_CapabilityHolder)
+-  [Resource `CapabilityHolder`](#0x1_LibraSystem_CapabilityHolder)
 -  [Struct `LibraSystem`](#0x1_LibraSystem_LibraSystem)
 -  [Function `initialize_validator_set`](#0x1_LibraSystem_initialize_validator_set)
 -  [Function `set_validator_set`](#0x1_LibraSystem_set_validator_set)
@@ -68,7 +68,7 @@
 
 <a name="0x1_LibraSystem_CapabilityHolder"></a>
 
-## Struct `CapabilityHolder`
+## Resource `CapabilityHolder`
 
 
 

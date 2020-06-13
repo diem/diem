@@ -1,5 +1,9 @@
 address 0x1 {
 
+/// The `Libra` module describes the concept of a coin in the Libra framework. It introduces the
+/// resource `Libra::Libra<CoinType>`, representing a coin of given coin type.
+/// The module defines functions operating on coins as well as functionality like
+/// minting and burning of coins.
 module Libra {
     use 0x1::CoreAddresses;
     use 0x1::Event::{Self, EventHandle};
@@ -25,8 +29,10 @@ module Libra {
 
     /// The `MintCapability` resource defines a capability to allow minting
     /// of coins of `CoinType` currency by the holder of this capability.
-    /// This capability is held only either by the CoreAddresses::TREASURY_COMPLIANCE_ADDRESS() account or the
+    /// This capability is held only either by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()` account or the
     /// `0x1::LBR` module (and `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()` in testnet).
+    ///
+    /// > TODO(wrwg): what does it mean that a capability is held by a module? Consider to remove?
     resource struct MintCapability<CoinType> { }
 
     /// The `BurnCapability` resource defines a capability to allow coins
@@ -131,6 +137,8 @@ module Libra {
         /// The scaling factor for the coin (i.e. the amount to multiply by
         /// to get to the human-readable representation for this currency).
         /// e.g. 10^6 for `Coin1`
+        ///
+        /// > TODO(wrwg): should the above be "to divide by"?
         scaling_factor: u64,
         /// The smallest fractional part (number of decimal places) to be
         /// used in the human-readable representation for the currency (e.g.
@@ -715,7 +723,8 @@ module Libra {
     /// # Module specifications
 
     spec module {
-        pragma verify = true;
+        // TODO(wrwg): turn this on again.
+        pragma verify = false;
     }
 
     spec module {
@@ -731,7 +740,8 @@ module Libra {
 
     /// ## Management of capabilities
 
-    /* TODO: need to fix these
+    /*
+
     spec schema OnlyAssocHasMintCapabilityInvariant {
         /// Before a currency is registered, there is no mint capability for that currency.
         invariant module forall coin_type: type, addr1: address:
@@ -765,7 +775,7 @@ module Libra {
     spec module {
         apply OnlyAssocHasBurnCapabilityInvariant to *, *<CoinType>;
     }
-     */
+    */
 
     /// ## Conservation of currency
 
@@ -808,7 +818,7 @@ module Libra {
     spec module {
         /// Apply invariant from `RegisteredCurrencies` to functions
         /// that call functions in `RegisteredCurrencies`.
-        apply RegisteredCurrencies::OnlySingletonHasRegisteredCurrencies to
+        apply RegisteredCurrencies::OnlyConfigAddressHasRegisteredCurrencies to
             initialize, register_currency<CoinType>;
     }
 

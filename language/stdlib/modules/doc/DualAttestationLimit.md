@@ -5,9 +5,9 @@
 
 ### Table of Contents
 
--  [Struct `UpdateDualAttestationThreshold`](#0x1_DualAttestationLimit_UpdateDualAttestationThreshold)
+-  [Resource `UpdateDualAttestationThreshold`](#0x1_DualAttestationLimit_UpdateDualAttestationThreshold)
 -  [Struct `DualAttestationLimit`](#0x1_DualAttestationLimit_DualAttestationLimit)
--  [Struct `ModifyLimitCapability`](#0x1_DualAttestationLimit_ModifyLimitCapability)
+-  [Resource `ModifyLimitCapability`](#0x1_DualAttestationLimit_ModifyLimitCapability)
 -  [Function `grant_privileges`](#0x1_DualAttestationLimit_grant_privileges)
 -  [Function `initialize`](#0x1_DualAttestationLimit_initialize)
 -  [Function `get_cur_microlibra_limit`](#0x1_DualAttestationLimit_get_cur_microlibra_limit)
@@ -17,7 +17,7 @@
 
 <a name="0x1_DualAttestationLimit_UpdateDualAttestationThreshold"></a>
 
-## Struct `UpdateDualAttestationThreshold`
+## Resource `UpdateDualAttestationThreshold`
 
 
 
@@ -73,7 +73,7 @@
 
 <a name="0x1_DualAttestationLimit_ModifyLimitCapability"></a>
 
-## Struct `ModifyLimitCapability`
+## Resource `ModifyLimitCapability`
 
 
 

@@ -5,14 +5,14 @@
 
 ### Table of Contents
 
--  [Struct `AccountFreezing`](#0x1_LibraAccount_AccountFreezing)
--  [Struct `AccountUnfreezing`](#0x1_LibraAccount_AccountUnfreezing)
--  [Struct `PublishModule`](#0x1_LibraAccount_PublishModule)
--  [Struct `LibraAccount`](#0x1_LibraAccount_LibraAccount)
--  [Struct `Balance`](#0x1_LibraAccount_Balance)
--  [Struct `WithdrawCapability`](#0x1_LibraAccount_WithdrawCapability)
--  [Struct `KeyRotationCapability`](#0x1_LibraAccount_KeyRotationCapability)
--  [Struct `AccountOperationsCapability`](#0x1_LibraAccount_AccountOperationsCapability)
+-  [Resource `AccountFreezing`](#0x1_LibraAccount_AccountFreezing)
+-  [Resource `AccountUnfreezing`](#0x1_LibraAccount_AccountUnfreezing)
+-  [Resource `PublishModule`](#0x1_LibraAccount_PublishModule)
+-  [Resource `LibraAccount`](#0x1_LibraAccount_LibraAccount)
+-  [Resource `Balance`](#0x1_LibraAccount_Balance)
+-  [Resource `WithdrawCapability`](#0x1_LibraAccount_WithdrawCapability)
+-  [Resource `KeyRotationCapability`](#0x1_LibraAccount_KeyRotationCapability)
+-  [Resource `AccountOperationsCapability`](#0x1_LibraAccount_AccountOperationsCapability)
 -  [Struct `SentPaymentEvent`](#0x1_LibraAccount_SentPaymentEvent)
 -  [Struct `ReceivedPaymentEvent`](#0x1_LibraAccount_ReceivedPaymentEvent)
 -  [Struct `FreezingPrivilege`](#0x1_LibraAccount_FreezingPrivilege)
@@ -76,7 +76,7 @@
 
 <a name="0x1_LibraAccount_AccountFreezing"></a>
 
-## Struct `AccountFreezing`
+## Resource `AccountFreezing`
 
 
 
@@ -104,7 +104,7 @@
 
 <a name="0x1_LibraAccount_AccountUnfreezing"></a>
 
-## Struct `AccountUnfreezing`
+## Resource `AccountUnfreezing`
 
 
 
@@ -132,7 +132,7 @@
 
 <a name="0x1_LibraAccount_PublishModule"></a>
 
-## Struct `PublishModule`
+## Resource `PublishModule`
 
 
 
@@ -160,7 +160,7 @@
 
 <a name="0x1_LibraAccount_LibraAccount"></a>
 
-## Struct `LibraAccount`
+## Resource `LibraAccount`
 
 
 
@@ -230,7 +230,7 @@
 
 <a name="0x1_LibraAccount_Balance"></a>
 
-## Struct `Balance`
+## Resource `Balance`
 
 
 
@@ -258,7 +258,7 @@
 
 <a name="0x1_LibraAccount_WithdrawCapability"></a>
 
-## Struct `WithdrawCapability`
+## Resource `WithdrawCapability`
 
 
 
@@ -286,7 +286,7 @@
 
 <a name="0x1_LibraAccount_KeyRotationCapability"></a>
 
-## Struct `KeyRotationCapability`
+## Resource `KeyRotationCapability`
 
 
 
@@ -314,7 +314,7 @@
 
 <a name="0x1_LibraAccount_AccountOperationsCapability"></a>
 
-## Struct `AccountOperationsCapability`
+## Resource `AccountOperationsCapability`
 
 
 
@@ -1365,7 +1365,7 @@ Creates the root association account in genesis.
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
 ) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_is_genesis">LibraTimestamp::assert_is_genesis</a>();
     <b>assert</b>(new_account_address == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 0);
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="#0x1_LibraAccount_make_account">make_account</a>(new_account, auth_key_prefix)
@@ -1406,7 +1406,7 @@ Create a treasury/compliance account at
     coin2_mint_cap: <a href="Libra.md#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;,
     coin2_burn_cap: <a href="Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;,
 ) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_is_genesis">LibraTimestamp::assert_is_genesis</a>();
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Libra.md#0x1_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(&new_account, coin1_mint_cap, tc_capability);
     <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(&new_account, coin1_burn_cap, tc_capability);

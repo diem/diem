@@ -5,8 +5,8 @@
 
 ### Table of Contents
 
--  [Struct `ParentVASP`](#0x1_VASP_ParentVASP)
--  [Struct `ChildVASP`](#0x1_VASP_ChildVASP)
+-  [Resource `ParentVASP`](#0x1_VASP_ParentVASP)
+-  [Resource `ChildVASP`](#0x1_VASP_ChildVASP)
 -  [Function `recertify_vasp`](#0x1_VASP_recertify_vasp)
 -  [Function `decertify_vasp`](#0x1_VASP_decertify_vasp)
 -  [Function `cert_lifetime`](#0x1_VASP_cert_lifetime)
@@ -39,7 +39,7 @@
 
 <a name="0x1_VASP_ParentVASP"></a>
 
-## Struct `ParentVASP`
+## Resource `ParentVASP`
 
 Each VASP has a unique root account that holds a
 <code><a href="#0x1_VASP_ParentVASP">ParentVASP</a></code> resource. This resource holds
@@ -106,7 +106,7 @@ off-chain protocols with this one.
 
 <a name="0x1_VASP_ChildVASP"></a>
 
-## Struct `ChildVASP`
+## Resource `ChildVASP`
 
 A resource that represents a child account of the parent VASP account at
 <code>parent_vasp_addr</code>

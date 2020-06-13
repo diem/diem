@@ -5,8 +5,8 @@
 
 ### Table of Contents
 
--  [Struct `EventHandleGenerator`](#0x1_Event_EventHandleGenerator)
--  [Struct `EventHandle`](#0x1_Event_EventHandle)
+-  [Resource `EventHandleGenerator`](#0x1_Event_EventHandleGenerator)
+-  [Resource `EventHandle`](#0x1_Event_EventHandle)
 -  [Function `publish_generator`](#0x1_Event_publish_generator)
 -  [Function `fresh_guid`](#0x1_Event_fresh_guid)
 -  [Function `new_event_handle`](#0x1_Event_new_event_handle)
@@ -19,8 +19,8 @@
         -  [Uniqueness and Counter Incrementation of EventHandleGenerators](#0x1_Event_@Uniqueness_and_Counter_Incrementation_of_EventHandleGenerators)
         -  [Uniqueness of EventHandle GUIDs](#0x1_Event_@Uniqueness_of_EventHandle_GUIDs)
         -  [Destruction of EventHandles](#0x1_Event_@Destruction_of_EventHandles)
-    -  [Struct `EventHandleGenerator`](#0x1_Event_Specification_EventHandleGenerator)
-    -  [Struct `EventHandle`](#0x1_Event_Specification_EventHandle)
+    -  [Resource `EventHandleGenerator`](#0x1_Event_Specification_EventHandleGenerator)
+    -  [Resource `EventHandle`](#0x1_Event_Specification_EventHandle)
     -  [Function `publish_generator`](#0x1_Event_Specification_publish_generator)
     -  [Function `fresh_guid`](#0x1_Event_Specification_fresh_guid)
     -  [Function `new_event_handle`](#0x1_Event_Specification_new_event_handle)
@@ -39,7 +39,7 @@ events emitted to a handle and emit events to the event store.
 
 <a name="0x1_Event_EventHandleGenerator"></a>
 
-## Struct `EventHandleGenerator`
+## Resource `EventHandleGenerator`
 
 
 
@@ -74,7 +74,7 @@ events emitted to a handle and emit events to the event store.
 
 <a name="0x1_Event_EventHandle"></a>
 
-## Struct `EventHandle`
+## Resource `EventHandle`
 
 
 
@@ -507,7 +507,7 @@ Variable that counts the total number of event handles ever to exist.
 
 <a name="0x1_Event_Specification_EventHandleGenerator"></a>
 
-### Struct `EventHandleGenerator`
+### Resource `EventHandleGenerator`
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Event_EventHandleGenerator">EventHandleGenerator</a>
@@ -619,7 +619,7 @@ The solver takes a long time unless fresh_guid is excepted.
 
 <a name="0x1_Event_Specification_EventHandle"></a>
 
-### Struct `EventHandle`
+### Resource `EventHandle`
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Event_EventHandle">EventHandle</a>&lt;T: <b>copyable</b>&gt;

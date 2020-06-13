@@ -143,6 +143,9 @@
 
     <a href="Roles.md#0x1_Roles_restore_capability_to_privilege">Roles::restore_capability_to_privilege</a>(tc_account, currency_registration_capability);
     <a href="Roles.md#0x1_Roles_restore_capability_to_privilege">Roles::restore_capability_to_privilege</a>(tc_account, tc_capability);
+
+    // Mark that genesis has finished. This must appear <b>as</b> the last call.
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_set_time_has_started">LibraTimestamp::set_time_has_started</a>(association);
 }
 </code></pre>
 

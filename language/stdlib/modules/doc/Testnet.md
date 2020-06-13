@@ -5,7 +5,7 @@
 
 ### Table of Contents
 
--  [Struct `IsTestnet`](#0x1_Testnet_IsTestnet)
+-  [Resource `IsTestnet`](#0x1_Testnet_IsTestnet)
 -  [Function `initialize`](#0x1_Testnet_initialize)
 -  [Function `is_testnet`](#0x1_Testnet_is_testnet)
 -  [Function `remove_testnet`](#0x1_Testnet_remove_testnet)
@@ -21,7 +21,7 @@
 
 <a name="0x1_Testnet_IsTestnet"></a>
 
-## Struct `IsTestnet`
+## Resource `IsTestnet`
 
 
 
