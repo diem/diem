@@ -445,7 +445,7 @@ impl Signature for Ed25519Signature {
             Ed25519Signature::check_malleability(&sig.to_bytes())?
         }
         let batch_argument = keys_and_signatures
-            .into_iter()
+            .iter()
             .map(|(key, signature)| (key.0, signature.0));
         let (dalek_public_keys, dalek_signatures): (Vec<_>, Vec<_>) = batch_argument.unzip();
         let message_ref = &message.as_ref()[..];

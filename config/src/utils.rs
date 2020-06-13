@@ -45,7 +45,7 @@ fn get_ephemeral_port() -> ::std::io::Result<u16> {
 pub fn get_local_ip() -> Option<NetworkAddress> {
     get_if_addrs().ok().and_then(|if_addrs| {
         if_addrs
-            .into_iter()
+            .iter()
             .find(|if_addr| !if_addr.is_loopback())
             .map(|if_addr| NetworkAddress::from(Protocol::from(if_addr.ip())))
     })

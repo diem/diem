@@ -244,7 +244,7 @@ impl ClusterSwarmKube {
         let create_jobs_futures = jobs.iter().map(|job| job_api.create(&pp, job));
         let job_names: Vec<String> = try_join_all(create_jobs_futures)
             .await?
-            .into_iter()
+            .iter()
             .map(|job| -> Result<String, anyhow::Error> {
                 Ok(job
                     .metadata
@@ -260,7 +260,7 @@ impl ClusterSwarmKube {
             .iter()
             .map(|job_name| self.wait_job_completion(job_name, back_off_limit));
         let wait_jobs_results = try_join_all(wait_jobs_futures).await?;
-        if wait_jobs_results.into_iter().any(|r| !r) {
+        if wait_jobs_results.iter().any(|r| !r) {
             bail!("one of the jobs failed")
         }
         Ok(())
