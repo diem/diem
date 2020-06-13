@@ -29,7 +29,7 @@ fn protocols_to_from_vec() {
 
 #[test]
 fn represents_same_network() {
-    let network_id = NetworkId::private_network("h1");
+    let network_id = NetworkId::Private("h1".to_string());
     let chain_id = ChainId::new("h1");
 
     // Positive case
@@ -38,7 +38,7 @@ fn represents_same_network() {
     assert!(h1.verify(&h2));
 
     // Negative cases
-    let h2 = HandshakeMsg::new(chain_id.clone(), NetworkId::private_network("h2"));
+    let h2 = HandshakeMsg::new(chain_id.clone(), NetworkId::Private("h2".to_string()));
     assert!(!h1.verify(&h2));
     let h2 = HandshakeMsg::new(chain_id, NetworkId::Public);
     assert!(!h1.verify(&h2));

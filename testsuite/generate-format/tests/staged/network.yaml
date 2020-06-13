@@ -45,16 +45,12 @@ NetworkAddress:
 NetworkId:
   ENUM:
     0:
-      Validator: UNIT
+      validator: UNIT
     1:
-      Public: UNIT
+      public: UNIT
     2:
-      Private:
-        NEWTYPE:
-          TYPENAME: NetworkInfo
-NetworkInfo:
-  STRUCT:
-    - name: STR
+      private:
+        NEWTYPE: STR
 NetworkMessage:
   ENUM:
     0:
