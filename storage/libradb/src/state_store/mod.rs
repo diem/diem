@@ -43,9 +43,7 @@ impl StateStore {
         address: AccountAddress,
         version: Version,
     ) -> Result<(Option<AccountStateBlob>, SparseMerkleProof)> {
-        let (blob, proof) =
-            JellyfishMerkleTree::new(self).get_with_proof(address.hash(), version)?;
-        Ok((blob, proof))
+        JellyfishMerkleTree::new(self).get_with_proof(address.hash(), version)
     }
 
     /// Gets the proof that proves a range of accounts.

@@ -75,8 +75,7 @@ impl WalletLibrary {
 
     /// Recover wallet from input_file_path
     pub fn recover(input_file_path: &Path) -> Result<WalletLibrary> {
-        let wallet = io_utils::recover(&input_file_path)?;
-        Ok(wallet)
+        io_utils::recover(&input_file_path)
     }
 
     /// Get the current ChildNumber in u64 format

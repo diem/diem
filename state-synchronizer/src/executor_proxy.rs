@@ -165,13 +165,11 @@ impl ExecutorProxyTrait for ExecutorProxy {
     }
 
     fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
-        let epoch_change_li = self
-            .storage
+        self.storage
             .get_epoch_change_ledger_infos(epoch, epoch + 1)?
             .ledger_info_with_sigs
             .pop()
-            .ok_or_else(|| format_err!("Empty EpochChangeProof"))?;
-        Ok(epoch_change_li)
+            .ok_or_else(|| format_err!("Empty EpochChangeProof"))
     }
 
     fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
