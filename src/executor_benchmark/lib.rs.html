@@ -365,6 +365,8 @@
 <span id="365">365</span>
 <span id="366">366</span>
 <span id="367">367</span>
+<span id="368">368</span>
+<span id="369">369</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -380,7 +382,9 @@
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-    <span class="ident">account_config</span>::{<span class="ident">association_address</span>, <span class="ident">lbr_type_tag</span>, <span class="ident">AccountResource</span>, <span class="ident">LBR_NAME</span>},
+    <span class="ident">account_config</span>::{
+        <span class="ident">lbr_type_tag</span>, <span class="ident">treasury_compliance_account_address</span>, <span class="ident">AccountResource</span>, <span class="ident">LBR_NAME</span>,
+    },
     <span class="ident">block_info</span>::<span class="ident">BlockInfo</span>,
     <span class="ident">ledger_info</span>::{<span class="ident">LedgerInfo</span>, <span class="ident">LedgerInfoWithSignatures</span>},
     <span class="ident">transaction</span>::{
@@ -472,14 +476,14 @@
 
     <span class="doccomment">/// Generates transactions that allocate `init_account_balance` to every account.</span>
     <span class="kw">fn</span> <span class="ident">gen_mint_transactions</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">init_account_balance</span>: <span class="ident">u64</span>, <span class="ident">block_size</span>: <span class="ident">usize</span>) {
-        <span class="kw">let</span> <span class="ident">genesis_account</span> <span class="op">=</span> <span class="ident">association_address</span>();
+        <span class="kw">let</span> <span class="ident">genesis_account</span> <span class="op">=</span> <span class="ident">treasury_compliance_account_address</span>();
 
         <span class="kw">for</span> (<span class="ident">i</span>, <span class="ident">block</span>) <span class="kw">in</span> <span class="self">self</span>.<span class="ident">accounts</span>.<span class="ident">chunks</span>(<span class="ident">block_size</span>).<span class="ident">enumerate</span>() {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">transactions</span> <span class="op">=</span> <span class="ident">Vec</span>::<span class="ident">with_capacity</span>(<span class="ident">block_size</span>);
             <span class="kw">for</span> (<span class="ident">j</span>, <span class="ident">account</span>) <span class="kw">in</span> <span class="ident">block</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
                 <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="ident">create_transaction</span>(
                     <span class="ident">genesis_account</span>,
-                    (<span class="ident">i</span> <span class="op">*</span> <span class="ident">block_size</span> <span class="op">+</span> <span class="ident">j</span> <span class="op">+</span> <span class="number">1</span>) <span class="kw">as</span> <span class="ident">u64</span>,
+                    (<span class="ident">i</span> <span class="op">*</span> <span class="ident">block_size</span> <span class="op">+</span> <span class="ident">j</span>) <span class="kw">as</span> <span class="ident">u64</span>,
                     <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">genesis_key</span>,
                     <span class="self">self</span>.<span class="ident">genesis_key</span>.<span class="ident">public_key</span>(),
                     <span class="ident">encode_mint_lbr_to_address_script</span>(
