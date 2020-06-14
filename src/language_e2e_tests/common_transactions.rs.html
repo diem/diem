@@ -277,8 +277,8 @@
 
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">CREATE_ACCOUNT_SCRIPT</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
     <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="string">&quot;
-    import 0x0.Libra;
-    import 0x0.LibraAccount;
+    import 0x1.Libra;
+    import 0x1.LibraAccount;
 
     main&lt;Token&gt;(account: &amp;signer, fresh_address: address, auth_key_prefix: vector&lt;u8&gt;, initial_amount: u64) {
       let with_cap: LibraAccount.WithdrawCapability;

@@ -210,6 +210,8 @@
 <span id="210">210</span>
 <span id="211">211</span>
 <span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -238,7 +240,9 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Address</span>([<span class="ident">u8</span>; <span class="ident">ADDRESS_LENGTH</span>]);
 
 <span class="kw">impl</span> <span class="ident">Address</span> {
-    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">LIBRA_CORE</span>: <span class="ident">Address</span> <span class="op">=</span> <span class="ident">Address</span>::<span class="ident">new</span>([<span class="number">0u8</span>; <span class="ident">ADDRESS_LENGTH</span>]);
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">LIBRA_CORE</span>: <span class="ident">Address</span> <span class="op">=</span> <span class="ident">Address</span>::<span class="ident">new</span>([
+        <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">1u8</span>,
+    ]);
 
     <span class="kw">pub</span> <span class="kw">const</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">address</span>: [<span class="ident">u8</span>; <span class="ident">ADDRESS_LENGTH</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">Address</span>(<span class="ident">address</span>)

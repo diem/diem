@@ -110,6 +110,17 @@
 <span id="110">110</span>
 <span id="111">111</span>
 <span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
+<span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -129,13 +140,13 @@
     <span class="ident">compiler</span>::{<span class="ident">compile_module</span>, <span class="ident">compile_script</span>},
     <span class="ident">parser</span>::{<span class="ident">parse_module</span>, <span class="ident">parse_script</span>},
 };
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">account_config</span>};
 <span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="ident">Loc</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">mem</span>;
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">file_format</span>::{<span class="ident">CompiledModule</span>, <span class="ident">CompiledScript</span>};
 
 <span class="doccomment">/// An API for the compiler. Supports setting custom options.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Default</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Compiler</span> {
     <span class="doccomment">/// The address used as the sender for the compiler.</span>
     <span class="kw">pub</span> <span class="ident">address</span>: <span class="ident">AccountAddress</span>,
@@ -154,6 +165,17 @@
     <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">missing_docs</span>)]</span>
     <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
     <span class="kw">pub</span> <span class="ident">_non_exhaustive</span>: (),
+}
+
+<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Compiler</span> {
+    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span> {
+            <span class="ident">address</span>: <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>,
+            <span class="ident">skip_stdlib_deps</span>: <span class="bool-val">false</span>,
+            <span class="ident">extra_deps</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="ident">_non_exhaustive</span>: (),
+        }
+    }
 }
 
 <span class="kw">impl</span> <span class="ident">Compiler</span> {

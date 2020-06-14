@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["CORE_CODE_ADDRESS",""]],"fn":[["association_address",""],["transaction_fee_address",""],["treasury_compliance_account_address",""],["validator_set_address",""]]});
+initSidebarItems({"constant":[["CORE_CODE_ADDRESS",""]],"fn":[["association_address",""],["reserved_vm_address",""],["transaction_fee_address",""],["treasury_compliance_account_address",""],["validator_set_address",""]]});

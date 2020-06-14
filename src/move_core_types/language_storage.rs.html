@@ -163,6 +163,8 @@
 <span id="163">163</span>
 <span id="164">164</span>
 <span id="165">165</span>
+<span id="166">166</span>
+<span id="167">167</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -181,7 +183,9 @@
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">CODE_TAG</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">0</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">RESOURCE_TAG</span>: <span class="ident">u8</span> <span class="op">=</span> <span class="number">1</span>;
 
-<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">CORE_CODE_ADDRESS</span>: <span class="ident">AccountAddress</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">DEFAULT</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">CORE_CODE_ADDRESS</span>: <span class="ident">AccountAddress</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">new</span>([
+    <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">0u8</span>, <span class="number">1u8</span>,
+]);
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Hash</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TypeTag</span> {
