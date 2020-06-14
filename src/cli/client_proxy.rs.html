@@ -1795,14 +1795,6 @@
 <span id="1795">1795</span>
 <span id="1796">1796</span>
 <span id="1797">1797</span>
-<span id="1798">1798</span>
-<span id="1799">1799</span>
-<span id="1800">1800</span>
-<span id="1801">1801</span>
-<span id="1802">1802</span>
-<span id="1803">1803</span>
-<span id="1804">1804</span>
-<span id="1805">1805</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2261,20 +2253,12 @@
 
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">treasury_compliance_account</span> {
             <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">script</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">mint_currency</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;LBR&quot;</span> {
-                    <span class="ident">transaction_builder</span>::<span class="ident">encode_mint_lbr_to_address_script</span>(
-                        <span class="kw-2">&amp;</span><span class="ident">receiver</span>,
-                        <span class="ident">receiver_auth_key</span>.<span class="ident">prefix</span>().<span class="ident">to_vec</span>(),
-                        <span class="ident">num_coins</span>,
-                    )
-                } <span class="kw">else</span> {
-                    <span class="ident">transaction_builder</span>::<span class="ident">encode_mint_script</span>(
-                        <span class="ident">type_tag_for_currency_code</span>(<span class="ident">currency_code</span>),
-                        <span class="kw-2">&amp;</span><span class="ident">receiver</span>,
-                        <span class="ident">receiver_auth_key</span>.<span class="ident">prefix</span>().<span class="ident">to_vec</span>(),
-                        <span class="ident">num_coins</span>,
-                    )
-                };
+                <span class="kw">let</span> <span class="ident">script</span> <span class="op">=</span> <span class="ident">transaction_builder</span>::<span class="ident">encode_mint_script</span>(
+                    <span class="ident">type_tag_for_currency_code</span>(<span class="ident">currency_code</span>),
+                    <span class="kw-2">&amp;</span><span class="ident">receiver</span>,
+                    <span class="ident">receiver_auth_key</span>.<span class="ident">prefix</span>().<span class="ident">to_vec</span>(),
+                    <span class="ident">num_coins</span>,
+                );
                 <span class="self">self</span>.<span class="ident">association_transaction_with_local_treasury_compliance_account</span>(
                     <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">script</span>),
                     <span class="ident">is_blocking</span>,
