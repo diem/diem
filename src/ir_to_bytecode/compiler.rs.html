@@ -1964,6 +1964,10 @@
 <span id="1964">1964</span>
 <span id="1965">1965</span>
 <span id="1966">1966</span>
+<span id="1967">1967</span>
+<span id="1968">1968</span>
+<span id="1969">1969</span>
+<span id="1970">1970</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2387,6 +2391,10 @@
     <span class="kw">let</span> <span class="ident">parameters_sig_idx</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">signature_index</span>(<span class="ident">Signature</span>(<span class="ident">sig</span>.<span class="ident">parameters</span>))<span class="question-mark">?</span>;
 
     <span class="macro">record_src_loc</span><span class="macro">!</span>(<span class="ident">function_decl</span>: <span class="ident">context</span>, <span class="ident">function</span>.<span class="ident">loc</span>, <span class="number">0</span>);
+    <span class="macro">record_src_loc</span><span class="macro">!</span>(
+        <span class="ident">function_type_formals</span>: <span class="ident">context</span>,
+        <span class="kw-2">&amp;</span><span class="ident">function</span>.<span class="ident">value</span>.<span class="ident">signature</span>.<span class="ident">type_formals</span>
+    );
     <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="ident">compile_function_body_impl</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="ident">function</span>.<span class="ident">value</span>)<span class="question-mark">?</span>.<span class="ident">unwrap</span>();
 
     <span class="kw">let</span> (
