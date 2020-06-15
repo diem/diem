@@ -25,6 +25,8 @@ pub struct CommandAdapterOpt {
     config: PathBuf,
 }
 
+/// A BackupStorage that delegates required APIs to configured command lines.
+/// see `CommandAdapterConfig`.
 pub struct CommandAdapter {
     config: CommandAdapterConfig,
 }
