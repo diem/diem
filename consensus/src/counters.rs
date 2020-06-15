@@ -11,18 +11,9 @@ use once_cell::sync::Lazy;
 // HEALTH COUNTERS
 //////////////////////
 
+/// Monitor counters, used by monitor! macro
 pub static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
     Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("consensus"));
-
-/// Counter of pending network events to Consensus
-pub static PENDING_CONSENSUS_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "libra_consensus_pending_network_events",
-        "Counters(queued,dequeued,dropped) related to pending network notifications to Consensus",
-        &["state"]
-    )
-    .unwrap()
-});
 
 /// This counter is set to the round of the highest committed block.
 pub static LAST_COMMITTED_ROUND: Lazy<IntGauge> = Lazy::new(|| {
@@ -38,33 +29,6 @@ pub static LAST_COMMITTED_VERSION: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
         "libra_consensus_last_committed_version",
         "The counter corresponds to the version of the last committed ledger info."
-    )
-    .unwrap()
-});
-
-/// This counter is set to the round of the highest voted block.
-pub static LAST_VOTE_ROUND: Lazy<IntGauge> = Lazy::new(|| {
-    register_int_gauge!(
-        "libra_consensus_last_vote_round",
-        "This counter is set to the round of the highest voted block."
-    )
-    .unwrap()
-});
-
-/// This counter is set to the round of the preferred block (highest 2-chain head).
-pub static PREFERRED_BLOCK_ROUND: Lazy<IntGauge> = Lazy::new(|| {
-    register_int_gauge!(
-        "libra_consensus_preferred_block_round",
-        "This counter is set to the round of the preferred block (highest 2-chain head)."
-    )
-    .unwrap()
-});
-
-/// This counter is set to the last round reported by the local round_state.
-pub static CURRENT_ROUND: Lazy<IntGauge> = Lazy::new(|| {
-    register_int_gauge!(
-        "libra_consensus_current_round",
-        "This counter is set to the last round reported by the local round_state."
     )
     .unwrap()
 });
@@ -88,48 +52,26 @@ pub static COMMITTED_TXNS_COUNT: Lazy<IntCounterVec> = Lazy::new(|| {
     .unwrap()
 });
 
-/// Histogram of idle time of spent in event processing loop
-pub static EVENT_PROCESSING_LOOP_IDLE_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(
-        register_histogram!(
-            "libra_consensus_event_processing_loop_idle_duration_s",
-            "Histogram of idle time of spent in event processing loop"
-        )
-        .unwrap(),
-    )
-});
-
-/// Histogram of busy time of spent in event processing loop
-pub static EVENT_PROCESSING_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(
-        register_histogram!(
-            "libra_consensus_event_processing_loop_busy_duration_s",
-            "Histogram of busy time of spent in event processing loop"
-        )
-        .unwrap(),
-    )
-});
-
-/// Counters(queued,dequeued,dropped) related to consensus channel
-pub static CONSENSUS_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "libra_consensus_channel_msgs_count",
-        "Counters(queued,dequeued,dropped) related to consensus channel",
-        &["state"]
+//////////////////////
+// SafetyRules COUNTERS
+//////////////////////
+/// This counter is set to the round of the highest voted block.
+pub static LAST_VOTE_ROUND: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_consensus_last_vote_round",
+        "This counter is set to the round of the highest voted block."
     )
     .unwrap()
 });
 
-/// Counters(queued,dequeued,dropped) related to block retrieval channel
-pub static BLOCK_RETRIEVAL_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
-    register_int_counter_vec!(
-        "libra_consensus_block_retrieval_channel_msgs_count",
-        "Counters(queued,dequeued,dropped) related to block retrieval channel",
-        &["state"]
+/// This counter is set to the round of the preferred block (highest 2-chain head).
+pub static PREFERRED_BLOCK_ROUND: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_consensus_preferred_block_round",
+        "This counter is set to the round of the preferred block (highest 2-chain head)."
     )
     .unwrap()
 });
-
 //////////////////////
 // PROPOSAL ELECTION
 //////////////////////
@@ -152,6 +94,15 @@ pub static VOTE_NIL_COUNT: Lazy<IntCounter> = Lazy::new(|| {
 //////////////////////
 // RoundState COUNTERS
 //////////////////////
+/// This counter is set to the last round reported by the local round_state.
+pub static CURRENT_ROUND: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_consensus_current_round",
+        "This counter is set to the last round reported by the local round_state."
+    )
+    .unwrap()
+});
+
 /// Count of the rounds that gathered QC since last restart.
 pub static QC_ROUNDS_COUNT: Lazy<IntCounter> = Lazy::new(|| {
     register_int_counter!(
@@ -188,62 +139,13 @@ pub static ROUND_TIMEOUT_MS: Lazy<IntGauge> = Lazy::new(|| {
 });
 
 ////////////////////////
-// SYNCMANAGER COUNTERS
+// SYNC MANAGER COUNTERS
 ////////////////////////
-/// Count the number of times we invoked state synchronization since last restart.
-pub static STATE_SYNC_COUNT: Lazy<IntCounter> = Lazy::new(|| {
-    register_int_counter!(
-        "libra_consensus_state_sync_count",
-        "Count the number of times we invoked state synchronization since last restart."
-    )
-    .unwrap()
-});
-
-/// Count the number of block retrieval requests issued since last restart.
-pub static BLOCK_RETRIEVAL_COUNT: Lazy<IntCounter> = Lazy::new(|| {
-    register_int_counter!(
-        "libra_consensus_block_retrieval_count",
-        "Count the number of block retrieval requests issued since last restart."
-    )
-    .unwrap()
-});
-
-/// Histogram of block retrieval duration.
-pub static BLOCK_RETRIEVAL_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(
-        register_histogram!(
-            "libra_consensus_block_retrieval_duration_s",
-            "Histogram of block retrieval duration."
-        )
-        .unwrap(),
-    )
-});
-
-/// Histogram of state sync duration.
-pub static STATE_SYNC_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(
-        register_histogram!(
-            "libra_consensus_state_sync_duration_s",
-            "Histogram of state sync duration."
-        )
-        .unwrap(),
-    )
-});
-
 /// Counts the number of times the sync info message has been set since last restart.
 pub static SYNC_INFO_MSGS_SENT_COUNT: Lazy<IntCounter> = Lazy::new(|| {
     register_int_counter!(
         "libra_consensus_sync_info_msg_sent_count",
         "Counts the number of times the sync info message has been set since last restart."
-    )
-    .unwrap()
-});
-
-/// Counts the number of times the sync info message has been received since last restart.
-pub static SYNC_INFO_MSGS_RECEIVED_COUNT: Lazy<IntCounter> = Lazy::new(|| {
-    register_int_counter!(
-        "libra_consensus_sync_info_msg_received_count",
-        "Counts the number of times the sync info message has been received since last restart."
     )
     .unwrap()
 });
@@ -254,19 +156,12 @@ pub static SYNC_INFO_MSGS_RECEIVED_COUNT: Lazy<IntCounter> = Lazy::new(|| {
 /// Current epoch num
 pub static EPOCH: Lazy<IntGauge> =
     Lazy::new(|| register_int_gauge!("libra_consensus_epoch", "Current epoch num").unwrap());
+
 /// The number of validators in the current epoch
 pub static CURRENT_EPOCH_VALIDATORS: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
         "libra_consensus_current_epoch_validators",
         "The number of validators in the current epoch"
-    )
-    .unwrap()
-});
-/// Quorum size in the current epoch
-pub static CURRENT_EPOCH_QUORUM_SIZE: Lazy<IntGauge> = Lazy::new(|| {
-    register_int_gauge!(
-        "libra_consensus_current_epoch_quorum_size",
-        "Quorum size in the current epoch"
     )
     .unwrap()
 });
@@ -287,17 +182,6 @@ pub static NUM_BLOCKS_IN_TREE: Lazy<IntGauge> = Lazy::new(|| {
 //////////////////////
 // PERFORMANCE COUNTERS
 //////////////////////
-/// Histogram of execution time of non-empty blocks.
-pub static BLOCK_EXECUTION_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(
-        register_histogram!(
-            "libra_consensus_block_execution_duration_s",
-            "Histogram of execution time of non-empty blocks."
-        )
-        .unwrap(),
-    )
-});
-
 // TODO Consider reintroducing this counter
 // pub static UNWRAPPED_PROPOSAL_SIZE_BYTES: Lazy<Histogram> = Lazy::new(|| {
 //     register_histogram!(
@@ -307,12 +191,6 @@ pub static BLOCK_EXECUTION_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
 //     .unwrap()
 // });
 
-/// Histogram of duration of a commit procedure (the time it takes for the execution / storage to
-/// commit a block once we decide to do so).
-pub static BLOCK_COMMIT_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_block_commit_duration_s", "Histogram of duration of a commit procedure (the time it takes for the execution / storage to commit a block once we decide to do so).").unwrap())
-});
-
 /// Histogram for the number of txns per (committed) blocks.
 pub static NUM_TXNS_PER_BLOCK: Lazy<Histogram> = Lazy::new(|| {
     register_histogram!(
@@ -320,12 +198,6 @@ pub static NUM_TXNS_PER_BLOCK: Lazy<Histogram> = Lazy::new(|| {
         "Histogram for the number of txns per (committed) blocks."
     )
     .unwrap()
-});
-
-/// Histogram of per-transaction execution time of non-empty blocks
-/// (calculated as the overall execution time of a block divided by the number of transactions).
-pub static TXN_EXECUTION_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_txn_execution_duration_s", "Histogram of per-transaction execution time of non-empty blocks (calculated as the overall execution time of a block divided by the number of transactions).").unwrap())
 });
 
 /// Histogram of the time it takes for a block to get committed.
@@ -352,8 +224,8 @@ pub static CREATION_TO_RECEIVAL_S: Lazy<DurationHistogram> = Lazy::new(|| {
 
 /// Histogram of the time it requires to wait before inserting blocks into block store.
 /// Measured as the block's timestamp minus local timestamp.
-pub static WAIT_DURATION_MS: Lazy<DurationHistogram> = Lazy::new(|| {
-    DurationHistogram::new(register_histogram!("libra_consensus_wait_duration_ms", "Histogram of the time it requires to wait before inserting blocks into block store. Measured as the block's timestamp minus the local timestamp.").unwrap())
+pub static WAIT_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
+    DurationHistogram::new(register_histogram!("libra_consensus_wait_duration_s", "Histogram of the time it requires to wait before inserting blocks into block store. Measured as the block's timestamp minus the local timestamp.").unwrap())
 });
 
 ///////////////////
@@ -373,6 +245,36 @@ pub static PENDING_ROUND_TIMEOUTS: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(
         "libra_consensus_pending_round_timeouts",
         "Count of the pending outbound round timeouts"
+    )
+    .unwrap()
+});
+
+/// Counter of pending network events to Consensus
+pub static PENDING_CONSENSUS_NETWORK_EVENTS: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_consensus_pending_network_events",
+        "Counters(queued,dequeued,dropped) related to pending network notifications to Consensus",
+        &["state"]
+    )
+    .unwrap()
+});
+
+/// Counters(queued,dequeued,dropped) related to consensus channel
+pub static CONSENSUS_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_consensus_channel_msgs_count",
+        "Counters(queued,dequeued,dropped) related to consensus channel",
+        &["state"]
+    )
+    .unwrap()
+});
+
+/// Counters(queued,dequeued,dropped) related to block retrieval channel
+pub static BLOCK_RETRIEVAL_CHANNEL_MSGS: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_consensus_block_retrieval_channel_msgs_count",
+        "Counters(queued,dequeued,dropped) related to block retrieval channel",
+        &["state"]
     )
     .unwrap()
 });

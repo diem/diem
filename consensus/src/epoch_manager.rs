@@ -37,11 +37,7 @@ use libra_types::{
 };
 use network::protocols::network::Event;
 use safety_rules::SafetyRulesManager;
-use std::{
-    cmp::Ordering,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{cmp::Ordering, sync::Arc, time::Duration};
 
 /// RecoveryManager is used to process events in order to sync up with peer if we can't recover from local consensusdb
 /// RoundManager is used for normal event handling.
@@ -255,7 +251,6 @@ impl EpochManager {
         self.processor = None;
         counters::EPOCH.set(epoch_state.epoch as i64);
         counters::CURRENT_EPOCH_VALIDATORS.set(epoch_state.verifier.len() as i64);
-        counters::CURRENT_EPOCH_QUORUM_SIZE.set(epoch_state.verifier.quorum_voting_power() as i64);
         info!(
             "Starting {} with genesis {}",
             epoch_state,
@@ -494,36 +489,29 @@ impl EpochManager {
             self.start_processor(payload).await;
         }
         loop {
-            let pre_select_instant = Instant::now();
-            let idle_duration;
-            let result = select! {
-                payload = reconfig_events.select_next_some() => {
-                    idle_duration = pre_select_instant.elapsed();
-                    self.start_processor(payload).await;
-                    Ok(())
+            if let Err(e) = monitor!(
+                "main_loop",
+                select! {
+                    payload = reconfig_events.select_next_some() => {
+                        monitor!("reconfig", self.start_processor(payload).await);
+                        Ok(())
+                    }
+                    msg = network_receivers.consensus_messages.select_next_some() => {
+                        monitor!("process_message", self.process_message(msg.0, msg.1).await)
+                    }
+                    block_retrieval = network_receivers.block_retrieval.select_next_some() => {
+                        monitor!("process_block_retrieval", self.process_block_retrieval(block_retrieval).await)
+                    }
+                    round = round_timeout_sender_rx.select_next_some() => {
+                        monitor!("process_local_timeout", self.process_local_timeout(round).await)
+                    }
                 }
-                msg = network_receivers.consensus_messages.select_next_some() => {
-                    idle_duration = pre_select_instant.elapsed();
-                    self.process_message(msg.0, msg.1).await
-                }
-                block_retrieval = network_receivers.block_retrieval.select_next_some() => {
-                    idle_duration = pre_select_instant.elapsed();
-                    self.process_block_retrieval(block_retrieval).await
-                }
-                round = round_timeout_sender_rx.select_next_some() => {
-                    idle_duration = pre_select_instant.elapsed();
-                    self.process_local_timeout(round).await
-                }
-            };
-            if let Err(e) = result {
+            ) {
                 error!("{:?}", e);
             }
             if let RoundProcessor::Normal(p) = self.processor_mut() {
                 debug!("{}", p.round_state());
             }
-            counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
-                .observe_duration(pre_select_instant.elapsed() - idle_duration);
-            counters::EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
         }
     }
 }

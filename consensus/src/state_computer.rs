@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{counters, state_replication::StateComputer};
-use anyhow::{ensure, Error, Result};
+use crate::state_replication::StateComputer;
+use anyhow::{Error, Result};
 use consensus_types::block::Block;
 use executor_types::{BlockExecutor, StateComputeResult};
 use libra_crypto::HashValue;
@@ -12,9 +12,7 @@ use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::Transactio
 use state_synchronizer::StateSyncClient;
 use std::{
     boxed::Box,
-    convert::TryFrom,
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
 };
 
 /// Basic communication with the Execution module;
@@ -57,7 +55,6 @@ impl StateComputer for ExecutionProxy {
         // The parent block id.
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult> {
-        let pre_execution_instant = Instant::now();
         debug!(
             "Executing block {:x}. Parent: {:x}.",
             block.id(),
@@ -75,21 +72,6 @@ impl StateComputer for ExecutionProxy {
                     parent_block_id,
                 )
                 .map_err(Error::from)
-                .and_then(|result| {
-                    let execution_duration = pre_execution_instant.elapsed();
-                    let num_txns = result.transaction_info_hashes().len();
-                    ensure!(num_txns > 0, "metadata txn failed to execute");
-                    counters::BLOCK_EXECUTION_DURATION_S.observe_duration(execution_duration);
-                    if let Ok(nanos_per_txn) =
-                        u64::try_from(execution_duration.as_nanos() / num_txns as u128)
-                    {
-                        // TODO: use duration_float once it's stable
-                        // Tracking: https://github.com/rust-lang/rust/issues/54361
-                        counters::TXN_EXECUTION_DURATION_S
-                            .observe_duration(Duration::from_nanos(nanos_per_txn));
-                    }
-                    Ok(result)
-                })
         )
     }
 
@@ -99,11 +81,6 @@ impl StateComputer for ExecutionProxy {
         block_ids: Vec<HashValue>,
         finality_proof: LedgerInfoWithSignatures,
     ) -> Result<()> {
-        let version = finality_proof.ledger_info().version();
-        counters::LAST_COMMITTED_VERSION.set(version as i64);
-
-        let pre_commit_instant = Instant::now();
-
         let (committed_txns, reconfig_events) = monitor!(
             "commit_block",
             self.execution_correctness_client
@@ -111,7 +88,6 @@ impl StateComputer for ExecutionProxy {
                 .unwrap()
                 .commit_blocks(block_ids, finality_proof)?
         );
-        counters::BLOCK_COMMIT_DURATION_S.observe_duration(pre_commit_instant.elapsed());
         if let Err(e) = self
             .synchronizer
             .commit(committed_txns, reconfig_events)
@@ -124,7 +100,6 @@ impl StateComputer for ExecutionProxy {
 
     /// Synchronize to a commit that not present locally.
     async fn sync_to(&self, target: LedgerInfoWithSignatures) -> Result<()> {
-        counters::STATE_SYNC_COUNT.inc();
         // Here to start to do state synchronization where ChunkExecutor inside will
         // process chunks and commit to Storage. However, after block execution and
         // commitments, the the sync state of ChunkExecutor may be not up to date so
