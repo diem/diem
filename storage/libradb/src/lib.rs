@@ -201,7 +201,7 @@ impl LibraDB {
         start_epoch: u64,
         end_epoch: u64,
     ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
-        self.ledger_store.get_first_n_epoch_change_ledger_infos(
+        self.ledger_store.get_epoch_change_ledger_infos(
             start_epoch,
             end_epoch,
             MAX_NUM_EPOCH_CHANGE_LEDGER_INFO,
