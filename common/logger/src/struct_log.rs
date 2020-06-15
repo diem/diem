@@ -377,8 +377,8 @@ impl UDPStructLogThread {
                     continue;
                 }
                 Err(e) => {
+                    // do not break on error, move on to the next log message
                     println!("[Logging] Error while sending data to socket: {}", e);
-                    break;
                 }
             }
         }
