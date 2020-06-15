@@ -222,19 +222,12 @@
 <span id="222">222</span>
 <span id="223">223</span>
 <span id="224">224</span>
-<span id="225">225</span>
-<span id="226">226</span>
-<span id="227">227</span>
-<span id="228">228</span>
-<span id="229">229</span>
-<span id="230">230</span>
-<span id="231">231</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">SynchronizerState</span>;
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="ident">format_err</span>, <span class="prelude-ty">Result</span>};
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">format_err</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">executor_types</span>::{<span class="ident">ChunkExecutor</span>, <span class="ident">ExecutedTrees</span>};
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
@@ -274,8 +267,8 @@
     <span class="doccomment">/// Get the epoch change ledger info for epoch so that we can move to next epoch.</span>
     <span class="kw">fn</span> <span class="ident">get_epoch_proof</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span>;
 
-    <span class="doccomment">/// Tries to find a LedgerInfo for a given version.</span>
-    <span class="kw">fn</span> <span class="ident">get_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span>;
+    <span class="doccomment">/// Get ledger info at an epoch boundary version.</span>
+    <span class="kw">fn</span> <span class="ident">get_epoch_change_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Load all on-chain configs from storage</span>
     <span class="doccomment">/// Note: this method is being exposed as executor proxy trait temporarily because storage read is currently</span>
@@ -404,15 +397,8 @@
             .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Empty EpochChangeProof&quot;</span>))
     }
 
-    <span class="kw">fn</span> <span class="ident">get_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">waypoint_li</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">get_ledger_info</span>(<span class="ident">version</span>)<span class="question-mark">?</span>;
-        <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="ident">waypoint_li</span>.<span class="ident">ledger_info</span>().<span class="ident">version</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">version</span>,
-            <span class="string">&quot;Version of Waypoint LI {} is different from requested waypoint version {}&quot;</span>,
-            <span class="ident">waypoint_li</span>.<span class="ident">ledger_info</span>().<span class="ident">version</span>(),
-            <span class="ident">version</span>
-        );
-        <span class="prelude-val">Ok</span>(<span class="ident">waypoint_li</span>)
+    <span class="kw">fn</span> <span class="ident">get_epoch_change_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">get_epoch_change_ledger_info</span>(<span class="ident">version</span>)
     }
 
     <span class="kw">fn</span> <span class="ident">load_on_chain_configs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
