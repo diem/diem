@@ -206,8 +206,8 @@ impl SharedMempoolNetwork {
     /// returns the newly created SharedMempoolNetwork, and the ID of validator and full node, in that order
     fn bootstrap_vfn_network(
         broadcast_batch_size: usize,
-        mempool_size: Option<usize>,
-        account_txn_limit: Option<usize>,
+        validator_mempool_size: Option<usize>,
+        validator_account_txn_limit: Option<usize>,
     ) -> (Self, PeerId, PeerId) {
         let mut smp = Self::default();
 
@@ -219,10 +219,10 @@ impl SharedMempoolNetwork {
         let mut config = NodeConfig::random();
         config.mempool.shared_mempool_batch_size = broadcast_batch_size;
         config.mempool.shared_mempool_backoff_interval_ms = 50;
-        if let Some(capacity) = mempool_size {
+        if let Some(capacity) = validator_mempool_size {
             config.mempool.capacity = capacity
         }
-        if let Some(capacity_per_user) = account_txn_limit {
+        if let Some(capacity_per_user) = validator_account_txn_limit {
             config.mempool.capacity_per_user = capacity_per_user;
         }
 
@@ -236,12 +236,6 @@ impl SharedMempoolNetwork {
         fn_config.base.role = RoleType::FullNode;
         fn_config.mempool.shared_mempool_batch_size = broadcast_batch_size;
         fn_config.mempool.shared_mempool_backoff_interval_ms = 50;
-        if let Some(capacity) = mempool_size {
-            fn_config.mempool.capacity = capacity
-        }
-        if let Some(capacity_per_user) = account_txn_limit {
-            fn_config.mempool.capacity_per_user = capacity_per_user;
-        }
 
         let mut upstream_config = UpstreamConfig::default();
         upstream_config
@@ -454,7 +448,6 @@ fn test_metric_cache_ignore_shared_txns() {
     }
 }
 
-// fail
 #[test]
 fn test_interruption_in_sync() {
     let (mut smp, peers) = SharedMempoolNetwork::bootstrap_validator_network(3, 1, None);
@@ -733,85 +726,6 @@ fn test_state_sync_events_committed_txns() {
     let (timeline, _) = pool.read_timeline(0, 10);
     assert_eq!(timeline.len(), 1);
     assert_eq!(timeline.get(0).unwrap().1, kept_txn);
-}
-
-#[test]
-fn test_broadcast_ack_single_account_single_peer() {
-    let batch_size = 3;
-    let (mut smp, validator, full_node) =
-        SharedMempoolNetwork::bootstrap_vfn_network(3, None, None);
-
-    // add txns to FN
-    // txns from single account
-    let mut all_txns = vec![];
-    for i in 0..10 {
-        all_txns.push(TestTransaction::new(1, i, 1));
-    }
-    smp.add_txns(&full_node, all_txns.clone());
-
-    // FN discovers new peer V
-    smp.send_connection_event(
-        &full_node,
-        ConnectionNotification::NewPeer(validator, NetworkAddress::mock()),
-    );
-
-    // deliver messages until FN mempool is empty
-    let mut remaining_txn_index = batch_size;
-    while remaining_txn_index < all_txns.len() + 1 {
-        // deliver message
-        let (_transactions, recipient) = smp.deliver_message(&full_node, 1, true);
-        assert_eq!(validator, recipient);
-
-        // check that txns on FN have been GC'ed
-        let mempool = smp.mempools.get(&full_node).unwrap();
-        let block = mempool.lock().unwrap().get_block(100, HashSet::new());
-        let remaining_txns = &all_txns[remaining_txn_index..];
-        assert_eq!(block.len(), remaining_txns.len());
-        for txn in remaining_txns {
-            assert!(block.contains(&txn.make_signed_transaction_with_max_gas_amount(5)));
-        }
-
-        // update remaining txn index
-        if remaining_txn_index == all_txns.len() {
-            remaining_txn_index += batch_size;
-        } else {
-            remaining_txn_index = std::cmp::min(remaining_txn_index + batch_size, all_txns.len());
-        }
-    }
-}
-
-#[test]
-fn test_broadcast_ack_multiple_accounts_single_peer() {
-    let (mut smp, validator, full_node) =
-        SharedMempoolNetwork::bootstrap_vfn_network(3, None, None);
-
-    let all_txns = vec![
-        TestTransaction::new(0, 0, 1),
-        TestTransaction::new(0, 1, 1),
-        TestTransaction::new(1, 0, 1),
-        TestTransaction::new(1, 1, 1),
-        TestTransaction::new(0, 2, 1),
-    ];
-    smp.add_txns(&full_node, all_txns.clone());
-
-    // full node discovers new validator peer
-    smp.send_connection_event(
-        &full_node,
-        ConnectionNotification::NewPeer(validator, NetworkAddress::mock()),
-    );
-
-    // deliver message
-    let (_transactions, recipient) = smp.deliver_message(&full_node, 1, true);
-    assert_eq!(validator, recipient);
-
-    // check that txns have been GC'ed
-    let mempool = smp.mempools.get(&full_node).unwrap();
-    let remaining_txns = &all_txns[3..];
-    let block = mempool.lock().unwrap().get_block(100, HashSet::new());
-    assert_eq!(remaining_txns.len(), block.len());
-    for txn in remaining_txns {
-        assert!(block.contains(&txn.make_signed_transaction_with_max_gas_amount(5)));
-    }
 }
 
 // primary_peers = k, fallbacks > 0

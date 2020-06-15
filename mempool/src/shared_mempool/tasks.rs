@@ -7,9 +7,8 @@ use crate::{
     core_mempool::{CoreMempool, TimelineState, TxnPointer},
     counters,
     network::{MempoolNetworkSender, MempoolSyncMsg},
-    shared_mempool::{
-        peer_manager::PeerManager,
-        types::{notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification},
+    shared_mempool::types::{
+        notify_subscribers, ScheduledBroadcast, SharedMempool, SharedMempoolNotification,
     },
     CommitNotification, CommitResponse, CommittedTransaction, ConsensusRequest, ConsensusResponse,
     SubmissionStatus,
@@ -399,40 +398,6 @@ fn log_txn_process_results(results: &[SubmissionStatus], sender: Option<PeerId>)
             }
         }
     }
-}
-
-/// processes ACK from peer node regarding txn submission to that node
-pub(crate) fn process_broadcast_ack(
-    mempool: &Mutex<CoreMempool>,
-    peer: PeerNetworkId,
-    request_id: String,
-    retry_txns: Vec<u64>,
-    backoff: bool,
-    is_validator: bool, // whether this node is a validator or not
-    peer_manager: Arc<PeerManager>,
-) {
-    // for full nodes, remove successfully ACK'ed txns from mempool
-    if !is_validator {
-        if let Some(broadcasted_batch) = peer_manager.get_broadcast_batch(peer, &request_id) {
-            let retry_timeline_ids = retry_txns
-                .iter()
-                .filter_map(|index| broadcasted_batch.get(*index as usize).cloned())
-                .collect::<HashSet<_>>();
-
-            let mut mempool = mempool
-                .lock()
-                .expect("[shared mempool] failed to acquire mempool lock");
-
-            let batch_txns = mempool.filter_read_timeline(broadcasted_batch);
-            for (timeline_id, txn) in batch_txns {
-                if !retry_timeline_ids.contains(&timeline_id) {
-                    mempool.remove_transaction(&txn.sender(), txn.sequence_number(), false);
-                }
-            }
-        }
-    }
-
-    peer_manager.process_broadcast_ack(peer, request_id, retry_txns, backoff);
 }
 
 // ================================= //

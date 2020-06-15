@@ -57,7 +57,6 @@ pub(crate) fn start_shared_mempool<V>(
             .shared_mempool_min_broadcast_recipient_count
             .unwrap_or(DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT),
     ));
-    let config_clone = config.clone_for_template();
 
     let mut all_network_events = vec![];
     let mut network_senders = HashMap::new();
@@ -84,7 +83,6 @@ pub(crate) fn start_shared_mempool<V>(
         consensus_requests,
         state_sync_requests,
         mempool_reconfig_events,
-        config_clone,
     ));
 
     executor.spawn(gc_coordinator(
