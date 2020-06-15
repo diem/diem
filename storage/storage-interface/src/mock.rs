@@ -124,7 +124,10 @@ impl DbReader for MockDbReader {
         unimplemented!()
     }
 
-    fn get_ledger_info(&self, _known_version: u64) -> Result<LedgerInfoWithSignatures> {
+    fn get_epoch_change_ledger_info(
+        &self,
+        _known_version: u64,
+    ) -> Result<LedgerInfoWithSignatures> {
         unimplemented!()
     }
 }

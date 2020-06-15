@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::SynchronizerState;
-use anyhow::{ensure, format_err, Result};
+use anyhow::{format_err, Result};
 use executor_types::{ChunkExecutor, ExecutedTrees};
 use itertools::Itertools;
 use libra_types::{
@@ -42,8 +42,8 @@ pub trait ExecutorProxyTrait: Send {
     /// Get the epoch change ledger info for epoch so that we can move to next epoch.
     fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures>;
 
-    /// Tries to find a LedgerInfo for a given version.
-    fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
+    /// Get ledger info at an epoch boundary version.
+    fn get_epoch_change_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
 
     /// Load all on-chain configs from storage
     /// Note: this method is being exposed as executor proxy trait temporarily because storage read is currently
@@ -172,15 +172,8 @@ impl ExecutorProxyTrait for ExecutorProxy {
             .ok_or_else(|| format_err!("Empty EpochChangeProof"))
     }
 
-    fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
-        let waypoint_li = self.storage.get_ledger_info(version)?;
-        ensure!(
-            waypoint_li.ledger_info().version() == version,
-            "Version of Waypoint LI {} is different from requested waypoint version {}",
-            waypoint_li.ledger_info().version(),
-            version
-        );
-        Ok(waypoint_li)
+    fn get_epoch_change_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+        self.storage.get_epoch_change_ledger_info(version)
     }
 
     fn load_on_chain_configs(&mut self) -> Result<()> {
