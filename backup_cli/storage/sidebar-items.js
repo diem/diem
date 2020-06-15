@@ -1,1 +1,1 @@
-initSidebarItems({"mod":[["local_fs",""]],"trait":[["BackupStorage",""]],"type":[["BackupHandle",""],["BackupHandleRef",""],["FileHandle",""],["FileHandleRef",""]]});
+initSidebarItems({"enum":[["StorageOpt",""]],"mod":[["command_adapter",""],["local_fs",""]],"trait":[["BackupStorage",""]],"type":[["BackupHandle",""],["BackupHandleRef",""],["FileHandle",""],["FileHandleRef",""]]});

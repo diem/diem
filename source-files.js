@@ -1,6 +1,6 @@
 var N = null;var sourcesIndex = {};
 sourcesIndex["accumulator"] = {"name":"","files":["lib.rs"]};
-sourcesIndex["backup_cli"] = {"name":"","dirs":[{"name":"manifest","files":["mod.rs","state_snapshot.rs"]},{"name":"storage","dirs":[{"name":"local_fs","files":["mod.rs"]}],"files":["mod.rs"]}],"files":["backup.rs","lib.rs","restore.rs"]};
+sourcesIndex["backup_cli"] = {"name":"","dirs":[{"name":"manifest","files":["mod.rs","state_snapshot.rs"]},{"name":"storage","dirs":[{"name":"command_adapter","files":["config.rs","mod.rs"]},{"name":"local_fs","files":["mod.rs"]}],"files":["mod.rs"]}],"files":["backup.rs","lib.rs","restore.rs"]};
 sourcesIndex["backup_service"] = {"name":"","files":["handlers.rs","lib.rs"]};
 sourcesIndex["borrow_graph"] = {"name":"","files":["graph.rs","lib.rs","paths.rs","references.rs","shared.rs"]};
 sourcesIndex["bounded_executor"] = {"name":"","files":["lib.rs"]};
