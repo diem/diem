@@ -1,14 +1,16 @@
 import 0x1.CoreAddresses;
+import 0x1.Signer;
 //! sender: association
-main() {
-    assert(get_txn_sender() == CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 0);
+main(account: &signer) {
+    assert(Signer.address_of(move(account)) == CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 0);
     return;
 }
 
 //! new-transaction
 import 0x1.CoreAddresses;
-main() {
-    assert(get_txn_sender() != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 1);
+import 0x1.Signer;
+main(account: &signer) {
+    assert(Signer.address_of(move(account)) != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 1);
     return;
 }
 
@@ -16,8 +18,9 @@ main() {
 //! account: alice
 //! sender: alice
 import 0x1.CoreAddresses;
-main() {
-    assert(get_txn_sender() != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 2);
+import 0x1.Signer;
+main(account: &signer) {
+    assert(Signer.address_of(move(account)) != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 2);
     assert({{alice}} != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 3);
     return;
 }

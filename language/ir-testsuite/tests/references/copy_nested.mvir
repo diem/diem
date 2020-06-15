@@ -1,4 +1,5 @@
 module Test {
+    import 0x1.Signer;
 
     struct Config { b: bool }
 
@@ -24,12 +25,12 @@ module Test {
         return *&move(config).b;
     }
 
-    public set(b: bool) acquires T {
+    public set(account: &signer, b: bool) acquires T {
         let t_ref: &mut Self.T;
         let config_ref: &mut Self.Config;
         let b_ref: &mut bool;
 
-        t_ref = borrow_global_mut<T>(get_txn_sender());
+        t_ref = borrow_global_mut<T>(Signer.address_of(move(account)));
         config_ref = &mut move(t_ref).config;
         b_ref = &mut move(config_ref).b;
         *move(b_ref) = move(b);
@@ -43,20 +44,23 @@ module Test {
 
 //! new-transaction
 import {{default}}.Test;
+import 0x1.Signer;
 
 main(account: &signer) {
+    let sender: address;
     let config: Test.Config;
     let config1: Test.Config;
 
     Test.publish_config(copy(account), false);
 
-    config = Test.config(get_txn_sender());
+    sender = Signer.address_of(copy(account));
+    config = Test.config(copy(sender));
     assert(Test.value(&config) == false, 77);
 
-    Test.set(true); // shouldn't affect local config variable
+    Test.set(copy(account), true); // shouldn't affect local config variable
     assert(Test.value(&config) == false, 88);
 
-    config1 = Test.config(get_txn_sender());
+    config1 = Test.config(move(sender));
     assert(Test.value(&config1) == true, 99);
 
     return;

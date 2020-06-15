@@ -1,21 +1,23 @@
 module TestMoveFrom {
+    import 0x1.Signer;
+
     resource Counter { i: u64 }
 
-    public has(): bool {
+    public has(account: &signer): bool {
       let sender_address: address;
       let yes: bool;
 
-      sender_address = get_txn_sender();
+      sender_address = Signer.address_of(move(account));
       yes = exists<Counter>(move(sender_address));
       return move(yes);
     }
 
-    public increment() acquires Counter {
+    public increment(account: &signer) acquires Counter {
       let sender_address: address;
       let t_ref: &mut Self.Counter;
       let counter_ref: &mut u64;
 
-      sender_address = get_txn_sender();
+      sender_address = Signer.address_of(move(account));
       t_ref = borrow_global_mut<Counter>(move(sender_address));
       counter_ref = &mut copy(t_ref).i;
       _ = move(t_ref);
@@ -33,12 +35,12 @@ module TestMoveFrom {
       return;
     }
 
-    public unpublish() acquires Counter {
+    public unpublish(account: &signer) acquires Counter {
       let sender_address: address;
       let counter: Self.Counter;
       let i: u64;
 
-      sender_address = get_txn_sender();
+      sender_address = Signer.address_of(move(account));
       counter = move_from<Counter>(move(sender_address));
       Counter { i } = move(counter);
 
@@ -56,14 +58,14 @@ main(account: &signer) {
   let has2: bool;
 
   TestMoveFrom.publish(copy(account));
-  TestMoveFrom.increment();
+  TestMoveFrom.increment(copy(account));
 
-  has1 = TestMoveFrom.has();
+  has1 = TestMoveFrom.has(copy(account));
   assert(move(has1), 77);
 
-  TestMoveFrom.unpublish();
+  TestMoveFrom.unpublish(copy(account));
 
-  has2 = TestMoveFrom.has();
+  has2 = TestMoveFrom.has(copy(account));
   assert(!move(has2), 88);
 
   return;

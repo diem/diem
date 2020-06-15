@@ -1,4 +1,6 @@
 module M {
+    import 0x1.Signer;
+
     // Structures
     //
 
@@ -61,12 +63,14 @@ module M {
     }
 
     // unpublish whatever was published in `publish_some_value()`
-    public unpublish_some_value() acquires Some {
+    public unpublish_some_value(account: &signer) acquires Some {
+        let sender: address;
         let some_of_value: Self.Some<Self.Value>;
         let value: Self.Value;
         let v: u64;
 
-        some_of_value = move_from<Some<Self.Value>>(get_txn_sender());
+        sender = Signer.address_of(move(account));
+        some_of_value = move_from<Some<Self.Value>>(move(sender));
         Some<Self.Value> { v: value } = move(some_of_value);
         Value { val: v } = move(value);
         assert(move(v) == 100, 100);
@@ -83,28 +87,34 @@ module M {
     }
 
     // unpublish a `Some<T>` under sender account
-    public unpublish_some<T>(): T acquires Some {
+    public unpublish_some<T>(account: &signer): T acquires Some {
+        let sender: address;
         let some_of_t: Self.Some<T>;
         let t: T;
 
-        some_of_t = move_from<Some<T>>(get_txn_sender());
+        sender = Signer.address_of(move(account));
+        some_of_t = move_from<Some<T>>(move(sender));
         Some<T> { v: t } = move(some_of_t);
 
         return move(t);
     }
 
     // whether an instance of Some<T> exists under sender account
-    public some_exists<T>(): bool {
-        return exists<Some<T>>(get_txn_sender());
+    public some_exists<T>(account: &signer): bool {
+        let sender: address;
+        sender = Signer.address_of(move(account));
+        return exists<Some<T>>(move(sender));
     }
 
     // check a `Some` under sender account
-    public check_some<T>(val: T): T * bool acquires Some {
+    public check_some<T>(account: &signer, val: T): T * bool acquires Some {
+        let sender: address;
         let some: &Self.Some<T>;
         let inner_ref: &T;
         let val_ref: &T;
         let equal: bool;
-        some = borrow_global<Some<T>>(get_txn_sender());
+        sender = Signer.address_of(move(account));
+        some = borrow_global<Some<T>>(move(sender));
         inner_ref = &move(some).v;
         val_ref = &val;
         equal = (move(inner_ref) == move(val_ref));
@@ -112,9 +122,11 @@ module M {
     }
 
     // publish a `Some` under sender account
-    public change_some<T: copyable>(val: T) acquires Some {
+    public change_some<T: copyable>(account: &signer, val: T) acquires Some {
+        let sender: address;
         let some: &mut Self.Some<T>;
-        some = borrow_global_mut<Some<T>>(get_txn_sender());
+        sender = Signer.address_of(move(account));
+        some = borrow_global_mut<Some<T>>(move(sender));
         *(&mut move(some).v) = move(val);
         return;
     }
@@ -137,12 +149,12 @@ module M {
 import {{default}}.M;
 
 main(account: &signer) {
-    assert(M.some_exists<M.Value>() == false, 1010);
-    assert(M.some_exists<address>() == false, 1011);
+    assert(M.some_exists<M.Value>(copy(account)) == false, 1010);
+    assert(M.some_exists<address>(copy(account)) == false, 1011);
 
-    M.publish_some_value(move(account));
+    M.publish_some_value(copy(account));
 
-    assert(M.some_exists<M.Value>() == true, 1012);
+    assert(M.some_exists<M.Value>(move(account)) == true, 1012);
     return;
 }
 
@@ -150,15 +162,15 @@ main(account: &signer) {
 import {{default}}.M;
 
 main(account: &signer) {
-    assert(M.some_exists<M.Value>() == true, 1020);
-    assert(M.some_exists<u64>() == false, 1021);
+    assert(M.some_exists<M.Value>(copy(account)) == true, 1020);
+    assert(M.some_exists<u64>(copy(account)) == false, 1021);
 
     M.publish_some<u64>(copy(account), 100);
-    M.publish_some<bool>(move(account), true);
+    M.publish_some<bool>(copy(account), true);
 
-    assert(M.some_exists<u64>() == true, 1022);
-    assert(M.some_exists<bool>() == true, 1023);
-    assert(M.some_exists<address>() == false, 1024);
+    assert(M.some_exists<u64>(copy(account)) == true, 1022);
+    assert(M.some_exists<bool>(copy(account)) == true, 1023);
+    assert(M.some_exists<address>(move(account)) == false, 1024);
     return;
 }
 
@@ -166,10 +178,10 @@ main(account: &signer) {
 import {{default}}.M;
 
 main(account: &signer) {
-    assert(M.some_exists<M.Value>() == true, 1030);
-    assert(M.some_exists<bool>() == true, 1031);
-    assert(M.some_exists<address>() == false, 1032);
-    assert(M.some_exists<M.Container<u64>>() == false, 1033);
+    assert(M.some_exists<M.Value>(copy(account)) == true, 1030);
+    assert(M.some_exists<bool>(copy(account)) == true, 1031);
+    assert(M.some_exists<address>(copy(account)) == false, 1032);
+    assert(M.some_exists<M.Container<u64>>(copy(account)) == false, 1033);
 
     M.publish_some<address>(copy(account), 0x0);
     M.publish_some<M.Container<u64>>(
@@ -177,10 +189,10 @@ main(account: &signer) {
         M.new_container<u64>(7)
     );
 
-    assert(M.some_exists<address>() == true, 1034);
-    assert(M.some_exists<M.Container<u64>>() == true, 1035);
-    assert(M.some_exists<M.Container<u8>>() == false, 1036);
-    assert(M.some_exists<M.Value>() == true, 1037);
+    assert(M.some_exists<address>(copy(account)) == true, 1034);
+    assert(M.some_exists<M.Container<u64>>(copy(account)) == true, 1035);
+    assert(M.some_exists<M.Container<u8>>(copy(account)) == false, 1036);
+    assert(M.some_exists<M.Value>(copy(account)) == true, 1037);
 
     M.publish_some<M.Container<M.Value>>(
         copy(account),
@@ -197,21 +209,21 @@ main(account: &signer) {
 //! new-transaction
 import {{default}}.M;
 
-main() {
+main(account: &signer) {
     let eq: bool;
     let val: M.Value;
-    _, eq = M.check_some<bool>(true);
+    _, eq = M.check_some<bool>(copy(account), true);
     assert(move(eq), 2010);
-    _, eq = M.check_some<u64>(100);
+    _, eq = M.check_some<u64>(copy(account), 100);
     assert(move(eq), 2011);
-    _, eq = M.check_some<address>(0x0);
+    _, eq = M.check_some<address>(copy(account), 0x0);
     assert(move(eq), 2012);
-    _, eq = M.check_some<M.Container<u64>>(M.new_container<u64>(7));
+    _, eq = M.check_some<M.Container<u64>>(copy(account), M.new_container<u64>(7));
     assert(move(eq), 2013);
-    _, eq = M.check_some<M.Container<u64>>(M.new_container<u64>(10));
+    _, eq = M.check_some<M.Container<u64>>(copy(account), M.new_container<u64>(10));
     assert(!move(eq), 2014);
     val = M.new_value(5);
-    val, eq = M.check_some<M.Value>(move(val));
+    val, eq = M.check_some<M.Value>(copy(account), move(val));
     assert(!move(eq), 2015);
     _ = M.destroy_value(move(val));
     return;
@@ -220,15 +232,15 @@ main() {
 //! new-transaction
 import {{default}}.M;
 
-main() {
+main(account: &signer) {
     let eq: bool;
-    M.change_some<bool>(false);
-    M.change_some<u64>(1);
-    M.change_some<address>(0x01);
-    M.change_some<M.Container<u64>>(M.new_container<u64>(20));
-    _, eq = M.check_some<M.Container<u64>>(M.new_container<u64>(20));
+    M.change_some<bool>(copy(account), false);
+    M.change_some<u64>(copy(account), 1);
+    M.change_some<address>(copy(account), 0x01);
+    M.change_some<M.Container<u64>>(copy(account), M.new_container<u64>(20));
+    _, eq = M.check_some<M.Container<u64>>(copy(account), M.new_container<u64>(20));
     assert(move(eq), 2020);
-    _, eq = M.check_some<address>(0x1);
+    _, eq = M.check_some<address>(copy(account), 0x1);
     assert(move(eq), 2021);
     return;
 }
@@ -239,37 +251,37 @@ main() {
 //! new-transaction
 import {{default}}.M;
 
-main() {
-    M.unpublish_some_value();
+main(account: &signer) {
+    M.unpublish_some_value(copy(account));
 
-    assert(M.some_exists<M.Value>() == false, 3010);
-    assert(M.some_exists<address>() == true, 3011);
-    assert(M.some_exists<M.Container<u64>>() == true, 3012);
-    assert(M.some_exists<M.Container<u8>>() == false, 3013);
+    assert(M.some_exists<M.Value>(copy(account)) == false, 3010);
+    assert(M.some_exists<address>(copy(account)) == true, 3011);
+    assert(M.some_exists<M.Container<u64>>(copy(account)) == true, 3012);
+    assert(M.some_exists<M.Container<u8>>(copy(account)) == false, 3013);
     return;
 }
 
 //! new-transaction
 import {{default}}.M;
 
-main() {
-    assert(M.some_exists<M.Container<M.Value>>() == true, 3020);
-    assert(M.some_exists<M.Value>() == false, 3021);
-    assert(M.some_exists<address>() == true, 3022);
+main(account: &signer) {
+    assert(M.some_exists<M.Container<M.Value>>(copy(account)) == true, 3020);
+    assert(M.some_exists<M.Value>(copy(account)) == false, 3021);
+    assert(M.some_exists<address>(copy(account)) == true, 3022);
 
-    assert(M.unpublish_some<u64>() == 1, 3023);
-    assert(!M.unpublish_some<bool>(), 3024);
+    assert(M.unpublish_some<u64>(copy(account)) == 1, 3023);
+    assert(!M.unpublish_some<bool>(copy(account)), 3024);
     assert(
         M.destroy_container<u64>(
-            M.unpublish_some<M.Container<u64>>()
+            M.unpublish_some<M.Container<u64>>(copy(account))
         ) == 20,
         3025
     );
-    assert(M.unpublish_some<address>() == 0x01, 3026);
+    assert(M.unpublish_some<address>(copy(account)) == 0x01, 3026);
 
-    assert(M.some_exists<u64>() == false, 3027);
-    assert(M.some_exists<address>() == false, 3028);
-    assert(M.some_exists<M.Container<u64>>() == false, 3029);
+    assert(M.some_exists<u64>(copy(account)) == false, 3027);
+    assert(M.some_exists<address>(copy(account)) == false, 3028);
+    assert(M.some_exists<M.Container<u64>>(copy(account)) == false, 3029);
     return;
 }
 
@@ -277,21 +289,21 @@ main() {
 //! new-transaction
 import {{default}}.M;
 
-main() {
+main(account: &signer) {
     assert(
         M.destroy_value(
             M.destroy_container<M.Value>(
-                M.unpublish_some<M.Container<M.Value>>()
+                M.unpublish_some<M.Container<M.Value>>(copy(account))
             )
         ) == 5,
         3030
     );
 
-    assert(M.some_exists<u64>() == false, 3031);
-    assert(M.some_exists<address>() == false, 3032);
-    assert(M.some_exists<bool>() == false, 3033);
-    assert(M.some_exists<M.Container<u64>>() == false, 3034);
-    assert(M.some_exists<M.Container<M.Value>>() == false, 3035);
-    assert(M.some_exists<M.Value>() == false, 3036);
+    assert(M.some_exists<u64>(copy(account)) == false, 3031);
+    assert(M.some_exists<address>(copy(account)) == false, 3032);
+    assert(M.some_exists<bool>(copy(account)) == false, 3033);
+    assert(M.some_exists<M.Container<u64>>(copy(account)) == false, 3034);
+    assert(M.some_exists<M.Container<M.Value>>(copy(account)) == false, 3035);
+    assert(M.some_exists<M.Value>(copy(account)) == false, 3036);
     return;
 }

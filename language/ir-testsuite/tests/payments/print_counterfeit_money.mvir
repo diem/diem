@@ -4,14 +4,15 @@ module M {
     import 0x1.LBR;
     import 0x1.Libra;
     import 0x1.LibraAccount;
+    import 0x1.Signer;
 
     resource R<T: resource> { x: T }
     resource FakeCoin { value: u64 }
 
-    fetch<T: resource>(): T acquires R {
+    fetch<T: resource>(account: &signer): T acquires R {
         let r: Self.R<T>;
         let t: T;
-        r = move_from<R<T>>(get_txn_sender());
+        r = move_from<R<T>>(Signer.address_of(move(account)));
         R<T> { x: t } = move(r);
         return move(t);
     }
@@ -22,8 +23,8 @@ module M {
     }
 
     transmute<T1: resource, T2: resource>(account: &signer, x: T1): T2 acquires R {
-        Self.store<T1>(move(account), move(x));
-        return Self.fetch<T2>();
+        Self.store<T1>(copy(account), move(x));
+        return Self.fetch<T2>(move(account));
     }
 
     public become_rich(account: &signer) acquires R {
@@ -44,10 +45,11 @@ module M {
 import {{default}}.M;
 import 0x1.LibraAccount;
 import 0x1.LBR;
+import 0x1.Signer;
 
 main(account: &signer) {
-    M.become_rich(move(account));
-    assert(LibraAccount.balance<LBR.LBR>(get_txn_sender()) == 500000, 42);
+    M.become_rich(copy(account));
+    assert(LibraAccount.balance<LBR.LBR>(Signer.address_of(move(account))) == 500000, 42);
     return;
 }
 

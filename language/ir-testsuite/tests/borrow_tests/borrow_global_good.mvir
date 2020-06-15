@@ -1,11 +1,12 @@
 module A {
+    import 0x1.Signer;
     resource T{v: u64}
     resource U{v: u64}
 
-    public A0() acquires T {
+    public A0(account: &signer) acquires T {
         let sender: address;
         let t_ref: &mut Self.T;
-        sender = get_txn_sender();
+        sender = Signer.address_of(move(account));
         t_ref = borrow_global_mut<T>(copy(sender));
         _ = move(t_ref);
         t_ref = borrow_global_mut<T>(copy(sender));
@@ -13,11 +14,11 @@ module A {
         return;
     }
 
-    public A1() acquires T, U {
+    public A1(account: &signer) acquires T, U {
         let sender: address;
         let t_ref: &mut Self.T;
         let u_ref: &mut Self.U;
-        sender = get_txn_sender();
+        sender = Signer.address_of(move(account));
         t_ref = borrow_global_mut<T>(copy(sender));
         u_ref = borrow_global_mut<U>(copy(sender));
         _ = move(t_ref);
@@ -25,10 +26,10 @@ module A {
         return;
     }
 
-    public A2(b: bool) acquires T {
+    public A2(account: &signer, b: bool) acquires T {
         let sender: address;
         let t_ref: &mut Self.T;
-        sender = get_txn_sender();
+        sender = Signer.address_of(move(account));
         if (move(b)) {
             t_ref = borrow_global_mut<T>(copy(sender));
         } else {
@@ -38,10 +39,10 @@ module A {
         return;
     }
 
-    public A3(b: bool) acquires T {
+    public A3(account: &signer, b: bool) acquires T {
         let sender: address;
         let t_ref: &mut Self.T;
-        sender = get_txn_sender();
+        sender = Signer.address_of(move(account));
         if (move(b)) {
             t_ref = borrow_global_mut<T>(copy(sender));
             _ = move(t_ref);
@@ -53,7 +54,7 @@ module A {
         let sender: address;
         let x: Self.T;
         let y: &mut Self.T;
-        sender = get_txn_sender();
+        sender = Signer.address_of(copy(account));
         x = move_from<T>(copy(sender));
         y = borrow_global_mut<T>(move(sender));
         _ = move(y);
@@ -61,9 +62,11 @@ module A {
         return;
     }
 
-    public A5() acquires T {
+    public A5(account: &signer) acquires T {
         let t_ref: &Self.T;
-        t_ref = borrow_global<T>(get_txn_sender());
+        let sender: address;
+        sender = Signer.address_of(move(account));
+        t_ref = borrow_global<T>(move(sender));
         return;
     }
 }

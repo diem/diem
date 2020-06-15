@@ -1,4 +1,6 @@
 module M {
+    import 0x1.Signer;
+
     resource Foo {
         x: u8,
     }
@@ -8,9 +10,9 @@ module M {
         return;
     }
 
-    public bar(): u8 acquires Foo {
+    public bar(account: &signer): u8 acquires Foo {
         let x: u8;
-        Foo { x } = move_from<Foo>(get_txn_sender());
+        Foo { x } = move_from<Foo>(Signer.address_of(move(account)));
         return move(x);
     }
 }
@@ -27,7 +29,7 @@ main(account: &signer) {
 //! new-transaction
 import {{default}}.M;
 
-main() {
-    assert(M.bar() == 100u8, 42);
+main(account: &signer) {
+    assert(M.bar(move(account)) == 100u8, 42);
     return;
 }

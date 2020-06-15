@@ -20,17 +20,20 @@ module M {
 //! sender: alice
 import {{default}}.M;
 import 0x1.Offer;
+import 0x1.Signer;
 
 // Alice creates an offer for Bob that contains an M.T resource
 main(account: &signer) {
+    let sender: address;
+    sender = Signer.address_of(copy(account));
     Offer.create<M.T>(
         move(account),
         M.create(),
         {{bob}}
     );
 
-    assert(Offer.exists_at<M.T>(get_txn_sender()), 77);
-    assert(Offer.address_of<M.T>(get_txn_sender()) == {{bob}} , 78);
+    assert(Offer.exists_at<M.T>(copy(sender)), 77);
+    assert(Offer.address_of<M.T>(copy(sender)) == {{bob}} , 78);
     return;
 }
 

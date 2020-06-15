@@ -19,6 +19,7 @@ module Token {
 
 //! new-transaction
 
+import 0x1.Signer;
 import {{default}}.Token;
 
 main(account: &signer) {
@@ -30,7 +31,7 @@ main(account: &signer) {
 
     z = Token.new();
     Token.publish(copy(account), move(z));
-    sender = get_txn_sender();
+    sender = Signer.address_of(move(account));
     exists1 = Token.has(copy(sender));
     assert(copy(exists1), 42);
 

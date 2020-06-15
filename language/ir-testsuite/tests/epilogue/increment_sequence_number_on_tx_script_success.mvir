@@ -8,9 +8,12 @@ main() {
 
 //! new-transaction
 import 0x1.LibraAccount;
+import 0x1.Signer;
 
-main() {
-    assert(LibraAccount.sequence_number(get_txn_sender()) == 1, 42);
+main(account: &signer) {
+    let sender: address;
+    sender = Signer.address_of(move(account));
+    assert(LibraAccount.sequence_number(move(sender)) == 1, 42);
     return;
 }
 

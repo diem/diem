@@ -5,6 +5,7 @@ module PaymentChannel {
     import 0x1.Libra;
     import 0x1.LibraAccount;
     import 0x1.Hash;
+    import 0x1.Signer;
     import 0x1.Vector;
 
     // This is the PaymentChannel resource.
@@ -74,10 +75,10 @@ module PaymentChannel {
     // Constructor for the new payment channel
     // Due to the lack of a time API in the Move VM, this payment channel is forced to be
     // uni-directional. Therefore, only the funder is funding the channel.
-    public new_payment_channel(funding: Libra.Libra<LBR.LBR>, funder_pk: vector<u8>, counterparty_pk: vector<u8>): Self.T {
+    public new_payment_channel(account: &signer, funding: Libra.Libra<LBR.LBR>, funder_pk: vector<u8>, counterparty_pk: vector<u8>): Self.T {
 	let sender: address;
         let counterparty_capacity: Libra.Libra<LBR.LBR>;
-	sender = get_txn_sender();
+	sender = Signer.address_of(move(account));
         counterparty_capacity = Libra.zero<LBR.LBR>();
 
         return T{
@@ -154,7 +155,7 @@ module PaymentChannel {
     // Public on-chain update function that allows to update the internal state of the payment channel.
     // This function is called by the `close` method before withdrawing the funds in order to update the
     // on-chain state of the contract before moving the Libra resources to their respective parties.
-    public update(this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: vector<u8>, counterparty_signature: vector<u8>, preimage: vector<u8>) {
+    public update(counterparty: &signer, this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: vector<u8>, counterparty_signature: vector<u8>, preimage: vector<u8>) {
         let sender: address;
         let ver_funder: bool;
         let ver_counterparty: bool;
@@ -164,7 +165,7 @@ module PaymentChannel {
         let counterparty_pk: vector<u8>;
 
         ref = freeze(copy(this));
-        sender = get_txn_sender();
+        sender = Signer.address_of(move(counterparty));
 
         funder_pk = Self.funder_pk(copy(ref));
         counterparty_pk = Self.counterparty_pk(copy(ref));
@@ -184,7 +185,7 @@ module PaymentChannel {
     }
 
     // Public method for closing the channel. Invokes the update method and then pays out the Libra to each party
-    public close(account: &signer, this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: vector<u8>, counterparty_signature: vector<u8>, preimage: vector<u8>) {
+    public close(counterparty: &signer, account: &signer, this: &mut Self.T, amt_to_transfer: u64, new_seq_id: u64, funder_signature: vector<u8>, counterparty_signature: vector<u8>, preimage: vector<u8>) {
         let funder_addr: address;
         let counterparty_addr: address;
 
@@ -199,11 +200,11 @@ module PaymentChannel {
 
         let ref: &Self.T;
 
-        Self.update(copy(this), move(amt_to_transfer), move(new_seq_id), move(funder_signature), move(counterparty_signature), move(preimage));
+        Self.update(copy(counterparty), copy(this), move(amt_to_transfer), move(new_seq_id), move(funder_signature), move(counterparty_signature), move(preimage));
 
         ref = freeze(copy(this));
 
-        counterparty_addr = get_txn_sender();
+        counterparty_addr = Signer.address_of(move(counterparty));
         counterparty_balance = Self.counterparty_balance(move(ref));
 
         counterparty_capacity_ref = &mut copy(this).counterparty_capacity;

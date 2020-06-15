@@ -1,16 +1,19 @@
 // Self offers are silly, but ok.
 
 import 0x1.Offer;
+import 0x1.Signer;
 
 // Create a self offer containing a u64
 main(account: &signer) {
+    let sender: address;
+    sender = Signer.address_of(copy(account));
     Offer.create<u64>(
         move(account),
         7,
         {{default}}
     );
 
-    assert(Offer.address_of<u64>(get_txn_sender()) == {{default}} , 100);
+    assert(Offer.address_of<u64>(move(sender)) == {{default}} , 100);
     return;
 }
 

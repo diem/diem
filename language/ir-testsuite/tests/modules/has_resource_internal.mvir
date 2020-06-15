@@ -9,13 +9,14 @@ module Token {
 
 //! new-transaction
 
+import 0x1.Signer;
 import {{default}}.Token;
 
-main() {
+main(account: &signer) {
     let sender: address;
     let yes: bool;
 
-    sender = get_txn_sender();
+    sender = Signer.address_of(move(account));
     yes = exists<T>(copy(sender));
     return;
 }
