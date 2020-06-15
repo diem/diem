@@ -1,8 +1,10 @@
-main() {
+import 0x1.Signer;
+
+main(account: &signer) {
     let sender: address;
     let addr: address;
 
-    sender = get_txn_sender();
+    sender = Signer.address_of(move(account));
     addr = 0x0;
     assert(copy(sender) != copy(addr), 42);
     // TODO: do we really need to test this?

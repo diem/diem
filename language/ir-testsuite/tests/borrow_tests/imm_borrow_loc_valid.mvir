@@ -5,10 +5,12 @@ module Tester {
     resource Box { f: u64 }
 
     // the resource is here to just give a feeling why the computation might not be reorderable
-    bump_and_pick(b1: &mut Self.Box, b2: &mut Self.Box): &u64 acquires Data {
+    bump_and_pick(account: &signer, b1: &mut Self.Box, b2: &mut Self.Box): &u64 acquires Data {
+        let sender: address;
         let data: &mut Self.Data;
 
-        data = borrow_global_mut<Data>(get_txn_sender());
+        sender = Signer.address_of(move(account));
+        data = borrow_global_mut<Data>(move(sender));
         *&mut copy(b1).f = *&copy(data).v1;
         *&mut copy(b2).f = *&move(data).v2;
         if (*&copy(b1).f >= *&copy(b2).f) {
@@ -32,7 +34,7 @@ module Tester {
         assert(*&(&b1).f == 0, 42);
         assert(*&(&b2).f == 0, 42);
 
-        returned_ref = Self.bump_and_pick(&mut b1, &mut b2);
+        returned_ref = Self.bump_and_pick(copy(account), &mut b1, &mut b2);
 
         // imagine some more interesting check than these asserts
         assert(

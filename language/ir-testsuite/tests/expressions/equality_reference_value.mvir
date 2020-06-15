@@ -1,4 +1,6 @@
 module Token {
+    import 0x1.Signer;
+
     resource T { count: u64 }
 
     public test(account: &signer) acquires T {
@@ -8,7 +10,7 @@ module Token {
         let local_ref: &mut u64;
         let sender: address;
         move_to<T>(copy(account), T { count: 0 });
-        sender = get_txn_sender();
+        sender = Signer.address_of(move(account));
         t_ref = borrow_global_mut<T>(move(sender));
         count_ref = &mut move(t_ref).count;
         local = 0;

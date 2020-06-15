@@ -29,8 +29,9 @@ import 0x1.LBR;
 import {{default}}.Hack;
 import 0x1.LBR;
 import 0x1.Libra;
+import 0x1.Signer;
 
-main() {
+main(account: &signer) {
     let zero_resource: Libra.Libra<LBR.LBR>;
     let minter: Hack.Hack;
     let addr1: address;
@@ -38,7 +39,7 @@ main() {
 
     zero_resource = Libra.zero<LBR.LBR>();
     minter = Hack.new(move(zero_resource));
-    addr1 = get_txn_sender();
+    addr1 = Signer.address_of(move(account));
     minter_ref = &mut minter;
     Hack.give_me_all_the_money(move(minter_ref), move(addr1));
 

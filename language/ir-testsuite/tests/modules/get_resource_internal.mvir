@@ -9,13 +9,14 @@ module Token {
 
 //! new-transaction
 
+import 0x1.Signer;
 import {{default}}.Token;
 
-main() {
+main(account: &signer) {
     let sender: address;
     let yes: &mut Token.T;
 
-    sender = get_txn_sender();
+    sender = Signer.address_of(move(account));
     yes = borrow_global_mut<T>(copy(sender));
     _ = move(yes);
     return;

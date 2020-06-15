@@ -1,13 +1,14 @@
 module A {
+    import 0x1.Signer;
     resource T1{v: u64}
 
-    public test1() acquires T1 {
-        _ = Self.borrow_acquires_t1();
+    public test1(account: &signer) acquires T1 {
+        _ = Self.borrow_acquires_t1(move(account));
         return;
     }
 
-    borrow_acquires_t1(): &mut Self.T1 acquires T1 {
-        return borrow_global_mut<T1>(get_txn_sender());
+    borrow_acquires_t1(account: &signer): &mut Self.T1 acquires T1 {
+        return borrow_global_mut<T1>(Signer.address_of(move(account)));
     }
 }
 

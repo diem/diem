@@ -30,12 +30,13 @@ main(account: &signer, receiver: address) {
 
 import 0x1.LibraAccount;
 import 0x1.LBR;
+import 0x1.Signer;
 
-main() {
+main(account: &signer) {
     let balance: u64;
     let sender: address;
 
-    sender = get_txn_sender();
+    sender = Signer.address_of(move(account));
     balance = LibraAccount.balance<LBR.LBR>(move(sender));
     assert(move(balance) <= 999800, 42);
 
@@ -49,12 +50,13 @@ main() {
 //! sender: bob
 import 0x1.LibraAccount;
 import 0x1.LBR;
+import 0x1.Signer;
 
-main() {
+main(account: &signer) {
     let balance: u64;
     let sender: address;
 
-    sender = get_txn_sender();
+    sender = Signer.address_of(move(account));
     balance = LibraAccount.balance<LBR.LBR>(move(sender));
     assert(move(balance) == 900200, 42);
 

@@ -193,24 +193,25 @@ fn add_module_txn(sender: &AccountData, seq_num: u64) -> (VerifiedModule, Signed
     let module_code = String::from(
         "
         module M {
+            import 0x1.Signer;
             resource T1 { v: u64 }
 
-            public borrow_t1() acquires T1 {
+            public borrow_t1(account: &signer) acquires T1 {
                 let t1: &Self.T1;
-                t1 = borrow_global<T1>(get_txn_sender());
+                t1 = borrow_global<T1>(Signer.address_of(move(account)));
                 return;
             }
 
-            public change_t1(v: u64) acquires T1 {
+            public change_t1(account: &signer, v: u64) acquires T1 {
                 let t1: &mut Self.T1;
-                t1 = borrow_global_mut<T1>(get_txn_sender());
+                t1 = borrow_global_mut<T1>(Signer.address_of(move(account)));
                 *&mut move(t1).v = move(v);
                 return;
             }
 
-            public remove_t1() acquires T1 {
+            public remove_t1(account: &signer) acquires T1 {
                 let v: u64;
-                T1 { v } = move_from<T1>(get_txn_sender());
+                T1 { v } = move_from<T1>(Signer.address_of(move(account)));
                 return;
             }
 
@@ -284,8 +285,8 @@ fn remove_resource_txn(
         "
             import 0x{}.M;
 
-            main() {{
-                M.remove_t1();
+            main(account: &signer) {{
+                M.remove_t1(move(account));
                 return;
             }}
         ",
@@ -312,8 +313,8 @@ fn borrow_resource_txn(
         "
             import 0x{}.M;
 
-            main() {{
-                M.borrow_t1();
+            main(account: &signer) {{
+                M.borrow_t1(move(account));
                 return;
             }}
         ",
@@ -340,8 +341,8 @@ fn change_resource_txn(
         "
             import 0x{}.M;
 
-            main() {{
-                M.change_t1(20);
+            main(account: &signer) {{
+                M.change_t1(move(account), 20);
                 return;
             }}
         ",

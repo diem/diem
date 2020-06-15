@@ -22,17 +22,19 @@ module M1 {
 //! new-transaction
 
 module M2 {
+    import 0x1.Signer;
+
     resource X { y: vector<Self.Y> }
     resource Y { x: vector<Self.X> }
 
     // blows up the vm
-    public ex(): bool {
-        return exists<X>(get_txn_sender());
+    public ex(account: &signer): bool {
+        return exists<X>(Signer.address_of(move(account)));
     }
 
     // blows up the VM
-    public borrow() acquires X {
-        _ = borrow_global<X>(get_txn_sender());
+    public borrow(account: &signer) acquires X {
+        _ = borrow_global<X>(Signer.address_of(move(account)));
         return;
     }
 }

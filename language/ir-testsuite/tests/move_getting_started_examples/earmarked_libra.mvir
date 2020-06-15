@@ -5,6 +5,7 @@
 module EarmarkedLibra {
   import 0x1.LBR;
   import 0x1.Libra;
+  import 0x1.Signer;
 
   // A wrapper containing a Libra coin and the address of the recipient the
   // coin is earmarked for.
@@ -33,7 +34,7 @@ module EarmarkedLibra {
   }
 
   // Allow the transaction sender to claim a coin that was earmarked for her.
-  public claim_for_recipient(earmarked_coin_address: address): Self.T acquires T {
+  public claim_for_recipient(account: &signer, earmarked_coin_address: address): Self.T acquires T {
     let t: Self.T;
     let t_ref: &Self.T;
     let sender: address;
@@ -44,7 +45,7 @@ module EarmarkedLibra {
 
     t_ref = &t;
     // This is a builtin that returns the address of the transaction sender.
-    sender = get_txn_sender();
+    sender = Signer.address_of(move(account));
     // Ensure that the transaction sender is the recipient. If this assertion
     // fails, the transaction will fail and none of its effects (e.g.,
     // removing the earmarked coin) will be committed.  99 is an error code
@@ -55,11 +56,11 @@ module EarmarkedLibra {
   }
 
   // Allow the creator of the earmarked coin to reclaim it.
-  public claim_for_creator(): Self.T acquires T {
+  public claim_for_creator(account: &signer): Self.T acquires T {
     let t: Self.T;
     let sender: address;
 
-    sender = get_txn_sender();
+    sender = Signer.address_of(move(account));
     // This will fail if no resource of type T under the sender's address.
     t = move_from<T>(move(sender));
     return move(t);
@@ -100,7 +101,7 @@ main(account: &signer) {
   LibraAccount.restore_withdraw_capability(move(with_cap));
   EarmarkedLibra.create(copy(account), move(coin), move(recipient_address));
 
-  earmarked_coin = EarmarkedLibra.claim_for_creator();
+  earmarked_coin = EarmarkedLibra.claim_for_creator(copy(account));
   coin = EarmarkedLibra.unwrap(move(earmarked_coin));
   LibraAccount.deposit_to<LBR.LBR>(copy(account), move(coin));
 

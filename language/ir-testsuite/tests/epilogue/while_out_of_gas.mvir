@@ -28,9 +28,12 @@ main() {
 //! sender: default
 import 0x1.LibraAccount;
 import 0x1.LBR;
+import 0x1.Signer;
 
-main() {
-    assert(LibraAccount.balance<LBR.LBR>(get_txn_sender()) == 90000, 42);
+main(account: &signer) {
+    let sender: address;
+    sender = Signer.address_of(move(account));
+    assert(LibraAccount.balance<LBR.LBR>(move(sender)) == 90000, 42);
     return;
 }
 

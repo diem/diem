@@ -1,12 +1,16 @@
 module M {
+    import 0x1.Signer;
+
     resource Box<T> { _dummy: bool }
 
     public type_eq<T1, T2>(account: &signer): bool acquires Box {
+        let sender: address;
         let r: bool;
         let b: bool;
+        sender = Signer.address_of(copy(account));
         move_to<Box<T1>>(move(account), Box<T1> { _dummy: false });
-        r = exists<Box<T2>>(get_txn_sender());
-        Box<T1> { _dummy: b } = move_from<Box<T1>>(get_txn_sender());
+        r = exists<Box<T2>>(copy(sender));
+        Box<T1> { _dummy: b } = move_from<Box<T1>>(move(sender));
         return move(r);
     }
 }

@@ -144,7 +144,7 @@ module SortedLinkedList
     }
 
     //can only called by the list owner (head) -- removes the list if it is empty, fails if it is non-empty or if no list is owned by the caller
-    public remove_list() acquires Node
+    public remove_list(account: &signer) acquires Node
     {
         let sender_address: address;
         let current_node_ref: & Self.Node;
@@ -154,7 +154,7 @@ module SortedLinkedList
         let temp_value: u64; //TODO: make generic
         let temp_bool: bool;
 
-        sender_address = get_txn_sender();
+        sender_address = Signer.address_of(move(account));
 
         //fail if the caller does not own a list
         assert(Self.is_head_node(copy(sender_address)), 18)
@@ -176,10 +176,10 @@ module SortedLinkedList
     }
 
     //removes the current non-head node -- fails if the passed node is the head of a list
-    public remove_node_by_node_owner()  acquires Node
+    public remove_node_by_node_owner(account: &signer)  acquires Node
     {
         let sender_address: address;
-        sender_address = get_txn_sender();
+        sender_address = Signer.address_of(move(account));
 
         //make sure a node exists
         assert(exists<Node>(copy(sender_address)), 11);
@@ -193,7 +193,7 @@ module SortedLinkedList
         return;
     }
 
-    public remove_node_by_list_owner(node_address: address) acquires Node
+    public remove_node_by_list_owner(account: &signer, node_address: address) acquires Node
     {
 
         let node_ref: & Self.Node;
@@ -208,7 +208,7 @@ module SortedLinkedList
         //make sure the caller owns the list
         node_ref = borrow_global<Node>(copy(node_address));
         list_owner = *&move(node_ref).head;
-        assert(move(list_owner) == get_txn_sender(), 15);
+        assert(move(list_owner) == Signer.address_of(move(account)), 15);
 
         //remove it
         Self.remove_node(move(node_address));
@@ -385,8 +385,8 @@ main(account: &signer) {
 //! sender: carol
 //remove node  _@alice -> 7@eve -> 10@bob -> 15@david
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.remove_node_by_node_owner();
+main(account: &signer) {
+    SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
 // check: EXECUTED
@@ -395,8 +395,8 @@ main() {
 //! sender: carol
 //remove node again
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.remove_node_by_node_owner();
+main(account: &signer) {
+    SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
 // check: ABORTED
@@ -416,8 +416,8 @@ main(account: &signer) {
 //! sender: alice
 //Alice removes Bob's node _@alice -> 7@eve -> 9@carol -> 15@david
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.remove_node_by_list_owner({{bob}});
+main(account: &signer) {
+    SortedLinkedList.remove_node_by_list_owner(move(account), {{bob}});
     return;
 }
 // check: EXECUTED
@@ -426,8 +426,8 @@ main() {
 //! sender: bob
 //Bob tries to remove his now-non-existent node
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.remove_node_by_node_owner();
+main(account: &signer) {
+    SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
 // check: ABORTED
@@ -437,8 +437,8 @@ main() {
 //! sender: bob
 //A non-owner tries to remove a node
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.remove_node_by_list_owner({{david}});
+main(account: &signer) {
+    SortedLinkedList.remove_node_by_list_owner(move(account), {{david}});
     return;
 }
 // check: ABORTED
@@ -448,8 +448,8 @@ main() {
 //! sender: alice
 //Alice attempts to remove her head node
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.remove_node_by_list_owner({{alice}});
+main(account: &signer) {
+    SortedLinkedList.remove_node_by_list_owner(move(account), {{alice}});
     return;
 }
 // check: ABORTED
@@ -459,8 +459,8 @@ main() {
 //! sender: alice
 //Alice attempts to remove her head node
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.remove_node_by_node_owner();
+main(account: &signer) {
+    SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
 // check: ABORTED
@@ -470,8 +470,8 @@ main() {
 //! sender: alice
 //Alice attempts to remove her list while it is not empty
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.remove_list();
+main(account: &signer) {
+    SortedLinkedList.remove_list(move(account));
     return;
 }
 // check: ABORTED
@@ -481,11 +481,11 @@ main() {
 //! sender: alice
 //Alice empties her list and removes it using the wrong method
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.remove_node_by_list_owner({{carol}});
-    SortedLinkedList.remove_node_by_list_owner({{david}});
-    SortedLinkedList.remove_node_by_list_owner({{eve}});
-    SortedLinkedList.remove_node_by_list_owner({{alice}});
+main(account: &signer) {
+    SortedLinkedList.remove_node_by_list_owner(copy(account), {{carol}});
+    SortedLinkedList.remove_node_by_list_owner(copy(account), {{david}});
+    SortedLinkedList.remove_node_by_list_owner(copy(account), {{eve}});
+    SortedLinkedList.remove_node_by_list_owner(copy(account), {{alice}});
     return;
 }
 // check: ABORTED
@@ -495,11 +495,11 @@ main() {
 //! sender: alice
 //Alice empties her list and removes it using the wrong method
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.remove_node_by_list_owner({{david}});
-    SortedLinkedList.remove_node_by_list_owner({{carol}});
-    SortedLinkedList.remove_node_by_list_owner({{eve}});
-    SortedLinkedList.remove_node_by_node_owner();
+main(account: &signer) {
+    SortedLinkedList.remove_node_by_list_owner(copy(account), {{david}});
+    SortedLinkedList.remove_node_by_list_owner(copy(account), {{carol}});
+    SortedLinkedList.remove_node_by_list_owner(copy(account), {{eve}});
+    SortedLinkedList.remove_node_by_node_owner(move(account));
     return;
 }
 // check: ABORTED
@@ -509,11 +509,11 @@ main() {
 //! sender: alice
 //Alice empties her list and removes it
 import {{sys}}.SortedLinkedList;
-main() {
-    SortedLinkedList.remove_node_by_list_owner({{eve}});
-    SortedLinkedList.remove_node_by_list_owner({{david}});
-    SortedLinkedList.remove_node_by_list_owner({{carol}});
-    SortedLinkedList.remove_list();
+main(account: &signer) {
+    SortedLinkedList.remove_node_by_list_owner(copy(account), {{eve}});
+    SortedLinkedList.remove_node_by_list_owner(copy(account), {{david}});
+    SortedLinkedList.remove_node_by_list_owner(copy(account), {{carol}});
+    SortedLinkedList.remove_list(move(account));
     return;
 }
 // check: EXECUTED

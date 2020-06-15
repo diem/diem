@@ -2,6 +2,7 @@ module M {
 import 0x1.LBR;
     import 0x1.Libra;
     import 0x1.Vector;
+    import 0x1.Signer;
     resource Coins { f: vector<Libra.Libra<LBR.LBR>> }
 
     public new(account: &signer) {
@@ -14,33 +15,33 @@ import 0x1.LBR;
         return;
     }
 
-    public put_coin(coin: Libra.Libra<LBR.LBR>) acquires Coins {
+    public put_coin(account: &signer, coin: Libra.Libra<LBR.LBR>) acquires Coins {
         let coins_ref: &mut Self.Coins;
         let v_ref: &mut vector<Libra.Libra<LBR.LBR>>;
 
-        coins_ref = borrow_global_mut<Coins>(get_txn_sender());
+        coins_ref = borrow_global_mut<Coins>(Signer.address_of(move(account)));
         v_ref = &mut move(coins_ref).f;
         Vector.push_back<Libra.Libra<LBR.LBR>>(move(v_ref), move(coin));
         return;
     }
 
-    public get_value(i: u64): u64 acquires Coins {
+    public get_value(account: &signer, i: u64): u64 acquires Coins {
         let coins_ref: &Self.Coins;
         let v_ref: &vector<Libra.Libra<LBR.LBR>>;
         let coin_ref: &Libra.Libra<LBR.LBR>;
 
-        coins_ref = borrow_global<Coins>(get_txn_sender());
+        coins_ref = borrow_global<Coins>(Signer.address_of(move(account)));
         v_ref = &move(coins_ref).f;
         coin_ref = Vector.borrow<Libra.Libra<LBR.LBR>>(move(v_ref), move(i));
 
         return Libra.value<LBR.LBR>(move(coin_ref));
     }
 
-    public pop(): Libra.Libra<LBR.LBR> acquires Coins {
+    public pop(account: &signer): Libra.Libra<LBR.LBR> acquires Coins {
         let coins_ref: &mut Self.Coins;
         let v_ref: &mut vector<Libra.Libra<LBR.LBR>>;
 
-        coins_ref = borrow_global_mut<Coins>(get_txn_sender());
+        coins_ref = borrow_global_mut<Coins>(Signer.address_of(move(account)));
         v_ref = &mut move(coins_ref).f;
         return Vector.pop_back<Libra.Libra<LBR.LBR>>(move(v_ref));
     }
@@ -59,7 +60,7 @@ main(account: &signer) {
     coin = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 1000);
     LibraAccount.restore_withdraw_capability(move(with_cap));
     M.new(copy(account));
-    M.put_coin(move(coin));
+    M.put_coin(copy(account), move(coin));
 
     return;
 }
@@ -74,11 +75,11 @@ main(account: &signer) {
     let coin: Libra.Libra<LBR.LBR>;
     let with_cap: LibraAccount.WithdrawCapability;
 
-    assert(M.get_value(0) == 1000, 4);
+    assert(M.get_value(copy(account), 0) == 1000, 4);
     with_cap = LibraAccount.extract_withdraw_capability(copy(account));
     coin = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 300);
     LibraAccount.restore_withdraw_capability(move(with_cap));
-    M.put_coin(move(coin));
+    M.put_coin(copy(account), move(coin));
 
     return;
 }
@@ -93,9 +94,9 @@ import 0x1.LibraAccount;
 main(account: &signer) {
     let coin: Libra.Libra<LBR.LBR>;
 
-    assert(M.get_value(0) == 1000, 4);
-    assert(M.get_value(1) == 300, 4);
-    coin = M.pop();
+    assert(M.get_value(copy(account), 0) == 1000, 4);
+    assert(M.get_value(copy(account), 1) == 300, 4);
+    coin = M.pop(copy(account));
     LibraAccount.deposit_to<LBR.LBR>(copy(account), move(coin));
     return;
 }

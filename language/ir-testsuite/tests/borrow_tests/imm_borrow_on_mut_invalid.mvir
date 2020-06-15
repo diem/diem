@@ -1,12 +1,16 @@
 module Tester {
+    import 0x1.Signer;
+
     resource Initializer { x: u64, y: u64 }
     struct Point { x: u64, y: u64 }
 
     // the resource is here to just give a feeling why the computation might not be reorderable
-    set_and_pick(p: &mut Self.Point): &mut u64 acquires Initializer {
+    set_and_pick(account: &signer, p: &mut Self.Point): &mut u64 acquires Initializer {
+        let sender: address;
         let init: &mut Self.Initializer;
 
-        init = borrow_global_mut<Initializer>(get_txn_sender());
+        sender = Signer.address_of(move(account));
+        init = borrow_global_mut<Initializer>(move(sender));
         *&mut copy(p).x = *&copy(init).x;
         *&mut copy(p).y = *&move(init).y;
         if (*&copy(p).x >= *&copy(p).y) {
@@ -21,7 +25,7 @@ module Tester {
         return freeze(move(u));
     }
 
-    larger_field_1(point_ref: &mut Self.Point): &u64 acquires Initializer {
+    larger_field_1(account: &signer, point_ref: &mut Self.Point): &u64 acquires Initializer {
         let field_ref: &mut u64;
         let returned_ref: &u64;
         let x_val: u64;
@@ -29,7 +33,7 @@ module Tester {
         assert(*&copy(point_ref).x == 0, 42);
         assert(*&copy(point_ref).y == 0, 42);
 
-        field_ref = Self.set_and_pick(copy(point_ref));
+        field_ref = Self.set_and_pick(move(account), copy(point_ref));
         x_val = *freeze(&mut move(point_ref).x);
         returned_ref = Self.bump_and_give(move(field_ref));
 
@@ -46,14 +50,18 @@ module Tester {
 
 //! new-transaction
 module Tester2 {
+    import 0x1.Signer;
+
     resource Initializer { x: u64, y: u64 }
     struct Point { x: u64, y: u64 }
 
     // the resource is here to just give a feeling why the computation might not be reorderable
-    set_and_pick(p: &mut Self.Point): &mut u64 acquires Initializer {
+    set_and_pick(account: &signer, p: &mut Self.Point): &mut u64 acquires Initializer {
+        let sender: address;
         let init: &mut Self.Initializer;
 
-        init = borrow_global_mut<Initializer>(get_txn_sender());
+        sender = Signer.address_of(move(account));
+        init = borrow_global_mut<Initializer>(move(sender));
         *&mut copy(p).x = *&copy(init).x;
         *&mut copy(p).y = *&move(init).y;
         if (*&copy(p).x >= *&copy(p).y) {
@@ -68,7 +76,7 @@ module Tester2 {
         return freeze(move(u));
     }
 
-    larger_field_2(point_ref: &mut Self.Point): &u64 acquires Initializer {
+    larger_field_2(account: &signer, point_ref: &mut Self.Point): &u64 acquires Initializer {
         let field_ref: &mut u64;
         let returned_ref: &u64;
         let x_val: u64;
@@ -76,7 +84,7 @@ module Tester2 {
         assert(*&copy(point_ref).x == 0, 42);
         assert(*&copy(point_ref).y == 0, 42);
 
-        field_ref = Self.set_and_pick(copy(point_ref));
+        field_ref = Self.set_and_pick(move(account), copy(point_ref));
         x_val = *(&freeze(move(point_ref)).x);
         returned_ref = Self.bump_and_give(move(field_ref));
 

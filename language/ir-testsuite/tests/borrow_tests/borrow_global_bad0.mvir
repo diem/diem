@@ -1,10 +1,11 @@
 module A {
+    import 0x1.Signer;
     resource T{v: u64}
 
-    public A0() acquires T {
+    public A0(account: &signer) acquires T {
         let sender: address;
         let t_ref: &mut Self.T;
-        sender = get_txn_sender();
+        sender = Signer.address_of(move(account));
         t_ref = borrow_global_mut<T>(copy(sender));
         t_ref = borrow_global_mut<T>(move(sender));
         _ = move(t_ref);
