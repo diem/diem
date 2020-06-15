@@ -108,6 +108,7 @@
 <span id="108">108</span>
 <span id="109">109</span>
 <span id="110">110</span>
+<span id="111">111</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -160,7 +161,7 @@
         <span class="ident">ProtocolId</span>,
     };
     <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">executor</span>::<span class="ident">block_on</span>, <span class="ident">future</span>::<span class="ident">join</span>};
-    <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">network_id</span>::<span class="ident">NetworkId</span>;
+    <span class="kw">use</span> <span class="ident">libra_config</span>::{<span class="ident">chain_id</span>::<span class="ident">ChainId</span>, <span class="ident">network_id</span>::<span class="ident">NetworkId</span>};
     <span class="kw">use</span> <span class="ident">memsocket</span>::<span class="ident">MemorySocket</span>;
 
     <span class="kw">fn</span> <span class="ident">build_test_connection</span>() <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">MemorySocket</span>, <span class="ident">MemorySocket</span>) {
@@ -170,10 +171,11 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">simple_handshake</span>() {
         <span class="kw">let</span> <span class="ident">network_id</span> <span class="op">=</span> <span class="ident">NetworkId</span>::<span class="ident">Validator</span>;
+        <span class="kw">let</span> <span class="ident">chain_id</span> <span class="op">=</span> <span class="ident">ChainId</span>::<span class="ident">default</span>();
         <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">outbound</span>, <span class="kw-2">mut</span> <span class="ident">inbound</span>) <span class="op">=</span> <span class="ident">build_test_connection</span>();
 
         <span class="comment">// Create client and server handshake messages.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_handshake</span> <span class="op">=</span> <span class="ident">HandshakeMsg</span>::<span class="ident">new</span>(<span class="ident">network_id</span>.<span class="ident">clone</span>());
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_handshake</span> <span class="op">=</span> <span class="ident">HandshakeMsg</span>::<span class="ident">new</span>(<span class="ident">chain_id</span>.<span class="ident">clone</span>(), <span class="ident">network_id</span>.<span class="ident">clone</span>());
         <span class="ident">server_handshake</span>.<span class="ident">add</span>(
             <span class="ident">MessagingProtocolVersion</span>::<span class="ident">V1</span>,
             [
@@ -183,7 +185,7 @@
             .<span class="ident">iter</span>()
             .<span class="ident">into</span>(),
         );
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client_handshake</span> <span class="op">=</span> <span class="ident">HandshakeMsg</span>::<span class="ident">new</span>(<span class="ident">network_id</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client_handshake</span> <span class="op">=</span> <span class="ident">HandshakeMsg</span>::<span class="ident">new</span>(<span class="ident">chain_id</span>, <span class="ident">network_id</span>);
         <span class="ident">client_handshake</span>.<span class="ident">add</span>(
             <span class="ident">MessagingProtocolVersion</span>::<span class="ident">V1</span>,
             [<span class="ident">ProtocolId</span>::<span class="ident">ConsensusRpc</span>, <span class="ident">ProtocolId</span>::<span class="ident">ConsensusDirectSend</span>]

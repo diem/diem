@@ -892,6 +892,9 @@
 <span id="892">892</span>
 <span id="893">893</span>
 <span id="894">894</span>
+<span id="895">895</span>
+<span id="896">896</span>
+<span id="897">897</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -908,7 +911,7 @@
     <span class="ident">io</span>::{<span class="ident">AsyncRead</span>, <span class="ident">AsyncWrite</span>},
     <span class="ident">stream</span>::{<span class="ident">Stream</span>, <span class="ident">StreamExt</span>, <span class="ident">TryStreamExt</span>},
 };
-<span class="kw">use</span> <span class="ident">libra_config</span>::{<span class="ident">config</span>::<span class="ident">HANDSHAKE_VERSION</span>, <span class="ident">network_id</span>::<span class="ident">NetworkId</span>};
+<span class="kw">use</span> <span class="ident">libra_config</span>::{<span class="ident">chain_id</span>::<span class="ident">ChainId</span>, <span class="ident">config</span>::<span class="ident">HANDSHAKE_VERSION</span>, <span class="ident">network_id</span>::<span class="ident">NetworkId</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">x25519</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::{<span class="ident">parse_dns_tcp</span>, <span class="ident">parse_ip_tcp</span>, <span class="ident">parse_memory</span>, <span class="ident">NetworkAddress</span>};
@@ -1045,22 +1048,22 @@
     <span class="ident">origin</span>: <span class="ident">ConnectionOrigin</span>,
     <span class="ident">own_handshake</span>: <span class="kw-2">&amp;</span><span class="ident">HandshakeMsg</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">handshake_other</span> <span class="op">=</span> <span class="ident">exchange_handshake</span>(<span class="kw-2">&amp;</span><span class="ident">own_handshake</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">socket</span>).<span class="kw">await</span><span class="question-mark">?</span>;
-    <span class="kw">if</span> <span class="ident">own_handshake</span>.<span class="ident">network_id</span> <span class="op">!</span><span class="op">=</span> <span class="ident">handshake_other</span>.<span class="ident">network_id</span> {
+    <span class="kw">let</span> <span class="ident">remote_handshake</span> <span class="op">=</span> <span class="ident">exchange_handshake</span>(<span class="kw-2">&amp;</span><span class="ident">own_handshake</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">socket</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">if</span> <span class="op">!</span><span class="ident">own_handshake</span>.<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">remote_handshake</span>) {
         <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
             <span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>,
             <span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;network_ids don&#39;t match own: {:?} received: {:?}&quot;</span>,
-                <span class="ident">own_handshake</span>.<span class="ident">network_id</span>, <span class="ident">handshake_other</span>.<span class="ident">network_id</span>
+                <span class="string">&quot;Handshakes don&#39;t match networks own: {:?} received: {:?}&quot;</span>,
+                <span class="ident">own_handshake</span>, <span class="ident">remote_handshake</span>
             ),
         ));
     }
 
-    <span class="kw">let</span> <span class="ident">intersecting_protocols</span> <span class="op">=</span> <span class="ident">own_handshake</span>.<span class="ident">find_common_protocols</span>(<span class="kw-2">&amp;</span><span class="ident">handshake_other</span>);
+    <span class="kw">let</span> <span class="ident">intersecting_protocols</span> <span class="op">=</span> <span class="ident">own_handshake</span>.<span class="ident">find_common_protocols</span>(<span class="kw-2">&amp;</span><span class="ident">remote_handshake</span>);
     <span class="kw">match</span> <span class="ident">intersecting_protocols</span> {
         <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;No matching protocols found for connection with peer: {:?}. Handshake received: {:?}&quot;</span>,
-                  <span class="ident">peer_id</span>.<span class="ident">short_str</span>(), <span class="ident">handshake_other</span>);
+                  <span class="ident">peer_id</span>.<span class="ident">short_str</span>(), <span class="ident">remote_handshake</span>);
             <span class="prelude-val">Err</span>(<span class="ident">io</span>::<span class="ident">Error</span>::<span class="ident">new</span>(
                 <span class="ident">io</span>::<span class="ident">ErrorKind</span>::<span class="ident">Other</span>,
                 <span class="string">&quot;no matching messaging protocol&quot;</span>,
@@ -1178,10 +1181,11 @@
         <span class="ident">identity_key</span>: <span class="ident">x25519</span>::<span class="ident">PrivateKey</span>,
         <span class="ident">trusted_peers</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">x25519</span>::<span class="ident">PublicKey</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">handshake_version</span>: <span class="ident">u8</span>,
+        <span class="ident">chain_id</span>: <span class="ident">ChainId</span>,
         <span class="ident">network_id</span>: <span class="ident">NetworkId</span>,
         <span class="ident">application_protocols</span>: <span class="ident">SupportedProtocols</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">own_handshake</span> <span class="op">=</span> <span class="ident">HandshakeMsg</span>::<span class="ident">new</span>(<span class="ident">network_id</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">own_handshake</span> <span class="op">=</span> <span class="ident">HandshakeMsg</span>::<span class="ident">new</span>(<span class="ident">chain_id</span>, <span class="ident">network_id</span>);
         <span class="ident">own_handshake</span>.<span class="ident">add</span>(<span class="ident">SUPPORTED_MESSAGING_PROTOCOL</span>, <span class="ident">application_protocols</span>);
         <span class="kw">let</span> <span class="ident">identity_pubkey</span> <span class="op">=</span> <span class="ident">identity_key</span>.<span class="ident">public_key</span>();
 
@@ -1473,13 +1477,14 @@
         <span class="kw">let</span> <span class="ident">supported_protocols</span> <span class="op">=</span> <span class="ident">SupportedProtocols</span>::<span class="ident">from</span>(
             [<span class="ident">ProtocolId</span>::<span class="ident">ConsensusRpc</span>, <span class="ident">ProtocolId</span>::<span class="ident">DiscoveryDirectSend</span>].<span class="ident">iter</span>(),
         );
-
+        <span class="kw">let</span> <span class="ident">chain_id</span> <span class="op">=</span> <span class="ident">ChainId</span>::<span class="ident">default</span>();
         <span class="kw">let</span> <span class="ident">listener_transport</span> <span class="op">=</span> <span class="ident">LibraNetTransport</span>::<span class="ident">new</span>(
             <span class="ident">base_transport</span>.<span class="ident">clone</span>(),
             <span class="ident">listener_peer_id</span>,
             <span class="ident">listener_key</span>,
             <span class="ident">trusted_peers</span>.<span class="ident">clone</span>(),
             <span class="ident">HANDSHAKE_VERSION</span>,
+            <span class="ident">chain_id</span>.<span class="ident">clone</span>(),
             <span class="ident">NetworkId</span>::<span class="ident">Validator</span>,
             <span class="ident">supported_protocols</span>.<span class="ident">clone</span>(),
         );
@@ -1490,6 +1495,7 @@
             <span class="ident">dialer_key</span>,
             <span class="ident">trusted_peers</span>.<span class="ident">clone</span>(),
             <span class="ident">HANDSHAKE_VERSION</span>,
+            <span class="ident">chain_id</span>,
             <span class="ident">NetworkId</span>::<span class="ident">Validator</span>,
             <span class="ident">supported_protocols</span>.<span class="ident">clone</span>(),
         );
@@ -1750,7 +1756,7 @@
     <span class="kw">fn</span> <span class="ident">handshake_network_id_mismatch</span>() {
         <span class="kw">let</span> (<span class="ident">outbound</span>, <span class="ident">inbound</span>) <span class="op">=</span> <span class="ident">MemorySocket</span>::<span class="ident">new_pair</span>();
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_handshake</span> <span class="op">=</span> <span class="ident">HandshakeMsg</span>::<span class="ident">new</span>(<span class="ident">NetworkId</span>::<span class="ident">Validator</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">server_handshake</span> <span class="op">=</span> <span class="ident">HandshakeMsg</span>::<span class="ident">new</span>(<span class="ident">ChainId</span>::<span class="ident">default</span>(), <span class="ident">NetworkId</span>::<span class="ident">Validator</span>);
         <span class="comment">// This is required to ensure that test doesn&#39;t get an error for a different reason</span>
         <span class="ident">server_handshake</span>.<span class="ident">add</span>(
             <span class="ident">MessagingProtocolVersion</span>::<span class="ident">V1</span>,

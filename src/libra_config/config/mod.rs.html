@@ -416,6 +416,8 @@
 <span id="416">416</span>
 <span id="417">417</span>
 <span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -462,7 +464,7 @@
 <span class="kw">mod</span> <span class="ident">upstream_config</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">upstream_config</span>::<span class="kw-2">*</span>;
 <span class="kw">mod</span> <span class="ident">test_config</span>;
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">network_id</span>::<span class="ident">NetworkId</span>;
+<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">chain_id</span>::<span class="ident">ChainId</span>, <span class="ident">network_id</span>::<span class="ident">NetworkId</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">waypoint</span>::<span class="ident">Waypoint</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">test_config</span>::<span class="kw-2">*</span>;
 
@@ -508,6 +510,7 @@
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BaseConfig</span> {
     <span class="ident">data_dir</span>: <span class="ident">PathBuf</span>,
+    <span class="kw">pub</span> <span class="ident">chain_id</span>: <span class="ident">ChainId</span>,
     <span class="kw">pub</span> <span class="ident">role</span>: <span class="ident">RoleType</span>,
     <span class="kw">pub</span> <span class="ident">waypoint</span>: <span class="ident">WaypointConfig</span>,
 }
@@ -516,6 +519,7 @@
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BaseConfig</span> {
         <span class="ident">BaseConfig</span> {
             <span class="ident">data_dir</span>: <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="string">&quot;/opt/libra/data/commmon&quot;</span>),
+            <span class="ident">chain_id</span>: <span class="ident">ChainId</span>::<span class="ident">default</span>(),
             <span class="ident">role</span>: <span class="ident">RoleType</span>::<span class="ident">Validator</span>,
             <span class="ident">waypoint</span>: <span class="ident">WaypointConfig</span>::<span class="prelude-val">None</span>,
         }

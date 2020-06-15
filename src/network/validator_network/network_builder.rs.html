@@ -488,6 +488,13 @@
 <span id="488">488</span>
 <span id="489">489</span>
 <span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -518,6 +525,7 @@
 <span class="kw">use</span> <span class="ident">channel</span>::{<span class="self">self</span>, <span class="ident">libra_channel</span>, <span class="ident">message_queues</span>::<span class="ident">QueueStyle</span>};
 <span class="kw">use</span> <span class="ident">futures</span>::<span class="ident">stream</span>::<span class="ident">StreamExt</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::{
+    <span class="ident">chain_id</span>::<span class="ident">ChainId</span>,
     <span class="ident">config</span>::{<span class="ident">RoleType</span>, <span class="ident">HANDSHAKE_VERSION</span>},
     <span class="ident">network_id</span>::{<span class="ident">NetworkContext</span>, <span class="ident">NetworkId</span>},
 };
@@ -591,6 +599,7 @@
 <span class="comment">// pretty tangled.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NetworkBuilder</span> {
     <span class="ident">executor</span>: <span class="ident">Handle</span>,
+    <span class="ident">chain_id</span>: <span class="ident">ChainId</span>,
     <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
     <span class="comment">// TODO(philiphayes): better support multiple listening addrs</span>
     <span class="ident">listen_address</span>: <span class="ident">NetworkAddress</span>,
@@ -623,9 +632,10 @@
     <span class="doccomment">/// Return a new NetworkBuilder initialized with default configuration values.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">executor</span>: <span class="ident">Handle</span>,
+        <span class="ident">chain_id</span>: <span class="ident">ChainId</span>,
         <span class="ident">network_id</span>: <span class="ident">NetworkId</span>,
-        <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
         <span class="ident">role</span>: <span class="ident">RoleType</span>,
+        <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
         <span class="ident">listen_address</span>: <span class="ident">NetworkAddress</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NetworkBuilder</span> {
         <span class="comment">// Setup channel to send requests to peer manager.</span>
@@ -642,6 +652,7 @@
         );
         <span class="ident">NetworkBuilder</span> {
             <span class="ident">executor</span>,
+            <span class="ident">chain_id</span>,
             <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>::<span class="ident">new</span>(<span class="ident">network_id</span>, <span class="ident">role</span>, <span class="ident">peer_id</span>),
             <span class="ident">listen_address</span>,
             <span class="ident">advertised_address</span>: <span class="prelude-val">None</span>,
@@ -893,6 +904,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build</span>(<span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NetworkAddress</span> {
         <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">Protocol</span>::<span class="kw-2">*</span>;
 
+        <span class="kw">let</span> <span class="ident">chain_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">chain_id</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">network_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">network_id</span>().<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">protos</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">supported_protocols</span>();
 
@@ -928,6 +940,7 @@
                     <span class="ident">key</span>,
                     <span class="ident">maybe_trusted_peers</span>,
                     <span class="ident">HANDSHAKE_VERSION</span>,
+                    <span class="ident">chain_id</span>,
                     <span class="ident">network_id</span>,
                     <span class="ident">protos</span>,
                 ))
@@ -938,6 +951,7 @@
                 <span class="ident">key</span>,
                 <span class="ident">maybe_trusted_peers</span>,
                 <span class="ident">HANDSHAKE_VERSION</span>,
+                <span class="ident">chain_id</span>,
                 <span class="ident">network_id</span>,
                 <span class="ident">protos</span>,
             )),
