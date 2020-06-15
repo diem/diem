@@ -104,10 +104,29 @@ impl LedgerStore {
         end_epoch: u64,
         limit: usize,
     ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
+        ensure!(
+            start_epoch <= end_epoch,
+            "Bad epoch range [{}, {})",
+            start_epoch,
+            end_epoch,
+        );
+        // Note that the latset epoch can be the same with the current epoch (in most cases), or
+        // current_epoch + 1 (when the latest ledger_info carries next validator set)
+        let latest_epoch = self
+            .get_latest_ledger_info()?
+            .ledger_info()
+            .next_block_epoch();
+        ensure!(
+            end_epoch <= latest_epoch,
+            "Unable to provide epoch change ledger info for still open epoch. asked upper bound: {}, last sealed epoch: {}",
+            end_epoch,
+            latest_epoch - 1,  // okay to -1 because genesis LedgerInfo has .next_block_epoch() == 1
+        );
         let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
         iter.seek(&start_epoch)?;
 
         let mut results = Vec::new();
+
         for res in iter {
             let (epoch, ledger_info_with_sigs) = res?;
             debug_assert_eq!(epoch, ledger_info_with_sigs.ledger_info().epoch());
