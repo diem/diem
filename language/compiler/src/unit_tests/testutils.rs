@@ -85,7 +85,7 @@ fn compile_module_string_impl(
     code: &str,
     deps: Vec<CompiledModule>,
 ) -> Result<(CompiledModule, Option<VMStatus>)> {
-    let address = AccountAddress::default();
+    let address = AccountAddress::ZERO;
     let module = parse_module("file_name", code).unwrap();
     let compiled_module = compile_module(address, module, &deps)?.0;
 

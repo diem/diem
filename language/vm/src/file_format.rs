@@ -1803,7 +1803,7 @@ pub fn empty_module() -> CompiledModuleMut {
         }],
         self_module_handle_idx: ModuleHandleIndex(0),
         identifiers: vec![self_module_name().to_owned()],
-        address_identifiers: vec![AccountAddress::default()],
+        address_identifiers: vec![AccountAddress::ZERO],
         constant_pool: vec![],
         function_defs: vec![],
         struct_defs: vec![],

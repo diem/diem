@@ -72,7 +72,7 @@ impl Default for TransactionMetadata {
         buf[Ed25519PrivateKey::LENGTH - 1] = 1;
         let public_key = Ed25519PrivateKey::try_from(&buf[..]).unwrap().public_key();
         TransactionMetadata {
-            sender: AccountAddress::default(),
+            sender: AccountAddress::ZERO,
             authentication_key_preimage: AuthenticationKeyPreimage::ed25519(&public_key).into_vec(),
             sequence_number: 0,
             max_gas_amount: GasUnits::new(100_000_000),

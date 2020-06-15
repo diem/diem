@@ -55,7 +55,7 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, module: VerifiedModule, fun: &st
         .expect("Module must load");
 
     // module and function to call
-    let module_id = ModuleId::new(AccountAddress::default(), Identifier::new("Bench").unwrap());
+    let module_id = ModuleId::new(AccountAddress::ZERO, Identifier::new("Bench").unwrap());
     let fun_name = IdentStr::new(fun).unwrap_or_else(|_| panic!("Invalid identifier name {}", fun));
 
     // benchmark
@@ -67,7 +67,7 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, module: VerifiedModule, fun: &st
                     &fun_name,
                     vec![],
                     vec![],
-                    AccountAddress::default(),
+                    AccountAddress::ZERO,
                     &mut data_store,
                     &mut cost_strategy,
                 )

@@ -44,7 +44,7 @@ fn setup_permissive_health_checker(
     );
     let hc_network_rx = HealthCheckerNetworkEvents::new(network_notifs_rx, connection_notifs_rx);
     let network_context =
-        NetworkContext::new(NetworkId::Validator, RoleType::Validator, PeerId::default());
+        NetworkContext::new(NetworkId::Validator, RoleType::Validator, PeerId::ZERO);
     let health_checker = HealthChecker::new(
         network_context,
         ticker_rx,

@@ -31,7 +31,7 @@ fn make_module() -> CompiledModuleMut {
             Identifier::new("test_fn").unwrap(), // Test function name
         ],
         address_identifiers: vec![
-            AccountAddress::default(), // Module address
+            AccountAddress::ZERO, // Module address
         ],
         struct_handles: vec![
             StructHandle {

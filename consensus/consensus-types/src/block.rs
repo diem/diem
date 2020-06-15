@@ -9,9 +9,9 @@ use crate::{
 use anyhow::{bail, ensure, format_err};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash, HashValue};
 use libra_types::{
-    block_info::BlockInfo, block_metadata::BlockMetadata, epoch_state::EpochState,
-    ledger_info::LedgerInfo, transaction::Version, validator_signer::ValidatorSigner,
-    validator_verifier::ValidatorVerifier,
+    account_address::AccountAddress, block_info::BlockInfo, block_metadata::BlockMetadata,
+    epoch_state::EpochState, ledger_info::LedgerInfo, transaction::Version,
+    validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier,
 };
 use mirai_annotations::debug_checked_verify_eq;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -295,7 +295,7 @@ impl From<&Block> for BlockMetadata {
                 .cloned()
                 .collect(),
             // For nil block, we use 0x0 which is convention for nil address in move.
-            block.author().unwrap_or_default(),
+            block.author().unwrap_or(AccountAddress::ZERO),
         )
     }
 }

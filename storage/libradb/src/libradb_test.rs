@@ -392,7 +392,7 @@ fn test_get_latest_tree_state() {
     );
 
     // unbootstrapped db with pre-genesis state
-    let address = AccountAddress::default();
+    let address = AccountAddress::ZERO;
     let blob = AccountStateBlob::from(vec![1]);
     db.db
         .put::<JellyfishMerkleNodeSchema>(

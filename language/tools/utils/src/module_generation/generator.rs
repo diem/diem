@@ -46,7 +46,7 @@ pub fn generate_modules(
     let compiled_callees = callees
         .into_iter()
         .map(|module| {
-            let mut module = compile_module(AccountAddress::default(), module, &empty_deps)
+            let mut module = compile_module(AccountAddress::ZERO, module, &empty_deps)
                 .unwrap()
                 .0
                 .into_inner();
@@ -55,11 +55,10 @@ pub fn generate_modules(
         })
         .collect();
 
-    let mut compiled_root =
-        compile_module(AccountAddress::default(), root_module, &compiled_callees)
-            .unwrap()
-            .0
-            .into_inner();
+    let mut compiled_root = compile_module(AccountAddress::ZERO, root_module, &compiled_callees)
+        .unwrap()
+        .0
+        .into_inner();
     Pad::pad(table_size, &mut compiled_root, options);
     (compiled_root.freeze().unwrap(), compiled_callees)
 }
@@ -267,7 +266,7 @@ impl<'a> ModuleGenerator<'a> {
             .map(|ident| {
                 let module_name = ModuleName::new(ident.clone());
                 let qualified_mod_ident =
-                    QualifiedModuleIdent::new(module_name, AccountAddress::default());
+                    QualifiedModuleIdent::new(module_name, AccountAddress::ZERO);
                 let module_ident = ModuleIdent::Qualified(qualified_mod_ident);
                 ImportDefinition::new(module_ident, None)
             })
