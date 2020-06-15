@@ -59,7 +59,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(20))]
 
     #[test]
-    fn test_get_first_n_epoch_change_ledger_infos(
+    fn test_get_epoch_change_ledger_infos(
         (ledger_infos_with_sigs, start_epoch, end_epoch, limit) in arb_ledger_infos_with_sigs()
             .prop_flat_map(|ledger_infos_with_sigs| {
                 let first_epoch = get_first_epoch(&ledger_infos_with_sigs);
@@ -86,7 +86,7 @@ proptest! {
 
         let (actual, more) = db
             .ledger_store
-            .get_first_n_epoch_change_ledger_infos(start_epoch, end_epoch, limit)
+            .get_epoch_change_ledger_infos(start_epoch, end_epoch, limit)
             .unwrap();
         let all_epoch_changes = ledger_infos_with_sigs
             .into_iter()
