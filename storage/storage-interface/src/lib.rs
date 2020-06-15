@@ -247,7 +247,7 @@ pub trait DbReader: Send + Sync {
     fn get_latest_tree_state(&self) -> Result<TreeState>;
 
     /// Get the ledger info of the epoch that `known_version` belongs to.
-    fn get_ledger_info(&self, known_version: u64) -> Result<LedgerInfoWithSignatures>;
+    fn get_epoch_change_ledger_info(&self, known_version: u64) -> Result<LedgerInfoWithSignatures>;
 }
 
 impl MoveStorage for &dyn DbReader {

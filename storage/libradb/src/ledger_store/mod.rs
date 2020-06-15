@@ -152,6 +152,21 @@ impl LedgerStore {
         Ok((results, false))
     }
 
+    /// Gets ledger info at specified version and ensures it's an epoch change.
+    pub fn get_epoch_change_ledger_info(
+        &self,
+        version: Version,
+    ) -> Result<LedgerInfoWithSignatures> {
+        let li = self.db.get::<LedgerInfoSchema>(&version)?.ok_or_else(|| {
+            LibraDbError::NotFound(format!("Epoch change LedgerInfo at version {}", version))
+        })?;
+        li.ledger_info()
+            .next_epoch_state()
+            .ok_or_else(|| format_err!("Not an epoch change at version {}", version))?;
+
+        Ok(li)
+    }
+
     pub fn get_latest_ledger_info_option(&self) -> Option<LedgerInfoWithSignatures> {
         let ledger_info_ptr = self.latest_ledger_info.load();
         let ledger_info: &Option<_> = ledger_info_ptr.deref();

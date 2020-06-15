@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::SynchronizerState;
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use executor_types::ExecutedTrees;
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_types::{
@@ -218,10 +218,13 @@ impl MockStorage {
             .clone();
     }
 
-    // Find LedgerInfo for a given version.
-    pub fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+    // Find LedgerInfo for an epoch boundary version.
+    pub fn get_epoch_change_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
         for li in self.ledger_infos.values() {
             if li.ledger_info().version() == version {
+                li.ledger_info()
+                    .next_epoch_state()
+                    .ok_or_else(|| anyhow!("Not an epoch boundary at version {}.", version))?;
                 return Ok(li.clone());
             }
         }

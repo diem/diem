@@ -94,8 +94,11 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         Ok(self.storage.read().unwrap().get_epoch_changes(epoch))
     }
 
-    fn get_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
-        self.storage.read().unwrap().get_ledger_info(version)
+    fn get_epoch_change_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+        self.storage
+            .read()
+            .unwrap()
+            .get_epoch_change_ledger_info(version)
     }
 
     fn load_on_chain_configs(&mut self) -> Result<()> {
@@ -344,12 +347,16 @@ impl SynchronizerEnv {
             .highest_local_li()
     }
 
-    // Find LedgerInfo for a given version.
-    fn get_ledger_info(&self, peer_id: usize, version: u64) -> Result<LedgerInfoWithSignatures> {
+    // Find LedgerInfo for a epoch boundary version
+    fn get_epoch_change_ledger_info(
+        &self,
+        peer_id: usize,
+        version: u64,
+    ) -> Result<LedgerInfoWithSignatures> {
         self.storage_proxies[peer_id]
             .read()
             .unwrap()
-            .get_ledger_info(version)
+            .get_epoch_change_ledger_info(version)
     }
 
     fn wait_for_version(&self, peer_id: usize, target_version: u64) -> bool {
@@ -536,7 +543,7 @@ fn catch_up_with_waypoints() {
     env.commit(0, 950); // At this point peer 0 is at epoch 10 and version 950
 
     // Create a waypoint based on LedgerInfo of peer 0 at version 700 (epoch 7)
-    let waypoint_li = env.get_ledger_info(0, 700).unwrap();
+    let waypoint_li = env.get_epoch_change_ledger_info(0, 700).unwrap();
     let waypoint = Waypoint::new_epoch_boundary(waypoint_li.ledger_info()).unwrap();
 
     env.start_next_synchronizer(

@@ -46,7 +46,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{ensure, format_err, Result};
+use anyhow::{ensure, Result};
 use itertools::{izip, zip_eq};
 use jellyfish_merkle::{restore::JellyfishMerkleRestore, TreeReader, TreeWriter};
 use libra_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
@@ -564,16 +564,9 @@ impl DbReader for LibraDB {
         Ok(events)
     }
 
-    fn get_ledger_info(&self, known_version: u64) -> Result<LedgerInfoWithSignatures> {
-        let known_epoch = self.ledger_store.get_epoch(known_version)?;
-        let (mut ledger_infos_with_sigs, _more) =
-            self.get_epoch_change_ledger_infos(known_epoch, known_epoch + 1)?;
-        ledger_infos_with_sigs.pop().ok_or_else(|| {
-            format_err!(
-                "No waypoint ledger info found for version {}",
-                known_version
-            )
-        })
+    /// Gets ledger info at specified version and ensures it's an epoch change.
+    fn get_epoch_change_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+        self.ledger_store.get_epoch_change_ledger_info(version)
     }
 
     fn get_state_proof_with_ledger_info(
