@@ -201,6 +201,9 @@
 <span id="201">201</span>
 <span id="202">202</span>
 <span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -220,12 +223,14 @@
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">de</span>::<span class="ident">DeserializeOwned</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 
+<span class="kw">mod</span> <span class="ident">dual_attestation_limit</span>;
 <span class="kw">mod</span> <span class="ident">libra_version</span>;
 <span class="kw">mod</span> <span class="ident">registered_currencies</span>;
 <span class="kw">mod</span> <span class="ident">validator_set</span>;
 <span class="kw">mod</span> <span class="ident">vm_config</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::{
+    <span class="ident">dual_attestation_limit</span>::<span class="ident">DualAttestationLimit</span>,
     <span class="ident">libra_version</span>::<span class="ident">LibraVersion</span>,
     <span class="ident">registered_currencies</span>::<span class="ident">RegisteredCurrencies</span>,
     <span class="ident">validator_set</span>::<span class="ident">ValidatorSet</span>,
@@ -258,6 +263,7 @@
     <span class="ident">LibraVersion</span>::<span class="ident">CONFIG_ID</span>,
     <span class="ident">ValidatorSet</span>::<span class="ident">CONFIG_ID</span>,
     <span class="ident">RegisteredCurrencies</span>::<span class="ident">CONFIG_ID</span>,
+    <span class="ident">DualAttestationLimit</span>::<span class="ident">CONFIG_ID</span>,
 ];
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>

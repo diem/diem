@@ -586,6 +586,15 @@
 <span id="586">586</span>
 <span id="587">587</span>
 <span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
+<span id="591">591</span>
+<span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -798,7 +807,7 @@
     <span class="ident">doc</span>: <span class="string">&quot;Encode a program transferring `amount` coins to `recipient_address` with (optional) \
           associated metadata `metadata` and (optional) `signature` on the metadata, amount, and \
           sender address. The `metadata` and `signature` parameters are only required if \
-          `amount` &gt;= 1000 LBR and the sender and recipient of the funds are two distinct VASPs. \
+          `amount` &gt;= 1_000_000 micro LBR and the sender and recipient of the funds are two distinct VASPs. \
           Fails if there is no account at the recipient address or if the sender&#39;s balance is lower \
           than `amount`&quot;</span>
 }
@@ -1055,6 +1064,14 @@
          `new_exchange_rate_denominator/new_exchange_rate_numerator`.&quot;</span>
 }
 
+{
+    <span class="ident">script</span>: <span class="ident">UpdateTravelRuleLimit</span>,
+    <span class="ident">builder</span>: <span class="ident">encode_update_travel_rule_limit</span>,
+    <span class="ident">type_args</span>: [],
+    <span class="ident">args</span>: [<span class="ident">nonce</span>: <span class="ident">U64</span>, <span class="ident">new_micro_lbr_limit</span>: <span class="ident">U64</span>],
+    <span class="ident">doc</span>: <span class="string">&quot;Encode a program that updates the travel rule limit to &#39;new_micro_lbr_limit&#39;&quot;</span>
+}
+
 } <span class="comment">// End of txn scripts</span>
 
 <span class="comment">//...........................................................................</span>
@@ -1170,6 +1187,7 @@
                 <span class="string">&quot;unfreeze_account&quot;</span>,
                 <span class="string">&quot;rotate_authentication_key_with_nonce&quot;</span>,
                 <span class="string">&quot;update_exchange_rate&quot;</span>,
+                <span class="string">&quot;update_travel_rule_limit&quot;</span>
             ],
             <span class="ident">abis</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">name</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
         );
