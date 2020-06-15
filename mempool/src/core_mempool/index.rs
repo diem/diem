@@ -139,7 +139,7 @@ impl TTLIndex {
     pub(crate) fn gc(&mut self, now: Duration) -> Vec<TTLOrderingKey> {
         let ttl_key = TTLOrderingKey {
             expiration_time: now,
-            address: AccountAddress::default(),
+            address: AccountAddress::ZERO,
             sequence_number: 0,
         };
 

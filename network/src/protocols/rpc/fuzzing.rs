@@ -27,7 +27,7 @@ const MAX_UVI_PREFIX_BYTES: usize = 19;
 const MAX_SMALL_MSG_BYTES: usize = 32;
 const MAX_MEDIUM_MSG_BYTES: usize = 280;
 
-const MOCK_PEER_ID: PeerId = PeerId::DEFAULT;
+const MOCK_PEER_ID: PeerId = PeerId::ZERO;
 const TEST_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
 
 #[test]

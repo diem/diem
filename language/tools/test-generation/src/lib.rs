@@ -65,7 +65,7 @@ fn run_vm(module: VerifiedModule) -> VMResult<()> {
         .0
         .iter()
         .map(|sig_tok| match sig_tok {
-            SignatureToken::Address => Value::address(AccountAddress::DEFAULT),
+            SignatureToken::Address => Value::address(AccountAddress::ZERO),
             SignatureToken::U64 => Value::u64(0),
             SignatureToken::Bool => Value::bool(true),
             SignatureToken::Vector(inner_tok) if **inner_tok == SignatureToken::U8 => {
@@ -115,7 +115,7 @@ fn execute_function_in_module(
                 &entry_name,
                 ty_args,
                 args,
-                AccountAddress::default(),
+                AccountAddress::ZERO,
                 &mut txn_context,
                 &mut cost_strategy,
             )

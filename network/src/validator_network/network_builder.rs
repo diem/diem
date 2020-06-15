@@ -418,7 +418,7 @@ impl NetworkBuilder {
         let (key, maybe_trusted_peers, peer_id) = match authentication_mode {
             // validator-operated full node
             AuthenticationMode::ServerOnly(key)
-                if self.network_context.peer_id() == PeerId::default() =>
+                if self.network_context.peer_id() == PeerId::ZERO =>
             {
                 let public_key = key.public_key();
                 let peer_id = PeerId::from_identity_public_key(public_key);

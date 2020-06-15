@@ -122,7 +122,7 @@ impl NetworkConfig {
                     .unwrap()
                     .derived_address();
 
-                if config.peer_id == PeerId::default() {
+                if config.peer_id == PeerId::ZERO {
                     config.peer_id = peer_id;
                 }
             }

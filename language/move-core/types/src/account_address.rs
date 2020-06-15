@@ -29,7 +29,7 @@ impl AccountAddress {
     pub const LENGTH: usize = 16;
 
     /// Hex address: 0x0
-    pub const DEFAULT: Self = Self([0u8; Self::LENGTH]);
+    pub const ZERO: Self = Self([0u8; Self::LENGTH]);
 
     pub fn random() -> Self {
         let mut rng = OsRng;
@@ -83,12 +83,6 @@ impl AccountAddress {
         // keep only the last 16 bytes
         array.copy_from_slice(&pubkey_slice[x25519::PUBLIC_KEY_SIZE - Self::LENGTH..]);
         Self(array)
-    }
-}
-
-impl Default for AccountAddress {
-    fn default() -> AccountAddress {
-        AccountAddress::DEFAULT
     }
 }
 
