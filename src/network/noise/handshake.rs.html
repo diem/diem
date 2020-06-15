@@ -519,6 +519,64 @@
 <span id="519">519</span>
 <span id="520">520</span>
 <span id="521">521</span>
+<span id="522">522</span>
+<span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
+<span id="541">541</span>
+<span id="542">542</span>
+<span id="543">543</span>
+<span id="544">544</span>
+<span id="545">545</span>
+<span id="546">546</span>
+<span id="547">547</span>
+<span id="548">548</span>
+<span id="549">549</span>
+<span id="550">550</span>
+<span id="551">551</span>
+<span id="552">552</span>
+<span id="553">553</span>
+<span id="554">554</span>
+<span id="555">555</span>
+<span id="556">556</span>
+<span id="557">557</span>
+<span id="558">558</span>
+<span id="559">559</span>
+<span id="560">560</span>
+<span id="561">561</span>
+<span id="562">562</span>
+<span id="563">563</span>
+<span id="564">564</span>
+<span id="565">565</span>
+<span id="566">566</span>
+<span id="567">567</span>
+<span id="568">568</span>
+<span id="569">569</span>
+<span id="570">570</span>
+<span id="571">571</span>
+<span id="572">572</span>
+<span id="573">573</span>
+<span id="574">574</span>
+<span id="575">575</span>
+<span id="576">576</span>
+<span id="577">577</span>
+<span id="578">578</span>
+<span id="579">579</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -562,7 +620,18 @@
     <span class="doccomment">/// The timestamp is sent as a payload, so that it is encrypted.</span>
     <span class="doccomment">/// Note that a millisecond value is a 16-byte value in rust,</span>
     <span class="doccomment">/// but as we use it to store a duration since UNIX_EPOCH we will never use more than 8 bytes.</span>
-    <span class="kw">const</span> <span class="ident">TIMESTAMP_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">8</span>;
+    <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TIMESTAMP_SIZE</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">8</span>;
+
+    <span class="doccomment">/// obtain the current timestamp</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">now</span>() <span class="op">-</span><span class="op">&gt;</span> [<span class="ident">u8</span>; <span class="self">Self</span>::<span class="ident">TIMESTAMP_SIZE</span>] {
+        <span class="kw">let</span> <span class="ident">now</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">time</span>::<span class="ident">SystemTime</span>::<span class="ident">now</span>()
+            .<span class="ident">duration_since</span>(<span class="ident">time</span>::<span class="ident">UNIX_EPOCH</span>)
+            .<span class="ident">expect</span>(<span class="string">&quot;system clock should work&quot;</span>)
+            .<span class="ident">as_millis</span>() <span class="kw">as</span> <span class="ident">u64</span>; <span class="comment">// (TIMESTAMP_SIZE)</span>
+
+        <span class="comment">// e.g. [157, 126, 253, 97, 114, 1, 0, 0]</span>
+        <span class="ident">now</span>.<span class="ident">to_le_bytes</span>()
+    }
 
     <span class="doccomment">/// Returns true if the timestamp has already been observed for this peer</span>
     <span class="doccomment">/// or if it&#39;s an old timestamp</span>
@@ -691,7 +760,8 @@
                         ));
                     }
                 };
-                <span class="self">self</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">socket</span>, <span class="ident">remote_public_key</span>).<span class="kw">await</span><span class="question-mark">?</span>
+                <span class="self">self</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">socket</span>, <span class="ident">remote_public_key</span>, <span class="ident">AntiReplayTimestamps</span>::<span class="ident">now</span>)
+                    .<span class="kw">await</span><span class="question-mark">?</span>
             }
             <span class="ident">ConnectionOrigin</span>::<span class="ident">Inbound</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> (<span class="ident">socket</span>, <span class="ident">_peer_id</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_inbound</span>(<span class="ident">socket</span>).<span class="kw">await</span><span class="question-mark">?</span>;
@@ -721,13 +791,15 @@
     <span class="doccomment">/// In mutual auth scenarios, we will also include an anti replay attack counter in the</span>
     <span class="doccomment">/// Noise handshake payload. Currently this counter is always a millisecond-</span>
     <span class="doccomment">/// granularity unix epoch timestamp.</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">upgrade_outbound</span><span class="op">&lt;</span><span class="ident">TSocket</span><span class="op">&gt;</span>(
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">upgrade_outbound</span><span class="op">&lt;</span><span class="ident">TSocket</span>, <span class="ident">F</span><span class="op">&gt;</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="kw-2">mut</span> <span class="ident">socket</span>: <span class="ident">TSocket</span>,
         <span class="ident">remote_public_key</span>: <span class="ident">x25519</span>::<span class="ident">PublicKey</span>,
+        <span class="ident">time_provider</span>: <span class="ident">F</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">io</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">NoiseStream</span><span class="op">&lt;</span><span class="ident">TSocket</span><span class="op">&gt;</span><span class="op">&gt;</span>
     <span class="kw">where</span>
         <span class="ident">TSocket</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="ident">Unpin</span>,
+        <span class="ident">F</span>: <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> [<span class="ident">u8</span>; <span class="ident">AntiReplayTimestamps</span>::<span class="ident">TIMESTAMP_SIZE</span>],
     {
         <span class="comment">// buffer to hold prologue + first noise handshake message</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">client_message</span> <span class="op">=</span> [<span class="number">0</span>; <span class="self">Self</span>::<span class="ident">CLIENT_MESSAGE_SIZE</span>];
@@ -740,15 +812,7 @@
         <span class="kw">let</span> (<span class="ident">prologue_msg</span>, <span class="kw-2">mut</span> <span class="ident">client_noise_msg</span>) <span class="op">=</span> <span class="ident">client_message</span>.<span class="ident">split_at_mut</span>(<span class="self">Self</span>::<span class="ident">PROLOGUE_SIZE</span>);
 
         <span class="comment">// craft 8-byte payload as current timestamp (in milliseconds)</span>
-        <span class="kw">let</span> <span class="ident">payload</span> <span class="op">=</span> {
-            <span class="kw">let</span> <span class="ident">now</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="ident">time</span>::<span class="ident">SystemTime</span>::<span class="ident">now</span>()
-                .<span class="ident">duration_since</span>(<span class="ident">time</span>::<span class="ident">UNIX_EPOCH</span>)
-                .<span class="ident">expect</span>(<span class="string">&quot;system clock should work&quot;</span>)
-                .<span class="ident">as_millis</span>() <span class="kw">as</span> <span class="ident">u64</span>; <span class="comment">// (TIMESTAMP_SIZE)</span>
-
-            <span class="comment">// e.g. [157, 126, 253, 97, 114, 1, 0, 0]</span>
-            <span class="ident">now</span>.<span class="ident">to_le_bytes</span>()
-        };
+        <span class="kw">let</span> <span class="ident">payload</span> <span class="op">=</span> <span class="ident">time_provider</span>();
 
         <span class="comment">// craft first handshake message  (-&gt; e, es, s, ss)</span>
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">rand</span>::<span class="ident">rngs</span>::<span class="ident">OsRng</span>;
@@ -1015,7 +1079,7 @@
 
         <span class="comment">// perform the handshake</span>
         <span class="kw">let</span> (<span class="ident">client_session</span>, <span class="ident">server_session</span>) <span class="op">=</span> <span class="ident">block_on</span>(<span class="ident">join</span>(
-            <span class="ident">client</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">dialer_socket</span>, <span class="ident">server_public_key</span>),
+            <span class="ident">client</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">dialer_socket</span>, <span class="ident">server_public_key</span>, <span class="ident">AntiReplayTimestamps</span>::<span class="ident">now</span>),
             <span class="ident">server</span>.<span class="ident">upgrade_inbound</span>(<span class="ident">listener_socket</span>),
         ));
 
@@ -1039,6 +1103,58 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_handshake_mutual_auth</span>() {
         <span class="ident">test_handshake_success</span>(<span class="bool-val">true</span> <span class="comment">/* is_mutual_auth */</span>);
+    }
+
+    <span class="doccomment">/// provide a function that will return the same given value as a timestamp</span>
+    <span class="kw">fn</span> <span class="ident">bad_timestamp</span>(<span class="ident">value</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Fn</span>() <span class="op">-</span><span class="op">&gt;</span> [<span class="ident">u8</span>; <span class="ident">AntiReplayTimestamps</span>::<span class="ident">TIMESTAMP_SIZE</span>] {
+        <span class="kw">move</span> <span class="op">|</span><span class="op">|</span> <span class="ident">value</span>.<span class="ident">to_le_bytes</span>()
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_timestamp_replay</span>() {
+        <span class="comment">// 1. generate peers</span>
+        <span class="kw">let</span> ((<span class="ident">client</span>, <span class="ident">_client_public</span>), (<span class="ident">server</span>, <span class="ident">server_public</span>)) <span class="op">=</span>
+            <span class="ident">build_peers</span>(<span class="bool-val">true</span> <span class="comment">/* is_mutual_auth */</span>);
+
+        <span class="comment">// 2. perform the handshake with some timestamp, it should work</span>
+        <span class="kw">let</span> (<span class="ident">dialer_socket</span>, <span class="ident">listener_socket</span>) <span class="op">=</span> <span class="ident">MemorySocket</span>::<span class="ident">new_pair</span>();
+        <span class="kw">let</span> (<span class="ident">client_session</span>, <span class="ident">server_session</span>) <span class="op">=</span> <span class="ident">block_on</span>(<span class="ident">join</span>(
+            <span class="ident">client</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">dialer_socket</span>, <span class="ident">server_public</span>, <span class="ident">bad_timestamp</span>(<span class="number">1</span>)),
+            <span class="ident">server</span>.<span class="ident">upgrade_inbound</span>(<span class="ident">listener_socket</span>),
+        ));
+
+        <span class="ident">client_session</span>.<span class="ident">unwrap</span>();
+        <span class="ident">server_session</span>.<span class="ident">unwrap</span>();
+
+        <span class="comment">// 3. perform the handshake again with timestamp in the past, it should fail</span>
+        <span class="kw">let</span> (<span class="ident">dialer_socket</span>, <span class="ident">listener_socket</span>) <span class="op">=</span> <span class="ident">MemorySocket</span>::<span class="ident">new_pair</span>();
+        <span class="kw">let</span> (<span class="ident">client_session</span>, <span class="ident">server_session</span>) <span class="op">=</span> <span class="ident">block_on</span>(<span class="ident">join</span>(
+            <span class="ident">client</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">dialer_socket</span>, <span class="ident">server_public</span>, <span class="ident">bad_timestamp</span>(<span class="number">0</span>)),
+            <span class="ident">server</span>.<span class="ident">upgrade_inbound</span>(<span class="ident">listener_socket</span>),
+        ));
+
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">client_session</span>.<span class="ident">is_err</span>());
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">server_session</span>.<span class="ident">is_err</span>());
+
+        <span class="comment">// 4. perform the handshake again with the same timestamp, it should fail</span>
+        <span class="kw">let</span> (<span class="ident">dialer_socket</span>, <span class="ident">listener_socket</span>) <span class="op">=</span> <span class="ident">MemorySocket</span>::<span class="ident">new_pair</span>();
+        <span class="kw">let</span> (<span class="ident">client_session</span>, <span class="ident">server_session</span>) <span class="op">=</span> <span class="ident">block_on</span>(<span class="ident">join</span>(
+            <span class="ident">client</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">dialer_socket</span>, <span class="ident">server_public</span>, <span class="ident">bad_timestamp</span>(<span class="number">1</span>)),
+            <span class="ident">server</span>.<span class="ident">upgrade_inbound</span>(<span class="ident">listener_socket</span>),
+        ));
+
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">client_session</span>.<span class="ident">is_err</span>());
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">server_session</span>.<span class="ident">is_err</span>());
+
+        <span class="comment">// 5. perform the handshake again with a valid timestamp in the future, it should work</span>
+        <span class="kw">let</span> (<span class="ident">dialer_socket</span>, <span class="ident">listener_socket</span>) <span class="op">=</span> <span class="ident">MemorySocket</span>::<span class="ident">new_pair</span>();
+        <span class="kw">let</span> (<span class="ident">client_session</span>, <span class="ident">server_session</span>) <span class="op">=</span> <span class="ident">block_on</span>(<span class="ident">join</span>(
+            <span class="ident">client</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">dialer_socket</span>, <span class="ident">server_public</span>, <span class="ident">bad_timestamp</span>(<span class="number">2</span>)),
+            <span class="ident">server</span>.<span class="ident">upgrade_inbound</span>(<span class="ident">listener_socket</span>),
+        ));
+
+        <span class="ident">client_session</span>.<span class="ident">unwrap</span>();
+        <span class="ident">server_session</span>.<span class="ident">unwrap</span>();
     }
 }
 </pre></div>

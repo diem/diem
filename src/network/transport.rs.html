@@ -889,12 +889,15 @@
 <span id="889">889</span>
 <span id="890">890</span>
 <span id="891">891</span>
+<span id="892">892</span>
+<span id="893">893</span>
+<span id="894">894</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">noise</span>::{<span class="ident">stream</span>::<span class="ident">NoiseStream</span>, <span class="ident">HandshakeAuthMode</span>, <span class="ident">NoiseUpgrader</span>},
+    <span class="ident">noise</span>::{<span class="ident">stream</span>::<span class="ident">NoiseStream</span>, <span class="ident">AntiReplayTimestamps</span>, <span class="ident">HandshakeAuthMode</span>, <span class="ident">NoiseUpgrader</span>},
     <span class="ident">protocols</span>::{
         <span class="ident">identity</span>::<span class="ident">exchange_handshake</span>,
         <span class="ident">wire</span>::<span class="ident">handshake</span>::<span class="ident">v1</span>::{<span class="ident">HandshakeMsg</span>, <span class="ident">MessagingProtocolVersion</span>, <span class="ident">SupportedProtocols</span>},
@@ -1131,7 +1134,10 @@
     <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">fut_socket</span>.<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// noise handshake</span>
-    <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">ctxt</span>.<span class="ident">noise</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">socket</span>, <span class="ident">remote_pubkey</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">socket</span> <span class="op">=</span> <span class="ident">ctxt</span>
+        .<span class="ident">noise</span>
+        .<span class="ident">upgrade_outbound</span>(<span class="ident">socket</span>, <span class="ident">remote_pubkey</span>, <span class="ident">AntiReplayTimestamps</span>::<span class="ident">now</span>)
+        .<span class="kw">await</span><span class="question-mark">?</span>;
 
     <span class="comment">// sanity check: Noise IK should always guarantee this is true</span>
     <span class="macro">debug_assert_eq</span><span class="macro">!</span>(<span class="ident">remote_pubkey</span>, <span class="ident">socket</span>.<span class="ident">get_remote_static</span>());

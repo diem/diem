@@ -220,6 +220,11 @@
 <span id="220">220</span>
 <span id="221">221</span>
 <span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -231,7 +236,7 @@
 <span class="comment">// This fuzzes the wrappers we have around our Noise library.</span>
 <span class="comment">//</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">noise</span>::{<span class="ident">HandshakeAuthMode</span>, <span class="ident">NoiseUpgrader</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">noise</span>::{<span class="ident">AntiReplayTimestamps</span>, <span class="ident">HandshakeAuthMode</span>, <span class="ident">NoiseUpgrader</span>};
 <span class="kw">use</span> <span class="ident">futures</span>::{
     <span class="ident">executor</span>::<span class="ident">block_on</span>,
     <span class="ident">future</span>::<span class="ident">join</span>,
@@ -330,7 +335,7 @@
 
     <span class="comment">// perform the handshake</span>
     <span class="kw">let</span> (<span class="ident">client_session</span>, <span class="ident">server_session</span>) <span class="op">=</span> <span class="ident">block_on</span>(<span class="ident">join</span>(
-        <span class="ident">initiator</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">dialer_socket</span>, <span class="ident">public_key</span>),
+        <span class="ident">initiator</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">dialer_socket</span>, <span class="ident">public_key</span>, <span class="ident">fake_timestamp</span>),
         <span class="ident">responder</span>.<span class="ident">upgrade_inbound</span>(<span class="ident">listener_socket</span>),
     ));
 
@@ -404,6 +409,11 @@
     }
 }
 
+<span class="doccomment">/// let&#39;s provide the same timestamp everytime, faster</span>
+<span class="kw">fn</span> <span class="ident">fake_timestamp</span>() <span class="op">-</span><span class="op">&gt;</span> [<span class="ident">u8</span>; <span class="ident">AntiReplayTimestamps</span>::<span class="ident">TIMESTAMP_SIZE</span>] {
+    [<span class="number">0u8</span>; <span class="ident">AntiReplayTimestamps</span>::<span class="ident">TIMESTAMP_SIZE</span>]
+}
+
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fuzz_initiator</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) {
     <span class="comment">// setup initiator</span>
     <span class="kw">let</span> (<span class="ident">private_key</span>, <span class="ident">public_key</span>) <span class="op">=</span> <span class="ident">KEYPAIR</span>.<span class="ident">clone</span>();
@@ -414,7 +424,7 @@
     <span class="kw">let</span> <span class="ident">fake_socket</span> <span class="op">=</span> <span class="ident">FakeSocket</span> { <span class="ident">content</span>: <span class="ident">data</span> };
 
     <span class="comment">// send a message, then read fuzz data</span>
-    <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">block_on</span>(<span class="ident">initiator</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">fake_socket</span>, <span class="ident">public_key</span>));
+    <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">block_on</span>(<span class="ident">initiator</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">fake_socket</span>, <span class="ident">public_key</span>, <span class="ident">fake_timestamp</span>));
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fuzz_responder</span>(<span class="ident">data</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) {

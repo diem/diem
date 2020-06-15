@@ -105,7 +105,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! ```</span>
 <span class="doccomment">//! use network::{</span>
-<span class="doccomment">//!     noise::{HandshakeAuthMode, NoiseUpgrader},</span>
+<span class="doccomment">//!     noise::{HandshakeAuthMode, NoiseUpgrader, AntiReplayTimestamps},</span>
 <span class="doccomment">//! };</span>
 <span class="doccomment">//! use futures::{executor, future, io::{AsyncReadExt, AsyncWriteExt}};</span>
 <span class="doccomment">//! use memsocket::MemorySocket;</span>
@@ -143,7 +143,7 @@
 <span class="doccomment">//!</span>
 <span class="doccomment">//! // perform the handshake</span>
 <span class="doccomment">//! let (client_session, server_session) = executor::block_on(future::join(</span>
-<span class="doccomment">//!    client.upgrade_outbound(dialer_socket, server_public),</span>
+<span class="doccomment">//!    client.upgrade_outbound(dialer_socket, server_public, AntiReplayTimestamps::now),</span>
 <span class="doccomment">//!    server.upgrade_inbound(listener_socket),</span>
 <span class="doccomment">//! ));</span>
 <span class="doccomment">//!</span>
