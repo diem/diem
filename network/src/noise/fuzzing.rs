@@ -94,35 +94,43 @@ pub static KEYPAIRS: Lazy<(
 )> = Lazy::new(|| {
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
 
-    let initiator_key = x25519::PrivateKey::generate(&mut rng);
-    let initiator_public_key = initiator_key.public_key();
+    let initiator_private_key = x25519::PrivateKey::generate(&mut rng);
+    let initiator_public_key = initiator_private_key.public_key();
     let initiator_peer_id = PeerId::from_identity_public_key(initiator_public_key);
 
-    let responder_key = x25519::PrivateKey::generate(&mut rng);
-    let responder_public_key = responder_key.public_key();
+    let responder_private_key = x25519::PrivateKey::generate(&mut rng);
+    let responder_public_key = responder_private_key.public_key();
     let responder_peer_id = PeerId::from_identity_public_key(responder_public_key);
 
     (
-        (initiator_key, initiator_public_key, initiator_peer_id),
-        (responder_key, responder_public_key, responder_peer_id),
+        (
+            initiator_private_key,
+            initiator_public_key,
+            initiator_peer_id,
+        ),
+        (
+            responder_private_key,
+            responder_public_key,
+            responder_peer_id,
+        ),
     )
 });
 
 fn generate_first_two_messages() -> (Vec<u8>, Vec<u8>) {
     // build
     let (
-        (initiator_key, initiator_public_key, initiator_peer_id),
-        (responder_key, responder_public_key, responder_peer_id),
+        (initiator_private_key, initiator_public_key, initiator_peer_id),
+        (responder_private_key, responder_public_key, responder_peer_id),
     ) = KEYPAIRS.clone();
 
     let initiator = NoiseUpgrader::new(
         initiator_peer_id,
-        initiator_key,
+        initiator_private_key,
         HandshakeAuthMode::ServerOnly,
     );
     let responder = NoiseUpgrader::new(
         responder_peer_id,
-        responder_key,
+        responder_private_key,
         HandshakeAuthMode::ServerOnly,
     );
 
@@ -219,10 +227,11 @@ fn fake_timestamp() -> [u8; AntiReplayTimestamps::TIMESTAMP_SIZE] {
 
 pub fn fuzz_initiator(data: &[u8]) {
     // setup initiator
-    let ((initiator_key, _, initiator_peer_id), (_, responder_public_key, _)) = KEYPAIRS.clone();
+    let ((initiator_private_key, _, initiator_peer_id), (_, responder_public_key, _)) =
+        KEYPAIRS.clone();
     let initiator = NoiseUpgrader::new(
         initiator_peer_id,
-        initiator_key,
+        initiator_private_key,
         HandshakeAuthMode::ServerOnly,
     );
 
@@ -235,10 +244,10 @@ pub fn fuzz_initiator(data: &[u8]) {
 
 pub fn fuzz_responder(data: &[u8]) {
     // setup responder
-    let (_, (responder_key, _, responder_peer_id)) = KEYPAIRS.clone();
+    let (_, (responder_private_key, _, responder_peer_id)) = KEYPAIRS.clone();
     let responder = NoiseUpgrader::new(
         responder_peer_id,
-        responder_key,
+        responder_private_key,
         HandshakeAuthMode::ServerOnly,
     );
 

@@ -464,11 +464,11 @@ mod test {
     ) {
         let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
 
-        let client_key = x25519::PrivateKey::generate(&mut rng);
-        let client_public_key = client_key.public_key();
+        let client_private_key = x25519::PrivateKey::generate(&mut rng);
+        let client_public_key = client_private_key.public_key();
 
-        let server_key = x25519::PrivateKey::generate(&mut rng);
-        let server_public_key = server_key.public_key();
+        let server_private_key = x25519::PrivateKey::generate(&mut rng);
+        let server_public_key = server_private_key.public_key();
 
         let (client_auth, server_auth, client_peer_id, server_peer_id) = if is_mutual_auth {
             let client_peer_id = PeerId::random();
@@ -495,8 +495,8 @@ mod test {
             )
         };
 
-        let client = NoiseUpgrader::new(client_peer_id, client_key, client_auth);
-        let server = NoiseUpgrader::new(server_peer_id, server_key, server_auth);
+        let client = NoiseUpgrader::new(client_peer_id, client_private_key, client_auth);
+        let server = NoiseUpgrader::new(server_peer_id, server_private_key, server_auth);
 
         ((client, client_public_key), (server, server_public_key))
     }
@@ -528,7 +528,7 @@ mod test {
     #[test]
     fn test_timestamp_replay() {
         // 1. generate peers
-        let ((client, _client_public_key), (server, server_public_key)) =
+        let ((client, _), (server, server_public_key)) =
             build_peers(true /* is_mutual_auth */);
 
         // 2. perform the handshake with some timestamp, it should work
