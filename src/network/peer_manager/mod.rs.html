@@ -960,6 +960,7 @@
 <span id="960">960</span>
 <span id="961">961</span>
 <span id="962">962</span>
+<span id="963">963</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -998,6 +999,7 @@
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">netcore</span>::<span class="ident">transport</span>::{<span class="ident">ConnectionOrigin</span>, <span class="ident">Transport</span>};
+<span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Serialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::{<span class="ident">hash_map</span>::<span class="ident">Entry</span>, <span class="ident">HashMap</span>},
     <span class="ident">fmt</span>::<span class="ident">Debug</span>,
@@ -1042,7 +1044,7 @@
     <span class="ident">DisconnectPeer</span>(<span class="ident">PeerId</span>, <span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PeerManagerError</span><span class="op">&gt;</span><span class="op">&gt;</span>),
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ConnectionNotification</span> {
     <span class="doccomment">/// Connection with a new peer has been established.</span>
     <span class="ident">NewPeer</span>(<span class="ident">PeerId</span>, <span class="ident">NetworkAddress</span>),

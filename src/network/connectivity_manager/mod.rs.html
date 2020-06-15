@@ -633,6 +633,38 @@
 <span id="633">633</span>
 <span id="634">634</span>
 <span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
+<span id="650">650</span>
+<span id="651">651</span>
+<span id="652">652</span>
+<span id="653">653</span>
+<span id="654">654</span>
+<span id="655">655</span>
+<span id="656">656</span>
+<span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
+<span id="664">664</span>
+<span id="665">665</span>
+<span id="666">666</span>
+<span id="667">667</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -663,7 +695,10 @@
 <span class="doccomment">//! any partitions asap, as we aren&#39;t currently gossiping consensus messages or</span>
 <span class="doccomment">//! using a relay protocol.</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">peer_manager</span>::{<span class="self">self</span>, <span class="ident">conn_notifs_channel</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerError</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">logging</span>,
+    <span class="ident">peer_manager</span>::{<span class="self">self</span>, <span class="ident">conn_notifs_channel</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerError</span>},
+};
 <span class="kw">use</span> <span class="ident">futures</span>::{
     <span class="ident">channel</span>::<span class="ident">oneshot</span>,
     <span class="ident">future</span>::{<span class="ident">BoxFuture</span>, <span class="ident">FutureExt</span>},
@@ -671,10 +706,11 @@
 };
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">network_id</span>::<span class="ident">NetworkContext</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">x25519</span>;
-<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">libra_logger</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">StructuredLogEntry</span>};
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">num_variants</span>::<span class="ident">NumVariants</span>;
+<span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Serialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">cmp</span>::<span class="ident">min</span>,
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
@@ -722,7 +758,7 @@
 <span class="doccomment">/// Different sources for peer addresses, ordered by priority (Onchain=highest,</span>
 <span class="doccomment">/// Config=lowest).</span>
 <span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u8</span>)]</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Ord</span>, <span class="ident">PartialOrd</span>, <span class="ident">NumVariants</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Ord</span>, <span class="ident">PartialOrd</span>, <span class="ident">NumVariants</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">DiscoverySource</span> {
     <span class="ident">OnChain</span>,
     <span class="ident">Gossip</span>,
@@ -730,13 +766,14 @@
 }
 
 <span class="doccomment">/// Requests received by the [`ConnectivityManager`] manager actor from upstream modules.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ConnectivityRequest</span> {
     <span class="doccomment">/// Request to update known addresses of peer with id `PeerId` to given list.</span>
     <span class="ident">UpdateAddresses</span>(<span class="ident">DiscoverySource</span>, <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span><span class="op">&gt;</span>),
     <span class="doccomment">/// Update set of nodes eligible to join the network.</span>
     <span class="ident">UpdateEligibleNodes</span>(<span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">x25519</span>::<span class="ident">PublicKey</span><span class="op">&gt;</span>),
     <span class="doccomment">/// Gets current size of dial queue. This is useful in tests.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>)]</span>
     <span class="ident">GetDialQueueSize</span>(<span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>),
 }
 
@@ -847,29 +884,56 @@
 
         <span class="comment">// When we first startup, let&#39;s attempt to connect with our seed peers.</span>
         <span class="self">self</span>.<span class="ident">check_connectivity</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">pending_dials</span>).<span class="kw">await</span>;
-
-        <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} Starting connection manager&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
+        <span class="macro">send_struct_log</span><span class="macro">!</span>(
+            <span class="ident">StructuredLogEntry</span>::<span class="ident">new_named</span>(<span class="ident">logging</span>::<span class="ident">CONNECTIVITY_MANAGER_LOOP</span>)
+                .<span class="ident">data</span>(<span class="ident">logging</span>::<span class="ident">TYPE</span>, <span class="ident">logging</span>::<span class="ident">START</span>)
+                .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">NETWORK_CONTEXT</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>)
+        );
         <span class="kw">loop</span> {
             <span class="self">self</span>.<span class="ident">event_id</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">event_id</span>.<span class="ident">wrapping_add</span>(<span class="number">1</span>);
             ::<span class="ident">futures</span>::<span class="macro">select</span><span class="macro">!</span> {
                 <span class="kw">_</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ticker</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} Event Id: {}, type: Tick&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>);
+                    <span class="macro">send_struct_log</span><span class="macro">!</span>(<span class="ident">StructuredLogEntry</span>::<span class="ident">new_named</span>(<span class="ident">logging</span>::<span class="ident">CONNECTIVITY_MANAGER_LOOP</span>)
+                        .<span class="ident">data</span>(<span class="ident">logging</span>::<span class="ident">TYPE</span>, <span class="string">&quot;tick&quot;</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">NETWORK_CONTEXT</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">EVENT_ID</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">event_id</span>)
+                    );
                     <span class="self">self</span>.<span class="ident">check_connectivity</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">pending_dials</span>).<span class="kw">await</span>;
                 },
                 <span class="ident">req</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">requests_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} Event Id: {}, type: ConnectivityRequest, req: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>, <span class="ident">req</span>);
+                    <span class="macro">send_struct_log</span><span class="macro">!</span>(<span class="ident">StructuredLogEntry</span>::<span class="ident">new_named</span>(<span class="ident">logging</span>::<span class="ident">CONNECTIVITY_MANAGER_LOOP</span>)
+                        .<span class="ident">data</span>(<span class="ident">logging</span>::<span class="ident">TYPE</span>, <span class="string">&quot;connectivity_request&quot;</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">NETWORK_CONTEXT</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">CONNECTIVITY_REQUEST</span>, <span class="kw-2">&amp;</span><span class="ident">req</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">EVENT_ID</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">event_id</span>)
+                    );
                     <span class="self">self</span>.<span class="ident">handle_request</span>(<span class="ident">req</span>);
                 },
                 <span class="ident">notif</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">connection_notifs_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} Event Id: {}, type: peer_manager::ConnectionNotification, notif: {:?}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>, <span class="ident">notif</span>);
+                    <span class="macro">send_struct_log</span><span class="macro">!</span>(<span class="ident">StructuredLogEntry</span>::<span class="ident">new_named</span>(<span class="ident">logging</span>::<span class="ident">CONNECTIVITY_MANAGER_LOOP</span>)
+                        .<span class="ident">data</span>(<span class="ident">logging</span>::<span class="ident">TYPE</span>, <span class="string">&quot;connection_notification&quot;</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">NETWORK_CONTEXT</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">EVENT_ID</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">event_id</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">CONNECTION_NOTIFICATION</span>, <span class="kw-2">&amp;</span><span class="ident">notif</span>)
+                    );
                     <span class="self">self</span>.<span class="ident">handle_control_notification</span>(<span class="ident">notif</span>);
                 },
                 <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">pending_dials</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">trace</span><span class="macro">!</span>(<span class="string">&quot;{} Event Id: {}, type: Dial complete, peer: {}&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>, <span class="self">self</span>.<span class="ident">event_id</span>, <span class="ident">peer_id</span>.<span class="ident">short_str</span>());
+                    <span class="macro">send_struct_log</span><span class="macro">!</span>(<span class="ident">StructuredLogEntry</span>::<span class="ident">new_named</span>(<span class="ident">logging</span>::<span class="ident">CONNECTIVITY_MANAGER_LOOP</span>)
+                        .<span class="ident">data</span>(<span class="ident">logging</span>::<span class="ident">TYPE</span>, <span class="string">&quot;dial_complete&quot;</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">NETWORK_CONTEXT</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">EVENT_ID</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">event_id</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">REMOTE_PEER</span>, <span class="kw-2">&amp;</span><span class="ident">peer_id</span>)
+                    );
                     <span class="self">self</span>.<span class="ident">dial_queue</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>);
                 },
                 <span class="ident">complete</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;{} Connectivity manager actor terminated&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
+                    <span class="macro">send_struct_log</span><span class="macro">!</span>(<span class="ident">StructuredLogEntry</span>::<span class="ident">new_named</span>(<span class="ident">logging</span>::<span class="ident">CONNECTIVITY_MANAGER_LOOP</span>)
+                        .<span class="ident">data</span>(<span class="ident">logging</span>::<span class="ident">TYPE</span>, <span class="ident">logging</span>::<span class="ident">TERMINATION</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">NETWORK_CONTEXT</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>)
+                        .<span class="ident">critical</span>()
+                    );
+                    <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;{} Connectivity manager actor terminated&quot;</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>);
                     <span class="kw">break</span>;
                 }
             }

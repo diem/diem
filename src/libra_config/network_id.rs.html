@@ -196,7 +196,7 @@
 <span class="doccomment">/// A grouping of common information between all networking code for logging.</span>
 <span class="doccomment">/// This should greatly reduce the groupings between these given everywhere, and will allow</span>
 <span class="doccomment">/// for logging accordingly.  TODO: Figure out how to split these as structured logging</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NetworkContext</span> {
     <span class="ident">network_id</span>: <span class="ident">NetworkId</span>,
     <span class="ident">role</span>: <span class="ident">RoleType</span>,
