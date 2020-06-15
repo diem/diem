@@ -129,7 +129,7 @@
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_local_ip</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span> {
     <span class="ident">get_if_addrs</span>().<span class="ident">ok</span>().<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">if_addrs</span><span class="op">|</span> {
         <span class="ident">if_addrs</span>
-            .<span class="ident">into_iter</span>()
+            .<span class="ident">iter</span>()
             .<span class="ident">find</span>(<span class="op">|</span><span class="ident">if_addr</span><span class="op">|</span> <span class="op">!</span><span class="ident">if_addr</span>.<span class="ident">is_loopback</span>())
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">if_addr</span><span class="op">|</span> <span class="ident">NetworkAddress</span>::<span class="ident">from</span>(<span class="ident">Protocol</span>::<span class="ident">from</span>(<span class="ident">if_addr</span>.<span class="ident">ip</span>())))
     })

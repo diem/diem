@@ -182,7 +182,6 @@
 <span id="182">182</span>
 <span id="183">183</span>
 <span id="184">184</span>
-<span id="185">185</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -261,8 +260,7 @@
 
     <span class="doccomment">/// Recover wallet from input_file_path</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">recover</span>(<span class="ident">input_file_path</span>: <span class="kw-2">&amp;</span><span class="ident">Path</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">WalletLibrary</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">wallet</span> <span class="op">=</span> <span class="ident">io_utils</span>::<span class="ident">recover</span>(<span class="kw-2">&amp;</span><span class="ident">input_file_path</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">wallet</span>)
+        <span class="ident">io_utils</span>::<span class="ident">recover</span>(<span class="kw-2">&amp;</span><span class="ident">input_file_path</span>)
     }
 
     <span class="doccomment">/// Get the current ChildNumber in u64 format</span>

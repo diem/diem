@@ -1794,7 +1794,6 @@
 <span id="1794">1794</span>
 <span id="1795">1795</span>
 <span id="1796">1796</span>
-<span id="1797">1797</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2936,8 +2935,7 @@
                 <span class="ident">account_data</span>
                     .<span class="ident">authentication_key</span>
                     .<span class="ident">clone</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">bytes</span><span class="op">|</span> <span class="ident">AuthenticationKey</span>::<span class="ident">try_from</span>(<span class="ident">bytes</span>).<span class="ident">ok</span>())
-                    .<span class="ident">flatten</span>(),
+                    .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">bytes</span><span class="op">|</span> <span class="ident">AuthenticationKey</span>::<span class="ident">try_from</span>(<span class="ident">bytes</span>).<span class="ident">ok</span>()),
             ))
         }
     }

@@ -229,8 +229,6 @@
 <span id="229">229</span>
 <span id="230">230</span>
 <span id="231">231</span>
-<span id="232">232</span>
-<span id="233">233</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -399,13 +397,11 @@
     }
 
     <span class="kw">fn</span> <span class="ident">get_epoch_proof</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">epoch_change_li</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">storage</span>
+        <span class="self">self</span>.<span class="ident">storage</span>
             .<span class="ident">get_epoch_change_ledger_infos</span>(<span class="ident">epoch</span>, <span class="ident">epoch</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>
             .<span class="ident">ledger_info_with_sigs</span>
             .<span class="ident">pop</span>()
-            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Empty EpochChangeProof&quot;</span>))<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="ident">epoch_change_li</span>)
+            .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Empty EpochChangeProof&quot;</span>))
     }
 
     <span class="kw">fn</span> <span class="ident">get_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span> {
@@ -429,7 +425,7 @@
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
         }
         <span class="kw">let</span> <span class="ident">event_keys</span> <span class="op">=</span> <span class="ident">events</span>
-            .<span class="ident">into_iter</span>()
+            .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">event</span><span class="op">|</span> <span class="kw-2">*</span><span class="ident">event</span>.<span class="ident">key</span>())
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">HashSet</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
 
