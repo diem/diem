@@ -181,8 +181,6 @@
 <span id="181">181</span>
 <span id="182">182</span>
 <span id="183">183</span>
-<span id="184">184</span>
-<span id="185">185</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -209,7 +207,7 @@
     <span class="ident">stream</span>::{<span class="ident">select_all</span>, <span class="ident">FuturesUnordered</span>},
     <span class="ident">StreamExt</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">NodeConfig</span>, <span class="ident">PeerNetworkId</span>, <span class="ident">UpstreamNetworkId</span>};
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">PeerNetworkId</span>, <span class="ident">UpstreamNetworkId</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_security_logger</span>::{<span class="ident">security_log</span>, <span class="ident">SecurityEvent</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">on_chain_config</span>::<span class="ident">OnChainConfigPayload</span>, <span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>};
@@ -233,7 +231,6 @@
     <span class="kw-2">mut</span> <span class="ident">consensus_requests</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">ConsensusRequest</span><span class="op">&gt;</span>,
     <span class="kw-2">mut</span> <span class="ident">state_sync_requests</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">CommitNotification</span><span class="op">&gt;</span>,
     <span class="kw-2">mut</span> <span class="ident">mempool_reconfig_events</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(), <span class="ident">OnChainConfigPayload</span><span class="op">&gt;</span>,
-    <span class="ident">node_config</span>: <span class="ident">NodeConfig</span>,
 ) <span class="kw">where</span>
     <span class="ident">V</span>: <span class="ident">TransactionValidation</span>,
 {
@@ -242,7 +239,6 @@
         .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">network_id</span>, <span class="ident">events</span>)<span class="op">|</span> <span class="ident">events</span>.<span class="ident">map</span>(<span class="kw">move</span> <span class="op">|</span><span class="ident">e</span><span class="op">|</span> (<span class="ident">network_id</span>, <span class="ident">e</span>)))
         .<span class="ident">collect</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">events</span> <span class="op">=</span> <span class="ident">select_all</span>(<span class="ident">smp_events</span>).<span class="ident">fuse</span>();
-    <span class="kw">let</span> <span class="ident">is_validator</span> <span class="op">=</span> <span class="ident">node_config</span>.<span class="ident">base</span>.<span class="ident">role</span>.<span class="ident">is_validator</span>();
     <span class="kw">let</span> <span class="ident">mempool</span> <span class="op">=</span> <span class="ident">smp</span>.<span class="ident">mempool</span>.<span class="ident">clone</span>();
     <span class="kw">let</span> <span class="ident">peer_manager</span> <span class="op">=</span> <span class="ident">smp</span>.<span class="ident">peer_manager</span>.<span class="ident">clone</span>();
     <span class="kw">let</span> <span class="ident">subscribers</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">smp</span>.<span class="ident">subscribers</span>.<span class="ident">clone</span>();
@@ -330,7 +326,7 @@
                                     }
                                     <span class="ident">MempoolSyncMsg</span>::<span class="ident">BroadcastTransactionsResponse</span>{<span class="ident">request_id</span>, <span class="ident">retry_txns</span>, <span class="ident">backoff</span>} <span class="op">=</span><span class="op">&gt;</span> {
                                         <span class="kw">let</span> <span class="ident">peer</span> <span class="op">=</span> <span class="ident">PeerNetworkId</span>(<span class="ident">network_id</span>, <span class="ident">peer_id</span>);
-                                        <span class="ident">tasks</span>::<span class="ident">process_broadcast_ack</span>(<span class="kw-2">&amp;</span><span class="ident">mempool</span>, <span class="ident">peer</span>, <span class="ident">request_id</span>, <span class="ident">retry_txns</span>, <span class="ident">backoff</span>, <span class="ident">is_validator</span>, <span class="ident">peer_manager</span>.<span class="ident">clone</span>());
+                                        <span class="ident">peer_manager</span>.<span class="ident">process_broadcast_ack</span>(<span class="ident">PeerNetworkId</span>(<span class="ident">network_id</span>, <span class="ident">peer_id</span>), <span class="ident">request_id</span>, <span class="ident">retry_txns</span>, <span class="ident">backoff</span>);
                                         <span class="ident">notify_subscribers</span>(<span class="ident">SharedMempoolNotification</span>::<span class="ident">ACK</span>, <span class="kw-2">&amp;</span><span class="ident">smp</span>.<span class="ident">subscribers</span>);
                                     }
                                 };

@@ -126,8 +126,6 @@
 <span id="126">126</span>
 <span id="127">127</span>
 <span id="128">128</span>
-<span id="129">129</span>
-<span id="130">130</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -188,7 +186,6 @@
             .<span class="ident">shared_mempool_min_broadcast_recipient_count</span>
             .<span class="ident">unwrap_or</span>(<span class="ident">DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT</span>),
     ));
-    <span class="kw">let</span> <span class="ident">config_clone</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">clone_for_template</span>();
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">all_network_events</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network_senders</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
@@ -215,7 +212,6 @@
         <span class="ident">consensus_requests</span>,
         <span class="ident">state_sync_requests</span>,
         <span class="ident">mempool_reconfig_events</span>,
-        <span class="ident">config_clone</span>,
     ));
 
     <span class="ident">executor</span>.<span class="ident">spawn</span>(<span class="ident">gc_coordinator</span>(

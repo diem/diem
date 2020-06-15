@@ -200,18 +200,6 @@
 <span id="200">200</span>
 <span id="201">201</span>
 <span id="202">202</span>
-<span id="203">203</span>
-<span id="204">204</span>
-<span id="205">205</span>
-<span id="206">206</span>
-<span id="207">207</span>
-<span id="208">208</span>
-<span id="209">209</span>
-<span id="210">210</span>
-<span id="211">211</span>
-<span id="212">212</span>
-<span id="213">213</span>
-<span id="214">214</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -374,18 +362,6 @@
             }
         }
         <span class="ident">sync_state</span>.<span class="ident">broadcast_info</span>.<span class="ident">backoff_mode</span> <span class="op">=</span> <span class="ident">backoff</span>;
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_broadcast_batch</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">peer</span>: <span class="ident">PeerNetworkId</span>, <span class="ident">batch_id</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">peer_info</span>
-            .<span class="ident">lock</span>()
-            .<span class="ident">expect</span>(<span class="string">&quot;failed to acquire lock&quot;</span>)
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">peer</span>)
-            .<span class="ident">expect</span>(<span class="string">&quot;missing peer&quot;</span>)
-            .<span class="ident">broadcast_info</span>
-            .<span class="ident">sent_batches</span>
-            .<span class="ident">get</span>(<span class="ident">batch_id</span>)
-            .<span class="ident">cloned</span>()
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_upstream_peer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">peer</span>: <span class="ident">PeerNetworkId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
