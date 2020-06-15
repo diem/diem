@@ -195,6 +195,22 @@
 <span id="195">195</span>
 <span id="196">196</span>
 <span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -222,22 +238,25 @@
 };
 
 <span class="doccomment">/// SharedState is a data structure private to this module which is</span>
-<span class="doccomment">/// shared by the sender and receiver.</span>
+<span class="doccomment">/// shared by the `Receiver` and any `Sender`s.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">SharedState</span><span class="op">&lt;</span><span class="ident">K</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span> <span class="op">+</span> <span class="ident">Clone</span>, <span class="ident">M</span><span class="op">&gt;</span> {
-    <span class="doccomment">/// The internal queue of messages in this Channel</span>
+    <span class="doccomment">/// The internal queue of messages in this channel.</span>
     <span class="ident">internal_queue</span>: <span class="ident">PerKeyQueue</span><span class="op">&lt;</span><span class="ident">K</span>, (<span class="ident">M</span>, <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ElementStatus</span><span class="op">&lt;</span><span class="ident">M</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
-    <span class="doccomment">/// Waker is needed so that the Sender can notify the task executor/scheduler</span>
-    <span class="doccomment">/// that something has been pushed to the internal_queue and it ready for</span>
-    <span class="doccomment">/// consumption by the Receiver and then the executor/scheduler will wake up</span>
-    <span class="doccomment">/// the Receiver task to process the next item.</span>
+    <span class="doccomment">/// The `Receiver` registers its `Waker` in this slot when the queue is empty.</span>
+    <span class="doccomment">/// `Sender`s will try to wake the `Receiver` (if any) when they push a new</span>
+    <span class="doccomment">/// item onto the queue. The last live `Sender` will also wake the `Receiver`</span>
+    <span class="doccomment">/// as it&#39;s tearing down so the `Receiver` can gracefully drain and shutdown</span>
+    <span class="doccomment">/// the channel.</span>
     <span class="ident">waker</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Waker</span><span class="op">&gt;</span>,
-
-    <span class="doccomment">/// A boolean which tracks whether the receiver has dropped</span>
+    <span class="doccomment">/// The number of active senders. When this value reaches 0, all senders have</span>
+    <span class="doccomment">/// been dropped.</span>
+    <span class="ident">num_senders</span>: <span class="ident">usize</span>,
+    <span class="doccomment">/// A boolean which tracks whether the receiver has dropped.</span>
     <span class="ident">receiver_dropped</span>: <span class="ident">bool</span>,
-    <span class="doccomment">/// A boolean which tracks whether the stream has terminated</span>
-    <span class="doccomment">/// A stream is considered terminated when sender has dropped</span>
-    <span class="doccomment">/// and we have drained everything inside our internal queue</span>
+    <span class="doccomment">/// A boolean which tracks whether the stream has terminated. A stream is</span>
+    <span class="doccomment">/// considered terminated when sender has dropped and we have drained everything</span>
+    <span class="doccomment">/// inside our internal queue.</span>
     <span class="ident">stream_terminated</span>: <span class="ident">bool</span>,
 }
 
@@ -291,6 +310,8 @@
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shared_state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">shared_state</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
         <span class="macro">ensure</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">shared_state</span>.<span class="ident">receiver_dropped</span>, <span class="string">&quot;Channel is closed&quot;</span>);
+        <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="ident">shared_state</span>.<span class="ident">num_senders</span> <span class="op">&gt;</span> <span class="number">0</span>);
+
         <span class="kw">let</span> <span class="ident">dropped</span> <span class="op">=</span> <span class="ident">shared_state</span>.<span class="ident">internal_queue</span>.<span class="ident">push</span>(<span class="ident">key</span>, (<span class="ident">message</span>, <span class="ident">status_ch</span>));
         <span class="comment">// If this or an existing message had to be dropped because of the queue being full, we</span>
         <span class="comment">// notify the corresponding status channel if it was registered.</span>
@@ -307,17 +328,27 @@
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span> <span class="op">+</span> <span class="ident">Clone</span>, <span class="ident">M</span><span class="op">&gt;</span> <span class="ident">Clone</span> <span class="kw">for</span> <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">M</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">Sender</span> {
-            <span class="ident">shared_state</span>: <span class="self">self</span>.<span class="ident">shared_state</span>.<span class="ident">clone</span>(),
+        <span class="kw">let</span> <span class="ident">shared_state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">shared_state</span>.<span class="ident">clone</span>();
+        {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shared_state_lock</span> <span class="op">=</span> <span class="ident">shared_state</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
+            <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="ident">shared_state_lock</span>.<span class="ident">num_senders</span> <span class="op">&gt;</span> <span class="number">0</span>);
+            <span class="ident">shared_state_lock</span>.<span class="ident">num_senders</span> <span class="op">+</span><span class="op">=</span> <span class="number">1</span>;
         }
+        <span class="ident">Sender</span> { <span class="ident">shared_state</span> }
     }
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span> <span class="op">+</span> <span class="ident">Clone</span>, <span class="ident">M</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">M</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shared_state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">shared_state</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">w</span>) <span class="op">=</span> <span class="ident">shared_state</span>.<span class="ident">waker</span>.<span class="ident">take</span>() {
-            <span class="ident">w</span>.<span class="ident">wake</span>();
+
+        <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="ident">shared_state</span>.<span class="ident">num_senders</span> <span class="op">&gt;</span> <span class="number">0</span>);
+        <span class="ident">shared_state</span>.<span class="ident">num_senders</span> <span class="op">-</span><span class="op">=</span> <span class="number">1</span>;
+
+        <span class="kw">if</span> <span class="ident">shared_state</span>.<span class="ident">num_senders</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">waker</span>) <span class="op">=</span> <span class="ident">shared_state</span>.<span class="ident">waker</span>.<span class="ident">take</span>() {
+                <span class="ident">waker</span>.<span class="ident">wake</span>();
+            }
         }
     }
 }
@@ -339,6 +370,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">K</span>: <span class="ident">Eq</span> <span class="op">+</span> <span class="ident">Hash</span> <span class="op">+</span> <span class="ident">Clone</span>, <span class="ident">M</span><span class="op">&gt;</span> <span class="ident">Drop</span> <span class="kw">for</span> <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">K</span>, <span class="ident">M</span><span class="op">&gt;</span> {
     <span class="kw">fn</span> <span class="ident">drop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shared_state</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">shared_state</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>();
+        <span class="macro">debug_assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">shared_state</span>.<span class="ident">receiver_dropped</span>);
         <span class="ident">shared_state</span>.<span class="ident">receiver_dropped</span> <span class="op">=</span> <span class="bool-val">true</span>;
     }
 }
@@ -355,9 +387,8 @@
                 <span class="kw">let</span> <span class="ident">_err</span> <span class="op">=</span> <span class="ident">status_ch</span>.<span class="ident">send</span>(<span class="ident">ElementStatus</span>::<span class="ident">Dequeued</span>);
             }
             <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">Some</span>(<span class="ident">val</span>))
-        <span class="comment">// if the only Arc reference to `shared_state` is 1, which is this receiver,</span>
-        <span class="comment">// this must mean all senders have been dropped (and so the stream is terminated)</span>
-        } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">Arc</span>::<span class="ident">strong_count</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">shared_state</span>) <span class="op">=</span><span class="op">=</span> <span class="number">1</span> {
+        <span class="comment">// all senders have been dropped (and so the stream is terminated)</span>
+        } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">shared_state</span>.<span class="ident">num_senders</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span> {
             <span class="ident">shared_state</span>.<span class="ident">stream_terminated</span> <span class="op">=</span> <span class="bool-val">true</span>;
             <span class="ident">Poll</span>::<span class="ident">Ready</span>(<span class="prelude-val">None</span>)
         } <span class="kw">else</span> {
@@ -382,6 +413,7 @@
     <span class="kw">let</span> <span class="ident">shared_state</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">Mutex</span>::<span class="ident">new</span>(<span class="ident">SharedState</span> {
         <span class="ident">internal_queue</span>: <span class="ident">PerKeyQueue</span>::<span class="ident">new</span>(<span class="ident">queue_style</span>, <span class="ident">max_queue_size_per_key</span>, <span class="ident">counters</span>),
         <span class="ident">waker</span>: <span class="prelude-val">None</span>,
+        <span class="ident">num_senders</span>: <span class="number">1</span>,
         <span class="ident">receiver_dropped</span>: <span class="bool-val">false</span>,
         <span class="ident">stream_terminated</span>: <span class="bool-val">false</span>,
     }));
