@@ -25,7 +25,7 @@ exists under
 sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(account: &signer, sliding_nonce: u64, preburn_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Token&gt;(account: &signer, sliding_nonce: u64, preburn_address: address)
 </code></pre>
 
 

@@ -420,6 +420,10 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     let parameters_sig_idx = context.signature_index(Signature(sig.parameters))?;
 
     record_src_loc!(function_decl: context, function.loc, 0);
+    record_src_loc!(
+        function_type_formals: context,
+        &function.value.signature.type_formals
+    );
     let code = compile_function_body_impl(&mut context, function.value)?.unwrap();
 
     let (
