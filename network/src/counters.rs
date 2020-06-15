@@ -87,6 +87,15 @@ pub static LIBRA_NETWORK_DIRECT_SEND_BYTES: Lazy<HistogramVec> = Lazy::new(|| {
     .unwrap()
 });
 
+pub static LIBRA_NETWORK_NOISE_HANDSHAKE: Lazy<IntCounterVec> = Lazy::new(|| {
+    register_int_counter_vec!(
+        "libra_network_noise_handshake",
+        "Libra network noise handshake counter",
+        &["role_type", "network_type"]
+    )
+    .unwrap()
+});
+
 /// Counters(queued,dequeued,dropped) related to inbound network notifications for RPCs and
 /// DirectSends.
 pub static PENDING_NETWORK_NOTIFICATIONS: Lazy<IntCounterVec> = Lazy::new(|| {

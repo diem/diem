@@ -10,7 +10,7 @@
 //!
 //! [stream]: network::noise::stream
 
-use crate::noise::stream::NoiseStream;
+use crate::{counters, noise::stream::NoiseStream};
 use futures::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use libra_crypto::{noise, x25519};
 use libra_types::PeerId;
@@ -98,6 +98,12 @@ pub enum HandshakeAuthMode {
 }
 
 impl HandshakeAuthMode {
+    pub fn to_str(&self) -> &'static str {
+        match self {
+            ServerOnly => "server_authentication",
+            _ => "mutual_authentication",
+        }
+    }
     pub fn mutual(trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>) -> Self {
         HandshakeAuthMode::Mutual {
             anti_replay_timestamps: RwLock::new(AntiReplayTimestamps::default()),
@@ -221,6 +227,11 @@ impl NoiseUpgrader {
         TSocket: AsyncRead + AsyncWrite + Unpin,
         F: Fn() -> [u8; AntiReplayTimestamps::TIMESTAMP_SIZE],
     {
+        // increment counter for metrics
+        counters::LIBRA_NETWORK_NOISE_HANDSHAKE
+            .with_label_values(&["initiator", self.auth_mode.to_str()])
+            .inc();
+
         // buffer to hold prologue + first noise handshake message
         let mut client_message = [0; Self::CLIENT_MESSAGE_SIZE];
 
@@ -281,6 +292,11 @@ impl NoiseUpgrader {
     where
         TSocket: AsyncRead + AsyncWrite + Unpin,
     {
+        // increment counter for metrics
+        counters::LIBRA_NETWORK_NOISE_HANDSHAKE
+            .with_label_values(&["responder", self.auth_mode.to_str()])
+            .inc();
+
         // buffer to contain the client first message
         let mut client_message = [0; Self::CLIENT_MESSAGE_SIZE];
 
