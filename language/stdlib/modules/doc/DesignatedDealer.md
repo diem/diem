@@ -113,7 +113,7 @@
     <b>let</b> tiers = &<b>mut</b> dealer.tiers;
     <b>let</b> number_of_tiers: u64 = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
     // INVALID_TIER_ADDITION
-    <b>assert</b>(number_of_tiers &lt;= 4, 3);
+    <b>assert</b>(number_of_tiers &lt;= 4, 31);
     <b>if</b> (number_of_tiers &gt; 1) {
         <b>let</b> prev_tier = *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, number_of_tiers - 1);
         // INVALID_TIER_START
@@ -241,7 +241,7 @@
     // If the tier_index is one past the bounded tiers, minting is unbounded
     <b>let</b> number_of_tiers = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
     <b>let</b> tier_check = &<b>mut</b> <b>false</b>;
-    <b>if</b> (tier_index == number_of_tiers) {
+    <b>if</b> (tier_index &gt;= number_of_tiers) {
         *tier_check = <b>true</b>;
     } <b>else</b> {
         <b>let</b> tier_upperbound: u64 = *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, tier_index);
@@ -277,7 +277,8 @@
     blessed: &signer, amount: u64, addr: address, tier_index: u64
 ): <a href="Libra.md#0x1_Libra">Libra</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
     <a href="Association.md#0x1_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(blessed);
-
+    // INVALID TIER_INDEX
+    <b>assert</b>(tier_index &lt;= 4, 66);
     // INVALID_MINT_AMOUNT
     <b>assert</b>(amount &gt; 0, 6);
 

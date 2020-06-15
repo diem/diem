@@ -41,7 +41,7 @@ module DesignatedDealer {
         let tiers = &mut dealer.tiers;
         let number_of_tiers: u64 = Vector::length(tiers);
         // INVALID_TIER_ADDITION
-        assert(number_of_tiers <= 4, 3);
+        assert(number_of_tiers <= 4, 31);
         if (number_of_tiers > 1) {
             let prev_tier = *Vector::borrow(tiers, number_of_tiers - 1);
             // INVALID_TIER_START
@@ -83,6 +83,8 @@ module DesignatedDealer {
     }
 
     fun tiered_mint_(dealer: &mut Dealer, amount: u64, tier_index: u64): bool {
+        // INVALID TIER_INDEX (if tier is 4, can mint unlimited)
+        assert(tier_index <= 4, 66);
         reset_window(dealer);
         let cur_inflow = *&dealer.window_inflow;
         let tiers = &mut dealer.tiers;
@@ -105,13 +107,8 @@ module DesignatedDealer {
         blessed: &signer, amount: u64, addr: address, tier_index: u64
     ): Libra<CoinType> acquires Dealer {
         Association::assert_account_is_blessed(blessed);
-
-        // INVALID_MINT_AMOUNT
-        assert(amount > 0, 6);
-
         // NOT_A_DD
         assert(exists_at(addr), 1);
-
         let tier_check = tiered_mint_(borrow_global_mut<Dealer>(addr), amount, tier_index);
         // INVALID_AMOUNT_FOR_TIER
         assert(tier_check, 5);
