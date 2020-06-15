@@ -23,7 +23,7 @@ use futures::{
     stream::{select_all, FuturesUnordered},
     StreamExt,
 };
-use libra_config::config::{NodeConfig, PeerNetworkId, UpstreamNetworkId};
+use libra_config::config::{PeerNetworkId, UpstreamNetworkId};
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
@@ -47,7 +47,6 @@ pub(crate) async fn coordinator<V>(
     mut consensus_requests: mpsc::Receiver<ConsensusRequest>,
     mut state_sync_requests: mpsc::Receiver<CommitNotification>,
     mut mempool_reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
-    node_config: NodeConfig,
 ) where
     V: TransactionValidation,
 {
@@ -56,7 +55,6 @@ pub(crate) async fn coordinator<V>(
         .map(|(network_id, events)| events.map(move |e| (network_id, e)))
         .collect();
     let mut events = select_all(smp_events).fuse();
-    let is_validator = node_config.base.role.is_validator();
     let mempool = smp.mempool.clone();
     let peer_manager = smp.peer_manager.clone();
     let subscribers = &mut smp.subscribers.clone();
@@ -144,7 +142,7 @@ pub(crate) async fn coordinator<V>(
                                     }
                                     MempoolSyncMsg::BroadcastTransactionsResponse{request_id, retry_txns, backoff} => {
                                         let peer = PeerNetworkId(network_id, peer_id);
-                                        tasks::process_broadcast_ack(&mempool, peer, request_id, retry_txns, backoff, is_validator, peer_manager.clone());
+                                        peer_manager.process_broadcast_ack(PeerNetworkId(network_id, peer_id), request_id, retry_txns, backoff);
                                         notify_subscribers(SharedMempoolNotification::ACK, &smp.subscribers);
                                     }
                                 };
