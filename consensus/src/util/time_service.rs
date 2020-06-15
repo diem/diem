@@ -45,7 +45,7 @@ pub trait TimeService: Send + Sync {
                     wait_duration.as_secs()
                 );
             }
-            counters::WAIT_DURATION_MS.observe_duration(wait_duration);
+            counters::WAIT_DURATION_S.observe_duration(wait_duration);
             self.sleep(wait_duration);
         }
     }

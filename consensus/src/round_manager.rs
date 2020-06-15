@@ -201,9 +201,6 @@ impl RoundManager {
         txn_manager: Box<dyn TxnManager>,
         storage: Arc<dyn PersistentLivenessStorage>,
     ) -> Self {
-        counters::BLOCK_RETRIEVAL_COUNT.get();
-        counters::STATE_SYNC_COUNT.get();
-
         Self {
             epoch_state,
             block_store,
@@ -382,7 +379,6 @@ impl RoundManager {
         peer: Author,
     ) -> anyhow::Result<()> {
         debug!("Received a sync info msg: {}", sync_info);
-        counters::SYNC_INFO_MSGS_RECEIVED_COUNT.inc();
         // To avoid a ping-pong cycle between two peers that move forward together.
         self.ensure_round_and_sync_up(sync_info.highest_round() + 1, &sync_info, peer, false)
             .await

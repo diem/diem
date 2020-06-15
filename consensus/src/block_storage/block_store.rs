@@ -48,6 +48,7 @@ fn update_counters_for_committed_blocks(blocks_to_commit: &[Arc<ExecutedBlock>])
         counters::NUM_TXNS_PER_BLOCK.observe(txn_status.len() as f64);
         counters::COMMITTED_BLOCKS_COUNT.inc();
         counters::LAST_COMMITTED_ROUND.set(block.round() as i64);
+        counters::LAST_COMMITTED_VERSION.set(block.compute_result().num_leaves() as i64);
 
         for status in txn_status.iter() {
             match status {
@@ -61,8 +62,11 @@ fn update_counters_for_committed_blocks(blocks_to_commit: &[Arc<ExecutedBlock>])
                         .with_label_values(&["failed"])
                         .inc();
                 }
-                // TODO(zekunli): add counter
-                TransactionStatus::Retry => (),
+                TransactionStatus::Retry => {
+                    counters::COMMITTED_TXNS_COUNT
+                        .with_label_values(&["retry"])
+                        .inc();
+                }
             }
         }
     }
