@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(account: &signer, payee: address, auth_key_prefix: vector&lt;u8&gt;, amount: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Token&gt;(account: &signer, payee: address, auth_key_prefix: vector&lt;u8&gt;, amount: u64)
 </code></pre>
 
 

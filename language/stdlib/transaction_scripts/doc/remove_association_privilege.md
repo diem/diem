@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(account: &signer, addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Privilege&gt;(account: &signer, addr: address)
 </code></pre>
 
 

@@ -16,7 +16,7 @@
 Script for Treasury Comliance Account to update <Currency> to LBR rate
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_denominator: u64, new_exchange_rate_numerator: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_denominator: u64, new_exchange_rate_numerator: u64)
 </code></pre>
 
 

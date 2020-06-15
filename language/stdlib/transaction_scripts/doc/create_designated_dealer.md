@@ -17,7 +17,7 @@ Script for Treasury Compliance Account to create designated dealer account at 'n
 and 'auth_key_prefix' for nonsynthetic CoinType. Creates dealer and preburn resource for dd.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;unknown#0&gt;(tc_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
 </code></pre>
 
 
