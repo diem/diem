@@ -5,17 +5,17 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `rotate_authentication_key_with_nonce`](#SCRIPT_rotate_authentication_key_with_nonce)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_rotate_authentication_key_with_nonce"></a>
 
-## Function `main`
+## Function `rotate_authentication_key_with_nonce`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -24,7 +24,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="#SCRIPT_rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;) {
   <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
   <b>let</b> key_rotation_capability = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(account);
   <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&key_rotation_capability, new_key);

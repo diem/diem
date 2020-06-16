@@ -5,19 +5,19 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `unfreeze_account`](#SCRIPT_unfreeze_account)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_unfreeze_account"></a>
 
-## Function `main`
+## Function `unfreeze_account`
 
 Script for un-freezing account by authorized initiator
 sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_unfreeze_account">unfreeze_account</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address)
 </code></pre>
 
 
@@ -26,7 +26,7 @@ sliding_nonce is a unique nonce for operation, see sliding_nonce.move for detail
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address) {
+<pre><code><b>fun</b> <a href="#SCRIPT_unfreeze_account">unfreeze_account</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_unfreeze_account">LibraAccount::unfreeze_account</a>(account,  to_unfreeze_account);
 }

@@ -5,13 +5,13 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `preburn`](#SCRIPT_preburn)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_preburn"></a>
 
-## Function `main`
+## Function `preburn`
 
 Preburn
 <code>amount</code>
@@ -22,7 +22,7 @@ This will only succeed if
 <code>Preburn&lt;Token&gt;</code> resource.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Token&gt;(account: &signer, amount: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64)
 </code></pre>
 
 
@@ -31,7 +31,7 @@ This will only succeed if
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Token&gt;(account: &signer, amount: u64) {
+<pre><code><b>fun</b> <a href="#SCRIPT_preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64) {
     <b>let</b> withdraw_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(account);
     <a href="../../modules/doc/Libra.md#0x1_Libra_preburn_to">Libra::preburn_to</a>&lt;Token&gt;(account, <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_withdraw_from">LibraAccount::withdraw_from</a>(&withdraw_cap, amount));
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_withdraw_capability">LibraAccount::restore_withdraw_capability</a>(withdraw_cap);

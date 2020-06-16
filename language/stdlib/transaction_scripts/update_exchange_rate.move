@@ -5,7 +5,7 @@ use 0x1::SlidingNonce;
 
 /// Script for Treasury Comliance Account to update <Currency> to LBR rate
 
-fun main<Currency>(
+fun update_exchange_rate<Currency>(
     tc_account: &signer,
     sliding_nonce: u64,
     new_exchange_rate_denominator: u64,

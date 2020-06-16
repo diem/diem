@@ -5,13 +5,13 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `add_recovery_rotation_capability`](#SCRIPT_add_recovery_rotation_capability)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_add_recovery_rotation_capability"></a>
 
-## Function `main`
+## Function `add_recovery_rotation_capability`
 
 Add the
 <code>KeyRotationCapability</code> for
@@ -29,7 +29,7 @@ Aborts if
 <code> has already extracted its </code>KeyRotationCapability`.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(to_recover_account: &signer, recovery_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
 </code></pre>
 
 
@@ -38,7 +38,7 @@ Aborts if
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(to_recover_account: &signer, recovery_address: address) {
+<pre><code><b>fun</b> <a href="#SCRIPT_add_recovery_rotation_capability">add_recovery_rotation_capability</a>(to_recover_account: &signer, recovery_address: address) {
     <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_add_rotation_capability">RecoveryAddress::add_rotation_capability</a>(to_recover_account, recovery_address)
 }
 </code></pre>

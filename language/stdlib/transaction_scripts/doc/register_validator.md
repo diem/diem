@@ -5,17 +5,17 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `register_validator`](#SCRIPT_register_validator)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_register_validator"></a>
 
-## Function `main`
+## Function `register_validator`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, consensus_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, fullnodes_network_identity_pubkey: vector&lt;u8&gt;, fullnodes_network_address: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_register_validator">register_validator</a>(account: &signer, consensus_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, fullnodes_network_identity_pubkey: vector&lt;u8&gt;, fullnodes_network_address: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -24,7 +24,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(
+<pre><code><b>fun</b> <a href="#SCRIPT_register_validator">register_validator</a>(
     account: &signer,
     consensus_pubkey: vector&lt;u8&gt;,
     validator_network_identity_pubkey: vector&lt;u8&gt;,

@@ -6,7 +6,7 @@ use 0x1::LibraAccount;
 /// `auth_key_prefix | child_address`.
 /// If `add_all_currencies` is true, the child address will have a zero balance in all available
 /// currencies in the system
-fun main<CoinType>(
+fun create_child_vasp_account<CoinType>(
     parent_vasp: &signer,
     child_address: address,
     auth_key_prefix: vector<u8>,
