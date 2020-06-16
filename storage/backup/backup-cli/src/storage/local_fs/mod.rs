@@ -6,7 +6,7 @@ mod tests;
 
 use super::{BackupHandle, BackupHandleRef, FileHandle, FileHandleRef};
 
-use crate::storage::BackupStorage;
+use crate::storage::{BackupStorage, ShellSafeName};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use std::path::PathBuf;
@@ -44,20 +44,20 @@ impl LocalFs {
 
 #[async_trait]
 impl BackupStorage for LocalFs {
-    async fn create_backup(&self, name: &str) -> Result<BackupHandle> {
-        create_dir(self.dir.join(name)).await?;
+    async fn create_backup(&self, name: &ShellSafeName) -> Result<BackupHandle> {
+        create_dir(self.dir.join(name.as_ref())).await?;
         Ok(name.to_string())
     }
 
     async fn create_for_write(
         &self,
         backup_handle: &BackupHandleRef,
-        name: &str,
+        name: &ShellSafeName,
     ) -> Result<(FileHandle, Box<dyn AsyncWrite + Send + Unpin>)> {
         let file_handle = self
             .dir
             .join(backup_handle)
-            .join(name)
+            .join(name.as_ref())
             .into_os_string()
             .into_string()
             .map_err(|s| anyhow!("into_string failed for OsString '{:?}'", s))?;
