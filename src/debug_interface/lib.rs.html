@@ -111,11 +111,11 @@
 <span id="111">111</span>
 <span id="112">112</span>
 <span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
-
-<span class="attribute">#![<span class="ident">forbid</span>(<span class="ident">unsafe_code</span>)]</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">json_log</span>::<span class="ident">JsonLogEntry</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
@@ -127,8 +127,12 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">node_debug_service</span>;
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">prelude</span> {
-    <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">end_trace</span>, <span class="ident">event</span>, <span class="ident">trace_code_block</span>, <span class="ident">trace_edge</span>, <span class="ident">trace_event</span>};
+    <span class="kw">pub</span> <span class="kw">use</span> <span class="kw">crate</span>::{
+        <span class="ident">end_trace</span>, <span class="ident">event</span>, <span class="ident">node_sampling_data</span>, <span class="ident">trace_code_block</span>, <span class="ident">trace_edge</span>, <span class="ident">trace_event</span>,
+    };
 }
+
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">libra_trace</span>::{<span class="ident">is_selected</span>, <span class="ident">libra_trace_set</span>, <span class="ident">set_libra_trace</span>};
 
 <span class="doccomment">/// Implement default utility client for NodeDebugInterface</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">NodeDebugClient</span> {
