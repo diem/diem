@@ -7,7 +7,7 @@ use libra_types::{
     account_config::{
         AccountResource, AccountRole, BalanceResource, BurnEvent, CancelBurnEvent,
         CurrencyInfoResource, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent,
-        ReceivedPaymentEvent, SentPaymentEvent, UpgradeEvent,
+        ReceivedPaymentEvent, SentPaymentEvent, ToLBRExchangeRateUpdateEvent, UpgradeEvent,
     },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
@@ -124,6 +124,11 @@ pub enum EventDataView {
     },
     #[serde(rename = "mint")]
     Mint { amount: AmountView },
+    #[serde(rename = "to_lbr_exchange_rate_update")]
+    ToLBRExchangeRateUpdate {
+        currency_code: String,
+        new_to_lbr_exchange_rate: f32,
+    },
     #[serde(rename = "preburn")]
     Preburn {
         amount: AmountView,
@@ -210,6 +215,15 @@ impl From<(u64, ContractEvent)> for EventView {
                 })
             } else {
                 Err(format_err!("Unable to parse CancelBurnEvent"))
+            }
+        } else if event.type_tag() == &TypeTag::Struct(ToLBRExchangeRateUpdateEvent::struct_tag()) {
+            if let Ok(update_event) = ToLBRExchangeRateUpdateEvent::try_from(&event) {
+                Ok(EventDataView::ToLBRExchangeRateUpdate {
+                    currency_code: update_event.currency_code().to_string(),
+                    new_to_lbr_exchange_rate: update_event.new_to_lbr_exchange_rate(),
+                })
+            } else {
+                Err(format_err!("Unable to parse ToLBRExchangeRateUpdate"))
             }
         } else if event.type_tag() == &TypeTag::Struct(MintEvent::struct_tag()) {
             if let Ok(mint_event) = MintEvent::try_from(&event) {

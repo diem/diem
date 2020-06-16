@@ -13,6 +13,7 @@
 -  [Struct `BurnEvent`](#0x1_Libra_BurnEvent)
 -  [Struct `PreburnEvent`](#0x1_Libra_PreburnEvent)
 -  [Struct `CancelBurnEvent`](#0x1_Libra_CancelBurnEvent)
+-  [Struct `ToLBRExchangeRateUpdateEvent`](#0x1_Libra_ToLBRExchangeRateUpdateEvent)
 -  [Struct `CurrencyInfo`](#0x1_Libra_CurrencyInfo)
 -  [Struct `Preburn`](#0x1_Libra_Preburn)
 -  [Struct `AddCurrency`](#0x1_Libra_AddCurrency)
@@ -417,6 +418,47 @@ preburn, but not burned). The currency of the funds is given by the
 
 </details>
 
+<a name="0x1_Libra_ToLBRExchangeRateUpdateEvent"></a>
+
+## Struct `ToLBRExchangeRateUpdateEvent`
+
+An
+<code><a href="#0x1_Libra_ToLBRExchangeRateUpdateEvent">ToLBRExchangeRateUpdateEvent</a></code> is emitted every time the to-LBR exchange
+rate for the currency given by
+<code>currency_code</code> is updated.
+
+
+<pre><code><b>struct</b> <a href="#0x1_Libra_ToLBRExchangeRateUpdateEvent">ToLBRExchangeRateUpdateEvent</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>currency_code: vector&lt;u8&gt;</code>
+</dt>
+<dd>
+ The currency code of the currency whose exchange rate was updated.
+</dd>
+<dt>
+
+<code>new_to_lbr_exchange_rate: u64</code>
+</dt>
+<dd>
+ The new on-chain to-LBR exchange rate between the
+ <code>currency_code</code> currency and LBR. Represented in conversion
+ between the (on-chain) base-units for the currency and microlibra.
+</dd>
+</dl>
+
+
+</details>
+
 <a name="0x1_Libra_CurrencyInfo"></a>
 
 ## Struct `CurrencyInfo`
@@ -550,6 +592,13 @@ currency would be the LBR.
 <dd>
  Event stream for all cancelled preburn requests for this
  <code>CoinType</code>.
+</dd>
+<dt>
+
+<code>exchange_rate_update_events: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_Libra_ToLBRExchangeRateUpdateEvent">Libra::ToLBRExchangeRateUpdateEvent</a>&gt;</code>
+</dt>
+<dd>
+ Event stream for emiting exchange rate change events
 </dd>
 </dl>
 
@@ -1630,7 +1679,8 @@ adds the currency to the set of
         mint_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_Libra_MintEvent">MintEvent</a>&gt;(account),
         burn_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_Libra_BurnEvent">BurnEvent</a>&gt;(account),
         preburn_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_Libra_PreburnEvent">PreburnEvent</a>&gt;(account),
-        cancel_burn_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_Libra_CancelBurnEvent">CancelBurnEvent</a>&gt;(account)
+        cancel_burn_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_Libra_CancelBurnEvent">CancelBurnEvent</a>&gt;(account),
+        exchange_rate_update_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_Libra_ToLBRExchangeRateUpdateEvent">ToLBRExchangeRateUpdateEvent</a>&gt;(account)
     });
     <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_add_currency_code">RegisteredCurrencies::add_currency_code</a>(
         currency_code,
@@ -1906,6 +1956,14 @@ Updates the
     <a href="#0x1_Libra_assert_assoc_and_currency">assert_assoc_and_currency</a>&lt;FromCoinType&gt;(account);
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;FromCoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
+    <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>(
+        &<b>mut</b> currency_info.exchange_rate_update_events,
+        <a href="#0x1_Libra_ToLBRExchangeRateUpdateEvent">ToLBRExchangeRateUpdateEvent</a> {
+            currency_code: *&currency_info.currency_code,
+            new_to_lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32_get_raw_value">FixedPoint32::get_raw_value</a>(*&currency_info.to_lbr_exchange_rate),
+        }
+    );
+
 }
 </code></pre>
 

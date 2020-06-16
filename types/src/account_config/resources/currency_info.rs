@@ -31,6 +31,7 @@ pub struct CurrencyInfoResource {
     burn_events: EventHandle,
     preburn_events: EventHandle,
     cancel_burn_events: EventHandle,
+    exchange_rate_update_events: EventHandle,
 }
 
 impl MoveResource for CurrencyInfoResource {

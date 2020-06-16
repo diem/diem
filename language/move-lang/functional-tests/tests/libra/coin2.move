@@ -12,4 +12,5 @@ fun main(account: &signer) {
     assert(Libra::approx_lbr_for_value<Coin2>(10) == 3, 4);
 }
 }
+// check: ToLBRExchangeRateUpdateEvent
 // check: EXECUTED
