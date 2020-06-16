@@ -57,6 +57,7 @@ pub enum AccountRoleView {
         base_url: String,
         expiration_time: u64,
         compliance_key: BytesView,
+        num_children: u64,
     },
 }
 
@@ -419,6 +420,7 @@ impl From<AccountRole> for AccountRoleView {
                 base_url: parent_vasp.base_url().to_string(),
                 expiration_time: parent_vasp.expiration_date(),
                 compliance_key: BytesView::from(parent_vasp.compliance_public_key()),
+                num_children: parent_vasp.num_children(),
             },
         }
     }
