@@ -154,7 +154,7 @@ module Association {
         ///
         /// **Informally:** Only the root address has a Root resource.
         define only_root_addr_has_root_privilege(): bool {
-            all(domain<address>(), |addr| exists<Root>(addr) ==> addr == spec_root_address())
+            forall addr: address: exists<Root>(addr) ==> addr == spec_root_address()
         }
     }
     spec schema OnlyRootAddressHasRootPrivilege {
@@ -165,7 +165,7 @@ module Association {
         /// **BUG:** If you change `addr1` to `addr` below, we get a 'more than one declaration
         /// of variable error from Boogie, which should not happen with a lambda variable.
         /// I have not been able to figure out what is going on. Is it a Boogie problem?
-        invariant module !spec_is_initialized() ==> all(domain<address>(), |addr1| !exists<Root>(addr1));
+        invariant module !spec_is_initialized() ==> (forall addr1: address: !exists<Root>(addr1));
         /// Induction hypothesis for invariant, after initialization
         invariant module spec_is_initialized() ==> only_root_addr_has_root_privilege();
     }
@@ -222,10 +222,9 @@ module Association {
     /// **Informally:** if addr1 had a PrivilegedCapability (of any type),
     /// it continues to have it.
     spec schema OnlyRemoveCanRemovePrivileges {
-         ensures all(domain<type>(),
-                     |ty| all(domain<address>(),
-                              |addr1| old(exists<PrivilegedCapability<ty>>(addr1))
-                                         ==> exists<PrivilegedCapability<ty>>(addr1)));
+         ensures forall ty: type, addr1: address:
+                     old(exists<PrivilegedCapability<ty>>(addr1))
+                         ==> exists<PrivilegedCapability<ty>>(addr1);
     }
     spec module {
         /// Show that every function except remove_privilege preserves privileges
@@ -249,8 +248,8 @@ module Association {
     /// "invariant spec_addr_is_association(spec_root_address(sender()))"
     spec schema RootAddressIsAssociationAddress {
         invariant module
-            all(domain<address>(),
-                |addr1| exists<Root>(addr1) ==> spec_addr_is_association(addr1));
+            forall addr1: address:
+                exists<Root>(addr1) ==> spec_addr_is_association(addr1);
     }
 
     /// > **Note:** Why doesn't this include initialize, root_address()?

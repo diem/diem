@@ -88,12 +88,12 @@ module RegisteredCurrencies {
     spec schema OnlySingletonHasRegisteredCurrencies {
         // *Informally:* There is no address with a RegisteredCurrencies value before initialization.
         invariant !spec_is_initialized()
-            ==> all(domain<address>(), |addr| !LibraConfig::spec_is_published<RegisteredCurrencies>(addr));
+            ==> (forall addr: address: !LibraConfig::spec_is_published<RegisteredCurrencies>(addr));
         // *Informally:* After initialization, only singleton_address() has a RegisteredCurrencies value.
         invariant spec_is_initialized()
             ==> LibraConfig::spec_is_published<RegisteredCurrencies>(spec_singleton_address())
-                && all(domain<address>(),
-                       |addr| LibraConfig::spec_is_published<RegisteredCurrencies>(addr)
+                && (forall addr: address:
+                       LibraConfig::spec_is_published<RegisteredCurrencies>(addr)
                                   ==> addr == spec_singleton_address());
     }
     spec module {

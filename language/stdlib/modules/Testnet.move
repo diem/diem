@@ -51,14 +51,13 @@ module Testnet {
     spec module {
         /// Returns true if no address has IsTestNet resource.
         define spec_no_addr_has_testnet(): bool {
-            all(domain<address>(), |addr| !exists<IsTestnet>(addr))
+            forall addr: address: !exists<IsTestnet>(addr)
         }
 
         /// Returns true if only the root address has an IsTestNet resource.
         define spec_only_root_addr_has_testnet(): bool {
-            all(domain<address>(), |addr|
-                exists<IsTestnet>(addr)
-                    ==> addr == spec_root_address())
+            forall addr: address:
+                exists<IsTestnet>(addr) ==> addr == spec_root_address()
         }
     }
 

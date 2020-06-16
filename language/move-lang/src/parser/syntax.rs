@@ -1079,7 +1079,7 @@ fn parse_quant_cont<'input>(is_forall: bool, tokens: &mut Lexer<'input>) -> Resu
         // Built `domain<ty>()` expression.
         tokens.advance()?;
         let ty = parse_type(tokens)?;
-        make_builtin_call(ty.loc, "domain", Some(vec![ty]), vec![])
+        make_builtin_call(ty.loc, "$spec_domain", Some(vec![ty]), vec![])
     } else {
         // This is a quantifier over a value, like a vector or a range.
         consume_identifier(tokens, "in")?;
@@ -1116,7 +1116,7 @@ fn parse_quant_cont<'input>(is_forall: bool, tokens: &mut Lexer<'input>) -> Resu
     );
     Ok(make_builtin_call(
         lambda.loc,
-        if is_forall { "all" } else { "any" },
+        if is_forall { "$spec_all" } else { "$spec_any" },
         None,
         vec![range, lambda],
     )
