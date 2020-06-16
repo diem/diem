@@ -435,7 +435,7 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">gc</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">now</span>: <span class="ident">Duration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TTLOrderingKey</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">ttl_key</span> <span class="op">=</span> <span class="ident">TTLOrderingKey</span> {
             <span class="ident">expiration_time</span>: <span class="ident">now</span>,
-            <span class="ident">address</span>: <span class="ident">AccountAddress</span>::<span class="ident">default</span>(),
+            <span class="ident">address</span>: <span class="ident">AccountAddress</span>::<span class="ident">ZERO</span>,
             <span class="ident">sequence_number</span>: <span class="number">0</span>,
         };
 

@@ -311,9 +311,9 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">bail</span>, <span class="ident">ensure</span>, <span class="ident">format_err</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">ed25519</span>::<span class="ident">Ed25519Signature</span>, <span class="ident">hash</span>::<span class="ident">CryptoHash</span>, <span class="ident">HashValue</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
-    <span class="ident">block_info</span>::<span class="ident">BlockInfo</span>, <span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>, <span class="ident">epoch_state</span>::<span class="ident">EpochState</span>,
-    <span class="ident">ledger_info</span>::<span class="ident">LedgerInfo</span>, <span class="ident">transaction</span>::<span class="ident">Version</span>, <span class="ident">validator_signer</span>::<span class="ident">ValidatorSigner</span>,
-    <span class="ident">validator_verifier</span>::<span class="ident">ValidatorVerifier</span>,
+    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">block_info</span>::<span class="ident">BlockInfo</span>, <span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>,
+    <span class="ident">epoch_state</span>::<span class="ident">EpochState</span>, <span class="ident">ledger_info</span>::<span class="ident">LedgerInfo</span>, <span class="ident">transaction</span>::<span class="ident">Version</span>,
+    <span class="ident">validator_signer</span>::<span class="ident">ValidatorSigner</span>, <span class="ident">validator_verifier</span>::<span class="ident">ValidatorVerifier</span>,
 };
 <span class="kw">use</span> <span class="ident">mirai_annotations</span>::<span class="ident">debug_checked_verify_eq</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Deserializer</span>, <span class="ident">Serialize</span>};
@@ -597,7 +597,7 @@
                 .<span class="ident">cloned</span>()
                 .<span class="ident">collect</span>(),
             <span class="comment">// For nil block, we use 0x0 which is convention for nil address in move.</span>
-            <span class="ident">block</span>.<span class="ident">author</span>().<span class="ident">unwrap_or_default</span>(),
+            <span class="ident">block</span>.<span class="ident">author</span>().<span class="ident">unwrap_or</span>(<span class="ident">AccountAddress</span>::<span class="ident">ZERO</span>),
         )
     }
 }

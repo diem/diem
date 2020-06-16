@@ -380,7 +380,7 @@
                     .<span class="ident">unwrap</span>()
                     .<span class="ident">derived_address</span>();
 
-                <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">peer_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">default</span>() {
+                <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">peer_id</span> <span class="op">=</span><span class="op">=</span> <span class="ident">PeerId</span>::<span class="ident">ZERO</span> {
                     <span class="ident">config</span>.<span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">peer_id</span>;
                 }
             }

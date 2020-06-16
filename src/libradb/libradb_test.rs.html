@@ -822,7 +822,7 @@
     );
 
     <span class="comment">// unbootstrapped db with pre-genesis state</span>
-    <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">default</span>();
+    <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">AccountAddress</span>::<span class="ident">ZERO</span>;
     <span class="kw">let</span> <span class="ident">blob</span> <span class="op">=</span> <span class="ident">AccountStateBlob</span>::<span class="ident">from</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="number">1</span>]);
     <span class="ident">db</span>.<span class="ident">db</span>
         .<span class="ident">put</span>::<span class="op">&lt;</span><span class="ident">JellyfishMerkleNodeSchema</span><span class="op">&gt;</span>(
