@@ -95,9 +95,6 @@ pub struct NetworkBuilder {
     channel_size: usize,
     direct_send_protocols: Vec<ProtocolId>,
     rpc_protocols: Vec<ProtocolId>,
-    ping_interval_ms: u64,
-    ping_timeout_ms: u64,
-    ping_failures_tolerated: u64,
     upstream_handlers:
         HashMap<ProtocolId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     connection_event_handlers: Vec<conn_notifs_channel::Sender>,
@@ -158,9 +155,6 @@ impl NetworkBuilder {
             connection_reqs_tx,
             connection_reqs_rx,
             conn_mgr_reqs_tx: None,
-            ping_interval_ms: constants::PING_INTERVAL_MS,
-            ping_timeout_ms: constants::PING_TIMEOUT_MS,
-            ping_failures_tolerated: constants::PING_FAILURES_TOLERATED,
             max_concurrent_network_reqs: constants::MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
             max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
@@ -204,7 +198,14 @@ impl NetworkBuilder {
             peer_id,
             config.listen_address.clone(),
         );
-        network_builder.add_connection_monitoring();
+        network_builder.add_connection_monitoring(
+            // TODO:  move into NetworkConfig
+            constants::PING_INTERVAL_MS,
+            // TODO:  move into NetworkConfig
+            constants::PING_TIMEOUT_MS,
+            // TODO:  move into NetworkConfig
+            constants::PING_FAILURES_TOLERATED,
+        );
 
         // Sanity check seed peer addresses.
         config
@@ -511,15 +512,20 @@ impl NetworkBuilder {
         }
         self
     }
-    pub fn add_connection_monitoring(&mut self) -> &mut Self {
+    pub fn add_connection_monitoring(
+        &mut self,
+        ping_interval_ms: u64,
+        ping_timeout_ms: u64,
+        ping_failures_tolerated: u64,
+    ) -> &mut Self {
         // Initialize and start HealthChecker.
         let (hc_network_tx, hc_network_rx) =
             self.add_protocol_handler(health_checker::network_endpoint_config());
         let health_checker_config = HealthCheckerBuilderConfig::new(
             self.network_context.clone(),
-            self.ping_interval_ms,
-            self.ping_timeout_ms,
-            self.ping_failures_tolerated,
+            ping_interval_ms,
+            ping_timeout_ms,
+            ping_failures_tolerated,
             hc_network_tx,
             hc_network_rx,
         );
