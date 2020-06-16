@@ -107,6 +107,21 @@ module Vector {
     // Specification
     // ------------------------------------------------------------------------
 
+    spec module {
+        /// Auxiliary function to check if `v1` is equal to the result of adding `e` at the end of `v2`
+        define eq_push_back<Element>(v1: vector<Element>, v2: vector<Element>, e: Element): bool {
+            len(v1) == len(v2) + 1 &&
+            v1[len(v1)-1] == e &&
+            v1[0..len(v1)-1] == v2[0..len(v2)]
+        }
+        /// Auxiliary function to check if `v` is equal to the result of concatenating `v1` and `v2`
+        define eq_append<Element>(v: vector<Element>, v1: vector<Element>, v2: vector<Element>): bool {
+            len(v) == len(v1) + len(v2) &&
+            v[0..len(v1)] == v1 &&
+            v[len(v1)..len(v)] == v2
+        }
+    }
+
     spec fun reverse {
         pragma intrinsic = true;
     }
