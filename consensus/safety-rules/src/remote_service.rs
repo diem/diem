@@ -2,22 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    persistent_safety_storage::PersistentSafetyStorage,
-    serializer::{SafetyRulesInput, SerializerClient, SerializerService, TSerializerClient},
-    Error, SafetyRules,
+    persistent_safety_storage::PersistentSafetyStorage, serializer::SerializerService, Error,
+    SafetyRules,
 };
 use consensus_types::common::Author;
 use libra_logger::warn;
-use libra_secure_net::{NetworkClient, NetworkServer};
+use libra_secure_net::NetworkServer;
 use std::net::SocketAddr;
 
 pub trait RemoteService {
-    fn client(&self) -> SerializerClient {
-        let network_client = NetworkClient::new(self.server_address());
-        let service = Box::new(RemoteClient::new(network_client));
-        SerializerClient::new_client(service)
-    }
-
     fn server_address(&self) -> SocketAddr;
 }
 
@@ -41,23 +34,4 @@ fn process_one_message(
     let response = serializer_service.handle_message(request)?;
     network_server.write(&response)?;
     Ok(())
-}
-
-struct RemoteClient {
-    network_client: NetworkClient,
-}
-
-impl RemoteClient {
-    pub fn new(network_client: NetworkClient) -> Self {
-        Self { network_client }
-    }
-}
-
-impl TSerializerClient for RemoteClient {
-    fn request(&mut self, input: SafetyRulesInput) -> Result<Vec<u8>, Error> {
-        let input_message = lcs::to_bytes(&input)?;
-        self.network_client.write(&input_message)?;
-        let result = self.network_client.read()?;
-        Ok(result)
-    }
 }

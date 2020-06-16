@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::persistent_safety_storage::PersistentSafetyStorage;
 use consensus_types::{
     block::Block,
     common::{Payload, Round},
@@ -23,6 +22,7 @@ use libra_types::{
     validator_signer::ValidatorSigner,
     waypoint::Waypoint,
 };
+use safety_rules::PersistentSafetyStorage;
 use std::{
     collections::BTreeMap,
     time::{SystemTime, UNIX_EPOCH},

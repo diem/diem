@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{test_utils, ConsensusState, Error, SafetyRulesManager, TSafetyRules};
+use crate::safety_rules_client::{safety_rules_manager::SafetyRulesManager, test_utils};
 use consensus_types::{
     block::Block, block_data::BlockData, quorum_cert::QuorumCert, timeout::Timeout, vote::Vote,
     vote_proposal::VoteProposal,
@@ -12,6 +12,7 @@ use libra_config::{
 };
 use libra_crypto::ed25519::Ed25519Signature;
 use libra_types::{epoch_change::EpochChangeProof, validator_signer::ValidatorSigner};
+use safety_rules::{ConsensusState, Error, TSafetyRules};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
 /// This container exists only so that we can kill the spawned process after testing is complete.

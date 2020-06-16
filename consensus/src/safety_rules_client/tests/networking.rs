@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{test_utils, SafetyRulesManager};
+use crate::safety_rules_client::{test_utils, SafetyRulesManager};
 use libra_types::validator_signer::ValidatorSigner;
 
 #[test]

@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{process_client_wrapper::ProcessClientWrapper, tests::suite, TSafetyRules};
+use crate::safety_rules_client::{process_client_wrapper::ProcessClientWrapper, tests::suite};
 use libra_config::config::SecureBackend;
 use libra_types::validator_signer::ValidatorSigner;
+use safety_rules::TSafetyRules;
 
 #[test]
 fn test() {

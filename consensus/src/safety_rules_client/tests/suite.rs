@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{test_utils, Error, SafetyRules, TSafetyRules};
+use crate::safety_rules_client::test_utils;
 use consensus_types::{
     block::{block_test_utils::random_payload, Block},
     common::Round,
@@ -21,6 +21,7 @@ use libra_types::{
     validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
+use safety_rules::{Error, SafetyRules, TSafetyRules};
 use std::collections::BTreeMap;
 
 type Proof = test_utils::Proof;

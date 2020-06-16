@@ -1,9 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{tests::suite, PersistentSafetyStorage, SafetyRulesManager, TSafetyRules};
+use crate::safety_rules_client::{tests::suite, SafetyRulesManager};
 use libra_secure_storage::{KVStorage, Storage, VaultStorage};
 use libra_types::{validator_signer::ValidatorSigner, waypoint::Waypoint};
+use safety_rules::{PersistentSafetyStorage, TSafetyRules};
 
 /// A test for verifying VaultStorage properly supports the SafetyRule backend.  This test
 /// depends on running Vault, which can be done by using the provided docker run script in

@@ -1,52 +1,21 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
+use crate::safety_rules_client::{
     local_client::LocalClient,
-    persistent_safety_storage::PersistentSafetyStorage,
-    process::ProcessService,
-    remote_service::RemoteService,
-    serializer::{SerializerClient, SerializerService},
+    remote_client::{LocalService, SerializerClient},
     spawned_process::SpawnedProcess,
-    thread::ThreadService,
-    SafetyRules, TSafetyRules,
 };
 use consensus_types::common::Author;
 use libra_config::config::{NodeConfig, SafetyRulesService};
-use libra_secure_storage::{config, Storage};
+use safety_rules::{
+    extract_service_inputs, PersistentSafetyStorage, ProcessService, SafetyRules,
+    SerializerService, TSafetyRules, ThreadService,
+};
 use std::{
-    convert::TryInto,
     net::SocketAddr,
     sync::{Arc, RwLock},
 };
-
-pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSafetyStorage) {
-    let author = config::peer_id(
-        config
-            .validator_network
-            .as_ref()
-            .expect("Missing validator network"),
-    );
-
-    let backend = &config.consensus.safety_rules.backend;
-    let internal_storage: Storage = backend.try_into().expect("Unable to initialize storage");
-
-    let storage = if let Some(test_config) = config.test.as_mut() {
-        let private_key = test_config
-            .consensus_keypair
-            .as_mut()
-            .expect("Missing consensus keypair in test config")
-            .take_private()
-            .expect("Failed to take Consensus private key, key absent or already read");
-        let waypoint = config::waypoint(&config.base.waypoint);
-
-        PersistentSafetyStorage::initialize(internal_storage, private_key, waypoint)
-    } else {
-        PersistentSafetyStorage::new(internal_storage)
-    };
-
-    (author, storage)
-}
 
 enum SafetyRulesWrapper {
     Local(Arc<RwLock<SafetyRules>>),
@@ -121,12 +90,20 @@ impl SafetyRulesManager {
             SafetyRulesWrapper::Local(safety_rules) => {
                 Box::new(LocalClient::new(safety_rules.clone()))
             }
-            SafetyRulesWrapper::Process(process) => Box::new(process.client()),
-            SafetyRulesWrapper::Serializer(serializer_service) => {
-                Box::new(SerializerClient::new(serializer_service.clone()))
+            SafetyRulesWrapper::Process(process) => {
+                Box::new(SerializerClient::new_from_remote_service(process))
             }
-            SafetyRulesWrapper::SpawnedProcess(process) => Box::new(process.client()),
-            SafetyRulesWrapper::Thread(thread) => Box::new(thread.client()),
+            SafetyRulesWrapper::Serializer(serializer_service) => {
+                Box::new(SerializerClient::new_from_local_service(LocalService {
+                    serializer_service: serializer_service.clone(),
+                }))
+            }
+            SafetyRulesWrapper::SpawnedProcess(process) => {
+                Box::new(SerializerClient::new_from_remote_service(process))
+            }
+            SafetyRulesWrapper::Thread(thread) => {
+                Box::new(SerializerClient::new_from_remote_service(thread))
+            }
         }
     }
 }

@@ -12,6 +12,7 @@ use crate::{
     network_interface::ConsensusNetworkSender,
     persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
     round_manager::RoundManager,
+    safety_rules_client::test_utils,
     test_utils::{EmptyStateComputer, MockStorage, MockTransactionManager},
     util::{mock_time_service::SimulatedTimeService, time_service::TimeService},
 };
@@ -32,7 +33,7 @@ use network::{
     protocols::network::NewNetworkSender,
 };
 use once_cell::sync::Lazy;
-use safety_rules::{test_utils, SafetyRules, TSafetyRules};
+use safety_rules::{SafetyRules, TSafetyRules};
 use std::{collections::BTreeMap, num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Runtime;
 

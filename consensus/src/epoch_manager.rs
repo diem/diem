@@ -15,6 +15,7 @@ use crate::{
     network_interface::{ConsensusMsg, ConsensusNetworkSender},
     persistent_liveness_storage::{LedgerRecoveryData, PersistentLivenessStorage, RecoveryData},
     round_manager::{RecoveryManager, RoundManager, UnverifiedEvent, VerifiedEvent},
+    safety_rules_client::SafetyRulesManager,
     state_replication::{StateComputer, TxnManager},
     util::time_service::TimeService,
 };
@@ -36,7 +37,6 @@ use libra_types::{
     on_chain_config::{OnChainConfigPayload, ValidatorSet},
 };
 use network::protocols::network::Event;
-use safety_rules::SafetyRulesManager;
 use std::{cmp::Ordering, sync::Arc, time::Duration};
 
 /// RecoveryManager is used to process events in order to sync up with peer if we can't recover from local consensusdb

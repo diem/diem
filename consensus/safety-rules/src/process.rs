@@ -4,7 +4,6 @@
 use crate::{
     persistent_safety_storage::PersistentSafetyStorage,
     remote_service::{self, RemoteService},
-    safety_rules_manager,
 };
 use consensus_types::common::Author;
 use libra_config::config::{NodeConfig, SafetyRulesService};
@@ -17,7 +16,7 @@ pub struct Process {
 
 impl Process {
     pub fn new(mut config: NodeConfig) -> Self {
-        let (author, storage) = safety_rules_manager::extract_service_inputs(&mut config);
+        let (author, storage) = crate::extract_service_inputs(&mut config);
 
         let service = &config.consensus.safety_rules.service;
         let service = match &service {

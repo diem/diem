@@ -6,31 +6,55 @@
 mod consensus_state;
 mod counters;
 mod error;
-mod local_client;
 mod persistent_safety_storage;
 mod process;
 mod remote_service;
 mod safety_rules;
-mod safety_rules_manager;
 mod serializer;
-mod spawned_process;
 mod t_safety_rules;
 mod thread;
 
 pub use crate::{
-    consensus_state::ConsensusState, counters::COUNTERS, error::Error,
-    persistent_safety_storage::PersistentSafetyStorage, process::Process,
-    safety_rules::SafetyRules, safety_rules_manager::SafetyRulesManager,
+    consensus_state::ConsensusState,
+    counters::COUNTERS,
+    error::Error,
+    persistent_safety_storage::PersistentSafetyStorage,
+    process::{Process, ProcessService},
+    remote_service::RemoteService,
+    safety_rules::SafetyRules,
+    serializer::{SafetyRulesInput, SerializerService},
     t_safety_rules::TSafetyRules,
+    thread::ThreadService,
 };
+use consensus_types::common::Author;
+use libra_config::config::NodeConfig;
+use libra_secure_storage::{config, Storage};
+use std::convert::TryInto;
 
-#[cfg(any(test, feature = "testing"))]
-#[path = "process_client_wrapper.rs"]
-pub mod process_client_wrapper;
+pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSafetyStorage) {
+    let author = config::peer_id(
+        config
+            .validator_network
+            .as_ref()
+            .expect("Missing validator network"),
+    );
 
-#[cfg(any(test, feature = "testing"))]
-#[path = "test_utils.rs"]
-pub mod test_utils;
+    let backend = &config.consensus.safety_rules.backend;
+    let internal_storage: Storage = backend.try_into().expect("Unable to initialize storage");
 
-#[cfg(test)]
-mod tests;
+    let storage = if let Some(test_config) = config.test.as_mut() {
+        let private_key = test_config
+            .consensus_keypair
+            .as_mut()
+            .expect("Missing consensus keypair in test config")
+            .take_private()
+            .expect("Failed to take Consensus private key, key absent or already read");
+        let waypoint = config::waypoint(&config.base.waypoint);
+
+        PersistentSafetyStorage::initialize(internal_storage, private_key, waypoint)
+    } else {
+        PersistentSafetyStorage::new(internal_storage)
+    };
+
+    (author, storage)
+}

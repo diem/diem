@@ -1,8 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{test_utils, tests::suite, SafetyRules, TSafetyRules};
+use crate::safety_rules_client::{test_utils, tests::suite, SafetyRulesManager};
 use libra_types::validator_signer::ValidatorSigner;
+use safety_rules::TSafetyRules;
 
 #[test]
 fn test() {
@@ -12,6 +13,7 @@ fn test() {
 fn safety_rules() -> (Box<dyn TSafetyRules>, ValidatorSigner) {
     let signer = ValidatorSigner::from_int(0);
     let storage = test_utils::test_storage(&signer);
-    let safety_rules = Box::new(SafetyRules::new(signer.author(), storage));
+    let safety_rules_manager = SafetyRulesManager::new_local(signer.author(), storage);
+    let safety_rules = safety_rules_manager.client();
     (safety_rules, signer)
 }
