@@ -90,13 +90,11 @@ pub struct NetworkBuilder {
     network_context: Arc<NetworkContext>,
     // TODO(philiphayes): better support multiple listening addrs
     listen_address: NetworkAddress,
-    seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
     authentication_mode: Option<AuthenticationMode>,
     channel_size: usize,
     direct_send_protocols: Vec<ProtocolId>,
     rpc_protocols: Vec<ProtocolId>,
-    discovery_interval_ms: u64,
     ping_interval_ms: u64,
     ping_timeout_ms: u64,
     ping_failures_tolerated: u64,
@@ -148,7 +146,6 @@ impl NetworkBuilder {
             chain_id,
             network_context: Arc::new(NetworkContext::new(network_id, role, peer_id)),
             listen_address,
-            seed_peers: HashMap::new(),
             trusted_peers: Arc::new(RwLock::new(HashMap::new())),
             authentication_mode: None,
             channel_size: constants::NETWORK_CHANNEL_SIZE,
@@ -161,7 +158,6 @@ impl NetworkBuilder {
             connection_reqs_tx,
             connection_reqs_rx,
             conn_mgr_reqs_tx: None,
-            discovery_interval_ms: constants::DISCOVERY_INTERVAL_MS,
             ping_interval_ms: constants::PING_INTERVAL_MS,
             ping_timeout_ms: constants::PING_TIMEOUT_MS,
             ping_failures_tolerated: constants::PING_FAILURES_TOLERATED,
@@ -277,18 +273,6 @@ impl NetworkBuilder {
         trusted_peers: HashMap<PeerId, x25519::PublicKey>,
     ) -> &mut Self {
         *self.trusted_peers.write().unwrap() = trusted_peers;
-        self
-    }
-
-    /// Set seed peers to bootstrap discovery
-    pub fn seed_peers(&mut self, seed_peers: HashMap<PeerId, Vec<NetworkAddress>>) -> &mut Self {
-        self.seed_peers = seed_peers;
-        self
-    }
-
-    /// Set discovery ticker interval
-    pub fn discovery_interval_ms(&mut self, discovery_interval_ms: u64) -> &mut Self {
-        self.discovery_interval_ms = discovery_interval_ms;
         self
     }
 
