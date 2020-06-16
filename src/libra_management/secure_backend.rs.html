@@ -328,7 +328,7 @@
                     <span class="ident">namespace</span>: <span class="self">self</span>.<span class="ident">parameters</span>.<span class="ident">remove</span>(<span class="string">&quot;namespace&quot;</span>),
                     <span class="ident">owner</span>,
                     <span class="ident">repository</span>,
-                    <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">new_disk</span>(<span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">token</span>)),
+                    <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">FromDisk</span>(<span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">token</span>)),
                 })
             }
             <span class="ident">MEMORY</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">config</span>::<span class="ident">SecureBackend</span>::<span class="ident">InMemoryStorage</span>,
@@ -346,7 +346,7 @@
                     <span class="ident">namespace</span>: <span class="self">self</span>.<span class="ident">parameters</span>.<span class="ident">remove</span>(<span class="string">&quot;namespace&quot;</span>),
                     <span class="ident">server</span>,
                     <span class="ident">ca_certificate</span>: <span class="ident">certificate</span>,
-                    <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">new_disk</span>(<span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">token</span>)),
+                    <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">FromDisk</span>(<span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">token</span>)),
                 })
             }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Invalid backend: {}&quot;</span>, <span class="self">self</span>.<span class="ident">backend</span>),

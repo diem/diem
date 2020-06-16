@@ -145,7 +145,7 @@
             <span class="ident">ca_certificate</span>: <span class="prelude-val">None</span>,
             <span class="ident">namespace</span>: <span class="self">self</span>.<span class="ident">vault_namespace</span>.<span class="ident">clone</span>(),
             <span class="ident">server</span>: <span class="self">self</span>.<span class="ident">vault_host</span>.<span class="ident">clone</span>(),
-            <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">new_config</span>(<span class="self">self</span>.<span class="ident">vault_token</span>.<span class="ident">clone</span>()),
+            <span class="ident">token</span>: <span class="ident">Token</span>::<span class="ident">FromConfig</span>(<span class="self">self</span>.<span class="ident">vault_token</span>.<span class="ident">clone</span>()),
         });
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">rotation_period_secs</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">rotation_period_secs</span> {

@@ -527,16 +527,16 @@
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
-<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;snake_case&quot;</span>, <span class="ident">tag</span> <span class="op">=</span> <span class="string">&quot;type&quot;</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename_all</span> <span class="op">=</span> <span class="string">&quot;snake_case&quot;</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">WaypointConfig</span> {
-    <span class="ident">FromConfig</span> { <span class="ident">waypoint</span>: <span class="ident">Waypoint</span> },
-    <span class="ident">FromStorage</span> { <span class="ident">backend</span>: <span class="ident">SecureBackend</span> },
+    <span class="ident">FromConfig</span>(<span class="ident">Waypoint</span>),
+    <span class="ident">FromStorage</span>(<span class="ident">SecureBackend</span>),
     <span class="prelude-val">None</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">WaypointConfig</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">waypoint_from_config</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Waypoint</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">WaypointConfig</span>::<span class="ident">FromConfig</span> { <span class="ident">waypoint</span> } <span class="op">=</span> <span class="self">self</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">WaypointConfig</span>::<span class="ident">FromConfig</span>(<span class="ident">waypoint</span>) <span class="op">=</span> <span class="self">self</span> {
             <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">waypoint</span>)
         } <span class="kw">else</span> {
             <span class="prelude-val">None</span>
@@ -803,9 +803,9 @@
 <span class="kw">mod</span> <span class="ident">test</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
 
-    <span class="kw">const</span> <span class="ident">PUBLIC_FULL_NODE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;src/config/test_data/public_full_node.config.yaml&quot;</span>;
-    <span class="kw">const</span> <span class="ident">VALIDATOR</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;src/config/test_data/validator.config.yaml&quot;</span>;
-    <span class="kw">const</span> <span class="ident">VALIDATOR_FULL_NODE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;src/config/test_data/validator_full_node.config.yaml&quot;</span>;
+    <span class="kw">const</span> <span class="ident">PUBLIC_FULL_NODE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;src/config/test_data/public_full_node.yaml&quot;</span>;
+    <span class="kw">const</span> <span class="ident">VALIDATOR</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;src/config/test_data/validator.yaml&quot;</span>;
+    <span class="kw">const</span> <span class="ident">VALIDATOR_FULL_NODE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;src/config/test_data/validator_full_node.yaml&quot;</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">verify_role_type_conversion</span>() {
