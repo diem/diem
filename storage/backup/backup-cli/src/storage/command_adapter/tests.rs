@@ -25,8 +25,8 @@ proptest! {
                 value = "{}"
 
                 [commands]
-                create_backup = 'cd -- "$FOLDER" && mkdir -- "$BACKUP_NAME" && echo -n "$BACKUP_NAME"'
-                create_for_write = 'cd -- "$FOLDER" && cd -- "$BACKUP_HANDLE" && test ! -f "$FILE_NAME" && touch -- "$FILE_NAME" && echo -n `pwd`/"$FILE_NAME" && exec >&- && cat > "$FILE_NAME"'
+                create_backup = 'cd "$FOLDER" && mkdir $BACKUP_NAME && echo -n $BACKUP_NAME'
+                create_for_write = 'cd "$FOLDER" && cd "$BACKUP_HANDLE" && test ! -f $FILE_NAME && touch $FILE_NAME && echo -n `pwd`/$FILE_NAME && exec >&- && cat > $FILE_NAME'
                 open_for_read = 'cat "$FILE_HANDLE"'
             "#, tmpdir.path().to_str().unwrap()),
         ).unwrap();
