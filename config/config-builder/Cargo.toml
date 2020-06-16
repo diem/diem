@@ -14,7 +14,7 @@ anyhow = "1.0.31"
 hex = "0.4.2"
 rand = "0.7.3"
 structopt = "0.3.14"
-thiserror = "1.0.19"
+thiserror = "1.0.20"
 
 executor = { path = "../../execution/executor", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
