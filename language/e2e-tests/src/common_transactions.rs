@@ -82,6 +82,20 @@ pub fn add_validator_txn(
     )
 }
 
+/// Returns a transaction to update validators' configs and reconfigure
+///   (= emit reconfiguration event and change the epoch)
+pub fn reconfigure_txn(sender: &Account, seq_num: u64) -> SignedTransaction {
+    sender.create_signed_txn_with_args(
+        StdlibScript::Reconfigure.compiled_bytes().into_vec(),
+        vec![],
+        Vec::new(),
+        seq_num,
+        gas_costs::TXN_RESERVED * 2,
+        0,
+        LBR_NAME.to_owned(),
+    )
+}
+
 pub fn empty_txn(
     sender: &Account,
     seq_num: u64,
@@ -174,8 +188,8 @@ pub fn peer_to_peer_txn(
     )
 }
 
-/// Returns a transaction to register the sender as a candidate validator
-pub fn register_validator_txn(
+/// Returns a transaction to set config for a candidate validator
+pub fn set_validator_config_txn(
     sender: &Account,
     consensus_pubkey: Vec<u8>,
     validator_network_identity_pubkey: Vec<u8>,
@@ -185,6 +199,7 @@ pub fn register_validator_txn(
     seq_num: u64,
 ) -> SignedTransaction {
     let args = vec![
+        TransactionArgument::Address(*sender.address()),
         TransactionArgument::U8Vector(consensus_pubkey),
         TransactionArgument::U8Vector(validator_network_identity_pubkey),
         TransactionArgument::U8Vector(validator_network_address),
@@ -192,7 +207,7 @@ pub fn register_validator_txn(
         TransactionArgument::U8Vector(fullnodes_network_address),
     ];
     sender.create_signed_txn_with_args(
-        StdlibScript::RegisterValidator.compiled_bytes().into_vec(),
+        StdlibScript::SetValidatorConfig.compiled_bytes().into_vec(),
         vec![],
         args,
         seq_num,
@@ -234,26 +249,6 @@ pub fn raw_rotate_key_txn(
         args,
         seq_num,
         gas_costs::TXN_RESERVED,
-        0,
-        LBR_NAME.to_owned(),
-    )
-}
-
-/// Returns a transaction to change the keys for the given account.
-pub fn rotate_consensus_pubkey_txn(
-    sender: &Account,
-    new_key_hash: Vec<u8>,
-    seq_num: u64,
-) -> SignedTransaction {
-    let args = vec![TransactionArgument::U8Vector(new_key_hash)];
-    sender.create_signed_txn_with_args(
-        StdlibScript::RotateConsensusPubkey
-            .compiled_bytes()
-            .into_vec(),
-        vec![],
-        args,
-        seq_num,
-        gas_costs::TXN_RESERVED * 4,
         0,
         LBR_NAME.to_owned(),
     )

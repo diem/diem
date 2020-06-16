@@ -4,13 +4,13 @@
 
 //! sender: bob
 script {
-use 0x1::LibraSystem;
-use 0x1::ValidatorConfig;
-fun main() {
-    // test bob is a validator
-    assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
-    assert(LibraSystem::is_validator({{bob}}) == true, 98);
-}
+    use 0x1::LibraSystem;
+    use 0x1::ValidatorConfig;
+    fun main() {
+        // test bob is a validator
+        assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
+        assert(LibraSystem::is_validator({{bob}}) == true, 98);
+    }
 }
 
 // check: EXECUTED

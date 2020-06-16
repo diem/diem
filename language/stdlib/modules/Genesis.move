@@ -25,7 +25,6 @@ module Genesis {
     use 0x1::TransactionFee;
     use 0x1::Roles::{Self, AssociationRootRole, TreasuryComplianceRole};
     use 0x1::SlidingNonce::{Self, CreateSlidingNonce};
-    use 0x1::ValidatorConfig;
     use 0x1::LibraVMConfig;
 
 
@@ -47,7 +46,6 @@ module Genesis {
         LibraConfig::grant_privileges(association);
         LibraAccount::grant_association_privileges(association);
         SlidingNonce::grant_privileges(association);
-        ValidatorConfig::grant_privileges(association);
         let assoc_root_capability = Roles::extract_privilege_to_capability<AssociationRootRole>(association);
         let create_config_capability = Roles::extract_privilege_to_capability<CreateOnChainConfig>(association);
         let create_sliding_nonce_capability = Roles::extract_privilege_to_capability<CreateSlidingNonce>(association);

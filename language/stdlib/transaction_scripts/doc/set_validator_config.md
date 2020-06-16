@@ -1,7 +1,7 @@
 
 <a name="SCRIPT"></a>
 
-# Script `rotate_validator_config.move`
+# Script `set_validator_config.move`
 
 ### Table of Contents
 
@@ -42,8 +42,7 @@
         fullnodes_network_identity_pubkey,
         fullnodes_network_address
     );
-    <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_update_and_reconfigure">LibraSystem::update_and_reconfigure</a>(account);
-}
+ }
 </code></pre>
 
 

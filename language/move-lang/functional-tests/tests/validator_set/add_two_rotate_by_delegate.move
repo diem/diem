@@ -11,11 +11,11 @@
 
 //! sender: bob
 script {
-use 0x1::ValidatorConfig;
-fun main(account: &signer) {
-    // set alice to change bob's key
-    ValidatorConfig::set_operator(account, {{alice}});
-}
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        // set alice to change bob's key
+        ValidatorConfig::set_operator(account, {{alice}});
+    }
 }
 
 // check: EXECUTED
@@ -24,10 +24,10 @@ fun main(account: &signer) {
 //! sender: bob
 // check bob can not rotate his consensus key
 script {
-use 0x1::ValidatorConfig;
-fun main(account: &signer) {
-    ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
-}
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
+    }
 }
 
 // check: ABORTED
@@ -36,10 +36,10 @@ fun main(account: &signer) {
 //! sender: bob
 // check bob can not rotate alice's consensus key
 script {
-use 0x1::ValidatorConfig;
-fun main(account: &signer) {
-    ValidatorConfig::set_consensus_pubkey(account, {{alice}}, x"30");
-}
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        ValidatorConfig::set_consensus_pubkey(account, {{alice}}, x"30");
+    }
 }
 
 // check: ABORTED
@@ -48,24 +48,11 @@ fun main(account: &signer) {
 //! sender: alice
 // check alice can rotate bob's consensus key
 script {
-use 0x1::ValidatorConfig;
-fun main(account: &signer) {
-    ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
-    assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{bob}})) == x"30", 99);
-}
-}
-
-// check: EXECUTED
-
-//! new-transaction
-//! sender: alice
-// check alice can rotate her consensus key
-script {
-use 0x1::ValidatorConfig;
-fun main(account: &signer) {
-    ValidatorConfig::set_consensus_pubkey(account, {{alice}}, x"20");
-    assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"20", 99);
-}
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
+        assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{bob}})) == x"30", 99);
+    }
 }
 
 // check: EXECUTED
@@ -74,11 +61,24 @@ fun main(account: &signer) {
 //! sender: alice
 // check alice can rotate her consensus key
 script {
-use 0x1::ValidatorConfig;
-fun main(account: &signer) {
-    ValidatorConfig::set_consensus_pubkey(account, {{alice}}, x"30");
-    assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"30", 99);
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        ValidatorConfig::set_consensus_pubkey(account, {{alice}}, x"20");
+        assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"20", 99);
+    }
 }
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: alice
+// check alice can rotate her consensus key
+script {
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        ValidatorConfig::set_consensus_pubkey(account, {{alice}}, x"30");
+        assert(*ValidatorConfig::get_consensus_pubkey(&ValidatorConfig::get_config({{alice}})) == x"30", 99);
+    }
 }
 
 // check: EXECUTED

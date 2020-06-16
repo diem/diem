@@ -63,9 +63,14 @@ impl ValidatorConfig {
 
         // Step 2) Generate transaction
 
+        // TODO(davidiw): This is currently not supported
+        // let sender = self.owner_address;
+        let sender = account_address::from_public_key(&operator_key);
+
         // TODO(philiphayes): remove network identity pubkey field from struct when
         // transition complete
-        let script = transaction_builder::encode_register_validator_script(
+        let script = transaction_builder::encode_set_validator_config_script(
+            sender,
             consensus_key.to_bytes().to_vec(),
             validator_network_key.to_bytes(),
             raw_validator_address.into(),
@@ -73,9 +78,6 @@ impl ValidatorConfig {
             raw_fullnode_address.into(),
         );
 
-        // TODO(davidiw): This is currently not supported
-        // let sender = self.owner_address;
-        let sender = account_address::from_public_key(&operator_key);
         // TODO(davidiw): In genesis this is irrelevant -- afterward we need to obtain the
         // current sequence number by querying the blockchain.
         let sequence_number = 0;

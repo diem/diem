@@ -202,8 +202,21 @@ fn create_and_initialize_validators(
         );
         context.exec_script(&create_script);
 
+        // Set config for the validator
         context.set_sender(account);
         context.exec_script(registration);
+
+        // Add validator to the set
+        context.set_sender(account_config::association_address());
+        context.exec(
+            "LibraSystem",
+            "add_validator",
+            vec![],
+            vec![
+                Value::transaction_argument_signer_reference(account_config::association_address()),
+                Value::address(account),
+            ],
+        );
     }
 }
 
@@ -308,14 +321,15 @@ pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegi
             // TODO(philiphayes): do something with n.full_node_networks instead
             // of ignoring them?
 
-            let register_script = transaction_builder::encode_register_validator_script(
+            let script = transaction_builder::encode_set_validator_config_script(
+                AuthenticationKey::ed25519(&account_key).derived_address(),
                 consensus_key.to_bytes().to_vec(),
                 identity_key.to_bytes(),
                 raw_advertised_address.clone().into(),
                 identity_key.to_bytes(),
                 raw_advertised_address.into(),
             );
-            (account_key, register_script)
+            (account_key, script)
         })
         .collect::<Vec<_>>()
 }
