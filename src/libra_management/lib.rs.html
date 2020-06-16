@@ -439,38 +439,6 @@
 <span id="439">439</span>
 <span id="440">440</span>
 <span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
-<span id="451">451</span>
-<span id="452">452</span>
-<span id="453">453</span>
-<span id="454">454</span>
-<span id="455">455</span>
-<span id="456">456</span>
-<span id="457">457</span>
-<span id="458">458</span>
-<span id="459">459</span>
-<span id="460">460</span>
-<span id="461">461</span>
-<span id="462">462</span>
-<span id="463">463</span>
-<span id="464">464</span>
-<span id="465">465</span>
-<span id="466">466</span>
-<span id="467">467</span>
-<span id="468">468</span>
-<span id="469">469</span>
-<span id="470">470</span>
-<span id="471">471</span>
-<span id="472">472</span>
-<span id="473">473</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -594,102 +562,70 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">association_key</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519PublicKey</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Command</span>::<span class="ident">AssociationKey</span>(<span class="ident">association_key</span>) <span class="op">=</span> <span class="self">self</span> {
-            <span class="ident">association_key</span>.<span class="ident">execute</span>()
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedCommand</span>(
-                <span class="ident">CommandName</span>::<span class="ident">AssociationKey</span>,
-                <span class="ident">CommandName</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>),
-            ))
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Command</span>::<span class="ident">AssociationKey</span>(<span class="ident">association_key</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">association_key</span>.<span class="ident">execute</span>(),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="self">self</span>.<span class="ident">unexpected_command</span>(<span class="ident">CommandName</span>::<span class="ident">AssociationKey</span>)),
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create_waypoint</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Waypoint</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Command</span>::<span class="ident">CreateWaypoint</span>(<span class="ident">create_waypoint</span>) <span class="op">=</span> <span class="self">self</span> {
-            <span class="ident">create_waypoint</span>.<span class="ident">execute</span>()
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedCommand</span>(
-                <span class="ident">CommandName</span>::<span class="ident">CreateWaypoint</span>,
-                <span class="ident">CommandName</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>),
-            ))
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Command</span>::<span class="ident">CreateWaypoint</span>(<span class="ident">create_waypoint</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">create_waypoint</span>.<span class="ident">execute</span>(),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="self">self</span>.<span class="ident">unexpected_command</span>(<span class="ident">CommandName</span>::<span class="ident">CreateWaypoint</span>)),
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">genesis</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Transaction</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Command</span>::<span class="ident">Genesis</span>(<span class="ident">genesis</span>) <span class="op">=</span> <span class="self">self</span> {
-            <span class="ident">genesis</span>.<span class="ident">execute</span>()
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedCommand</span>(
-                <span class="ident">CommandName</span>::<span class="ident">Genesis</span>,
-                <span class="ident">CommandName</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>),
-            ))
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Command</span>::<span class="ident">Genesis</span>(<span class="ident">genesis</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">genesis</span>.<span class="ident">execute</span>(),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="self">self</span>.<span class="ident">unexpected_command</span>(<span class="ident">CommandName</span>::<span class="ident">Genesis</span>)),
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">insert_waypoint</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Waypoint</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Command</span>::<span class="ident">InsertWaypoint</span>(<span class="ident">insert_waypoint</span>) <span class="op">=</span> <span class="self">self</span> {
-            <span class="ident">insert_waypoint</span>.<span class="ident">execute</span>()
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedCommand</span>(
-                <span class="ident">CommandName</span>::<span class="ident">InsertWaypoint</span>,
-                <span class="ident">CommandName</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>),
-            ))
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Command</span>::<span class="ident">InsertWaypoint</span>(<span class="ident">insert_waypoint</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">insert_waypoint</span>.<span class="ident">execute</span>(),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="self">self</span>.<span class="ident">unexpected_command</span>(<span class="ident">CommandName</span>::<span class="ident">InsertWaypoint</span>)),
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">operator_key</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519PublicKey</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Command</span>::<span class="ident">OperatorKey</span>(<span class="ident">operator_key</span>) <span class="op">=</span> <span class="self">self</span> {
-            <span class="ident">operator_key</span>.<span class="ident">execute</span>()
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedCommand</span>(
-                <span class="ident">CommandName</span>::<span class="ident">OperatorKey</span>,
-                <span class="ident">CommandName</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>),
-            ))
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Command</span>::<span class="ident">OperatorKey</span>(<span class="ident">operator_key</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">operator_key</span>.<span class="ident">execute</span>(),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="self">self</span>.<span class="ident">unexpected_command</span>(<span class="ident">CommandName</span>::<span class="ident">OperatorKey</span>)),
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">owner_key</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519PublicKey</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Command</span>::<span class="ident">OwnerKey</span>(<span class="ident">owner_key</span>) <span class="op">=</span> <span class="self">self</span> {
-            <span class="ident">owner_key</span>.<span class="ident">execute</span>()
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedCommand</span>(
-                <span class="ident">CommandName</span>::<span class="ident">OwnerKey</span>,
-                <span class="ident">CommandName</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>),
-            ))
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Command</span>::<span class="ident">OwnerKey</span>(<span class="ident">owner_key</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">owner_key</span>.<span class="ident">execute</span>(),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="self">self</span>.<span class="ident">unexpected_command</span>(<span class="ident">CommandName</span>::<span class="ident">OwnerKey</span>)),
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_layout</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">layout</span>::<span class="ident">Layout</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Command</span>::<span class="ident">SetLayout</span>(<span class="ident">set_layout</span>) <span class="op">=</span> <span class="self">self</span> {
-            <span class="ident">set_layout</span>.<span class="ident">execute</span>()
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedCommand</span>(
-                <span class="ident">CommandName</span>::<span class="ident">SetLayout</span>,
-                <span class="ident">CommandName</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>),
-            ))
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Command</span>::<span class="ident">SetLayout</span>(<span class="ident">set_layout</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">set_layout</span>.<span class="ident">execute</span>(),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="self">self</span>.<span class="ident">unexpected_command</span>(<span class="ident">CommandName</span>::<span class="ident">SetLayout</span>)),
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">validator_config</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Transaction</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Command</span>::<span class="ident">ValidatorConfig</span>(<span class="ident">config</span>) <span class="op">=</span> <span class="self">self</span> {
-            <span class="ident">config</span>.<span class="ident">execute</span>()
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedCommand</span>(
-                <span class="ident">CommandName</span>::<span class="ident">ValidatorConfig</span>,
-                <span class="ident">CommandName</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>),
-            ))
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Command</span>::<span class="ident">ValidatorConfig</span>(<span class="ident">config</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">config</span>.<span class="ident">execute</span>(),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="self">self</span>.<span class="ident">unexpected_command</span>(<span class="ident">CommandName</span>::<span class="ident">ValidatorConfig</span>)),
         }
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Command</span>::<span class="ident">Verify</span>(<span class="ident">verify</span>) <span class="op">=</span> <span class="self">self</span> {
-            <span class="ident">verify</span>.<span class="ident">execute</span>()
-        } <span class="kw">else</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">UnexpectedCommand</span>(
-                <span class="ident">CommandName</span>::<span class="ident">Verify</span>,
-                <span class="ident">CommandName</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>),
-            ))
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Command</span>::<span class="ident">Verify</span>(<span class="ident">verify</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">verify</span>.<span class="ident">execute</span>(),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="self">self</span>.<span class="ident">unexpected_command</span>(<span class="ident">CommandName</span>::<span class="ident">Verify</span>)),
         }
+    }
+
+    <span class="kw">fn</span> <span class="ident">unexpected_command</span>(<span class="self">self</span>, <span class="ident">expected</span>: <span class="ident">CommandName</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Error</span> {
+        <span class="ident">Error</span>::<span class="ident">UnexpectedCommand</span>(<span class="ident">expected</span>, <span class="ident">CommandName</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="self">self</span>))
     }
 }
 
@@ -701,7 +637,7 @@
     <span class="doccomment">///     Vault: &quot;backend=vault;server=URL;token=PATH_TO_TOKEN&quot;</span>
     <span class="doccomment">///         an optional namespace: &quot;namespace=NAMESPACE&quot;</span>
     <span class="doccomment">///         an optional server certificate: &quot;ca_certificate=PATH_TO_CERT&quot;</span>
-    <span class="doccomment">///     GitHub: &quot;backend=github;owner=OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN&quot;</span>
+    <span class="doccomment">///     GitHub: &quot;backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN&quot;</span>
     <span class="doccomment">///         an optional namespace: &quot;namespace=NAMESPACE&quot;</span>
     <span class="doccomment">///     InMemory: &quot;backend=memory&quot;</span>
     <span class="doccomment">///     OnDisk: &quot;backend=disk;path=LOCAL_PATH&quot;</span>
@@ -721,7 +657,7 @@
     <span class="doccomment">///     Vault: &quot;backend=vault;server=URL;token=PATH_TO_TOKEN&quot;</span>
     <span class="doccomment">///         an optional namespace: &quot;namespace=NAMESPACE&quot;</span>
     <span class="doccomment">///         an optional server certificate: &quot;ca_certificate=PATH_TO_CERT&quot;</span>
-    <span class="doccomment">///     GitHub: &quot;backend=github;owner=OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN&quot;</span>
+    <span class="doccomment">///     GitHub: &quot;backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN&quot;</span>
     <span class="doccomment">///         an optional namespace: &quot;namespace=NAMESPACE&quot;</span>
     <span class="doccomment">///     InMemory: &quot;backend=memory&quot;</span>
     <span class="doccomment">///     OnDisk: &quot;backend=disk;path=LOCAL_PATH&quot;</span>

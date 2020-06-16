@@ -117,7 +117,7 @@
         <span class="kw">match</span> <span class="ident">backend</span> {
             <span class="ident">SecureBackend</span>::<span class="ident">GitHub</span>(<span class="ident">config</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">storage</span> <span class="op">=</span> <span class="ident">GitHubStorage</span>::<span class="ident">new</span>(
-                    <span class="ident">config</span>.<span class="ident">owner</span>.<span class="ident">clone</span>(),
+                    <span class="ident">config</span>.<span class="ident">repository_owner</span>.<span class="ident">clone</span>(),
                     <span class="ident">config</span>.<span class="ident">repository</span>.<span class="ident">clone</span>(),
                     <span class="ident">config</span>.<span class="ident">token</span>.<span class="ident">read_token</span>().<span class="ident">expect</span>(<span class="string">&quot;Unable to read token&quot;</span>),
                 );

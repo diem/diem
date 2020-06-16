@@ -215,12 +215,12 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GitHubConfig</span> {
     <span class="doccomment">/// The owner or account that hosts a repository</span>
-    <span class="kw">pub</span> <span class="ident">owner</span>: <span class="ident">String</span>,
+    <span class="kw">pub</span> <span class="ident">repository_owner</span>: <span class="ident">String</span>,
     <span class="doccomment">/// The repository where storage will mount</span>
     <span class="kw">pub</span> <span class="ident">repository</span>: <span class="ident">String</span>,
     <span class="doccomment">/// The authorization token for accessing the repository</span>
     <span class="kw">pub</span> <span class="ident">token</span>: <span class="ident">Token</span>,
-    <span class="doccomment">/// A namespace is an optional portion of the path to a key stored within OnDiskStorage. For</span>
+    <span class="doccomment">/// A namespace is an optional portion of the path to a key stored within GitHubConfig. For</span>
     <span class="doccomment">/// example, a key, S, without a namespace would be available in S, with a namespace, N, it</span>
     <span class="doccomment">/// would be in N/S.</span>
     <span class="kw">pub</span> <span class="ident">namespace</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
