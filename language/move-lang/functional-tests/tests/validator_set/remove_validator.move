@@ -13,34 +13,42 @@
 // remove_validator cannot be called on a non-validator
 script{
     use 0x1::LibraSystem;
+    use 0x1::Roles::{Self, AssociationRootRole};
     fun main(account: &signer) {
-        LibraSystem::remove_validator(account, {{alice}});
+        let assoc_root_role = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        LibraSystem::remove_validator(&assoc_root_role, {{alice}});
+        Roles::restore_capability_to_privilege(account, assoc_root_role);
     }
 }
 
 // check: ABORTED
-// check: 1106
+// check: 21
 
 // remove_validator can only be called by the Association
 //! new-transaction
 //! sender: alice
 script{
     use 0x1::LibraSystem;
+    use 0x1::Roles::{Self, AssociationRootRole};
     fun main(account: &signer) {
-        LibraSystem::remove_validator(account, {{vivian}});
+        let assoc_root_role = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        LibraSystem::remove_validator(&assoc_root_role, {{vivian}});
+        Roles::restore_capability_to_privilege(account, assoc_root_role);
     }
 }
 
 // check: ABORTED
-// check: 22
 
 //! new-transaction
-//! sender: vivian
+//! sender: association
 // should work because Vivian is a validator
 script{
     use 0x1::LibraSystem;
+    use 0x1::Roles::{Self, AssociationRootRole};
     fun main(account: &signer) {
-        LibraSystem::remove_validator(account, {{vivian}});
+        let assoc_root_role = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        LibraSystem::remove_validator(&assoc_root_role, {{vivian}});
+        Roles::restore_capability_to_privilege(account, assoc_root_role);
     }
 }
 
@@ -48,12 +56,15 @@ script{
 // check: EXECUTED
 
 //! new-transaction
-//! sender: vivian
+//! sender: association
 // double-removing Vivian should fail
 script{
     use 0x1::LibraSystem;
+    use 0x1::Roles::{Self, AssociationRootRole};
     fun main(account: &signer) {
-        LibraSystem::remove_validator(account, {{vivian}});
+        let assoc_root_role = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        LibraSystem::remove_validator(&assoc_root_role, {{vivian}});
+        Roles::restore_capability_to_privilege(account, assoc_root_role);
     }
 }
 

@@ -69,6 +69,7 @@
 -  [Function `failure_epilogue`](#0x1_LibraAccount_failure_epilogue)
 -  [Function `bump_sequence_number`](#0x1_LibraAccount_bump_sequence_number)
 -  [Function `create_validator_account`](#0x1_LibraAccount_create_validator_account)
+-  [Function `create_validator_operator_account`](#0x1_LibraAccount_create_validator_operator_account)
 
 
 
@@ -2253,6 +2254,38 @@ also be added. This account will be a child of
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="Roles.md#0x1_Roles_new_validator_role">Roles::new_validator_role</a>(creator_account, &new_account);
     <a href="ValidatorConfig.md#0x1_ValidatorConfig_publish">ValidatorConfig::publish</a>(&new_account, assoc_root_capability);
+    <a href="#0x1_LibraAccount_make_account">make_account</a>&lt;Token&gt;(new_account, auth_key_prefix, <b>false</b>)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraAccount_create_validator_operator_account"></a>
+
+## Function `create_validator_operator_account`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_validator_operator_account">create_validator_operator_account</a>&lt;Token&gt;(creator_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_validator_operator_account">create_validator_operator_account</a>&lt;Token&gt;(
+    creator_account: &signer,
+    _: &Capability&lt;AssociationRootRole&gt;,
+    new_account_address: address,
+    auth_key_prefix: vector&lt;u8&gt;,
+) {
+    <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
+    <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
+    <a href="Roles.md#0x1_Roles_new_validator_operator_role">Roles::new_validator_operator_role</a>(creator_account, &new_account);
     <a href="#0x1_LibraAccount_make_account">make_account</a>&lt;Token&gt;(new_account, auth_key_prefix, <b>false</b>)
 }
 </code></pre>

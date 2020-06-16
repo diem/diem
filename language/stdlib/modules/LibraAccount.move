@@ -871,10 +871,6 @@ module LibraAccount {
         sender_account.sequence_number = sender_account.sequence_number + 1;
     }
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Proof of concept code used for Validator and ValidatorOperator roles management
-    ///////////////////////////////////////////////////////////////////////////
-
     public fun create_validator_account<Token>(
         creator_account: &signer,
         assoc_root_capability: &Capability<AssociationRootRole>,
@@ -888,8 +884,16 @@ module LibraAccount {
         make_account<Token>(new_account, auth_key_prefix, false)
     }
 
-    ///////////////////////////////////////////////////////////////////////////
-    // End of the proof of concept code
-    ///////////////////////////////////////////////////////////////////////////
+    public fun create_validator_operator_account<Token>(
+        creator_account: &signer,
+        _: &Capability<AssociationRootRole>,
+        new_account_address: address,
+        auth_key_prefix: vector<u8>,
+    ) {
+        let new_account = create_signer(new_account_address);
+        Event::publish_generator(&new_account);
+        Roles::new_validator_operator_role(creator_account, &new_account);
+        make_account<Token>(new_account, auth_key_prefix, false)
+    }
 }
 }

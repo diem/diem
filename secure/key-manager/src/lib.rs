@@ -22,15 +22,16 @@
 use crate::{counters::COUNTERS, libra_interface::LibraInterface};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    PrivateKey,
+    x25519, PrivateKey,
 };
-use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
+use libra_global_constants::{ASSOCIATION_KEY, CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_logger::{error, info};
+use libra_network_address::RawNetworkAddress;
 use libra_secure_storage::{CryptoStorage, KVStorage};
 use libra_secure_time::TimeService;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::LBR_NAME,
+    account_config::{association_address, LBR_NAME},
     transaction::{RawTransaction, Script, Transaction, TransactionArgument},
 };
 use std::{str::FromStr, time::Duration};
@@ -203,14 +204,34 @@ where
         let storage_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
         COUNTERS.consensus_rotation_tx_resubmissions.inc();
         self.submit_key_rotation_transaction(storage_key)
-            .map(|_| ())
+            .map(|_| ())?;
+        self.submit_reconfiguration_transaction().map(|_| ())
     }
 
     pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey, Error> {
         let new_key = self.storage.rotate_key(CONSENSUS_KEY)?;
         info!("Successfully rotated the consensus key in secure storage.");
         COUNTERS.completed_consensus_key_rotations.inc();
-        self.submit_key_rotation_transaction(new_key)
+        let result = self.submit_key_rotation_transaction(new_key);
+        self.submit_reconfiguration_transaction()?;
+        result
+    }
+
+    pub fn submit_reconfiguration_transaction(&self) -> Result<(), Error> {
+        let account_prikey = self.storage.export_private_key(ASSOCIATION_KEY)?;
+        let association_account = association_address();
+        let seq_id = self.libra.retrieve_sequence_number(association_account)?;
+        let expiration = Duration::from_secs(self.time_service.now() + self.txn_expiration_secs);
+        let txn = build_reconfiguration_transaction(
+            association_account,
+            seq_id,
+            &account_prikey,
+            expiration,
+        );
+        self.libra.submit_transaction(txn)?;
+
+        info!("Submitted the reconfiguration transaction to the blockchain.");
+        Ok(())
     }
 
     pub fn submit_key_rotation_transaction(
@@ -221,11 +242,22 @@ where
         let account_prikey = self.storage.export_private_key(OPERATOR_KEY)?;
         let seq_id = self.libra.retrieve_sequence_number(operator_account)?;
         let expiration = Duration::from_secs(self.time_service.now() + self.txn_expiration_secs);
+        // retrieve existing network information from storage
+        let validator_config = self.libra.retrieve_validator_config(operator_account)?;
+        let network_key = validator_config.validator_network_identity_public_key;
+        let network_address = validator_config.validator_network_address;
+        let fullnode_network_key = validator_config.full_node_network_identity_public_key;
+        let fullnode_network_address = validator_config.full_node_network_address;
+
         let txn = build_rotation_transaction(
             operator_account,
             seq_id,
             &account_prikey,
             &new_key,
+            &network_key,
+            &network_address,
+            &fullnode_network_key,
+            &fullnode_network_address,
             expiration,
         );
         self.libra.submit_transaction(txn)?;
@@ -314,17 +346,52 @@ where
     }
 }
 
+pub fn build_reconfiguration_transaction(
+    sender: AccountAddress,
+    seq_id: u64,
+    signing_key: &Ed25519PrivateKey,
+    expiration: Duration,
+) -> Transaction {
+    let script = Script::new(
+        libra_transaction_scripts::RECONFIGURE_TXN.clone(),
+        vec![],
+        vec![],
+    );
+    let raw_txn = RawTransaction::new_script(
+        sender,
+        seq_id,
+        script,
+        MAX_GAS_AMOUNT,
+        GAS_UNIT_PRICE,
+        LBR_NAME.to_owned(),
+        expiration,
+    );
+    let signed_txn = raw_txn.sign(signing_key, signing_key.public_key()).unwrap();
+    Transaction::UserTransaction(signed_txn.into_inner())
+}
+
 pub fn build_rotation_transaction(
     sender: AccountAddress,
     seq_id: u64,
     signing_key: &Ed25519PrivateKey,
     new_key: &Ed25519PublicKey,
+    network_key: &x25519::PublicKey,
+    network_address: &RawNetworkAddress,
+    fullnode_network_key: &x25519::PublicKey,
+    fullnode_network_address: &RawNetworkAddress,
     expiration: Duration,
 ) -> Transaction {
     let script = Script::new(
-        libra_transaction_scripts::ROTATE_CONSENSUS_PUBKEY_TXN.clone(),
+        libra_transaction_scripts::SET_VALIDATOR_CONFIG_TXN.clone(),
         vec![],
-        vec![TransactionArgument::U8Vector(new_key.to_bytes().to_vec())],
+        vec![
+            TransactionArgument::Address(sender),
+            TransactionArgument::U8Vector(new_key.to_bytes().to_vec()),
+            TransactionArgument::U8Vector(network_key.as_slice().to_vec()),
+            TransactionArgument::U8Vector(network_address.as_ref().to_vec()),
+            TransactionArgument::U8Vector(fullnode_network_key.as_slice().to_vec()),
+            TransactionArgument::U8Vector(fullnode_network_address.as_ref().to_vec()),
+        ],
     );
     let raw_txn = RawTransaction::new_script(
         sender,

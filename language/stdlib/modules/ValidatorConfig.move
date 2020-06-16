@@ -15,8 +15,6 @@ module ValidatorConfig {
     use 0x1::Roles::{Self, Capability, AssociationRootRole};
 
     resource struct UpdateValidatorConfig {}
-    resource struct DecertifyValidator {}
-    resource struct CertifyValidator {}
 
     struct Config {
         consensus_pubkey: vector<u8>,
@@ -35,15 +33,9 @@ module ValidatorConfig {
         // set and rotated by the operator_account
         config: Option<Config>,
         operator_account: Option<address>,
-        is_certified: bool, // this flag is for revocation purposes
     }
 
     // TODO(valerini): add events here
-
-    public fun grant_privileges(account: &signer) {
-        Roles::add_privilege_to_account_association_root_role(account, CertifyValidator{});
-        Roles::add_privilege_to_account_association_root_role(account, DecertifyValidator{});
-    }
 
     ///////////////////////////////////////////////////////////////////////////
     // Validator setup methods
@@ -53,7 +45,6 @@ module ValidatorConfig {
         move_to(account, ValidatorConfig {
             config: Option::none(),
             operator_account: Option::none(),
-            is_certified: true
         });
         Roles::add_privilege_to_account_validator_role(account, UpdateValidatorConfig{})
     }
@@ -68,7 +59,7 @@ module ValidatorConfig {
         (borrow_global_mut<ValidatorConfig>(sender)).operator_account = Option::some(operator_account);
     }
 
-    // Removes an operator account, setting a corresponding field to Opetion::none.
+    // Removes an operator account, setting a corresponding field to Option::none.
     // The old config is preserved.
     public fun remove_operator(account: &signer) acquires ValidatorConfig {
         let sender = Signer::address_of(account);
@@ -167,22 +158,6 @@ module ValidatorConfig {
     // Never aborts
     public fun get_validator_network_address(config_ref: &Config): &vector<u8> {
         &config_ref.validator_network_address
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Proof of concept code used for Validator certification
-    ///////////////////////////////////////////////////////////////////////////
-
-    public fun decertify(_: &Capability<DecertifyValidator>, addr: address) acquires ValidatorConfig {
-        borrow_global_mut<ValidatorConfig>(addr).is_certified = false;
-    }
-
-    public fun certify(_: &Capability<CertifyValidator>, addr: address) acquires ValidatorConfig {
-        borrow_global_mut<ValidatorConfig>(addr).is_certified = true;
-    }
-
-    public fun is_certified(addr: address): bool acquires ValidatorConfig {
-         exists<ValidatorConfig>(addr) && borrow_global<ValidatorConfig>(addr).is_certified
     }
 }
 }

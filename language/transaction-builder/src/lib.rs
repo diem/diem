@@ -245,22 +245,6 @@ register_all_txn_scripts! {
 }
 
 {
-    script: RegisterValidator,
-    builder: encode_register_validator_script,
-    type_args: [],
-    args: [
-        consensus_pubkey: Bytes,
-        validator_network_identity_pubkey: Bytes,
-        validator_network_address: Bytes,
-        fullnodes_network_identity_pubkey: Bytes,
-        fullnodes_network_address: Bytes
-    ],
-    doc: "Encode a program registering the sender as a candidate validator with the given key information. \
-         `network_identity_pubkey` should be a X25519 public key \
-         `consensus_pubkey` should be a Ed25519 public c=key."
-}
-
-{
     script: RemoveValidator,
     builder: encode_remove_validator_script,
     type_args: [],
@@ -283,14 +267,6 @@ register_all_txn_scripts! {
     type_args: [],
     args: [new_url: Bytes],
     doc: "Encode a program that rotates `vasp_root_addr`'s base URL to `new_url`."
-}
-
-{
-    script: RotateConsensusPubkey,
-    builder: encode_rotate_consensus_pubkey_script,
-    type_args: [],
-    args: [new_key: Bytes],
-    doc: "Encode a program that rotates the sender's consensus public key to `new_key`."
 }
 
 {
@@ -491,6 +467,30 @@ register_all_txn_scripts! {
           the script ignores the update to that threshold"
 }
 
+{
+    script: SetValidatorConfig,
+    builder: encode_set_validator_config_script,
+    type_args: [],
+    args: [
+        validator_account: Address,
+        consensus_pubkey: Bytes,
+        validator_network_identity_pubkey: Bytes,
+        validator_network_address: Bytes,
+        fullnodes_network_identity_pubkey: Bytes,
+        fullnodes_network_address: Bytes
+    ],
+    doc: "Encode a program setting a consensus config for a validator. \
+         `consensus_pubkey` should be a Ed25519 public c=key."
+}
+
+{
+    script: Reconfigure,
+    builder: encode_reconfigure_script,
+    type_args: [],
+    args: [],
+    doc: "Reconfigures the ValidatorSet by copying local validators' configs into the global \
+          ValidatorSet."
+}
 } // End of txn scripts
 
 //...........................................................................
@@ -584,11 +584,9 @@ mod tests {
                 "preburn",
                 "publish_shared_ed25519_public_key",
                 "add_currency_to_account",
-                "register_validator",
                 "remove_validator",
                 "rotate_compliance_public_key",
                 "rotate_base_url",
-                "rotate_consensus_pubkey",
                 "rotate_authentication_key",
                 "rotate_authentication_key_with_recovery_address",
                 "rotate_shared_ed25519_public_key",
@@ -608,7 +606,9 @@ mod tests {
                 "rotate_authentication_key_with_nonce",
                 "update_exchange_rate",
                 "update_travel_rule_limit",
-                "update_unhosted_wallet_limits"
+                "update_unhosted_wallet_limits",
+                "set_validator_config",
+                "reconfigure",
             ],
             abis.iter().map(|x| x.name()).collect::<Vec<_>>()
         );

@@ -2509,6 +2509,7 @@ dependencies = [
  "libra-global-constants 0.1.0",
  "libra-json-rpc 0.1.0",
  "libra-logger 0.1.0",
+ "libra-network-address 0.1.0",
  "libra-secure-json-rpc 0.1.0",
  "libra-secure-push-metrics 0.1.0",
  "libra-secure-storage 0.1.0",

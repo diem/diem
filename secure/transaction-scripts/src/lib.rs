@@ -27,12 +27,11 @@ pub static ADD_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("add_validator
 pub static PEER_TO_PEER_WITH_METADATA_TXN: Lazy<Vec<u8>> =
     Lazy::new(|| script("peer_to_peer_with_metadata"));
 
-pub static REGISTER_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("register_validator"));
+pub static RECONFIGURE_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("reconfigure"));
 
 pub static REMOVE_VALIDATOR_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("remove_validator"));
 
-pub static ROTATE_CONSENSUS_PUBKEY_TXN: Lazy<Vec<u8>> =
-    Lazy::new(|| script("rotate_consensus_pubkey"));
+pub static SET_VALIDATOR_CONFIG_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("set_validator_config"));
 
 pub static ROTATE_AUTHENTICATION_KEY_TXN: Lazy<Vec<u8>> =
     Lazy::new(|| script("rotate_authentication_key"));
@@ -50,9 +49,9 @@ mod test {
         let txn_scripts = &[
             &ADD_VALIDATOR_TXN,
             &PEER_TO_PEER_WITH_METADATA_TXN,
-            &REGISTER_VALIDATOR_TXN,
+            &RECONFIGURE_TXN,
             &REMOVE_VALIDATOR_TXN,
-            &ROTATE_CONSENSUS_PUBKEY_TXN,
+            &SET_VALIDATOR_CONFIG_TXN,
             &ROTATE_AUTHENTICATION_KEY_TXN,
             &MINT_TXN,
             &EMPTY_TXN,

@@ -10,7 +10,7 @@ use executor_test_helpers::{
 };
 use executor_types::BlockExecutor;
 use libra_config::{config::NodeConfig, utils::get_genesis_txn};
-use libra_crypto::{ed25519::*, test_utils::TEST_SEED, HashValue, PrivateKey, Uniform};
+use libra_crypto::{ed25519::*, test_utils::TEST_SEED, x25519, HashValue, PrivateKey, Uniform};
 use libra_types::{
     account_config::{
         association_address, from_currency_code_string, lbr_type_tag,
@@ -33,7 +33,8 @@ use std::convert::TryFrom;
 use storage_interface::DbReaderWriter;
 use transaction_builder::{
     encode_block_prologue_script, encode_mint_script, encode_publishing_option_script,
-    encode_rotate_consensus_pubkey_script, encode_transfer_with_metadata_script,
+    encode_reconfigure_script, encode_set_validator_config_script,
+    encode_transfer_with_metadata_script,
 };
 
 fn create_db_and_executor(config: &NodeConfig) -> (DbReaderWriter, Executor<LibraVM>) {
@@ -115,19 +116,34 @@ fn test_reconfiguration() {
     // Create a dummy block prologue transaction that will bump the timer.
     let txn2 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
 
-    // rotate the validator's connsensus pubkey to trigger a reconfiguration
+    // rotate the validator's consensus pubkey
     let new_pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
+    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
+    let new_network_pubkey = x25519::PrivateKey::generate(&mut rng).public_key();
     let txn3 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 0,
         validator_privkey.clone(),
         validator_pubkey.clone(),
-        Some(encode_rotate_consensus_pubkey_script(
+        Some(encode_set_validator_config_script(
+            validator_account,
             new_pubkey.to_bytes().to_vec(),
+            new_network_pubkey.as_slice().to_vec(),
+            Vec::new(),
+            new_network_pubkey.as_slice().to_vec(),
+            Vec::new(),
         )),
     );
+    // reconfigure the system with a new consensus key
+    let txn4 = get_test_signed_transaction(
+        association_address(),
+        /* sequence_number = */ 1,
+        genesis_key.clone(),
+        genesis_key.public_key(),
+        Some(encode_reconfigure_script()),
+    );
 
-    let txn_block = vec![txn1, txn2, txn3];
+    let txn_block = vec![txn1, txn2, txn3, txn4];
     let vm_output = executor
         .execute_block((HashValue::random(), txn_block), parent_block_id)
         .unwrap();
@@ -145,8 +161,13 @@ fn test_reconfiguration() {
         /* sequence_number = */ 1,
         validator_privkey,
         validator_pubkey,
-        Some(encode_rotate_consensus_pubkey_script(
+        Some(encode_set_validator_config_script(
+            validator_account,
             new_pubkey.to_bytes().to_vec(),
+            new_network_pubkey.as_slice().to_vec(),
+            Vec::new(),
+            new_network_pubkey.as_slice().to_vec(),
+            Vec::new(),
         )),
     );
     let txn_block = vec![txn4, txn5];

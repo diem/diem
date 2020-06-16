@@ -12,8 +12,9 @@ use futures::{future::FutureExt, stream::StreamExt};
 use libra_config::utils::get_genesis_txn;
 use libra_crypto::{
     ed25519::*,
+    test_utils::TEST_SEED,
     traits::{PrivateKey, Uniform},
-    HashValue,
+    x25519, HashValue,
 };
 use libra_types::{
     account_config::{association_address, lbr_type_tag},
@@ -21,11 +22,12 @@ use libra_types::{
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;
+use rand::SeedableRng;
 use storage_interface::DbReaderWriter;
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{
-    encode_block_prologue_script, encode_publishing_option_script,
-    encode_rotate_consensus_pubkey_script, encode_transfer_with_metadata_script,
+    encode_block_prologue_script, encode_publishing_option_script, encode_reconfigure_script,
+    encode_set_validator_config_script, encode_transfer_with_metadata_script,
 };
 
 // TODO test for subscription with multiple subscribed configs once there are >1 on-chain configs
@@ -163,17 +165,33 @@ fn test_on_chain_config_pub_sub() {
 
     // rotate the validator's consensus pubkey to trigger a reconfiguration
     let new_pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
+    let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
+    let new_network_pubkey = x25519::PrivateKey::generate(&mut rng).public_key();
     let txn5 = get_test_signed_transaction(
         validator_account,
         /* sequence_number = */ 0,
         validator_privkey,
         validator_pubkey,
-        Some(encode_rotate_consensus_pubkey_script(
+        Some(encode_set_validator_config_script(
+            validator_account,
             new_pubkey.to_bytes().to_vec(),
+            new_network_pubkey.as_slice().to_vec(),
+            Vec::new(),
+            new_network_pubkey.as_slice().to_vec(),
+            Vec::new(),
         )),
     );
 
-    let block2 = vec![txn3, txn4, txn5];
+    // reconfigure the system with a new consensus key
+    let txn6 = get_test_signed_transaction(
+        association_address(),
+        /* sequence_number = */ 3,
+        genesis_key.clone(),
+        genesis_key.public_key(),
+        Some(encode_reconfigure_script()),
+    );
+
+    let block2 = vec![txn3, txn4, txn5, txn6];
     let block2_id = gen_block_id(2);
 
     let output = block_executor

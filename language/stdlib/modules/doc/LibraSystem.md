@@ -18,8 +18,6 @@
 -  [Function `get_validator_config`](#0x1_LibraSystem_get_validator_config)
 -  [Function `validator_set_size`](#0x1_LibraSystem_validator_set_size)
 -  [Function `get_ith_validator_address`](#0x1_LibraSystem_get_ith_validator_address)
--  [Function `is_valid_and_certified`](#0x1_LibraSystem_is_valid_and_certified)
--  [Function `is_authorized_to_reconfigure_`](#0x1_LibraSystem_is_authorized_to_reconfigure_)
 -  [Function `get_validator_index_`](#0x1_LibraSystem_get_validator_index_)
 -  [Function `update_ith_validator_info_`](#0x1_LibraSystem_update_ith_validator_info_)
 -  [Function `is_validator_`](#0x1_LibraSystem_is_validator_)
@@ -201,7 +199,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_add_validator">add_validator</a>(operator: &signer, account_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_add_validator">add_validator</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;, account_address: address)
 </code></pre>
 
 
@@ -211,17 +209,11 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_add_validator">add_validator</a>(
-    operator: &signer,
+    _: &Capability&lt;AssociationRootRole&gt;,
     account_address: address
 ) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    // Validator's operator can add its certified validator <b>to</b> the validator set
-    <b>assert</b>(
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(operator) == <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(account_address),
-        22
-    );
-
     // A prospective validator must have a validator config <b>resource</b>
-    <b>assert</b>(<a href="#0x1_LibraSystem_is_valid_and_certified">is_valid_and_certified</a>(account_address), 33);
+    <b>assert</b>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(account_address), 33);
 
     <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
     // Ensure that this address is not already a validator
@@ -249,7 +241,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_remove_validator">remove_validator</a>(operator: &signer, account_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_remove_validator">remove_validator</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;, account_address: address)
 </code></pre>
 
 
@@ -259,13 +251,9 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_remove_validator">remove_validator</a>(
-    operator: &signer,
+    _: &Capability&lt;AssociationRootRole&gt;,
     account_address: address
 ) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    // Validator's operator can remove its certified validator from the validator set
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(operator) ==
-                        <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(account_address), 22);
-
     <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
     // Ensure that this address is an active validator
     <b>let</b> to_remove_index_vec = <a href="#0x1_LibraSystem_get_validator_index_">get_validator_index_</a>(&validator_set.validators, account_address);
@@ -288,7 +276,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_update_and_reconfigure">update_and_reconfigure</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_update_and_reconfigure">update_and_reconfigure</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;)
 </code></pre>
 
 
@@ -297,9 +285,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_update_and_reconfigure">update_and_reconfigure</a>(account: &signer) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    <b>assert</b>(<a href="#0x1_LibraSystem_is_authorized_to_reconfigure_">is_authorized_to_reconfigure_</a>(account), 22);
-
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_update_and_reconfigure">update_and_reconfigure</a>(_: &Capability&lt;AssociationRootRole&gt;) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
     <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
     <b>let</b> validators = &<b>mut</b> validator_set.validators;
 
@@ -314,7 +300,7 @@
         i = i - 1;
         // <b>if</b> the validator is invalid, remove it from the set
         <b>let</b> validator_address = <a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(validators, i).addr;
-        <b>if</b> (<a href="#0x1_LibraSystem_is_valid_and_certified">is_valid_and_certified</a>(validator_address)) {
+        <b>if</b> (<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_address)) {
             <b>let</b> validator_info_update = <a href="#0x1_LibraSystem_update_ith_validator_info_">update_ith_validator_info_</a>(validators, i);
             configs_changed = configs_changed || validator_info_update;
         } <b>else</b> {
@@ -448,78 +434,6 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_get_ith_validator_address">get_ith_validator_address</a>(i: u64): address {
     <a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&<a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>().validators, i).addr
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraSystem_is_valid_and_certified"></a>
-
-## Function `is_valid_and_certified`
-
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraSystem_is_valid_and_certified">is_valid_and_certified</a>(addr: address): bool
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraSystem_is_valid_and_certified">is_valid_and_certified</a>(addr: address): bool {
-    <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(addr) &&
-        <a href="ValidatorConfig.md#0x1_ValidatorConfig_is_certified">ValidatorConfig::is_certified</a>(addr)
-        // TODO(valerini): only allow certified operators, i.e. uncomment the line
-        // && LibraAccount::is_certified&lt;LibraAccount::ValidatorOperatorRole&gt;(<a href="ValidatorConfig.md#0x1_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(addr))
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraSystem_is_authorized_to_reconfigure_"></a>
-
-## Function `is_authorized_to_reconfigure_`
-
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraSystem_is_authorized_to_reconfigure_">is_authorized_to_reconfigure_</a>(account: &signer): bool
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraSystem_is_authorized_to_reconfigure_">is_authorized_to_reconfigure_</a>(account: &signer): bool {
-    <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    // succeed fast
-    <b>if</b> (sender == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>() ||
-        sender == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
-        <b>return</b> <b>true</b>
-    };
-    <b>let</b> validators = &<a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>().validators;
-    // scan the validators <b>to</b> find a match
-    <b>let</b> size = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(validators);
-    // always <b>true</b>: size &gt; 3 (see remove_validator code)
-
-    <b>let</b> i = 0;
-    <b>while</b> (i &lt; size) {
-        <b>if</b> (<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(validators, i).addr == sender) {
-            <b>return</b> <b>true</b>
-        };
-        <b>if</b> (<a href="ValidatorConfig.md#0x1_ValidatorConfig_get_operator">ValidatorConfig::get_operator</a>(<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(validators, i).addr) == sender) {
-            <b>return</b> <b>true</b>
-        };
-        i = i + 1;
-    };
-    <b>return</b> <b>false</b>
 }
 </code></pre>
 

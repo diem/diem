@@ -6,10 +6,7 @@ use debug_interface::{libra_trace, NodeDebugClient};
 use libra_config::config::{
     KeyManagerConfig, NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend, TestConfig,
 };
-use libra_crypto::{
-    ed25519::Ed25519PrivateKey, hash::CryptoHash, traits::ValidCryptoMaterialStringExt, PrivateKey,
-    SigningKey, Uniform,
-};
+use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, PrivateKey, SigningKey, Uniform};
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_key_manager::libra_interface::{JsonRpcLibraInterface, LibraInterface};
@@ -1025,18 +1022,6 @@ fn test_full_node_basic_flow() {
 #[test]
 fn test_e2e_reconfiguration() {
     let (env, mut client_proxy_1) = setup_swarm_and_client_proxy(3, 1);
-    // retrieving the 0-th validator private key
-    let config_path = env.validator_swarm.config.config_files.get(0).unwrap();
-    let config = NodeConfig::load(&config_path).unwrap();
-    let operator_private_str = config
-        .test
-        .unwrap()
-        .operator_keypair
-        .unwrap()
-        .take_private()
-        .unwrap()
-        .to_encoded_string()
-        .unwrap();
 
     // the client connected to the removed validator
     let mut client_proxy_0 = env.get_validator_ac_client(0, None);
@@ -1064,7 +1049,7 @@ fn test_e2e_reconfiguration() {
         .unwrap()
         .to_string();
     client_proxy_1
-        .remove_validator(&["remove_validator", &peer_id, &operator_private_str], true)
+        .remove_validator(&["remove_validator", &peer_id], true)
         .unwrap();
     // mint another 10 coins after remove node 0
     client_proxy_1
@@ -1081,7 +1066,7 @@ fn test_e2e_reconfiguration() {
     ));
     // Add the node back
     client_proxy_1
-        .add_validator(&["add_validator", &peer_id, &operator_private_str], true)
+        .add_validator(&["add_validator", &peer_id], true)
         .unwrap();
     // Wait for it catches up, mint1 + mint2 => seq == 2
     client_proxy_0
@@ -1165,18 +1150,6 @@ fn test_e2e_modify_publishing_option() {
 #[test]
 fn test_client_waypoints() {
     let (env, mut client_proxy) = setup_swarm_and_client_proxy(3, 1);
-    // retrieving the 0-th validator private key
-    let config_path = env.validator_swarm.config.config_files.get(0).unwrap();
-    let config = NodeConfig::load(&config_path).unwrap();
-    let operator_private_str = config
-        .test
-        .unwrap()
-        .operator_keypair
-        .unwrap()
-        .take_private()
-        .unwrap()
-        .to_encoded_string()
-        .unwrap();
     // Make sure some txns are committed
     client_proxy.create_next_account(false).unwrap();
     client_proxy
@@ -1207,7 +1180,7 @@ fn test_client_waypoints() {
         .unwrap()
         .to_string();
     client_proxy
-        .remove_validator(&["remove_validator", &peer_id, &operator_private_str], true)
+        .remove_validator(&["remove_validator", &peer_id], true)
         .unwrap();
     client_proxy
         .mint_coins(&["mintb", "0", "10", "LBR"], true)
