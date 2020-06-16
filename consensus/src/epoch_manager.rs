@@ -461,19 +461,14 @@ impl EpochManager {
         request: IncomingBlockRetrievalRequest,
     ) -> anyhow::Result<()> {
         match self.processor_mut() {
-            RoundProcessor::Normal(p) => {
-                monitor!("block_retrieval", p.process_block_retrieval(request).await)
-            }
+            RoundProcessor::Normal(p) => p.process_block_retrieval(request).await,
             _ => bail!("[EpochManager] RoundManager not started yet"),
         }
     }
 
     pub async fn process_local_timeout(&mut self, round: u64) -> anyhow::Result<()> {
         match self.processor_mut() {
-            RoundProcessor::Normal(p) => monitor!(
-                "process_local_timeout",
-                p.process_local_timeout(round).await
-            ),
+            RoundProcessor::Normal(p) => p.process_local_timeout(round).await,
             _ => unreachable!("RoundManager not started yet"),
         }
     }

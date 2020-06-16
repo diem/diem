@@ -15,10 +15,12 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 1,
+  "id": 472,
   "links": [],
   "panels": [
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
@@ -35,13 +37,16 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
         "y": 1
       },
+      "hiddenSeries": false,
       "id": 2,
       "legend": {
         "avg": false,
@@ -56,7 +61,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -130,13 +137,16 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
         "y": 1
       },
+      "hiddenSeries": false,
       "id": 6,
       "legend": {
         "avg": false,
@@ -151,7 +161,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -216,13 +228,1568 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
+      "description": "Duration between block generation time until the moment it is first received by a voter / gathers full QC",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 16,
         "y": 1
       },
+      "hiddenSeries": false,
+      "id": 29,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(libra_consensus_creation_to_qc_s_sum[1m])/irate(libra_consensus_creation_to_qc_s_count[1m])",
+          "format": "time_series",
+          "interval": "",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}: QC",
+          "refId": "A"
+        },
+        {
+          "expr": "irate(libra_consensus_creation_to_receival_s_sum[1m])/irate(libra_consensus_creation_to_receival_s_count[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}: vote",
+          "refId": "B"
+        },
+        {
+          "expr": "irate(libra_consensus_creation_to_commit_s_sum[1m])/irate(libra_consensus_creation_to_commit_s_count[1m])",
+          "legendFormat": "{{peer_id}: commit",
+          "refId": "C"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Block creation to vote / QC / commit",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "s",
+          "label": "s",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 9
+      },
+      "id": 70,
+      "panels": [],
+      "title": "Main loop",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Percent of time the main Event Loop spends idle",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 10
+      },
+      "hiddenSeries": false,
+      "id": 44,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.6.0",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "1 -(irate(consensus_duration_sum{op='process_block_retrieval'}[1m]) + on (peer_id) irate(consensus_duration_sum{op='process_message'}[1m]) + on (peer_id) irate(consensus_duration_sum{op='process_local_timeout'}[1m])) / on(peer_id) irate(consensus_duration_sum{op='main_loop'}[1m])",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}} ",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Event Loop Idle Percent",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": "ms",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Percent of time the main Event Loop spends for block retrieval",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 10
+      },
+      "hiddenSeries": false,
+      "id": 72,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.6.0",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(consensus_duration_sum{op='process_message'}[1m]) / on(peer_id) irate(consensus_duration_sum{op='main_loop'}[1m])",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}} ",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Event Loop process consensus msg",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": "ms",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Percent of time the main Event Loop spends for block retrieval",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 10
+      },
+      "hiddenSeries": false,
+      "id": 71,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.6.0",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(consensus_duration_sum{op='process_block_retrieval'}[1m]) / on(peer_id) irate(consensus_duration_sum{op='main_loop'}[1m])",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}} ",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Event Loop process block retrieval",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": "ms",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 18
+      },
+      "hiddenSeries": false,
+      "id": 73,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.6.0",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(consensus_duration_sum{op='process_local_timeout'}[1m]) / on(peer_id) irate(consensus_duration_sum{op='main_loop'}[1m])",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}} ",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Event Loop process local timeout",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": "ms",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Percent time spent in process proposal compared to all consensus msg",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 18
+      },
+      "hiddenSeries": false,
+      "id": 74,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.6.0",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(consensus_duration_sum{op='process_proposal'}[1m]) / on(peer_id) irate(consensus_duration_sum{op='process_message'}[1m])",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}} ",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Process proposal",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": "ms",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Percent time spent in process vote compared to all consensus msg",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 18
+      },
+      "hiddenSeries": false,
+      "id": 75,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.6.0",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(consensus_duration_sum{op='process_vote'}[1m]) / on(peer_id) irate(consensus_duration_sum{op='process_message'}[1m])",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}} ",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Process vote",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": "ms",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Percent time spent in process sync info compared to all consensus msg",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 26
+      },
+      "hiddenSeries": false,
+      "id": 76,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.6.0",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(consensus_duration_sum{op='process_sync_info'}[1m]) / on(peer_id) irate(consensus_duration_sum{op='process_message'}[1m])",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}} ",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Process sync info",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": "ms",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Useful when the node is stuck somewhere",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 26
+      },
+      "hiddenSeries": false,
+      "id": 83,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "consensus_gauge{op='process_proposal_running'}",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}}: proposal",
+          "refId": "A"
+        },
+        {
+          "expr": "consensus_gauge{op='process_vote_running'}",
+          "legendFormat": "{{peer_id}}: vote",
+          "refId": "B"
+        },
+        {
+          "expr": "consensus_gauge{op='process_local_timeout_running'}",
+          "legendFormat": "{{peer_id}}: timeout",
+          "refId": "C"
+        },
+        {
+          "expr": "consensus_gauge{op='reconfig_running'}",
+          "legendFormat": "{{peer_id}}: reconfig",
+          "refId": "D"
+        },
+        {
+          "expr": "consensus_gauge{op='execute_block'}",
+          "legendFormat": "{{peer_id}}: execute",
+          "refId": "E"
+        },
+        {
+          "expr": "consensus_gauge{op='commit_block'}",
+          "legendFormat": "{{peer_id}}: commit",
+          "refId": "F"
+        },
+        {
+          "expr": "consensus_gauge{op='sync_to'}",
+          "legendFormat": "{{peer_id}}: sync",
+          "refId": "G"
+        },
+        {
+          "expr": "consensus_gauge{op='block_retrieval'}",
+          "legendFormat": "{{peer_id}}: rpc",
+          "refId": "H"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Current running function",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 34
+      },
+      "id": 18,
+      "panels": [],
+      "title": "RoundState",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 35
+      },
+      "hiddenSeries": false,
+      "id": 45,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "libra_consensus_current_round",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Current Round",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 35
+      },
+      "hiddenSeries": false,
+      "id": 16,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "libra_consensus_timeout_rounds_count",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Total timeout rounds",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "count timeout rounds",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 35
+      },
+      "hiddenSeries": false,
+      "id": 26,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "libra_consensus_timeout_count",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Total local timeout",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "count timeouts",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 43
+      },
+      "hiddenSeries": false,
+      "id": 14,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "libra_consensus_qc_rounds_count",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Total QC rounds",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "rounds per sec",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 43
+      },
+      "hiddenSeries": false,
+      "id": 27,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "libra_consensus_round_timeout_s",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Round timeout val",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ms",
+          "label": "timeout val (ms)",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 51
+      },
+      "id": 59,
+      "panels": [],
+      "title": "EpochState",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 52
+      },
+      "hiddenSeries": false,
+      "id": 60,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "libra_consensus_epoch",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Current Epoch",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 52
+      },
+      "hiddenSeries": false,
+      "id": 61,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "libra_consensus_current_epoch_validators",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Number of validators",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 60
+      },
+      "id": 55,
+      "panels": [],
+      "title": "BlockStore",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 61
+      },
+      "hiddenSeries": false,
       "id": 8,
       "legend": {
         "avg": false,
@@ -237,7 +1804,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -301,111 +1870,17 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Duration between block generation time until the moment it is first received by a voter / gathers full QC",
-      "fill": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 9
-      },
-      "id": 29,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "irate(libra_consensus_creation_to_qc_s_sum[1m])/irate(libra_consensus_creation_to_qc_s_count[1m])",
-          "format": "time_series",
-          "interval": "",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}: QC",
-          "refId": "A"
-        },
-        {
-          "expr": "irate(libra_consensus_creation_to_receival_s_sum[1m])/irate(libra_consensus_creation_to_receival_s_count[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}: vote",
-          "refId": "B"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Block creation to vote / QC",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "ms",
-          "label": "ms",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
       "datasource": null,
-      "description": "Percent of time the main Event Loop spends idle",
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 9
+        "y": 61
       },
-      "id": 44,
+      "hiddenSeries": false,
+      "id": 57,
       "legend": {
         "avg": false,
         "current": false,
@@ -432,8 +1907,10 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(libra_consensus_event_processing_loop_idle_duration_s_sum[1m]) /  (irate(libra_consensus_event_processing_loop_idle_duration_s_sum[1m]) +  irate(libra_consensus_event_processing_loop_busy_duration_s_sum[1m]))",
-          "legendFormat": "{{peer_id}} Idle",
+          "expr": "irate(libra_consensus_num_txns_per_block_sum[1m])/irate(libra_consensus_num_txns_per_block_count[1m])",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
       ],
@@ -441,7 +1918,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Event Loop Idle Percent",
+      "title": "Transactions per block",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -457,8 +1934,99 @@
       },
       "yaxes": [
         {
-          "format": "percentunit",
-          "label": "ms",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Total time the node has to wait before inserting the block",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 61
+      },
+      "hiddenSeries": false,
+      "id": 56,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "libra_consensus_wait_duration_s_sum",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Total wait duration",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "s",
+          "label": null,
           "logBase": 1,
           "max": null,
           "min": "0",
@@ -480,15 +2048,16 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 17
+        "y": 69
       },
-      "id": 18,
+      "id": 4,
       "panels": [],
-      "title": "RoundState",
+      "title": "External call",
       "type": "row"
     },
     {
@@ -496,14 +2065,18 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
+      "description": "",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 18
+        "y": 70
       },
-      "id": 14,
+      "hiddenSeries": false,
+      "id": 79,
       "legend": {
         "avg": false,
         "current": false,
@@ -517,8 +2090,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
+      "pluginVersion": "6.6.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -528,10 +2104,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(libra_consensus_qc_rounds_count[1m])",
+          "expr": "irate(consensus_duration_sum{op='execute_block'}[1m]) / irate(consensus_duration_count{op='execute_block'}[1m])",
           "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{peer_id}} ",
           "refId": "A"
         }
       ],
@@ -539,7 +2114,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "QC rounds per sec",
+      "title": "Execute block",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -555,8 +2130,8 @@
       },
       "yaxes": [
         {
-          "format": "short",
-          "label": "rounds per sec",
+          "format": "dtdurations",
+          "label": "s",
           "logBase": 1,
           "max": null,
           "min": "0",
@@ -581,14 +2156,18 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
+      "description": "",
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 18
+        "y": 70
       },
-      "id": 16,
+      "hiddenSeries": false,
+      "id": 80,
       "legend": {
         "avg": false,
         "current": false,
@@ -602,8 +2181,11 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
+      "pluginVersion": "6.6.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -613,10 +2195,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_timeout_rounds_count",
+          "expr": "irate(consensus_duration_sum{op='commit_block'}[1m]) / irate(consensus_duration_count{op='commit_block'}[1m])",
           "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{peer_id}} ",
           "refId": "A"
         }
       ],
@@ -624,7 +2205,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Num of timeout rounds since restart",
+      "title": "Commit block",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -640,8 +2221,8 @@
       },
       "yaxes": [
         {
-          "format": "short",
-          "label": "count timeout rounds",
+          "format": "dtdurations",
+          "label": "s",
           "logBase": 1,
           "max": null,
           "min": "0",
@@ -666,14 +2247,17 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 18
+        "y": 70
       },
-      "id": 26,
+      "hiddenSeries": false,
+      "id": 62,
       "legend": {
         "avg": false,
         "current": false,
@@ -687,7 +2271,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -698,7 +2284,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_timeout_count",
+          "expr": "libra_consensus_sync_info_msg_sent_count",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -709,7 +2295,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Num of timeouts since restart",
+      "title": "Total sync info sent to help peers",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -726,7 +2312,7 @@
       "yaxes": [
         {
           "format": "short",
-          "label": "count timeouts",
+          "label": "",
           "logBase": 1,
           "max": null,
           "min": "0",
@@ -751,14 +2337,17 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 26
+        "y": 78
       },
-      "id": 27,
+      "hiddenSeries": false,
+      "id": 21,
       "legend": {
         "avg": false,
         "current": false,
@@ -772,7 +2361,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -783,7 +2374,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_round_timeout_s",
+          "expr": "consensus_duration_count{op='sync_to'}",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -794,7 +2385,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Round timeout val",
+      "title": "State sync count",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -810,8 +2401,8 @@
       },
       "yaxes": [
         {
-          "format": "ms",
-          "label": "timeout val (ms)",
+          "format": "short",
+          "label": "count state sync",
           "logBase": 1,
           "max": null,
           "min": "0",
@@ -836,13 +2427,300 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 26
+        "y": 78
       },
+      "hiddenSeries": false,
+      "id": 23,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "consensus_duration_sum{op='sync_to'}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Total time spent on state sync",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "s",
+          "label": "total time spent (s)",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 78
+      },
+      "hiddenSeries": false,
+      "id": 24,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "consensus_duration_count{op='block_retrieval'}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Block retrieval count",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "count",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 86
+      },
+      "hiddenSeries": false,
+      "id": 25,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "consensus_duration_sum{op='block_retrieval'}",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Total time spent on block retrieval",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "s",
+          "label": "total time spent (s)",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "collapsed": false,
+      "datasource": null,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 94
+      },
+      "id": 52,
+      "panels": [],
+      "title": "Proposer Election",
+      "type": "row"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 95
+      },
+      "hiddenSeries": false,
       "id": 28,
       "legend": {
         "avg": false,
@@ -857,7 +2735,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -917,116 +2797,21 @@
       }
     },
     {
-      "collapsed": false,
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 34
-      },
-      "id": 4,
-      "panels": [],
-      "title": "State Synchronization",
-      "type": "row"
-    },
-    {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
+      "datasource": null,
       "fill": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 35
-      },
-      "id": 21,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "libra_consensus_state_sync_count",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "State sync count",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "count state sync",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 0,
+      "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 35
+        "y": 95
       },
-      "id": 22,
+      "hiddenSeries": false,
+      "id": 53,
       "legend": {
         "avg": false,
         "current": false,
@@ -1040,7 +2825,9 @@
       "linewidth": 1,
       "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -1051,7 +2838,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_state_sync_txns_replayed",
+          "expr": "libra_consensus_vote_nil_count",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -1062,7 +2849,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Txns replayed in state synchronization ",
+      "title": "Total vote on Nil",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1079,262 +2866,7 @@
       "yaxes": [
         {
           "format": "short",
-          "label": "txns count",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 35
-      },
-      "id": 23,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "libra_consensus_state_sync_duration_s_sum",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Total time spent on state sync",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "ms",
-          "label": "total time spent (ms)",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 43
-      },
-      "id": 24,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "libra_consensus_block_retrieval_count",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Block retrieval requests since restart",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "count",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 43
-      },
-      "id": 25,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "libra_consensus_block_retrieval_duration_s_sum",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Total time spent on block retrieval",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "ms",
-          "label": "total time spent (ms)",
+          "label": "/s",
           "logBase": 1,
           "max": null,
           "min": "0",
@@ -1356,15 +2888,16 @@
     },
     {
       "collapsed": false,
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 51
+        "y": 103
       },
-      "id": 31,
+      "id": 49,
       "panels": [],
-      "title": "Timestamps",
+      "title": "SafetyState",
       "type": "row"
     },
     {
@@ -1372,15 +2905,18 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Count of the proposals that passed the timestamp rules and did not have to wait",
-      "fill": 0,
+      "datasource": null,
+      "description": "",
+      "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 9,
         "w": 8,
         "x": 0,
-        "y": 52
+        "y": 104
       },
-      "id": 32,
+      "hiddenSeries": false,
+      "id": 47,
       "legend": {
         "avg": false,
         "current": false,
@@ -1392,9 +2928,10 @@
       },
       "lines": true,
       "linewidth": 1,
-      "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -1405,9 +2942,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_proposals_generated_count{state='no_wait_required'}",
-          "format": "time_series",
-          "intervalFactor": 1,
+          "expr": "libra_consensus_last_vote_round",
           "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
@@ -1416,7 +2951,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Proposal no wait required count",
+      "title": "Last voted round",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1433,10 +2968,10 @@
       "yaxes": [
         {
           "format": "short",
-          "label": "count",
+          "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
@@ -1458,15 +2993,18 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Count of the proposals where passing the timestamp rules required waiting",
-      "fill": 0,
+      "datasource": null,
+      "description": "",
+      "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 9,
         "w": 8,
         "x": 8,
-        "y": 52
+        "y": 104
       },
-      "id": 33,
+      "hiddenSeries": false,
+      "id": 50,
       "legend": {
         "avg": false,
         "current": false,
@@ -1478,9 +3016,10 @@
       },
       "lines": true,
       "linewidth": 1,
-      "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -1491,9 +3030,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_proposals_generated_count{state='wait_was_required'}",
-          "format": "time_series",
-          "intervalFactor": 1,
+          "expr": "libra_consensus_preferred_block_round",
           "legendFormat": "{{peer_id}}",
           "refId": "A"
         }
@@ -1502,7 +3039,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Proposal wait was required count",
+      "title": "Preferred round",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1519,10 +3056,10 @@
       "yaxes": [
         {
           "format": "short",
-          "label": "count",
+          "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
@@ -1540,105 +3077,36 @@
       }
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "description": "Count of the proposals that were not made due to the waiting period exceeding the maximum allowed duration, breaking timestamp rules",
-      "fill": 0,
+      "collapsed": false,
+      "datasource": null,
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 52
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 113
       },
-      "id": 34,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "libra_consensus_proposals_generated_count{state='max_wait_exceeded'}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Proposal maximum wait exceeded count",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "count",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "id": 64,
+      "panels": [],
+      "title": "Message queue",
+      "type": "row"
     },
     {
       "aliasColors": {},
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Count of the proposals that were not made due to waiting to ensure the current time exceeds min_duration_since_epoch failed, breaking timestamp rules",
-      "fill": 0,
+      "datasource": null,
+      "description": "",
+      "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 9,
         "w": 8,
         "x": 0,
-        "y": 60
+        "y": 114
       },
-      "id": 35,
+      "hiddenSeries": false,
+      "id": 65,
       "legend": {
         "avg": false,
         "current": false,
@@ -1650,9 +3118,10 @@
       },
       "lines": true,
       "linewidth": 1,
-      "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -1663,18 +3132,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_proposals_generated_count{state='wait_failed'}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "expr": "libra_consensus_pending_network_events{state=\"enqueued\"} - on (peer_id) libra_consensus_pending_network_events{state=\"dequeued\"}",
+          "legendFormat": "{{peer_id}}: pending",
           "refId": "A"
+        },
+        {
+          "expr": "libra_consensus_pending_network_events{state=\"dropped\"}",
+          "legendFormat": "{{peer_id}}: dropped",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Proposal wait failed count",
+      "title": "Network -> Consensus",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1691,10 +3163,10 @@
       "yaxes": [
         {
           "format": "short",
-          "label": "count",
+          "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
@@ -1716,15 +3188,18 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Average time waited for successfully proposing a proposal (both those that waited and didn't wait) after following timestamp rules",
-      "fill": 0,
+      "datasource": null,
+      "description": "",
+      "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 9,
         "w": 8,
         "x": 8,
-        "y": 60
+        "y": 114
       },
-      "id": 36,
+      "hiddenSeries": false,
+      "id": 66,
       "legend": {
         "avg": false,
         "current": false,
@@ -1736,9 +3211,10 @@
       },
       "lines": true,
       "linewidth": 1,
-      "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -1749,18 +3225,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(libra_consensus_proposal_success_wait_s_sum[1m])/irate(libra_consensus_proposal_success_wait_s_count[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "expr": "libra_consensus_channel_msgs_count{state=\"enqueued\"} - on (peer_id) libra_consensus_channel_msgs_count{state=\"dequeued\"} - on (peer_id) libra_consensus_channel_msgs_count{state=\"dropped\"}",
+          "legendFormat": "{{peer_id}}: pending",
           "refId": "A"
+        },
+        {
+          "expr": "libra_consensus_channel_msgs_count{state=\"dropped\"}",
+          "legendFormat": "{{peer_id}}: dropped",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Avg time waiting for proposal success",
+      "title": "Consensus -> Main loop (Consensus Msg)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1777,10 +3256,10 @@
       "yaxes": [
         {
           "format": "short",
-          "label": "ms",
+          "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
@@ -1802,15 +3281,18 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Average time waited for failing to propose a proposal (both those that waited and didn't wait) while trying to follow timestamp rules",
-      "fill": 0,
+      "datasource": null,
+      "description": "",
+      "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 9,
         "w": 8,
         "x": 16,
-        "y": 60
+        "y": 114
       },
-      "id": 37,
+      "hiddenSeries": false,
+      "id": 67,
       "legend": {
         "avg": false,
         "current": false,
@@ -1822,9 +3304,10 @@
       },
       "lines": true,
       "linewidth": 1,
-      "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -1835,18 +3318,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(libra_consensus_proposal_failure_wait_s_sum[1m])/irate(libra_consensus_proposal_failure_wait_s_count[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "expr": "libra_consensus_block_retrieval_channel_msgs_count{state=\"enqueued\"} - on (peer_id) libra_consensus_block_retrieval_channel_msgs_count{state=\"dequeued\"}",
+          "legendFormat": "{{peer_id}}: pending",
           "refId": "A"
+        },
+        {
+          "expr": "libra_consensus_block_retrieval_channel_msgs_count{state=\"dropped\"}",
+          "legendFormat": "{{peer_id}}: dropped",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Avg time waiting for proposal failure",
+      "title": "Consensus -> Main loop (Block retrieval)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1862,11 +3348,11 @@
       },
       "yaxes": [
         {
-          "format": "ms",
-          "label": "",
+          "format": "short",
+          "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
@@ -1888,15 +3374,18 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "description": "Count of the votes that passed the timestamp rules and did not have to wait",
-      "fill": 0,
+      "datasource": null,
+      "description": "",
+      "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
-        "h": 8,
+        "h": 9,
         "w": 8,
         "x": 0,
-        "y": 68
+        "y": 123
       },
-      "id": 38,
+      "hiddenSeries": false,
+      "id": 68,
       "legend": {
         "avg": false,
         "current": false,
@@ -1908,9 +3397,10 @@
       },
       "lines": true,
       "linewidth": 1,
-      "links": [],
       "nullPointMode": "null",
-      "options": {},
+      "options": {
+        "dataLinks": []
+      },
       "percentage": false,
       "pointradius": 2,
       "points": false,
@@ -1921,18 +3411,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_votes_count{state='no_wait_required'}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "expr": "libra_consensus_pending_self_messages",
+          "legendFormat": "{{peer_id}}: self message",
           "refId": "A"
+        },
+        {
+          "expr": "libra_consensus_pending_round_timeouts",
+          "legendFormat": "{{peer_id}}: timeout",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Vote no wait required count",
+      "title": "Pending self message & local timeout",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1949,10 +3442,10 @@
       "yaxes": [
         {
           "format": "short",
-          "label": "count",
+          "label": null,
           "logBase": 1,
           "max": null,
-          "min": "0",
+          "min": null,
           "show": true
         },
         {
@@ -1970,445 +3463,30 @@
       }
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "description": "Count of the votes where passing the timestamp rules required waiting",
-      "fill": 0,
+      "collapsed": false,
+      "datasource": null,
       "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 68
-      },
-      "id": 39,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "libra_consensus_votes_count{state='wait_was_required'}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Vote wait was required count",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "count",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "description": "Count of the votes that were not made due to the waiting period exceeding the maximum allowed duration, breaking timestamp rules",
-      "fill": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 68
-      },
-      "id": 40,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "libra_consensus_votes_count{state='max_wait_exceeded'}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Vote maximum wait exceeded count",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "count",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "description": "Count of the votes that were not made due to waiting to ensure the current time exceeds min_duration_since_epoch failed, breaking timestamp rules",
-      "fill": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
+        "h": 1,
+        "w": 24,
         "x": 0,
-        "y": 76
+        "y": 132
       },
-      "id": 41,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "libra_consensus_votes_count{state='wait_failed'}",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Vote wait failed count",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "count",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "description": "Average time waited for successfully having the ability to vote (both those that waited and didn't wait) after following timestamp rules.  A success only means that a replica has an opportunity to vote.  It may not vote if it doesn't pass the voting rules.",
-      "fill": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 76
-      },
-      "id": 42,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "irate(libra_consensus_vote_success_wait_s_sum[1m])/irate(libra_consensus_vote_success_wait_s_count[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Avg time waiting for ability to vote success",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "ms",
-          "label": "",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "description": "Average time waited for failing to have the ability to vote (both those that waited and didn't wait) while trying to follow timestamp rules",
-      "fill": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 76
-      },
-      "id": 43,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "irate(libra_consensus_vote_failure_wait_s_sum[1m])/irate(libra_consensus_vote_failure_wait_s_count[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Avg time waiting for ability to vote failure",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "ms",
-          "label": "",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
+      "id": 82,
+      "panels": [],
+      "title": "Running",
+      "type": "row"
     }
   ],
-  "schemaVersion": 18,
+  "refresh": false,
+  "schemaVersion": 22,
   "style": "dark",
   "tags": [],
   "templating": {
     "list": []
   },
   "time": {
-    "from": "now-3h",
-    "to": "now"
+    "from": "2020-06-16T20:27:13.071Z",
+    "to": "2020-06-16T20:54:49.165Z"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -2436,7 +3514,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "Consensus",
-  "uid": "lDnunt7Zk",
-  "version": 1
+  "title": "Consensus-1",
+  "uid": "Zslv6zWGz",
+  "version": 21
 }
