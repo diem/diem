@@ -204,6 +204,9 @@
 <span id="204">204</span>
 <span id="205">205</span>
 <span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -234,7 +237,10 @@
     <span class="ident">validator_signer</span>::<span class="ident">ValidatorSigner</span>,
     <span class="ident">validator_verifier</span>::<span class="ident">ValidatorVerifier</span>,
 };
-<span class="kw">use</span> <span class="ident">network</span>::<span class="ident">peer_manager</span>::{<span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerRequestSender</span>};
+<span class="kw">use</span> <span class="ident">network</span>::{
+    <span class="ident">peer_manager</span>::{<span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerRequestSender</span>},
+    <span class="ident">protocols</span>::<span class="ident">network</span>::<span class="ident">NewNetworkSender</span>,
+};
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 <span class="kw">use</span> <span class="ident">safety_rules</span>::{<span class="ident">test_utils</span>, <span class="ident">SafetyRules</span>, <span class="ident">TSafetyRules</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">BTreeMap</span>, <span class="ident">num</span>::<span class="ident">NonZeroUsize</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};

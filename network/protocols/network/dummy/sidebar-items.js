@@ -1,1 +1,0 @@
-initSidebarItems({"fn":[["setup_network","The following sets up a 2 peer network and verifies connectivity."]],"struct":[["DummyMsg",""],["DummyNetwork",""],["DummyNetworkSender",""]],"type":[["DummyNetworkEvents","TODO(davidiw): In DummyNetwork, replace DummyMsg with a Serde compatible type once migration is complete"]]});

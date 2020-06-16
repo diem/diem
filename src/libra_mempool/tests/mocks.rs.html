@@ -144,6 +144,7 @@
 <span id="144">144</span>
 <span id="145">145</span>
 <span id="146">146</span>
+<span id="147">147</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -162,8 +163,9 @@
     <span class="ident">network_id</span>::<span class="ident">NetworkId</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">mempool_status</span>::<span class="ident">MempoolStatusCode</span>, <span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>};
-<span class="kw">use</span> <span class="ident">network</span>::<span class="ident">peer_manager</span>::{
-    <span class="ident">conn_notifs_channel</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerRequestSender</span>,
+<span class="kw">use</span> <span class="ident">network</span>::{
+    <span class="ident">peer_manager</span>::{<span class="ident">conn_notifs_channel</span>, <span class="ident">ConnectionRequestSender</span>, <span class="ident">PeerManagerRequestSender</span>},
+    <span class="ident">protocols</span>::<span class="ident">network</span>::{<span class="ident">NewNetworkEvents</span>, <span class="ident">NewNetworkSender</span>},
 };
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">num</span>::<span class="ident">NonZeroUsize</span>,

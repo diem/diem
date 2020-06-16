@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["setup_environment",""],["setup_network",""]],"struct":[["LibraHandle",""]]});
+initSidebarItems({"fn":[["setup_environment",""]],"struct":[["LibraHandle",""]]});

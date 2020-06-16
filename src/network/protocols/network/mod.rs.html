@@ -258,6 +258,19 @@
 <span id="258">258</span>
 <span id="259">259</span>
 <span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -285,11 +298,6 @@
 <span class="kw">use</span> <span class="ident">pin_project</span>::<span class="ident">pin_project</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">de</span>::<span class="ident">DeserializeOwned</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">marker</span>::<span class="ident">PhantomData</span>, <span class="ident">pin</span>::<span class="ident">Pin</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
-
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;testing&quot;</span>, <span class="ident">test</span>))]</span>
-<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">dummy</span>;
-<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
-<span class="kw">mod</span> <span class="ident">test</span>;
 
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">Message</span>: <span class="ident">DeserializeOwned</span> <span class="op">+</span> <span class="ident">Serialize</span> {}
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">DeserializeOwned</span> <span class="op">+</span> <span class="ident">Serialize</span><span class="op">&gt;</span> <span class="ident">Message</span> <span class="kw">for</span> <span class="ident">T</span> {}
@@ -356,8 +364,16 @@
     <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">TMessage</span>: <span class="ident">Message</span><span class="op">&gt;</span> <span class="ident">NetworkEvents</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+<span class="doccomment">/// Trait specifying the signature for `new()` `NetworkEvents`</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">NewNetworkEvents</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">peer_mgr_notifs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">ProtocolId</span>), <span class="ident">PeerManagerNotification</span><span class="op">&gt;</span>,
+        <span class="ident">connection_notifs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionNotification</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>;
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">TMessage</span>: <span class="ident">Message</span><span class="op">&gt;</span> <span class="ident">NewNetworkEvents</span> <span class="kw">for</span> <span class="ident">NetworkEvents</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">peer_mgr_notifs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">ProtocolId</span>), <span class="ident">PeerManagerNotification</span><span class="op">&gt;</span>,
         <span class="ident">connection_notifs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionNotification</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -439,8 +455,16 @@
     <span class="ident">_marker</span>: <span class="ident">PhantomData</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span> <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
+<span class="doccomment">/// Trait specifying the signature for `new()` `NetworkSender`s</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">NewNetworkSender</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(
+        <span class="ident">peer_mgr_reqs_tx</span>: <span class="ident">PeerManagerRequestSender</span>,
+        <span class="ident">connection_reqs_tx</span>: <span class="ident">ConnectionRequestSender</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>;
+}
+
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span> <span class="ident">NewNetworkSender</span> <span class="kw">for</span> <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">peer_mgr_reqs_tx</span>: <span class="ident">PeerManagerRequestSender</span>,
         <span class="ident">connection_reqs_tx</span>: <span class="ident">ConnectionRequestSender</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -450,7 +474,9 @@
             <span class="ident">_marker</span>: <span class="ident">PhantomData</span>,
         }
     }
+}
 
+<span class="kw">impl</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span> <span class="ident">NetworkSender</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Request that a given Peer be dialed at the provided `NetworkAddress` and</span>
     <span class="doccomment">/// synchronously wait for the request to be performed.</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">dial_peer</span>(

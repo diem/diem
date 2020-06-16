@@ -322,7 +322,7 @@
 <span class="doccomment">//! [`NetworkProvider`] actor. Inbound RPC requests are forwarded to the appropriate</span>
 <span class="doccomment">//! handler, determined using the protocol negotiated on the RPC substream.</span>
 <span class="kw">use</span> <span class="kw">crate</span>::{
-    <span class="ident">counters</span>,
+    <span class="ident">constants</span>, <span class="ident">counters</span>,
     <span class="ident">peer</span>::{<span class="ident">Peer</span>, <span class="ident">PeerHandle</span>, <span class="ident">PeerNotification</span>},
     <span class="ident">peer_manager</span>::<span class="ident">TransportNotification</span>,
     <span class="ident">protocols</span>::{
@@ -330,7 +330,7 @@
         <span class="ident">rpc</span>::{<span class="ident">InboundRpcRequest</span>, <span class="ident">OutboundRpcRequest</span>, <span class="ident">Rpc</span>, <span class="ident">RpcNotification</span>},
     },
     <span class="ident">transport</span>::<span class="ident">Connection</span>,
-    <span class="ident">validator_network</span>, <span class="ident">ProtocolId</span>,
+    <span class="ident">ProtocolId</span>,
 };
 <span class="kw">use</span> <span class="ident">channel</span>::{<span class="self">self</span>, <span class="ident">libra_channel</span>, <span class="ident">message_queues</span>::<span class="ident">QueueStyle</span>};
 <span class="kw">use</span> <span class="ident">futures</span>::{
@@ -439,9 +439,9 @@
             <span class="ident">rpc_reqs_rx</span>,
             <span class="ident">peer_rpc_notifs_rx</span>,
             <span class="ident">rpc_notifs_tx</span>,
-            <span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="ident">validator_network</span>::<span class="ident">network_builder</span>::<span class="ident">INBOUND_RPC_TIMEOUT_MS</span>),
-            <span class="ident">validator_network</span>::<span class="ident">network_builder</span>::<span class="ident">MAX_CONCURRENT_OUTBOUND_RPCS</span>,
-            <span class="ident">validator_network</span>::<span class="ident">network_builder</span>::<span class="ident">MAX_CONCURRENT_INBOUND_RPCS</span>,
+            <span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="ident">constants</span>::<span class="ident">INBOUND_RPC_TIMEOUT_MS</span>),
+            <span class="ident">constants</span>::<span class="ident">MAX_CONCURRENT_OUTBOUND_RPCS</span>,
+            <span class="ident">constants</span>::<span class="ident">MAX_CONCURRENT_INBOUND_RPCS</span>,
         );
         <span class="ident">executor</span>.<span class="ident">spawn</span>(<span class="ident">rpc</span>.<span class="ident">start</span>());
 
