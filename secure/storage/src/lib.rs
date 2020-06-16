@@ -40,7 +40,7 @@ impl From<&SecureBackend> for Storage {
         match backend {
             SecureBackend::GitHub(config) => {
                 let storage = GitHubStorage::new(
-                    config.owner.clone(),
+                    config.repository_owner.clone(),
                     config.repository.clone(),
                     config.token.read_token().expect("Unable to read token"),
                 );
