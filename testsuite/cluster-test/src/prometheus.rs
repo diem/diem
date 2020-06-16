@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{bail, format_err, Result};
+use libra_logger::debug;
 use reqwest::Url;
 use serde::Deserialize;
 use std::{collections::HashMap, time::Duration};
@@ -65,7 +66,7 @@ impl Prometheus {
                 step
             ))
             .expect("Failed to make query_range url");
-
+        debug!("Query url is: {:?}", url);
         let response = self
             .client
             .get(url.clone())
@@ -88,6 +89,7 @@ impl Prometheus {
             ),
         }
     }
+
     pub fn query_range_avg(
         &self,
         query: String,
@@ -100,9 +102,42 @@ impl Prometheus {
             .avg()
             .ok_or_else(|| format_err!("Failed to compute avg"))
     }
+
+    pub fn query_range_max(
+        &self,
+        query: String,
+        start: &Duration,
+        end: &Duration,
+        step: u64,
+    ) -> Result<HashMap<String, f64>> {
+        let response = self.query_range(query, start, end, step)?;
+        response
+            .max()
+            .ok_or_else(|| format_err!("Failed to compute max"))
+    }
 }
 
 impl MatrixResponse {
+    pub fn max(&self) -> Option<HashMap<String, f64>> {
+        let mut max = HashMap::new();
+        for (peer_id, time_series) in &self.inner {
+            let cur_max = time_series
+                .inner
+                .iter()
+                .map(|tuple| tuple.1)
+                // Some time series can return NaN, but f64::max always
+                // chooses the non-NaN argument
+                .fold(f64::NAN, f64::max);
+
+            max.insert(peer_id.clone(), cur_max);
+        }
+        if max.is_empty() {
+            None
+        } else {
+            Some(max)
+        }
+    }
+
     pub fn avg(&self) -> Option<f64> {
         if self.inner.is_empty() {
             return None;

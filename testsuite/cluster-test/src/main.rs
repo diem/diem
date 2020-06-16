@@ -157,7 +157,7 @@ pub async fn main() {
     } else if args.health_check && args.swarm {
         let util = BasicSwarmUtil::setup(&args);
         let logs = DebugPortLogWorker::spawn_new(&util.cluster).0;
-        let mut health_check_runner = HealthCheckRunner::new_all(util.cluster);
+        let mut health_check_runner = HealthCheckRunner::new_all(util.cluster, None);
         let duration = Duration::from_secs(args.duration);
         exit_on_error(run_health_check(&logs, &mut health_check_runner, duration));
         return;
@@ -525,7 +525,8 @@ impl ClusterTestRunner {
             "Log tail thread started in {} ms",
             log_tail_startup_time.as_millis()
         );
-        let health_check_runner = HealthCheckRunner::new_all(cluster.clone());
+        let health_check_runner =
+            HealthCheckRunner::new_all(cluster.clone(), Some(util.prometheus.clone()));
         let experiment_interval_sec = match env::var("EXPERIMENT_INTERVAL") {
             Ok(s) => s.parse().expect("EXPERIMENT_INTERVAL env is not a number"),
             Err(..) => 15,

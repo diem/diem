@@ -5,13 +5,15 @@
 
 mod commit_check;
 mod debug_interface_log_tail;
+mod fullnode_check;
 mod liveness_check;
 mod log_tail;
 
-use crate::{cluster::Cluster, util::unix_timestamp_now};
+use crate::{cluster::Cluster, prometheus::Prometheus, util::unix_timestamp_now};
 use anyhow::{bail, Result};
 pub use commit_check::CommitHistoryHealthCheck;
 pub use debug_interface_log_tail::DebugPortLogWorker;
+pub use fullnode_check::FullNodeHealthCheck;
 use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
 pub use log_tail::{LogTail, TraceTail};
@@ -59,7 +61,7 @@ impl fmt::Debug for ValidatorEvent {
 
 pub trait HealthCheck {
     /// Verify specific event
-    fn on_event(&mut self, event: &ValidatorEvent, ctx: &mut HealthCheckContext);
+    fn on_event(&mut self, _event: &ValidatorEvent, _ctx: &mut HealthCheckContext) {}
     /// Periodic verification (happens even if when no events produced)
     fn verify(&mut self, _ctx: &mut HealthCheckContext) {}
     /// Optionally marks validator as failed, requiring waiting for at least one event from it to
@@ -87,15 +89,18 @@ impl HealthCheckRunner {
         }
     }
 
-    pub fn new_all(cluster: Cluster) -> Self {
+    pub fn new_all(cluster: Cluster, prometheus: Option<Prometheus>) -> Self {
+        let mut health_check: Vec<Box<dyn HealthCheck>> = vec![];
         let liveness_health_check = LivenessHealthCheck::new(&cluster);
-        Self::new(
-            cluster,
-            vec![
-                Box::new(CommitHistoryHealthCheck::new()),
-                Box::new(liveness_health_check),
-            ],
-        )
+        health_check.push(Box::new(CommitHistoryHealthCheck::new()));
+        health_check.push(Box::new(liveness_health_check));
+        if let Some(p) = prometheus.as_ref() {
+            health_check.push(Box::new(FullNodeHealthCheck::new(
+                cluster.clone(),
+                p.clone(),
+            )))
+        };
+        Self::new(cluster, health_check)
     }
 
     /// Takes a list of affected_validators. If there are validators which failed
