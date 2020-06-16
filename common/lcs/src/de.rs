@@ -155,12 +155,16 @@ impl<'de> Deserializer<'de> {
         Err(Error::IntegerOverflowDuringUleb128Decoding)
     }
 
-    fn parse_bytes(&mut self) -> Result<&'de [u8]> {
+    fn parse_length(&mut self) -> Result<usize> {
         let len = self.parse_u32_from_uleb128()? as usize;
         if len > crate::MAX_SEQUENCE_LENGTH {
             return Err(Error::ExceededMaxLen(len));
         }
+        Ok(len)
+    }
 
+    fn parse_bytes(&mut self) -> Result<&'de [u8]> {
+        let len = self.parse_length()?;
         let slice = self.input.get(..len).ok_or(Error::Eof)?;
         self.input = &self.input[len..];
         Ok(slice)
@@ -347,11 +351,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        let len = self.parse_u32_from_uleb128()? as usize;
-        if len > crate::MAX_SEQUENCE_LENGTH {
-            return Err(Error::ExceededMaxLen(len));
-        }
-
+        let len = self.parse_length()?;
         visitor.visit_seq(SeqDeserializer::new(&mut self, len))
     }
 
@@ -378,11 +378,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut Deserializer<'de> {
     where
         V: Visitor<'de>,
     {
-        let len = self.parse_u32_from_uleb128()? as usize;
-        if len > crate::MAX_SEQUENCE_LENGTH {
-            return Err(Error::ExceededMaxLen(len));
-        }
-
+        let len = self.parse_length()?;
         visitor.visit_map(MapDeserializer::new(&mut self, len))
     }
 
