@@ -130,14 +130,14 @@ pub fn setup_network() -> DummyNetwork {
         network_id.clone(),
         RoleType::Validator,
         listener_peer_id,
-        listener_addr,
+        listener_addr.clone(),
     );
     network_builder
         .authentication_mode(AuthenticationMode::Mutual(listener_identity_private_key))
         .trusted_peers(trusted_peers.clone())
         .add_connectivity_manager();
     let (listener_sender, mut listener_events) = add_to_network(&mut network_builder);
-    let listener_addr = network_builder.build();
+    network_builder.build();
 
     // Set up the dialer network
     let mut network_builder = NetworkBuilder::new(
@@ -159,7 +159,7 @@ pub fn setup_network() -> DummyNetwork {
         )
         .add_connectivity_manager();
     let (dialer_sender, mut dialer_events) = add_to_network(&mut network_builder);
-    let _dialer_addr = network_builder.build();
+    network_builder.build();
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();

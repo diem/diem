@@ -403,7 +403,7 @@ impl NetworkBuilder {
 
     /// Create the configured transport and start PeerManager.
     /// Return the actual NetworkAddress over which this peer is listening.
-    pub fn build(mut self) -> NetworkAddress {
+    pub fn build(mut self) {
         use libra_network_address::Protocol::*;
 
         let chain_id = self.chain_id.clone();
@@ -462,12 +462,12 @@ impl NetworkBuilder {
                  '/ip4/<addr>/tcp/<port>', or '/ip6/<addr>/tcp/<port>'.",
                 self.network_context, self.listen_address
             ),
-        }
+        };
     }
 
     /// Given a transport build and launch PeerManager.
     /// Return the actual NetworkAddress over which this peer is listening.
-    fn build_with_transport<TTransport, TSocket>(self, transport: TTransport) -> NetworkAddress
+    fn build_with_transport<TTransport, TSocket>(self, transport: TTransport)
     where
         TTransport: Transport<Output = Connection<TSocket>> + Send + 'static,
         TSocket: transport::TSocket,
@@ -487,11 +487,8 @@ impl NetworkBuilder {
             self.max_concurrent_network_notifs,
             self.channel_size,
         );
-        let listen_addr = peer_mgr.listen_addr().clone();
 
         self.executor.spawn(peer_mgr.start());
         debug!("{} Started peer manager", self.network_context);
-
-        listen_addr
     }
 }

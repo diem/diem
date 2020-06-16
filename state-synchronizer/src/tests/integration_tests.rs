@@ -258,7 +258,7 @@ impl SynchronizerEnv {
             self.network_id.clone(),
             RoleType::Validator,
             self.peer_ids[new_peer_idx],
-            addr,
+            addr.clone(),
         );
         network_builder
             .authentication_mode(AuthenticationMode::Mutual(
@@ -270,7 +270,7 @@ impl SynchronizerEnv {
             .add_gossip_discovery();
 
         let (sender, events) = crate::network::add_to_network(&mut network_builder);
-        let peer_addr = network_builder.build();
+        network_builder.build();
 
         let mut config = config_builder::test_config().0;
         let network = config.validator_network.unwrap();
@@ -309,7 +309,7 @@ impl SynchronizerEnv {
         self.synchronizers.push(synchronizer);
         self.clients.push(client);
         self.storage_proxies.push(storage_proxy);
-        self.peer_addresses.push(peer_addr);
+        self.peer_addresses.push(addr);
     }
 
     fn default_handler() -> MockRpcHandler {
