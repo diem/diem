@@ -557,63 +557,6 @@ jobs:
           name: Deploy to gh-pages branch
           command: |
             gh-pages --dotfiles --message "[skip ci] documentation update" --dist target/doc
-  premainnet-cluster-test:
-    executor: premainnet-cluster-test-executor
-    description: Run cluster test against Premainnet
-    steps:
-      - run:
-          name: Set Premainnet Clustetest Environment
-          command: |
-            # Please see the runbook to determine when to update these values: https://fb.quip.com/FnSVAppvJaT9
-            echo Premainnet git revision $PREMAINNET_GIT_REVISION
-            echo 'export NODES=aa4d66f81665240019022d50326c1654-cf61b8e99df12293.elb.eu-west-1.amazonaws.com:80,\
-            aa82477d9b73b4531976e66cd4076eed-a1a497567aecf78e.elb.eu-west-1.amazonaws.com:80,\
-            a0aa8f8cacac149bb8d5bd891fda3dfa-2285ad042afe7e20.elb.us-east-1.amazonaws.com:80,\
-            a0be2811e181148f193dbb130042ca17-fa9afbb369bf4b77.elb.us-west-2.amazonaws.com:80,\
-            a092976324bb748d7b2885dc64e6c71a-dac92eeea83a39b1.elb.us-west-2.amazonaws.com:80,\
-            a11d2e31854e811eaa1f702474484dd1-21dcb00bef9f6cc0.elb.us-west-2.amazonaws.com:80,\
-            a6c7d5afc80de11ea9bcd0a7a792c33e-564886650.ap-southeast-1.elb.amazonaws.com:80,\
-            libra-fullnode-pre-mainnet.shopifyapps.com:80,\
-            3.230.173.177:32251,\
-            20.50.43.42:80,\
-            34.68.134.0:80,\
-            34.96.244.174:80,\
-            35.246.147.6:80,\
-            51.159.75.165:80,\
-            104.197.179.142:80' >> $BASH_ENV
-            echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
-            echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
-      - checkout
-      - run:
-          name: Get premain git revision
-          command: git checkout $PREMAINNET_GIT_REVISION
-      - rust_setup
-      - print_versions
-      - env_setup
-      - install_deps
-      - run:
-          name: Build config-builder
-          command: |
-            cargo build -p config-builder
-      - run:
-          name: Build cluster-test
-          command: |
-            cargo build -p cluster-test
-      - run:
-          name: Generate premaintnet config key
-          command: |
-            cargo run -p config-builder -- faucet \
-            --output-dir "/tmp/config" \
-            --validators-in-genesis $PREMAINNET_NUM_VAL \
-            --seed $PREMAINNET_CONFIG_SEED
-      - run:
-          name: Premainnet cluster test
-          command: |
-            cargo run -p cluster-test -- --swarm --emit-tx --mint-file /tmp/config/mint.key --peers $NODES
-      - slack/status:
-          fail_only: true
-          webhook: "${WEBHOOK_PREMAINNET}"
-          failure_message: "<@channel> Cluster test failed on premainnet :ferris-detective:"
 workflows:
   commit-workflow:
     jobs:
@@ -665,13 +608,3 @@ workflows:
     jobs:
       - audit
       - code-coverage
-
-  premainnet-clustertest:
-    triggers:
-      - schedule:
-          cron: "0 * * * *"
-          filters:
-            branches:
-              only: master
-    jobs:
-      - premainnet-cluster-test
