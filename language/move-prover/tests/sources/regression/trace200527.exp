@@ -6,11 +6,11 @@ error:  A postcondition might not hold on this return path.
  31 │         ensures sender() == root_address();
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     ·
- 15 │             all(domain<address>(), |addr| exists<Root>(TRACE(addr)) ==> TRACE(addr) == root_address())
-    │                                                        ----------- <redacted>
+ 15 │             forall addr: address: exists<Root>(TRACE(addr)) ==> TRACE(addr) == root_address()
+    │                                                ----------- <redacted>
     ·
- 15 │             all(domain<address>(), |addr| exists<Root>(TRACE(addr)) ==> TRACE(addr) == root_address())
-    │                                                                         ----------- <redacted>
+ 15 │             forall addr: address: exists<Root>(TRACE(addr)) ==> TRACE(addr) == root_address()
+    │                                                                 ----------- <redacted>
     │
     =     at tests/sources/regression/trace200527.move:20:5: assert_sender_is_root (entry)
     =     at tests/sources/regression/trace200527.move:22:9: assert_sender_is_root

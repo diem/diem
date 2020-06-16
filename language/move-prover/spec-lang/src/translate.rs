@@ -490,7 +490,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("all"),
+                self.builtin_fun_symbol("$spec_all"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::All,
@@ -501,7 +501,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("any"),
+                self.builtin_fun_symbol("$spec_any"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Any,
@@ -525,7 +525,7 @@ impl<'env> Translator<'env> {
             // Ranges
             add_builtin(
                 self,
-                self.builtin_fun_symbol("all"),
+                self.builtin_fun_symbol("$spec_all"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::All,
@@ -536,7 +536,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("any"),
+                self.builtin_fun_symbol("$spec_any"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Any,
@@ -584,7 +584,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("domain"),
+                self.builtin_fun_symbol("$spec_domain"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::TypeDomain,
@@ -595,7 +595,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("all"),
+                self.builtin_fun_symbol("$spec_all"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::All,
@@ -606,7 +606,7 @@ impl<'env> Translator<'env> {
             );
             add_builtin(
                 self,
-                self.builtin_fun_symbol("any"),
+                self.builtin_fun_symbol("$spec_any"),
                 SpecFunEntry {
                     loc: loc.clone(),
                     oper: Operation::Any,
@@ -3371,7 +3371,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
             if let Some(entry) = self.lookup_local(sym) {
                 // Check whether the local has the expected function type.
                 let sym_ty = entry.type_.clone();
-                let (arg_types, args) = self.translate_exp_list(args);
+                let (arg_types, args) = self.translate_exp_list(args, false);
                 let fun_t = Type::Fun(arg_types, Box::new(expected_type.clone()));
                 let sym_ty = self.check_type(&loc, &sym_ty, &fun_t, "in expression");
                 let local_id = self.new_node_id_with_type_loc(&sym_ty, &self.to_loc(&n.loc));
@@ -3682,8 +3682,9 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     ) -> Exp {
         // Translate generic arguments, if any.
         let generics = generics.as_ref().map(|ts| self.translate_types(&ts));
-        // Translate arguments.
-        let (arg_types, args) = self.translate_exp_list(args);
+        // Translate arguments. Skip any lambda expressions; they are resolved after the overload
+        // is identified to avoid restrictions with type inference.
+        let (arg_types, mut translated_args) = self.translate_exp_list(args, true);
         // Lookup candidates.
         let cand_modules = if let Some(m) = module {
             vec![m.clone()]
@@ -3713,13 +3714,13 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         let mut outruled = vec![];
         let mut matching = vec![];
         for cand in &cands {
-            if cand.arg_types.len() != args.len() {
+            if cand.arg_types.len() != translated_args.len() {
                 outruled.push((
                     cand,
                     format!(
                         "argument count mismatch (expected {} but found {})",
                         cand.arg_types.len(),
-                        args.len()
+                        translated_args.len()
                     ),
                 ));
                 continue;
@@ -3770,6 +3771,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 let (cand, subs, instantiation) = matching.remove(0);
                 // Commit the candidate substitution to this expression translator.
                 self.subs = subs;
+                // Now translate lambda-based arguments passing expected type to aid type inference.
+                for i in 0..translated_args.len() {
+                    let e = args[i];
+                    if matches!(e.value, EA::Exp_::Lambda(..)) {
+                        let expected_type = self.subs.specialize(&arg_types[i]);
+                        translated_args[i] = self.translate_exp(e, &expected_type);
+                    }
+                }
                 // Check result type against expected type.
                 let ty = self.check_type(
                     loc,
@@ -3780,7 +3789,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 // Construct result.
                 let id = self.new_node_id_with_type_loc(&ty, loc);
                 self.set_instantiation(id, instantiation);
-                Exp::Call(id, cand.oper.clone(), args)
+                Exp::Call(id, cand.oper.clone(), translated_args)
             }
             _ => {
                 let display = self.display_call_target(module, name);
@@ -3804,12 +3813,22 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     }
 
     /// Translate a list of expressions and deliver them together with their types.
-    fn translate_exp_list(&mut self, exps: &[&EA::Exp]) -> (Vec<Type>, Vec<Exp>) {
+    fn translate_exp_list(
+        &mut self,
+        exps: &[&EA::Exp],
+        skip_lambda: bool,
+    ) -> (Vec<Type>, Vec<Exp>) {
         let mut types = vec![];
         let exps = exps
             .iter()
             .map(|e| {
-                let (t, e) = self.translate_exp_free(e);
+                let (t, e) = if !skip_lambda || !matches!(e.value, EA::Exp_::Lambda(..)) {
+                    self.translate_exp_free(e)
+                } else {
+                    // In skip-lambda mode, just create a fresh type variable. We translate
+                    // the expression in a second pass, once the expected type is known.
+                    (self.fresh_type_var(), Exp::Error(NodeId::new(0)))
+                };
                 types.push(t);
                 e
             })
@@ -3969,16 +3988,16 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 }
             }
         }
-        // Translate the body.
+        // Create a fresh type variable for the body and check expected type before analyzing
+        // body. This aids type inference for the lambda parameters.
         let ty = self.fresh_type_var();
-        let rbody = self.translate_exp(body, &ty);
-        // Check types and construct result.
         let rty = self.check_type(
             loc,
-            &Type::Fun(arg_types, Box::new(ty)),
+            &Type::Fun(arg_types, Box::new(ty.clone())),
             expected_type,
-            "in lambda body",
+            "in lambda",
         );
+        let rbody = self.translate_exp(body, &ty);
         let id = self.new_node_id_with_type_loc(&rty, loc);
         Exp::Lambda(id, decls, Box::new(rbody))
     }

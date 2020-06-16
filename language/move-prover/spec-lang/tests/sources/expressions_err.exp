@@ -48,14 +48,13 @@ error: no matching declaration of `M::wrongly_typed_callee`
     │
     = outruled candidate `M::wrongly_typed_callee(num, bool): num` (expected `bool` but found `u128` for argument 2)
 
-error: no matching declaration of `M::wrongly_typed_fun_arg_callee`
+error: expected `num` but found `bool` in expression
 
-    ┌── tests/sources/expressions_err.move:41:50 ───
+    ┌── tests/sources/expressions_err.move:41:83 ───
     │
  41 │     define wrongly_typed_fun_arg_caller(): num { wrongly_typed_fun_arg_callee(|x| false) }
-    │                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │                                                                                   ^^^^^
     │
-    = outruled candidate `M::wrongly_typed_fun_arg_callee(|num|num): num` (expected `num` but found `bool` for argument 1)
 
 error: no matching declaration of `M::wrong_instantiation`
 

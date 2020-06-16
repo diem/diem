@@ -46,19 +46,3 @@ error: [boogie translator] Shr not yet supported
  38 │             8 >> 2
     │             ^^^^^^
     │
-
-error: [boogie translator] currently 2nd argument must be a lambda
-
-    ┌── tests/sources/functional/restrictions.move:43:13 ───
-    │
- 43 │             all(x, p) && any(x, p)
-    │             ^^^^^^^^^
-    │
-
-error: [boogie translator] currently 2nd argument must be a lambda
-
-    ┌── tests/sources/functional/restrictions.move:43:26 ───
-    │
- 43 │             all(x, p) && any(x, p)
-    │                          ^^^^^^^^^
-    │

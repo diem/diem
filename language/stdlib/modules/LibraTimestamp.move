@@ -91,7 +91,7 @@ module LibraTimestamp {
     spec module {
         /// **Informally:** Only the root address has a CurrentTimeMicroseconds struct.
         define only_root_addr_has_ctm(): bool {
-            all(domain<address>(), |addr|
+            (forall addr: address:
                 exists<CurrentTimeMicroseconds>(addr)
                     ==> addr == root_address())
         }
@@ -103,7 +103,7 @@ module LibraTimestamp {
         /// **Informally:** If the root account hasn't been initialized with
         /// CurrentTimeMicroseconds, then it should not exist.
         invariant module !root_ctm_initialized()
-                            ==> all(domain<address>(), |addr| !exists<CurrentTimeMicroseconds>(addr));
+                            ==> (forall addr: address: !exists<CurrentTimeMicroseconds>(addr));
         /// Induction hypothesis for invariant after initialization.
         ///
         /// **Informally:** Only the association account has a timestamp `CurrentTimeMicroseconds`.
