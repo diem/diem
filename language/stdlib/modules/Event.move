@@ -1,5 +1,11 @@
 address 0x1 {
 
+/**
+The Event module defines an `EventHandleGenerator` that is used to create
+`EventHandle`s with unique GUIDs. It contains a counter for the number
+of `EventHandle`s it generates. An `EventHandle` is used to count the number of
+events emitted to a handle and emit events to the event store.
+*/
 module Event {
     use 0x1::LCS;
     use 0x1::Signer;
@@ -72,68 +78,72 @@ module Event {
 
     // ****************** SPECIFICATIONS *******************
 
-    /**
-        The Event module defines an `EventHandleGenerator` that is used to create
-        unqiue `EventHandle`s based on a strictly monotonically increasing counter.
-        An `EventHandle` counts the number of events emitted to a unique handle
-        for a partilar GUID.
-    */
-
     /// # Module specifications
     spec module {
         /// Helper function that returns whether or not an EventHandleGenerator is
         /// initilaized at the given address `addr`.
-        define initialized_ehg(addr: address): bool {
+        define ehg_exists(addr: address): bool {
             exists<EventHandleGenerator>(addr)
         }
         /// Helper function that returns the EventHandleGenerator at `addr`.
-        define ehg(addr: address): EventHandleGenerator {
+        define get_ehg(addr: address): EventHandleGenerator {
             global<EventHandleGenerator>(addr)
         }
-        // Helper function that returns the serialized counter of the `EventHandleGenerator` ehg.
+        /// Helper function that returns the serialized counter of the `EventHandleGenerator` ehg.
         define serialized_ehg_counter(ehg: EventHandleGenerator): vector<u8> {
             LCS::serialize(ehg.counter)
         }
-        // Helper function that returns the serialized address of the `EventHandleGenerator` ehg.
+        /// Helper function that returns the serialized address of the `EventHandleGenerator` ehg.
         define serialized_ehg_addr(ehg: EventHandleGenerator): vector<u8> {
             LCS::serialize(ehg.addr)
         }
     }
 
-    /// ## Creation and Uniqueness of `EventHandleGenerator`s
+    /// ## Management of EventHandleGenerators
 
     spec module {
+        /// `ehg_destroyed` is true whenever an `EventHandleGenerator` is destroyed.
+        /// It should never to true to preserve uniqueness of EventHandleGenerators.
         global ehg_destroyed: bool;
     }
     spec struct EventHandleGenerator {
+        /// Updates the ehg_destroyed variable to true if an
+        /// `EventHandleGenerator` is ever unpacked.
         invariant pack ehg_destroyed = ehg_destroyed;
         invariant unpack ehg_destroyed = true;
     }
     spec schema EventHandleGeneratorNeverDestroyed {
-        /// **Informally:** No EventHandleGenerator should ever be destroyed.
+        /// **Informally:** No `EventHandleGenerator` should ever be destroyed.
+        /// Together with `EventHandleGeneratorAtSameAddress`, the `EventHandleGenerator`s
+        /// can never be alternated.
         invariant module !ehg_destroyed;
     }
     spec schema EventHandleGeneratorAtSameAddress {
         /// **Informally:** An EventHandleGenerator should be located at `addr` and is never moved.
-        invariant module forall addr: address where initialized_ehg(addr): ehg(addr).addr == addr;
+        invariant module forall addr: address where ehg_exists(addr): get_ehg(addr).addr == addr;
     }
     spec module {
         /// Apply `EventHandleGeneratorNeverDestroyed` to all functions to ensure that the
         /// `EventHandleGenerator`s are never destroyed.
-        /// Together with `CounterMonotonicallyIncreases`, this proves the uniqueness of the
-        /// `EventHandleGenerator` resource throughout transient states at each address.
+        /// Together with `EHGCounterIncreasesOnEventHandleCreate`, this proves
+        /// the uniqueness of the `EventHandleGenerator` resource throughout transient
+        /// states at each address.
         /// Without this, the specification would allow an implementation to remove
         /// an `EventHandleGenerator`, say `ehg`, and then have it generate a number
         /// of events until the `ehg.counter` >= `old(ehg.counter)`. Violating the property
         /// that an EventHandleGenerator should only be used to generate unique GUIDs.
         ///
-        // BUG: Takes a long time (sometimes returns a precondition violation error)
-        // unless fresh_guid is excepted.
+        /// > TODO(#4549): Potential bug. Without `* except fresh_guid;`, this
+        /// takes a long time to return from the Boogie solver. Sometimes it
+        /// returns a precondition violation error quickly (seemingly
+        /// non-determistic). We expect all functions to satisfy this schema.
         apply EventHandleGeneratorNeverDestroyed to * except fresh_guid;
 
         /// Apply `EventHandleGeneratorAtSameAddress` to all functions to enforce
         /// that all `EventHandleGenerator`s reside at the address they hold.
-        // BUG: Takes a long time unless fresh_guid is excepted.
+        ///
+        /// > TODO(#4549): Potential bug. Refer to the previous TODO.
+        /// The solver takes a long time unless fresh_guid is excepted.
         apply EventHandleGeneratorAtSameAddress to * except fresh_guid;
     }
     spec fun publish_generator {
@@ -147,28 +157,48 @@ module Event {
     // Switch documentation context back to module level.
     spec module {}
 
-    /// ## Uniqueness of `EventHandleGenerator` and Counter Monotonicity
+    /// ## Uniqueness and Counter Incrementation of EventHandleGenerators
 
-    spec schema CounterMonotonicallyIncreases {
-        /// **Informally:** If the EventHandleGenerator has been initialized,
+    spec schema EHGCounterUnchanged {
+        /// **Informally:** If an `EventHandleGenerator` exists, then it never changes
+        /// except when a function generates a new `EventHandle` GUID.
+        ensures forall addr: address where old(ehg_exists(addr)):
+                    ehg_exists(addr) && get_ehg(addr).counter == old(get_ehg(addr).counter);
+    }
+
+    spec schema EHGCounterIncreasesOnEventHandleCreate {
+        /// **Informally:** If the `EventHandleGenerator` has been initialized,
         /// then the counter never decreases and stays initialized.
-        /// This proves the uniqueness of the EvenHandleGenerators between functions.
+        /// This proves the uniqueness of the `EventHandleGenerator`s at entry and
+        /// exit of functions in this module.
         ///
-        /// Base case
-        ensures forall addr: address where !old(initialized_ehg(addr)) && initialized_ehg(addr):
-                    ehg(addr).counter == 0;
-        /// Induction step
-        ensures forall addr: address where old(initialized_ehg(addr)):
-                    initialized_ehg(addr)
-                    && ehg(addr).counter >= old(ehg(addr).counter);
+        /// > TODO(#4549): Unable to prove thaat the counter increments using schemas.
+        /// However, we can prove the that the `EventHandleGenerator` increments
+        /// in the post conditions of the functions.
+        ///
+        /// Base case:
+        ensures forall addr: address where !old(ehg_exists(addr)) && ehg_exists(addr):
+                    get_ehg(addr).counter == 0;
+        /// Induction step:
+        ///
+        /// > TODO(kkmc): Change `counter >= old(counter)` to `counter == old(counter) + 1`
+        /// Currently, this can be proved at the function level but not the global invariant level.
+        ensures forall addr: address where old(ehg_exists(addr)):
+                    ehg_exists(addr) && get_ehg(addr).counter >= old(get_ehg(addr).counter);
     }
     spec module {
-        /// Apply `CounterMonotonicallyIncreases` to all functions to enforce monotonicity of
-        /// all EventHandleGenerator counters.
-        apply CounterMonotonicallyIncreases to *;
+        /// Apply `EHGCounterUnchanged` to all functions except for those
+        /// that create a new GUID and increment the `EventHandleGenerator` counter.
+        apply EHGCounterUnchanged to * except fresh_guid, new_event_handle;
+        /// Apply `EHGCounterIncreasesOnEventHandleCreate` to all functions except fresh_guid
+        /// and its callees.
+        apply EHGCounterIncreasesOnEventHandleCreate to *;
     }
     spec fun fresh_guid {
+        /// The byte array returned is the concatenation of the serialized
+        /// EventHandleGenerator counter and address.
         aborts_if counter.counter + 1 > max_u64();
+        ensures counter.counter == old(counter).counter + 1;
         ensures Vector::eq_append(
                     result,
                     old(serialized_ehg_counter(counter)),
@@ -179,7 +209,7 @@ module Event {
     // Switch documentation context back to module level.
     spec module {}
 
-    /// ## Creation and Uniqueness of `EventHandle`s
+    /// ## Uniqueness of EventHandle GUIDs
 
     spec schema UniqueEventHandleGUIDs {
         /// **Informally:** All `EventHandle`s have unqiue GUIDs.
@@ -196,7 +226,7 @@ module Event {
         /// INV 2: Enforce `fresh_guid` to only return unique GUIDs; every call only increases the counter
         /// of the EventHandleGenerator and the output of the `fresh_guid`.
         ///
-        /// TODO: The move-prover does not currently encode the property that LCS::serialize
+        /// > TODO(kkmc): The move-prover does not currently encode the property that LCS::serialize
         /// returns the same number of bytes for the same primitive types. Which means that
         /// `fresh_guid` can return the same GUIDs.
         ///
@@ -210,36 +240,44 @@ module Event {
         apply UniqueEventHandleGUIDs to *;
     }
     spec fun new_event_handle {
-        aborts_if ehg(Signer::get_address(account)).counter + 1 > max_u64();
-        aborts_if !initialized_ehg(Signer::get_address(account));
+        aborts_if !ehg_exists(Signer::get_address(account));
+        aborts_if get_ehg(Signer::get_address(account)).counter + 1 > max_u64();
+        ensures ehg_exists(Signer::get_address(account));
+        ensures get_ehg(Signer::get_address(account)).counter ==
+                    old(get_ehg(Signer::get_address(account)).counter) + 1;
         ensures result.counter == 0;
         ensures Vector::eq_append(
                     result.guid,
-                    old(serialized_ehg_counter(ehg(Signer::get_address(account)))),
-                    old(serialized_ehg_addr(ehg(Signer::get_address(account)))));
+                    old(serialized_ehg_counter(get_ehg(Signer::get_address(account)))),
+                    old(serialized_ehg_addr(get_ehg(Signer::get_address(account))))
+                );
     }
 
     // Switch documentation context back to module level.
     spec module {}
 
-    /// ## Emitting Events
-
     spec fun emit_event {
-        /// The counter in `EventHandle<T>` increases and the event is emitted to the event store
+        /// The counter in `EventHandle<T>` increases and the event is emitted to the event store.
         ///
-        /// TODO: Do we need to specify that the event was sent to the event store?
+        /// > TODO(kkmc): Do we need to specify that the event was sent to the event store?
         aborts_if handle_ref.counter + 1 > max_u64();
         ensures handle_ref.counter == old(handle_ref.counter) + 1;
         ensures handle_ref.guid == old(handle_ref.guid);
     }
 
-    /// ## Destruction of `EventHandle`s
+    // Switch documentation context back to module level.
+    spec module {}
+
+    /// ## Destruction of EventHandles
+
     spec module {
-        /// Ghost variable that stores the total number of event handles
+        /// Variable that counts the total number of event handles ever to exist.
         global total_num_of_event_handles<T>: num;
     }
     spec struct EventHandle {
         /// Count the total number of `EventHandle`s.
+        /// This is used in the post condition of `destroy_handle` to ensure that an
+        /// `EventHandle` is destroyed.
         invariant pack total_num_of_event_handles<T> = total_num_of_event_handles<T> + 1;
         invariant unpack total_num_of_event_handles<T> = total_num_of_event_handles<T> - 1;
     }

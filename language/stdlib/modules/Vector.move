@@ -107,6 +107,8 @@ module Vector {
     // Specification
     // ------------------------------------------------------------------------
 
+    /// # Module specifications
+
     spec module {
         /// Auxiliary function to check if `v1` is equal to the result of adding `e` at the end of `v2`
         define eq_push_back<Element>(v1: vector<Element>, v2: vector<Element>, e: Element): bool {
