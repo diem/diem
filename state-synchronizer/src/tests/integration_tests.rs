@@ -19,6 +19,7 @@ use libra_types::{
     validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
     validator_verifier::random_validator_verifier, waypoint::Waypoint, PeerId,
 };
+use network::constants;
 use network_builder::builder::{AuthenticationMode, NetworkBuilder};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
@@ -254,7 +255,7 @@ impl SynchronizerEnv {
             self.network_id.clone(),
             RoleType::Validator,
             self.peer_ids[new_peer_idx],
-            addr,
+            addr.clone(),
         );
         network_builder
             .authentication_mode(AuthenticationMode::Mutual(
@@ -263,7 +264,7 @@ impl SynchronizerEnv {
             .trusted_peers(trusted_peers)
             .seed_peers(seed_peers)
             .add_connectivity_manager()
-            .add_gossip_discovery();
+            .add_gossip_discovery(addr, constants::DISCOVERY_INTERVAL_MS);
 
         let (sender, events) =
             network_builder.add_protocol_handler(crate::network::network_endpoint_config());
