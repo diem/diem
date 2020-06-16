@@ -764,8 +764,8 @@
                     <span class="kw">continue</span>;
                 }
                 <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="comment">// do not break on error, move on to the next log message</span>
                     <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;[Logging] Error while sending data to socket: {}&quot;</span>, <span class="ident">e</span>);
-                    <span class="kw">break</span>;
                 }
             }
         }
