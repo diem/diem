@@ -40,7 +40,9 @@ use proptest::{
 };
 use proptest_derive::Arbitrary;
 use std::{convert::TryFrom, iter::Iterator, time::Duration};
-
+use std::{
+    collections::{BTreeMap, BTreeSet},
+};
 impl WriteOp {
     pub fn value_strategy() -> impl Strategy<Value = Self> {
         vec(any::<u8>(), 0..64).prop_map(WriteOp::Value)
@@ -602,11 +604,11 @@ impl Arbitrary for LedgerInfoWithSignatures {
                 )
             })
             .prop_map(|(ledger_info, signatures)| {
-                LedgerInfoWithSignatures::new(ledger_info, signatures.into_iter().collect())
+                LedgerInfoWithSignatures::new(ledger_info, signatures.into_iter().collect(), BTreeMap::new()
+                )
             })
             .boxed()
     }
-
     type Strategy = BoxedStrategy<Self>;
 }
 
@@ -1073,7 +1075,7 @@ impl LedgerInfoWithSignaturesGen {
                 (account.address, signature)
             })
             .collect();
-
-        LedgerInfoWithSignatures::new(ledger_info, signatures)
+        
+        LedgerInfoWithSignatures::new(ledger_info, signatures, BTreeMap::new())
     }
 }

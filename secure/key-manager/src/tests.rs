@@ -102,7 +102,7 @@ impl<T: LibraInterface> Node<T> {
             ),
             HashValue::zero(),
         );
-        let ledger_info_with_sigs = LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new());
+        let ledger_info_with_sigs = LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new(), BTreeMap::new());
         self.executor
             .commit_blocks(vec![block_id], ledger_info_with_sigs)
             .unwrap();

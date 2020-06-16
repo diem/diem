@@ -196,9 +196,11 @@ impl MockStorage {
         let signature = self.signer.sign_message(ledger_info.hash());
         let mut signatures = BTreeMap::new();
         signatures.insert(self.signer.author(), signature);
+        let mut markers = BTreeMap::new();
+        markers.insert(self.signer.author(), 0);
         self.ledger_infos.insert(
             self.epoch_num(),
-            LedgerInfoWithSignatures::new(ledger_info, signatures),
+            LedgerInfoWithSignatures::new(ledger_info, signatures, markers),
         );
     }
 

@@ -122,7 +122,7 @@ fn gen_ledger_info(
         ),
         HashValue::zero(),
     );
-    LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new())
+    LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new(), BTreeMap::new())
 }
 
 #[test]

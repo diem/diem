@@ -143,7 +143,7 @@ pub fn make_proposal_with_parent_and_overrides<P: Payload>(
     );
 
     let mut ledger_info_with_signatures =
-        LedgerInfoWithSignatures::new(vote.ledger_info().clone(), BTreeMap::new());
+        LedgerInfoWithSignatures::new(vote.ledger_info().clone(), BTreeMap::new(), BTreeMap::new());
 
     ledger_info_with_signatures.add_signature(vote.author(), vote.signature().clone());
 

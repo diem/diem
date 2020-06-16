@@ -61,7 +61,7 @@ impl<T: Payload> MockStorage<T> {
     pub fn new(shared_storage: Arc<MockSharedStorage<T>>) -> Self {
         let validator_set = Some(shared_storage.validator_set.clone());
         let li = LedgerInfo::mock_genesis(validator_set);
-        let lis = LedgerInfoWithSignatures::new(li.clone(), BTreeMap::new());
+        let lis = LedgerInfoWithSignatures::new(li.clone(), BTreeMap::new(), BTreeMap::new());
         shared_storage
             .lis
             .lock()
@@ -83,7 +83,7 @@ impl<T: Payload> MockStorage<T> {
             let validator_set = Some(shared_storage.validator_set.clone());
             LedgerInfo::mock_genesis(validator_set)
         };
-        let lis = LedgerInfoWithSignatures::new(li, BTreeMap::new());
+        let lis = LedgerInfoWithSignatures::new(li, BTreeMap::new(), BTreeMap::new());
         shared_storage
             .lis
             .lock()

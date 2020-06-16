@@ -17,6 +17,7 @@ use std::{collections::BTreeMap, fmt};
 pub struct TimeoutCertificate {
     timeout: Timeout,
     signatures: BTreeMap<Author, Ed25519Signature>,
+    markers: BTreeMap<Author, Round>,
 }
 
 impl fmt::Display for TimeoutCertificate {
@@ -36,6 +37,7 @@ impl TimeoutCertificate {
         Self {
             timeout,
             signatures: BTreeMap::new(),
+            markers: BTreeMap::new(),
         }
     }
 
@@ -69,5 +71,17 @@ impl TimeoutCertificate {
 
     pub fn remove_signature(&mut self, author: Author) {
         self.signatures.remove(&author);
+    }
+
+    pub fn markers(&self) -> &BTreeMap<Author, Round> {
+        &self.markers()
+    }
+
+    pub fn add_marker(&mut self, author: Author, marker: Round) {
+        self.markers.entry(author).or_insert(marker);
+    }
+
+    pub fn remove_marker(&mut self, author: Author) {
+        self.markers.remove(&author);
     }
 }
