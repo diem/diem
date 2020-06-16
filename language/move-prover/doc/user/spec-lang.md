@@ -183,6 +183,20 @@ spec fun increment {
 }
 ```
 
+### Experimental
+
+We are working towards supporting smoke testing to check unsound or imprecise models. To turn this option on, set the smoke\_test pragma to true as shown below. By default, the experimental smoke\_test pragma is set to false.
+
+List of checks smoke\_test pragma runs:
+- Checks if `aborts_if true;` is provable for a function (at the Boogie model level, this is done by adding `ensures $abort_flag;` to the end of a function and ignoring the other post conditions); this usually indicates a bug in the specification or implementation.
+
+```move
+spec fun {
+    pragma smoke_test = true;
+    ...
+}
+```
+
 ## Helper Functions
 
 The Spec language allows to define helper functions. Those functions can than be used in expressions.
