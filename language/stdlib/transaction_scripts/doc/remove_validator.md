@@ -5,17 +5,17 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `remove_validator`](#SCRIPT_remove_validator)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_remove_validator"></a>
 
-## Function `main`
+## Function `remove_validator`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, validator_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_remove_validator">remove_validator</a>(account: &signer, validator_address: address)
 </code></pre>
 
 
@@ -24,7 +24,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, validator_address: address) {
+<pre><code><b>fun</b> <a href="#SCRIPT_remove_validator">remove_validator</a>(account: &signer, validator_address: address) {
     <a href="../../modules/doc/LibraSystem.md#0x1_LibraSystem_remove_validator">LibraSystem::remove_validator</a>(account, validator_address);
 }
 </code></pre>

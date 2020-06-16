@@ -5,13 +5,13 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `rotate_authentication_key_with_recovery_address`](#SCRIPT_rotate_authentication_key_with_recovery_address)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_rotate_authentication_key_with_recovery_address"></a>
 
-## Function `main`
+## Function `rotate_authentication_key_with_recovery_address`
 
 Extract the
 <code>KeyRotationCapability</code> for
@@ -24,7 +24,7 @@ Aborts if
 <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code> resource, or is not a VASP.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -33,7 +33,7 @@ Aborts if
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;) {
+<pre><code><b>fun</b> <a href="#SCRIPT_rotate_authentication_key_with_recovery_address">rotate_authentication_key_with_recovery_address</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;) {
     <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_rotate_authentication_key">RecoveryAddress::rotate_authentication_key</a>(account, recovery_address, to_recover, new_key)
 }
 </code></pre>

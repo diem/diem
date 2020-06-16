@@ -7,7 +7,7 @@ use 0x1::SharedEd25519PublicKey;
 // `SharedEd25519PublicKey` to a new value derived from `new_public_key`
 // Aborts if `account` does not have a `SharedEd25519PublicKey` resource.
 // Aborts if the length of `new_public_key` is not 32.
-fun main(account: &signer, public_key: vector<u8>) {
+fun rotate_shared_ed25519_public_key(account: &signer, public_key: vector<u8>) {
     SharedEd25519PublicKey::rotate_key(account, public_key)
 }
 }

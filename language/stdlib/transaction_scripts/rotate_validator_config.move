@@ -3,7 +3,7 @@ script {
     use 0x1::ValidatorConfig;
 
     // Rotates validator's config
-    fun main(
+    fun rotate_validator_config(
         account: &signer,
         validator_account: address,
         consensus_pubkey: vector<u8>,

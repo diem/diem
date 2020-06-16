@@ -5,20 +5,20 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `tiered_mint`](#SCRIPT_tiered_mint)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_tiered_mint"></a>
 
-## Function `main`
+## Function `tiered_mint`
 
 Script for Treasury Comliance Account to mint 'mint_amount' to 'designated_dealer_address' for
 'tier_index' tier
 sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
 </code></pre>
 
 
@@ -27,7 +27,7 @@ sliding_nonce is a unique nonce for operation, see sliding_nonce.move for detail
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="#SCRIPT_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     designated_dealer_address: address,

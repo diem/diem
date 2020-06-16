@@ -5,7 +5,7 @@ script {
 
     // Here the sender's address should already be certified as both a Validator.
     // This tx sets the config and adds the validator to the Validator Set.
-    fun main(
+    fun register_validator(
         account: &signer,
         consensus_pubkey: vector<u8>,
         validator_network_identity_pubkey: vector<u8>,

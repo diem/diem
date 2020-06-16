@@ -1,6 +1,6 @@
 script {
 use 0x1::LibraAccount;
-fun main<CoinType>(
+fun create_parent_vasp_account<CoinType>(
     association: &signer,
     new_account_address: address,
     auth_key_prefix: vector<u8>,

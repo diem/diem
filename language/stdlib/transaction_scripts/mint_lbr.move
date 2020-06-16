@@ -4,7 +4,7 @@ use 0x1::Coin2::Coin2;
 use 0x1::LBR;
 use 0x1::LibraAccount;
 use 0x1::Signer;
-fun main(account: &signer, amount_lbr: u64) {
+fun mint_lbr(account: &signer, amount_lbr: u64) {
     let sender = Signer::address_of(account);
     let coin1_balance = LibraAccount::balance<Coin1>(sender);
     let coin2_balance = LibraAccount::balance<Coin2>(sender);

@@ -6,7 +6,7 @@ use 0x1::SlidingNonce;
 /// Script for Treasury Comliance Account to mint 'mint_amount' to 'designated_dealer_address' for
 /// 'tier_index' tier
 /// sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
-fun main<CoinType>(
+fun tiered_mint<CoinType>(
     tc_account: &signer,
     sliding_nonce: u64,
     designated_dealer_address: address,

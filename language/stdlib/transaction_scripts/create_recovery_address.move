@@ -5,7 +5,7 @@ use 0x1::RecoveryAddress;
 /// `RecoveryAddress` resource under  `recovery_account`.
 /// Aborts if `recovery_account` has delegated its `KeyRotationCapability`, already has a
 /// `RecoveryAddress` resource, or is not a VASP.
-fun main(account: &signer) {
+fun create_recovery_address(account: &signer) {
     RecoveryAddress::publish(account)
 }
 }

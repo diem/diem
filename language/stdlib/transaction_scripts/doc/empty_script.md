@@ -5,17 +5,17 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `empty_script`](#SCRIPT_empty_script)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_empty_script"></a>
 
-## Function `main`
+## Function `empty_script`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>()
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_empty_script">empty_script</a>()
 </code></pre>
 
 
@@ -24,7 +24,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>() { }
+<pre><code><b>fun</b> <a href="#SCRIPT_empty_script">empty_script</a>() { }
 </code></pre>
 
 

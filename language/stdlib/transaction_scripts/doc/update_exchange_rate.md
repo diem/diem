@@ -5,18 +5,18 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `update_exchange_rate`](#SCRIPT_update_exchange_rate)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_update_exchange_rate"></a>
 
-## Function `main`
+## Function `update_exchange_rate`
 
 Script for Treasury Comliance Account to update <Currency> to LBR rate
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_denominator: u64, new_exchange_rate_numerator: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_denominator: u64, new_exchange_rate_numerator: u64)
 </code></pre>
 
 
@@ -25,7 +25,7 @@ Script for Treasury Comliance Account to update <Currency> to LBR rate
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;Currency&gt;(
+<pre><code><b>fun</b> <a href="#SCRIPT_update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     new_exchange_rate_denominator: u64,

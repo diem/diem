@@ -5,13 +5,13 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `create_child_vasp_account`](#SCRIPT_create_child_vasp_account)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_create_child_vasp_account"></a>
 
-## Function `main`
+## Function `create_child_vasp_account`
 
 Create a
 <code>ChildVASP</code> account for sender
@@ -25,7 +25,7 @@ If
 currencies in the system
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;CoinType&gt;(parent_vasp: &signer, child_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool, child_initial_balance: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(parent_vasp: &signer, child_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool, child_initial_balance: u64)
 </code></pre>
 
 
@@ -34,7 +34,7 @@ currencies in the system
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="#SCRIPT_create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(
     parent_vasp: &signer,
     child_address: address,
     auth_key_prefix: vector&lt;u8&gt;,

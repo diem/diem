@@ -1,7 +1,7 @@
 script {
 use 0x1::LibraAccount;
 
-fun main<Token>(
+fun peer_to_peer_with_metadata<Token>(
     payer: &signer,
     payee: address,
     amount: u64,

@@ -5,13 +5,13 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `create_recovery_address`](#SCRIPT_create_recovery_address)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_create_recovery_address"></a>
 
-## Function `main`
+## Function `create_recovery_address`
 
 Extract the
 <code>KeyRotationCapability</code> for
@@ -24,7 +24,7 @@ Aborts if
 <code><a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress">RecoveryAddress</a></code> resource, or is not a VASP.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_recovery_address">create_recovery_address</a>(account: &signer)
 </code></pre>
 
 
@@ -33,7 +33,7 @@ Aborts if
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer) {
+<pre><code><b>fun</b> <a href="#SCRIPT_create_recovery_address">create_recovery_address</a>(account: &signer) {
     <a href="../../modules/doc/RecoveryAddress.md#0x1_RecoveryAddress_publish">RecoveryAddress::publish</a>(account)
 }
 </code></pre>
