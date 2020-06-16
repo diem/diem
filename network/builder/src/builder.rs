@@ -108,13 +108,9 @@ pub struct NetworkBuilder {
     connection_reqs_tx: libra_channel::Sender<PeerId, ConnectionRequest>,
     connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
     conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
-    connectivity_check_interval_ms: u64,
     max_concurrent_network_reqs: usize,
     max_concurrent_network_notifs: usize,
-    max_connection_delay_ms: u64,
-    /// For now full node connections are limited by
     max_fullnode_connections: usize,
-
     connectivity_manager_config: Option<ConnectivityManagerBuilderConfig>,
     connectivity_manager: Option<ConnectivityManagerService>,
     discovery_cfg: Option<DiscoveryBuilderConfig>,
@@ -169,13 +165,11 @@ impl NetworkBuilder {
             ping_interval_ms: constants::PING_INTERVAL_MS,
             ping_timeout_ms: constants::PING_TIMEOUT_MS,
             ping_failures_tolerated: constants::PING_FAILURES_TOLERATED,
-            connectivity_check_interval_ms: constants::CONNECTIVITY_CHECK_INTERNAL_MS,
             max_concurrent_network_reqs: constants::MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
-            max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
             max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
-            connectivity_manager: None,
             connectivity_manager_config: None,
+            connectivity_manager: None,
             discovery: None,
             discovery_cfg: None,
             health_checker_cfg: None,
@@ -239,16 +233,15 @@ impl NetworkBuilder {
             network_builder
                 .authentication_mode(AuthenticationMode::Mutual(identity_key))
                 .trusted_peers(trusted_peers)
-                .seed_peers(seed_peers)
-                .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
-                .add_connectivity_manager();
+                .add_connectivity_manager(seed_peers, config.connectivity_check_interval_ms);
         } else {
             // Enforce the outgoing connection (dialer) verifies the identity of the listener (server)
             network_builder.authentication_mode(AuthenticationMode::ServerOnly(identity_key));
+            // TODO:  Why does ServerOnly and no seed_peers mean that a ConnectivityManager is unnecessary?
+            // My understanding is that ConnectivityManager is responsible for keeping connections to neighbors alive.
             if !seed_peers.is_empty() {
                 network_builder
-                    .seed_peers(seed_peers)
-                    .add_connectivity_manager();
+                    .add_connectivity_manager(seed_peers, config.connectivity_check_interval_ms);
             }
         }
 
@@ -296,15 +289,6 @@ impl NetworkBuilder {
     /// Set discovery ticker interval
     pub fn discovery_interval_ms(&mut self, discovery_interval_ms: u64) -> &mut Self {
         self.discovery_interval_ms = discovery_interval_ms;
-        self
-    }
-
-    /// Set connectivity check ticker interval
-    pub fn connectivity_check_interval_ms(
-        &mut self,
-        connectivity_check_interval_ms: u64,
-    ) -> &mut Self {
-        self.connectivity_check_interval_ms = connectivity_check_interval_ms;
         self
     }
 
@@ -375,7 +359,11 @@ impl NetworkBuilder {
     ///
     /// Note: a connectivity manager should only be added if the network is
     /// permissioned.
-    pub fn add_connectivity_manager(&mut self) -> &mut Self {
+    pub fn add_connectivity_manager(
+        &mut self,
+        seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
+        connectivity_check_interval_ms: u64,
+    ) -> &mut Self {
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
             self.channel_size,
             &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
@@ -391,10 +379,12 @@ impl NetworkBuilder {
         let config = ConnectivityManagerBuilderConfig::new(
             self.network_context(),
             self.trusted_peers.clone(),
-            self.seed_peers.clone(),
-            self.connectivity_check_interval_ms,
+            seed_peers,
+            connectivity_check_interval_ms,
+            // TODO:  Move this to NetworkConfig
             2, // Hard-coded constant
-            self.max_connection_delay_ms,
+            // TODO:  Move this to NetworkConfig
+            constants::MAX_CONNECTION_DELAY_MS,
             ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
             pm_conn_mgr_notifs_rx,
             conn_mgr_reqs_rx,

@@ -262,8 +262,7 @@ impl SynchronizerEnv {
                 self.network_keys[new_peer_idx].clone(),
             ))
             .trusted_peers(trusted_peers)
-            .seed_peers(seed_peers)
-            .add_connectivity_manager()
+            .add_connectivity_manager(seed_peers, constants::CONNECTIVITY_CHECK_INTERNAL_MS)
             .add_gossip_discovery(addr, constants::DISCOVERY_INTERVAL_MS);
 
         let (sender, events) =
