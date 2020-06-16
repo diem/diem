@@ -595,6 +595,16 @@
 <span id="595">595</span>
 <span id="596">596</span>
 <span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1072,6 +1082,15 @@
     <span class="ident">doc</span>: <span class="string">&quot;Encode a program that updates the travel rule limit to &#39;new_micro_lbr_limit&#39;&quot;</span>
 }
 
+{
+    <span class="ident">script</span>: <span class="ident">UpdateUnhostedWalletLimits</span>,
+    <span class="ident">builder</span>: <span class="ident">encode_update_unhosted_wallet_limits</span>,
+    <span class="ident">type_args</span>: [],
+    <span class="ident">args</span>: [<span class="ident">nonce</span>: <span class="ident">U64</span>, <span class="ident">new_max_total_flow</span>: <span class="ident">U64</span>, <span class="ident">new_max_holding_balance</span>: <span class="ident">U64</span>],
+    <span class="ident">doc</span>: <span class="string">&quot;Updates the nonzero thresholds for regular (unhosted) accounts. If the U64 holds the value 0,
+          the script ignores the update to that threshold&quot;</span>
+}
+
 } <span class="comment">// End of txn scripts</span>
 
 <span class="comment">//...........................................................................</span>
@@ -1187,7 +1206,8 @@
                 <span class="string">&quot;unfreeze_account&quot;</span>,
                 <span class="string">&quot;rotate_authentication_key_with_nonce&quot;</span>,
                 <span class="string">&quot;update_exchange_rate&quot;</span>,
-                <span class="string">&quot;update_travel_rule_limit&quot;</span>
+                <span class="string">&quot;update_travel_rule_limit&quot;</span>,
+                <span class="string">&quot;update_unhosted_wallet_limits&quot;</span>
             ],
             <span class="ident">abis</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">name</span>()).<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
         );
