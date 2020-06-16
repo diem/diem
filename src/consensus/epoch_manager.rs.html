@@ -515,18 +515,6 @@
 <span id="515">515</span>
 <span id="516">516</span>
 <span id="517">517</span>
-<span id="518">518</span>
-<span id="519">519</span>
-<span id="520">520</span>
-<span id="521">521</span>
-<span id="522">522</span>
-<span id="523">523</span>
-<span id="524">524</span>
-<span id="525">525</span>
-<span id="526">526</span>
-<span id="527">527</span>
-<span id="528">528</span>
-<span id="529">529</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -567,11 +555,7 @@
 };
 <span class="kw">use</span> <span class="ident">network</span>::<span class="ident">protocols</span>::<span class="ident">network</span>::<span class="ident">Event</span>;
 <span class="kw">use</span> <span class="ident">safety_rules</span>::<span class="ident">SafetyRulesManager</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">cmp</span>::<span class="ident">Ordering</span>,
-    <span class="ident">sync</span>::<span class="ident">Arc</span>,
-    <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
-};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">cmp</span>::<span class="ident">Ordering</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 
 <span class="doccomment">/// RecoveryManager is used to process events in order to sync up with peer if we can&#39;t recover from local consensusdb</span>
 <span class="doccomment">/// RoundManager is used for normal event handling.</span>
@@ -785,7 +769,6 @@
         <span class="self">self</span>.<span class="ident">processor</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="ident">counters</span>::<span class="ident">EPOCH</span>.<span class="ident">set</span>(<span class="ident">epoch_state</span>.<span class="ident">epoch</span> <span class="kw">as</span> <span class="ident">i64</span>);
         <span class="ident">counters</span>::<span class="ident">CURRENT_EPOCH_VALIDATORS</span>.<span class="ident">set</span>(<span class="ident">epoch_state</span>.<span class="ident">verifier</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">i64</span>);
-        <span class="ident">counters</span>::<span class="ident">CURRENT_EPOCH_QUORUM_SIZE</span>.<span class="ident">set</span>(<span class="ident">epoch_state</span>.<span class="ident">verifier</span>.<span class="ident">quorum_voting_power</span>() <span class="kw">as</span> <span class="ident">i64</span>);
         <span class="macro">info</span><span class="macro">!</span>(
             <span class="string">&quot;Starting {} with genesis {}&quot;</span>,
             <span class="ident">epoch_state</span>,
@@ -1024,36 +1007,29 @@
             <span class="self">self</span>.<span class="ident">start_processor</span>(<span class="ident">payload</span>).<span class="kw">await</span>;
         }
         <span class="kw">loop</span> {
-            <span class="kw">let</span> <span class="ident">pre_select_instant</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
-            <span class="kw">let</span> <span class="ident">idle_duration</span>;
-            <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="macro">select</span><span class="macro">!</span> {
-                <span class="ident">payload</span> <span class="op">=</span> <span class="ident">reconfig_events</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="ident">idle_duration</span> <span class="op">=</span> <span class="ident">pre_select_instant</span>.<span class="ident">elapsed</span>();
-                    <span class="self">self</span>.<span class="ident">start_processor</span>(<span class="ident">payload</span>).<span class="kw">await</span>;
-                    <span class="prelude-val">Ok</span>(())
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="macro">monitor</span><span class="macro">!</span>(
+                <span class="string">&quot;main_loop&quot;</span>,
+                <span class="macro">select</span><span class="macro">!</span> {
+                    <span class="ident">payload</span> <span class="op">=</span> <span class="ident">reconfig_events</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="macro">monitor</span><span class="macro">!</span>(<span class="string">&quot;reconfig&quot;</span>, <span class="self">self</span>.<span class="ident">start_processor</span>(<span class="ident">payload</span>).<span class="kw">await</span>);
+                        <span class="prelude-val">Ok</span>(())
+                    }
+                    <span class="ident">msg</span> <span class="op">=</span> <span class="ident">network_receivers</span>.<span class="ident">consensus_messages</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="macro">monitor</span><span class="macro">!</span>(<span class="string">&quot;process_message&quot;</span>, <span class="self">self</span>.<span class="ident">process_message</span>(<span class="ident">msg</span>.<span class="number">0</span>, <span class="ident">msg</span>.<span class="number">1</span>).<span class="kw">await</span>)
+                    }
+                    <span class="ident">block_retrieval</span> <span class="op">=</span> <span class="ident">network_receivers</span>.<span class="ident">block_retrieval</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="macro">monitor</span><span class="macro">!</span>(<span class="string">&quot;process_block_retrieval&quot;</span>, <span class="self">self</span>.<span class="ident">process_block_retrieval</span>(<span class="ident">block_retrieval</span>).<span class="kw">await</span>)
+                    }
+                    <span class="ident">round</span> <span class="op">=</span> <span class="ident">round_timeout_sender_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="macro">monitor</span><span class="macro">!</span>(<span class="string">&quot;process_local_timeout&quot;</span>, <span class="self">self</span>.<span class="ident">process_local_timeout</span>(<span class="ident">round</span>).<span class="kw">await</span>)
+                    }
                 }
-                <span class="ident">msg</span> <span class="op">=</span> <span class="ident">network_receivers</span>.<span class="ident">consensus_messages</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="ident">idle_duration</span> <span class="op">=</span> <span class="ident">pre_select_instant</span>.<span class="ident">elapsed</span>();
-                    <span class="self">self</span>.<span class="ident">process_message</span>(<span class="ident">msg</span>.<span class="number">0</span>, <span class="ident">msg</span>.<span class="number">1</span>).<span class="kw">await</span>
-                }
-                <span class="ident">block_retrieval</span> <span class="op">=</span> <span class="ident">network_receivers</span>.<span class="ident">block_retrieval</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="ident">idle_duration</span> <span class="op">=</span> <span class="ident">pre_select_instant</span>.<span class="ident">elapsed</span>();
-                    <span class="self">self</span>.<span class="ident">process_block_retrieval</span>(<span class="ident">block_retrieval</span>).<span class="kw">await</span>
-                }
-                <span class="ident">round</span> <span class="op">=</span> <span class="ident">round_timeout_sender_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="ident">idle_duration</span> <span class="op">=</span> <span class="ident">pre_select_instant</span>.<span class="ident">elapsed</span>();
-                    <span class="self">self</span>.<span class="ident">process_local_timeout</span>(<span class="ident">round</span>).<span class="kw">await</span>
-                }
-            };
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">result</span> {
+            ) {
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>);
             }
             <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RoundProcessor</span>::<span class="ident">Normal</span>(<span class="ident">p</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">processor_mut</span>() {
                 <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">p</span>.<span class="ident">round_state</span>());
             }
-            <span class="ident">counters</span>::<span class="ident">EVENT_PROCESSING_LOOP_BUSY_DURATION_S</span>
-                .<span class="ident">observe_duration</span>(<span class="ident">pre_select_instant</span>.<span class="ident">elapsed</span>() <span class="op">-</span> <span class="ident">idle_duration</span>);
-            <span class="ident">counters</span>::<span class="ident">EVENT_PROCESSING_LOOP_IDLE_DURATION_S</span>.<span class="ident">observe_duration</span>(<span class="ident">idle_duration</span>);
         }
     }
 }

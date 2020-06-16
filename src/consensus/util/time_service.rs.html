@@ -181,7 +181,7 @@
                     <span class="ident">wait_duration</span>.<span class="ident">as_secs</span>()
                 );
             }
-            <span class="ident">counters</span>::<span class="ident">WAIT_DURATION_MS</span>.<span class="ident">observe_duration</span>(<span class="ident">wait_duration</span>);
+            <span class="ident">counters</span>::<span class="ident">WAIT_DURATION_S</span>.<span class="ident">observe_duration</span>(<span class="ident">wait_duration</span>);
             <span class="self">self</span>.<span class="ident">sleep</span>(<span class="ident">wait_duration</span>);
         }
     }

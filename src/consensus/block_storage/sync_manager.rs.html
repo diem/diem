@@ -336,20 +336,12 @@
 <span id="336">336</span>
 <span id="337">337</span>
 <span id="338">338</span>
-<span id="339">339</span>
-<span id="340">340</span>
-<span id="341">341</span>
-<span id="342">342</span>
-<span id="343">343</span>
-<span id="344">344</span>
-<span id="345">345</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">block_storage</span>::{<span class="ident">BlockReader</span>, <span class="ident">BlockStore</span>},
-    <span class="ident">counters</span>,
     <span class="ident">network</span>::<span class="ident">NetworkSender</span>,
     <span class="ident">persistent_liveness_storage</span>::{<span class="ident">PersistentLivenessStorage</span>, <span class="ident">RecoveryData</span>},
     <span class="ident">state_replication</span>::<span class="ident">StateComputer</span>,
@@ -366,11 +358,7 @@
 <span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">epoch_change</span>::<span class="ident">EpochChangeProof</span>};
 <span class="kw">use</span> <span class="ident">mirai_annotations</span>::<span class="ident">checked_precondition</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">Rng</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">clone</span>::<span class="ident">Clone</span>,
-    <span class="ident">sync</span>::<span class="ident">Arc</span>,
-    <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
-};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">clone</span>::<span class="ident">Clone</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 <span class="kw">use</span> <span class="ident">termion</span>::<span class="ident">color</span>::<span class="kw-2">*</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
@@ -569,11 +557,9 @@
         <span class="comment">// If a node restarts in the middle of state synchronization, it is going to try to catch up</span>
         <span class="comment">// to the stored quorum certs as the new root.</span>
         <span class="ident">storage</span>.<span class="ident">save_tree</span>(<span class="ident">blocks</span>.<span class="ident">clone</span>(), <span class="ident">quorum_certs</span>.<span class="ident">clone</span>())<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">pre_sync_instance</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
         <span class="ident">state_computer</span>
             .<span class="ident">sync_to</span>(<span class="ident">highest_commit_cert</span>.<span class="ident">ledger_info</span>().<span class="ident">clone</span>())
             .<span class="kw">await</span><span class="question-mark">?</span>;
-        <span class="ident">counters</span>::<span class="ident">STATE_SYNC_DURATION_S</span>.<span class="ident">observe_duration</span>(<span class="ident">pre_sync_instance</span>.<span class="ident">elapsed</span>());
         <span class="kw">let</span> <span class="ident">recovery_data</span> <span class="op">=</span> <span class="ident">storage</span>
             .<span class="ident">start</span>()
             .<span class="ident">expect_recovery_data</span>(<span class="string">&quot;Failed to construct recovery data after fast forward sync&quot;</span>);

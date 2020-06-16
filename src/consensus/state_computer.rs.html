@@ -112,37 +112,12 @@
 <span id="112">112</span>
 <span id="113">113</span>
 <span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
-<span id="127">127</span>
-<span id="128">128</span>
-<span id="129">129</span>
-<span id="130">130</span>
-<span id="131">131</span>
-<span id="132">132</span>
-<span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
-<span id="136">136</span>
-<span id="137">137</span>
-<span id="138">138</span>
-<span id="139">139</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">counters</span>, <span class="ident">state_replication</span>::<span class="ident">StateComputer</span>};
-<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">ensure</span>, <span class="ident">Error</span>, <span class="prelude-ty">Result</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">state_replication</span>::<span class="ident">StateComputer</span>;
+<span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">Error</span>, <span class="prelude-ty">Result</span>};
 <span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">block</span>::<span class="ident">Block</span>;
 <span class="kw">use</span> <span class="ident">executor_types</span>::{<span class="ident">BlockExecutor</span>, <span class="ident">StateComputeResult</span>};
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">HashValue</span>;
@@ -152,9 +127,7 @@
 <span class="kw">use</span> <span class="ident">state_synchronizer</span>::<span class="ident">StateSyncClient</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">boxed</span>::<span class="ident">Box</span>,
-    <span class="ident">convert</span>::<span class="ident">TryFrom</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>},
-    <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
 };
 
 <span class="doccomment">/// Basic communication with the Execution module;</span>
@@ -197,7 +170,6 @@
         <span class="comment">// The parent block id.</span>
         <span class="ident">parent_block_id</span>: <span class="ident">HashValue</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">StateComputeResult</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">pre_execution_instant</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
         <span class="macro">debug</span><span class="macro">!</span>(
             <span class="string">&quot;Executing block {:x}. Parent: {:x}.&quot;</span>,
             <span class="ident">block</span>.<span class="ident">id</span>(),
@@ -215,21 +187,6 @@
                     <span class="ident">parent_block_id</span>,
                 )
                 .<span class="ident">map_err</span>(<span class="ident">Error</span>::<span class="ident">from</span>)
-                .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">result</span><span class="op">|</span> {
-                    <span class="kw">let</span> <span class="ident">execution_duration</span> <span class="op">=</span> <span class="ident">pre_execution_instant</span>.<span class="ident">elapsed</span>();
-                    <span class="kw">let</span> <span class="ident">num_txns</span> <span class="op">=</span> <span class="ident">result</span>.<span class="ident">transaction_info_hashes</span>().<span class="ident">len</span>();
-                    <span class="macro">ensure</span><span class="macro">!</span>(<span class="ident">num_txns</span> <span class="op">&gt;</span> <span class="number">0</span>, <span class="string">&quot;metadata txn failed to execute&quot;</span>);
-                    <span class="ident">counters</span>::<span class="ident">BLOCK_EXECUTION_DURATION_S</span>.<span class="ident">observe_duration</span>(<span class="ident">execution_duration</span>);
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">nanos_per_txn</span>) <span class="op">=</span>
-                        <span class="ident">u64</span>::<span class="ident">try_from</span>(<span class="ident">execution_duration</span>.<span class="ident">as_nanos</span>() <span class="op">/</span> <span class="ident">num_txns</span> <span class="kw">as</span> <span class="ident">u128</span>)
-                    {
-                        <span class="comment">// TODO: use duration_float once it&#39;s stable</span>
-                        <span class="comment">// Tracking: https://github.com/rust-lang/rust/issues/54361</span>
-                        <span class="ident">counters</span>::<span class="ident">TXN_EXECUTION_DURATION_S</span>
-                            .<span class="ident">observe_duration</span>(<span class="ident">Duration</span>::<span class="ident">from_nanos</span>(<span class="ident">nanos_per_txn</span>));
-                    }
-                    <span class="prelude-val">Ok</span>(<span class="ident">result</span>)
-                })
         )
     }
 
@@ -239,11 +196,6 @@
         <span class="ident">block_ids</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
         <span class="ident">finality_proof</span>: <span class="ident">LedgerInfoWithSignatures</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">version</span> <span class="op">=</span> <span class="ident">finality_proof</span>.<span class="ident">ledger_info</span>().<span class="ident">version</span>();
-        <span class="ident">counters</span>::<span class="ident">LAST_COMMITTED_VERSION</span>.<span class="ident">set</span>(<span class="ident">version</span> <span class="kw">as</span> <span class="ident">i64</span>);
-
-        <span class="kw">let</span> <span class="ident">pre_commit_instant</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
-
         <span class="kw">let</span> (<span class="ident">committed_txns</span>, <span class="ident">reconfig_events</span>) <span class="op">=</span> <span class="macro">monitor</span><span class="macro">!</span>(
             <span class="string">&quot;commit_block&quot;</span>,
             <span class="self">self</span>.<span class="ident">execution_correctness_client</span>
@@ -251,7 +203,6 @@
                 .<span class="ident">unwrap</span>()
                 .<span class="ident">commit_blocks</span>(<span class="ident">block_ids</span>, <span class="ident">finality_proof</span>)<span class="question-mark">?</span>
         );
-        <span class="ident">counters</span>::<span class="ident">BLOCK_COMMIT_DURATION_S</span>.<span class="ident">observe_duration</span>(<span class="ident">pre_commit_instant</span>.<span class="ident">elapsed</span>());
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">synchronizer</span>
             .<span class="ident">commit</span>(<span class="ident">committed_txns</span>, <span class="ident">reconfig_events</span>)
@@ -264,7 +215,6 @@
 
     <span class="doccomment">/// Synchronize to a commit that not present locally.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">sync_to</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">target</span>: <span class="ident">LedgerInfoWithSignatures</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="ident">counters</span>::<span class="ident">STATE_SYNC_COUNT</span>.<span class="ident">inc</span>();
         <span class="comment">// Here to start to do state synchronization where ChunkExecutor inside will</span>
         <span class="comment">// process chunks and commit to Storage. However, after block execution and</span>
         <span class="comment">// commitments, the the sync state of ChunkExecutor may be not up to date so</span>

@@ -491,6 +491,10 @@
 <span id="491">491</span>
 <span id="492">492</span>
 <span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -542,6 +546,7 @@
         <span class="ident">counters</span>::<span class="ident">NUM_TXNS_PER_BLOCK</span>.<span class="ident">observe</span>(<span class="ident">txn_status</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">f64</span>);
         <span class="ident">counters</span>::<span class="ident">COMMITTED_BLOCKS_COUNT</span>.<span class="ident">inc</span>();
         <span class="ident">counters</span>::<span class="ident">LAST_COMMITTED_ROUND</span>.<span class="ident">set</span>(<span class="ident">block</span>.<span class="ident">round</span>() <span class="kw">as</span> <span class="ident">i64</span>);
+        <span class="ident">counters</span>::<span class="ident">LAST_COMMITTED_VERSION</span>.<span class="ident">set</span>(<span class="ident">block</span>.<span class="ident">compute_result</span>().<span class="ident">num_leaves</span>() <span class="kw">as</span> <span class="ident">i64</span>);
 
         <span class="kw">for</span> <span class="ident">status</span> <span class="kw">in</span> <span class="ident">txn_status</span>.<span class="ident">iter</span>() {
             <span class="kw">match</span> <span class="ident">status</span> {
@@ -555,8 +560,11 @@
                         .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;failed&quot;</span>])
                         .<span class="ident">inc</span>();
                 }
-                <span class="comment">// TODO(zekunli): add counter</span>
-                <span class="ident">TransactionStatus</span>::<span class="ident">Retry</span> <span class="op">=</span><span class="op">&gt;</span> (),
+                <span class="ident">TransactionStatus</span>::<span class="ident">Retry</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">counters</span>::<span class="ident">COMMITTED_TXNS_COUNT</span>
+                        .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="string">&quot;retry&quot;</span>])
+                        .<span class="ident">inc</span>();
+                }
             }
         }
     }
