@@ -208,6 +208,119 @@
 <span id="208">208</span>
 <span id="209">209</span>
 <span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
+<span id="214">214</span>
+<span id="215">215</span>
+<span id="216">216</span>
+<span id="217">217</span>
+<span id="218">218</span>
+<span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
+<span id="226">226</span>
+<span id="227">227</span>
+<span id="228">228</span>
+<span id="229">229</span>
+<span id="230">230</span>
+<span id="231">231</span>
+<span id="232">232</span>
+<span id="233">233</span>
+<span id="234">234</span>
+<span id="235">235</span>
+<span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
+<span id="257">257</span>
+<span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
+<span id="316">316</span>
+<span id="317">317</span>
+<span id="318">318</span>
+<span id="319">319</span>
+<span id="320">320</span>
+<span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -239,9 +352,118 @@
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ReachingDefProcessor</span>();
 
+<span class="kw">type</span> <span class="ident">DefMap</span> <span class="op">=</span> <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">TempIndex</span>, <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">Def</span><span class="op">&gt;</span><span class="op">&gt;</span>;
 <span class="kw">impl</span> <span class="ident">ReachingDefProcessor</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">ReachingDefProcessor</span>())
+    }
+
+    <span class="doccomment">/// Union all the reaching definitions of a temp.</span>
+    <span class="kw">fn</span> <span class="ident">union_defs</span>(<span class="ident">one</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">DefMap</span>, <span class="ident">other</span>: <span class="kw-2">&amp;</span><span class="ident">DefMap</span>) {
+        <span class="kw">for</span> (<span class="ident">temp</span>, <span class="ident">defs</span>) <span class="kw">in</span> <span class="ident">other</span> {
+            <span class="ident">one</span>.<span class="ident">entry</span>(<span class="kw-2">*</span><span class="ident">temp</span>)
+                .<span class="ident">and_modify</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+                    <span class="ident">e</span>.<span class="ident">extend</span>(<span class="ident">defs</span>.<span class="ident">clone</span>());
+                })
+                .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">defs</span>.<span class="ident">clone</span>());
+        }
+    }
+
+    <span class="doccomment">/// Returns Some(temp, def) if temp has a unique reaching definition and None otherwise.</span>
+    <span class="kw">fn</span> <span class="ident">get_unique_def</span>(<span class="ident">temp</span>: <span class="ident">TempIndex</span>, <span class="ident">defs</span>: <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">Def</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">TempIndex</span>, <span class="ident">TempIndex</span>)<span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="ident">defs</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">1</span> {
+            <span class="kw">return</span> <span class="prelude-val">None</span>;
+        }
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Def</span>::<span class="ident">Alias</span>(<span class="ident">def</span>) <span class="op">=</span> <span class="ident">defs</span>.<span class="ident">iter</span>().<span class="ident">next</span>().<span class="ident">unwrap</span>() {
+            <span class="kw">return</span> <span class="prelude-val">Some</span>((<span class="ident">temp</span>, <span class="kw-2">*</span><span class="ident">def</span>));
+        }
+        <span class="prelude-val">None</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">defs_reaching_exits</span>(
+        <span class="ident">exit_offsets</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">CodeOffset</span><span class="op">&gt;</span>,
+        <span class="ident">annotations</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">CodeOffset</span>, <span class="ident">DefMap</span><span class="op">&gt;</span>,
+        <span class="ident">func_target</span>: <span class="ident">FunctionTarget</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">TempIndex</span>, <span class="ident">TempIndex</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="ident">user_local_count</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_user_local_count</span>();
+        <span class="kw">for</span> <span class="ident">offset</span> <span class="kw">in</span> <span class="ident">exit_offsets</span> {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">defs</span>) <span class="op">=</span> <span class="ident">annotations</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">offset</span>) {
+                <span class="self">Self</span>::<span class="ident">union_defs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">res</span>, <span class="kw-2">&amp;</span><span class="ident">defs</span>);
+            }
+        }
+        <span class="ident">res</span>.<span class="ident">into_iter</span>()
+            .<span class="ident">filter_map</span>(<span class="op">|</span>(<span class="ident">temp</span>, <span class="ident">defs</span>)<span class="op">|</span> <span class="self">Self</span>::<span class="ident">get_unique_def</span>(<span class="ident">temp</span>, <span class="ident">defs</span>))
+            .<span class="ident">filter</span>(<span class="op">|</span>(<span class="ident">t</span>, <span class="kw">_</span>)<span class="op">|</span> {
+                <span class="kw-2">*</span><span class="ident">t</span> <span class="op">&gt;</span><span class="op">=</span> <span class="ident">user_local_count</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="kw-2">*</span><span class="ident">t</span>).<span class="ident">is_reference</span>()
+            }) <span class="comment">// keeping only newly added temps</span>
+            .<span class="ident">collect</span>()
+    }
+
+    <span class="kw">fn</span> <span class="ident">get_src_local</span>(<span class="ident">idx</span>: <span class="ident">TempIndex</span>, <span class="ident">reaching_defs</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">TempIndex</span>, <span class="ident">TempIndex</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">TempIndex</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">idx</span>;
+        <span class="kw">while</span> <span class="ident">reaching_defs</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">res</span>) {
+            <span class="ident">res</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">reaching_defs</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">res</span>).<span class="ident">unwrap</span>();
+            <span class="kw">if</span> <span class="ident">res</span> <span class="op">=</span><span class="op">=</span> <span class="ident">idx</span> {
+                <span class="kw">break</span>;
+            }
+        }
+        <span class="ident">res</span>
+    }
+
+    <span class="doccomment">/// Eliminate assignments of temps if they reach the return of a function</span>
+    <span class="doccomment">/// and replace temps accordingly. For example, if assignment &#39;a=b&#39; reaches</span>
+    <span class="doccomment">/// the end of the function, then it will be eliminated and all appearances</span>
+    <span class="doccomment">/// of a will be replaced by b.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transform_code</span>(
+        <span class="ident">code</span>: <span class="kw-2">&amp;</span>[<span class="ident">Bytecode</span>],
+        <span class="ident">defs</span>: <span class="kw-2">&amp;</span><span class="ident">ReachingDefAnnotation</span>,
+        <span class="ident">func_target</span>: <span class="ident">FunctionTarget</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Bytecode</span><span class="op">&gt;</span> {
+        <span class="kw">use</span> <span class="ident">Bytecode</span>::<span class="kw-2">*</span>;
+        <span class="kw">let</span> <span class="ident">exit_offsets</span> <span class="op">=</span> <span class="ident">Bytecode</span>::<span class="ident">get_exits</span>(<span class="ident">code</span>);
+        <span class="kw">let</span> <span class="ident">user_local_count</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_user_local_count</span>();
+        <span class="kw">let</span> <span class="ident">reaching_defs</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">defs_reaching_exits</span>(<span class="ident">exit_offsets</span>, <span class="kw-2">&amp;</span><span class="ident">defs</span>.<span class="number">0</span>, <span class="ident">func_target</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+        <span class="kw">let</span> <span class="ident">transform_local</span> <span class="op">=</span> <span class="op">|</span><span class="ident">local</span><span class="op">|</span> <span class="self">Self</span>::<span class="ident">get_src_local</span>(<span class="ident">local</span>, <span class="kw-2">&amp;</span><span class="ident">reaching_defs</span>);
+        <span class="kw">for</span> <span class="ident">bytecode</span> <span class="kw">in</span> <span class="ident">code</span> {
+            <span class="kw">match</span> <span class="ident">bytecode</span> {
+                <span class="ident">Assign</span>(<span class="ident">attr</span>, <span class="ident">dest</span>, <span class="ident">src</span>, <span class="ident">a_kind</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">if</span> <span class="kw-2">*</span><span class="ident">dest</span> <span class="op">&lt;</span> <span class="ident">user_local_count</span>
+                        <span class="op">|</span><span class="op">|</span> <span class="op">!</span><span class="ident">reaching_defs</span>.<span class="ident">contains_key</span>(<span class="ident">dest</span>)
+                        <span class="op">|</span><span class="op">|</span> <span class="ident">reaching_defs</span>.<span class="ident">get</span>(<span class="ident">dest</span>).<span class="ident">unwrap</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">src</span>
+                    {
+                        <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">Assign</span>(<span class="kw-2">*</span><span class="ident">attr</span>, <span class="kw-2">*</span><span class="ident">dest</span>, <span class="ident">transform_local</span>(<span class="kw-2">*</span><span class="ident">src</span>), <span class="kw-2">*</span><span class="ident">a_kind</span>));
+                    }
+                }
+                <span class="ident">Call</span>(<span class="ident">attr</span>, <span class="ident">dests</span>, <span class="ident">op</span>, <span class="ident">srcs</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">let</span> <span class="ident">transformed_dests</span> <span class="op">=</span> <span class="ident">dests</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">d</span><span class="op">|</span> <span class="ident">transform_local</span>(<span class="kw-2">*</span><span class="ident">d</span>)).<span class="ident">collect</span>();
+                    <span class="kw">let</span> <span class="ident">transformed_srcs</span> <span class="op">=</span> <span class="ident">srcs</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">s</span><span class="op">|</span> <span class="ident">transform_local</span>(<span class="kw-2">*</span><span class="ident">s</span>)).<span class="ident">collect</span>();
+                    <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">Call</span>(<span class="kw-2">*</span><span class="ident">attr</span>, <span class="ident">transformed_dests</span>, <span class="ident">op</span>.<span class="ident">clone</span>(), <span class="ident">transformed_srcs</span>));
+                }
+                <span class="ident">Ret</span>(<span class="ident">attr</span>, <span class="ident">rets</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">let</span> <span class="ident">transformed_rets</span> <span class="op">=</span> <span class="ident">rets</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">r</span><span class="op">|</span> <span class="ident">transform_local</span>(<span class="kw-2">*</span><span class="ident">r</span>)).<span class="ident">collect</span>();
+                    <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">Ret</span>(<span class="kw-2">*</span><span class="ident">attr</span>, <span class="ident">transformed_rets</span>));
+                }
+
+                <span class="ident">Branch</span>(<span class="ident">attr</span>, <span class="ident">if_label</span>, <span class="ident">else_label</span>, <span class="ident">cond</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">Branch</span>(
+                        <span class="kw-2">*</span><span class="ident">attr</span>,
+                        <span class="kw-2">*</span><span class="ident">if_label</span>,
+                        <span class="kw-2">*</span><span class="ident">else_label</span>,
+                        <span class="ident">transform_local</span>(<span class="kw-2">*</span><span class="ident">cond</span>),
+                    ));
+                }
+
+                <span class="ident">Abort</span>(<span class="ident">attr</span>, <span class="ident">cond</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">Abort</span>(<span class="kw-2">*</span><span class="ident">attr</span>, <span class="ident">transform_local</span>(<span class="kw-2">*</span><span class="ident">cond</span>)));
+                }
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">res</span>.<span class="ident">push</span>(<span class="ident">bytecode</span>.<span class="ident">clone</span>());
+                }
+            }
+        }
+        <span class="ident">res</span>
     }
 }
 
@@ -279,7 +501,11 @@
             }
             <span class="ident">res</span>
         };
-        <span class="ident">data</span>.<span class="ident">annotations</span>.<span class="ident">set</span>(<span class="ident">ReachingDefAnnotation</span>(<span class="ident">defs</span>));
+        <span class="kw">let</span> <span class="ident">annotations</span> <span class="op">=</span> <span class="ident">ReachingDefAnnotation</span>(<span class="ident">defs</span>);
+        <span class="kw">let</span> <span class="ident">func_target</span> <span class="op">=</span> <span class="ident">FunctionTarget</span>::<span class="ident">new</span>(<span class="ident">func_env</span>, <span class="kw-2">&amp;</span><span class="ident">data</span>);
+        <span class="kw">let</span> <span class="ident">transformed_code</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">transform_code</span>(<span class="kw-2">&amp;</span><span class="ident">data</span>.<span class="ident">code</span>, <span class="kw-2">&amp;</span><span class="ident">annotations</span>, <span class="ident">func_target</span>);
+        <span class="ident">data</span>.<span class="ident">code</span> <span class="op">=</span> <span class="ident">transformed_code</span>;
+        <span class="ident">data</span>.<span class="ident">annotations</span>.<span class="ident">set</span>(<span class="ident">annotations</span>);
         <span class="ident">data</span>
     }
 }

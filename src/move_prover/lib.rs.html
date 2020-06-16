@@ -274,6 +274,8 @@
 <span id="274">274</span>
 <span id="275">275</span>
 <span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -304,6 +306,7 @@
     <span class="ident">function_target_pipeline</span>::{<span class="ident">FunctionTargetPipeline</span>, <span class="ident">FunctionTargetsHolder</span>},
     <span class="ident">livevar_analysis</span>::<span class="ident">LiveVarAnalysisProcessor</span>,
     <span class="ident">packref_analysis</span>::<span class="ident">PackrefAnalysisProcessor</span>,
+    <span class="ident">reaching_def_analysis</span>::<span class="ident">ReachingDefProcessor</span>,
     <span class="ident">writeback_analysis</span>::<span class="ident">WritebackAnalysisProcessor</span>,
 };
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -471,6 +474,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">res</span> <span class="op">=</span> <span class="ident">FunctionTargetPipeline</span>::<span class="ident">default</span>();
 
     <span class="comment">// Add processors in order they are executed.</span>
+    <span class="ident">res</span>.<span class="ident">add_processor</span>(<span class="ident">ReachingDefProcessor</span>::<span class="ident">new</span>());
     <span class="ident">res</span>.<span class="ident">add_processor</span>(<span class="ident">EliminateImmRefsProcessor</span>::<span class="ident">new</span>());
     <span class="ident">res</span>.<span class="ident">add_processor</span>(<span class="ident">LiveVarAnalysisProcessor</span>::<span class="ident">new</span>());
     <span class="ident">res</span>.<span class="ident">add_processor</span>(<span class="ident">BorrowAnalysisProcessor</span>::<span class="ident">new</span>());
