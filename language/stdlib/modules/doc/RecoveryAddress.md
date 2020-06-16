@@ -9,6 +9,14 @@
 -  [Function `publish`](#0x1_RecoveryAddress_publish)
 -  [Function `rotate_authentication_key`](#0x1_RecoveryAddress_rotate_authentication_key)
 -  [Function `add_rotation_capability`](#0x1_RecoveryAddress_add_rotation_capability)
+-  [Specification](#0x1_RecoveryAddress_Specification)
+    -  [Module specifications](#0x1_RecoveryAddress_@Module_specifications)
+        -  [RecoveryAddress has its own KeyRotationCapability](#0x1_RecoveryAddress_@RecoveryAddress_has_its_own_KeyRotationCapability)
+        -  [RecoveryAddress resource stays](#0x1_RecoveryAddress_@RecoveryAddress_resource_stays)
+        -  [RecoveryAddress remains same](#0x1_RecoveryAddress_@RecoveryAddress_remains_same)
+    -  [Function `publish`](#0x1_RecoveryAddress_Specification_publish)
+    -  [Function `rotate_authentication_key`](#0x1_RecoveryAddress_Specification_rotate_authentication_key)
+    -  [Function `add_rotation_capability`](#0x1_RecoveryAddress_Specification_add_rotation_capability)
 
 
 
@@ -204,3 +212,210 @@ Aborts if
 
 
 </details>
+
+<a name="0x1_RecoveryAddress_Specification"></a>
+
+## Specification
+
+
+<a name="0x1_RecoveryAddress_@Module_specifications"></a>
+
+### Module specifications
+
+
+> TODO: change
+<code>aborts_if_is_partial</code> to
+<code><b>false</b></code> after
+> the KeyRotationCapability property has been specified
+> and all the aborts_ifs have been added.
+
+
+<pre><code>pragma verify = <b>true</b>, aborts_if_is_partial = <b>true</b>;
+</code></pre>
+
+
+
+Returns true if
+<code>addr</code> is a recovery address.
+
+
+<a name="0x1_RecoveryAddress_spec_is_recovery_address"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr: address): bool
+{
+    exists&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(addr)
+}
+</code></pre>
+
+
+Returns all the
+<code>KeyRotationCapability</code>s held at
+<code>recovery_address</code>.
+
+
+<a name="0x1_RecoveryAddress_spec_get_rotation_caps"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address: address):
+    vector&lt;<a href="LibraAccount.md#0x1_LibraAccount_KeyRotationCapability">LibraAccount::KeyRotationCapability</a>&gt;
+{
+    <b>global</b>&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps
+}
+</code></pre>
+
+
+Returns true if
+<code>recovery_address</code> holds the
+<code>KeyRotationCapability</code> for
+<code>addr</code>.
+
+
+<a name="0x1_RecoveryAddress_spec_holds_key_rotation_cap_for"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(
+    recovery_address: address,
+    addr: address): bool
+{
+    // BUG: the commented out version will <b>break</b> the postconditions.
+    // exists i in 0..len(<a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)):
+    //     <a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)[i].account_address == addr
+    exists i: u64
+        where 0 &lt;= i && i &lt; len(<a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)):
+            <a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)[i].account_address == addr
+}
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_@RecoveryAddress_has_its_own_KeyRotationCapability"></a>
+
+#### RecoveryAddress has its own KeyRotationCapability
+
+
+
+<a name="0x1_RecoveryAddress_RecoveryAddressHasItsOwnKeyRotationCap"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_RecoveryAddressHasItsOwnKeyRotationCap">RecoveryAddressHasItsOwnKeyRotationCap</a> {
+    <b>invariant</b> <b>module</b> forall addr1: address
+        where <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr1):
+            <a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(addr1, addr1);
+}
+</code></pre>
+
+
+
+> TODO: the invariant does not work for
+<code>publish</code>
+> because we need to yet prove in LibraAccount that
+> every account must contain either no KeyRotationCapability
+> or the KeyRotationCapability for itself.
+
+
+<pre><code><b>apply</b> <a href="#0x1_RecoveryAddress_RecoveryAddressHasItsOwnKeyRotationCap">RecoveryAddressHasItsOwnKeyRotationCap</a> <b>to</b> * <b>except</b> publish;
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_@RecoveryAddress_resource_stays"></a>
+
+#### RecoveryAddress resource stays
+
+
+
+<a name="0x1_RecoveryAddress_RecoveryAddressStays"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_RecoveryAddressStays">RecoveryAddressStays</a> {
+    <b>ensures</b> forall addr1: address:
+        <b>old</b>(<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr1))
+        ==&gt; <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(addr1);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_RecoveryAddress_RecoveryAddressStays">RecoveryAddressStays</a> <b>to</b> *;
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_@RecoveryAddress_remains_same"></a>
+
+#### RecoveryAddress remains same
+
+
+
+<a name="0x1_RecoveryAddress_RecoveryAddressRemainsSame"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_RecoveryAddress_RecoveryAddressRemainsSame">RecoveryAddressRemainsSame</a> {
+    <b>ensures</b> forall recovery_addr: address, to_recovery_addr: address
+        where <b>old</b>(<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_addr)):
+            <b>old</b>(<a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_addr, to_recovery_addr))
+            ==&gt; <a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_addr, to_recovery_addr);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_RecoveryAddress_RecoveryAddressRemainsSame">RecoveryAddressRemainsSame</a> <b>to</b> *;
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_Specification_publish"></a>
+
+### Function `publish`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_publish">publish</a>(recovery_account: &signer)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(recovery_account));
+<b>ensures</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(recovery_account));
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_Specification_rotate_authentication_key"></a>
+
+### Function `rotate_authentication_key`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_rotate_authentication_key">rotate_authentication_key</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address);
+<b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_address, to_recover);
+<b>aborts_if</b> !(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(account) == recovery_address
+            || <a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(account) == to_recover);
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_Specification_add_rotation_capability"></a>
+
+### Function `add_rotation_capability`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability">add_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
+</code></pre>
+
+
+
+
+<pre><code><b>ensures</b> forall to_recovery_addr: address:
+    <b>old</b>(<a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_address, to_recovery_addr))
+    ==&gt; <a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_address, to_recovery_addr);
+</code></pre>
