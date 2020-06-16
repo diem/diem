@@ -40,7 +40,7 @@ use network::{
     transport::{self, Connection, LibraNetTransport, LIBRA_TCP_TRANSPORT},
     ProtocolId,
 };
-use onchain_discovery::builder::OnchainDiscoveryBuilder;
+use onchain_discovery::builder::{OnchainDiscoveryBuilder, OnchainDiscoveryBuilderConfig};
 use std::{
     clone::Clone,
     collections::HashMap,
@@ -121,6 +121,8 @@ pub struct NetworkBuilder {
     discovery: Option<DiscoveryService>,
     health_checker_cfg: Option<HealthCheckerBuilderConfig>,
     health_checker: Option<HealthCheckerService>,
+    onchain_discovery_cfg: Option<OnchainDiscoveryBuilderConfig>,
+    onchain_discovery: Option<OnchainDiscoveryBuilder>,
 }
 
 impl NetworkBuilder {
@@ -178,6 +180,8 @@ impl NetworkBuilder {
             discovery_cfg: None,
             health_checker_cfg: None,
             health_checker: None,
+            onchain_discovery_cfg: None,
+            onchain_discovery: None,
         }
     }
 
@@ -256,22 +260,7 @@ impl NetworkBuilder {
                 );
             }
             DiscoveryMethod::Onchain => {
-                let (network_tx, discovery_events) = network_builder.add_protocol_handler(
-                    onchain_discovery::network_interface::network_endpoint_config(),
-                );
-
-                let onchain_discovery_builder = OnchainDiscoveryBuilder::build(
-                    network_builder
-                        .conn_mgr_reqs_tx()
-                        .expect("ConnectivityManager must be installed"),
-                    network_tx,
-                    discovery_events,
-                    network_builder.network_context(),
-                    libra_db,
-                    waypoint,
-                    runtime.handle(),
-                );
-                onchain_discovery_builder.start(runtime.handle());
+                network_builder.add_onchain_discovery(libra_db, waypoint);
             }
             DiscoveryMethod::None => {}
         }
@@ -505,6 +494,49 @@ impl NetworkBuilder {
         self
     }
 
+    fn add_onchain_discovery(
+        &mut self,
+        libra_db: Arc<dyn DbReader>,
+        waypoint: Waypoint,
+    ) -> &mut Self {
+        let (network_tx, discovery_events) = self
+            .add_protocol_handler(onchain_discovery::network_interface::network_endpoint_config());
+
+        let onchain_config = OnchainDiscoveryBuilderConfig::new(
+            self.conn_mgr_reqs_tx()
+                .expect("ConnectivityManager must be installed"),
+            network_tx,
+            discovery_events,
+            self.network_context(),
+            libra_db,
+            waypoint,
+            // TODO: Move into NetworkConfig
+            30, // Legacy hard-coded value.
+            // TODO: move into NetworkConfig
+            8, // Legacy hard-coded value.
+        );
+
+        self.onchain_discovery_cfg = Some(onchain_config);
+
+        self.build_onchain_discovery()
+    }
+
+    fn build_onchain_discovery(&mut self) -> &mut Self {
+        if let Some(config) = self.onchain_discovery_cfg.take() {
+            let onchain_discovery_builder = OnchainDiscoveryBuilder::build(config, &self.executor);
+            self.onchain_discovery = Some(onchain_discovery_builder);
+            debug!("Built OnchainDiscovery");
+        }
+        self.start_onchain_discovery()
+    }
+
+    fn start_onchain_discovery(&mut self) -> &mut Self {
+        if let Some(onchain_discovery) = self.onchain_discovery.take() {
+            onchain_discovery.start(&self.executor);
+            debug!("Started Onchain Discovery");
+        }
+        self
+    }
     pub fn add_connection_monitoring(&mut self) -> &mut Self {
         // Initialize and start HealthChecker.
         let (hc_network_tx, hc_network_rx) =

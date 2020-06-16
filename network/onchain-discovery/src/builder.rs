@@ -23,35 +23,68 @@ pub struct OnchainDiscoveryBuilder {
     started: bool,
 }
 
-impl OnchainDiscoveryBuilder {
-    /// Setup OnchainDiscovery to work with the provided tx and rx channels.  Returns a tuple
-    /// (OnChainDiscoveryService, OnChainDiscovery) which must be started by the caller.
-    pub fn build(
+pub struct OnchainDiscoveryBuilderConfig {
+    conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
+    network_tx: OnchainDiscoveryNetworkSender,
+    discovery_events: OnchainDiscoveryNetworkEvents,
+    network_context: Arc<NetworkContext>,
+    libra_db: Arc<dyn DbReader>,
+    waypoint: Waypoint,
+    outbound_rpc_timeout_secs: u64,
+    max_concurrent_inbound_queries: usize,
+}
+
+impl OnchainDiscoveryBuilderConfig {
+    pub fn new(
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         network_tx: OnchainDiscoveryNetworkSender,
         discovery_events: OnchainDiscoveryNetworkEvents,
         network_context: Arc<NetworkContext>,
         libra_db: Arc<dyn DbReader>,
         waypoint: Waypoint,
-        executor: &Handle,
+        outbound_rpc_timeout_secs: u64,
+        max_concurrent_inbound_queries: usize,
     ) -> Self {
-        let outbound_rpc_timeout = Duration::from_secs(30);
-        let max_concurrent_inbound_queries = 8;
+        Self {
+            conn_mgr_reqs_tx,
+            network_tx,
+            discovery_events,
+            network_context,
+            libra_db,
+            waypoint,
+            outbound_rpc_timeout_secs,
+            max_concurrent_inbound_queries,
+        }
+    }
+}
+
+impl OnchainDiscoveryBuilder {
+    /// Setup OnchainDiscovery to work with the provided tx and rx channels.  Returns a tuple
+    /// (OnChainDiscoveryService, OnChainDiscovery) which must be started by the caller.
+    pub fn build(config: OnchainDiscoveryBuilderConfig, executor: &Handle) -> Self {
         let (peer_mgr_notifs_rx, conn_notifs_rx) = (
-            discovery_events.peer_mgr_notifs_rx,
-            discovery_events.connection_notifs_rx,
+            config.discovery_events.peer_mgr_notifs_rx,
+            config.discovery_events.connection_notifs_rx,
         );
 
         let onchain_discovery_service = OnchainDiscoveryService::new(
             executor.clone(),
             peer_mgr_notifs_rx,
-            Arc::clone(&libra_db),
-            max_concurrent_inbound_queries,
+            Arc::clone(&config.libra_db),
+            config.max_concurrent_inbound_queries,
         );
 
+        let network_context = config.network_context;
+        let waypoint = config.waypoint;
+        let network_tx = config.network_tx;
+        let conn_mgr_reqs_tx = config.conn_mgr_reqs_tx;
+        let libra_db = config.libra_db;
+        let ticker_secs = config.outbound_rpc_timeout_secs;
+
         let onchain_discovery = executor.enter(move || {
-            let peer_query_ticker = interval(Duration::from_secs(30)).fuse();
-            let storage_query_ticker = interval(Duration::from_secs(30)).fuse();
+            let peer_query_ticker = interval(Duration::from_secs(ticker_secs)).fuse();
+            let storage_query_ticker = interval(Duration::from_secs(ticker_secs)).fuse();
+            let outbound_rpc_timeout = Duration::from_secs(ticker_secs);
 
             OnchainDiscovery::new(
                 network_context,
