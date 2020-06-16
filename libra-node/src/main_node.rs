@@ -58,6 +58,7 @@ fn setup_debug_interface(config: &NodeConfig) -> NodeDebugService {
 }
 
 pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
+    debug!("Meaningless comment to make a PR for CI purposes");
     crash_handler::setup_panic_handler();
 
     // Some of our code uses the rayon global thread pool. Name the rayon threads so it doesn't
