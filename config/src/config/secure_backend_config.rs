@@ -17,12 +17,12 @@ pub enum SecureBackend {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub struct GitHubConfig {
     /// The owner or account that hosts a repository
-    pub owner: String,
+    pub repository_owner: String,
     /// The repository where storage will mount
     pub repository: String,
     /// The authorization token for accessing the repository
     pub token: Token,
-    /// A namespace is an optional portion of the path to a key stored within OnDiskStorage. For
+    /// A namespace is an optional portion of the path to a key stored within GitHubConfig. For
     /// example, a key, S, without a namespace would be available in S, with a namespace, N, it
     /// would be in N/S.
     pub namespace: Option<String>,

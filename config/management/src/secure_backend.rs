@@ -86,10 +86,10 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                 config::SecureBackend::OnDiskStorage(config)
             }
             GITHUB => {
-                let owner = self
+                let repository_owner = self
                     .parameters
-                    .remove("owner")
-                    .ok_or_else(|| Error::BackendParsingError("missing owner".into()))?;
+                    .remove("repository_owner")
+                    .ok_or_else(|| Error::BackendParsingError("missing repository owner".into()))?;
                 let repository = self
                     .parameters
                     .remove("repository")
@@ -100,7 +100,7 @@ impl TryInto<config::SecureBackend> for SecureBackend {
                     .ok_or_else(|| Error::BackendParsingError("missing token".into()))?;
                 config::SecureBackend::GitHub(GitHubConfig {
                     namespace: self.parameters.remove("namespace"),
-                    owner,
+                    repository_owner,
                     repository,
                     token: Token::FromDisk(PathBuf::from(token)),
                 })
@@ -179,13 +179,13 @@ mod tests {
         let path_str = path.path().to_str().unwrap();
 
         let github = format!(
-            "backend=github;owner=libra;repository=libra;token={}",
+            "backend=github;repository_owner=libra;repository=libra;token={}",
             path_str
         );
         storage(&github).unwrap();
 
         let github = format!(
-            "backend=github;owner=libra;repository=libra;token={};namespace=test",
+            "backend=github;repository_owner=libra;repository=libra;token={};namespace=test",
             path_str
         );
         storage(&github).unwrap();
