@@ -4,6 +4,7 @@
 use crate::{
     consensus_state::ConsensusState, error::Error,
     persistent_safety_storage::PersistentSafetyStorage, t_safety_rules::TSafetyRules, COUNTERS,
+    safety_rules_sgx_runner,
 };
 use consensus_types::{
     block::Block, block_data::BlockData, common::Author, quorum_cert::QuorumCert, timeout::Timeout,
@@ -199,6 +200,7 @@ impl TSafetyRules for SafetyRules {
     }
 
     fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
+	safety_rules_sgx_runner::start_lsr_enclave();
         let waypoint = self.persistent_storage.waypoint()?;
         let last_li = proof
             .verify(&waypoint)

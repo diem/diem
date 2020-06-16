@@ -16,6 +16,7 @@ mod serializer;
 mod spawned_process;
 mod t_safety_rules;
 mod thread;
+mod safety_rules_sgx_runner;
 
 pub use crate::{
     consensus_state::ConsensusState, counters::COUNTERS, error::Error,

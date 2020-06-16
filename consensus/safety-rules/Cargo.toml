@@ -26,6 +26,13 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 serde = { version = "1.0.112", default-features = false }
 thiserror = "1.0.20"
 
+# lwg: necessary dependency for enclave to run using Fortanix Rust-SGX SDK
+#enclave-runner = "0.4.0"
+enclave-runner = "0.2.0"
+#aesm-client = "0.5.0"
+aesm-client = "0.2.0"
+sgxs-loaders = "0.2.2"
+
 [dev-dependencies]
 criterion = "0.3.2"
 tempfile = "3.1.0"
