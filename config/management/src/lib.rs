@@ -120,102 +120,70 @@ impl Command {
     }
 
     pub fn association_key(self) -> Result<Ed25519PublicKey, Error> {
-        if let Command::AssociationKey(association_key) = self {
-            association_key.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::AssociationKey,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::AssociationKey(association_key) => association_key.execute(),
+            _ => Err(self.unexpected_command(CommandName::AssociationKey)),
         }
     }
 
     pub fn create_waypoint(self) -> Result<Waypoint, Error> {
-        if let Command::CreateWaypoint(create_waypoint) = self {
-            create_waypoint.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::CreateWaypoint,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::CreateWaypoint(create_waypoint) => create_waypoint.execute(),
+            _ => Err(self.unexpected_command(CommandName::CreateWaypoint)),
         }
     }
 
     pub fn genesis(self) -> Result<Transaction, Error> {
-        if let Command::Genesis(genesis) = self {
-            genesis.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::Genesis,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::Genesis(genesis) => genesis.execute(),
+            _ => Err(self.unexpected_command(CommandName::Genesis)),
         }
     }
 
     pub fn insert_waypoint(self) -> Result<Waypoint, Error> {
-        if let Command::InsertWaypoint(insert_waypoint) = self {
-            insert_waypoint.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::InsertWaypoint,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::InsertWaypoint(insert_waypoint) => insert_waypoint.execute(),
+            _ => Err(self.unexpected_command(CommandName::InsertWaypoint)),
         }
     }
 
     pub fn operator_key(self) -> Result<Ed25519PublicKey, Error> {
-        if let Command::OperatorKey(operator_key) = self {
-            operator_key.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::OperatorKey,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::OperatorKey(operator_key) => operator_key.execute(),
+            _ => Err(self.unexpected_command(CommandName::OperatorKey)),
         }
     }
 
     pub fn owner_key(self) -> Result<Ed25519PublicKey, Error> {
-        if let Command::OwnerKey(owner_key) = self {
-            owner_key.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::OwnerKey,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::OwnerKey(owner_key) => owner_key.execute(),
+            _ => Err(self.unexpected_command(CommandName::OwnerKey)),
         }
     }
 
     pub fn set_layout(self) -> Result<crate::layout::Layout, Error> {
-        if let Command::SetLayout(set_layout) = self {
-            set_layout.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::SetLayout,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::SetLayout(set_layout) => set_layout.execute(),
+            _ => Err(self.unexpected_command(CommandName::SetLayout)),
         }
     }
 
     pub fn validator_config(self) -> Result<Transaction, Error> {
-        if let Command::ValidatorConfig(config) = self {
-            config.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::ValidatorConfig,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::ValidatorConfig(config) => config.execute(),
+            _ => Err(self.unexpected_command(CommandName::ValidatorConfig)),
         }
     }
 
     pub fn verify(self) -> Result<String, Error> {
-        if let Command::Verify(verify) = self {
-            verify.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::Verify,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::Verify(verify) => verify.execute(),
+            _ => Err(self.unexpected_command(CommandName::Verify)),
         }
+    }
+
+    fn unexpected_command(self, expected: CommandName) -> Error {
+        Error::UnexpectedCommand(expected, CommandName::from(&self))
     }
 }
 
