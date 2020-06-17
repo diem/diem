@@ -711,7 +711,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Percent time spent in process proposal compared to all consensus msg",
+      "description": "The error rate of main loop.",
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -721,7 +721,7 @@
         "y": 18
       },
       "hiddenSeries": false,
-      "id": 74,
+      "id": 84,
       "legend": {
         "avg": false,
         "current": false,
@@ -749,7 +749,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(consensus_duration_sum{op='process_proposal'}[1m]) / on(peer_id) irate(consensus_duration_sum{op='process_message'}[1m])",
+          "expr": "irate(libra_consensus_error_count[1m]) / on (peer_id) irate(consensus_duration_count{op='main_loop'}[1m])",
           "format": "time_series",
           "legendFormat": "{{peer_id}} ",
           "refId": "A"
@@ -759,7 +759,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Process proposal",
+      "title": "Error rate",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -984,13 +984,104 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
-      "description": "Useful when the node is stuck somewhere",
+      "description": "Percent time spent in process proposal compared to all consensus msg",
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
         "h": 8,
         "w": 8,
         "x": 8,
+        "y": 26
+      },
+      "hiddenSeries": false,
+      "id": 74,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.6.0",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(consensus_duration_sum{op='process_proposal'}[1m]) / on(peer_id) irate(consensus_duration_sum{op='process_message'}[1m])",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}} ",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Process proposal",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": "ms",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "Useful when the node is stuck somewhere",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
         "y": 26
       },
       "hiddenSeries": false,
@@ -2248,6 +2339,7 @@
       "dashLength": 10,
       "dashes": false,
       "datasource": null,
+      "description": "",
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -2257,7 +2349,7 @@
         "y": 70
       },
       "hiddenSeries": false,
-      "id": 62,
+      "id": 85,
       "legend": {
         "avg": false,
         "current": false,
@@ -2275,6 +2367,7 @@
         "dataLinks": []
       },
       "percentage": false,
+      "pluginVersion": "6.6.0",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -2284,10 +2377,9 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "libra_consensus_sync_info_msg_sent_count",
+          "expr": "irate(consensus_duration_sum{op='safety_rules'}[1m]) / irate(consensus_duration_count{op='safety_rules'}[1m])",
           "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
+          "legendFormat": "{{peer_id}} ",
           "refId": "A"
         }
       ],
@@ -2295,7 +2387,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Total sync info sent to help peers",
+      "title": "Safety rules",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -2311,8 +2403,281 @@
       },
       "yaxes": [
         {
+          "format": "dtdurations",
+          "label": "s",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
           "format": "short",
-          "label": "",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 78
+      },
+      "hiddenSeries": false,
+      "id": 86,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.6.0",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(consensus_duration_sum{op='pull_txn'}[1m]) / irate(consensus_duration_count{op='pull_txn'}[1m])",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}} ",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Pull txn",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "dtdurations",
+          "label": "s",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 8,
+        "y": 78
+      },
+      "hiddenSeries": false,
+      "id": 87,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.6.0",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(consensus_duration_sum{op='notify_mempool'}[1m]) / irate(consensus_duration_count{op='notify_mempool'}[1m])",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}} ",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Notify mempool",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "dtdurations",
+          "label": "s",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "description": "",
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 16,
+        "y": 78
+      },
+      "hiddenSeries": false,
+      "id": 88,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.6.0",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(consensus_duration_sum{op='notify_state_sync'}[1m]) / irate(consensus_duration_count{op='notify_state_sync'}[1m])",
+          "format": "time_series",
+          "legendFormat": "{{peer_id}} ",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Notify state sync",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "dtdurations",
+          "label": "s",
           "logBase": 1,
           "max": null,
           "min": "0",
@@ -2344,7 +2709,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 78
+        "y": 86
       },
       "hiddenSeries": false,
       "id": 21,
@@ -2434,7 +2799,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 78
+        "y": 86
       },
       "hiddenSeries": false,
       "id": 23,
@@ -2524,7 +2889,97 @@
         "h": 8,
         "w": 8,
         "x": 16,
-        "y": 78
+        "y": 86
+      },
+      "hiddenSeries": false,
+      "id": 62,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "libra_consensus_sync_info_msg_sent_count",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{peer_id}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Total sync info sent to help peers",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "",
+          "logBase": 1,
+          "max": null,
+          "min": "0",
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fill": 0,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 94
       },
       "hiddenSeries": false,
       "id": 24,
@@ -2613,8 +3068,8 @@
       "gridPos": {
         "h": 8,
         "w": 8,
-        "x": 0,
-        "y": 86
+        "x": 8,
+        "y": 94
       },
       "hiddenSeries": false,
       "id": 25,
@@ -2699,7 +3154,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 94
+        "y": 102
       },
       "id": 52,
       "panels": [],
@@ -2718,7 +3173,7 @@
         "h": 8,
         "w": 8,
         "x": 0,
-        "y": 95
+        "y": 103
       },
       "hiddenSeries": false,
       "id": 28,
@@ -2808,7 +3263,7 @@
         "h": 8,
         "w": 8,
         "x": 8,
-        "y": 95
+        "y": 103
       },
       "hiddenSeries": false,
       "id": 53,
@@ -2893,7 +3348,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 103
+        "y": 111
       },
       "id": 49,
       "panels": [],
@@ -2913,7 +3368,7 @@
         "h": 9,
         "w": 8,
         "x": 0,
-        "y": 104
+        "y": 112
       },
       "hiddenSeries": false,
       "id": 47,
@@ -3001,7 +3456,7 @@
         "h": 9,
         "w": 8,
         "x": 8,
-        "y": 104
+        "y": 112
       },
       "hiddenSeries": false,
       "id": 50,
@@ -3083,7 +3538,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 113
+        "y": 121
       },
       "id": 64,
       "panels": [],
@@ -3103,7 +3558,7 @@
         "h": 9,
         "w": 8,
         "x": 0,
-        "y": 114
+        "y": 122
       },
       "hiddenSeries": false,
       "id": 65,
@@ -3196,7 +3651,7 @@
         "h": 9,
         "w": 8,
         "x": 8,
-        "y": 114
+        "y": 122
       },
       "hiddenSeries": false,
       "id": 66,
@@ -3289,7 +3744,7 @@
         "h": 9,
         "w": 8,
         "x": 16,
-        "y": 114
+        "y": 122
       },
       "hiddenSeries": false,
       "id": 67,
@@ -3382,7 +3837,7 @@
         "h": 9,
         "w": 8,
         "x": 0,
-        "y": 123
+        "y": 131
       },
       "hiddenSeries": false,
       "id": 68,
@@ -3469,7 +3924,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 132
+        "y": 140
       },
       "id": 82,
       "panels": [],
@@ -3485,8 +3940,8 @@
     "list": []
   },
   "time": {
-    "from": "2020-06-16T20:27:13.071Z",
-    "to": "2020-06-16T20:54:49.165Z"
+    "from": "now-1h",
+    "to": "now"
   },
   "timepicker": {
     "refresh_intervals": [
@@ -3514,7 +3969,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "Consensus-1",
+  "title": "Consensus",
   "uid": "Zslv6zWGz",
-  "version": 21
+  "version": 24
 }
