@@ -87,6 +87,7 @@ dependencies = [
  "protobuf 1.7.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "protoc-rust 1.7.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "sgx-isa 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sgxs 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "unix_socket2 0.5.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]

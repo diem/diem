@@ -53,7 +53,7 @@ impl UsercallExtension for LSRService {
 	) -> IoResult<Option<Box<dyn SyncListener>>> {
 		Ok(None)
 	}
-} 
+}
 
 fn run_server(file: String) -> Result<(), ()> {
     let mut device = IsgxDevice::new()
