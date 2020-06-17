@@ -13,7 +13,7 @@ use crate::{
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::{future::try_join_all, join};
-use libra_logger::info;
+use libra_logger::{info, warn};
 use serde_json::Value;
 use std::{
     collections::HashSet,
@@ -146,7 +146,10 @@ impl Experiment for PerformanceBenchmark {
         }
         let end = unix_timestamp_now() - buffer;
         let start = end - window + 2 * buffer;
-        let avg_txns_per_block = stats::avg_txns_per_block(&context.prometheus, start, end)?;
+        let avg_txns_per_block = stats::avg_txns_per_block(&context.prometheus, start, end);
+        let avg_txns_per_block = avg_txns_per_block
+            .map_err(|e| warn!("Failed to query avg_txns_per_block: {}", e))
+            .ok();
         let avg_latency_client = stats.latency / stats.committed;
         let p99_latency = stats.latency_buckets.percentile(99, 100);
         let avg_tps = stats.committed / window.as_secs();
@@ -155,7 +158,7 @@ impl Experiment for PerformanceBenchmark {
             context.prometheus.link_to_dashboard(start, end)
         );
         info!(
-            "Tx status from client side: txn {}, avg latency {}",
+            "Tx status: txn {}, avg latency {}",
             stats.committed as u64, avg_latency_client
         );
         let futures: Vec<_> = self
@@ -172,9 +175,11 @@ impl Experiment for PerformanceBenchmark {
         context
             .report
             .report_metric(&self, "expired_txn", expired_txn as f64);
-        context
-            .report
-            .report_metric(&self, "avg_txns_per_block", avg_txns_per_block as f64);
+        if let Some(avg_txns_per_block) = avg_txns_per_block {
+            context
+                .report
+                .report_metric(&self, "avg_txns_per_block", avg_txns_per_block);
+        }
         context
             .report
             .report_metric(&self, "avg_tps", avg_tps as f64);
@@ -184,7 +189,6 @@ impl Experiment for PerformanceBenchmark {
         context
             .report
             .report_metric(&self, "p99_latency", p99_latency as f64);
-        info!("avg_txns_per_block: {}", avg_txns_per_block);
         let expired_text = if expired_txn == 0 {
             "no expired txns".to_string()
         } else {
