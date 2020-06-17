@@ -270,7 +270,7 @@
 <span class="kw">static</span> <span class="ident">VAL_REGEX</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Regex</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Regex</span>::<span class="ident">new</span>(<span class="string">r&quot;val-(\d+)&quot;</span>).<span class="ident">unwrap</span>());
 <span class="kw">static</span> <span class="ident">FULLNODE_REGEX</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">Regex</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">Regex</span>::<span class="ident">new</span>(<span class="string">r&quot;fn-(\d+)&quot;</span>).<span class="ident">unwrap</span>());
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">InstanceConfig</span> {
     <span class="ident">Validator</span>(<span class="ident">ValidatorConfig</span>),
     <span class="ident">Fullnode</span>(<span class="ident">FullnodeConfig</span>),
@@ -278,12 +278,12 @@
     <span class="ident">Vault</span>(<span class="ident">VaultConfig</span>),
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">VaultConfig</span> {
     <span class="kw">pub</span> <span class="ident">index</span>: <span class="ident">u32</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LSRConfig</span> {
     <span class="kw">pub</span> <span class="ident">index</span>: <span class="ident">u32</span>,
     <span class="kw">pub</span> <span class="ident">num_validators</span>: <span class="ident">u32</span>,
@@ -291,7 +291,7 @@
     <span class="kw">pub</span> <span class="ident">lsr_backend</span>: <span class="ident">String</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ValidatorConfig</span> {
     <span class="kw">pub</span> <span class="ident">index</span>: <span class="ident">u32</span>,
     <span class="kw">pub</span> <span class="ident">num_validators</span>: <span class="ident">u32</span>,
@@ -301,7 +301,7 @@
     <span class="kw">pub</span> <span class="ident">config_overrides</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">FullnodeConfig</span> {
     <span class="kw">pub</span> <span class="ident">fullnode_index</span>: <span class="ident">u32</span>,
     <span class="kw">pub</span> <span class="ident">num_fullnodes_per_validator</span>: <span class="ident">u32</span>,
