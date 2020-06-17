@@ -58,6 +58,7 @@ jobs:
           export CTI_OUTPUT_LOG=$(mktemp)
           echo "::set-env name=CTI_OUTPUT_LOG::$CTI_OUTPUT_LOG"
           ./scripts/cti \
+            -E RUST_LOG=debug \
             --tag ${TEST_TAG} \
             --report report.json \
             --run bench
