@@ -9,9 +9,10 @@ use crate::{
     cli::{Options, INLINE_PRELUDE},
     prelude_template_helpers::StratificationHelper,
 };
+use abigen::Abigen;
 use anyhow::anyhow;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
-use docgen::docgen::Docgen;
+use docgen::Docgen;
 use handlebars::Handlebars;
 use itertools::Itertools;
 #[allow(unused_imports)]
@@ -75,6 +76,10 @@ pub fn run_move_prover<W: WriteColor>(
     if options.run_docgen {
         return run_docgen(&env, &options, now);
     }
+    // Same for ABI generator.
+    if options.run_abigen {
+        return run_abigen(&env, &options, now);
+    }
     let targets = create_and_process_bytecode(&options, &env);
     if env.has_errors() {
         env.report_errors(error_writer);
@@ -136,6 +141,25 @@ fn run_docgen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Resul
     let mut generator = Docgen::new(env, &options.docgen);
     let checking_elapsed = now.elapsed();
     info!("generating documentation");
+    generator.gen();
+    for (file, content) in generator.into_result() {
+        let path = PathBuf::from(&file);
+        fs::create_dir_all(path.parent().unwrap())?;
+        fs::write(path.as_path(), content)?;
+    }
+    let generating_elapsed = now.elapsed();
+    info!(
+        "{:.3}s checking, {:.3}s generating",
+        checking_elapsed.as_secs_f64(),
+        (generating_elapsed - checking_elapsed).as_secs_f64()
+    );
+    Ok(())
+}
+
+fn run_abigen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Result<()> {
+    let mut generator = Abigen::new(env, &options.abigen);
+    let checking_elapsed = now.elapsed();
+    info!("generating ABI files");
     generator.gen();
     for (file, content) in generator.into_result() {
         let path = PathBuf::from(&file);

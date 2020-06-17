@@ -10,6 +10,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "abigen"
+version = "0.1.0"
+dependencies = [
+ "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
+ "codespan-reporting 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "datatest-stable 0.1.0",
+ "libra-temppath 0.1.0",
+ "libra-types 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "log 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "move-core-types 0.1.0",
+ "move-prover 0.1.0",
+ "serde 1.0.112 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)",
+ "spec-lang 0.1.0",
+ "test-utils 0.1.0",
+]
+
+[[package]]
 name = "accumulator"
 version = "0.1.0"
 dependencies = [
@@ -3293,6 +3312,7 @@ dependencies = [
 name = "move-prover"
 version = "0.1.0"
 dependencies = [
+ "abigen 0.1.0",
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "bytecode-source-map 0.1.0",
  "clap 2.33.1 (registry+https://github.com/rust-lang/crates.io-index)",

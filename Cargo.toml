@@ -63,6 +63,7 @@ members = [
     "language/move-lang",
     "language/move-lang/functional-tests",
     "language/move-prover",
+    "language/move-prover/abigen",
     "language/move-prover/diagen",
     "language/move-prover/docgen",
     "language/move-prover/spec-lang",
