@@ -160,10 +160,6 @@ impl DiscoverySetInternal {
     pub fn empty() -> Self {
         Self(HashMap::new())
     }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
