@@ -13,23 +13,14 @@ pub trait TxnManager: Send + Sync {
     /// Brings new transactions to be applied.
     /// The `exclude_txns` list includes the transactions that are already pending in the
     /// branch of blocks consensus is trying to extend.
-    async fn pull_txns(&mut self, max_size: u64, exclude: Vec<&Payload>) -> Result<Payload>;
+    async fn pull_txns(&self, max_size: u64, exclude: Vec<&Payload>) -> Result<Payload>;
 
-    /// Notifies TxnManager about the payload of the committed block including the state compute
-    /// result, which includes the specifics of what transactions succeeded and failed.
-    async fn commit(&mut self, block: &Block, compute_result: &StateComputeResult) -> Result<()>;
+    /// Notifies TxnManager about the executed result of the block,
+    /// which includes the specifics of what transactions succeeded and failed.
+    async fn notify(&self, block: &Block, compute_result: &StateComputeResult) -> Result<()>;
 
-    /// Bypass the trait object non-clonable limit.
-    fn _clone_box(&self) -> Box<dyn TxnManager>;
-
-    // Helper to trace transactions after block is generated
+    /// Helper to trace transactions after block is generated
     fn trace_transactions(&self, _block: &Block) {}
-}
-
-impl Clone for Box<dyn TxnManager> {
-    fn clone(&self) -> Box<dyn TxnManager> {
-        self._clone_box()
-    }
 }
 
 /// While Consensus is managing proposed blocks, `StateComputer` is managing the results of the
