@@ -3,12 +3,9 @@
 
 use crate::{constants, layout::Layout, storage_helper::StorageHelper};
 use config_builder::{BuildSwarm, SwarmConfig};
-use libra_config::{
-    config::{
-        DiscoveryMethod, Identity, NetworkConfig, NodeConfig, OnDiskStorageConfig, RoleType,
-        SecureBackend, SeedPeersConfig, WaypointConfig, HANDSHAKE_VERSION,
-    },
-    network_id::NetworkId,
+use libra_config::config::{
+    Identity, NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend, SeedPeersConfig,
+    WaypointConfig, HANDSHAKE_VERSION,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
@@ -70,16 +67,7 @@ fn smoke_test() {
         let operator_key = helper.operator_key(&ns, &ns_shared).unwrap();
 
         let validator_account = account_address::from_public_key(&operator_key);
-        let mut config = NodeConfig::default();
-
-        let mut network = NetworkConfig::network_with_id(NetworkId::Validator);
-        network.discovery_method = DiscoveryMethod::None;
-        network.mutual_authentication = true;
-        config.validator_network = Some(network);
-
-        let mut network = NetworkConfig::network_with_id(NetworkId::Public);
-        network.discovery_method = DiscoveryMethod::None;
-        config.full_node_networks = vec![network];
+        let mut config = NodeConfig::default_for_validator();
         config.randomize_ports();
 
         let validator_network = config.validator_network.as_mut().unwrap();
@@ -139,11 +127,11 @@ fn smoke_test() {
             config.base.waypoint = WaypointConfig::FromStorage(backend);
         }
         config.execution.genesis = Some(genesis.clone());
+        config.execution.genesis_file_location = PathBuf::from("");
     }
 
     // Step 6) Prepare ecosystem
-    let full_node_config =
-        attach_validator_full_node(&helper, &mut configs[0], &swarm_path, 0.to_string());
+    let full_node_config = attach_validator_full_node(&mut configs[0]);
 
     // Step 7) Build configuration for Swarm
     let faucet_key = helper
@@ -202,37 +190,22 @@ fn check_connectivity(swarm: &mut LibraSwarm, expected_peers: i64) -> bool {
     true
 }
 
-fn attach_validator_full_node(
-    helper: &StorageHelper,
-    validator_config: &mut NodeConfig,
-    swarm_path: &Path,
-    ns: String,
-) -> NodeConfig {
+fn attach_validator_full_node(validator_config: &mut NodeConfig) -> NodeConfig {
     // Create two vfns, we'll pass one to the validator later
-    let fn_vfn = NetworkConfig::network_with_id(NetworkId::vfn_network());
-    let v_vfn = NetworkConfig::network_with_id(NetworkId::vfn_network());
-
-    let mut full_node_config = NodeConfig::default();
-    full_node_config.full_node_networks = vec![fn_vfn, v_vfn];
+    let mut full_node_config = NodeConfig::default_for_validator_full_node();
     full_node_config.randomize_ports();
 
-    // Now let's swap the full node network on the validator with the PFN on the fullnode, since
-    // that's the VFN and what we want clients to connect to.
-    let internal_fn = full_node_config.full_node_networks.swap_remove(1);
-    let pfn = validator_config.full_node_networks.swap_remove(0);
-    full_node_config.full_node_networks.push(pfn);
-    validator_config.full_node_networks.push(internal_fn);
+    // The FN's first network is the external, public network, it needs to swap listen addresses
+    // with the validator's VFN and to copy it's key access:
+    let pfn = &mut full_node_config.full_node_networks[0];
+    let v_vfn = &mut validator_config.full_node_networks[0];
+    pfn.identity = v_vfn.identity.clone();
+    let temp_listen = v_vfn.listen_address.clone();
+    v_vfn.listen_address = pfn.listen_address.clone();
+    pfn.listen_address = temp_listen;
 
     // Now let's prepare the full nodes internal network to communicate with the validators
     // internal network
-
-    let v_vfn = &mut validator_config.full_node_networks[0];
-    v_vfn.discovery_method = DiscoveryMethod::None;
-    v_vfn.identity = Identity::from_storage(
-        libra_global_constants::FULLNODE_NETWORK_KEY.into(),
-        libra_global_constants::OPERATOR_ACCOUNT.into(),
-        secure_backend(helper.path(), &swarm_path, &ns, "pfn_full_node"),
-    );
 
     let v_vfn_network_address = v_vfn.listen_address.clone();
     let v_vfn_pub_key = libra_secure_storage::config::identity_key(v_vfn).public_key();
@@ -242,13 +215,12 @@ fn attach_validator_full_node(
     let mut seed_peers = SeedPeersConfig::default();
     seed_peers.insert(v_vfn_id, vec![v_vfn_network_address]);
 
-    let fn_vfn = &mut full_node_config.full_node_networks[0];
-    fn_vfn.discovery_method = DiscoveryMethod::None;
+    let fn_vfn = &mut full_node_config.full_node_networks[1];
     fn_vfn.seed_peers = seed_peers;
 
     full_node_config.base.waypoint = validator_config.base.waypoint.clone();
-    full_node_config.base.role = RoleType::FullNode;
     full_node_config.execution.genesis = validator_config.execution.genesis.clone();
+    full_node_config.execution.genesis_file_location = PathBuf::from("");
     full_node_config
 }
 
