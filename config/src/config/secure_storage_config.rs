@@ -1,31 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::config::{Identity, NetworkConfig, SecureBackend, WaypointConfig};
+use crate::config::{SecureBackend, WaypointConfig};
 use libra_secure_storage::{
     GitHubStorage, InMemoryStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage,
     VaultStorage,
 };
-use libra_types::{waypoint::Waypoint, PeerId};
-use std::{convert::TryInto, str::FromStr};
-
-pub fn peer_id(config: &NetworkConfig) -> PeerId {
-    let key = match &config.identity {
-        Identity::FromConfig(config) => Some(config.peer_id),
-        Identity::FromStorage(config) => {
-            let storage: Storage = (&config.backend).into();
-            let peer_id = storage
-                .get(&config.peer_id_name)
-                .expect("Unable to read peer id")
-                .value
-                .string()
-                .expect("Expected string for peer id");
-            Some(peer_id.try_into().expect("Unable to parse peer id"))
-        }
-        Identity::None => None,
-    };
-    key.expect("peer id should be present")
-}
+use libra_types::waypoint::Waypoint;
+use std::str::FromStr;
 
 pub fn waypoint(config: &WaypointConfig) -> Waypoint {
     let waypoint = match &config {

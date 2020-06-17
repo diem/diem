@@ -12,7 +12,7 @@ use crate::{
     SafetyRules, TSafetyRules,
 };
 use consensus_types::common::Author;
-use libra_config::config::{peer_id, waypoint, NodeConfig, SafetyRulesService};
+use libra_config::config::{waypoint, NodeConfig, SafetyRulesService};
 use libra_secure_storage::Storage;
 use std::{
     convert::TryInto,
@@ -21,12 +21,11 @@ use std::{
 };
 
 pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSafetyStorage) {
-    let author = peer_id(
-        config
-            .validator_network
-            .as_ref()
-            .expect("Missing validator network"),
-    );
+    let author = config
+        .validator_network
+        .as_ref()
+        .expect("Missing validator network")
+        .peer_id();
 
     let backend = &config.consensus.safety_rules.backend;
     let internal_storage: Storage = backend.try_into().expect("Unable to initialize storage");
