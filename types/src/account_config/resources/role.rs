@@ -15,13 +15,6 @@ pub enum AccountRole {
 }
 
 impl AccountRole {
-    pub fn child_vasp_data(&self) -> Option<&ChildVASP> {
-        match self {
-            AccountRole::ChildVASP(vasp) => Some(vasp),
-            _ => None,
-        }
-    }
-
     pub fn is_unhosted(&self) -> bool {
         match self {
             AccountRole::Unhosted => true,
