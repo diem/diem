@@ -1,11 +1,9 @@
 [package]
 name = "lsr-sgx"
 version = "0.1.0"
-authors = ["lwg <ukernel@fb.com>"]
+authors = ["lwg <zaxguo@me.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-sgx-isa = { version = "0.2", features = ["sgxstd"] }
-

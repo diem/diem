@@ -3079,9 +3079,6 @@ dependencies = [
 [[package]]
 name = "lsr-sgx"
 version = "0.1.0"
-dependencies = [
- "sgx-isa 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
-]
 
 [[package]]
 name = "maplit"
@@ -5029,14 +5026,6 @@ dependencies = [
 
 [[package]]
 name = "sgx-isa"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "bitflags 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "sgx-isa"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
@@ -6841,7 +6830,6 @@ dependencies = [
 "checksum serde_yaml 0.8.13 (registry+https://github.com/rust-lang/crates.io-index)" = "ae3e2dd40a7cdc18ca80db804b7f461a39bb721160a85c9a1fa30134bf3c02a5"
 "checksum serial_test 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fef5f7c7434b2f2c598adc6f9494648a1e41274a75c0ba4056f680ae0c117fd6"
 "checksum serial_test_derive 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d08338d8024b227c62bd68a12c7c9883f5c66780abaef15c550dc56f46ee6515"
-"checksum sgx-isa 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d0756ae39de704225ed0c5e0c6bf108d24e88f0ffdafa9c79917c7df90008f68"
 "checksum sgx-isa 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "750b7db4f02fb21f7eb9b3b04a3cfde840264848d81f18b6ea12192d7175a847"
 "checksum sgxs 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)" = "47d3271865cbe8da468d02b2b3b5416c7a460f13b739c38ee2933aa970e7ed2e"
 "checksum sgxs-loaders 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "54caaa7aaae20d5f1769572da895e1ad131fd7d7c93020f3377955db599fbda7"
