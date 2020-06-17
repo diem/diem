@@ -28,6 +28,7 @@ use crate::{
 use bytes::Bytes;
 use futures::{sink::SinkExt, stream::StreamExt};
 use libra_logger::prelude::*;
+use serde::Serialize;
 use std::fmt::Debug;
 
 #[cfg(test)]
@@ -45,11 +46,12 @@ pub enum DirectSendNotification {
     RecvMessage(Message),
 }
 
-#[derive(Clone, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq, Serialize)]
 pub struct Message {
     /// Message type.
     pub protocol: ProtocolId,
     /// Serialized message data.
+    #[serde(skip)]
     pub mdata: Bytes,
 }
 
