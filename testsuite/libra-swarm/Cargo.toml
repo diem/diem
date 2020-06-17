@@ -12,7 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.31"
 ctrlc = { version = "3.1.4", default-features = false }
-structopt = "0.3.14"
+structopt = "0.3.15"
 thiserror = "1.0.20"
 config-builder = { path = "../../config/config-builder", version = "0.1.0" }
 libra-config = { path = "../../config", version = "0.1.0", features = ["fuzzing"] }

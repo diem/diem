@@ -19,7 +19,7 @@ rust_decimal = "1.6.0"
 num-traits = "0.2.12"
 reqwest = { version = "0.10.6", features = ["blocking", "json", "rustls-tls"], default-features = false }
 serde = { version = "1.0.112", features = ["derive"] }
-structopt = "0.3.14"
+structopt = "0.3.15"
 walkdir = "2.3.1"
 
 libra-config = { path = "../../config", version = "0.1.0" }
