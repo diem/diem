@@ -640,11 +640,6 @@ impl EventProof {
         &self.transaction_info_with_proof
     }
 
-    /// Returns the `transaction_info_to_event_proof` object in this proof.
-    pub fn transaction_info_to_event_proof(&self) -> &EventAccumulatorProof {
-        &self.transaction_info_to_event_proof
-    }
-
     /// Verifies that a given event is correct using provided proof.
     pub fn verify(
         &self,
