@@ -217,11 +217,22 @@ fn calculate_deps(sources: &[String], input_deps: &[String]) -> anyhow::Result<V
     // Remove input sources from deps. They can end here because our dep analysis is an
     // over-approximation and for example cannot distinguish between references inside
     // and outside comments.
+    let canonical_sources = sources
+        .iter()
+        .map(|s| canonicalize(s))
+        .collect::<BTreeSet<_>>();
     let deps = deps
         .into_iter()
-        .filter(|d| !sources.contains(d))
+        .filter(|d| !canonical_sources.contains(&canonicalize(d)))
         .collect_vec();
     Ok(deps)
+}
+
+fn canonicalize(s: &str) -> String {
+    match fs::canonicalize(s) {
+        Ok(p) => p.to_string_lossy().to_string(),
+        Err(_) => s.to_string(),
+    }
 }
 
 /// Recursively calculate dependencies.
