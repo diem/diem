@@ -75,10 +75,6 @@ impl CurrencyInfoResource {
         AccessPath::resource_access_path(&resource_key)
     }
 
-    pub fn access_path_for(currency_code: Identifier) -> Vec<u8> {
-        AccessPath::resource_access_vec(&CurrencyInfoResource::struct_tag_for(currency_code))
-    }
-
     pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         lcs::from_bytes(bytes).map_err(Into::into)
     }
