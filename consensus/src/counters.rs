@@ -15,6 +15,14 @@ use once_cell::sync::Lazy;
 pub static OP_COUNTERS: Lazy<libra_metrics::OpMetrics> =
     Lazy::new(|| libra_metrics::OpMetrics::new_and_registered("consensus"));
 
+pub static ERROR_COUNT: Lazy<IntGauge> = Lazy::new(|| {
+    register_int_gauge!(
+        "libra_consensus_error_count",
+        "Total number of errors in main loop"
+    )
+    .unwrap()
+});
+
 /// This counter is set to the round of the highest committed block.
 pub static LAST_COMMITTED_ROUND: Lazy<IntGauge> = Lazy::new(|| {
     register_int_gauge!(

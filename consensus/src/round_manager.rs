@@ -228,7 +228,10 @@ impl RoundManager {
     /// Replica:
     ///
     /// Do nothing
-    async fn process_new_round_event(&mut self, new_round_event: NewRoundEvent) {
+    async fn process_new_round_event(
+        &mut self,
+        new_round_event: NewRoundEvent,
+    ) -> anyhow::Result<()> {
         debug!("Processing {}", new_round_event);
         counters::CURRENT_ROUND.set(new_round_event.round as i64);
         counters::ROUND_TIMEOUT_MS.set(new_round_event.timeout.as_millis() as i64);
@@ -240,22 +243,16 @@ impl RoundManager {
                 counters::TIMEOUT_ROUNDS_COUNT.inc();
             }
         };
-        if !self
+        if self
             .proposer_election
             .is_valid_proposer(self.proposal_generator.author(), new_round_event.round)
         {
-            return;
+            let proposal_msg = self.generate_proposal(new_round_event).await?;
+            let mut network = self.network.clone();
+            network.broadcast_proposal(proposal_msg).await;
+            counters::PROPOSALS_COUNT.inc();
         }
-        let proposal_msg = match self.generate_proposal(new_round_event).await {
-            Ok(x) => x,
-            Err(e) => {
-                error!("Error while generating proposal: {:?}", e);
-                return;
-            }
-        };
-        let mut network = self.network.clone();
-        network.broadcast_proposal(proposal_msg).await;
-        counters::PROPOSALS_COUNT.inc();
+        Ok(())
     }
 
     async fn generate_proposal(
@@ -437,7 +434,7 @@ impl RoundManager {
         counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
 
         if let Some(new_round_event) = self.round_state.process_certificates(sync_info) {
-            self.process_new_round_event(new_round_event).await;
+            self.process_new_round_event(new_round_event).await?;
         }
         Ok(())
     }
@@ -699,7 +696,9 @@ impl RoundManager {
         if let Some(vote) = last_vote_sent {
             self.round_state.record_vote(vote);
         }
-        self.process_new_round_event(new_round_event).await;
+        if let Err(e) = self.process_new_round_event(new_round_event).await {
+            error!("[RoundManager] Error during start: {:?}", e);
+        }
     }
 
     /// Inspect the current consensus state.
