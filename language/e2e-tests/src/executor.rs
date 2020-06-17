@@ -14,7 +14,6 @@ use libra_crypto::HashValue;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
-    account_address::AccountAddress,
     account_config::{AccountResource, BalanceResource, CORE_CODE_ADDRESS},
     block_metadata::{new_block_event_key, BlockMetadata, NewBlockEvent},
     on_chain_config::{OnChainConfig, VMPublishingOption, ValidatorSet},
@@ -281,7 +280,6 @@ impl FakeExecutor {
         function_name: &str,
         type_params: Vec<TypeTag>,
         args: Vec<Value>,
-        sender: AccountAddress,
     ) {
         let write_set = {
             let cost_table = zero_cost_schedule();
@@ -294,7 +292,6 @@ impl FakeExecutor {
                 &Self::name(function_name),
                 type_params,
                 args,
-                sender,
                 &mut cache,
                 &mut cost_strategy,
             )

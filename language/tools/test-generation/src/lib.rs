@@ -115,7 +115,6 @@ fn execute_function_in_module(
                 &entry_name,
                 ty_args,
                 args,
-                AccountAddress::ZERO,
                 &mut txn_context,
                 &mut cost_strategy,
             )

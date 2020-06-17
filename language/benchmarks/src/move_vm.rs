@@ -67,7 +67,6 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, module: VerifiedModule, fun: &st
                     &fun_name,
                     vec![],
                     vec![],
-                    AccountAddress::ZERO,
                     &mut data_store,
                     &mut cost_strategy,
                 )

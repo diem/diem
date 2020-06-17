@@ -28,7 +28,6 @@ impl MoveVM {
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
-        sender: AccountAddress,
         data_store: &mut dyn DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
@@ -37,7 +36,6 @@ impl MoveVM {
             function_name,
             ty_args,
             args,
-            sender,
             data_store,
             cost_strategy,
         )

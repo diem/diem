@@ -215,8 +215,8 @@ fn add_module_txn(sender: &AccountData, seq_num: u64) -> (VerifiedModule, Signed
                 return;
             }
 
-            public publish_t1() {
-                move_to_sender<T1>(T1 { v: 3 });
+            public publish_t1(account: &signer) {
+                move_to<T1>(move(account), T1 { v: 3 });
                 return;
             }
         }
@@ -257,8 +257,8 @@ fn add_resource_txn(
         "
             import 0x{}.M;
 
-            main() {{
-                M.publish_t1();
+            main(account: &signer) {{
+                M.publish_t1(move(account));
                 return;
             }}
         ",

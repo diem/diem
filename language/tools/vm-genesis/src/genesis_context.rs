@@ -100,7 +100,6 @@ impl<'a> GenesisContext<'a> {
                 &Self::name(function_name),
                 type_params,
                 args,
-                self.sender,
                 &mut self.data_store,
                 &mut cost_strategy,
             )

@@ -105,7 +105,6 @@ impl VMRuntime {
             main,
             type_params,
             args,
-            sender,
             data_store,
             cost_strategy,
             &self.loader,
@@ -118,7 +117,6 @@ impl VMRuntime {
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
-        sender: AccountAddress,
         data_store: &mut dyn DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
@@ -139,7 +137,6 @@ impl VMRuntime {
             func,
             type_params,
             args,
-            sender,
             data_store,
             cost_strategy,
             &self.loader,

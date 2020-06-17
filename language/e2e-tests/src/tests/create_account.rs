@@ -62,7 +62,6 @@ fn create_account_with_exec() {
             Value::vector_u8(new_account.auth_key_prefix()),
             Value::bool(false),
         ],
-        *new_account.address(),
     );
 
     // check that numbers in stored DB are correct
