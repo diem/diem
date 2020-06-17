@@ -208,10 +208,6 @@ impl RawNetworkAddress {
     pub fn new(bytes: Vec<u8>) -> Self {
         Self(bytes)
     }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
 }
 
 impl Into<Vec<u8>> for RawNetworkAddress {
@@ -254,12 +250,6 @@ impl Arbitrary for RawNetworkAddress {
 impl NetworkAddress {
     fn new(protocols: Vec<Protocol>) -> Self {
         Self(protocols)
-    }
-
-    // TODO(philiphayes): could return NonZeroUsize?
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
     }
 
     pub fn as_slice(&self) -> &[Protocol] {
