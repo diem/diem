@@ -7,6 +7,7 @@ use std::time::Instant;
 
 pub const TRACE_EVENT: &str = "trace_event";
 pub const TRACE_EDGE: &str = "trace_edge";
+pub const LIBRA_TRACE: &str = "libra_trace";
 
 use std::{
     collections::HashMap,
@@ -33,19 +34,17 @@ struct CategorySampling {
 macro_rules! trace_event {
     ($stage:expr, $node:tt) => {
         if $crate::is_selected($crate::node_sampling_data!($node)) {
-            trace_event!($stage; {$crate::format_node!($node), module_path!(), Option::<u64>::None})
+            trace_event!($stage; {$crate::format_node!($node), module_path!(), Option::<u64>::None});
         }
     };
     ($stage:expr; {$node:expr, $path:expr, $duration:expr}) => {
-        $crate::json_log::send_json_log($crate::json_log::JsonLogEntry::new(
-            $crate::libra_trace::TRACE_EVENT,
-            serde_json::json!({
+        let json = serde_json::json!({
                "path": $path,
                "node": $node,
                "stage": $stage,
                "duration": $duration,
-            }),
-        ));
+            });
+        $crate::send_logs!($crate::libra_trace::TRACE_EVENT, json);
     }
 }
 
@@ -64,6 +63,18 @@ macro_rules! node_sampling_data {
     ($hasher:expr; $p:expr) => {
         std::hash::Hash::hash(&$p, &mut $hasher);
     }
+}
+
+#[macro_export]
+macro_rules! send_logs {
+    ($name:expr, $json:expr) => {
+        let log_entry = $crate::json_log::JsonLogEntry::new($name, $json);
+        $crate::json_log::send_json_log(log_entry.clone());
+        libra_logger::send_struct_log!(libra_logger::StructuredLogEntry::new_named(
+            $crate::libra_trace::LIBRA_TRACE
+        )
+        .data($name, log_entry));
+    };
 }
 
 #[macro_export]
@@ -121,15 +132,13 @@ impl Drop for TraceBlockGuard {
 macro_rules! end_trace {
     ($stage:expr, $node:tt) => {
         if $crate::is_selected($crate::node_sampling_data!($node)) {
-            $crate::json_log::send_json_log($crate::json_log::JsonLogEntry::new(
-                $crate::libra_trace::TRACE_EVENT,
-                serde_json::json!({
+            let json = serde_json::json!({
                     "path": module_path!(),
                     "node": $crate::format_node!($node),
                     "stage": $stage,
                     "end": true,
-                }),
-            ));
+                });
+            $crate::send_logs!($crate::libra_trace::TRACE_EVENT, json);
         }
     };
 }
@@ -138,15 +147,13 @@ macro_rules! end_trace {
 macro_rules! trace_edge {
     ($stage:expr, $node_from:tt, $node_to:tt) => {
         if $crate::is_selected($crate::node_sampling_data!($node_from)) {
-            $crate::json_log::send_json_log($crate::json_log::JsonLogEntry::new(
-                $crate::libra_trace::TRACE_EDGE,
-                serde_json::json!({
+            let json = serde_json::json!({
                     "path": module_path!(),
                     "node": $crate::format_node!($node_from),
                     "node_to": $crate::format_node!($node_to),
                     "stage": $stage,
-                }),
-            ));
+                });
+            $crate::send_logs!($crate::libra_trace::TRACE_EDGE, json);
         }
     };
 }
