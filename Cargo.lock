@@ -3390,6 +3390,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "memsocket 0.1.0",
  "pin-project 0.4.22 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.112 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

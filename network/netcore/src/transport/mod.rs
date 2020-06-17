@@ -14,6 +14,7 @@
 use futures::{future::Future, stream::Stream};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
+use serde::Serialize;
 use std::time::Duration;
 
 pub mod and_then;
@@ -23,7 +24,7 @@ pub mod tcp;
 pub mod timeout;
 
 /// Origin of how a Connection was established.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 pub enum ConnectionOrigin {
     /// `Inbound` indicates that we are the listener for this connection.
     Inbound,

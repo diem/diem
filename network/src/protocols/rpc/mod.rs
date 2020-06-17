@@ -65,6 +65,7 @@ use futures::{
 };
 use libra_logger::prelude::*;
 use libra_types::PeerId;
+use serde::Serialize;
 use std::{collections::HashMap, fmt::Debug, time::Duration};
 
 pub mod error;
@@ -102,18 +103,20 @@ pub struct InboundRpcRequest {
 }
 
 /// A wrapper struct for an outbound rpc request and its associated context.
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct OutboundRpcRequest {
     /// Rpc method identifier, e.g., `/libra/rpc/0.1.0/consensus/0.1.0`. This is the
     /// protocol we will negotiate our outbound substream to.
     pub protocol: ProtocolId,
     /// The serialized request data to be sent to the receiver.
+    #[serde(skip)]
     pub data: Bytes,
     /// Channel over which the rpc response is sent from the rpc layer to the
     /// upper client layer.
     ///
     /// If there is an error while performing the rpc protocol, e.g., the remote
     /// peer drops the connection, we will send an [`RpcError`] over the channel.
+    #[serde(skip)]
     pub res_tx: oneshot::Sender<Result<Bytes, RpcError>>,
     /// The timeout duration for the entire rpc call. If the timeout elapses, the
     /// rpc layer will send an [`RpcError::TimedOut`] error over the
