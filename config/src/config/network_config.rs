@@ -10,14 +10,18 @@ use crate::{
 use anyhow::{anyhow, ensure, Result};
 use libra_crypto::{x25519, Uniform};
 use libra_network_address::NetworkAddress;
-use libra_secure_storage::{CryptoStorage, Storage};
+use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_types::{transaction::authenticator::AuthenticationKey, PeerId};
 use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::TryFrom, string::ToString};
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    string::ToString,
+};
 
 /// Current supported protocol negotiation handshake version.
 ///
@@ -123,6 +127,24 @@ impl NetworkConfig {
         Ok(())
     }
 
+    pub fn peer_id(&self) -> PeerId {
+        let key = match &self.identity {
+            Identity::FromConfig(config) => Some(config.peer_id),
+            Identity::FromStorage(config) => {
+                let storage: Storage = (&config.backend).into();
+                let peer_id = storage
+                    .get(&config.peer_id_name)
+                    .expect("Unable to read peer id")
+                    .value
+                    .string()
+                    .expect("Expected string for peer id");
+                Some(peer_id.try_into().expect("Unable to parse peer id"))
+            }
+            Identity::None => None,
+        };
+        key.expect("peer id should be present")
+    }
+
     fn prepare_identity(&mut self) {
         match &mut self.identity {
             Identity::FromStorage(_) => (),
@@ -161,11 +183,6 @@ impl NetworkConfig {
                 .derived_address()
         };
         self.identity = Identity::from_config(identity_key, peer_id);
-    }
-
-    #[cfg(any(test, feature = "fuzzing"))]
-    pub fn peer_id(&self) -> PeerId {
-        self.identity.peer_id_from_config().unwrap()
     }
 
     /// Check that all seed peer addresses look like canonical LibraNet addresses
