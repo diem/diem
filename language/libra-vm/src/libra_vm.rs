@@ -338,8 +338,16 @@ impl LibraVM {
             VerifiedTransactionPayload::Module(m) => cost_strategy
                 .charge_intrinsic_gas(txn_data.transaction_size())
                 .and_then(|_| {
+                    // Module publishing is currently restricted to the Association, so we choose to
+                    // publish all modules under the address 0x0...1 for convenience.
+                    // This will change to the sender's address once module publishing becomes open.
+                    let module_address = if self.on_chain_config()?.publishing_option.is_open() {
+                        txn_data.sender()
+                    } else {
+                        account_config::CORE_CODE_ADDRESS
+                    };
                     self.move_vm
-                        .publish_module(m, txn_data.sender(), &mut data_store)
+                        .publish_module(m, module_address, &mut data_store)
                 }),
             VerifiedTransactionPayload::Script(s, ty_args, args) => {
                 let ret = cost_strategy

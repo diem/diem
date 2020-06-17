@@ -40,11 +40,6 @@
     <a href="Association.md#0x1_Association_grant_privilege">Association::grant_privilege</a>&lt;AddCurrency&gt;(association, association);
     <a href="Association.md#0x1_Association_grant_privilege">Association::grant_privilege</a>&lt;PublishModule&gt;(association, association);
 
-    // Setup the core code address <b>as</b> an association account that can
-    // publish modules.
-    <a href="Association.md#0x1_Association_grant_association_address">Association::grant_association_address</a>(association, core_code_account);
-    <a href="Association.md#0x1_Association_grant_privilege">Association::grant_privilege</a>&lt;PublishModule&gt;(association, core_code_account);
-
     // On-chain config setup
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(config_account);
     <a href="LibraConfig.md#0x1_LibraConfig_initialize">LibraConfig::initialize</a>(config_account, association);

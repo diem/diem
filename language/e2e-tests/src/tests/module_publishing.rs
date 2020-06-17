@@ -165,7 +165,8 @@ pub fn test_publishing_no_modules_non_whitelist_script_proper_sender() {
         ",
     );
 
-    let random_script = compile_module_with_address(sender.address(), "file_name", &program);
+    let random_script =
+        compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &program);
     let txn = sender.create_signed_txn_impl(
         *sender.address(),
         random_script,
@@ -196,7 +197,8 @@ pub fn test_publishing_no_modules_proper_sender() {
         ",
     );
 
-    let random_script = compile_module_with_address(sender.address(), "file_name", &program);
+    let random_script =
+        compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &program);
     let txn = sender.create_signed_txn_impl(
         *sender.address(),
         random_script,
@@ -237,10 +239,12 @@ pub fn test_publishing_no_modules_core_code_sender() {
         0,
         LBR_NAME.to_owned(),
     );
-    assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
-    assert_eq!(
+
+    // Doesn't work because the core code address doesn't have a PublishModuleCapability
+    assert_prologue_parity!(
+        executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        VMStatus::new(StatusCode::INVALID_MODULE_PUBLISHER)
     );
 }
 

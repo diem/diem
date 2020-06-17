@@ -41,11 +41,6 @@ module Genesis {
         Association::grant_privilege<AddCurrency>(association, association);
         Association::grant_privilege<PublishModule>(association, association);
 
-        // Setup the core code address as an association account that can
-        // publish modules.
-        Association::grant_association_address(association, core_code_account);
-        Association::grant_privilege<PublishModule>(association, core_code_account);
-
         // On-chain config setup
         Event::publish_generator(config_account);
         LibraConfig::initialize(config_account, association);
