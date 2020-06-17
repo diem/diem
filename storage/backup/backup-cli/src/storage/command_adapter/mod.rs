@@ -62,7 +62,9 @@ impl BackupStorage for CommandAdapter {
             cmd,
             output.status.code(),
         );
-        Ok(BackupHandle::from_utf8(output.stdout)?)
+        let mut backup_handle = BackupHandle::from_utf8(output.stdout)?;
+        backup_handle.truncate(backup_handle.trim_end().len());
+        Ok(backup_handle)
     }
 
     async fn create_for_write(
@@ -90,6 +92,7 @@ impl BackupStorage for CommandAdapter {
             .ok_or_else(|| anyhow!("Child process stdout is None."))?;
         let mut file_handle = FileHandle::new();
         stdout.read_to_string(&mut file_handle).await?;
+        file_handle.truncate(file_handle.trim_end().len());
         Ok((file_handle, Box::new(stdin)))
     }
 
