@@ -12,7 +12,7 @@ pub mod node_debug_service;
 
 pub mod prelude {
     pub use crate::{
-        end_trace, event, node_sampling_data, trace_code_block, trace_edge, trace_event,
+        end_trace, event, node_sampling_data, send_logs, trace_code_block, trace_edge, trace_event,
     };
 }
 
