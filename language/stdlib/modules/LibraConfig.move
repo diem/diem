@@ -155,7 +155,7 @@ module LibraConfig {
 
     fun reconfigure_() acquires Configuration {
        // Do not do anything if time is not set up yet, this is to avoid genesis emit too many epochs.
-       if (LibraTimestamp::is_genesis()) {
+       if (LibraTimestamp::is_during_genesis()) {
            return ()
        };
 

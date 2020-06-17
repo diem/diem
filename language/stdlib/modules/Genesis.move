@@ -43,6 +43,10 @@ module Genesis {
     ) {
         let dummy_auth_key_prefix = x"00000000000000000000000000000000";
 
+        // Call this first, because the timestamp is tested by other functions
+        // to determine whether they are in genesis or not.
+        LibraTimestamp::initialize(association);
+
         Roles::grant_root_association_role(association);
         LibraConfig::grant_privileges(association);
         LibraAccount::grant_association_privileges(association);
@@ -140,7 +144,6 @@ module Genesis {
         DualAttestationLimit::initialize(config_account, tc_account, &create_config_capability);
         LibraBlock::initialize_block_metadata(association);
         LibraWriteSetManager::initialize(association);
-        LibraTimestamp::initialize(association);
 
         let assoc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(association);
         LibraAccount::rotate_authentication_key(&assoc_rotate_key_cap, copy genesis_auth_key);
@@ -180,6 +183,19 @@ module Genesis {
 
         Roles::restore_capability_to_privilege(tc_account, currency_registration_capability);
         Roles::restore_capability_to_privilege(tc_account, tc_capability);
+
+// PROBLEM: When I include end_genesis and run "cargo test" in libra/language/move-lang/functional-tests,
+// all hell breaks loose. Tim helped me track down one of the errors, which is that the code
+// generates two reconfiguration events instead of the expected one (I don't know why.  This code
+// seems to be tricky, since the VM calls back into Move to do reconfiguration).
+// When I change that to look for two events (libra/language/tools/vm-genesis/src/:235), I get
+// a host of other errors including some panics because of unwraps after VM errors.
+// I'm not sure we can be sure that time advances after genesis. Tim says the time is the same
+// for all transactions in a block, and maybe we don't want to depend on genesis being in it's
+// own block?
+        // This needs to be the last thing in `initialize`.  It marks the end of genesis
+        // by setting time to 1.
+//        LibraTimestamp::end_genesis(association);
     }
 
 }

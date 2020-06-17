@@ -4,22 +4,35 @@ module LibraTimestamp {
     use 0x1::CoreAddresses;
     use 0x1::Signer;
 
-    // A singleton resource holding the current Unix time in microseconds
+    /// A singleton resource holding the current Unix time in microseconds
     resource struct CurrentTimeMicroseconds {
         microseconds: u64,
     }
 
-    // Initialize the global wall clock time resource.
+    /// Initialize the global wall clock time resource.
+    /// If called a second time, it will abort because association will already have a timer.
     public fun initialize(association: &signer) {
         // Only callable by the Association address
         assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
 
-        // TODO: Should the initialized value be passed in to genesis?
+        //> TODO: Should the initialized value be passed in to genesis?
         let timer = CurrentTimeMicroseconds { microseconds: 0 };
         move_to(association, timer);
     }
 
-    // Update the wall clock time by consensus. Requires VM privilege and will be invoked during block prologue.
+    /// Marks end of genesis phase by setting time to a non-zero value (specifically, 1).
+    public fun end_genesis(association: &signer)
+    acquires CurrentTimeMicroseconds
+    {
+        // Only callable by the Association address
+        assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
+        // TODO (dd): Return code is bogus.
+        assert(is_during_genesis(), 2);
+        borrow_global_mut<CurrentTimeMicroseconds>(Signer::address_of(association)).microseconds = 1;
+    }
+
+    /// Update the wall clock time by consensus. Requires VM privilege and will be invoked
+    /// during block prologue.
     public fun update_global_time(
         account: &signer,
         proposer: address,
@@ -39,14 +52,14 @@ module LibraTimestamp {
         global_timer.microseconds = timestamp;
     }
 
-    // Get the timestamp representing `now` in microseconds.
+    /// Get the current timestamp with value from most recent call to `update_global_time`
     public fun now_microseconds(): u64 acquires CurrentTimeMicroseconds {
         borrow_global<CurrentTimeMicroseconds>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).microseconds
     }
 
-    // Helper function to determine if the blockchain is at genesis state.
-    public fun is_genesis(): bool acquires CurrentTimeMicroseconds {
-        !exists<CurrentTimeMicroseconds>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()) || now_microseconds() == 0
+    /// Helper function to determine if the blockchain is at genesis state.
+    public fun is_during_genesis(): bool acquires CurrentTimeMicroseconds {
+        now_microseconds() == 0
     }
 
     /**
@@ -77,7 +90,7 @@ module LibraTimestamp {
             0x0
         }
         /// True if the association root account has a CurrentTimeMicroseconds.
-        define root_ctm_initialized(): bool {
+        define is_initialized(): bool {
             exists<CurrentTimeMicroseconds>(root_address())
         }
         /// Auxiliary function to get the association's Unix time in microseconds.
@@ -102,14 +115,14 @@ module LibraTimestamp {
         ///
         /// **Informally:** If the root account hasn't been initialized with
         /// CurrentTimeMicroseconds, then it should not exist.
-        invariant module !root_ctm_initialized()
+        invariant module !is_initialized()
                             ==> (forall addr: address: !exists<CurrentTimeMicroseconds>(addr));
         /// Induction hypothesis for invariant after initialization.
         ///
         /// **Informally:** Only the association account has a timestamp `CurrentTimeMicroseconds`.
-        invariant module root_ctm_initialized() ==> only_root_addr_has_ctm();
+        invariant module is_initialized() ==> only_root_addr_has_ctm();
         /// **Informally:** If the CurrentTimeMicroseconds is initialized, it stays initialized.
-        ensures old(root_ctm_initialized()) ==> root_ctm_initialized();
+        ensures old(is_initialized()) ==> is_initialized();
     }
     spec module {
         /// Apply `OnlyRootAddressHasTimestamp` to all functions.
@@ -120,8 +133,8 @@ module LibraTimestamp {
         /// The association / root account creates a timestamp struct
         /// under its account during initialization.
         aborts_if Signer::get_address(association) != root_address();
-        aborts_if root_ctm_initialized();
-        ensures root_ctm_initialized();
+        aborts_if is_initialized();
+        ensures is_initialized();
         ensures assoc_unix_time() == 0;
     }
 
@@ -132,7 +145,7 @@ module LibraTimestamp {
 
     spec schema GlobalWallClockIsMonotonic {
         /// **Informally:** The global wall clock time never decreases.
-        ensures old(root_ctm_initialized()) ==> (old(assoc_unix_time()) <= assoc_unix_time());
+        ensures old(is_initialized()) ==> (old(assoc_unix_time()) <= assoc_unix_time());
     }
     spec module {
         /// Apply `GlobalWallClockIsMonotonic` to all functions.
@@ -143,7 +156,7 @@ module LibraTimestamp {
         /// Used to update every proposers' global wall
         /// clock time by consensus.
         aborts_if Signer::get_address(account) != null_address();
-        aborts_if !root_ctm_initialized();
+        aborts_if !is_initialized();
         aborts_if (proposer == null_address()) && (timestamp != assoc_unix_time());
         aborts_if (proposer != null_address()) && !(timestamp > assoc_unix_time());
         ensures assoc_unix_time() == timestamp;
@@ -158,10 +171,10 @@ module LibraTimestamp {
         ensures result == assoc_unix_time();
     }
 
-    spec fun is_genesis {
+    spec fun is_during_genesis {
         /// Returns whether or not it is the beginning of time.
-        aborts_if false;
-        ensures (result == !root_ctm_initialized() || assoc_unix_time() == 0);
+        aborts_if !exists<CurrentTimeMicroseconds>(root_address());
+        ensures (result == !is_initialized() || assoc_unix_time() == 0);
     }
 }
 

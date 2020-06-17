@@ -541,8 +541,10 @@ module LibraAccount {
         new_account_address: address,
         auth_key_prefix: vector<u8>
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
+
+        assert(LibraTimestamp::is_during_genesis(), 0);
         assert(new_account_address == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
+
         let new_account = create_signer(new_account_address);
         Roles::new_role(
             creator_account,
@@ -557,7 +559,7 @@ module LibraAccount {
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
+        assert(LibraTimestamp::is_during_genesis(), 0);
         assert(new_account_address == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
         let new_account = create_signer(new_account_address);
         make_account<Token>(new_account, auth_key_prefix, false)
@@ -576,7 +578,7 @@ module LibraAccount {
         coin2_mint_cap: Libra::MintCapability<Coin2>,
         coin2_burn_cap: Libra::BurnCapability<Coin2>,
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
+        assert(LibraTimestamp::is_during_genesis(), 0);
         let new_account = create_signer(new_account_address);
         Libra::publish_mint_capability<Coin1>(&new_account, coin1_mint_cap, tc_capability);
         Libra::publish_burn_capability<Coin1>(&new_account, coin1_burn_cap, tc_capability);
