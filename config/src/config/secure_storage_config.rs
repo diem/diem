@@ -2,30 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::{Identity, NetworkConfig, SecureBackend, WaypointConfig};
-use libra_crypto::x25519;
 use libra_secure_storage::{
-    CryptoStorage, GitHubStorage, InMemoryStorage, KVStorage, NamespacedStorage, OnDiskStorage,
-    Storage, VaultStorage,
+    GitHubStorage, InMemoryStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage,
+    VaultStorage,
 };
 use libra_types::{waypoint::Waypoint, PeerId};
 use std::{convert::TryInto, str::FromStr};
-
-pub fn identity_key(config: &mut NetworkConfig) -> x25519::PrivateKey {
-    let key = match &mut config.identity {
-        Identity::FromConfig(config) => config.keypair.take_private(),
-        Identity::FromStorage(config) => {
-            let storage: Storage = (&config.backend).into();
-            let key = storage
-                .export_private_key(&config.key_name)
-                .expect("Unable to read key");
-            let key = x25519::PrivateKey::from_ed25519_private_bytes(&key.to_bytes())
-                .expect("Unable to convert key");
-            Some(key)
-        }
-        Identity::None => None,
-    };
-    key.expect("identity key should be present")
-}
 
 pub fn peer_id(config: &NetworkConfig) -> PeerId {
     let key = match &config.identity {
