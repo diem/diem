@@ -10,6 +10,7 @@ use crate::{
 use anyhow::{anyhow, ensure, Result};
 use libra_crypto::{x25519, Uniform};
 use libra_network_address::NetworkAddress;
+use libra_secure_storage::{CryptoStorage, Storage};
 use libra_types::{transaction::authenticator::AuthenticationKey, PeerId};
 use rand::{
     rngs::{OsRng, StdRng},
@@ -87,6 +88,23 @@ impl NetworkConfig {
             network_peers: self.network_peers.clone(),
             seed_peers: self.seed_peers.clone(),
         }
+    }
+
+    pub fn identity_key(&mut self) -> x25519::PrivateKey {
+        let key = match &mut self.identity {
+            Identity::FromConfig(config) => config.keypair.take_private(),
+            Identity::FromStorage(config) => {
+                let storage: Storage = (&config.backend).into();
+                let key = storage
+                    .export_private_key(&config.key_name)
+                    .expect("Unable to read key");
+                let key = x25519::PrivateKey::from_ed25519_private_bytes(&key.to_bytes())
+                    .expect("Unable to convert key");
+                Some(key)
+            }
+            Identity::None => None,
+        };
+        key.expect("identity key should be present")
     }
 
     pub fn load(&mut self, network_role: RoleType) -> Result<()> {

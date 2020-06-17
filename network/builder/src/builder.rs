@@ -13,7 +13,7 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::stream::StreamExt;
 use libra_config::{
     chain_id::ChainId,
-    config::{identity_key, peer_id, DiscoveryMethod, NetworkConfig, RoleType, HANDSHAKE_VERSION},
+    config::{peer_id, DiscoveryMethod, NetworkConfig, RoleType, HANDSHAKE_VERSION},
     network_id::{NetworkContext, NetworkId},
 };
 use libra_crypto::x25519;
@@ -530,7 +530,7 @@ pub fn setup_network(
         .build()
         .expect("Failed to start runtime. Won't be able to start networking.");
 
-    let identity_key = identity_key(config);
+    let identity_key = config.identity_key();
     let peer_id = peer_id(config);
 
     let mut network_builder = NetworkBuilder::new(
