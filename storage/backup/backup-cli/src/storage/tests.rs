@@ -13,7 +13,7 @@ fn test_shell_safe_name() {
     assert!(ShellSafeName::from_str("a b").is_err());
     assert!(ShellSafeName::from_str("a\nb").is_err());
     assert!(ShellSafeName::from_str("ab?").is_err());
-    assert!(ShellSafeName::from_str(&"x".repeat(256)).is_err());
+    assert!(ShellSafeName::from_str(&"x".repeat(128)).is_err());
 
-    assert!(ShellSafeName::from_str(&"x".repeat(255)).is_ok());
+    assert!(ShellSafeName::from_str(&"x".repeat(127)).is_ok());
 }

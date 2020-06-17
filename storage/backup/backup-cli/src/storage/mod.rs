@@ -34,7 +34,7 @@ pub type FileHandleRef = str;
 pub struct ShellSafeName(String);
 
 impl ShellSafeName {
-    const PATTERN: &'static str = r"\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,254}\z";
+    const PATTERN: &'static str = r"\A[a-zA-Z0-9][a-zA-Z0-9._-]{0,126}\z";
 
     fn sanitize(name: &str) -> Result<()> {
         static RE: Lazy<Regex> = Lazy::new(|| Regex::new(ShellSafeName::PATTERN).unwrap());
