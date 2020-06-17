@@ -8,12 +8,11 @@
 /// in the cluster after the given duration
 use crate::{
     cluster::Cluster,
-    experiments::{Context, Experiment},
+    effects::{self, packet_loss::PacketLoss},
+    experiments::{Context, Experiment, ExperimentParam},
     instance::Instance,
 };
 
-use crate::cluster_swarm::ClusterSwarm;
-use anyhow::Result;
 use async_trait::async_trait;
 use std::{fmt, time::Duration};
 use structopt::StructOpt;
@@ -23,7 +22,6 @@ pub struct PacketLossRandomValidators {
     percent: f32,
     duration: Duration,
 }
-use crate::experiments::ExperimentParam;
 use tokio::time;
 
 #[derive(StructOpt, Debug)]
@@ -67,26 +65,22 @@ impl ExperimentParam for PacketLossRandomValidatorsParams {
 
 #[async_trait]
 impl Experiment for PacketLossRandomValidators {
-    async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {
-        for instance in self.instances.iter() {
-            add_packet_delay(instance.clone(), self.percent).await?;
-        }
+    async fn run(&mut self, _context: &mut Context<'_>) -> anyhow::Result<()> {
+        let mut effects: Vec<_> = self
+            .instances
+            .clone()
+            .into_iter()
+            .map(|instance| PacketLoss::new(instance, self.percent))
+            .collect();
+        effects::activate_all(&mut effects).await?;
         time::delay_for(self.duration).await;
-        context.cluster_swarm.remove_all_network_effects().await?;
+        effects::deactivate_all(&mut effects).await?;
         Ok(())
     }
 
     fn deadline(&self) -> Duration {
         Duration::from_secs(20 * 60)
     }
-}
-
-async fn add_packet_delay(instance: Instance, percent: f32) -> Result<()> {
-    let command = format!(
-        "tc qdisc delete dev eth0 root; tc qdisc add dev eth0 root netem loss {:.*}%",
-        2, percent
-    );
-    instance.util_cmd(command, "add-packet-loss").await
 }
 
 impl fmt::Display for PacketLossRandomValidators {

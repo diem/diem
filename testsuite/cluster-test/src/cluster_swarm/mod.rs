@@ -17,8 +17,6 @@ use futures::{
 
 #[async_trait]
 pub trait ClusterSwarm {
-    async fn remove_all_network_effects(&self) -> Result<()>;
-
     /// Spawns a new instance.
     async fn spawn_new_instance(
         &self,
