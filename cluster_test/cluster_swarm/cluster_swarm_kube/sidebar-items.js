@@ -1,1 +1,1 @@
-initSidebarItems({"struct":[["ClusterSwarmKube",""]]});
+initSidebarItems({"struct":[["ClusterSwarmKube",""],["KubeNode",""]]});
