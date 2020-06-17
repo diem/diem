@@ -3233,7 +3233,7 @@
         <span class="comment">// Built `domain&lt;ty&gt;()` expression.</span>
         <span class="ident">tokens</span>.<span class="ident">advance</span>()<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">parse_type</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>;
-        <span class="ident">make_builtin_call</span>(<span class="ident">ty</span>.<span class="ident">loc</span>, <span class="string">&quot;domain&quot;</span>, <span class="prelude-val">Some</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">ty</span>]), <span class="macro">vec</span><span class="macro">!</span>[])
+        <span class="ident">make_builtin_call</span>(<span class="ident">ty</span>.<span class="ident">loc</span>, <span class="string">&quot;$spec_domain&quot;</span>, <span class="prelude-val">Some</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">ty</span>]), <span class="macro">vec</span><span class="macro">!</span>[])
     } <span class="kw">else</span> {
         <span class="comment">// This is a quantifier over a value, like a vector or a range.</span>
         <span class="ident">consume_identifier</span>(<span class="ident">tokens</span>, <span class="string">&quot;in&quot;</span>)<span class="question-mark">?</span>;
@@ -3270,7 +3270,7 @@
     );
     <span class="prelude-val">Ok</span>(<span class="ident">make_builtin_call</span>(
         <span class="ident">lambda</span>.<span class="ident">loc</span>,
-        <span class="kw">if</span> <span class="ident">is_forall</span> { <span class="string">&quot;all&quot;</span> } <span class="kw">else</span> { <span class="string">&quot;any&quot;</span> },
+        <span class="kw">if</span> <span class="ident">is_forall</span> { <span class="string">&quot;$spec_all&quot;</span> } <span class="kw">else</span> { <span class="string">&quot;$spec_any&quot;</span> },
         <span class="prelude-val">None</span>,
         <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">range</span>, <span class="ident">lambda</span>],
     )
