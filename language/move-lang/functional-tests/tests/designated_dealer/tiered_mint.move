@@ -39,6 +39,7 @@ script {
     }
 }
 
+// check: ReceivedMintEvent
 // check: MintEvent
 // check: EXECUTED
 
@@ -96,3 +97,24 @@ script {
 
 // check: ABORTED
 // check: 0
+
+// --------------------------------------------------------------------
+// Tier index is one more than number of tiers, indicating unlimited minting allowed
+
+//! new-transaction
+//! sender: blessed
+script {
+    use 0x1::DesignatedDealer;
+    use 0x1::LibraAccount;
+    use 0x1::Coin1::Coin1;
+    fun main(tc_account: &signer) {
+        let coins = DesignatedDealer::tiered_mint<Coin1>(
+            tc_account, 99999999999, 0xDEADBEEF, 3
+        );
+        LibraAccount::deposit(tc_account, 0xDEADBEEF, coins);
+    }
+}
+
+// check: ReceivedMintEvent
+// check: MintEvent
+// check: EXECUTED

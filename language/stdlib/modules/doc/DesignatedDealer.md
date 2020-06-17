@@ -6,6 +6,7 @@
 ### Table of Contents
 
 -  [Struct `Dealer`](#0x1_DesignatedDealer_Dealer)
+-  [Struct `ReceivedMintEvent`](#0x1_DesignatedDealer_ReceivedMintEvent)
 -  [Function `publish_designated_dealer_credential`](#0x1_DesignatedDealer_publish_designated_dealer_credential)
 -  [Function `add_tier_`](#0x1_DesignatedDealer_add_tier_)
 -  [Function `add_tier`](#0x1_DesignatedDealer_add_tier)
@@ -56,6 +57,48 @@
 <dd>
  0-indexed array of tier upperbounds
 </dd>
+<dt>
+
+<code>mint_event_handle: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_DesignatedDealer_ReceivedMintEvent">DesignatedDealer::ReceivedMintEvent</a>&gt;</code>
+</dt>
+<dd>
+ Handle for mint events
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x1_DesignatedDealer_ReceivedMintEvent"></a>
+
+## Struct `ReceivedMintEvent`
+
+
+
+<pre><code><b>struct</b> <a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>destination_address: address</code>
+</dt>
+<dd>
+
+</dd>
+<dt>
+
+<code>amount: u64</code>
+</dt>
+<dd>
+
+</dd>
 </dl>
 
 
@@ -85,6 +128,7 @@
             window_start: <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>(),
             window_inflow: 0,
             tiers: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>(),
+            mint_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>&gt;(dd),
         }
     )
 }
@@ -266,7 +310,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(blessed: &signer, amount: u64, addr: address, tier_index: u64): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(blessed: &signer, amount: u64, dd_addr: address, tier_index: u64): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -276,14 +320,22 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(
-    blessed: &signer, amount: u64, addr: address, tier_index: u64
+    blessed: &signer, amount: u64, dd_addr: address, tier_index: u64
 ): <a href="Libra.md#0x1_Libra">Libra</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
     <a href="Association.md#0x1_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(blessed);
     // NOT_A_DD
-    <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(addr), 1);
-    <b>let</b> tier_check = <a href="#0x1_DesignatedDealer_tiered_mint_">tiered_mint_</a>(borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr), amount, tier_index);
+    <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr), 1);
+    <b>let</b> tier_check = <a href="#0x1_DesignatedDealer_tiered_mint_">tiered_mint_</a>(borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr), amount, tier_index);
     // INVALID_AMOUNT_FOR_TIER
     <b>assert</b>(tier_check, 5);
+    // Send <a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>
+    <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>&gt;(
+        &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr).mint_event_handle,
+        <a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a> {
+            destination_address: dd_addr,
+            amount: amount,
+        },
+    );
     <a href="Libra.md#0x1_Libra_mint">Libra::mint</a>&lt;CoinType&gt;(blessed, amount)
 }
 </code></pre>
