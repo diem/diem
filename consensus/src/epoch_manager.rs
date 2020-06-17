@@ -502,6 +502,7 @@ impl EpochManager {
                     }
                 }
             ) {
+                counters::ERROR_COUNT.inc();
                 error!("{:?}", e);
             }
             if let RoundProcessor::Normal(p) = self.processor_mut() {
