@@ -3,6 +3,7 @@ use consensus_types::{
     vote_proposal::VoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
+use libra_metrics::monitor;
 use libra_secure_net::NetworkClient;
 use libra_types::epoch_change::EpochChangeProof;
 use safety_rules::{
@@ -65,7 +66,7 @@ impl SerializerClient {
     }
 
     fn request(&mut self, input: SafetyRulesInput) -> Result<Vec<u8>, Error> {
-        self.service.request(input)
+        monitor!("safety_rules", self.service.request(input))
     }
 }
 
