@@ -55,7 +55,11 @@ impl Genesis {
         association_config
             .parameters
             .insert("namespace".into(), layout.association[0].clone());
+
         let association: Storage = association_config.try_into()?;
+        association
+            .available()
+            .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
 
         let association_key = association
             .get(ASSOCIATION_KEY)
@@ -72,7 +76,11 @@ impl Genesis {
         common_config
             .parameters
             .insert("namespace".into(), constants::COMMON_NS.into());
+
         let common: Storage = common_config.try_into()?;
+        common
+            .available()
+            .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
 
         let layout = common
             .get(constants::LAYOUT)
@@ -90,7 +98,11 @@ impl Genesis {
             validator_config
                 .parameters
                 .insert("namespace".into(), operator.into());
+
             let validator: Storage = validator_config.try_into()?;
+            validator
+                .available()
+                .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
 
             let key = validator
                 .get(OPERATOR_KEY)
