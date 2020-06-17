@@ -46,6 +46,7 @@ mod upstream_config;
 pub use upstream_config::*;
 mod test_config;
 use crate::{chain_id::ChainId, network_id::NetworkId};
+use libra_secure_storage::{KVStorage, Storage};
 use libra_types::waypoint::Waypoint;
 pub use test_config::*;
 
@@ -122,6 +123,24 @@ impl WaypointConfig {
         } else {
             None
         }
+    }
+
+    pub fn waypoint(&self) -> Waypoint {
+        let waypoint = match &self {
+            WaypointConfig::FromConfig(waypoint) => Some(*waypoint),
+            WaypointConfig::FromStorage(backend) => {
+                let storage: Storage = backend.into();
+                let waypoint = storage
+                    .get(libra_global_constants::WAYPOINT)
+                    .expect("Unable to read waypoint")
+                    .value
+                    .string()
+                    .expect("Expected string for waypoint");
+                Some(Waypoint::from_str(&waypoint).expect("Unable to parse waypoint"))
+            }
+            WaypointConfig::None => None,
+        };
+        waypoint.expect("waypoint should be present")
     }
 }
 
