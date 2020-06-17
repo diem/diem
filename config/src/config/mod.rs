@@ -320,6 +320,27 @@ impl NodeConfig {
         self.set_data_dir(test.temp_dir().unwrap().to_path_buf());
         self.test = Some(test);
     }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn default_for_public_full_node() -> Self {
+        let contents = std::include_str!("test_data/public_full_node.yaml");
+        let path = "default_for_public_full_node";
+        Self::parse(&contents).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn default_for_validator() -> Self {
+        let contents = std::include_str!("test_data/validator.yaml");
+        let path = "default_for_validator";
+        Self::parse(&contents).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn default_for_validator_full_node() -> Self {
+        let contents = std::include_str!("test_data/validator_full_node.yaml");
+        let path = "default_for_validator_full_node";
+        Self::parse(&contents).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+    }
 }
 
 pub trait PersistableConfig: Serialize + DeserializeOwned {
@@ -382,10 +403,6 @@ impl RootPath {
 mod test {
     use super::*;
 
-    const PUBLIC_FULL_NODE: &str = "src/config/test_data/public_full_node.yaml";
-    const VALIDATOR: &str = "src/config/test_data/validator.yaml";
-    const VALIDATOR_FULL_NODE: &str = "src/config/test_data/validator_full_node.yaml";
-
     #[test]
     fn verify_role_type_conversion() {
         // Verify relationship between RoleType and as_string() is reflexive
@@ -409,12 +426,8 @@ mod test {
 
     #[test]
     fn verify_configs() {
-        let _ = vec![PUBLIC_FULL_NODE, VALIDATOR, VALIDATOR_FULL_NODE]
-            .iter()
-            .map(|path| {
-                NodeConfig::load_config(PathBuf::from(path))
-                    .unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
-            })
-            .collect::<Vec<_>>();
+        NodeConfig::default_for_public_full_node();
+        NodeConfig::default_for_validator();
+        NodeConfig::default_for_validator_full_node();
     }
 }
