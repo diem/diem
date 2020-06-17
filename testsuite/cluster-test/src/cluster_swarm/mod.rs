@@ -20,7 +20,11 @@ pub trait ClusterSwarm {
     async fn remove_all_network_effects(&self) -> Result<()>;
 
     /// Spawns a new instance.
-    async fn spawn_new_instance(&self, instance_config: InstanceConfig) -> Result<Instance>;
+    async fn spawn_new_instance(
+        &self,
+        instance_config: InstanceConfig,
+        delete_data: bool,
+    ) -> Result<Instance>;
 
     /// Creates a set of validators with the given `image_tag`
     async fn spawn_validator_set(
@@ -31,6 +35,7 @@ pub trait ClusterSwarm {
         lsr_backend: &str,
         image_tag: &str,
         config_overrides: Vec<String>,
+        delete_data: bool,
     ) -> Result<Vec<Instance>> {
         let mut lsrs = vec![];
         if enable_lsr {
@@ -38,7 +43,7 @@ pub trait ClusterSwarm {
                 let mut vault_instances: Vec<_> = (0..num_validators)
                     .map(|i| {
                         let vault_config = VaultConfig { index: i };
-                        self.spawn_new_instance(Vault(vault_config))
+                        self.spawn_new_instance(Vault(vault_config), delete_data)
                     })
                     .collect();
                 lsrs.append(&mut vault_instances);
@@ -51,7 +56,7 @@ pub trait ClusterSwarm {
                         image_tag: image_tag.to_string(),
                         lsr_backend: lsr_backend.to_string(),
                     };
-                    self.spawn_new_instance(LSR(lsr_config))
+                    self.spawn_new_instance(LSR(lsr_config), delete_data)
                 })
                 .collect();
             lsrs.append(&mut lsr_instances);
@@ -65,7 +70,7 @@ pub trait ClusterSwarm {
                 image_tag: image_tag.to_string(),
                 config_overrides: config_overrides.clone(),
             };
-            self.spawn_new_instance(Validator(validator_config))
+            self.spawn_new_instance(Validator(validator_config), delete_data)
         });
         let (lsrs, validators) = join(try_join_all(lsrs), try_join_all(validators)).await;
         lsrs?;
@@ -79,6 +84,7 @@ pub trait ClusterSwarm {
         num_fullnodes_per_validator: u32,
         image_tag: &str,
         config_overrides: Vec<String>,
+        delete_data: bool,
     ) -> Result<Vec<Instance>> {
         let fullnodes = (0..num_validators).flat_map(move |validator_index| {
             let config_overrides = config_overrides.clone();
@@ -91,7 +97,7 @@ pub trait ClusterSwarm {
                     image_tag: image_tag.to_string(),
                     config_overrides: config_overrides.clone(),
                 };
-                self.spawn_new_instance(Fullnode(fullnode_config))
+                self.spawn_new_instance(Fullnode(fullnode_config), delete_data)
             })
         });
         let fullnodes = try_join_all(fullnodes).await?;
@@ -106,6 +112,7 @@ pub trait ClusterSwarm {
         enable_lsr: bool,
         lsr_backend: &str,
         image_tag: &str,
+        delete_data: bool,
     ) -> Result<(Vec<Instance>, Vec<Instance>)> {
         try_join!(
             self.spawn_validator_set(
@@ -115,12 +122,14 @@ pub trait ClusterSwarm {
                 lsr_backend,
                 image_tag,
                 vec![],
+                delete_data,
             ),
             self.spawn_fullnode_set(
                 num_validators,
                 num_fullnodes_per_validator,
                 image_tag,
                 vec![],
+                delete_data,
             ),
         )
     }

@@ -468,6 +468,7 @@ impl ClusterUtil {
                 args.enable_lsr,
                 &args.lsr_backend,
                 current_tag,
+                true,
             )
             .await
             .expect("Failed to spawn_validator_and_fullnode_set");
