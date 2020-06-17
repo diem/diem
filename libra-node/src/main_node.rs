@@ -8,7 +8,7 @@ use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::{
-    config::{waypoint, NetworkConfig, NodeConfig, RoleType},
+    config::{NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
 };
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
@@ -113,7 +113,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         gen_consensus_reconfig_subscription();
     reconfig_subscriptions.push(consensus_reconfig_subscription);
 
-    let waypoint = waypoint(&node_config.base.waypoint);
+    let waypoint = node_config.base.waypoint.waypoint();
 
     // Gather all network configs into a single vector.
     // TODO:  consider explicitly encoding the role in the NetworkConfig

@@ -1,31 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::config::{SecureBackend, WaypointConfig};
+use crate::config::SecureBackend;
 use libra_secure_storage::{
-    GitHubStorage, InMemoryStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage,
-    VaultStorage,
+    GitHubStorage, InMemoryStorage, NamespacedStorage, OnDiskStorage, Storage, VaultStorage,
 };
-use libra_types::waypoint::Waypoint;
-use std::str::FromStr;
-
-pub fn waypoint(config: &WaypointConfig) -> Waypoint {
-    let waypoint = match &config {
-        WaypointConfig::FromConfig(waypoint) => Some(*waypoint),
-        WaypointConfig::FromStorage(backend) => {
-            let storage: Storage = backend.into();
-            let waypoint = storage
-                .get(libra_global_constants::WAYPOINT)
-                .expect("Unable to read waypoint")
-                .value
-                .string()
-                .expect("Expected string for waypoint");
-            Some(Waypoint::from_str(&waypoint).expect("Unable to parse waypoint"))
-        }
-        WaypointConfig::None => None,
-    };
-    waypoint.expect("waypoint should be present")
-}
 
 impl From<&SecureBackend> for Storage {
     fn from(backend: &SecureBackend) -> Self {
