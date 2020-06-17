@@ -61,25 +61,6 @@ impl AccessPath {
         AccessPath { address, path }
     }
 
-    /// Create an AccessPath to the event for the sender account in a deposit operation.
-    /// The sent counter in LibraAccount.T (LibraAccount.T.sent_events_count) is used to generate
-    /// the AccessPath.
-    /// That AccessPath can be used as a key into the event storage to retrieve all sent
-    /// events for a given account.
-    pub fn new_for_sent_event(address: AccountAddress) -> Self {
-        Self::new(address, ACCOUNT_SENT_EVENT_PATH.to_vec())
-    }
-
-    /// Create an AccessPath to the event for the target account (the receiver)
-    /// in a deposit operation.
-    /// The received counter in LibraAccount.T (LibraAccount.T.received_events_count) is used to
-    /// generate the AccessPath.
-    /// That AccessPath can be used as a key into the event storage to retrieve all received
-    /// events for a given account.
-    pub fn new_for_received_event(address: AccountAddress) -> Self {
-        Self::new(address, ACCOUNT_RECEIVED_EVENT_PATH.to_vec())
-    }
-
     pub fn resource_access_vec(tag: &StructTag) -> Vec<u8> {
         tag.access_vector()
     }
