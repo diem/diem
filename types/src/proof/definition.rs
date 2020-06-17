@@ -12,25 +12,26 @@ use crate::{
     ledger_info::LedgerInfo,
     transaction::{TransactionInfo, Version},
 };
-use anyhow::{bail, ensure, format_err, Result};
+use anyhow::{bail, ensure, format_err, Error, Result};
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_crypto::hash::TestOnlyHasher;
 use libra_crypto::{
     hash::{
         CryptoHash, CryptoHasher, EventAccumulatorHasher, TransactionAccumulatorHasher,
-        SPARSE_MERKLE_PLACEHOLDER_HASH,
+        ACCUMULATOR_PLACEHOLDER_HASH, SPARSE_MERKLE_PLACEHOLDER_HASH,
     },
     HashValue,
 };
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
 use serde::{Deserialize, Serialize};
+use std::convert::{TryFrom, TryInto};
 use std::marker::PhantomData;
 
 /// A proof that can be used authenticate an element in an accumulator given trusted root hash. For
 /// example, both `LedgerInfoToTransactionInfoProof` and `TransactionInfoToEventProof` can be
 /// constructed on top of this structure.
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone)]
 pub struct AccumulatorProof<H> {
     /// All siblings in this proof, including the default ones. Siblings are ordered from the bottom
     /// level to the root level.
@@ -123,6 +124,76 @@ impl<H> PartialEq for AccumulatorProof<H> {
 }
 
 impl<H> Eq for AccumulatorProof<H> {}
+
+#[derive(Serialize, Deserialize)]
+struct AccumulatorProofSerde {
+    compressed_siblings: Vec<Vec<u8>>,
+}
+
+impl<H> From<&AccumulatorProof<H>> for AccumulatorProofSerde {
+    fn from(proof: &AccumulatorProof<H>) -> Self {
+        let compressed_siblings = proof
+            .siblings
+            .iter()
+            .map(|sibling| {
+                if *sibling != *ACCUMULATOR_PLACEHOLDER_HASH {
+                    sibling.to_vec()
+                } else {
+                    vec![]
+                }
+            })
+            .collect();
+        Self {
+            compressed_siblings,
+        }
+    }
+}
+
+impl<H> TryFrom<AccumulatorProofSerde> for AccumulatorProof<H>
+where
+    H: CryptoHasher,
+{
+    type Error = Error;
+
+    fn try_from(proof_serde: AccumulatorProofSerde) -> Result<Self> {
+        let siblings = proof_serde
+            .compressed_siblings
+            .iter()
+            .map(|sibling| {
+                if !sibling.is_empty() {
+                    HashValue::from_slice(sibling)
+                } else {
+                    Ok(*ACCUMULATOR_PLACEHOLDER_HASH)
+                }
+            })
+            .collect::<Result<Vec<_>>>()?;
+
+        Ok(Self::new(siblings))
+    }
+}
+
+impl<H> Serialize for AccumulatorProof<H> {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let proof_serde = self.into();
+        <AccumulatorProofSerde as Serialize>::serialize(&proof_serde, serializer)
+    }
+}
+
+impl<'de, H> Deserialize<'de> for AccumulatorProof<H>
+where
+    H: CryptoHasher,
+{
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let proof_serde = <AccumulatorProofSerde as Deserialize>::deserialize(deserializer)?;
+        proof_serde.try_into().map_err(serde::de::Error::custom)
+    }
+}
 
 pub type TransactionAccumulatorProof = AccumulatorProof<TransactionAccumulatorHasher>;
 pub type EventAccumulatorProof = AccumulatorProof<EventAccumulatorHasher>;
