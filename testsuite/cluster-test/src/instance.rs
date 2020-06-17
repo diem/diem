@@ -16,7 +16,7 @@ use std::{collections::HashSet, fmt, str::FromStr};
 static VAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"val-(\d+)").unwrap());
 static FULLNODE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"fn-(\d+)").unwrap());
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum InstanceConfig {
     Validator(ValidatorConfig),
     Fullnode(FullnodeConfig),
@@ -24,12 +24,12 @@ pub enum InstanceConfig {
     Vault(VaultConfig),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct VaultConfig {
     pub index: u32,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct LSRConfig {
     pub index: u32,
     pub num_validators: u32,
@@ -37,7 +37,7 @@ pub struct LSRConfig {
     pub lsr_backend: String,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct ValidatorConfig {
     pub index: u32,
     pub num_validators: u32,
@@ -47,7 +47,7 @@ pub struct ValidatorConfig {
     pub config_overrides: Vec<String>,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FullnodeConfig {
     pub fullnode_index: u32,
     pub num_fullnodes_per_validator: u32,
