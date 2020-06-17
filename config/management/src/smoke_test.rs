@@ -31,123 +31,138 @@ impl BuildSwarm for ManagementBuilder {
 #[test]
 fn smoke_test() {
     LibraNode::prepare();
-    let helper = StorageHelper::new();
     let num_validators = 5;
-    let shared = "_shared";
-    let association = "association";
-    let association_shared = association.to_string() + shared;
+    let storage_helper = StorageHelper::new();
 
-    // Step 1) Prepare the layout
+    // Define namespaces in local and shared storage
+    let association_ns = "association";
+    let association_shared_ns = "association_shared";
+    let owner_ns = "_owner";
+    let owner_shared_ns = "_owner_shared";
+    let operator_ns = "_operator";
+    let operator_shared_ns = "_operator_shared";
+
+    // Step 1) Prepare the layout and upload to common storage
     let mut layout = Layout::default();
-    layout.association = vec![association_shared.to_string()];
+    layout.association = vec![association_shared_ns.to_string()];
+    layout.owners = (0..num_validators)
+        .map(|v| (v.to_string() + owner_shared_ns))
+        .collect();
     layout.operators = (0..num_validators)
-        .map(|v| (v.to_string() + shared))
+        .map(|v| (v.to_string() + operator_shared_ns))
         .collect();
 
-    let mut common_storage = helper.storage(crate::constants::COMMON_NS.into());
-    let layout_value = Value::String(layout.to_toml().unwrap());
+    let mut common_storage = storage_helper.storage(crate::constants::COMMON_NS.into());
     common_storage
-        .set(crate::constants::LAYOUT, layout_value)
+        .set(
+            crate::constants::LAYOUT,
+            Value::String(layout.to_toml().unwrap()),
+        )
         .unwrap();
 
-    // Step 2) Set association key
-    helper.initialize(association.into());
-    helper
-        .association_key(&association, &association_shared)
+    // Step 2) Set the association key
+    storage_helper.initialize(association_ns.into());
+    storage_helper
+        .association_key(&association_ns, &association_shared_ns)
         .unwrap();
 
-    // Step 3) Prepare validators
-    let temppath = TempPath::new();
-    temppath.create_as_dir().unwrap();
-    let swarm_path = temppath.path().to_path_buf();
+    // Step 3) Prepare the owners
+    for owner_index in 0..num_validators {
+        let local_ns = owner_index.to_string() + owner_ns;
+        let remote_ns = owner_index.to_string() + owner_shared_ns;
+        storage_helper.initialize(local_ns.clone());
+        storage_helper.owner_key(&local_ns, &remote_ns).unwrap();
+    }
+
+    // Step 4) Prepare operators, set operators and upload validator configs to owner namespaces
+    let temp_path = create_temp_path();
+    let swarm_path = temp_path.path().to_path_buf();
 
     let mut configs = Vec::new();
-    for i in 0..num_validators {
-        let ns = i.to_string();
-        let ns_shared = ns.clone() + shared;
-        helper.initialize(ns.clone());
+    for operator_index in 0..num_validators {
+        let local_ns = operator_index.to_string() + operator_ns;
+        let remote_ns = operator_index.to_string() + operator_shared_ns;
+        storage_helper.initialize(local_ns.clone());
 
-        let operator_key = helper.operator_key(&ns, &ns_shared).unwrap();
+        // Upload operator key
+        let _operator_key = storage_helper.operator_key(&local_ns, &remote_ns).unwrap();
 
-        let validator_account = account_address::from_public_key(&operator_key);
-        let mut config = NodeConfig::default();
+        // Owner sets the operator (we assume owner i chooses operator i)
+        let owner_shared_ns = operator_index.to_string() + owner_shared_ns;
+        storage_helper
+            .set_operator(&remote_ns, &owner_shared_ns)
+            .unwrap();
 
-        let mut network = NetworkConfig::network_with_id(NetworkId::Validator);
-        network.discovery_method = DiscoveryMethod::None;
-        network.mutual_authentication = true;
-        config.validator_network = Some(network);
+        // Create validator operator node config
+        let node_config = create_validator_node_config(&storage_helper, &swarm_path, &local_ns);
+        configs.push(node_config.clone());
 
-        let mut network = NetworkConfig::network_with_id(NetworkId::Public);
-        network.discovery_method = DiscoveryMethod::None;
-        config.full_node_networks = vec![network];
-        config.randomize_ports();
-
-        let validator_network = config.validator_network.as_mut().unwrap();
-        let validator_network_address = validator_network.listen_address.clone();
-        validator_network.identity = Identity::from_storage(
-            libra_global_constants::VALIDATOR_NETWORK_KEY.into(),
-            libra_global_constants::OPERATOR_ACCOUNT.into(),
-            secure_backend(helper.path(), &swarm_path, &ns, "validator"),
-        );
-
-        let fullnode_network = &mut config.full_node_networks[0];
-        let fullnode_network_address = fullnode_network.listen_address.clone();
-        fullnode_network.identity = Identity::from_storage(
-            libra_global_constants::FULLNODE_NETWORK_KEY.into(),
-            libra_global_constants::OPERATOR_ACCOUNT.into(),
-            secure_backend(helper.path(), &swarm_path, &ns, "full_node"),
-        );
-
-        configs.push(config);
-
-        helper.operator_key(&ns, &ns_shared).unwrap();
-        helper
+        // Upload the validator config
+        storage_helper
             .validator_config(
-                validator_account,
-                validator_network_address,
-                fullnode_network_address,
-                &ns,
-                &ns_shared,
+                account_address::AccountAddress::random(), // Currently unused
+                node_config
+                    .validator_network
+                    .unwrap()
+                    .listen_address
+                    .clone(),
+                node_config.full_node_networks[0].listen_address.clone(),
+                &local_ns,
+                &owner_shared_ns,
             )
             .unwrap();
     }
 
-    // Step 4) Produce genesis and introduce into node configs
+    // Step 5) Produce genesis and introduce into node configs
     let genesis_path = TempPath::new();
     genesis_path.create_as_file().unwrap();
-    let genesis = helper.genesis(genesis_path.path()).unwrap();
+    let genesis = storage_helper.genesis(genesis_path.path()).unwrap();
 
     // Save the waypoint into shared secure storage so that validators can perform insert_waypoint
-    let waypoint = helper.create_waypoint(constants::COMMON_NS).unwrap();
+    let waypoint = storage_helper
+        .create_waypoint(constants::COMMON_NS)
+        .unwrap();
 
-    // Step 5) Introduce waypoint and genesis into the configs and verify along the way
-    for (i, mut config) in configs.iter_mut().enumerate() {
-        let ns = i.to_string();
-        helper.insert_waypoint(&ns, constants::COMMON_NS).unwrap();
-        let output = helper.verify_genesis(&ns, genesis_path.path()).unwrap();
+    // Step 6) Introduce waypoint and genesis into the configs and verify along the way
+    for (operator_index, mut config) in configs.iter_mut().enumerate() {
+        let local_ns = operator_index.to_string() + operator_ns;
+        storage_helper
+            .insert_waypoint(&local_ns, constants::COMMON_NS)
+            .unwrap();
+        let output = storage_helper
+            .verify_genesis(&local_ns, genesis_path.path())
+            .unwrap();
         // 4 matches = 5 splits
         assert_eq!(output.split("match").count(), 5);
 
-        config.consensus.safety_rules.backend =
-            secure_backend(helper.path(), &swarm_path, &ns, "safety-rules");
+        config.consensus.safety_rules.backend = secure_backend(
+            storage_helper.path(),
+            &swarm_path,
+            &local_ns,
+            "safety-rules",
+        );
 
-        if i == 0 {
+        if operator_index == 0 {
             // This is unfortunate due to the way SwarmConfig works
             config.base.waypoint = WaypointConfig::FromConfig(waypoint);
         } else {
-            let backend = secure_backend(helper.path(), &swarm_path, &ns, "waypoint");
+            let backend = secure_backend(storage_helper.path(), &swarm_path, &local_ns, "waypoint");
             config.base.waypoint = WaypointConfig::FromStorage(backend);
         }
         config.execution.genesis = Some(genesis.clone());
     }
 
-    // Step 6) Prepare ecosystem
-    let full_node_config =
-        attach_validator_full_node(&helper, &mut configs[0], &swarm_path, 0.to_string());
+    // Step 7) Prepare full node ecosystem
+    let full_node_config = attach_validator_full_node(
+        &storage_helper,
+        &mut configs[0],
+        &swarm_path,
+        0.to_string() + operator_ns,
+    );
 
-    // Step 7) Build configuration for Swarm
-    let faucet_key = helper
-        .storage(association.into())
+    // Step 8) Build configuration for Swarm
+    let faucet_key = storage_helper
+        .storage(association_ns.into())
         .export_private_key(libra_global_constants::ASSOCIATION_KEY)
         .unwrap();
     let management_builder = ManagementBuilder {
@@ -156,7 +171,7 @@ fn smoke_test() {
     };
 
     let mut swarm = LibraSwarm {
-        dir: LibraSwarmDir::Temporary(temppath),
+        dir: LibraSwarmDir::Temporary(temp_path),
         nodes: std::collections::HashMap::new(),
         config: SwarmConfig::build(&management_builder, &swarm_path).unwrap(),
     };
@@ -164,24 +179,62 @@ fn smoke_test() {
     // Step 8) Launch validators
     swarm.launch_attempt(RoleType::Validator, false).unwrap();
 
-    // Step 9) Launch ecosystem
+    // Step 9) Launch full node ecosystem
     let management_builder = ManagementBuilder {
         configs: vec![full_node_config],
         faucet_key,
     };
 
-    let temppath = TempPath::new();
-    temppath.create_as_dir().unwrap();
-    let swarm_path = temppath.path().to_path_buf();
-
+    let temp_path = create_temp_path();
+    let swarm_path = temp_path.path().to_path_buf();
     let mut swarm = LibraSwarm {
-        dir: LibraSwarmDir::Temporary(temppath),
+        dir: LibraSwarmDir::Temporary(temp_path),
         nodes: std::collections::HashMap::new(),
         config: SwarmConfig::build(&management_builder, &swarm_path).unwrap(),
     };
 
     swarm.launch_attempt(RoleType::FullNode, false).unwrap();
     assert!(check_connectivity(&mut swarm, 1));
+}
+
+fn create_validator_node_config(
+    storage_helper: &StorageHelper,
+    swarm_path: &PathBuf,
+    local_ns: &str,
+) -> NodeConfig {
+    let mut config = NodeConfig::default();
+
+    let mut network = NetworkConfig::network_with_id(NetworkId::Validator);
+    network.discovery_method = DiscoveryMethod::None;
+    network.mutual_authentication = true;
+    config.validator_network = Some(network);
+
+    let mut network = NetworkConfig::network_with_id(NetworkId::Public);
+    network.discovery_method = DiscoveryMethod::None;
+    config.full_node_networks = vec![network];
+    config.randomize_ports();
+
+    let validator_network = config.validator_network.as_mut().unwrap();
+    validator_network.identity = Identity::from_storage(
+        libra_global_constants::VALIDATOR_NETWORK_KEY.into(),
+        libra_global_constants::OPERATOR_ACCOUNT.into(),
+        secure_backend(storage_helper.path(), &swarm_path, &local_ns, "validator"),
+    );
+
+    let fullnode_network = &mut config.full_node_networks[0];
+    fullnode_network.identity = Identity::from_storage(
+        libra_global_constants::FULLNODE_NETWORK_KEY.into(),
+        libra_global_constants::OPERATOR_ACCOUNT.into(),
+        secure_backend(storage_helper.path(), &swarm_path, &local_ns, "full_node"),
+    );
+
+    config
+}
+
+fn create_temp_path() -> TempPath {
+    let temppath = TempPath::new();
+    temppath.create_as_dir().unwrap();
+    temppath
 }
 
 fn check_connectivity(swarm: &mut LibraSwarm, expected_peers: i64) -> bool {

@@ -91,41 +91,43 @@ impl Genesis {
     }
 
     /// Produces a set of ValidatorRegistration from the remote storage.
+    /// TODO(joshlind): verify that owner account address specified by the validator config matches
+    /// the owner account address that was uploaded to the remote storage. Also verify that the
+    /// operator selection has been signed by the owner (somehow...)
     pub fn validators(&self, layout: &Layout) -> Result<Vec<ValidatorRegistration>, Error> {
         let mut validators = Vec::new();
-        for operator in layout.operators.iter() {
-            let mut validator_config = self.backend.backend.clone();
-            validator_config
-                .parameters
-                .insert("namespace".into(), operator.into());
 
-            let validator: Storage = validator_config.try_into()?;
-            validator
+        for owner in layout.owners.iter() {
+            let mut owner_config = self.backend.backend.clone();
+            owner_config
+                .parameters
+                .insert("namespace".into(), owner.into());
+
+            let owner_storage: Storage = owner_config.try_into()?;
+            owner_storage
                 .available()
                 .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
 
-            let key = validator
-                .get(OPERATOR_KEY)
+            let operator_key = owner_storage
+                .get(constants::VALIDATOR_OPERATOR)
                 .map_err(|e| Error::RemoteStorageReadError(OPERATOR_KEY, e.to_string()))?
                 .value
                 .ed25519_public_key()
                 .map_err(|e| Error::RemoteStorageReadError(OPERATOR_KEY, e.to_string()))?;
 
-            let txn = validator
+            let validator_config_txn = owner_storage
                 .get(constants::VALIDATOR_CONFIG)
+                .and_then(|v| v.value.transaction())
                 .map_err(|e| {
                     Error::RemoteStorageReadError(constants::VALIDATOR_CONFIG, e.to_string())
-                })?
-                .value;
-            let txn = txn.transaction().unwrap();
-            let txn = txn.as_signed_user_txn().unwrap().payload();
-            let txn = if let TransactionPayload::Script(script) = txn {
-                script.clone()
+                })?;
+            let validator_config_txn = validator_config_txn.as_signed_user_txn().unwrap().payload();
+
+            if let TransactionPayload::Script(txn_script) = validator_config_txn {
+                validators.push((operator_key, txn_script.clone()));
             } else {
                 return Err(Error::UnexpectedError("Found invalid registration".into()));
-            };
-
-            validators.push((key, txn));
+            }
         }
 
         Ok(validators)

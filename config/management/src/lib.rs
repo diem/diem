@@ -9,6 +9,7 @@ mod key;
 mod layout;
 mod secure_backend;
 mod validator_config;
+mod validator_operator;
 mod verify;
 mod waypoint;
 
@@ -28,6 +29,7 @@ pub mod constants {
     pub const COMMON_NS: &str = "common";
     pub const LAYOUT: &str = "layout";
     pub const VALIDATOR_CONFIG: &str = "validator_config";
+    pub const VALIDATOR_OPERATOR: &str = "validator_operator";
 
     pub const GAS_UNIT_PRICE: u64 = 0;
     pub const MAX_GAS_AMOUNT: u64 = 1_000_000;
@@ -52,6 +54,8 @@ pub enum Command {
     OwnerKey(crate::key::OwnerKey),
     #[structopt(about = "Submits a Layout doc to a shared storage")]
     SetLayout(SetLayout),
+    #[structopt(about = "Sets the validator operator chosen by the owner")]
+    SetOperator(crate::validator_operator::ValidatorOperator),
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
     ValidatorConfig(crate::validator_config::ValidatorConfig),
     #[structopt(about = "Verifies and prints the current configuration state")]
@@ -67,6 +71,7 @@ pub enum CommandName {
     OperatorKey,
     OwnerKey,
     SetLayout,
+    SetOperator,
     ValidatorConfig,
     Verify,
 }
@@ -81,6 +86,7 @@ impl From<&Command> for CommandName {
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
             Command::SetLayout(_) => CommandName::SetLayout,
+            Command::SetOperator(_) => CommandName::SetOperator,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::Verify(_) => CommandName::Verify,
         }
@@ -97,6 +103,7 @@ impl std::fmt::Display for CommandName {
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
             CommandName::SetLayout => "set-layout",
+            CommandName::SetOperator => "set-operator",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::Verify => "verify",
         };
@@ -114,6 +121,7 @@ impl Command {
             Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
             Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
+            Command::SetOperator(_) => self.set_operator().unwrap().to_string(),
             Command::ValidatorConfig(_) => format!("{:?}", self.validator_config().unwrap()),
             Command::Verify(_) => self.verify().unwrap(),
         }
@@ -165,6 +173,13 @@ impl Command {
         match self {
             Command::SetLayout(set_layout) => set_layout.execute(),
             _ => Err(self.unexpected_command(CommandName::SetLayout)),
+        }
+    }
+
+    pub fn set_operator(self) -> Result<Ed25519PublicKey, Error> {
+        match self {
+            Command::SetOperator(set_operator) => set_operator.execute(),
+            _ => Err(self.unexpected_command(CommandName::SetOperator)),
         }
     }
 
