@@ -259,14 +259,14 @@ impl Instance {
     }
 
     /// Runs command on the same host in separate utility container based on cluster-test-util image
-    pub async fn util_cmd(&self, command: String, job_name: &str) -> Result<()> {
+    pub async fn util_cmd<S: AsRef<str>>(&self, command: S, job_name: &str) -> Result<()> {
         let backend = self.k8s_backend();
         backend
             .kube
             .run(
                 &backend.k8s_node,
                 "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
-                command,
+                command.as_ref(),
                 job_name,
             )
             .await

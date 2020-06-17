@@ -429,7 +429,7 @@ impl ClusterSwarmKube {
         &self,
         k8s_node: &str,
         docker_image: &str,
-        command: String,
+        command: &str,
         job_name: &str,
     ) -> Result<()> {
         let back_off_limit = 0;
@@ -445,7 +445,7 @@ impl ClusterSwarmKube {
             label = job_name,
             image = docker_image,
             node_name = k8s_node,
-            command = &command,
+            command = command,
             back_off_limit = back_off_limit,
         );
         let job_spec: serde_yaml::Value = serde_yaml::from_str(&job_yaml)?;
@@ -598,17 +598,17 @@ impl ClusterSwarmKube {
         self.delete_resource::<Pod>(&pod_name).await?;
         self.delete_resource::<Service>(&service_name).await
     }
-}
 
-#[async_trait]
-impl ClusterSwarm for ClusterSwarmKube {
-    async fn remove_all_network_effects(&self) -> Result<()> {
+    pub async fn remove_all_network_effects(&self) -> Result<()> {
         libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 3), || {
             Box::pin(async move { self.remove_all_network_effects_helper().await })
         })
         .await
     }
+}
 
+#[async_trait]
+impl ClusterSwarm for ClusterSwarmKube {
     async fn spawn_new_instance(
         &self,
         instance_config: InstanceConfig,

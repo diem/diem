@@ -3,14 +3,12 @@
 
 use crate::{
     cluster::Cluster,
-    cluster_swarm::ClusterSwarm,
+    effects::{self, network_delay},
     experiments::{Context, Experiment, ExperimentParam},
-    instance::Instance,
     tx_emitter::EmitJobRequest,
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use futures::future::try_join_all;
 use libra_logger::info;
 use std::{
     fmt::{Display, Error, Formatter},
@@ -42,7 +40,7 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         let split_region_num = split_country_num / 2;
         let (us, euro) = self.cluster.split_n_validators_random(split_country_num);
         let (us_west, us_east) = us.split_n_validators_random(split_region_num);
-        three_region_simulation_effects_k8s(
+        let mut effects = network_delay::three_region_simulation_effects(
             (
                 us_west.validator_instances().to_vec(),
                 us_east.validator_instances().to_vec(),
@@ -53,8 +51,9 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
                 Duration::from_millis(95), // us_west<->eu one way delay
                 Duration::from_millis(40), // us_west<->us_east one way delay
             ),
-        )
-        .await?;
+        );
+
+        effects::activate_all(&mut effects).await?;
 
         let window = Duration::from_secs(240);
         let emit_job_request = if context.emit_to_validator {
@@ -79,7 +78,9 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
             "Tx status from client side: txn {}, avg latency {}",
             stats.committed as u64, avg_latency_client
         );
-        context.cluster_swarm.remove_all_network_effects().await?;
+
+        effects::deactivate_all(&mut effects).await?;
+
         context
             .report
             .report_metric(&self, "avg_tps", avg_tps as f64);
@@ -105,70 +106,4 @@ impl Display for PerformanceBenchmarkThreeRegionSimulation {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         write!(f, "3 Region Simulation")
     }
-}
-
-async fn add_network_delay_k8s(
-    instance: Instance,
-    configuration: Vec<(Vec<Instance>, Duration)>,
-) -> Result<()> {
-    let mut command = "".to_string();
-    command += "tc qdisc delete dev eth0 root; ";
-    // Create a HTB https://linux.die.net/man/8/tc-htb
-    command += "tc qdisc add dev eth0 root handle 1: htb; ";
-    for i in 0..configuration.len() {
-        // Create a class within the HTB https://linux.die.net/man/8/tc
-        command += format!(
-            "tc class add dev eth0 parent 1: classid 1:{} htb rate 1tbit; ",
-            i + 1
-        )
-        .as_str();
-    }
-    for (i, config) in configuration.iter().enumerate() {
-        // Create u32 filters so that all the target instances are classified as class 1:(i+1)
-        // http://man7.org/linux/man-pages/man8/tc-u32.8.html
-        for target_instance in &config.0 {
-            command += format!("tc filter add dev eth0 parent 1: protocol ip prio 1 u32 flowid 1:{} match ip dst {}; ", i+1, target_instance.ip()).as_str();
-        }
-    }
-    for (i, config) in configuration.iter().enumerate() {
-        // Use netem to delay packets to this class
-        command += format!(
-            "tc qdisc add dev eth0 parent 1:{} handle {}0: netem delay {}ms; ",
-            i + 1,
-            i + 1,
-            config.1.as_millis(),
-        )
-        .as_str();
-    }
-
-    instance.util_cmd(command, "add-network-delay").await
-}
-
-async fn three_region_simulation_effects_k8s(
-    regions: (Vec<Instance>, Vec<Instance>, Vec<Instance>),
-    delays_bw_regions: (Duration, Duration, Duration),
-) -> Result<()> {
-    let mut futures = vec![];
-    for instance in &regions.0 {
-        let configuration = vec![
-            (regions.1.clone(), delays_bw_regions.2),
-            (regions.2.clone(), delays_bw_regions.1),
-        ];
-        futures.push(add_network_delay_k8s(instance.clone(), configuration));
-    }
-    for instance in &regions.1 {
-        let configuration = vec![
-            (regions.0.clone(), delays_bw_regions.2),
-            (regions.2.clone(), delays_bw_regions.0),
-        ];
-        futures.push(add_network_delay_k8s(instance.clone(), configuration));
-    }
-    for instance in &regions.2 {
-        let configuration = vec![
-            (regions.1.clone(), delays_bw_regions.0),
-            (regions.0.clone(), delays_bw_regions.1),
-        ];
-        futures.push(add_network_delay_k8s(instance.clone(), configuration));
-    }
-    try_join_all(futures).await.map(|_| ())
 }
