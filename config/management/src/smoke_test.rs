@@ -4,8 +4,8 @@
 use crate::{constants, layout::Layout, storage_helper::StorageHelper};
 use config_builder::{BuildSwarm, SwarmConfig};
 use libra_config::config::{
-    Identity, NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend, SeedPeersConfig,
-    WaypointConfig, HANDSHAKE_VERSION,
+    identity_key, peer_id, Identity, NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend,
+    SeedPeersConfig, WaypointConfig, HANDSHAKE_VERSION,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
@@ -208,10 +208,10 @@ fn attach_validator_full_node(validator_config: &mut NodeConfig) -> NodeConfig {
     // internal network
 
     let v_vfn_network_address = v_vfn.listen_address.clone();
-    let v_vfn_pub_key = libra_secure_storage::config::identity_key(v_vfn).public_key();
+    let v_vfn_pub_key = identity_key(v_vfn).public_key();
     let v_vfn_network_address =
         v_vfn_network_address.append_prod_protos(v_vfn_pub_key, HANDSHAKE_VERSION);
-    let v_vfn_id = libra_secure_storage::config::peer_id(v_vfn);
+    let v_vfn_id = peer_id(v_vfn);
     let mut seed_peers = SeedPeersConfig::default();
     seed_peers.insert(v_vfn_id, vec![v_vfn_network_address]);
 

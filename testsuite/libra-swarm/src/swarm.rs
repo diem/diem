@@ -4,9 +4,8 @@
 use anyhow::{Context, Result};
 use config_builder::{FullNodeConfig, SwarmConfig, ValidatorConfig};
 use debug_interface::NodeDebugClient;
-use libra_config::config::{NodeConfig, RoleType};
+use libra_config::config::{peer_id, NodeConfig, RoleType};
 use libra_logger::prelude::*;
-use libra_secure_storage::config;
 use libra_temppath::TempPath;
 use libra_types::account_address::AccountAddress;
 use std::{
@@ -72,9 +71,7 @@ impl LibraNode {
             .unwrap_or_else(|_| panic!("Failed to load NodeConfig from file: {:?}", config_path));
         let log_file = File::create(&log_path)?;
         let validator_peer_id = match role {
-            RoleType::Validator => {
-                Some(config::peer_id(config.validator_network.as_ref().unwrap()))
-            }
+            RoleType::Validator => Some(peer_id(config.validator_network.as_ref().unwrap())),
             RoleType::FullNode => None,
         };
         let mut node_command = Command::new(workspace_builder::get_bin(LIBRA_NODE_BIN));

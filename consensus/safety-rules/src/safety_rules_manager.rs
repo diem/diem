@@ -12,8 +12,8 @@ use crate::{
     SafetyRules, TSafetyRules,
 };
 use consensus_types::common::Author;
-use libra_config::config::{NodeConfig, SafetyRulesService};
-use libra_secure_storage::{config, Storage};
+use libra_config::config::{peer_id, waypoint, NodeConfig, SafetyRulesService};
+use libra_secure_storage::Storage;
 use std::{
     convert::TryInto,
     net::SocketAddr,
@@ -21,7 +21,7 @@ use std::{
 };
 
 pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSafetyStorage) {
-    let author = config::peer_id(
+    let author = peer_id(
         config
             .validator_network
             .as_ref()
@@ -38,7 +38,7 @@ pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSaf
             .expect("Missing consensus keypair in test config")
             .take_private()
             .expect("Failed to take Consensus private key, key absent or already read");
-        let waypoint = config::waypoint(&config.base.waypoint);
+        let waypoint = waypoint(&config.base.waypoint);
 
         PersistentSafetyStorage::initialize(internal_storage, private_key, waypoint)
     } else {

@@ -26,10 +26,9 @@ use consensus_types::{
     epoch_retrieval::EpochRetrievalRequest,
 };
 use futures::{select, StreamExt};
-use libra_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig};
+use libra_config::config::{peer_id, ConsensusConfig, ConsensusProposerType, NodeConfig};
 use libra_logger::prelude::*;
 use libra_metrics::monitor;
-use libra_secure_storage::config;
 use libra_types::{
     account_address::AccountAddress,
     epoch_change::EpochChangeProof,
@@ -91,7 +90,7 @@ impl EpochManager {
         state_computer: Arc<dyn StateComputer>,
         storage: Arc<dyn PersistentLivenessStorage>,
     ) -> Self {
-        let author = config::peer_id(node_config.validator_network.as_ref().unwrap());
+        let author = peer_id(node_config.validator_network.as_ref().unwrap());
         let config = node_config.consensus.clone();
         let safety_rules_manager = SafetyRulesManager::new(node_config);
         Self {
