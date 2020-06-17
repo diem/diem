@@ -41,7 +41,7 @@ pub struct Commands {
     /// input env vars:
     ///     $BACKUP_NAME
     /// expected output on stdout:
-    ///     BackupHandle, without trailing new line.
+    ///     BackupHandle, trailing newline is trimmed
     pub create_backup: String,
     /// Command line to open a file for writing.
     /// input env vars:
@@ -49,7 +49,7 @@ pub struct Commands {
     ///     $FILE_NAME
     /// stdin will be fed with byte stream.
     /// expected output on stdout:
-    ///     FileHandle, without trailing new line.
+    ///     FileHandle, trailing newline
     pub create_for_write: String,
     /// Command line to open a file for reading.
     /// input env vars:

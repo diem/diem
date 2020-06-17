@@ -3,6 +3,6 @@ key = "BUCKET"
 value = "libra-backup"
 
 [commands]
-create_backup = 'echo -n "$BACKUP_NAME"'
-create_for_write = 'echo -n "s3://$BUCKET/$BACKUP_HANDLE/$FILE_NAME" && exec >&- && aws s3 cp - "s3://$BUCKET/$BACKUP_HANDLE/$FILE_NAME"'
+create_backup = 'echo "$BACKUP_NAME"'
+create_for_write = 'echo "s3://$BUCKET/$BACKUP_HANDLE/$FILE_NAME" && exec >&- && aws s3 cp - "s3://$BUCKET/$BACKUP_HANDLE/$FILE_NAME"'
 open_for_read = 'aws s3 cp "$FILE_HANDLE" -'
