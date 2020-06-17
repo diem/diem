@@ -23,10 +23,6 @@ impl fmt::Display for RegisteredCurrencies {
 }
 
 impl RegisteredCurrencies {
-    pub fn new(currency_codes: Vec<Identifier>) -> Self {
-        Self { currency_codes }
-    }
-
     pub fn currency_codes(&self) -> &[Identifier] {
         &self.currency_codes
     }
