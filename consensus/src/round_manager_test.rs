@@ -9,6 +9,7 @@ use crate::{
         rotating_proposer_election::RotatingProposer,
         round_state::{ExponentialTimeInterval, RoundState},
     },
+    metrics_safety_rules::MetricsSafetyRules,
     network::{IncomingBlockRetrievalRequest, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
     network_tests::{NetworkPlayground, TwinId},
@@ -53,7 +54,7 @@ use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
     protocols::network::{Event, NewNetworkEvents, NewNetworkSender},
 };
-use safety_rules::{ConsensusState, PersistentSafetyStorage, SafetyRulesManager};
+use safety_rules::{ConsensusState, PersistentSafetyStorage, SafetyRulesManager, TSafetyRules};
 use std::{num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
@@ -129,11 +130,6 @@ impl NodeSetup {
         executor: Handle,
         signer: ValidatorSigner,
         proposer_author: Author,
-        /*
-        storage: Arc<MockStorage<TestPayload>>,
-        initial_data: RecoveryData<TestPayload>,
-        safety_rules_manager: SafetyRulesManager<TestPayload>,
-        */
         storage: Arc<MockStorage>,
         initial_data: RecoveryData,
         safety_rules_manager: SafetyRulesManager,
@@ -197,7 +193,7 @@ impl NodeSetup {
 
         let round_state = Self::create_round_state(time_service);
         let proposer_election = Self::create_proposer_election(proposer_author);
-        let mut safety_rules = safety_rules_manager.client();
+        let mut safety_rules = MetricsSafetyRules::new(safety_rules_manager.client());
         let proof = storage.retrieve_epoch_change_proof(0).unwrap();
         safety_rules.initialize(&proof).unwrap();
 

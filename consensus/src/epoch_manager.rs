@@ -11,6 +11,7 @@ use crate::{
         rotating_proposer_election::{choose_leader, RotatingProposer},
         round_state::{ExponentialTimeInterval, RoundState},
     },
+    metrics_safety_rules::MetricsSafetyRules,
     network::{IncomingBlockRetrievalRequest, NetworkReceivers, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkSender},
     persistent_liveness_storage::{LedgerRecoveryData, PersistentLivenessStorage, RecoveryData},
@@ -36,7 +37,7 @@ use libra_types::{
     on_chain_config::{OnChainConfigPayload, ValidatorSet},
 };
 use network::protocols::network::Event;
-use safety_rules::SafetyRulesManager;
+use safety_rules::{SafetyRulesManager, TSafetyRules};
 use std::{cmp::Ordering, sync::Arc, time::Duration};
 
 /// RecoveryManager is used to process events in order to sync up with peer if we can't recover from local consensusdb
@@ -269,7 +270,7 @@ impl EpochManager {
 
         info!("Update SafetyRules");
 
-        let mut safety_rules = self.safety_rules_manager.client();
+        let mut safety_rules = MetricsSafetyRules::new(self.safety_rules_manager.client());
         let consensus_state = safety_rules
             .consensus_state()
             .expect("Unable to retrieve ConsensusState from SafetyRules");

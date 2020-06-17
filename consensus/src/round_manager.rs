@@ -1,11 +1,22 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use std::{sync::Arc, time::Duration};
-
+use crate::{
+    block_storage::{BlockReader, BlockRetriever, BlockStore, VoteReceptionResult},
+    counters,
+    liveness::{
+        proposal_generator::ProposalGenerator,
+        proposer_election::ProposerElection,
+        round_state::{NewRoundEvent, NewRoundReason, RoundState},
+    },
+    metrics_safety_rules::MetricsSafetyRules,
+    network::{IncomingBlockRetrievalRequest, NetworkSender},
+    network_interface::ConsensusMsg,
+    persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
+    state_replication::{StateComputer, TxnManager},
+    util::time_service::duration_since_epoch,
+};
 use anyhow::{ensure, Context, Result};
-use termion::color::*;
-
 use consensus_types::{
     block::Block,
     block_retrieval::{BlockRetrievalResponse, BlockRetrievalStatus},
@@ -29,21 +40,8 @@ use libra_types::{
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
-
-use crate::{
-    block_storage::{BlockReader, BlockRetriever, BlockStore, VoteReceptionResult},
-    counters,
-    liveness::{
-        proposal_generator::ProposalGenerator,
-        proposer_election::ProposerElection,
-        round_state::{NewRoundEvent, NewRoundReason, RoundState},
-    },
-    network::{IncomingBlockRetrievalRequest, NetworkSender},
-    network_interface::ConsensusMsg,
-    persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
-    state_replication::{StateComputer, TxnManager},
-    util::time_service::duration_since_epoch,
-};
+use std::{sync::Arc, time::Duration};
+use termion::color::*;
 
 pub enum UnverifiedEvent {
     ProposalMsg(Box<ProposalMsg>),
@@ -183,7 +181,7 @@ pub struct RoundManager {
     round_state: RoundState,
     proposer_election: Box<dyn ProposerElection + Send + Sync>,
     proposal_generator: ProposalGenerator,
-    safety_rules: Box<dyn TSafetyRules + Send + Sync>,
+    safety_rules: MetricsSafetyRules,
     network: NetworkSender,
     txn_manager: Box<dyn TxnManager>,
     storage: Arc<dyn PersistentLivenessStorage>,
@@ -196,7 +194,7 @@ impl RoundManager {
         round_state: RoundState,
         proposer_election: Box<dyn ProposerElection + Send + Sync>,
         proposal_generator: ProposalGenerator,
-        safety_rules: Box<dyn TSafetyRules + Send + Sync>,
+        safety_rules: MetricsSafetyRules,
         network: NetworkSender,
         txn_manager: Box<dyn TxnManager>,
         storage: Arc<dyn PersistentLivenessStorage>,
