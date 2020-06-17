@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["ToLBRExchangeRateUpdateEvent","Struct that represents a ToLBRExchangeRateUpdateEvent"]]});

@@ -82,6 +82,7 @@
 <span id="82">82</span>
 <span id="83">83</span>
 <span id="84">84</span>
+<span id="85">85</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -116,6 +117,7 @@
     <span class="ident">burn_events</span>: <span class="ident">EventHandle</span>,
     <span class="ident">preburn_events</span>: <span class="ident">EventHandle</span>,
     <span class="ident">cancel_burn_events</span>: <span class="ident">EventHandle</span>,
+    <span class="ident">exchange_rate_update_events</span>: <span class="ident">EventHandle</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">MoveResource</span> <span class="kw">for</span> <span class="ident">CurrencyInfoResource</span> {

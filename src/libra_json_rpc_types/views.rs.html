@@ -592,6 +592,20 @@
 <span id="592">592</span>
 <span id="593">593</span>
 <span id="594">594</span>
+<span id="595">595</span>
+<span id="596">596</span>
+<span id="597">597</span>
+<span id="598">598</span>
+<span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
+<span id="602">602</span>
+<span id="603">603</span>
+<span id="604">604</span>
+<span id="605">605</span>
+<span id="606">606</span>
+<span id="607">607</span>
+<span id="608">608</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -602,7 +616,7 @@
     <span class="ident">account_config</span>::{
         <span class="ident">AccountResource</span>, <span class="ident">AccountRole</span>, <span class="ident">BalanceResource</span>, <span class="ident">BurnEvent</span>, <span class="ident">CancelBurnEvent</span>,
         <span class="ident">CurrencyInfoResource</span>, <span class="ident">MintEvent</span>, <span class="ident">NewBlockEvent</span>, <span class="ident">NewEpochEvent</span>, <span class="ident">PreburnEvent</span>,
-        <span class="ident">ReceivedPaymentEvent</span>, <span class="ident">SentPaymentEvent</span>, <span class="ident">UpgradeEvent</span>,
+        <span class="ident">ReceivedPaymentEvent</span>, <span class="ident">SentPaymentEvent</span>, <span class="ident">ToLBRExchangeRateUpdateEvent</span>, <span class="ident">UpgradeEvent</span>,
     },
     <span class="ident">account_state_blob</span>::<span class="ident">AccountStateWithProof</span>,
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
@@ -719,6 +733,11 @@
     },
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;mint&quot;</span>)]</span>
     <span class="ident">Mint</span> { <span class="ident">amount</span>: <span class="ident">AmountView</span> },
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;to_lbr_exchange_rate_update&quot;</span>)]</span>
+    <span class="ident">ToLBRExchangeRateUpdate</span> {
+        <span class="ident">currency_code</span>: <span class="ident">String</span>,
+        <span class="ident">new_to_lbr_exchange_rate</span>: <span class="ident">f32</span>,
+    },
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;preburn&quot;</span>)]</span>
     <span class="ident">Preburn</span> {
         <span class="ident">amount</span>: <span class="ident">AmountView</span>,
@@ -805,6 +824,15 @@
                 })
             } <span class="kw">else</span> {
                 <span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Unable to parse CancelBurnEvent&quot;</span>))
+            }
+        } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">event</span>.<span class="ident">type_tag</span>() <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">ToLBRExchangeRateUpdateEvent</span>::<span class="ident">struct_tag</span>()) {
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">update_event</span>) <span class="op">=</span> <span class="ident">ToLBRExchangeRateUpdateEvent</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span><span class="ident">event</span>) {
+                <span class="prelude-val">Ok</span>(<span class="ident">EventDataView</span>::<span class="ident">ToLBRExchangeRateUpdate</span> {
+                    <span class="ident">currency_code</span>: <span class="ident">update_event</span>.<span class="ident">currency_code</span>().<span class="ident">to_string</span>(),
+                    <span class="ident">new_to_lbr_exchange_rate</span>: <span class="ident">update_event</span>.<span class="ident">new_to_lbr_exchange_rate</span>(),
+                })
+            } <span class="kw">else</span> {
+                <span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Unable to parse ToLBRExchangeRateUpdate&quot;</span>))
             }
         } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">event</span>.<span class="ident">type_tag</span>() <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">TypeTag</span>::<span class="ident">Struct</span>(<span class="ident">MintEvent</span>::<span class="ident">struct_tag</span>()) {
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">mint_event</span>) <span class="op">=</span> <span class="ident">MintEvent</span>::<span class="ident">try_from</span>(<span class="kw-2">&amp;</span><span class="ident">event</span>) {
