@@ -522,7 +522,6 @@ impl LibraVM {
                 &BLOCK_PROLOGUE,
                 vec![],
                 args,
-                txn_data.sender(),
                 &mut data_store,
                 &mut cost_strategy,
             )?
@@ -582,7 +581,6 @@ impl LibraVM {
             vec![Value::transaction_argument_signer_reference(
                 txn_data.sender,
             )],
-            txn_data.sender,
             &mut data_store,
             &mut cost_strategy,
         )?;
@@ -685,7 +683,6 @@ impl LibraVM {
                     Value::u64(txn_max_gas_units),
                     Value::u64(txn_expiration_time),
                 ],
-                txn_data.sender(),
                 data_store,
                 cost_strategy,
             )
@@ -719,7 +716,6 @@ impl LibraVM {
                 Value::u64(txn_max_gas_units),
                 Value::u64(gas_remaining),
             ],
-            txn_data.sender(),
             data_store,
             cost_strategy,
         )
@@ -752,7 +748,6 @@ impl LibraVM {
                 Value::u64(txn_max_gas_units),
                 Value::u64(gas_remaining),
             ],
-            txn_data.sender(),
             data_store,
             cost_strategy,
         )
@@ -780,7 +775,6 @@ impl LibraVM {
                     Value::u64(txn_sequence_number),
                     Value::vector_u8(txn_public_key),
                 ],
-                txn_data.sender(),
                 data_store,
                 &mut cost_strategy,
             )
@@ -809,7 +803,6 @@ impl LibraVM {
                 Value::transaction_argument_signer_reference(txn_data.sender),
                 Value::vector_u8(change_set_bytes),
             ],
-            txn_data.sender(),
             data_store,
             &mut cost_strategy,
         )

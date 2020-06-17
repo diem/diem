@@ -57,8 +57,6 @@ pub(crate) struct Interpreter {
     operand_stack: Stack,
     /// The stack of active functions.
     call_stack: CallStack,
-    /// The sender of the transaction. This can materialize as an argument to a script.
-    sender: AccountAddress,
 }
 
 impl Interpreter {
@@ -68,24 +66,22 @@ impl Interpreter {
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
-        sender: AccountAddress,
         data_store: &mut dyn DataStore,
         cost_strategy: &mut CostStrategy,
         loader: &Loader,
     ) -> VMResult<()> {
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.
-        let mut interp = Self::new(sender);
+        let mut interp = Self::new();
         interp.execute(loader, data_store, cost_strategy, function, ty_args, args)
     }
 
     /// Create a new instance of an `Interpreter` in the context of a transaction with a
     /// given module cache and gas schedule.
-    fn new(sender: AccountAddress) -> Self {
+    fn new() -> Self {
         Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
-            sender,
         }
     }
 
@@ -381,19 +377,6 @@ impl Interpreter {
             move_resource_to(data_store, &ap, struct_ty, resource)?;
             Ok(size)
         }
-    }
-
-    /// MoveToSender opcode.
-    fn move_to_sender(
-        &mut self,
-        data_store: &mut dyn DataStore,
-        ap: AccessPath,
-        struct_ty: &FatStructType,
-    ) -> VMResult<AbstractMemorySize<GasCarrier>> {
-        let resource = self.operand_stack.pop_as::<Struct>()?;
-        let size = resource.size();
-        move_resource_to(data_store, &ap, struct_ty, resource)?;
-        Ok(size)
     }
 
     //
@@ -1007,10 +990,11 @@ impl Frame {
                             .push(Value::bool(!lhs.equals(&rhs)?))?;
                     }
                     Bytecode::GetTxnSenderAddress => {
-                        cost_strategy.charge_instr(Opcodes::GET_TXN_SENDER)?;
-                        interpreter
-                            .operand_stack
-                            .push(Value::address(interpreter.sender))?;
+                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(
+                                "GetTxnSenderAddress is deprecated and will be removed soon"
+                                    .to_string(),
+                            ));
                     }
                     Bytecode::MutBorrowGlobal(sd_idx) | Bytecode::ImmBorrowGlobal(sd_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
@@ -1087,27 +1071,17 @@ impl Frame {
                         // the size of the data that we are about to read in.
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_FROM_GENERIC, size)?;
                     }
-                    Bytecode::MoveToSender(sd_idx) => {
-                        let size = interpreter.global_data_op(
-                            resolver,
-                            data_store,
-                            interpreter.sender,
-                            *sd_idx,
-                            Interpreter::move_to_sender,
-                        )?;
-                        cost_strategy.charge_instr_with_size(Opcodes::MOVE_TO_SENDER, size)?;
+                    Bytecode::MoveToSender(_) => {
+                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(
+                                "MoveToSender is deprecated and will be removed soon".to_string(),
+                            ));
                     }
-                    Bytecode::MoveToSenderGeneric(si_idx) => {
-                        let size = interpreter.global_data_op_generic(
-                            resolver,
-                            data_store,
-                            interpreter.sender,
-                            *si_idx,
-                            self,
-                            Interpreter::move_to_sender,
-                        )?;
-                        cost_strategy
-                            .charge_instr_with_size(Opcodes::MOVE_TO_SENDER_GENERIC, size)?;
+                    Bytecode::MoveToSenderGeneric(_) => {
+                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(
+                                "MoveToSender is deprecated and will be removed soon".to_string(),
+                            ));
                     }
                     Bytecode::MoveTo(sd_idx) => {
                         let resource = interpreter.operand_stack.pop_as::<Struct>()?;
