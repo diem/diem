@@ -1,0 +1,15 @@
+Move prover returns: exiting with boogie verification errors
+error:  A postcondition might not hold on this return path.
+
+    ┌── tests/sources/functional/address_serialization_constant_size.move:19:9 ───
+    │
+ 19 │         ensures len(LCS::serialize(mv1)) == len(LCS::serialize(mv2));
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    │
+    =     at tests/sources/functional/address_serialization_constant_size.move:15:5: serialized_move_values_diff_len_incorrect (entry)
+    =     at tests/sources/functional/address_serialization_constant_size.move:16:15: serialized_move_values_diff_len_incorrect
+    =         mv1 = <redacted>,
+    =         mv2 = <redacted>,
+    =         result_1 = <redacted>,
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/address_serialization_constant_size.move:15:5: serialized_move_values_diff_len_incorrect (exit)
