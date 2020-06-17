@@ -88,11 +88,12 @@ impl StateComputer for ExecutionProxy {
                 .unwrap()
                 .commit_blocks(block_ids, finality_proof)?
         );
-        if let Err(e) = self
-            .synchronizer
-            .commit(committed_txns, reconfig_events)
-            .await
-        {
+        if let Err(e) = monitor!(
+            "notify_state_sync",
+            self.synchronizer
+                .commit(committed_txns, reconfig_events)
+                .await
+        ) {
             error!("failed to notify state synchronizer: {:?}", e);
         }
         Ok(())
