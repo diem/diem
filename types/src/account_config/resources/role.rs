@@ -13,12 +13,3 @@ pub enum AccountRole {
     Unknown,
     // TODO: add other roles
 }
-
-impl AccountRole {
-    pub fn is_unhosted(&self) -> bool {
-        match self {
-            AccountRole::Unhosted => true,
-            _ => false,
-        }
-    }
-}
