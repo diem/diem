@@ -257,6 +257,53 @@
 <span id="257">257</span>
 <span id="258">258</span>
 <span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
+<span id="276">276</span>
+<span id="277">277</span>
+<span id="278">278</span>
+<span id="279">279</span>
+<span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
+<span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -274,7 +321,8 @@
 <span class="kw">use</span> <span class="ident">libra_state_view</span>::<span class="ident">StateView</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
-    <span class="ident">account_config</span>::{<span class="ident">AccountResource</span>, <span class="ident">BalanceResource</span>},
+    <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
+    <span class="ident">account_config</span>::{<span class="ident">AccountResource</span>, <span class="ident">BalanceResource</span>, <span class="ident">CORE_CODE_ADDRESS</span>},
     <span class="ident">block_metadata</span>::{<span class="ident">new_block_event_key</span>, <span class="ident">BlockMetadata</span>, <span class="ident">NewBlockEvent</span>},
     <span class="ident">on_chain_config</span>::{<span class="ident">OnChainConfig</span>, <span class="ident">VMPublishingOption</span>, <span class="ident">ValidatorSet</span>},
     <span class="ident">transaction</span>::{
@@ -283,8 +331,17 @@
     <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
     <span class="ident">write_set</span>::<span class="ident">WriteSet</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_vm</span>::{<span class="ident">LibraVM</span>, <span class="ident">VMExecutor</span>, <span class="ident">VMValidator</span>};
-<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">identifier</span>::<span class="ident">Identifier</span>, <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>};
+<span class="kw">use</span> <span class="ident">libra_vm</span>::{<span class="ident">data_cache</span>::<span class="ident">RemoteStorage</span>, <span class="ident">LibraVM</span>, <span class="ident">VMExecutor</span>, <span class="ident">VMValidator</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{
+    <span class="ident">gas_schedule</span>::{<span class="ident">GasAlgebra</span>, <span class="ident">GasUnits</span>},
+    <span class="ident">identifier</span>::<span class="ident">Identifier</span>,
+    <span class="ident">language_storage</span>::{<span class="ident">ModuleId</span>, <span class="ident">TypeTag</span>},
+};
+<span class="kw">use</span> <span class="ident">move_vm_runtime</span>::{<span class="ident">data_cache</span>::<span class="ident">TransactionDataCache</span>, <span class="ident">move_vm</span>::<span class="ident">MoveVM</span>};
+<span class="kw">use</span> <span class="ident">move_vm_types</span>::{
+    <span class="ident">gas_schedule</span>::{<span class="ident">zero_cost_schedule</span>, <span class="ident">CostStrategy</span>},
+    <span class="ident">values</span>::<span class="ident">Value</span>,
+};
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">CompiledModule</span>;
 <span class="kw">use</span> <span class="ident">vm_genesis</span>::<span class="ident">GENESIS_KEYPAIR</span>;
 
@@ -515,6 +572,43 @@
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">event</span>.<span class="ident">key</span>() <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">new_block_event_key</span>());
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">lcs</span>::<span class="ident">from_bytes</span>::<span class="op">&lt;</span><span class="ident">NewBlockEvent</span><span class="op">&gt;</span>(<span class="ident">event</span>.<span class="ident">event_data</span>()).<span class="ident">is_ok</span>());
         <span class="self">self</span>.<span class="ident">apply_write_set</span>(<span class="ident">output</span>.<span class="ident">write_set</span>());
+    }
+
+    <span class="kw">fn</span> <span class="ident">module</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ModuleId</span> {
+        <span class="ident">ModuleId</span>::<span class="ident">new</span>(<span class="ident">CORE_CODE_ADDRESS</span>, <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="ident">name</span>).<span class="ident">unwrap</span>())
+    }
+
+    <span class="kw">fn</span> <span class="ident">name</span>(<span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Identifier</span> {
+        <span class="ident">Identifier</span>::<span class="ident">new</span>(<span class="ident">name</span>).<span class="ident">unwrap</span>()
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">exec</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">module_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">function_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">type_params</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TypeTag</span><span class="op">&gt;</span>,
+        <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
+        <span class="ident">sender</span>: <span class="ident">AccountAddress</span>,
+    ) {
+        <span class="kw">let</span> <span class="ident">write_set</span> <span class="op">=</span> {
+            <span class="kw">let</span> <span class="ident">cost_table</span> <span class="op">=</span> <span class="ident">zero_cost_schedule</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cost_strategy</span> <span class="op">=</span> <span class="ident">CostStrategy</span>::<span class="ident">system</span>(<span class="kw-2">&amp;</span><span class="ident">cost_table</span>, <span class="ident">GasUnits</span>::<span class="ident">new</span>(<span class="number">100_000_000</span>));
+            <span class="kw">let</span> <span class="ident">vm</span> <span class="op">=</span> <span class="ident">MoveVM</span>::<span class="ident">new</span>();
+            <span class="kw">let</span> <span class="ident">remote_view</span> <span class="op">=</span> <span class="ident">RemoteStorage</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data_store</span>);
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cache</span> <span class="op">=</span> <span class="ident">TransactionDataCache</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">remote_view</span>);
+            <span class="ident">vm</span>.<span class="ident">execute_function</span>(
+                <span class="kw-2">&amp;</span><span class="self">Self</span>::<span class="ident">module</span>(<span class="ident">module_name</span>),
+                <span class="kw-2">&amp;</span><span class="self">Self</span>::<span class="ident">name</span>(<span class="ident">function_name</span>),
+                <span class="ident">type_params</span>,
+                <span class="ident">args</span>,
+                <span class="ident">sender</span>,
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cache</span>,
+                <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
+            )
+            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Error calling {}.{}: {}&quot;</span>, <span class="ident">module_name</span>, <span class="ident">function_name</span>, <span class="ident">e</span>));
+            <span class="ident">cache</span>.<span class="ident">make_write_set</span>().<span class="ident">expect</span>(<span class="string">&quot;Failed to generate writeset&quot;</span>)
+        };
+        <span class="self">self</span>.<span class="ident">data_store</span>.<span class="ident">add_write_set</span>(<span class="kw-2">&amp;</span><span class="ident">write_set</span>);
     }
 }
 </pre></div>
