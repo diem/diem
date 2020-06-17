@@ -18,6 +18,10 @@
 <span id="18">18</span>
 <span id="19">19</span>
 <span id="20">20</span>
+<span id="21">21</span>
+<span id="22">22</span>
+<span id="23">23</span>
+<span id="24">24</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -31,6 +35,7 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">eliminate_mut_refs</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">function_target</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">function_target_pipeline</span>;
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">graph</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">lifetime_analysis</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">livevar_analysis</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">packref_analysis</span>;
@@ -39,5 +44,8 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">stackless_bytecode_generator</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">stackless_control_flow_graph</span>;
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">writeback_analysis</span>;
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">unit_tests</span>;
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "stackless_bytecode_generator";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
