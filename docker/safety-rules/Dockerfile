@@ -17,7 +17,7 @@ FROM toolchain AS builder
 COPY . /libra
 
 ENV RUSTFLAGS "-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"
-RUN cargo build --release -p libra-node -p cli -p config-builder -p libra-key-manager -p safety-rules -p db-bootstrapper && cd target/release && rm -r build deps incremental
+RUN cargo build --release -p libra-node -p cli -p config-builder -p libra-key-manager -p safety-rules -p db-bootstrapper -p backup-cli && cd target/release && rm -r build deps incremental
 RUN strip /libra/target/release/config-builder
 
 ### Production Image ###

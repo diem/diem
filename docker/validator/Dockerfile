@@ -17,9 +17,11 @@ FROM toolchain AS builder
 COPY . /libra
 
 ENV RUSTFLAGS "-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"
-RUN cargo build --release -p libra-node -p cli -p config-builder -p libra-key-manager -p safety-rules -p db-bootstrapper && cd target/release && rm -r build deps incremental
+RUN cargo build --release -p libra-node -p cli -p config-builder -p libra-key-manager -p safety-rules -p db-bootstrapper -p backup-cli && cd target/release && rm -r build deps incremental
 RUN strip /libra/target/release/config-builder
+RUN strip /libra/target/release/db-backup
 RUN strip /libra/target/release/db-bootstrapper
+RUN strip /libra/target/release/db-restore
 
 ### Production Image ###
 FROM debian:buster AS prod
@@ -30,7 +32,9 @@ RUN mkdir -p /opt/libra/bin /opt/libra/etc
 COPY docker/install-tools.sh /root
 COPY --from=builder /libra/target/release/libra-node /opt/libra/bin
 COPY --from=builder /libra/target/release/config-builder /opt/libra/bin
+COPY --from=builder /libra/target/release/db-backup /opt/libra/bin
 COPY --from=builder /libra/target/release/db-bootstrapper /opt/libra/bin
+COPY --from=builder /libra/target/release/db-restore /opt/libra/bin
 
 # Admission control
 EXPOSE 8000
