@@ -19,7 +19,6 @@ libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0"
 bytecode-source-map = { path = "../compiler/bytecode-source-map", version = "0.1.0" }
 move-ir-types = { path = "../move-ir/types", version = "0.1.0" }
 
-
 # external dependencies
 anyhow = "1.0.31"
 clap = "2.33.1"
