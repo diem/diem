@@ -183,7 +183,7 @@ pub struct RoundManager {
     proposal_generator: ProposalGenerator,
     safety_rules: MetricsSafetyRules,
     network: NetworkSender,
-    txn_manager: Box<dyn TxnManager>,
+    txn_manager: Arc<dyn TxnManager>,
     storage: Arc<dyn PersistentLivenessStorage>,
 }
 
@@ -196,7 +196,7 @@ impl RoundManager {
         proposal_generator: ProposalGenerator,
         safety_rules: MetricsSafetyRules,
         network: NetworkSender,
-        txn_manager: Box<dyn TxnManager>,
+        txn_manager: Arc<dyn TxnManager>,
         storage: Arc<dyn PersistentLivenessStorage>,
     ) -> Self {
         Self {
@@ -504,7 +504,7 @@ impl RoundManager {
         let compute_result = executed_block.compute_result();
         if let Err(e) = self
             .txn_manager
-            .commit(executed_block.block(), compute_result)
+            .notify(executed_block.block(), compute_result)
             .await
         {
             error!(

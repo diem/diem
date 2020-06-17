@@ -186,7 +186,7 @@ impl NodeSetup {
         let proposal_generator = ProposalGenerator::new(
             author,
             block_store.clone(),
-            Box::new(MockTransactionManager::new(None)),
+            Arc::new(MockTransactionManager::new(None)),
             time_service.clone(),
             1,
         );
@@ -205,7 +205,7 @@ impl NodeSetup {
             proposal_generator,
             safety_rules,
             network,
-            Box::new(MockTransactionManager::new(None)),
+            Arc::new(MockTransactionManager::new(None)),
             storage.clone(),
         );
         block_on(round_manager.start(last_vote_sent));

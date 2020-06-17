@@ -79,7 +79,7 @@ impl SMRNode {
             commit_cb_sender,
             Arc::clone(&storage),
         ));
-        let txn_manager = Box::new(MockTransactionManager::new(Some(
+        let txn_manager = Arc::new(MockTransactionManager::new(Some(
             consensus_to_mempool_sender,
         )));
         let (mut reconfig_sender, reconfig_events) =

@@ -34,7 +34,7 @@ pub struct ProposalGenerator {
     // proposed block.
     block_store: Arc<dyn BlockReader + Send + Sync>,
     // Transaction manager is delivering the transactions.
-    txn_manager: Box<dyn TxnManager>,
+    txn_manager: Arc<dyn TxnManager>,
     // Time service to generate block timestamps
     time_service: Arc<dyn TimeService>,
     // Max number of transactions to be added to a proposed block.
@@ -47,7 +47,7 @@ impl ProposalGenerator {
     pub fn new(
         author: Author,
         block_store: Arc<dyn BlockReader + Send + Sync>,
-        txn_manager: Box<dyn TxnManager>,
+        txn_manager: Arc<dyn TxnManager>,
         time_service: Arc<dyn TimeService>,
         max_block_size: u64,
     ) -> Self {
