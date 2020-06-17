@@ -280,7 +280,8 @@ impl LedgerStore {
 
     /// Gets an iterator that yields `num_transaction_infos` transaction infos starting from
     /// `start_version`.
-    pub fn get_transaction_info_iter(
+    #[cfg(test)]
+    fn get_transaction_info_iter(
         &self,
         start_version: Version,
         num_transaction_infos: u64,
