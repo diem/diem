@@ -126,12 +126,6 @@ impl VMStatus {
         self
     }
 
-    /// Mutates the VMStatus sub status field to be the new `sub_status` passed in.
-
-    /// Mutates the VMStatus message field to be the new `message` passed in.
-    pub fn set_message(&mut self, message: String) {
-        self.message = Some(message);
-    }
     /// Append the message `message` to the message field of the VM status, and insert a seperator
     /// if the original message is non-empty.
     pub fn append_message_with_separator(mut self, separator: char, message: String) -> Self {
