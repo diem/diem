@@ -1211,6 +1211,10 @@ axiom (forall v: $Value :: ( var r := $LCS_serialize_core(v); $IsValidU8Vector(r
                             $vlen(r) <= {{backend.serialize_bound}} ));
 {{/if}}
 
+// Serialized addresses should have the same length
+const $serialized_address_len: int;
+axiom (forall v: $Value :: (var r := $LCS_serialize_core(v); is#$Address(v) ==> $vlen(r) == $serialized_address_len));
+
 procedure $LCS_to_bytes(ta: $TypeValue, v: $Value) returns (res: $Value);
 ensures res == $LCS_serialize($m, $txn, ta, v);
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
