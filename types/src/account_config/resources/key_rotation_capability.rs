@@ -13,8 +13,6 @@ pub struct KeyRotationCapabilityResource {
     account_address: AccountAddress,
 }
 
-impl KeyRotationCapabilityResource {}
-
 impl MoveResource for KeyRotationCapabilityResource {
     const MODULE_NAME: &'static str = ACCOUNT_MODULE_NAME;
     const STRUCT_NAME: &'static str = "KeyRotationCapability";

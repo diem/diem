@@ -15,13 +15,6 @@ pub enum AccountRole {
 }
 
 impl AccountRole {
-    pub fn parent_vasp_data(&self) -> Option<&ParentVASP> {
-        match self {
-            AccountRole::ParentVASP(vasp) => Some(vasp),
-            _ => None,
-        }
-    }
-
     pub fn child_vasp_data(&self) -> Option<&ChildVASP> {
         match self {
             AccountRole::ChildVASP(vasp) => Some(vasp),
