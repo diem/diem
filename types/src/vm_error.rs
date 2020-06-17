@@ -127,9 +127,6 @@ impl VMStatus {
     }
 
     /// Mutates the VMStatus sub status field to be the new `sub_status` passed in.
-    pub fn set_sub_status(&mut self, sub_status: u64) {
-        self.sub_status = Some(sub_status);
-    }
 
     /// Mutates the VMStatus message field to be the new `message` passed in.
     pub fn set_message(&mut self, message: String) {
