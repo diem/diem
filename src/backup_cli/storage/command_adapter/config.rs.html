@@ -123,7 +123,7 @@
     <span class="doccomment">/// input env vars:</span>
     <span class="doccomment">///     $BACKUP_NAME</span>
     <span class="doccomment">/// expected output on stdout:</span>
-    <span class="doccomment">///     BackupHandle, without trailing new line.</span>
+    <span class="doccomment">///     BackupHandle, trailing newline is trimmed</span>
     <span class="kw">pub</span> <span class="ident">create_backup</span>: <span class="ident">String</span>,
     <span class="doccomment">/// Command line to open a file for writing.</span>
     <span class="doccomment">/// input env vars:</span>
@@ -131,7 +131,7 @@
     <span class="doccomment">///     $FILE_NAME</span>
     <span class="doccomment">/// stdin will be fed with byte stream.</span>
     <span class="doccomment">/// expected output on stdout:</span>
-    <span class="doccomment">///     FileHandle, without trailing new line.</span>
+    <span class="doccomment">///     FileHandle, trailing newline</span>
     <span class="kw">pub</span> <span class="ident">create_for_write</span>: <span class="ident">String</span>,
     <span class="doccomment">/// Command line to open a file for reading.</span>
     <span class="doccomment">/// input env vars:</span>
