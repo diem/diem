@@ -207,6 +207,7 @@
 <span id="207">207</span>
 <span id="208">208</span>
 <span id="209">209</span>
+<span id="210">210</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -218,6 +219,7 @@
         <span class="ident">rotating_proposer_election</span>::<span class="ident">RotatingProposer</span>,
         <span class="ident">round_state</span>::{<span class="ident">ExponentialTimeInterval</span>, <span class="ident">NewRoundEvent</span>, <span class="ident">NewRoundReason</span>, <span class="ident">RoundState</span>},
     },
+    <span class="ident">metrics_safety_rules</span>::<span class="ident">MetricsSafetyRules</span>,
     <span class="ident">network</span>::<span class="ident">NetworkSender</span>,
     <span class="ident">network_interface</span>::<span class="ident">ConsensusNetworkSender</span>,
     <span class="ident">persistent_liveness_storage</span>::{<span class="ident">PersistentLivenessStorage</span>, <span class="ident">RecoveryData</span>},
@@ -369,7 +371,7 @@
         <span class="ident">round_state</span>,
         <span class="ident">proposer_election</span>,
         <span class="ident">proposal_generator</span>,
-        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">safety_rules</span>),
+        <span class="ident">MetricsSafetyRules</span>::<span class="ident">new</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">safety_rules</span>)),
         <span class="ident">network</span>,
         <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">MockTransactionManager</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>)),
         <span class="ident">storage</span>,
