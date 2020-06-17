@@ -74,12 +74,15 @@ impl JsonRpcClient {
         Self { host }
     }
 
-    /// Submits a signed transaction to the Libra blockchain via the JSON RPC API.
-    pub fn submit_signed_transaction(
-        &self,
-        signed_transaction: SignedTransaction,
-    ) -> Result<(), Error> {
-        let response = self.submit_transaction(signed_transaction)?;
+    /// Submits a signed transaction to the Libra blockchain. This is done by sending a submit()
+    /// request to the JSON RPC server using the given transaction.
+    pub fn submit_transaction(&self, signed_transaction: SignedTransaction) -> Result<(), Error> {
+        let method = "submit".into();
+        let params = vec![Value::String(hex::encode(lcs::to_bytes(
+            &signed_transaction,
+        )?))];
+        let response = self.execute_request(method, params);
+
         match response.status() {
             200 => {
                 let response = &response.into_string()?;
@@ -97,14 +100,23 @@ impl JsonRpcClient {
         }
     }
 
-    /// Returns the associated AccountState for a specific account at a given version height
-    /// using the JSON RCP API.
+    /// Returns the associated AccountState for a specific account at a given version height.
+    /// This is done by sending a get_account_state_with_proof() request to the JSON RPC server
+    /// for the specified account, optional version height and optional ledger_version height
+    /// (for the proof).
     pub fn get_account_state(
         &self,
         account: AccountAddress,
         version: Option<u64>,
     ) -> Result<AccountState, Error> {
-        let response = self.get_account_state_with_proof(account, version, version)?;
+        let method = "get_account_state_with_proof".into();
+        let params = vec![
+            Value::String(account.to_string()),
+            json!(version),
+            json!(version),
+        ];
+        let response = self.execute_request(method, params);
+
         match response.status() {
             200 => {
                 let response = &response.into_string()?;
@@ -144,32 +156,6 @@ impl JsonRpcClient {
             .send_json(
                 json!({"jsonrpc": JSON_RPC_VERSION, "method": method, "params": params, "id": 0}),
             )
-    }
-
-    // Sends a submit() request to the JSON RPC server using the given transaction.
-    fn submit_transaction(&self, signed_transaction: SignedTransaction) -> Result<Response, Error> {
-        let method = "submit".into();
-        let params = vec![Value::String(hex::encode(lcs::to_bytes(
-            &signed_transaction,
-        )?))];
-        Ok(self.execute_request(method, params))
-    }
-
-    // Sends a get_account_state_with_proof() request to the JSON RPC server for the specified
-    // account, optional version height and optional ledger_version height (for the proof).
-    fn get_account_state_with_proof(
-        &self,
-        account: AccountAddress,
-        version: Option<u64>,
-        ledger_version: Option<u64>,
-    ) -> Result<Response, Error> {
-        let method = "get_account_state_with_proof".into();
-        let params = vec![
-            Value::String(account.to_string()),
-            json!(version),
-            json!(ledger_version),
-        ];
-        Ok(self.execute_request(method, params))
     }
 }
 
@@ -310,7 +296,7 @@ mod test {
         let signed_transaction = generate_signed_transaction();
 
         // Ensure transaction submitted and validated successfully
-        let result = client.submit_signed_transaction(signed_transaction);
+        let result = client.submit_transaction(signed_transaction);
         assert!(result.is_ok());
     }
 
@@ -324,7 +310,7 @@ mod test {
         let signed_transaction = generate_signed_transaction();
 
         // Ensure transaction submitted successfully
-        let result = client.submit_signed_transaction(signed_transaction);
+        let result = client.submit_transaction(signed_transaction);
         assert!(result.is_err());
     }
 

@@ -121,14 +121,12 @@ impl LibraInterface for JsonRpcLibraInterface {
 
     fn submit_transaction(&self, transaction: Transaction) -> Result<(), Error> {
         if let Transaction::UserTransaction(signed_txn) = transaction {
-            self.client
-                .submit_signed_transaction(signed_txn)
-                .map_err(|e| {
-                    Error::UnknownError(format!(
-                        "Failed to submit signed transaction. Error: {:?}",
-                        e,
-                    ))
-                })
+            self.client.submit_transaction(signed_txn).map_err(|e| {
+                Error::UnknownError(format!(
+                    "Failed to submit signed transaction. Error: {:?}",
+                    e,
+                ))
+            })
         } else {
             Err(Error::UnknownError(format!(
                 "Unable to submit a transaction type that is not a SignedTransaction: {:?}",
