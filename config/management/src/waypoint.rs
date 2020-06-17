@@ -72,7 +72,12 @@ impl InsertWaypoint {
         let waypoint_string = if let Some(waypoint_string) = self.waypoint {
             waypoint_string
         } else if let Some(remote_backend) = self.secure_backends.remote {
-            TryInto::<Storage>::try_into(remote_backend)?
+            let remote_storage: Storage = remote_backend.try_into()?;
+            remote_storage
+                .available()
+                .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
+
+            remote_storage
                 .get(WAYPOINT)
                 .and_then(|v| v.value.string())
                 .map_err(|e| Error::RemoteStorageReadError(WAYPOINT, e.to_string()))?
