@@ -590,6 +590,8 @@
 <span id="590">590</span>
 <span id="591">591</span>
 <span id="592">592</span>
+<span id="593">593</span>
+<span id="594">594</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -650,6 +652,7 @@
         <span class="ident">base_url</span>: <span class="ident">String</span>,
         <span class="ident">expiration_time</span>: <span class="ident">u64</span>,
         <span class="ident">compliance_key</span>: <span class="ident">BytesView</span>,
+        <span class="ident">num_children</span>: <span class="ident">u64</span>,
     },
 }
 
@@ -1012,6 +1015,7 @@
                 <span class="ident">base_url</span>: <span class="ident">parent_vasp</span>.<span class="ident">base_url</span>().<span class="ident">to_string</span>(),
                 <span class="ident">expiration_time</span>: <span class="ident">parent_vasp</span>.<span class="ident">expiration_date</span>(),
                 <span class="ident">compliance_key</span>: <span class="ident">BytesView</span>::<span class="ident">from</span>(<span class="ident">parent_vasp</span>.<span class="ident">compliance_public_key</span>()),
+                <span class="ident">num_children</span>: <span class="ident">parent_vasp</span>.<span class="ident">num_children</span>(),
             },
         }
     }

@@ -54,6 +54,11 @@
 <span id="54">54</span>
 <span id="55">55</span>
 <span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -70,6 +75,7 @@
     <span class="ident">base_url</span>: <span class="ident">String</span>,
     <span class="ident">expiration_date</span>: <span class="ident">u64</span>,
     <span class="ident">compliance_public_key</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+    <span class="ident">num_children</span>: <span class="ident">u64</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">ParentVASP</span> {
@@ -87,6 +93,10 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compliance_public_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">u8</span>] {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">compliance_public_key</span>
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">num_children</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+        <span class="self">self</span>.<span class="ident">num_children</span>
     }
 }
 
