@@ -16,7 +16,7 @@ use std::{collections::HashSet, fmt, str::FromStr};
 static VAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"val-(\d+)").unwrap());
 static FULLNODE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"fn-(\d+)").unwrap());
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub enum InstanceConfig {
     Validator(ValidatorConfig),
     Fullnode(FullnodeConfig),
@@ -24,12 +24,12 @@ pub enum InstanceConfig {
     Vault(VaultConfig),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct VaultConfig {
     pub index: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct LSRConfig {
     pub index: u32,
     pub num_validators: u32,
@@ -37,7 +37,7 @@ pub struct LSRConfig {
     pub lsr_backend: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct ValidatorConfig {
     pub index: u32,
     pub num_validators: u32,
@@ -47,7 +47,7 @@ pub struct ValidatorConfig {
     pub config_overrides: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct FullnodeConfig {
     pub fullnode_index: u32,
     pub num_fullnodes_per_validator: u32,
@@ -78,6 +78,42 @@ struct K8sInstanceInfo {
     k8s_node: String,
     instance_config: InstanceConfig,
     kube: ClusterSwarmKube,
+}
+
+impl InstanceConfig {
+    pub fn replace_tag(&mut self, new_tag: String) -> Result<()> {
+        match self {
+            InstanceConfig::Validator(c) => {
+                c.image_tag = new_tag;
+            }
+            InstanceConfig::Fullnode(c) => {
+                c.image_tag = new_tag;
+            }
+            InstanceConfig::LSR(c) => {
+                c.image_tag = new_tag;
+            }
+            InstanceConfig::Vault(..) => {
+                return Err(format_err!(
+                    "InstanceConfig::Vault does not support custom tags"
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn pod_name(&self) -> String {
+        match self {
+            InstanceConfig::Validator(validator_config) => {
+                format!("val-{}", validator_config.index)
+            }
+            InstanceConfig::Fullnode(fullnode_config) => format!(
+                "fn-{}-{}",
+                fullnode_config.validator_index, fullnode_config.fullnode_index
+            ),
+            InstanceConfig::LSR(lsr_config) => format!("lsr-{}", lsr_config.index),
+            InstanceConfig::Vault(vault_config) => format!("vault-{}", vault_config.index),
+        }
+    }
 }
 
 impl Instance {
@@ -215,6 +251,11 @@ impl Instance {
             .upsert_node(backend.instance_config.clone(), delete_data)
             .await
             .map(|_| ())
+    }
+
+    pub fn instance_config(&self) -> &InstanceConfig {
+        let backend = self.k8s_backend();
+        &backend.instance_config
     }
 
     /// Runs command on the same host in separate utility container based on cluster-test-util image

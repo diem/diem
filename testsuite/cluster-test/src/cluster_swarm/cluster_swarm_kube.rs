@@ -41,7 +41,7 @@ const ERROR_NOT_FOUND: u16 = 404;
 #[derive(Clone)]
 pub struct ClusterSwarmKube {
     client: Client,
-    node_map: Arc<Mutex<HashMap<InstanceConfig, KubeNode>>>,
+    node_map: Arc<Mutex<HashMap<String, KubeNode>>>,
     http_client: HttpClient,
 }
 
@@ -456,26 +456,26 @@ impl ClusterSwarmKube {
         self.run_jobs(vec![job_spec], back_off_limit).await
     }
 
-    async fn allocate_node(&self, instance_config: &InstanceConfig) -> Result<KubeNode> {
+    async fn allocate_node(&self, pod_name: &str) -> Result<KubeNode> {
         libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 15), || {
-            Box::pin(async move { self.allocate_node_impl(instance_config).await })
+            Box::pin(async move { self.allocate_node_impl(pod_name).await })
         })
         .await
     }
 
-    async fn allocate_node_impl(&self, instance_config: &InstanceConfig) -> Result<KubeNode> {
+    async fn allocate_node_impl(&self, pod_name: &str) -> Result<KubeNode> {
         let nodes = self.list_nodes().await?;
         let nodes_count = nodes.len();
         // Holding lock for read-verfy-write to avoid race conditions on this map
         let mut node_map = self.node_map.lock().await;
-        if let Some(existed) = node_map.get(instance_config) {
+        if let Some(existed) = node_map.get(pod_name) {
             return Ok(existed.clone());
         }
         let used_nodes: HashSet<_> = node_map.values().map(|node| &node.name).collect();
         for node in nodes {
             let node = KubeNode::try_from(node)?;
             if !used_nodes.contains(&node.name) {
-                node_map.insert(instance_config.clone(), node.clone());
+                node_map.insert(pod_name.to_string(), node.clone());
                 return Ok(node);
             }
         }
@@ -490,21 +490,13 @@ impl ClusterSwarmKube {
         instance_config: InstanceConfig,
         delete_data: bool,
     ) -> Result<Instance> {
-        let pod_name = match &instance_config {
-            Validator(validator_config) => format!("val-{}", validator_config.index),
-            Fullnode(fullnode_config) => format!(
-                "fn-{}-{}",
-                fullnode_config.validator_index, fullnode_config.fullnode_index
-            ),
-            LSR(lsr_config) => format!("lsr-{}", lsr_config.index),
-            Vault(vault_config) => format!("vault-{}", vault_config.index),
-        };
+        let pod_name = instance_config.pod_name();
         let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         if pod_api.get(&pod_name).await.is_ok() {
             self.delete_resource::<Pod>(&pod_name).await?;
         }
         let node = self
-            .allocate_node(&instance_config)
+            .allocate_node(&pod_name)
             .await
             .map_err(|e| format_err!("Failed to allocate node: {}", e))?;
         debug!("Creating pod {} on node {:?}", pod_name, node);
@@ -601,15 +593,7 @@ impl ClusterSwarmKube {
     }
 
     pub async fn delete_node(&self, instance_config: &InstanceConfig) -> Result<()> {
-        let pod_name = match instance_config {
-            Validator(ref validator_config) => format!("val-{}", validator_config.index),
-            Fullnode(ref fullnode_config) => format!(
-                "fn-{}-{}",
-                fullnode_config.validator_index, fullnode_config.fullnode_index
-            ),
-            LSR(lsr_config) => format!("lsr-{}", lsr_config.index),
-            Vault(vault_config) => format!("vault-{}", vault_config.index),
-        };
+        let pod_name = instance_config.pod_name();
         let service_name = pod_name.clone();
         self.delete_resource::<Pod>(&pod_name).await?;
         self.delete_resource::<Service>(&service_name).await
@@ -716,7 +700,7 @@ impl ClusterSwarm for ClusterSwarmKube {
 }
 
 #[derive(Clone, Debug)]
-struct KubeNode {
+pub struct KubeNode {
     pub name: String,
     pub provider_id: String,
     pub internal_ip: String,
