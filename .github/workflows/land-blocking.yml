@@ -59,6 +59,7 @@ jobs:
           echo "::set-env name=CTI_OUTPUT_LOG::$CTI_OUTPUT_LOG"
           ./scripts/cti \
             --tag ${TEST_TAG} \
+            -E RUST_LOG=debug \
             --report report.json \
             --run bench
           if [ -s "report.json" ]; then
