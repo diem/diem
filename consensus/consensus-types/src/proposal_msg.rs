@@ -1,11 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    block::Block,
-    common::{Author, Round},
-    sync_info::SyncInfo,
-};
+use crate::{block::Block, common::Author, sync_info::SyncInfo};
 use anyhow::{ensure, format_err, Context, Result};
 use libra_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
@@ -101,10 +97,6 @@ impl ProposalMsg {
 
     pub fn sync_info(&self) -> &SyncInfo {
         &self.sync_info
-    }
-
-    pub fn round(&self) -> Round {
-        self.proposal.round()
     }
 
     pub fn proposer(&self) -> Author {
