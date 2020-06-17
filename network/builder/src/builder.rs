@@ -13,14 +13,13 @@ use channel::{self, libra_channel, message_queues::QueueStyle};
 use futures::stream::StreamExt;
 use libra_config::{
     chain_id::ChainId,
-    config::{DiscoveryMethod, NetworkConfig, RoleType, HANDSHAKE_VERSION},
+    config::{identity_key, peer_id, DiscoveryMethod, NetworkConfig, RoleType, HANDSHAKE_VERSION},
     network_id::{NetworkContext, NetworkId},
 };
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
-use libra_secure_storage::config;
 use libra_types::{waypoint::Waypoint, PeerId};
 use netcore::transport::{memory, Transport};
 use network::{
@@ -531,8 +530,8 @@ pub fn setup_network(
         .build()
         .expect("Failed to start runtime. Won't be able to start networking.");
 
-    let identity_key = config::identity_key(config);
-    let peer_id = config::peer_id(config);
+    let identity_key = identity_key(config);
+    let peer_id = peer_id(config);
 
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),

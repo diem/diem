@@ -3,8 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use libra_config::config::NodeConfig;
-use libra_secure_storage::config;
+use libra_config::config::{peer_id, NodeConfig};
 use libra_types::PeerId;
 use std::{
     path::PathBuf,
@@ -47,12 +46,12 @@ fn main() {
 
     if config.metrics.enabled {
         for network in &config.full_node_networks {
-            let peer_id = config::peer_id(&network);
+            let peer_id = peer_id(&network);
             setup_metrics(peer_id, &config);
         }
 
         if let Some(network) = config.validator_network.as_ref() {
-            let peer_id = config::peer_id(&network);
+            let peer_id = peer_id(&network);
             setup_metrics(peer_id, &config);
         }
     }

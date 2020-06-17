@@ -34,6 +34,8 @@ mod rpc_config;
 pub use rpc_config::*;
 mod secure_backend_config;
 pub use secure_backend_config::*;
+mod secure_storage_config;
+pub use secure_storage_config::*;
 mod state_sync_config;
 pub use state_sync_config::*;
 mod storage_config;

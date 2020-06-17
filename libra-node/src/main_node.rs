@@ -8,14 +8,13 @@ use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::{
-    config::{NetworkConfig, NodeConfig, RoleType},
+    config::{waypoint, NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
 };
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
 use libra_logger::prelude::*;
 use libra_mempool::gen_mempool_reconfig_subscription;
 use libra_metrics::metric_server;
-use libra_secure_storage::config;
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use network_simple_onchain_discovery::{
@@ -114,7 +113,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         gen_consensus_reconfig_subscription();
     reconfig_subscriptions.push(consensus_reconfig_subscription);
 
-    let waypoint = config::waypoint(&node_config.base.waypoint);
+    let waypoint = waypoint(&node_config.base.waypoint);
 
     // Gather all network configs into a single vector.
     // TODO:  consider explicitly encoding the role in the NetworkConfig
