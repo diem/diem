@@ -273,7 +273,7 @@ impl ClusterSwarmKube {
     }
 
     async fn get_pod_node_and_ip(&self, pod_name: &str) -> Result<(String, String)> {
-        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10000, 60), || {
+        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10000, 12), || {
             let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
             let pod_name = pod_name.to_string();
             Box::pin(async move {
