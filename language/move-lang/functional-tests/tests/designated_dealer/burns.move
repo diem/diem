@@ -40,5 +40,10 @@ script {
     }
 }
 
+// check: ReceivedMintEvent
 // check: MintEvent
 // check: EXECUTED
+
+
+//TODO(moezinia) add burn txn once specific address directive sender complete
+// and with new burn flow
