@@ -10,7 +10,9 @@ jobs:
   build-and-run-cluster-test:
     name: Build images and run cluster test
     runs-on: self-hosted
-    timeout-minutes: 25
+    # NOTE the total time should cover build (~10 min) and test (~10 min).
+    # The additional time can cover the retries and wait.
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v1
       - name: Setup env
