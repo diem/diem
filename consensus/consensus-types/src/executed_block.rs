@@ -42,10 +42,6 @@ impl ExecutedBlock {
         &self.block
     }
 
-    pub fn epoch(&self) -> u64 {
-        self.block().epoch()
-    }
-
     pub fn id(&self) -> HashValue {
         self.block().id()
     }
