@@ -698,11 +698,6 @@ impl TransactionListProof {
         &self.transaction_infos
     }
 
-    /// Retursn the accumulator proof
-    pub fn ledger_info_to_transaction_infos_proof(&self) -> &TransactionAccumulatorRangeProof {
-        &self.ledger_info_to_transaction_infos_proof
-    }
-
     pub fn left_siblings(&self) -> &Vec<HashValue> {
         self.ledger_info_to_transaction_infos_proof.left_siblings()
     }
