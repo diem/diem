@@ -374,13 +374,6 @@ pub enum ScriptView {
 
 impl ScriptView {
     // TODO cover all script types
-    pub fn get_name(&self) -> String {
-        match self {
-            ScriptView::PeerToPeer { .. } => "peer to peer transaction".to_string(),
-            ScriptView::Mint { .. } => "mint transaction".to_string(),
-            ScriptView::Unknown { .. } => "unknown transaction".to_string(),
-        }
-    }
 }
 
 impl From<Transaction> for TransactionDataView {
