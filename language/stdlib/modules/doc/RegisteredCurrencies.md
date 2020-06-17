@@ -264,11 +264,11 @@ initialized, forever.
 
 <pre><code><b>schema</b> <a href="#0x1_RegisteredCurrencies_OnlySingletonHasRegisteredCurrencies">OnlySingletonHasRegisteredCurrencies</a> {
     <b>invariant</b> !<a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>()
-        ==&gt; all(domain&lt;address&gt;(), |addr| !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(addr));
+        ==&gt; (forall addr: address: !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(addr));
     <b>invariant</b> <a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>()
         ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="#0x1_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>())
-            && all(domain&lt;address&gt;(),
-                   |addr| <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(addr)
+            && (forall addr: address:
+                   <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(addr)
                               ==&gt; addr == <a href="#0x1_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>());
 }
 </code></pre>

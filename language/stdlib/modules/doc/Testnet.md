@@ -181,7 +181,7 @@ Returns true if no address has IsTestNet resource.
 
 
 <pre><code><b>define</b> <a href="#0x1_Testnet_spec_no_addr_has_testnet">spec_no_addr_has_testnet</a>(): bool {
-    all(domain&lt;address&gt;(), |addr| !exists&lt;<a href="#0x1_Testnet_IsTestnet">IsTestnet</a>&gt;(addr))
+    forall addr: address: !exists&lt;<a href="#0x1_Testnet_IsTestnet">IsTestnet</a>&gt;(addr)
 }
 </code></pre>
 
@@ -193,9 +193,8 @@ Returns true if only the root address has an IsTestNet resource.
 
 
 <pre><code><b>define</b> <a href="#0x1_Testnet_spec_only_root_addr_has_testnet">spec_only_root_addr_has_testnet</a>(): bool {
-    all(domain&lt;address&gt;(), |addr|
-        exists&lt;<a href="#0x1_Testnet_IsTestnet">IsTestnet</a>&gt;(addr)
-            ==&gt; addr == <a href="#0x1_Testnet_spec_root_address">spec_root_address</a>())
+    forall addr: address:
+        exists&lt;<a href="#0x1_Testnet_IsTestnet">IsTestnet</a>&gt;(addr) ==&gt; addr == <a href="#0x1_Testnet_spec_root_address">spec_root_address</a>()
 }
 </code></pre>
 

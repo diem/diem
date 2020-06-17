@@ -217,7 +217,7 @@
     <b>let</b> tiers = &<b>mut</b> dealer.tiers;
     <b>let</b> number_of_tiers = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
     // INVALID_TIER_INDEX
-    <b>assert</b>(tier_index &lt;= 4, 3);
+    <b>assert</b>(tier_index &lt;= 3, 3); // max 4 tiers allowed
     <b>assert</b>(tier_index &lt; number_of_tiers, 3);
     // Make sure that this new start for the tier is consistent
     // with the tier above it.

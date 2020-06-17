@@ -583,7 +583,7 @@ in a schema and as a post-condition to
 
 
 <pre><code><b>define</b> <a href="#0x1_Association_only_root_addr_has_root_privilege">only_root_addr_has_root_privilege</a>(): bool {
-    all(domain&lt;address&gt;(), |addr| exists&lt;<a href="#0x1_Association_Root">Root</a>&gt;(addr) ==&gt; addr == <a href="#0x1_Association_spec_root_address">spec_root_address</a>())
+    forall addr: address: exists&lt;<a href="#0x1_Association_Root">Root</a>&gt;(addr) ==&gt; addr == <a href="#0x1_Association_spec_root_address">spec_root_address</a>()
 }
 </code></pre>
 
@@ -604,7 +604,7 @@ I have not been able to figure out what is going on. Is it a Boogie problem?
 
 
 <pre><code><b>schema</b> <a href="#0x1_Association_OnlyRootAddressHasRootPrivilege">OnlyRootAddressHasRootPrivilege</a> {
-    <b>invariant</b> <b>module</b> !<a href="#0x1_Association_spec_is_initialized">spec_is_initialized</a>() ==&gt; all(domain&lt;address&gt;(), |addr1| !exists&lt;<a href="#0x1_Association_Root">Root</a>&gt;(addr1));
+    <b>invariant</b> <b>module</b> !<a href="#0x1_Association_spec_is_initialized">spec_is_initialized</a>() ==&gt; (forall addr1: address: !exists&lt;<a href="#0x1_Association_Root">Root</a>&gt;(addr1));
 }
 </code></pre>
 
@@ -682,10 +682,9 @@ it continues to have it.
 
 
 <pre><code><b>schema</b> <a href="#0x1_Association_OnlyRemoveCanRemovePrivileges">OnlyRemoveCanRemovePrivileges</a> {
-    <b>ensures</b> all(domain&lt;type&gt;(),
-                |ty| all(domain&lt;address&gt;(),
-                         |addr1| <b>old</b>(exists&lt;<a href="#0x1_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;ty&gt;&gt;(addr1))
-                                    ==&gt; exists&lt;<a href="#0x1_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;ty&gt;&gt;(addr1)));
+    <b>ensures</b> forall ty: type, addr1: address:
+                <b>old</b>(exists&lt;<a href="#0x1_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;ty&gt;&gt;(addr1))
+                    ==&gt; exists&lt;<a href="#0x1_Association_PrivilegedCapability">PrivilegedCapability</a>&lt;ty&gt;&gt;(addr1);
 }
 </code></pre>
 
@@ -718,8 +717,8 @@ itself.  I added assertion 1005 above to prevent that, and this verifies.
 
 <pre><code><b>schema</b> <a href="#0x1_Association_RootAddressIsAssociationAddress">RootAddressIsAssociationAddress</a> {
     <b>invariant</b> <b>module</b>
-        all(domain&lt;address&gt;(),
-            |addr1| exists&lt;<a href="#0x1_Association_Root">Root</a>&gt;(addr1) ==&gt; <a href="#0x1_Association_spec_addr_is_association">spec_addr_is_association</a>(addr1));
+        forall addr1: address:
+            exists&lt;<a href="#0x1_Association_Root">Root</a>&gt;(addr1) ==&gt; <a href="#0x1_Association_spec_addr_is_association">spec_addr_is_association</a>(addr1);
 }
 </code></pre>
 
