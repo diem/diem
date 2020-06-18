@@ -7,7 +7,7 @@ use 0x1::Roles::{Self, TreasuryComplianceRole};
 /// of max balance, total flow (inflow + outflow) (microLBR) for LimitsDefinition bound accounts.
 /// If the new threshold is zero, that particular config does not get updated.
 /// sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
-fun main<CoinType>(
+fun update_unhosted_wallet_limits<CoinType>(
     tc_account: &signer,
     sliding_nonce: u64,
     new_max_total_flow: u64,
