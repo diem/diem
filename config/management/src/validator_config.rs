@@ -1,7 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{constants, error::Error, SecureBackends};
+use crate::{
+    constants,
+    error::Error,
+    secure_backend::StorageLocation::{LocalStorage, RemoteStorage},
+    SecureBackends,
+};
 use libra_config::config::HANDSHAKE_VERSION;
 use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};
 use libra_global_constants::{
@@ -14,10 +19,7 @@ use libra_types::{
     account_address::{self, AccountAddress},
     transaction::{RawTransaction, SignedTransaction, Transaction},
 };
-use std::{
-    convert::{TryFrom, TryInto},
-    time::Duration,
-};
+use std::{convert::TryFrom, time::Duration};
 use structopt::StructOpt;
 
 // TODO(davidiw) add operator_address, since that will eventually be the identity producing this.
@@ -35,16 +37,13 @@ pub struct ValidatorConfig {
 
 impl ValidatorConfig {
     pub fn execute(self) -> Result<Transaction, Error> {
-        let mut local: Storage = self.backends.local.try_into()?;
-        local
-            .available()
-            .map_err(|e| Error::LocalStorageUnavailable(e.to_string()))?;
+        let mut local_storage = self.backends.local.create_storage(LocalStorage)?;
 
         // Step 1) Retrieve keys from local storage
-        let consensus_key = ed25519_from_storage(CONSENSUS_KEY, &local)?;
-        let fullnode_network_key = x25519_from_storage(FULLNODE_NETWORK_KEY, &local)?;
-        let validator_network_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, &local)?;
-        let operator_key = ed25519_from_storage(OPERATOR_KEY, &local)?;
+        let consensus_key = ed25519_from_storage(CONSENSUS_KEY, &local_storage)?;
+        let fullnode_network_key = x25519_from_storage(FULLNODE_NETWORK_KEY, &local_storage)?;
+        let validator_network_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, &local_storage)?;
+        let operator_key = ed25519_from_storage(OPERATOR_KEY, &local_storage)?;
 
         // append ln-noise-ik and ln-handshake protocols to base network addresses
 
@@ -90,7 +89,7 @@ impl ValidatorConfig {
             constants::GAS_CURRENCY_CODE.to_owned(),
             Duration::from_secs(expiration_time),
         );
-        let signature = local
+        let signature = local_storage
             .sign_message(OPERATOR_KEY, &raw_transaction.hash())
             .map_err(|e| {
                 Error::LocalStorageSigningError("validator-config", OPERATOR_KEY, e.to_string())
@@ -100,15 +99,14 @@ impl ValidatorConfig {
 
         // Step 3) Submit to remote storage
 
-        if let Some(remote) = self.backends.remote {
-            let mut remote: Storage = remote.try_into()?;
-            remote
-                .available()
-                .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
+        if let Some(remote_config) = self.backends.remote {
+            let mut remote_storage = remote_config.create_storage(RemoteStorage)?;
             let txn = Value::Transaction(txn.clone());
-            remote.set(constants::VALIDATOR_CONFIG, txn).map_err(|e| {
-                Error::RemoteStorageWriteError(constants::VALIDATOR_CONFIG, e.to_string())
-            })?;
+            remote_storage
+                .set(constants::VALIDATOR_CONFIG, txn)
+                .map_err(|e| {
+                    Error::RemoteStorageWriteError(constants::VALIDATOR_CONFIG, e.to_string())
+                })?;
         }
 
         Ok(txn)
