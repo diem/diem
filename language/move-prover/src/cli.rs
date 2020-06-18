@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use simplelog::{
     CombinedLogger, Config, ConfigBuilder, LevelPadding, SimpleLogger, TermLogger, TerminalMode,
 };
+use spec_lang::env::VerificationScope;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Represents the virtual path to the boogie prelude which is inlined into the binary.
@@ -34,23 +35,6 @@ static LOGGER_CONFIGURED: AtomicBool = AtomicBool::new(false);
 
 /// Atomic used to detect whether we are running in test mode.
 static TEST_MODE: AtomicBool = AtomicBool::new(false);
-
-/// Default for what functions to verify.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub enum VerificationScope {
-    /// Verify only public functions.
-    Public,
-    /// Verify all functions.
-    All,
-    /// Verify no functions
-    None,
-}
-
-impl Default for VerificationScope {
-    fn default() -> Self {
-        Self::Public
-    }
-}
 
 /// Represents options provided to the tool. Most of those options are configured via a toml
 /// source; some over the command line flags.

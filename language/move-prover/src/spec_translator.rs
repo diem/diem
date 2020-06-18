@@ -27,8 +27,8 @@ use spec_lang::{
     code_writer::CodeWriter,
     emit, emitln,
     env::{
-        GlobalEnv, SpecVarId, ABORTS_IF_IS_PARTIAL_PRAGMA, ABORTS_IF_IS_STRICT_PRAGMA,
-        REQUIRES_IF_ABORTS, SMOKE_TEST_PRAGMA,
+        ConditionInfo, GlobalEnv, SpecVarId, ABORTS_IF_IS_PARTIAL_PRAGMA,
+        ABORTS_IF_IS_STRICT_PRAGMA, REQUIRES_IF_ABORTS,
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
@@ -37,6 +37,12 @@ use stackless_bytecode_generator::{
     function_target::FunctionTarget, stackless_bytecode::SpecBlockId,
 };
 use std::collections::BTreeSet;
+
+const REQUIRES_FAILS_MESSAGE: &str = "precondition does not hold at this call";
+const ENSURES_FAILS_MESSAGE: &str = "post-condition does not hold";
+const ABORTS_IF_FAILS_MESSAGE: &str = "function does not abort under this condition";
+const SUCCEEDS_IF_FAILS_MESSAGE: &str = "function does not succeed under this condition";
+const INVARIANT_FAILS_MESSAGE: &str = "data invariant does not hold";
 
 pub enum SpecEnv<'env> {
     Module(ModuleEnv<'env>),
@@ -378,6 +384,7 @@ impl<'env> SpecTranslator<'env> {
             // function does not abort.
             self.translate_seq(requires.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
+                self.set_condition_info(&cond.loc, REQUIRES_FAILS_MESSAGE);
                 emit!(self.writer, "requires b#$Boolean(");
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, ")");
@@ -391,18 +398,6 @@ impl<'env> SpecTranslator<'env> {
                 emit!(self.writer, ";")
             });
             emitln!(self.writer);
-        }
-
-        // Smoke test mode
-        if func_target.is_pragma_true(SMOKE_TEST_PRAGMA, || false) {
-            // Generates `ensure $abort_flag;` to check if the move
-            // prover can prove `ensures false;` because the function
-            // always aborts.
-            *self.in_ensures.borrow_mut() = true;
-            emit!(self.writer, "ensures $abort_flag;\n");
-            *self.in_ensures.borrow_mut() = false;
-            // Ignore the post-condition specifications for this function
-            return;
         }
 
         // Generate aborts_if. Logically, if we have abort conditions P1..Pn, we have
@@ -426,6 +421,7 @@ impl<'env> SpecTranslator<'env> {
             // reports positions only back per entire ensures, not individual sub-expression.)
             for c in &aborts_if {
                 self.writer.set_location(&c.loc);
+                self.set_condition_info(&c.loc, ABORTS_IF_FAILS_MESSAGE);
                 emit!(self.writer, "ensures b#$Boolean(old(");
                 self.translate_exp(&c.exp);
                 emitln!(self.writer, ")) ==> $abort_flag;")
@@ -453,6 +449,7 @@ impl<'env> SpecTranslator<'env> {
         let succeeds_if = spec.filter_kind(ConditionKind::SucceedsIf).collect_vec();
         for c in succeeds_if {
             self.writer.set_location(&c.loc);
+            self.set_condition_info(&c.loc, SUCCEEDS_IF_FAILS_MESSAGE);
             emit!(self.writer, "ensures b#$Boolean(old(");
             self.translate_exp(&c.exp);
             emitln!(self.writer, ")) ==> !$abort_flag;")
@@ -464,12 +461,24 @@ impl<'env> SpecTranslator<'env> {
             *self.in_ensures.borrow_mut() = true;
             self.translate_seq(ensures.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
+                self.set_condition_info(&cond.loc, ENSURES_FAILS_MESSAGE);
                 emit!(self.writer, "ensures !$abort_flag ==> (b#$Boolean(");
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, "));")
             });
             *self.in_ensures.borrow_mut() = false;
             emitln!(self.writer);
+        }
+    }
+
+    /// Sets info for verification condition so it can be later retrieved by the boogie wrapper.
+    /// If info is already set, it will not be overriden.
+    fn set_condition_info(&self, loc: &Loc, message: &str) {
+        let env = self.module_env().env;
+        if env.get_condition_info(loc).is_none() {
+            self.module_env()
+                .env
+                .set_condition_info(loc.clone(), ConditionInfo::for_message(message.to_string()));
         }
     }
 
@@ -843,6 +852,7 @@ impl<'env> SpecTranslator<'env> {
                 if assume {
                     emit!(self.writer, "assume b#$Boolean(");
                 } else {
+                    self.set_condition_info(&inv.loc, INVARIANT_FAILS_MESSAGE);
                     emit!(self.writer, "assert b#$Boolean(");
                 }
                 self.with_invariant_target(target, old_target, || self.translate_exp(&inv.exp));

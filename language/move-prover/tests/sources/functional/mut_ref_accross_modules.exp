@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error:  This assertion might not hold.
+error: data invariant does not hold
 
     ┌── tests/sources/functional/mut_ref_accross_modules.move:21:9 ───
     │
@@ -11,7 +11,7 @@ error:  This assertion might not hold.
     =         x = <redacted>,
     =         r = <redacted>
 
-error:  A postcondition might not hold on this return path.
+error: precondition does not hold at this call
 
     ┌── tests/sources/functional/mut_ref_accross_modules.move:30:9 ───
     │
@@ -24,7 +24,7 @@ error:  A postcondition might not hold on this return path.
     =     at tests/sources/functional/mut_ref_accross_modules.move:58:5: increment_invalid (exit)
     =         result = <redacted>
 
-error:  A precondition for this call might not hold.
+error: precondition does not hold at this call
 
     ┌── tests/sources/functional/mut_ref_accross_modules.move:30:9 ───
     │
@@ -34,7 +34,7 @@ error:  A precondition for this call might not hold.
     =     at tests/sources/functional/mut_ref_accross_modules.move:94:5: private_to_public_caller (entry)
     =     at tests/sources/functional/mut_ref_accross_modules.move:51:5: increment (entry)
 
-error:  A precondition for this call might not hold.
+error: precondition does not hold at this call
 
     ┌── tests/sources/functional/mut_ref_accross_modules.move:30:9 ───
     │

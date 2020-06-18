@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error:  A postcondition might not hold on this return path.
+error: function does not abort under this condition
 
     ┌── tests/sources/functional/aborts_if.move:35:9 ───
     │
@@ -11,7 +11,7 @@ error:  A postcondition might not hold on this return path.
     =         _x = <redacted>,
     =         _y = <redacted>
 
-error:  A postcondition might not hold on this return path.
+error: function does not abort under this condition
 
     ┌── tests/sources/functional/aborts_if.move:51:9 ───
     │
@@ -41,7 +41,7 @@ error: abort not covered by any of the `aborts_if` clauses
     =         x = <redacted>,
     =         y = <redacted>
 
-error:  A postcondition might not hold on this return path.
+error: function does not abort under this condition
 
     ┌── tests/sources/functional/aborts_if.move:67:9 ───
     │
@@ -54,7 +54,7 @@ error:  A postcondition might not hold on this return path.
     =         y = <redacted>
     =     at tests/sources/functional/aborts_if.move:63:5: abort6_incorrect (exit)
 
-error:  A postcondition might not hold on this return path.
+error: function does not abort under this condition
 
      ┌── tests/sources/functional/aborts_if.move:150:9 ───
      │
@@ -101,7 +101,7 @@ error: abort not covered by any of the `aborts_if` clauses
      =         x = <redacted>,
      =         $t1 = <redacted>
 
-error:  A postcondition might not hold on this return path.
+error: function does not abort under this condition
 
     ┌── tests/sources/functional/aborts_if.move:90:9 ───
     │
@@ -131,7 +131,7 @@ error: abort not covered by any of the `aborts_if` clauses
     =         _x = <redacted>,
     =         _y = <redacted>
 
-error:  A postcondition might not hold on this return path.
+error: function does not abort under this condition
 
      ┌── tests/sources/functional/aborts_if.move:118:9 ───
      │

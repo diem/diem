@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error:  A postcondition might not hold on this return path.
+error: function does not abort under this condition
 
     ┌── tests/sources/functional/loops.move:60:9 ───
     │

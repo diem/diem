@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error:  A postcondition might not hold on this return path.
+error: post-condition does not hold
 
     ┌── tests/sources/functional/hash_model.move:48:9 ───
     │
@@ -19,7 +19,7 @@ error:  A postcondition might not hold on this return path.
     =         result_2 = <redacted>
     =     at tests/sources/functional/hash_model.move:39:5: hash_test1_incorrect (exit)
 
-error:  A postcondition might not hold on this return path.
+error: post-condition does not hold
 
     ┌── tests/sources/functional/hash_model.move:91:9 ───
     │

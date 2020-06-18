@@ -28,6 +28,7 @@ use stackless_bytecode_generator::{
     livevar_analysis::LiveVarAnalysisProcessor,
     packref_analysis::PackrefAnalysisProcessor,
     reaching_def_analysis::ReachingDefProcessor,
+    test_instrumenter::TestInstrumenter,
     writeback_analysis::WritebackAnalysisProcessor,
 };
 use std::{
@@ -191,7 +192,7 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
 }
 
 /// Function to create the transformation pipeline.
-fn create_bytecode_processing_pipeline(_options: &Options) -> FunctionTargetPipeline {
+fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipeline {
     let mut res = FunctionTargetPipeline::default();
 
     // Add processors in order they are executed.
@@ -202,6 +203,7 @@ fn create_bytecode_processing_pipeline(_options: &Options) -> FunctionTargetPipe
     res.add_processor(WritebackAnalysisProcessor::new());
     res.add_processor(PackrefAnalysisProcessor::new());
     res.add_processor(EliminateMutRefsProcessor::new());
+    res.add_processor(TestInstrumenter::new(options.prover.verify_scope));
 
     res
 }

@@ -6,7 +6,7 @@
 use anyhow::anyhow;
 
 use std::{
-    collections::{BTreeMap, BTreeSet, HashSet},
+    collections::{BTreeMap, BTreeSet},
     fs,
     option::Option::None,
     process::Command,
@@ -22,12 +22,11 @@ use regex::Regex;
 
 use spec_lang::{
     code_writer::CodeWriter,
-    env::{FunId, GlobalEnv, Loc, ModuleId, StructId, SMOKE_TEST_PRAGMA, VERIFY_PRAGMA},
-    symbol::Symbol,
+    env::{FunId, GlobalEnv, Loc, ModuleId, StructId},
     ty::{PrimitiveType, Type},
 };
 
-use crate::cli::{Options, VerificationScope};
+use crate::cli::Options;
 // DEBUG
 // use backtrace::Backtrace;
 use spec_lang::env::NodeId;
@@ -94,12 +93,6 @@ pub enum TraceKind {
     Pack,
 }
 
-/// The type of smoke test
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum SmokeTestKind {
-    AbortsIfTrue,
-}
-
 impl<'env> BoogieWrapper<'env> {
     /// Calls boogie on the given file. On success, returns a struct representing the analyzed
     /// output of boogie.
@@ -145,14 +138,13 @@ impl<'env> BoogieWrapper<'env> {
         debug!("writing boogie log to {}", boogie_log_file);
         fs::write(&boogie_log_file, &all_output)?;
 
-        // Keep a list of function name symbols and the kind of smoke test for errors
-        // that come from smoke testing
-        let mut smoke_test_errors: HashSet<(Symbol, SmokeTestKind)> = HashSet::new();
+        // Keep the set of locations which had a negative condition failure. These are errors
+        // which are expected.
+        let mut negative_cond_errors = BTreeSet::new();
 
         for error in &errors {
-            if let Some(res) = self.try_get_smoke_test_error(error) {
-                // Errors from smoke test checks
-                smoke_test_errors.insert(res);
+            if let Some(fun) = self.try_get_negative_error(error) {
+                negative_cond_errors.insert(fun);
             } else {
                 // Errors from counter examples to the specification
                 self.add_error(error);
@@ -160,20 +152,14 @@ impl<'env> BoogieWrapper<'env> {
         }
 
         // Add errors for functions with smoke tests
-        self.add_smoke_test_errors(smoke_test_errors);
+        self.add_negative_errors(negative_cond_errors);
 
         Ok(())
     }
 
-    /// Helper that returns `Some` tuple of `Symbol` representing the function
-    /// the error appears in and `SmokeTestKind` representing the kind of smoke test
-    /// error.
-    /// Returns None if it's not a smoke test error.
-    ///
-    /// List of smoke test errors when `pragma smoke_test = true;` is declared:
-    ///     1. Ignore specification post conditions and add `ensures $abort_flag;` to
-    ///         the function to check if the function always aborts
-    fn try_get_smoke_test_error(&self, error: &BoogieError) -> Option<(Symbol, SmokeTestKind)> {
+    /// Determine whether the boogie error represents the failure of a negative condition
+    /// and return its location of so.
+    fn try_get_negative_error(&self, error: &BoogieError) -> Option<Loc> {
         // Find the source location of the error
         let (_, loc_opt) = self.get_locations(error.position);
         let source_loc = self.to_proper_source_location(loc_opt).and_then(|loc| {
@@ -184,71 +170,29 @@ impl<'env> BoogieWrapper<'env> {
             }
         })?;
 
-        // Find the function the error was raised in
-        let fun_env = self.env.get_enclosing_function(source_loc)?;
-
-        // Return whether the function of the error was in smoke test mode
-        if fun_env.is_pragma_true(SMOKE_TEST_PRAGMA, || false) {
-            let fname_symbol = fun_env.get_name();
-            // Determine the kind of smoke test this error comes from
-            //
-            // TODO: Currently the only type of test is the aborts_if true check.
-            // We will need to condition based on the error trace or message
-            // for additional errors.
-            let kind = SmokeTestKind::AbortsIfTrue;
-            Some((fname_symbol, kind))
-        } else {
-            None
-        }
+        // Check whether the condition which failed was a negative one.
+        self.env
+            .get_condition_info(&source_loc)
+            .filter(|info| info.negative_cond)?;
+        Some(source_loc)
     }
 
-    /// Helper function for adding smoke test errors as Diagnostics.
-    /// TODO: Ideally, we would like to use the FunId and ModuleIds to identify
-    /// where these errors `funs_with_errors` come from rather than a simple `Symbol`
-    /// name that refers to the function to avoid ambiguity in case there are
-    /// multiple modules.
-    fn add_smoke_test_errors(&self, funs_with_errors: HashSet<(Symbol, SmokeTestKind)>) {
-        // Add aborts_if true diagnostics.
-        for mod_env in self.env.get_modules() {
-            for fun_env in mod_env.get_functions() {
-                // Look up the `verify` pragma property first in this function, then in
-                // the module, and finally fall back to the value of option `--verify`,
-                // as in the usual verification process.
-                let default = || match self.options.prover.verify_scope {
-                    VerificationScope::Public => fun_env.is_public(),
-                    VerificationScope::All => true,
-                    VerificationScope::None => false,
-                };
-                // Ignore the function if we're not verifying it.
-                if !fun_env.is_pragma_true(VERIFY_PRAGMA, default) {
-                    continue;
-                }
-                if fun_env.is_pragma_true(SMOKE_TEST_PRAGMA, || false) {
-                    // Smoke test option turned on
-                    let fname_symbol = fun_env.get_name();
-                    let fname = fname_symbol.display(fun_env.symbol_pool());
-                    if !funs_with_errors
-                        .contains(&(fun_env.get_name(), SmokeTestKind::AbortsIfTrue))
-                    {
-                        // No Boogie error found, which means the `ensures $abort_flag` statement passed
-                        // and we should flag this as a bug (contradictory assumptions).
-                        let fun_loc = fun_env.get_loc();
-                        let diag = Diagnostic::new(
-                            Severity::Error,
-                            &format!("function {} always aborts.", fname),
-                            Label::new(fun_loc.file_id(), fun_loc.span(), ""),
-                        );
-                        self.env.add_diag(diag);
-                    } else {
-                        // An error occured in verifying aborts_if true, this is expected.
-                        info!(
-                            "function {} successfully passed the `aborts_if true;` smoke test.",
-                            fname
-                        );
-                    }
-                }
+    /// Go over all negative conditions and check whether errors occurred for them.
+    /// For those which did not occur, report error.
+    fn add_negative_errors(&self, negative_cond_errors: BTreeSet<Loc>) {
+        self.env.with_condition_infos(|loc, info| {
+            if !info.negative_cond || negative_cond_errors.contains(loc) {
+                // Not a negative condition, or expected error happened.
+                return;
             }
-        }
+            // Expected error did not happen, report it.
+            let diag = Diagnostic::new(
+                Severity::Error,
+                info.message.clone(),
+                Label::new(loc.file_id(), loc.span(), ""),
+            );
+            self.env.add_diag(diag);
+        });
     }
 
     /// Helper to add a boogie error as a codespan Diagnostic.
@@ -270,6 +214,11 @@ impl<'env> BoogieWrapper<'env> {
         };
 
         // Create the error
+        let (show_trace, message) = loc_opt
+            .as_ref()
+            .and_then(|loc| self.env.get_condition_info(loc))
+            .map(|info| (!info.omit_trace, info.message))
+            .unwrap_or_else(|| (true, error.message.clone()));
         let mut diag = Diagnostic::new(
             if on_source {
                 Severity::Error
@@ -277,12 +226,13 @@ impl<'env> BoogieWrapper<'env> {
                 // Consider diags on boogie source as bugs
                 Severity::Bug
             },
-            &error.message,
+            message,
             label,
         );
 
         // Now add trace diagnostics.
         if error.kind.is_from_verification()
+            && show_trace
             && !error.execution_trace.is_empty()
             // Reporting errors on boogie source seems to have some non-determinism, so skip
             // this if stable output is required
