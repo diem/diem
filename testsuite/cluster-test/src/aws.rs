@@ -44,7 +44,7 @@ pub async fn set_asg_size(
     if !wait_for_completion {
         return Ok(());
     }
-    libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10_000, 30), || {
+    libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10_000, 60), || {
         let asc_clone = asc.clone();
         Box::pin(async move {
             let mut total = 0;
