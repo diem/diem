@@ -618,20 +618,6 @@
 <span id="618">618</span>
 <span id="619">619</span>
 <span id="620">620</span>
-<span id="621">621</span>
-<span id="622">622</span>
-<span id="623">623</span>
-<span id="624">624</span>
-<span id="625">625</span>
-<span id="626">626</span>
-<span id="627">627</span>
-<span id="628">628</span>
-<span id="629">629</span>
-<span id="630">630</span>
-<span id="631">631</span>
-<span id="632">632</span>
-<span id="633">633</span>
-<span id="634">634</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -709,12 +695,15 @@
         <span class="self">Self</span> { <span class="ident">host</span> }
     }
 
-    <span class="doccomment">/// Submits a signed transaction to the Libra blockchain via the JSON RPC API.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">submit_signed_transaction</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">signed_transaction</span>: <span class="ident">SignedTransaction</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">submit_transaction</span>(<span class="ident">signed_transaction</span>)<span class="question-mark">?</span>;
+    <span class="doccomment">/// Submits a signed transaction to the Libra blockchain. This is done by sending a submit()</span>
+    <span class="doccomment">/// request to the JSON RPC server using the given transaction.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">submit_transaction</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">signed_transaction</span>: <span class="ident">SignedTransaction</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">method</span> <span class="op">=</span> <span class="string">&quot;submit&quot;</span>.<span class="ident">into</span>();
+        <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">String</span>(<span class="ident">hex</span>::<span class="ident">encode</span>(<span class="ident">lcs</span>::<span class="ident">to_bytes</span>(
+            <span class="kw-2">&amp;</span><span class="ident">signed_transaction</span>,
+        )<span class="question-mark">?</span>))];
+        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute_request</span>(<span class="ident">method</span>, <span class="ident">params</span>);
+
         <span class="kw">match</span> <span class="ident">response</span>.<span class="ident">status</span>() {
             <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">response</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>;
@@ -732,14 +721,23 @@
         }
     }
 
-    <span class="doccomment">/// Returns the associated AccountState for a specific account at a given version height</span>
-    <span class="doccomment">/// using the JSON RCP API.</span>
+    <span class="doccomment">/// Returns the associated AccountState for a specific account at a given version height.</span>
+    <span class="doccomment">/// This is done by sending a get_account_state_with_proof() request to the JSON RPC server</span>
+    <span class="doccomment">/// for the specified account, optional version height and optional ledger_version height</span>
+    <span class="doccomment">/// (for the proof).</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_account_state</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">account</span>: <span class="ident">AccountAddress</span>,
         <span class="ident">version</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AccountState</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_account_state_with_proof</span>(<span class="ident">account</span>, <span class="ident">version</span>, <span class="ident">version</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">method</span> <span class="op">=</span> <span class="string">&quot;get_account_state_with_proof&quot;</span>.<span class="ident">into</span>();
+        <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
+            <span class="ident">Value</span>::<span class="ident">String</span>(<span class="ident">account</span>.<span class="ident">to_string</span>()),
+            <span class="macro">json</span><span class="macro">!</span>(<span class="ident">version</span>),
+            <span class="macro">json</span><span class="macro">!</span>(<span class="ident">version</span>),
+        ];
+        <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">execute_request</span>(<span class="ident">method</span>, <span class="ident">params</span>);
+
         <span class="kw">match</span> <span class="ident">response</span>.<span class="ident">status</span>() {
             <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">response</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">response</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>;
@@ -779,32 +777,6 @@
             .<span class="ident">send_json</span>(
                 <span class="macro">json</span><span class="macro">!</span>({<span class="string">&quot;jsonrpc&quot;</span>: <span class="ident">JSON_RPC_VERSION</span>, <span class="string">&quot;method&quot;</span>: <span class="ident">method</span>, <span class="string">&quot;params&quot;</span>: <span class="ident">params</span>, <span class="string">&quot;id&quot;</span>: <span class="number">0</span>}),
             )
-    }
-
-    <span class="comment">// Sends a submit() request to the JSON RPC server using the given transaction.</span>
-    <span class="kw">fn</span> <span class="ident">submit_transaction</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">signed_transaction</span>: <span class="ident">SignedTransaction</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">method</span> <span class="op">=</span> <span class="string">&quot;submit&quot;</span>.<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">String</span>(<span class="ident">hex</span>::<span class="ident">encode</span>(<span class="ident">lcs</span>::<span class="ident">to_bytes</span>(
-            <span class="kw-2">&amp;</span><span class="ident">signed_transaction</span>,
-        )<span class="question-mark">?</span>))];
-        <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">execute_request</span>(<span class="ident">method</span>, <span class="ident">params</span>))
-    }
-
-    <span class="comment">// Sends a get_account_state_with_proof() request to the JSON RPC server for the specified</span>
-    <span class="comment">// account, optional version height and optional ledger_version height (for the proof).</span>
-    <span class="kw">fn</span> <span class="ident">get_account_state_with_proof</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">account</span>: <span class="ident">AccountAddress</span>,
-        <span class="ident">version</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
-        <span class="ident">ledger_version</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Response</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">method</span> <span class="op">=</span> <span class="string">&quot;get_account_state_with_proof&quot;</span>.<span class="ident">into</span>();
-        <span class="kw">let</span> <span class="ident">params</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[
-            <span class="ident">Value</span>::<span class="ident">String</span>(<span class="ident">account</span>.<span class="ident">to_string</span>()),
-            <span class="macro">json</span><span class="macro">!</span>(<span class="ident">version</span>),
-            <span class="macro">json</span><span class="macro">!</span>(<span class="ident">ledger_version</span>),
-        ];
-        <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">execute_request</span>(<span class="ident">method</span>, <span class="ident">params</span>))
     }
 }
 
@@ -945,7 +917,7 @@
         <span class="kw">let</span> <span class="ident">signed_transaction</span> <span class="op">=</span> <span class="ident">generate_signed_transaction</span>();
 
         <span class="comment">// Ensure transaction submitted and validated successfully</span>
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">submit_signed_transaction</span>(<span class="ident">signed_transaction</span>);
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">submit_transaction</span>(<span class="ident">signed_transaction</span>);
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">result</span>.<span class="ident">is_ok</span>());
     }
 
@@ -959,7 +931,7 @@
         <span class="kw">let</span> <span class="ident">signed_transaction</span> <span class="op">=</span> <span class="ident">generate_signed_transaction</span>();
 
         <span class="comment">// Ensure transaction submitted successfully</span>
-        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">submit_signed_transaction</span>(<span class="ident">signed_transaction</span>);
+        <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="ident">client</span>.<span class="ident">submit_transaction</span>(<span class="ident">signed_transaction</span>);
         <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">result</span>.<span class="ident">is_err</span>());
     }
 
