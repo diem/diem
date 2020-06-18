@@ -33,8 +33,9 @@ use std::convert::TryFrom;
 use storage_interface::DbReaderWriter;
 use transaction_builder::{
     encode_block_prologue_script, encode_create_testing_account_script,
-    encode_publishing_option_script, encode_reconfigure_script, encode_set_validator_config_script,
-    encode_testnet_mint_script, encode_transfer_with_metadata_script,
+    encode_modify_publishing_option_script, encode_reconfigure_script,
+    encode_set_validator_config_script, encode_testnet_mint_script,
+    encode_transfer_with_metadata_script,
 };
 
 fn create_db_and_executor(config: &NodeConfig) -> (DbReaderWriter, Executor<LibraVM>) {
@@ -252,7 +253,7 @@ fn test_change_publishing_option_to_custom() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_publishing_option_script(
+        Some(encode_modify_publishing_option_script(
             VMPublishingOption::CustomScripts,
         )),
     );
@@ -432,9 +433,9 @@ fn test_extend_whitelist() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_publishing_option_script(VMPublishingOption::Locked(
-            new_whitelist,
-        ))),
+        Some(encode_modify_publishing_option_script(
+            VMPublishingOption::Locked(new_whitelist),
+        )),
     );
 
     let block1 = vec![txn1, txn2, txn3, txn4, txn5];

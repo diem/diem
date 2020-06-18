@@ -26,8 +26,9 @@ use rand::SeedableRng;
 use storage_interface::DbReaderWriter;
 use subscription_service::ReconfigSubscription;
 use transaction_builder::{
-    encode_block_prologue_script, encode_publishing_option_script, encode_reconfigure_script,
-    encode_set_validator_config_script, encode_transfer_with_metadata_script,
+    encode_block_prologue_script, encode_modify_publishing_option_script,
+    encode_reconfigure_script, encode_set_validator_config_script,
+    encode_transfer_with_metadata_script,
 };
 
 // TODO test for subscription with multiple subscribed configs once there are >1 on-chain configs
@@ -105,7 +106,7 @@ fn test_on_chain_config_pub_sub() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_publishing_option_script(
+        Some(encode_modify_publishing_option_script(
             vm_publishing_option.clone(),
         )),
     );

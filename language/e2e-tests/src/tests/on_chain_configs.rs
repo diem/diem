@@ -16,7 +16,7 @@ use libra_types::{
     vm_status::{StatusCode, VMStatus},
 };
 use libra_vm::LibraVM;
-use transaction_builder::encode_update_travel_rule_limit;
+use transaction_builder::encode_update_travel_rule_limit_script;
 
 #[test]
 fn initial_libra_version() {
@@ -63,9 +63,10 @@ fn updated_limit_allows_txn() {
 
     // Execute updated dual attestation limit
     let new_micro_lbr_limit = 1_000_011;
-    let output = executor.execute_and_apply(
-        blessed.signed_script_txn(encode_update_travel_rule_limit(3, new_micro_lbr_limit), 0),
-    );
+    let output = executor.execute_and_apply(blessed.signed_script_txn(
+        encode_update_travel_rule_limit_script(3, new_micro_lbr_limit),
+        0,
+    ));
     assert_eq!(
         output.status(),
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))

@@ -30,7 +30,7 @@ use move_vm_types::{data_store::DataStore, loaded_data::types::FatStructType, va
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use std::{collections::btree_map::BTreeMap, convert::TryFrom};
-use transaction_builder::encode_create_designated_dealer;
+use transaction_builder::encode_create_designated_dealer_script;
 use vm::access::ModuleAccess;
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
@@ -191,7 +191,7 @@ fn create_and_initialize_testnet_minting(
     let coin2_tag = account_config::type_tag_for_currency_code(
         account_config::from_currency_code_string("Coin2").unwrap(),
     );
-    let create_dd_script = encode_create_designated_dealer(
+    let create_dd_script = encode_create_designated_dealer_script(
         coin1_tag.clone(),
         0,
         account_config::testnet_dd_account_address(),
@@ -249,7 +249,7 @@ fn create_and_initialize_validators(
 
         let auth_key = AuthenticationKey::ed25519(&account_key);
         let account = auth_key.derived_address();
-        let create_script = transaction_builder::encode_create_validator_account(
+        let create_script = transaction_builder::encode_create_validator_account_script(
             account,
             auth_key.prefix().to_vec(),
         );
