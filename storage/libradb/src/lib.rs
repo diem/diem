@@ -201,11 +201,30 @@ impl LibraDB {
         start_epoch: u64,
         end_epoch: u64,
     ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
-        self.ledger_store.get_epoch_ending_ledger_infos(
+        self.get_epoch_ending_ledger_infos_impl(
             start_epoch,
             end_epoch,
             MAX_NUM_EPOCH_ENDING_LEDGER_INFO,
         )
+    }
+
+    fn get_epoch_ending_ledger_infos_impl(
+        &self,
+        start_epoch: u64,
+        end_epoch: u64,
+        limit: usize,
+    ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
+        let (paging_epoch, more) = if end_epoch - start_epoch > limit as u64 {
+            (start_epoch + limit as u64, true)
+        } else {
+            (end_epoch, false)
+        };
+
+        Ok((
+            self.ledger_store
+                .get_epoch_ending_ledger_infos(start_epoch, paging_epoch)?,
+            more,
+        ))
     }
 
     pub fn get_transaction_with_proof(
