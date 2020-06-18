@@ -407,6 +407,13 @@
 <span id="407">407</span>
 <span id="408">408</span>
 <span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -417,6 +424,7 @@
 
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TRACE_EVENT</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;trace_event&quot;</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TRACE_EDGE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;trace_edge&quot;</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">LIBRA_TRACE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;libra_trace&quot;</span>;
 
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
@@ -443,19 +451,17 @@
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">trace_event</span> {
     (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">stage</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">node</span>:<span class="ident">tt</span>) <span class="op">=</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">is_selected</span>(<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">node_sampling_data</span><span class="op">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">node</span>)) {
-            <span class="macro">trace_event</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">stage</span>; {<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">format_node</span><span class="op">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">node</span>), <span class="macro">module_path</span><span class="macro">!</span>(), <span class="prelude-ty">Option</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>::<span class="prelude-val">None</span>})
+            <span class="macro">trace_event</span><span class="macro">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">stage</span>; {<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">format_node</span><span class="op">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">node</span>), <span class="macro">module_path</span><span class="macro">!</span>(), <span class="prelude-ty">Option</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>::<span class="prelude-val">None</span>});
         }
     };
     (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">stage</span>:<span class="ident">expr</span>; {<span class="macro-nonterminal">$</span><span class="macro-nonterminal">node</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">path</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">duration</span>:<span class="ident">expr</span>}) <span class="op">=</span><span class="op">&gt;</span> {
-        <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">json_log</span>::<span class="ident">send_json_log</span>(<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">json_log</span>::<span class="ident">JsonLogEntry</span>::<span class="ident">new</span>(
-            <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">libra_trace</span>::<span class="ident">TRACE_EVENT</span>,
-            <span class="ident">serde_json</span>::<span class="macro">json</span><span class="macro">!</span>({
+        <span class="kw">let</span> <span class="ident">json</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="macro">json</span><span class="macro">!</span>({
                <span class="string">&quot;path&quot;</span>: <span class="macro-nonterminal">$</span><span class="macro-nonterminal">path</span>,
                <span class="string">&quot;node&quot;</span>: <span class="macro-nonterminal">$</span><span class="macro-nonterminal">node</span>,
                <span class="string">&quot;stage&quot;</span>: <span class="macro-nonterminal">$</span><span class="macro-nonterminal">stage</span>,
                <span class="string">&quot;duration&quot;</span>: <span class="macro-nonterminal">$</span><span class="macro-nonterminal">duration</span>,
-            }),
-        ));
+            });
+        <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">send_logs</span><span class="op">!</span>(<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">libra_trace</span>::<span class="ident">TRACE_EVENT</span>, <span class="ident">json</span>);
     }
 }
 
@@ -474,6 +480,18 @@
     (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher</span>:<span class="ident">expr</span>; <span class="macro-nonterminal">$</span><span class="macro-nonterminal">p</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {
         <span class="ident">std</span>::<span class="ident">hash</span>::<span class="ident">Hash</span>::<span class="ident">hash</span>(<span class="kw-2">&amp;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">p</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">hasher</span>);
     }
+}
+
+<span class="attribute">#[<span class="ident">macro_export</span>]</span>
+<span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">send_logs</span> {
+    (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">json</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">log_entry</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">json_log</span>::<span class="ident">JsonLogEntry</span>::<span class="ident">new</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">json</span>);
+        <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">json_log</span>::<span class="ident">send_json_log</span>(<span class="ident">log_entry</span>.<span class="ident">clone</span>());
+        <span class="ident">libra_logger</span>::<span class="macro">send_struct_log</span><span class="macro">!</span>(<span class="ident">libra_logger</span>::<span class="ident">StructuredLogEntry</span>::<span class="ident">new_named</span>(
+            <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">libra_trace</span>::<span class="ident">LIBRA_TRACE</span>
+        )
+        .<span class="ident">data</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>, <span class="ident">log_entry</span>));
+    };
 }
 
 <span class="attribute">#[<span class="ident">macro_export</span>]</span>
@@ -531,15 +549,13 @@
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">end_trace</span> {
     (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">stage</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">node</span>:<span class="ident">tt</span>) <span class="op">=</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">is_selected</span>(<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">node_sampling_data</span><span class="op">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">node</span>)) {
-            <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">json_log</span>::<span class="ident">send_json_log</span>(<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">json_log</span>::<span class="ident">JsonLogEntry</span>::<span class="ident">new</span>(
-                <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">libra_trace</span>::<span class="ident">TRACE_EVENT</span>,
-                <span class="ident">serde_json</span>::<span class="macro">json</span><span class="macro">!</span>({
+            <span class="kw">let</span> <span class="ident">json</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="macro">json</span><span class="macro">!</span>({
                     <span class="string">&quot;path&quot;</span>: <span class="macro">module_path</span><span class="macro">!</span>(),
                     <span class="string">&quot;node&quot;</span>: <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">format_node</span><span class="op">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">node</span>),
                     <span class="string">&quot;stage&quot;</span>: <span class="macro-nonterminal">$</span><span class="macro-nonterminal">stage</span>,
                     <span class="string">&quot;end&quot;</span>: <span class="bool-val">true</span>,
-                }),
-            ));
+                });
+            <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">send_logs</span><span class="op">!</span>(<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">libra_trace</span>::<span class="ident">TRACE_EVENT</span>, <span class="ident">json</span>);
         }
     };
 }
@@ -548,15 +564,13 @@
 <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">trace_edge</span> {
     (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">stage</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">node_from</span>:<span class="ident">tt</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">node_to</span>:<span class="ident">tt</span>) <span class="op">=</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">is_selected</span>(<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">node_sampling_data</span><span class="op">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">node_from</span>)) {
-            <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">json_log</span>::<span class="ident">send_json_log</span>(<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">json_log</span>::<span class="ident">JsonLogEntry</span>::<span class="ident">new</span>(
-                <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">libra_trace</span>::<span class="ident">TRACE_EDGE</span>,
-                <span class="ident">serde_json</span>::<span class="macro">json</span><span class="macro">!</span>({
+            <span class="kw">let</span> <span class="ident">json</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="macro">json</span><span class="macro">!</span>({
                     <span class="string">&quot;path&quot;</span>: <span class="macro">module_path</span><span class="macro">!</span>(),
                     <span class="string">&quot;node&quot;</span>: <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">format_node</span><span class="op">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">node_from</span>),
                     <span class="string">&quot;node_to&quot;</span>: <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">format_node</span><span class="op">!</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">node_to</span>),
                     <span class="string">&quot;stage&quot;</span>: <span class="macro-nonterminal">$</span><span class="macro-nonterminal">stage</span>,
-                }),
-            ));
+                });
+            <span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">send_logs</span><span class="op">!</span>(<span class="macro-nonterminal">$</span><span class="kw">crate</span>::<span class="macro-nonterminal">libra_trace</span>::<span class="ident">TRACE_EDGE</span>, <span class="ident">json</span>);
         }
     };
 }

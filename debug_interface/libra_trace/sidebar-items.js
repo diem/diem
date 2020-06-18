@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["TRACE_EDGE",""],["TRACE_EVENT",""]],"fn":[["is_selected",""],["libra_trace_set","Checks if libra trace is enabled"],["random_node",""],["set_libra_trace","Sets libra trace config"],["trace_node",""]],"struct":[["TraceBlockGuard",""]]});
+initSidebarItems({"constant":[["LIBRA_TRACE",""],["TRACE_EDGE",""],["TRACE_EVENT",""]],"fn":[["is_selected",""],["libra_trace_set","Checks if libra trace is enabled"],["random_node",""],["set_libra_trace","Sets libra trace config"],["trace_node",""]],"struct":[["TraceBlockGuard",""]]});

@@ -67,6 +67,8 @@
 <span id="67">67</span>
 <span id="68">68</span>
 <span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -74,12 +76,12 @@
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">serde_json</span>::{<span class="self">self</span>, <span class="ident">value</span> <span class="kw">as</span> <span class="ident">json</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">VecDeque</span>, <span class="ident">sync</span>::<span class="ident">Mutex</span>, <span class="ident">time</span>::<span class="ident">SystemTime</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">VecDeque</span>, <span class="ident">convert</span>::<span class="ident">TryInto</span>, <span class="ident">sync</span>::<span class="ident">Mutex</span>, <span class="ident">time</span>::<span class="ident">SystemTime</span>};
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>, <span class="ident">Deserialize</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">JsonLogEntry</span> {
     <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">String</span>,
-    <span class="kw">pub</span> <span class="ident">timestamp</span>: <span class="ident">u128</span>,
+    <span class="kw">pub</span> <span class="ident">timestamp</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">json</span>: <span class="ident">json</span>::<span class="ident">Value</span>,
 }
 
@@ -109,7 +111,9 @@
         <span class="kw">let</span> <span class="ident">timestamp</span> <span class="op">=</span> <span class="ident">SystemTime</span>::<span class="ident">now</span>()
             .<span class="ident">duration_since</span>(<span class="ident">SystemTime</span>::<span class="ident">UNIX_EPOCH</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;now &gt; UNIX_EPOCH&quot;</span>)
-            .<span class="ident">as_millis</span>();
+            .<span class="ident">as_millis</span>()
+            .<span class="ident">try_into</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;Unable to convert u128 into u64&quot;</span>);
         <span class="ident">JsonLogEntry</span> {
             <span class="ident">name</span>: <span class="ident">name</span>.<span class="ident">into</span>(),
             <span class="ident">timestamp</span>,
