@@ -1756,14 +1756,14 @@
 }
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">Value</span> <span class="op">=</span> <span class="ident">Spanned</span><span class="op">&lt;</span><span class="ident">Value_</span><span class="op">&gt;</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">UnaryOp_</span> {
     <span class="comment">// !</span>
     <span class="ident">Not</span>,
 }
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">UnaryOp</span> <span class="op">=</span> <span class="ident">Spanned</span><span class="op">&lt;</span><span class="ident">UnaryOp_</span><span class="op">&gt;</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Copy</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">BinOp_</span> {
     <span class="comment">// Int ops</span>
     <span class="comment">// +</span>

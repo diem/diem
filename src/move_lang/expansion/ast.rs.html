@@ -1076,7 +1076,7 @@
 }
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ExpDotted</span> <span class="op">=</span> <span class="ident">Spanned</span><span class="op">&lt;</span><span class="ident">ExpDotted_</span><span class="op">&gt;</span>;
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Value_</span> {
     <span class="comment">// 0x&lt;hex representation up to 64 digits with padding 0s&gt;</span>
     <span class="ident">Address</span>(<span class="ident">Address</span>),

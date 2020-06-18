@@ -1830,7 +1830,7 @@
                 <span class="ident">BT</span>::<span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">B</span>::<span class="ident">CastU8</span>,
                 <span class="ident">BT</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">B</span>::<span class="ident">CastU64</span>,
                 <span class="ident">BT</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">B</span>::<span class="ident">CastU128</span>,
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;ICE type checking failed&quot;</span>),
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;ICE type checking failed. unexpected cast&quot;</span>),
             };
             <span class="ident">code</span>.<span class="ident">push</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">instr</span>));
         }
