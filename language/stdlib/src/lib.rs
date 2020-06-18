@@ -34,7 +34,7 @@ pub const TRANSACTION_SCRIPTS_DOC_DIR: &str = "transaction_scripts/doc";
 /// The output path under which compiled script files can be found
 pub const COMPILED_TRANSACTION_SCRIPTS_DIR: &str = "compiled/transaction_scripts";
 /// The output path for transaction script ABIs.
-pub const TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/transaction_scripts/abi";
+pub const COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/transaction_scripts/abi";
 
 pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterator<Item = PathBuf> {
     dir_iter.flat_map(|path| {
@@ -112,7 +112,7 @@ pub fn build_transaction_script_doc(script_file_str: String) {
 
 pub fn build_transaction_script_abi(script_file_str: String) {
     build_abi(
-        TRANSACTION_SCRIPTS_ABI_DIR,
+        COMPILED_TRANSACTION_SCRIPTS_ABI_DIR,
         &[script_file_str],
         STD_LIB_DIR,
         COMPILED_TRANSACTION_SCRIPTS_DIR,
