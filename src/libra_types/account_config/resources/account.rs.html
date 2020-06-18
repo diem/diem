@@ -88,14 +88,6 @@
 <span id="88">88</span>
 <span id="89">89</span>
 <span id="90">90</span>
-<span id="91">91</span>
-<span id="92">92</span>
-<span id="93">93</span>
-<span id="94">94</span>
-<span id="95">95</span>
-<span id="96">96</span>
-<span id="97">97</span>
-<span id="98">98</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -123,7 +115,6 @@
     <span class="ident">sent_events</span>: <span class="ident">EventHandle</span>,
     <span class="ident">sequence_number</span>: <span class="ident">u64</span>,
     <span class="ident">is_frozen</span>: <span class="ident">bool</span>,
-    <span class="ident">role_id</span>: <span class="ident">u64</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">AccountResource</span> {
@@ -136,7 +127,6 @@
         <span class="ident">sent_events</span>: <span class="ident">EventHandle</span>,
         <span class="ident">received_events</span>: <span class="ident">EventHandle</span>,
         <span class="ident">is_frozen</span>: <span class="ident">bool</span>,
-        <span class="ident">role_id</span>: <span class="ident">u64</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">AccountResource</span> {
             <span class="ident">sequence_number</span>,
@@ -146,7 +136,6 @@
             <span class="ident">sent_events</span>,
             <span class="ident">received_events</span>,
             <span class="ident">is_frozen</span>,
-            <span class="ident">role_id</span>,
         }
     }
 
@@ -183,11 +172,6 @@
     <span class="doccomment">/// Return the the is_frozen flag for the given AccountResource</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_frozen</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">is_frozen</span>
-    }
-
-    <span class="doccomment">/// Return the the is_frozen flag for the given AccountResource</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">role_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
-        <span class="self">self</span>.<span class="ident">role_id</span>
     }
 }
 

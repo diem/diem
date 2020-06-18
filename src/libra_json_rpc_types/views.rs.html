@@ -604,8 +604,6 @@
 <span id="604">604</span>
 <span id="605">605</span>
 <span id="606">606</span>
-<span id="607">607</span>
-<span id="608">608</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -680,7 +678,6 @@
     <span class="kw">pub</span> <span class="ident">delegated_key_rotation_capability</span>: <span class="ident">bool</span>,
     <span class="kw">pub</span> <span class="ident">delegated_withdrawal_capability</span>: <span class="ident">bool</span>,
     <span class="kw">pub</span> <span class="ident">is_frozen</span>: <span class="ident">bool</span>,
-    <span class="kw">pub</span> <span class="ident">role_id</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">role</span>: <span class="ident">AccountRoleView</span>,
 }
 
@@ -704,7 +701,6 @@
             <span class="ident">delegated_key_rotation_capability</span>: <span class="ident">account</span>.<span class="ident">has_delegated_key_rotation_capability</span>(),
             <span class="ident">delegated_withdrawal_capability</span>: <span class="ident">account</span>.<span class="ident">has_delegated_withdrawal_capability</span>(),
             <span class="ident">is_frozen</span>: <span class="ident">account</span>.<span class="ident">is_frozen</span>(),
-            <span class="ident">role_id</span>: <span class="ident">account</span>.<span class="ident">role_id</span>(),
             <span class="ident">role</span>: <span class="ident">AccountRoleView</span>::<span class="ident">from</span>(<span class="ident">account_role</span>),
         }
     }

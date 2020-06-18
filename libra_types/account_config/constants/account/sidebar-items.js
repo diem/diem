@@ -1,1 +1,1 @@
-initSidebarItems({"constant":[["ACCOUNT_MODULE_NAME",""]],"fn":[["received_event_name",""],["sent_event_name",""]],"static":[["ACCOUNT_MODULE","The ModuleId for the Account module."]]});
+initSidebarItems({"constant":[["ACCOUNT_MODULE_NAME",""]],"fn":[["received_event_name",""],["sent_event_name",""]],"static":[["ACCOUNT_MODULE","The ModuleId for the Account module."],["ACCOUNT_MODULE_IDENTIFIER",""]]});

@@ -605,6 +605,15 @@
 <span id="605">605</span>
 <span id="606">606</span>
 <span id="607">607</span>
+<span id="608">608</span>
+<span id="609">609</span>
+<span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -957,6 +966,14 @@
     <span class="ident">doc</span>: <span class="string">&quot;Update Libra version&quot;</span>
 }
 
+{
+    <span class="ident">script</span>: <span class="ident">CreateValidatorAccount</span>,
+    <span class="ident">builder</span>: <span class="ident">encode_create_validator_account</span>,
+    <span class="ident">type_args</span>: [<span class="ident">currency</span>],
+    <span class="ident">args</span>: [<span class="ident">new_validator_address</span>: <span class="ident">Address</span>, <span class="ident">auth_key_prefix</span>: <span class="ident">Bytes</span>],
+    <span class="ident">doc</span>: <span class="string">&quot;Creates a validator account at `new_validator_address` with `auth_key_prefix`&quot;</span>
+}
+
 <span class="comment">//...........................................................................</span>
 <span class="comment">// on-chain LBR scripts</span>
 <span class="comment">//...........................................................................</span>
@@ -1195,6 +1212,7 @@
                 <span class="string">&quot;mint&quot;</span>,
                 <span class="string">&quot;modify_publishing_option&quot;</span>,
                 <span class="string">&quot;update_libra_version&quot;</span>,
+                <span class="string">&quot;create_validator_account&quot;</span>,
                 <span class="string">&quot;mint_lbr&quot;</span>,
                 <span class="string">&quot;unmint_lbr&quot;</span>,
                 <span class="string">&quot;update_minting_ability&quot;</span>,

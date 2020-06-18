@@ -282,7 +282,7 @@
 
     main&lt;Token&gt;(account: &amp;signer, fresh_address: address, auth_key_prefix: vector&lt;u8&gt;, initial_amount: u64) {
       let with_cap: LibraAccount.WithdrawCapability;
-      LibraAccount.create_unhosted_account&lt;Token&gt;(copy(fresh_address), move(auth_key_prefix), false);
+      LibraAccount.create_unhosted_account&lt;Token&gt;(copy(account), copy(fresh_address), move(auth_key_prefix), false);
       if (copy(initial_amount) &gt; 0) {
          with_cap = LibraAccount.extract_withdraw_capability(copy(account));
          LibraAccount.deposit&lt;Token&gt;(

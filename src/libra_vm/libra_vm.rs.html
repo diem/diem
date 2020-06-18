@@ -1195,6 +1195,11 @@
 <span id="1195">1195</span>
 <span id="1196">1196</span>
 <span id="1197">1197</span>
+<span id="1198">1198</span>
+<span id="1199">1199</span>
+<span id="1200">1200</span>
+<span id="1201">1201</span>
+<span id="1202">1202</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1213,7 +1218,7 @@
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-    <span class="ident">account_config</span>,
+    <span class="ident">account_config</span>::{<span class="self">self</span>, <span class="ident">RoleId</span>},
     <span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>,
     <span class="ident">on_chain_config</span>::{<span class="ident">LibraVersion</span>, <span class="ident">OnChainConfig</span>, <span class="ident">VMConfig</span>},
     <span class="ident">transaction</span>::{
@@ -1228,7 +1233,9 @@
     <span class="ident">gas_schedule</span>::{<span class="ident">AbstractMemorySize</span>, <span class="ident">CostTable</span>, <span class="ident">GasAlgebra</span>, <span class="ident">GasCarrier</span>, <span class="ident">GasUnits</span>},
     <span class="ident">identifier</span>::<span class="ident">IdentStr</span>,
     <span class="ident">language_storage</span>::{<span class="ident">ResourceKey</span>, <span class="ident">StructTag</span>, <span class="ident">TypeTag</span>},
+    <span class="ident">move_resource</span>::<span class="ident">MoveResource</span>,
 };
+
 <span class="kw">use</span> <span class="ident">move_vm_runtime</span>::{
     <span class="ident">data_cache</span>::{<span class="ident">RemoteCache</span>, <span class="ident">TransactionDataCache</span>},
     <span class="ident">move_vm</span>::<span class="ident">MoveVM</span>,
@@ -1240,6 +1247,10 @@
 <span class="kw">use</span> <span class="ident">rayon</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashSet</span>, <span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">errors</span>::{<span class="ident">convert_prologue_runtime_error</span>, <span class="ident">VMResult</span>};
+
+<span class="doccomment">/// Any transation sent from an account with a role id below this cutoff will be priorited over</span>
+<span class="doccomment">/// other transactions.</span>
+<span class="kw">const</span> <span class="ident">PRIORITIZED_TRANSACTION_ROLE_CUTOFF</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">5</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="doccomment">/// A wrapper to make VMRuntime standalone and thread safe.</span>
@@ -2164,7 +2175,7 @@
             );
         };
 
-        <span class="kw">let</span> <span class="ident">is_governance_txn</span> <span class="op">=</span> <span class="ident">is_governance_txn</span>(<span class="ident">txn_sender</span>, <span class="kw-2">&amp;</span><span class="ident">data_cache</span>);
+        <span class="kw">let</span> <span class="ident">is_prioritized_txn</span> <span class="op">=</span> <span class="ident">is_prioritized_txn</span>(<span class="ident">txn_sender</span>, <span class="kw-2">&amp;</span><span class="ident">data_cache</span>);
         <span class="kw">let</span> <span class="ident">normalized_gas_price</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">normalize_gas_price</span>(<span class="ident">gas_price</span>, <span class="kw-2">&amp;</span><span class="ident">currency_code</span>, <span class="kw-2">&amp;</span><span class="ident">data_cache</span>)
         {
             <span class="prelude-val">Ok</span>(<span class="ident">price</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">price</span>,
@@ -2198,7 +2209,7 @@
             .<span class="ident">with_label_values</span>(<span class="kw-2">&amp;</span>[<span class="ident">counter_label</span>])
             .<span class="ident">inc</span>();
 
-        <span class="ident">VMValidatorResult</span>::<span class="ident">new</span>(<span class="ident">res</span>, <span class="ident">normalized_gas_price</span>, <span class="ident">is_governance_txn</span>)
+        <span class="ident">VMValidatorResult</span>::<span class="ident">new</span>(<span class="ident">res</span>, <span class="ident">normalized_gas_price</span>, <span class="ident">is_prioritized_txn</span>)
     }
 }
 
@@ -2254,24 +2265,23 @@
     }
 }
 
-<span class="kw">fn</span> <span class="ident">is_governance_txn</span>(<span class="ident">sender</span>: <span class="ident">AccountAddress</span>, <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">RemoteCache</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-    <span class="kw">let</span> <span class="ident">association_capability_path</span> <span class="op">=</span>
-        <span class="ident">create_access_path</span>(<span class="ident">sender</span>, <span class="ident">association_capability_struct_tag</span>());
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">blob</span>)) <span class="op">=</span> <span class="ident">remote_cache</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">association_capability_path</span>) {
-        <span class="kw">return</span> <span class="ident">lcs</span>::<span class="ident">from_bytes</span>::<span class="op">&lt;</span><span class="ident">account_config</span>::<span class="ident">AssociationCapabilityResource</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">blob</span>).<span class="ident">is_ok</span>();
+<span class="kw">fn</span> <span class="ident">is_prioritized_txn</span>(<span class="ident">sender</span>: <span class="ident">AccountAddress</span>, <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">RemoteCache</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+    <span class="kw">let</span> <span class="ident">role_access_path</span> <span class="op">=</span> <span class="ident">create_access_path</span>(<span class="ident">sender</span>, <span class="ident">RoleId</span>::<span class="ident">struct_tag</span>());
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">blob</span>)) <span class="op">=</span> <span class="ident">remote_cache</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">role_access_path</span>) {
+        <span class="kw">return</span> <span class="ident">lcs</span>::<span class="ident">from_bytes</span>::<span class="op">&lt;</span><span class="ident">account_config</span>::<span class="ident">RoleId</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">blob</span>)
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">role_id</span><span class="op">|</span> <span class="ident">role_id</span>.<span class="ident">role_id</span>() <span class="op">&lt;</span> <span class="ident">PRIORITIZED_TRANSACTION_ROLE_CUTOFF</span>)
+            .<span class="ident">unwrap_or</span>(<span class="bool-val">false</span>);
     }
     <span class="bool-val">false</span>
 }
 
 <span class="kw">fn</span> <span class="ident">can_publish_modules</span>(<span class="ident">sender</span>: <span class="ident">AccountAddress</span>, <span class="ident">remote_cache</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">RemoteCache</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-    <span class="kw">let</span> <span class="ident">association_capability_path</span> <span class="op">=</span> <span class="ident">create_access_path</span>(
-        <span class="ident">sender</span>,
-        <span class="ident">association_module_publishing_capability_struct_tag</span>(),
-    );
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">blob</span>)) <span class="op">=</span> <span class="ident">remote_cache</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">association_capability_path</span>) {
-        <span class="kw">return</span> <span class="ident">lcs</span>::<span class="ident">from_bytes</span>::<span class="op">&lt;</span><span class="ident">account_config</span>::<span class="ident">AssociationCapabilityResource</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="ident">blob</span>).<span class="ident">is_ok</span>();
+    <span class="kw">let</span> <span class="ident">module_publishing_priv_path</span> <span class="op">=</span>
+        <span class="ident">create_access_path</span>(<span class="ident">sender</span>, <span class="ident">module_publishing_capability_struct_tag</span>());
+    <span class="kw">match</span> <span class="ident">remote_cache</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">module_publishing_priv_path</span>) {
+        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="kw">_</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
     }
-    <span class="bool-val">false</span>
 }
 
 <span class="kw">fn</span> <span class="ident">normalize_gas_price</span>(
