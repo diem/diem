@@ -1,5 +1,5 @@
 //! account: bob
-//! account: vasp, 0, 0, vasp
+//! account: vasp, 0, 0, address
 
 //! new-transaction
 //! sender: bob
@@ -99,11 +99,19 @@ fun main(account: &signer) {
 script {
 use 0x1::LibraAccount;
 use 0x1::Roles::{Self, AssociationRootRole};
+use 0x1::LBR::LBR;
 fun main(association: &signer) {
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     let r = Roles::extract_privilege_to_capability<AssociationRootRole>(association);
-    LibraAccount::add_parent_vasp_role_from_association(
-        &r, {{vasp}}, x"A", x"B", pubkey
+    LibraAccount::create_parent_vasp_account<LBR>(
+        association,
+        &r,
+        {{vasp}},
+        {{vasp::auth_key}},
+        x"A",
+        x"B",
+        pubkey,
+        false,
     );
     Roles::restore_capability_to_privilege(association, r);
 }

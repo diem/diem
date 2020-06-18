@@ -34,11 +34,6 @@ module Roles {
     use 0x1::CoreAddresses;
     use 0x1::LibraTimestamp;
 
-    /// TODO: This needs to be removed.
-    public fun parent_vasp_role_TESTNET_HACK(): ParentVASPRole {
-        ParentVASPRole{}
-    }
-
     ///////////////////////////////////////////////////////////////////////////
     // Role ID constants
     ///////////////////////////////////////////////////////////////////////////

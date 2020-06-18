@@ -7,7 +7,7 @@ use crate::{
         transaction::{is_new_transaction, Config, Entry},
     },
     errors::*,
-    preprocessor::substitute_addresses,
+    preprocessor::substitute_addresses_and_auth_keys,
     tests::{
         global_config_tests::parse_and_build_config as parse_and_build_global_config,
         parse_each_line_as,
@@ -106,7 +106,7 @@ fn parse_new_transaction() {
 fn parse_and_build_config<'a>(global_config: &'a GlobalConfig, s: &str) -> Result<Config<'a>> {
     Config::build(
         &global_config,
-        &parse_each_line_as::<Entry>(&substitute_addresses(global_config, s))?,
+        &parse_each_line_as::<Entry>(&substitute_addresses_and_auth_keys(global_config, s))?,
     )
 }
 

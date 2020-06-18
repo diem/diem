@@ -142,34 +142,6 @@ module LibraAccount {
         Roles::add_privilege_to_account_treasury_compliance_role(account, AccountUnfreezing{});
     }
 
-    // TODO: temporary, remove when VASP account feature in E2E tests works
-    public fun add_parent_vasp_role_from_association(
-        parent_vasp_creation_capability: &Capability<AssociationRootRole>,
-        addr: address,
-        human_name: vector<u8>,
-        base_url: vector<u8>,
-        compliance_public_key: vector<u8>,
-    ) {
-        assert(exists_at(addr), 0);
-        let account = create_signer(addr);
-        VASP::publish_parent_vasp_credential(
-            &account, parent_vasp_creation_capability, human_name, base_url, compliance_public_key
-        );
-        Roles::add_privilege_to_account_parent_vasp_role(&account, Roles::parent_vasp_role_TESTNET_HACK());
-        destroy_signer(account);
-    }
-
-    // TODO: temporary, remove when DD account feature in E2E tests works
-    public fun add_preburn_from_tc<Token>(
-        preburn_creation_capability: &Capability<TreasuryComplianceRole>,
-        addr: address,
-    ) {
-        assert(exists_at(addr), 0);
-        let account = create_signer(addr);
-        Libra::publish_preburn_to_account<Token>(&account, preburn_creation_capability);
-        destroy_signer(account);
-    }
-
     public fun initialize(association: &signer) {
         // Operational constraint, not a privilege constraint.
         assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);

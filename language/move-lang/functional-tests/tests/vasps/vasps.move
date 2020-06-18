@@ -1,4 +1,4 @@
-//! account: parent, 10000000, 0, vasp
+//! account: parent, 0, 0, address
 //! account: bob, 10000000, 0, unhosted
 
 // create a parent VASP
@@ -11,32 +11,34 @@ use 0x1::LibraTimestamp;
 use 0x1::VASP;
 use 0x1::Roles::{Self, AssociationRootRole};
 fun main(assoc: &signer) {
-    let dummy_auth_key_prefix = x"00000000000000000000000000000000";
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     let add_all_currencies = false;
     let r = Roles::extract_privilege_to_capability<AssociationRootRole>(assoc);
+
     LibraAccount::create_parent_vasp_account<LBR>(
-        assoc, &r, 0xA, copy dummy_auth_key_prefix, x"A1", x"A2", copy pubkey, add_all_currencies
+        assoc,
+        &r,
+        {{parent}},
+        {{parent::auth_key}},
+        x"A1",
+        x"A2",
+        copy pubkey,
+        add_all_currencies,
     );
 
-    assert(VASP::is_vasp(0xA), 2001);
-    assert(VASP::is_parent(0xA), 2002);
-    assert(!VASP::is_child(0xA), 2003);
+    assert(VASP::is_vasp({{parent}}), 2001);
+    assert(VASP::is_parent({{parent}}), 2002);
+    assert(!VASP::is_child({{parent}}), 2003);
 
-    assert(VASP::parent_address(0xA) == 0xA, 2005);
-    assert(VASP::compliance_public_key(0xA) == copy pubkey, 2006);
-    assert(VASP::human_name(0xA) == x"A1", 2007);
-    assert(VASP::base_url(0xA) == x"A2", 2008);
+    assert(VASP::parent_address({{parent}}) == {{parent}}, 2005);
+    assert(VASP::compliance_public_key({{parent}}) == copy pubkey, 2006);
+    assert(VASP::human_name({{parent}}) == x"A1", 2007);
+    assert(VASP::base_url({{parent}}) == x"A2", 2008);
     assert(
-        VASP::expiration_date(0xA) > LibraTimestamp::now_microseconds(),
+        VASP::expiration_date({{parent}}) > LibraTimestamp::now_microseconds(),
         2009
     );
 
-    // set up parent account as a VASP
-    // TODO: remove this once //! account works
-    LibraAccount::add_parent_vasp_role_from_association(
-        &r, {{parent}}, x"A1", x"A2", pubkey,
-    );
     Roles::restore_capability_to_privilege(assoc, r);
 }
 }

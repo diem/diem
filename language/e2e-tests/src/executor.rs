@@ -274,6 +274,10 @@ impl FakeExecutor {
         Identifier::new(name).unwrap()
     }
 
+    pub fn set_block_time(&mut self, new_block_time: u64) {
+        self.block_time = new_block_time;
+    }
+
     pub fn exec(
         &mut self,
         module_name: &str,
