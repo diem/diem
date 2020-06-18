@@ -5,13 +5,13 @@
 
 ### Table of Contents
 
--  [Function `main`](#SCRIPT_main)
+-  [Function `update_unhosted_wallet_limits`](#SCRIPT_update_unhosted_wallet_limits)
 
 
 
-<a name="SCRIPT_main"></a>
+<a name="SCRIPT_update_unhosted_wallet_limits"></a>
 
-## Function `main`
+## Function `update_unhosted_wallet_limits`
 
 Script for Treasury Comliance Account to optionally update global thresholds
 of max balance, total flow (inflow + outflow) (microLBR) for LimitsDefinition bound accounts.
@@ -19,7 +19,7 @@ If the new threshold is zero, that particular config does not get updated.
 sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_max_total_flow: u64, new_max_holding_balance: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_update_unhosted_wallet_limits">update_unhosted_wallet_limits</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_max_total_flow: u64, new_max_holding_balance: u64)
 </code></pre>
 
 
@@ -28,7 +28,7 @@ sliding_nonce is a unique nonce for operation, see sliding_nonce.move for detail
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_main">main</a>&lt;CoinType&gt;(
+<pre><code><b>fun</b> <a href="#SCRIPT_update_unhosted_wallet_limits">update_unhosted_wallet_limits</a>&lt;CoinType&gt;(
     tc_account: &signer,
     sliding_nonce: u64,
     new_max_total_flow: u64,

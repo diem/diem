@@ -10,14 +10,13 @@
 use anyhow::{anyhow, Error, Result};
 use include_dir::{include_dir, Dir};
 use libra_crypto::HashValue;
-use libra_types::transaction::SCRIPT_HASH_LENGTH;
+use libra_types::transaction::{ScriptABI, SCRIPT_HASH_LENGTH};
 use std::{convert::TryFrom, fmt, path::PathBuf};
 
-// This includes the compiled transaction scripts as binaries. We must use this hack to work around
+// This includes the script ABIs as binaries. We must use this hack to work around
 // a problem with Docker, which does not copy over the Move source files that would be be used to
 // produce these binaries at runtime.
-#[allow(dead_code)]
-const COMPILED_TXN_SCRIPTS_DIR: Dir = include_dir!("transaction_scripts");
+const TXN_SCRIPTS_ABI_DIR: Dir = include_dir!("transaction_scripts/abi");
 
 /// All of the Move transaction scripts that can be executed on the Libra blockchain
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -125,22 +124,24 @@ impl StdlibScript {
         Self::try_from(code_bytes).is_ok()
     }
 
-    /// Return the Move bytecode produced by compiling this script. This will almost always read
-    /// from disk rather invoking the compiler; genesis is the only exception.
+    /// Return the Move bytecode that was produced by compiling this script.
     pub fn compiled_bytes(self) -> CompiledBytes {
-        // read from disk
-        let mut path = PathBuf::from(self.name());
-        path.set_extension("mv");
-        CompiledBytes(
-            COMPILED_TXN_SCRIPTS_DIR
-                .get_file(path.clone())
-                .unwrap_or_else(|| panic!("File {:?} does not exist", path))
-                .contents()
-                .to_vec(),
-        )
+        CompiledBytes(self.abi().code().to_vec())
     }
 
-    /// Return the sha3-256 hash of the compiled script bytes
+    /// Return the ABI of the script (including the bytecode).
+    pub fn abi(self) -> ScriptABI {
+        let mut path = PathBuf::from(self.name());
+        path.set_extension("abi");
+        let content = TXN_SCRIPTS_ABI_DIR
+            .get_file(path.clone())
+            .unwrap_or_else(|| panic!("File {:?} does not exist", path))
+            .contents();
+        serde_json::from_slice(content)
+            .unwrap_or_else(|err| panic!("Failed to deserialize ABI file {:?}: {}", path, err))
+    }
+
+    /// Return the sha3-256 hash of the compiled script bytes.
     pub fn hash(self) -> HashValue {
         self.compiled_bytes().hash()
     }
@@ -235,10 +236,13 @@ impl fmt::Display for StdlibScript {
 mod test {
     use super::*;
 
+    // This includes the compiled script binaries.
+    const COMPILED_TXN_SCRIPTS_DIR: Dir = include_dir!("transaction_scripts");
+
     #[test]
     fn test_file_correspondence() {
-        // make sure that every file under transaction_scripts/ is represented in
-        // StdlibScript::all() (and vice versa)
+        // Make sure that every compiled file under transaction_scripts is represented in
+        // StdlibScript::all() (and vice versa).
         let files = COMPILED_TXN_SCRIPTS_DIR.files();
         let scripts = StdlibScript::all();
         for file in files {
@@ -258,5 +262,32 @@ mod test {
                 "Did you forget to rebuild the standard library?"
             }
         );
+    }
+
+    #[test]
+    fn test_names() {
+        // Make sure that the names listed here matches the function names in the code.
+        for script in StdlibScript::all() {
+            assert_eq!(
+                script.name(),
+                script.abi().name(),
+                "The main function in language/stdlib/transaction_scripts/{}.move is named `{}` instead of `{}`. Please fix the issue and re-run (cd language/stdlib && cargo run --release)",
+                script.name(),
+                script.abi().name(),
+                script.name(),
+            );
+        }
+    }
+
+    #[test]
+    fn test_docs() {
+        // Make sure that scripts have non-empty documentation.
+        for script in StdlibScript::all() {
+            assert!(
+                !script.abi().doc().is_empty(),
+                "The main function in language/stdlib/transaction_scripts/{}.move does not have a `///` inline doc comment. Please fix the issue and re-run (cd language/stdlib && cargo run --release)",
+                script.name(),
+            );
+        }
     }
 }
