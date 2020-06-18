@@ -442,7 +442,7 @@ pub enum AccountRoleSpecifier {
 }
 
 impl AccountRoleSpecifier {
-    pub fn id(&self) -> u64 {
+    pub fn id(self) -> u64 {
         match self {
             Self::AssocRoot => 0,
             Self::TreasuryCompliance => 1,

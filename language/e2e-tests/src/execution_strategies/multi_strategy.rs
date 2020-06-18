@@ -7,6 +7,7 @@ use libra_types::transaction::TransactionOutput;
 use std::{collections::BTreeMap, error::Error, fmt};
 
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum MultiResult<E: Error> {
     NonMatchingOutput(TransactionOutput, TransactionOutput),
     OtherResult(E),

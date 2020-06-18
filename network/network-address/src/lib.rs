@@ -717,7 +717,7 @@ pub enum IpFilter {
 }
 
 impl IpFilter {
-    pub fn matches(&self, ipaddr: IpAddr) -> bool {
+    pub fn matches(self, ipaddr: IpAddr) -> bool {
         match self {
             IpFilter::Any => true,
             IpFilter::OnlyIp4 => ipaddr.is_ipv4(),

@@ -344,7 +344,9 @@ fn abbreviate_crate(name: &str) -> &str {
 
 // This is exact copy of similar function in log crate
 /// Sets libra trace config
-pub fn set_libra_trace(config: &HashMap<String, String>) -> Result<()> {
+pub fn set_libra_trace<S: ::std::hash::BuildHasher>(
+    config: &HashMap<String, String, S>,
+) -> Result<()> {
     match parse_sampling_config(config) {
         Ok(sampling) => unsafe {
             match LIBRA_TRACE_STATE.compare_and_swap(UNINITIALIZED, INITIALIZING, Ordering::SeqCst)
@@ -365,7 +367,9 @@ pub fn set_libra_trace(config: &HashMap<String, String>) -> Result<()> {
     }
 }
 
-fn parse_sampling_config(config: &HashMap<String, String>) -> Result<Sampling> {
+fn parse_sampling_config<S: ::std::hash::BuildHasher>(
+    config: &HashMap<String, String, S>,
+) -> Result<Sampling> {
     let mut map = HashMap::new();
     for (category, rate) in config {
         let k: &'static str = Box::leak(category.clone().into_boxed_str());

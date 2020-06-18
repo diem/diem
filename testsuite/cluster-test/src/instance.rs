@@ -68,6 +68,7 @@ pub struct Instance {
 }
 
 #[derive(Clone)]
+#[allow(clippy::large_enum_variant)]
 enum InstanceBackend {
     K8S(K8sInstanceInfo),
     Swarm,

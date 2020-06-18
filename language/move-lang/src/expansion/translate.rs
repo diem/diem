@@ -1574,7 +1574,7 @@ enum ModuleMemberKind {
 }
 
 impl ModuleMemberKind {
-    pub fn case(&self) -> &'static str {
+    pub fn case(self) -> &'static str {
         match self {
             ModuleMemberKind::Function => "function",
             // ModuleMember::Constant => "constant",
