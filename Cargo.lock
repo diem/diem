@@ -5714,7 +5714,6 @@ version = "0.1.0"
 dependencies = [
  "compiled-stdlib 0.1.0",
  "libra-canonical-serialization 0.1.0",
- "libra-config 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "mirai-annotations 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
