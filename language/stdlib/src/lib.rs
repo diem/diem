@@ -31,6 +31,11 @@ pub const STD_LIB_DOC_DIR: &str = "modules/doc";
 /// The output path for transaction script documentation.
 pub const TRANSACTION_SCRIPTS_DOC_DIR: &str = "transaction_scripts/doc";
 
+/// The output path under which compiled script files can be found
+pub const COMPILED_TRANSACTION_SCRIPTS_DIR: &str = "compiled/transaction_scripts";
+/// The output path for transaction script ABIs.
+pub const TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/transaction_scripts/abi";
+
 pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterator<Item = PathBuf> {
     dir_iter.flat_map(|path| {
         if path.extension()?.to_str()? == MOVE_EXTENSION {
@@ -105,6 +110,15 @@ pub fn build_transaction_script_doc(script_file_str: String) {
     )
 }
 
+pub fn build_transaction_script_abi(script_file_str: String) {
+    build_abi(
+        TRANSACTION_SCRIPTS_ABI_DIR,
+        &[script_file_str],
+        STD_LIB_DIR,
+        COMPILED_TRANSACTION_SCRIPTS_DIR,
+    )
+}
+
 fn build_doc(output_path: &str, doc_path: &str, sources: &[String], dep_path: &str) {
     let mut options = move_prover::cli::Options::default();
     options.move_sources = sources.to_vec();
@@ -120,6 +134,20 @@ fn build_doc(output_path: &str, doc_path: &str, sources: &[String], dep_path: &s
         options.docgen.doc_path = vec![doc_path.to_string()];
     }
     options.docgen.output_directory = output_path.to_string();
+    options.setup_logging_for_test();
+    move_prover::run_move_prover_errors_to_stderr(options).unwrap();
+}
+
+fn build_abi(output_path: &str, sources: &[String], dep_path: &str, compiled_script_path: &str) {
+    let mut options = move_prover::cli::Options::default();
+    options.move_sources = sources.to_vec();
+    if !dep_path.is_empty() {
+        options.move_deps = vec![dep_path.to_string()]
+    }
+    options.verbosity_level = LevelFilter::Warn;
+    options.run_abigen = true;
+    options.abigen.output_directory = output_path.to_string();
+    options.abigen.compiled_script_directory = compiled_script_path.to_string();
     options.setup_logging_for_test();
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
 }
