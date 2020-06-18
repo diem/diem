@@ -1,14 +1,40 @@
 Move prover returns: exiting with boogie verification errors
+error: abort not covered by any of the `aborts_if` clauses
+
+    ┌── tests/sources/functional/loops.move:77:5 ───
+    │
+ 77 │ ╭     public fun iter10_abort_incorrect() {
+ 78 │ │         let i = 0;
+ 79 │ │         while ({
+ 80 │ │             spec { assert i <= 7; };
+ 81 │ │             (i <= 10)
+ 82 │ │         }) {
+ 83 │ │             if (i == 7) abort 7;
+ 84 │ │             i = i + 1;
+ 85 │ │         }
+ 86 │ │     }
+    │ ╰─────^
+    ·
+ 83 │             if (i == 7) abort 7;
+    │             ------------------- abort happened here
+    │
+    =     at tests/sources/functional/loops.move:77:5: iter10_abort_incorrect (entry)
+    =     at tests/sources/functional/loops.move:78:13: iter10_abort_incorrect
+    =     at tests/sources/functional/loops.move:80:13: iter10_abort_incorrect
+    =         i = <redacted>
+    =     at tests/sources/functional/loops.move:79:9: iter10_abort_incorrect
+    =     at tests/sources/functional/loops.move:83:13: iter10_abort_incorrect (ABORTED)
+
 error: function does not abort under this condition
 
-    ┌── tests/sources/functional/loops.move:60:9 ───
+    ┌── tests/sources/functional/loops.move:59:9 ───
     │
- 60 │         aborts_if true;
+ 59 │         aborts_if true;
     │         ^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/loops.move:49:5: iter10_no_abort_incorrect (entry)
-    =     at tests/sources/functional/loops.move:50:13: iter10_no_abort_incorrect
-    =     at tests/sources/functional/loops.move:52:13: iter10_no_abort_incorrect
+    =     at tests/sources/functional/loops.move:48:5: iter10_no_abort_incorrect (entry)
+    =     at tests/sources/functional/loops.move:49:13: iter10_no_abort_incorrect
+    =     at tests/sources/functional/loops.move:51:13: iter10_no_abort_incorrect
     =         i = <redacted>
-    =     at tests/sources/functional/loops.move:51:9: iter10_no_abort_incorrect
-    =     at tests/sources/functional/loops.move:49:5: iter10_no_abort_incorrect (exit)
+    =     at tests/sources/functional/loops.move:50:9: iter10_no_abort_incorrect
+    =     at tests/sources/functional/loops.move:48:5: iter10_no_abort_incorrect (exit)

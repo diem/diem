@@ -19,8 +19,8 @@ pub struct Reducible<T: Ord + Copy + Debug> {
 
 pub struct Graph<T: Ord + Copy + Debug> {
     entry: T,
-    nodes: BTreeSet<T>,
-    edges: BTreeSet<(T, T)>,
+    nodes: Vec<T>,
+    edges: Vec<(T, T)>,
     predecessors: BTreeMap<T, BTreeSet<T>>,
     successors: BTreeMap<T, BTreeSet<T>>,
 }
@@ -28,7 +28,7 @@ pub struct Graph<T: Ord + Copy + Debug> {
 impl<T: Ord + Copy + Debug> Graph<T> {
     /// This function creates a graph from a set of nodes (with a unique entry node)
     /// and a set of edges.
-    pub fn new(entry: T, nodes: BTreeSet<T>, edges: BTreeSet<(T, T)>) -> Self {
+    pub fn new(entry: T, nodes: Vec<T>, edges: Vec<(T, T)>) -> Self {
         let mut predecessors: BTreeMap<T, BTreeSet<T>> =
             nodes.iter().map(|x| (*x, BTreeSet::new())).collect();
         let mut successors: BTreeMap<T, BTreeSet<T>> =
@@ -55,17 +55,17 @@ impl<T: Ord + Copy + Debug> Graph<T> {
     pub fn compute_reducible(&self) -> Option<Reducible<T>> {
         let dom_relation = DomRelation::new(self);
         let mut loop_headers = BTreeSet::new();
-        let mut back_edges = BTreeSet::new();
-        let mut non_back_edges = BTreeSet::new();
+        let mut back_edges = vec![];
+        let mut non_back_edges = vec![];
         for e in &self.edges {
             if !dom_relation.is_reachable(e.0) {
                 continue;
             }
             if dom_relation.is_dominated_by(e.0, e.1) {
-                back_edges.insert(*e);
+                back_edges.push(*e);
                 loop_headers.insert(e.1);
             } else {
-                non_back_edges.insert(*e);
+                non_back_edges.push(*e);
             }
         }
         if Graph::new(self.entry, self.nodes.clone(), non_back_edges).is_acyclic() {
