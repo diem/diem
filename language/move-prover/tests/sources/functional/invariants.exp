@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error:  This assertion might not hold.
+error: data invariant does not hold
 
     ┌── tests/sources/functional/invariants.move:16:9 ───
     │
@@ -8,7 +8,7 @@ error:  This assertion might not hold.
     │
     =     at tests/sources/functional/invariants.move:42:5: invalid_R_pack (entry)
 
-error:  This assertion might not hold.
+error: data invariant does not hold
 
     ┌── tests/sources/functional/invariants.move:16:9 ───
     │
@@ -26,7 +26,7 @@ error:  This assertion might not hold.
     =         r_ref = <redacted>,
     =         x_ref = <redacted>
 
-error:  This assertion might not hold.
+error: data invariant does not hold
 
      ┌── tests/sources/functional/invariants.move:150:9 ───
      │

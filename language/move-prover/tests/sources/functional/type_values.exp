@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error:  A postcondition might not hold on this return path.
+error: precondition does not hold at this call
 
     ┌── tests/sources/functional/type_values.move:25:9 ───
     │
@@ -11,7 +11,7 @@ error:  A postcondition might not hold on this return path.
     =         account = <redacted>
     =     at tests/sources/functional/type_values.move:37:5: add_R_incorrect (exit)
 
-error:  A postcondition might not hold on this return path.
+error: post-condition does not hold
 
     ┌── tests/sources/functional/type_values.move:18:9 ───
     │

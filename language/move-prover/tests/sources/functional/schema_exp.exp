@@ -15,7 +15,7 @@ error: abort not covered by any of the `aborts_if` clauses
     =     at tests/sources/functional/schema_exp.move:26:9: bar_incorrect (ABORTED)
     =         c = <redacted>
 
-error:  A postcondition might not hold on this return path.
+error: post-condition does not hold
 
     ┌── tests/sources/functional/schema_exp.move:47:9 ───
     │

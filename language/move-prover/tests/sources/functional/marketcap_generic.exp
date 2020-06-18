@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error:  A postcondition might not hold on this return path.
+error: post-condition does not hold
 
     ┌── tests/sources/functional/marketcap_generic.move:68:10 ───
     │

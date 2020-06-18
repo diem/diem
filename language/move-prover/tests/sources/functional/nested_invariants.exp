@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error:  This assertion might not hold.
+error: data invariant does not hold
 
     ┌── tests/sources/functional/nested_invariants.move:16:9 ───
     │
@@ -14,7 +14,7 @@ error:  This assertion might not hold.
     =     at tests/sources/functional/nested_invariants.move:66:17: mutate_inner_data_invariant_invalid
     =         r = <redacted>
 
-error:  This assertion might not hold.
+error: data invariant does not hold
 
     ┌── tests/sources/functional/nested_invariants.move:32:9 ───
     │
@@ -29,7 +29,7 @@ error:  This assertion might not hold.
     =     at tests/sources/functional/nested_invariants.move:60:15: mutate_outer_data_invariant_invalid
     =         r = <redacted>
 
-error:  This assertion might not hold.
+error: data invariant does not hold
 
     ┌── tests/sources/functional/nested_invariants.move:16:9 ───
     │
@@ -38,7 +38,7 @@ error:  This assertion might not hold.
     │
     =     at tests/sources/functional/nested_invariants.move:46:5: new_inner_data_invariant_invalid (entry)
 
-error:  This assertion might not hold.
+error: data invariant does not hold
 
     ┌── tests/sources/functional/nested_invariants.move:32:9 ───
     │

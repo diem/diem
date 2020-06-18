@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error:  A postcondition might not hold on this return path.
+error: post-condition does not hold
 
     ┌── tests/sources/functional/return_values.move:16:9 ───
     │
@@ -17,7 +17,7 @@ error:  A postcondition might not hold on this return path.
     =         result_2 = <redacted>
     =     at tests/sources/functional/return_values.move:29:5: one_two_wrapper_incorrect (exit)
 
-error:  A postcondition might not hold on this return path.
+error: post-condition does not hold
 
     ┌── tests/sources/functional/return_values.move:59:9 ───
     │

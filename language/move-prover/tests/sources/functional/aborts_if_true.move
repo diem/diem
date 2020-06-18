@@ -7,7 +7,7 @@ module TestEnsuresFalseSmokeTest {
     public fun aborts_if_true_succeeds() {
     }
     spec fun aborts_if_true_succeeds {
-        pragma smoke_test = true;
+        pragma always_aborts_test = true;
     }
 
     /// Expect this to return an error because it passes the ensures false
@@ -15,7 +15,7 @@ module TestEnsuresFalseSmokeTest {
         abort 1
     }
     spec fun aborts_if_true_smoke_test_fails {
-        pragma smoke_test = true;
+        pragma always_aborts_test = true;
     }
 
     /// More complicated example where smoke test should catch an error
@@ -28,6 +28,6 @@ module TestEnsuresFalseSmokeTest {
         x
     }
     spec fun aborts_if_true_smoke_test_fails_2 {
-        pragma smoke_test = true;
+        pragma always_aborts_test = true;
     }
 }

@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error:  A postcondition might not hold on this return path.
+error: precondition does not hold at this call
 
     ┌── tests/sources/regression/generic_invariant200518.move:63:9 ───
     │

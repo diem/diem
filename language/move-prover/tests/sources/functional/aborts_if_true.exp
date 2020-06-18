@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error: function aborts_if_true_smoke_test_fails always aborts.
+error: function always aborts
 
     ┌── tests/sources/functional/aborts_if_true.move:14:5 ───
     │
@@ -9,7 +9,7 @@ error: function aborts_if_true_smoke_test_fails always aborts.
     │ ╰─────^
     │
 
-error: function aborts_if_true_smoke_test_fails_2 always aborts.
+error: function always aborts
 
     ┌── tests/sources/functional/aborts_if_true.move:22:5 ───
     │

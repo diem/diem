@@ -32,10 +32,9 @@ use crate::{
         boogie_requires_well_formed, boogie_struct_name, boogie_struct_type_value,
         boogie_type_value, boogie_type_values, boogie_well_formed_check, WellFormedMode,
     },
-    cli::{Options, VerificationScope},
+    cli::Options,
     spec_translator::SpecTranslator,
 };
-use spec_lang::env::VERIFY_PRAGMA;
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,
@@ -395,7 +394,10 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer);
 
         // If the function should not have a `_verify` entry point, stop here.
-        if !self.should_generate_verify(func_target) {
+        if !func_target
+            .func_env
+            .should_verify(self.options.prover.verify_scope)
+        {
             return;
         }
 
@@ -404,23 +406,6 @@ impl<'env> ModuleTranslator<'env> {
         self.generate_function_sig(func_target, false); // no inline
         self.generate_function_args_requires_well_formed(func_target);
         self.generate_verify_function_body(func_target); // function body just calls inlined version
-    }
-
-    /// Determines whether we should generate the `_verify` entry point for a function, which
-    /// triggers its standalone verification.
-    fn should_generate_verify(&self, func_target: &FunctionTarget<'_>) -> bool {
-        if func_target.func_env.module_env.is_dependency() {
-            // Never generate verify method for functions from dependencies.
-            return false;
-        }
-        // We look up the `verify` pragma property first in this function, then in
-        // the module, and finally fall back to the value of option `--verify`.
-        let default = || match self.options.prover.verify_scope {
-            VerificationScope::Public => func_target.func_env.is_public(),
-            VerificationScope::All => true,
-            VerificationScope::None => false,
-        };
-        func_target.is_pragma_true(VERIFY_PRAGMA, default)
     }
 
     /// Return a string for a boogie procedure header.
