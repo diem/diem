@@ -34,9 +34,7 @@ pub fn validator_swarm(
 
         // For a validator node, any of its validator peers are considered an upstream peer
         let network = node.validator_network.as_mut().unwrap();
-        node.upstream
-            .primary_networks
-            .push(network.identity.peer_id_from_config().unwrap());
+        node.upstream.primary_networks.push(network.peer_id());
         network.discovery_method = DiscoveryMethod::gossip(network.listen_address.clone());
         network.mutual_authentication = true;
         network.network_id = NetworkId::Validator;
@@ -76,9 +74,6 @@ pub fn build_seed_peers(
     let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
 
     let mut seed_peers = SeedPeersConfig::default();
-    seed_peers.insert(
-        seed_config.identity.peer_id_from_config().unwrap(),
-        vec![seed_addr],
-    );
+    seed_peers.insert(seed_config.peer_id(), vec![seed_addr]);
     seed_peers
 }
