@@ -55,12 +55,11 @@ impl<'env> Abigen<'env> {
 
     /// Returns the result of ABI generation, a vector of pairs of filenames
     /// and JSON content.
-    pub fn into_result(mut self) -> Vec<(String, String)> {
+    pub fn into_result(mut self) -> Vec<(String, Vec<u8>)> {
         std::mem::take(&mut self.output)
             .into_iter()
             .map(|(path, abi)| {
-                let content =
-                    serde_json::to_string(&abi).expect("ABI serialization should not fail");
+                let content = lcs::to_bytes(&abi).expect("ABI serialization should not fail");
                 (path, content)
             })
             .collect()

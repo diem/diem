@@ -137,7 +137,7 @@ impl StdlibScript {
             .get_file(path.clone())
             .unwrap_or_else(|| panic!("File {:?} does not exist", path))
             .contents();
-        serde_json::from_slice(content)
+        lcs::from_bytes(content)
             .unwrap_or_else(|err| panic!("Failed to deserialize ABI file {:?}: {}", path, err))
     }
 
