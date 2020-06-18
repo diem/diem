@@ -1,25 +1,20 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+mod utils;
+
+use crate::handlers::utils::{
+    handle_rejection, reply_with_async_channel_writer, reply_with_lcs_bytes,
+    send_size_prefixed_lcs_bytes, unwrap_or_500,
+};
 use anyhow::Result;
-use bytes::Bytes;
-use futures::stream;
-use hyper::Body;
 use libra_crypto::hash::HashValue;
-use libra_logger::prelude::*;
 use libra_types::transaction::Version;
 use libradb::backup::BackupHandler;
-use serde::Serialize;
-use std::convert::Infallible;
-use warp::{
-    filters::BoxedFilter,
-    reply::{Reply, Response},
-    Filter, Rejection,
-};
+use warp::{filters::BoxedFilter, reply::Reply, Filter};
 
 fn get_latest_state_root(backup_handler: &BackupHandler) -> Result<Box<dyn Reply>> {
-    let bytes = lcs::to_bytes(&backup_handler.get_latest_state_root()?)?;
-    Ok(Box::new(bytes))
+    reply_with_lcs_bytes(&backup_handler.get_latest_state_root()?)
 }
 
 fn get_state_range_proof(
@@ -27,59 +22,20 @@ fn get_state_range_proof(
     version: Version,
     end_key: HashValue,
 ) -> Result<Box<dyn Reply>> {
-    let bytes = lcs::to_bytes(&backup_handler.get_account_state_range_proof(end_key, version)?)?;
-    Ok(Box::new(bytes))
+    reply_with_lcs_bytes(&backup_handler.get_account_state_range_proof(end_key, version)?)
 }
 
 fn get_state_snapshot(backup_handler: &BackupHandler, version: Version) -> Result<Box<dyn Reply>> {
-    backup_handler
-        .get_account_iter(version)
-        .map(size_prefixed_lcs_bytes_stream)
+    reply_with_async_channel_writer(backup_handler, |bh, sender| {
+        send_size_prefixed_lcs_bytes(bh.get_account_iter(version), sender)
+    })
 }
 
 fn get_state_root_proof(
     backup_handler: &BackupHandler,
     version: Version,
 ) -> Result<Box<dyn Reply>> {
-    let bytes = lcs::to_bytes(&backup_handler.get_state_root_proof(version)?)?;
-    Ok(Box::new(bytes))
-}
-
-fn size_prefixed_lcs_bytes_stream<I, R>(iter: I) -> Box<dyn Reply>
-where
-    I: Iterator<Item = Result<R>> + Send + Sync + 'static,
-    R: Serialize,
-{
-    let iter = iter
-        .map(|res| {
-            let record = res?;
-            let record_bytes = lcs::to_bytes(&record)?;
-            let size_bytes = (record_bytes.len() as u32).to_be_bytes();
-
-            Ok((Bytes::from(size_bytes.to_vec()), Bytes::from(record_bytes)))
-        })
-        .flat_map(|res: Result<(Bytes, Bytes)>| match res {
-            Ok((size_bytes, record_bytes)) => vec![Ok(size_bytes), Ok(record_bytes)],
-            Err(e) => vec![Err(e)],
-        });
-    Box::new(Response::new(Body::wrap_stream(stream::iter(iter))))
-}
-
-/// Return 500 on any error raised by the request handler.
-fn unwrap_or_500(result: Result<Box<dyn Reply>>) -> Box<dyn Reply> {
-    match result {
-        Ok(resp) => resp,
-        Err(e) => {
-            warn!("Request handler exception: {:#}", e);
-            Box::new(warp::http::StatusCode::INTERNAL_SERVER_ERROR)
-        }
-    }
-}
-
-/// Return 400 on any rejections (parameter parsing errors).
-async fn handle_rejection(err: Rejection) -> Result<impl Reply, Infallible> {
-    warn!("bad request: {:?}", err);
-    Ok(warp::http::StatusCode::BAD_REQUEST)
+    reply_with_lcs_bytes(&backup_handler.get_state_root_proof(version)?)
 }
 
 pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Reply,)> {
