@@ -79,7 +79,7 @@
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">activate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;PacketLoss {:.*}% for {}&quot;</span>, <span class="number">2</span>, <span class="self">self</span>.<span class="ident">percent</span>, <span class="self">self</span>.<span class="ident">instance</span>);
         <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;sudo tc qdisc add dev eth0 root netem loss {:.*}%&quot;</span>,
+            <span class="string">&quot;tc qdisc add dev eth0 root netem loss {:.*}%&quot;</span>,
             <span class="number">2</span>, <span class="self">self</span>.<span class="ident">percent</span>
         );
         <span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">util_cmd</span>(<span class="ident">cmd</span>, <span class="string">&quot;ac-packet-loss&quot;</span>).<span class="kw">await</span>
@@ -87,7 +87,7 @@
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">deactivate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;PacketLoss {:.*}% for {}&quot;</span>, <span class="number">2</span>, <span class="self">self</span>.<span class="ident">percent</span>, <span class="self">self</span>.<span class="ident">instance</span>);
-        <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="string">&quot;sudo tc qdisc delete dev eth0 root; true&quot;</span>.<span class="ident">to_string</span>();
+        <span class="kw">let</span> <span class="ident">cmd</span> <span class="op">=</span> <span class="string">&quot;tc qdisc delete dev eth0 root; true&quot;</span>.<span class="ident">to_string</span>();
         <span class="self">self</span>.<span class="ident">instance</span>.<span class="ident">util_cmd</span>(<span class="ident">cmd</span>, <span class="string">&quot;de-packet-loss&quot;</span>).<span class="kw">await</span>
     }
 }

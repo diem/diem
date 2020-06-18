@@ -148,11 +148,11 @@
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Injecting NetworkDelays for {}&quot;</span>, <span class="self">self</span>.<span class="ident">instance</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">command</span> <span class="op">=</span> <span class="string">&quot;&quot;</span>.<span class="ident">to_string</span>();
         <span class="comment">// Create a HTB https://linux.die.net/man/8/tc-htb</span>
-        <span class="ident">command</span> <span class="op">+</span><span class="op">=</span> <span class="string">&quot;sudo tc qdisc add dev eth0 root handle 1: htb; &quot;</span>;
+        <span class="ident">command</span> <span class="op">+</span><span class="op">=</span> <span class="string">&quot;tc qdisc add dev eth0 root handle 1: htb; &quot;</span>;
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="self">self</span>.<span class="ident">configuration</span>.<span class="ident">len</span>() {
             <span class="comment">// Create a class within the HTB https://linux.die.net/man/8/tc</span>
             <span class="ident">command</span> <span class="op">+</span><span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;sudo tc class add dev eth0 parent 1: classid 1:{} htb rate 1tbit; &quot;</span>,
+                <span class="string">&quot;tc class add dev eth0 parent 1: classid 1:{} htb rate 1tbit; &quot;</span>,
                 <span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>
             )
             .<span class="ident">as_str</span>();
@@ -161,13 +161,13 @@
             <span class="comment">// Create u32 filters so that all the target instances are classified as class 1:(i+1)</span>
             <span class="comment">// http://man7.org/linux/man-pages/man8/tc-u32.8.html</span>
             <span class="kw">for</span> <span class="ident">target_instance</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">configuration</span>[<span class="ident">i</span>].<span class="number">0</span> {
-                <span class="ident">command</span> <span class="op">+</span><span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;sudo tc filter add dev eth0 parent 1: protocol ip prio 1 u32 flowid 1:{} match ip dst {}; &quot;</span>, <span class="ident">i</span><span class="op">+</span><span class="number">1</span>, <span class="ident">target_instance</span>.<span class="ident">ip</span>()).<span class="ident">as_str</span>();
+                <span class="ident">command</span> <span class="op">+</span><span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;tc filter add dev eth0 parent 1: protocol ip prio 1 u32 flowid 1:{} match ip dst {}; &quot;</span>, <span class="ident">i</span><span class="op">+</span><span class="number">1</span>, <span class="ident">target_instance</span>.<span class="ident">ip</span>()).<span class="ident">as_str</span>();
             }
         }
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="self">self</span>.<span class="ident">configuration</span>.<span class="ident">len</span>() {
             <span class="comment">// Use netem to delay packets to this class</span>
             <span class="ident">command</span> <span class="op">+</span><span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;sudo tc qdisc add dev eth0 parent 1:{} handle {}0: netem delay {}ms; &quot;</span>,
+                <span class="string">&quot;tc qdisc add dev eth0 parent 1:{} handle {}0: netem delay {}ms; &quot;</span>,
                 <span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>,
                 <span class="ident">i</span> <span class="op">+</span> <span class="number">1</span>,
                 <span class="self">self</span>.<span class="ident">configuration</span>[<span class="ident">i</span>].<span class="number">1</span>.<span class="ident">as_millis</span>(),
@@ -179,7 +179,7 @@
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">deactivate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">instance</span>
-            .<span class="ident">util_cmd</span>(<span class="string">&quot;sudo tc qdisc delete dev eth0 root; true&quot;</span>, <span class="string">&quot;de-net-delay&quot;</span>)
+            .<span class="ident">util_cmd</span>(<span class="string">&quot;tc qdisc delete dev eth0 root; true&quot;</span>, <span class="string">&quot;de-net-delay&quot;</span>)
             .<span class="kw">await</span>
     }
 }
