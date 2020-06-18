@@ -11,9 +11,9 @@ use std::{
     time::Instant,
 };
 use stdlib::{
-    build_stdlib, build_stdlib_doc, build_transaction_script_doc, compile_script,
-    filter_move_files, save_binary, COMPILED_EXTENSION, COMPILED_OUTPUT_PATH, COMPILED_STDLIB_NAME,
-    TRANSACTION_SCRIPTS,
+    build_stdlib, build_stdlib_doc, build_transaction_script_abi, build_transaction_script_doc,
+    compile_script, filter_move_files, save_binary, COMPILED_EXTENSION, COMPILED_OUTPUT_PATH,
+    COMPILED_STDLIB_NAME, TRANSACTION_SCRIPTS,
 };
 
 // Generates the compiled stdlib and transaction scripts. Until this is run changes to the source
@@ -29,13 +29,19 @@ fn main() {
                 .help("do not generate documentation"),
         )
         .arg(
-            Arg::with_name("doc-only")
-                .long("doc-only")
-                .help("only generate documentation"),
+            Arg::with_name("no-script-abi")
+                .long("no-script-abi")
+                .help("do not generate script ABIs"),
+        )
+        .arg(
+            Arg::with_name("no-compiler")
+                .long("no-compiler")
+                .help("do not compile modules and scripts"),
         );
     let matches = cli.get_matches();
     let no_doc = matches.is_present("no-doc");
-    let doc_only = matches.is_present("doc-only");
+    let no_script_abi = matches.is_present("no-script-abi");
+    let no_compiler = matches.is_present("no-compiler");
 
     #[cfg(debug_assertions)]
     {
@@ -47,7 +53,7 @@ fn main() {
 
     std::fs::create_dir_all(&scripts_path).unwrap();
 
-    if !doc_only {
+    if !no_compiler {
         time_it("Creating stdlib blob", || {
             let mut module_path = PathBuf::from(COMPILED_OUTPUT_PATH);
             module_path.push(COMPILED_STDLIB_NAME);
@@ -72,7 +78,7 @@ fn main() {
     let transaction_files = filter_move_files(txn_source_files)
         .flat_map(|path| path.into_os_string().into_string().ok())
         .collect::<Vec<_>>();
-    if !doc_only {
+    if !no_compiler {
         time_it("Staging transaction scripts", || {
             transaction_files.par_iter().for_each(|txn_file| {
                 let compiled_script = compile_script(txn_file.clone());
@@ -98,14 +104,23 @@ fn main() {
         });
     }
 
-    fn time_it<F>(msg: &str, f: F)
-    where
-        F: Fn(),
-    {
-        let now = Instant::now();
-        print!("{} ... ", msg);
-        let _ = std::io::stdout().flush();
-        f();
-        println!("(took {:.3}s)", now.elapsed().as_secs_f64());
+    // Generate script ABIs
+    if !no_script_abi {
+        time_it("Generating script ABIs", || {
+            transaction_files
+                .par_iter()
+                .for_each(|txn_file| build_transaction_script_abi(txn_file.clone()));
+        });
     }
+}
+
+fn time_it<F>(msg: &str, f: F)
+where
+    F: Fn(),
+{
+    let now = Instant::now();
+    print!("{} ... ", msg);
+    let _ = std::io::stdout().flush();
+    f();
+    println!("(took {:.3}s)", now.elapsed().as_secs_f64());
 }
