@@ -3,7 +3,7 @@
 
 //! This module translates the bytecode of a module to Boogie code.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use itertools::Itertools;
 #[allow(unused_imports)]
@@ -18,11 +18,13 @@ use spec_lang::{
 use stackless_bytecode_generator::{
     function_target::FunctionTarget,
     function_target_pipeline::FunctionTargetsHolder,
+    graph::{Graph, Reducible},
     stackless_bytecode::{
         AssignKind, BorrowNode,
         Bytecode::{self, *},
-        Constant, Operation, SpecBlockId,
+        Constant, Label, Operation, SpecBlockId,
     },
+    stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
 use vm::file_format::CodeOffset;
 
@@ -60,12 +62,119 @@ struct BytecodeContext {
     /// over-approximation; however, the execution trace visualizer will remove redundant
     /// entries, so it is more of a performance concern.
     mutable_refs: BTreeSet<usize>,
+    loop_targets: BTreeMap<Label, BTreeSet<usize>>,
 }
 
-impl Default for BytecodeContext {
-    fn default() -> Self {
-        Self {
-            mutable_refs: BTreeSet::new(),
+impl BytecodeContext {
+    fn new(func_target: &FunctionTarget<'_>) -> Self {
+        let mutable_refs = Self::collect_mutable_refs(func_target);
+        let loop_targets = Self::collect_loop_targets(func_target);
+        BytecodeContext {
+            mutable_refs,
+            loop_targets,
+        }
+    }
+
+    fn collect_mutable_refs(func_target: &FunctionTarget<'_>) -> BTreeSet<usize> {
+        let code = func_target.get_bytecode();
+        let mut mutable_refs = BTreeSet::new();
+        // Walk over the bytecode and collect various context information.
+        for bytecode in code {
+            match bytecode {
+                Call(_, dsts, oper, _) => {
+                    use Operation::*;
+                    match oper {
+                        BorrowLoc | BorrowGlobal(..) | BorrowField(..) => {
+                            let dst = dsts[0];
+                            let ty = func_target.get_local_type(dst);
+                            if ty.is_mutable_reference() {
+                                // Track that we create a mutable reference here.
+                                mutable_refs.insert(dst);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                Assign(_, dst, src, AssignKind::Move) | Assign(_, dst, src, AssignKind::Store) => {
+                    // Propagate information from src to dst.
+                    if mutable_refs.contains(src) {
+                        mutable_refs.insert(*dst);
+                    }
+                }
+                _ => {}
+            }
+        }
+        mutable_refs
+    }
+
+    fn collect_loop_targets(func_target: &FunctionTarget<'_>) -> BTreeMap<Label, BTreeSet<usize>> {
+        let code = func_target.get_bytecode();
+        let cfg = StacklessControlFlowGraph::new_forward(code);
+        let entry = cfg.entry_blocks()[0];
+        let nodes = cfg.blocks();
+        let edges: Vec<(BlockId, BlockId)> = nodes
+            .iter()
+            .map(|x| {
+                cfg.successors(*x)
+                    .iter()
+                    .map(|y| (*x, *y))
+                    .collect::<Vec<(BlockId, BlockId)>>()
+            })
+            .flatten()
+            .collect();
+        let graph = Graph::new(entry, nodes, edges);
+        let mut loop_targets = BTreeMap::new();
+        if let Some(Reducible {
+            loop_headers,
+            natural_loops,
+        }) = graph.compute_reducible()
+        {
+            let block_id_to_label: BTreeMap<BlockId, Label> = loop_headers
+                .iter()
+                .map(|x| {
+                    if let Label(_, label) = code[cfg.block_start(*x) as usize] {
+                        Some((*x, label))
+                    } else {
+                        None
+                    }
+                })
+                .flatten()
+                .collect();
+            for (back_edge, natural_loop) in natural_loops {
+                let loop_header_label = block_id_to_label[&back_edge.1];
+                loop_targets
+                    .entry(loop_header_label)
+                    .or_insert_with(BTreeSet::new);
+                let natural_loop_targets = natural_loop
+                    .iter()
+                    .map(|block_id| {
+                        cfg.instr_indexes(*block_id)
+                            .map(|x| Self::targets(&code[x as usize]))
+                            .flatten()
+                            .collect::<BTreeSet<usize>>()
+                    })
+                    .flatten()
+                    .collect::<BTreeSet<usize>>();
+                for target in natural_loop_targets {
+                    loop_targets.entry(loop_header_label).and_modify(|x| {
+                        x.insert(target);
+                    });
+                }
+            }
+        }
+        loop_targets
+    }
+
+    fn targets(bytecode: &Bytecode) -> Vec<usize> {
+        use BorrowNode::*;
+        match bytecode {
+            Assign(_, dest, _, _) => vec![*dest],
+            Call(_, dests, _, _) => dests.clone(),
+            Load(_, dest, _) => vec![*dest],
+            WriteBack(_, LocalRoot(dest), _) => vec![*dest],
+            WriteBack(_, Reference(dest), _) => vec![*dest],
+            Splice(_, dest, _) => vec![*dest],
+            _ => vec![],
         }
     }
 }
@@ -591,37 +700,8 @@ impl<'env> ModuleTranslator<'env> {
     /// This generates boogie code for everything after the function signature
     /// The function body is only generated for the "inline" version of the function.
     fn generate_inline_function_body(&self, func_target: &FunctionTarget<'_>) {
-        let code = func_target.get_bytecode();
-
         // Construct context for bytecode translation.
-        let mut context = BytecodeContext::default();
-
-        // Walk over the bytecode and collect various context information.
-        for bytecode in code {
-            match bytecode {
-                Call(_, dsts, oper, _) => {
-                    use Operation::*;
-                    match oper {
-                        BorrowLoc | BorrowGlobal(..) | BorrowField(..) => {
-                            let dst = dsts[0];
-                            let ty = func_target.get_local_type(dst);
-                            if ty.is_mutable_reference() {
-                                // Track that we create a mutable reference here.
-                                context.mutable_refs.insert(dst);
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-                Assign(_, dst, src, AssignKind::Move) | Assign(_, dst, src, AssignKind::Store) => {
-                    // Propagate information from src to dst.
-                    if context.mutable_refs.contains(src) {
-                        context.mutable_refs.insert(*dst);
-                    }
-                }
-                _ => {}
-            }
-        }
+        let context = BytecodeContext::new(func_target);
 
         // Be sure to set back location to the whole function definition as a default, otherwise
         // we may get unassigned code locations associated with condition locations.
@@ -664,6 +744,7 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "\n// bytecode translation starts here");
 
         // Generate bytecode
+        let code = func_target.get_bytecode();
         for (offset, bytecode) in code.iter().enumerate() {
             self.translate_bytecode(func_target, &context, offset as CodeOffset, bytecode);
         }
@@ -818,16 +899,32 @@ impl<'env> ModuleTranslator<'env> {
             Label(_, label) => {
                 self.writer.unindent();
                 emitln!(self.writer, "L{}:", label.as_usize());
-                emitln!(self.writer, "assume !$abort_flag;");
-                for idx in 0..func_target.get_local_count() {
-                    if let Some(ref_proxy_idx) = func_target.get_ref_proxy_index(idx) {
-                        let ref_proxy_var_name = str_local(*ref_proxy_idx);
-                        let proxy_idx = func_target.get_proxy_index(idx).unwrap();
-                        emitln!(self.writer,
+                if ctx.loop_targets.contains_key(label) {
+                    emitln!(self.writer, "assume !$abort_flag;");
+                    let targets = &ctx.loop_targets[label];
+                    for idx in 0..func_target.get_local_count() {
+                        if let Some(ref_proxy_idx) = func_target.get_ref_proxy_index(idx) {
+                            if targets.contains(ref_proxy_idx) {
+                                let ref_proxy_var_name = str_local(*ref_proxy_idx);
+                                let proxy_idx = func_target.get_proxy_index(idx).unwrap();
+                                emitln!(self.writer,
                             "assume l#$Reference({}) == $Local({}) && p#$Reference({}) == $EmptyPath;",
                             ref_proxy_var_name,
                             proxy_idx,
                             ref_proxy_var_name);
+                            }
+                        }
+                        if targets.contains(&idx) {
+                            emit!(
+                                self.writer,
+                                &boogie_well_formed_check(
+                                    self.module_env.env,
+                                    str_local(idx).as_str(),
+                                    &func_target.get_local_type(idx),
+                                    WellFormedMode::Default,
+                                )
+                            );
+                        }
                     }
                 }
                 self.writer.indent();

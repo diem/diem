@@ -2,14 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::graph::{Graph, Reducible};
-use std::collections::BTreeSet;
 
 #[test]
 fn test1() {
-    let nodes: BTreeSet<u16> = vec![1, 2, 3, 4, 5].into_iter().collect();
-    let edges: BTreeSet<(u16, u16)> = vec![(1, 2), (2, 1), (4, 1), (3, 2), (5, 3), (5, 4)]
-        .into_iter()
-        .collect();
+    let nodes = vec![1, 2, 3, 4, 5];
+    let edges = vec![(1, 2), (2, 1), (4, 1), (3, 2), (5, 3), (5, 4)];
     let source = 5;
     let graph = Graph::new(source, nodes, edges);
     assert!(graph.compute_reducible().is_none());
@@ -17,8 +14,8 @@ fn test1() {
 
 #[test]
 fn test2() {
-    let nodes: BTreeSet<u16> = vec![1, 2, 3, 4, 5, 6].into_iter().collect();
-    let edges: BTreeSet<(u16, u16)> = vec![
+    let nodes = vec![1, 2, 3, 4, 5, 6];
+    let edges = vec![
         (1, 2),
         (2, 1),
         (2, 3),
@@ -28,9 +25,7 @@ fn test2() {
         (5, 1),
         (6, 5),
         (6, 4),
-    ]
-    .into_iter()
-    .collect();
+    ];
     let source = 6;
     let graph = Graph::new(source, nodes, edges);
     assert!(graph.compute_reducible().is_none());
@@ -38,10 +33,8 @@ fn test2() {
 
 #[test]
 fn test3() {
-    let nodes: BTreeSet<u16> = vec![1, 2, 3, 4, 5, 6].into_iter().collect();
-    let edges: BTreeSet<(u16, u16)> = vec![(1, 2), (2, 3), (2, 4), (2, 6), (3, 5), (4, 5), (5, 2)]
-        .into_iter()
-        .collect();
+    let nodes = vec![1, 2, 3, 4, 5, 6];
+    let edges = vec![(1, 2), (2, 3), (2, 4), (2, 6), (3, 5), (4, 5), (5, 2)];
     let source = 1;
     let graph = Graph::new(source, nodes, edges);
     let Reducible {
@@ -58,10 +51,8 @@ fn test3() {
 
 #[test]
 fn test4() {
-    let nodes: BTreeSet<u16> = vec![1, 2, 3, 4, 5, 6].into_iter().collect();
-    let edges: BTreeSet<(u16, u16)> = vec![(1, 2), (2, 3), (2, 4), (2, 6), (3, 5), (4, 5), (5, 2)]
-        .into_iter()
-        .collect();
+    let nodes = vec![1, 2, 3, 4, 5, 6];
+    let edges = vec![(1, 2), (2, 3), (2, 4), (2, 6), (3, 5), (4, 5), (5, 2)];
     let source = 6;
     let graph = Graph::new(source, nodes, edges);
     assert!(graph.compute_reducible().is_some());
