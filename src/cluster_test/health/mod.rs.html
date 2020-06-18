@@ -239,6 +239,8 @@
 <span id="239">239</span>
 <span id="240">240</span>
 <span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -252,6 +254,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">cluster</span>::<span class="ident">Cluster</span>, <span class="ident">util</span>::<span class="ident">unix_timestamp_now</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">bail</span>, <span class="prelude-ty">Result</span>};
+<span class="kw">use</span> <span class="ident">async_trait</span>::<span class="ident">async_trait</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">commit_check</span>::<span class="ident">CommitHistoryHealthCheck</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">debug_interface_log_tail</span>::<span class="ident">DebugPortLogWorker</span>;
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
@@ -299,11 +302,12 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">HealthCheck</span> {
+<span class="attribute">#[<span class="ident">async_trait</span>]</span>
+<span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">HealthCheck</span>: <span class="ident">Send</span> {
     <span class="doccomment">/// Verify specific event</span>
     <span class="kw">fn</span> <span class="ident">on_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">event</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorEvent</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">HealthCheckContext</span>);
     <span class="doccomment">/// Periodic verification (happens even if when no events produced)</span>
-    <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">HealthCheckContext</span>) {}
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">HealthCheckContext</span>);
     <span class="doccomment">/// Optionally marks validator as failed, requiring waiting for at least one event from it to</span>
     <span class="doccomment">/// mark it as healthy again</span>
     <span class="kw">fn</span> <span class="ident">invalidate</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_validator</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {}
@@ -345,7 +349,7 @@
     <span class="doccomment">/// of all the unexpected failures.</span>
     <span class="doccomment">/// Otherwise, it returns a list of ALL the failed validators</span>
     <span class="doccomment">/// It also takes print_failures parameter that controls level of verbosity of health check</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">run</span>(
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">run</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">events</span>: <span class="kw-2">&amp;</span>[<span class="ident">ValidatorEvent</span>],
         <span class="ident">affected_validators_set</span>: <span class="kw-2">&amp;</span><span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -364,7 +368,7 @@
                 <span class="ident">health_check</span>.<span class="ident">on_event</span>(<span class="ident">event</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>);
             }
             <span class="kw">let</span> <span class="ident">events_processed</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
-            <span class="ident">health_check</span>.<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>);
+            <span class="ident">health_check</span>.<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>).<span class="kw">await</span>;
             <span class="kw">let</span> <span class="ident">verified</span> <span class="op">=</span> <span class="ident">Instant</span>::<span class="ident">now</span>();
             <span class="kw">if</span> <span class="self">self</span>.<span class="ident">debug</span> {
                 <span class="ident">messages</span>.<span class="ident">push</span>(<span class="macro">format</span><span class="macro">!</span>(
