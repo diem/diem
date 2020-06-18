@@ -1,11 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, SingleBackend};
+use crate::{error::Error, secure_backend::StorageLocation::LocalStorage, SingleBackend};
 use executor::db_bootstrapper;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{
-    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, VALIDATOR_NETWORK_KEY, WAYPOINT,
+    CONSENSUS_KEY, EPOCH, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, OPERATOR_ACCOUNT, OPERATOR_KEY,
+    OWNER_ACCOUNT, OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_temppath::TempPath;
@@ -16,7 +17,7 @@ use libra_types::{
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use std::{
-    convert::{TryFrom, TryInto},
+    convert::TryFrom,
     fmt::Write,
     fs::File,
     io::Read,
@@ -41,10 +42,7 @@ pub struct Verify {
 
 impl Verify {
     pub fn execute(self) -> Result<String, Error> {
-        let storage: Storage = self.backend.backend.try_into()?;
-        storage
-            .available()
-            .map_err(|e| Error::LocalStorageUnavailable(e.to_string()))?;
+        let local_storage = self.backend.backend.create_storage(LocalStorage)?;
         let mut buffer = String::new();
 
         writeln!(buffer, "Data stored in SecureStorage:").unwrap();
@@ -52,39 +50,27 @@ impl Verify {
         writeln!(buffer, "Keys").unwrap();
         write_break(&mut buffer);
 
-        write_ed25519_key(&storage, &mut buffer, CONSENSUS_KEY);
-        write_x25519_key(&storage, &mut buffer, FULLNODE_NETWORK_KEY);
-        write_ed25519_key(&storage, &mut buffer, libra_global_constants::OWNER_KEY);
-        write_ed25519_key(&storage, &mut buffer, libra_global_constants::OPERATOR_KEY);
-        write_ed25519_key(&storage, &mut buffer, VALIDATOR_NETWORK_KEY);
+        write_ed25519_key(&local_storage, &mut buffer, CONSENSUS_KEY);
+        write_x25519_key(&local_storage, &mut buffer, FULLNODE_NETWORK_KEY);
+        write_ed25519_key(&local_storage, &mut buffer, OWNER_KEY);
+        write_ed25519_key(&local_storage, &mut buffer, OPERATOR_KEY);
+        write_ed25519_key(&local_storage, &mut buffer, VALIDATOR_NETWORK_KEY);
 
         write_break(&mut buffer);
         writeln!(buffer, "Data").unwrap();
         write_break(&mut buffer);
 
-        write_string(
-            &storage,
-            &mut buffer,
-            libra_global_constants::OPERATOR_ACCOUNT,
-        );
-        write_string(&storage, &mut buffer, libra_global_constants::OWNER_ACCOUNT);
-        write_u64(&storage, &mut buffer, libra_global_constants::EPOCH);
-        write_u64(
-            &storage,
-            &mut buffer,
-            libra_global_constants::LAST_VOTED_ROUND,
-        );
-        write_u64(
-            &storage,
-            &mut buffer,
-            libra_global_constants::PREFERRED_ROUND,
-        );
-        write_waypoint(&storage, &mut buffer, libra_global_constants::WAYPOINT);
+        write_string(&local_storage, &mut buffer, OPERATOR_ACCOUNT);
+        write_string(&local_storage, &mut buffer, OWNER_ACCOUNT);
+        write_u64(&local_storage, &mut buffer, EPOCH);
+        write_u64(&local_storage, &mut buffer, LAST_VOTED_ROUND);
+        write_u64(&local_storage, &mut buffer, PREFERRED_ROUND);
+        write_waypoint(&local_storage, &mut buffer, WAYPOINT);
 
         write_break(&mut buffer);
 
         if let Some(genesis_path) = self.genesis_path.as_ref() {
-            compare_genesis(&storage, &mut buffer, genesis_path)?;
+            compare_genesis(&local_storage, &mut buffer, genesis_path)?;
         }
 
         Ok(buffer)
@@ -164,11 +150,7 @@ fn compare_genesis(
     let actual_waypoint = Waypoint::from_str(&actual_waypoint).map_err(|e| {
         Error::UnexpectedError(format!("Unable to parse waypoint: {}", e.to_string()))
     })?;
-    write_assert(
-        buffer,
-        libra_global_constants::WAYPOINT,
-        actual_waypoint == expected_waypoint,
-    );
+    write_assert(buffer, WAYPOINT, actual_waypoint == expected_waypoint);
 
     let validator_account = validator_account(storage)?;
     let validator_config = validator_config(validator_account, db_rw.reader.clone())?;
@@ -255,10 +237,8 @@ fn validator_config(
 
 fn validator_account(storage: &Storage) -> Result<AccountAddress, Error> {
     let account = storage
-        .get(libra_global_constants::OPERATOR_ACCOUNT)
-        .map_err(|e| {
-            Error::LocalStorageReadError(libra_global_constants::OPERATOR_ACCOUNT, e.to_string())
-        })?
+        .get(OPERATOR_ACCOUNT)
+        .map_err(|e| Error::LocalStorageReadError(OPERATOR_ACCOUNT, e.to_string()))?
         .value
         .string()
         .map_err(|e| {

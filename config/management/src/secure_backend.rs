@@ -3,7 +3,7 @@
 
 use crate::error::Error;
 use libra_config::config::{self, GitHubConfig, OnDiskStorageConfig, Token, VaultConfig};
-use libra_secure_storage::Storage;
+use libra_secure_storage::{KVStorage, Storage};
 use std::{
     collections::HashMap,
     convert::{TryFrom, TryInto},
@@ -17,9 +17,9 @@ pub const MEMORY: &str = "memory";
 pub const VAULT: &str = "vault";
 
 #[derive(Copy, Clone, Debug)]
-pub enum RelativePosition {
-    Local,
-    Remote,
+pub enum StorageLocation {
+    LocalStorage,
+    RemoteStorage,
 }
 
 /// SecureBackend is a parameter that is stored as set of semi-colon separated key/value pairs. The
@@ -36,6 +36,24 @@ pub struct SecureBackend {
 
 impl SecureBackend {
     const BACKEND: &'static str = "backend";
+    const NAMESPACE: &'static str = "namespace";
+
+    /// Creates and returns a new Storage instance using the SecureBackend.
+    /// This method ensures the storage instance is available before returning.
+    pub fn create_storage(self, location: StorageLocation) -> Result<Storage, Error> {
+        let storage: Storage = self.try_into()?;
+        storage.available().map_err(|e| match location {
+            StorageLocation::LocalStorage => Error::LocalStorageUnavailable(e.to_string()),
+            StorageLocation::RemoteStorage => Error::RemoteStorageUnavailable(e.to_string()),
+        })?;
+
+        Ok(storage)
+    }
+
+    pub fn set_namespace(mut self, namespace: String) -> Self {
+        self.parameters.insert(Self::NAMESPACE.into(), namespace);
+        self
+    }
 }
 
 impl FromStr for SecureBackend {

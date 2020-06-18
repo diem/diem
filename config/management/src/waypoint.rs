@@ -1,7 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, secure_backend::RelativePosition, SecureBackends, SingleBackend};
+use crate::{
+    error::Error,
+    secure_backend::{
+        StorageLocation,
+        StorageLocation::{LocalStorage, RemoteStorage},
+    },
+    SecureBackends, SingleBackend,
+};
 use executor::db_bootstrapper;
 use libra_global_constants::WAYPOINT;
 use libra_secure_storage::{KVStorage, Storage, Value};
@@ -45,7 +52,7 @@ impl CreateWaypoint {
             InsertWaypoint::insert_waypoint_to_backend(
                 &waypoint,
                 &mut remote_storage,
-                RelativePosition::Remote,
+                StorageLocation::RemoteStorage,
             )?;
         }
         Ok(waypoint)
@@ -72,11 +79,7 @@ impl InsertWaypoint {
         let waypoint_string = if let Some(waypoint_string) = self.waypoint {
             waypoint_string
         } else if let Some(remote_backend) = self.secure_backends.remote {
-            let remote_storage: Storage = remote_backend.try_into()?;
-            remote_storage
-                .available()
-                .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
-
+            let remote_storage = remote_backend.create_storage(RemoteStorage)?;
             remote_storage
                 .get(WAYPOINT)
                 .and_then(|v| v.value.string())
@@ -89,33 +92,27 @@ impl InsertWaypoint {
 
         let waypoint = Waypoint::from_str(&waypoint_string)
             .map_err(|e| Error::UnexpectedError(e.to_string()))?;
-        let mut local_storage: Storage = self.secure_backends.local.try_into()?;
-        Self::insert_waypoint_to_backend(&waypoint, &mut local_storage, RelativePosition::Local)?;
+
+        let mut local_storage = self.secure_backends.local.create_storage(LocalStorage)?;
+        Self::insert_waypoint_to_backend(&waypoint, &mut local_storage, LocalStorage)?;
         Ok(waypoint)
     }
 
     fn insert_waypoint_to_backend(
         waypoint: &Waypoint,
         backend_storage: &mut Storage,
-        backend_location: RelativePosition,
+        backend_location: StorageLocation,
     ) -> Result<(), Error> {
-        backend_storage
-            .available()
-            .map_err(|e| match backend_location {
-                RelativePosition::Local => Error::LocalStorageUnavailable(e.to_string()),
-                RelativePosition::Remote => Error::RemoteStorageUnavailable(e.to_string()),
-            })?;
-
         backend_storage
             .set(
                 libra_global_constants::WAYPOINT,
                 Value::String(waypoint.to_string()),
             )
             .map_err(|e| match backend_location {
-                RelativePosition::Local => {
+                LocalStorage => {
                     Error::LocalStorageWriteError(libra_global_constants::WAYPOINT, e.to_string())
                 }
-                RelativePosition::Remote => {
+                RemoteStorage => {
                     Error::RemoteStorageWriteError(libra_global_constants::WAYPOINT, e.to_string())
                 }
             })?;
