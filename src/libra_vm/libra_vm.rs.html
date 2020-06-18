@@ -1187,6 +1187,14 @@
 <span id="1187">1187</span>
 <span id="1188">1188</span>
 <span id="1189">1189</span>
+<span id="1190">1190</span>
+<span id="1191">1191</span>
+<span id="1192">1192</span>
+<span id="1193">1193</span>
+<span id="1194">1194</span>
+<span id="1195">1195</span>
+<span id="1196">1196</span>
+<span id="1197">1197</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1528,8 +1536,16 @@
             <span class="ident">VerifiedTransactionPayload</span>::<span class="ident">Module</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">cost_strategy</span>
                 .<span class="ident">charge_intrinsic_gas</span>(<span class="ident">txn_data</span>.<span class="ident">transaction_size</span>())
                 .<span class="ident">and_then</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+                    <span class="comment">// Module publishing is currently restricted to the Association, so we choose to</span>
+                    <span class="comment">// publish all modules under the address 0x0...1 for convenience.</span>
+                    <span class="comment">// This will change to the sender&#39;s address once module publishing becomes open.</span>
+                    <span class="kw">let</span> <span class="ident">module_address</span> <span class="op">=</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">on_chain_config</span>()<span class="question-mark">?</span>.<span class="ident">publishing_option</span>.<span class="ident">is_open</span>() {
+                        <span class="ident">txn_data</span>.<span class="ident">sender</span>()
+                    } <span class="kw">else</span> {
+                        <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>
+                    };
                     <span class="self">self</span>.<span class="ident">move_vm</span>
-                        .<span class="ident">publish_module</span>(<span class="ident">m</span>, <span class="ident">txn_data</span>.<span class="ident">sender</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>)
+                        .<span class="ident">publish_module</span>(<span class="ident">m</span>, <span class="ident">module_address</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>)
                 }),
             <span class="ident">VerifiedTransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">s</span>, <span class="ident">ty_args</span>, <span class="ident">args</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="ident">cost_strategy</span>
