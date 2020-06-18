@@ -451,7 +451,7 @@
 
 <span class="kw">fn</span> <span class="ident">verify_epochs</span>(<span class="ident">db</span>: <span class="kw-2">&amp;</span><span class="ident">LibraDB</span>, <span class="ident">ledger_infos_with_sigs</span>: <span class="kw-2">&amp;</span>[<span class="ident">LedgerInfoWithSignatures</span>]) {
     <span class="kw">let</span> (<span class="ident">actual_epoch_change_lis</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">db</span>
-        .<span class="ident">get_epoch_change_ledger_infos</span>(
+        .<span class="ident">get_epoch_ending_ledger_infos</span>(
             <span class="number">0</span>,
             <span class="ident">ledger_infos_with_sigs</span>
                 .<span class="ident">last</span>()

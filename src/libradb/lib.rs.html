@@ -876,7 +876,7 @@
 
 <span class="comment">// TODO: Either implement an iteration API to allow a very old client to loop through a long history</span>
 <span class="comment">// or guarantee that there is always a recent enough waypoint and client knows to boot from there.</span>
-<span class="kw">const</span> <span class="ident">MAX_NUM_EPOCH_CHANGE_LEDGER_INFO</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">100</span>;
+<span class="kw">const</span> <span class="ident">MAX_NUM_EPOCH_ENDING_LEDGER_INFO</span>: <span class="ident">usize</span> <span class="op">=</span> <span class="number">100</span>;
 
 <span class="kw">fn</span> <span class="ident">error_if_too_many_requested</span>(<span class="ident">num_requested</span>: <span class="ident">u64</span>, <span class="ident">max_allowed</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">if</span> <span class="ident">num_requested</span> <span class="op">&gt;</span> <span class="ident">max_allowed</span> {
@@ -959,18 +959,18 @@
     <span class="comment">// ================================== Public API ==================================</span>
 
     <span class="doccomment">/// Returns ledger infos reflecting epoch bumps starting with the given epoch. If there are no</span>
-    <span class="doccomment">/// more than `MAX_NUM_EPOCH_CHANGE_LEDGER_INFO` results, this function returns all of them,</span>
-    <span class="doccomment">/// otherwise the first `MAX_NUM_EPOCH_CHANGE_LEDGER_INFO` results are returned and a flag</span>
+    <span class="doccomment">/// more than `MAX_NUM_EPOCH_ENDING_LEDGER_INFO` results, this function returns all of them,</span>
+    <span class="doccomment">/// otherwise the first `MAX_NUM_EPOCH_ENDING_LEDGER_INFO` results are returned and a flag</span>
     <span class="doccomment">/// (when true) will be used to indicate the fact that there is more.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_epoch_change_ledger_infos</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_epoch_ending_ledger_infos</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">start_epoch</span>: <span class="ident">u64</span>,
         <span class="ident">end_epoch</span>: <span class="ident">u64</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span>, <span class="ident">bool</span>)<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">ledger_store</span>.<span class="ident">get_epoch_change_ledger_infos</span>(
+        <span class="self">self</span>.<span class="ident">ledger_store</span>.<span class="ident">get_epoch_ending_ledger_infos</span>(
             <span class="ident">start_epoch</span>,
             <span class="ident">end_epoch</span>,
-            <span class="ident">MAX_NUM_EPOCH_CHANGE_LEDGER_INFO</span>,
+            <span class="ident">MAX_NUM_EPOCH_ENDING_LEDGER_INFO</span>,
         )
     }
 
@@ -1218,13 +1218,13 @@
 }
 
 <span class="kw">impl</span> <span class="ident">DbReader</span> <span class="kw">for</span> <span class="ident">LibraDB</span> {
-    <span class="kw">fn</span> <span class="ident">get_epoch_change_ledger_infos</span>(
+    <span class="kw">fn</span> <span class="ident">get_epoch_ending_ledger_infos</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">start_epoch</span>: <span class="ident">u64</span>,
         <span class="ident">end_epoch</span>: <span class="ident">u64</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">EpochChangeProof</span><span class="op">&gt;</span> {
         <span class="kw">let</span> (<span class="ident">ledger_info_with_sigs</span>, <span class="ident">more</span>) <span class="op">=</span>
-            <span class="self">Self</span>::<span class="ident">get_epoch_change_ledger_infos</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">start_epoch</span>, <span class="ident">end_epoch</span>)<span class="question-mark">?</span>;
+            <span class="self">Self</span>::<span class="ident">get_epoch_ending_ledger_infos</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">start_epoch</span>, <span class="ident">end_epoch</span>)<span class="question-mark">?</span>;
         <span class="prelude-val">Ok</span>(<span class="ident">EpochChangeProof</span>::<span class="ident">new</span>(<span class="ident">ledger_info_with_sigs</span>, <span class="ident">more</span>))
     }
 
@@ -1331,8 +1331,8 @@
     }
 
     <span class="doccomment">/// Gets ledger info at specified version and ensures it&#39;s an epoch change.</span>
-    <span class="kw">fn</span> <span class="ident">get_epoch_change_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">ledger_store</span>.<span class="ident">get_epoch_change_ledger_info</span>(<span class="ident">version</span>)
+    <span class="kw">fn</span> <span class="ident">get_epoch_ending_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">ledger_store</span>.<span class="ident">get_epoch_ending_ledger_info</span>(<span class="ident">version</span>)
     }
 
     <span class="kw">fn</span> <span class="ident">get_state_proof_with_ledger_info</span>(
@@ -1344,7 +1344,7 @@
         <span class="kw">let</span> <span class="ident">known_epoch</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ledger_store</span>.<span class="ident">get_epoch</span>(<span class="ident">known_version</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">epoch_change_proof</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">known_epoch</span> <span class="op">&lt;</span> <span class="ident">ledger_info</span>.<span class="ident">next_block_epoch</span>() {
             <span class="kw">let</span> (<span class="ident">ledger_infos_with_sigs</span>, <span class="ident">more</span>) <span class="op">=</span>
-                <span class="self">self</span>.<span class="ident">get_epoch_change_ledger_infos</span>(<span class="ident">known_epoch</span>, <span class="ident">ledger_info</span>.<span class="ident">next_block_epoch</span>())<span class="question-mark">?</span>;
+                <span class="self">self</span>.<span class="ident">get_epoch_ending_ledger_infos</span>(<span class="ident">known_epoch</span>, <span class="ident">ledger_info</span>.<span class="ident">next_block_epoch</span>())<span class="question-mark">?</span>;
             <span class="ident">EpochChangeProof</span>::<span class="ident">new</span>(<span class="ident">ledger_infos_with_sigs</span>, <span class="ident">more</span>)
         } <span class="kw">else</span> {
             <span class="ident">EpochChangeProof</span>::<span class="ident">new</span>(<span class="macro">vec</span><span class="macro">!</span>[], <span class="comment">/* more = */</span> <span class="bool-val">false</span>)

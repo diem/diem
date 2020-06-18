@@ -268,7 +268,7 @@
     <span class="kw">fn</span> <span class="ident">get_epoch_proof</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Get ledger info at an epoch boundary version.</span>
-    <span class="kw">fn</span> <span class="ident">get_epoch_change_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">get_epoch_ending_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Load all on-chain configs from storage</span>
     <span class="doccomment">/// Note: this method is being exposed as executor proxy trait temporarily because storage read is currently</span>
@@ -391,14 +391,14 @@
 
     <span class="kw">fn</span> <span class="ident">get_epoch_proof</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">epoch</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">storage</span>
-            .<span class="ident">get_epoch_change_ledger_infos</span>(<span class="ident">epoch</span>, <span class="ident">epoch</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>
+            .<span class="ident">get_epoch_ending_ledger_infos</span>(<span class="ident">epoch</span>, <span class="ident">epoch</span> <span class="op">+</span> <span class="number">1</span>)<span class="question-mark">?</span>
             .<span class="ident">ledger_info_with_sigs</span>
             .<span class="ident">pop</span>()
             .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Empty EpochChangeProof&quot;</span>))
     }
 
-    <span class="kw">fn</span> <span class="ident">get_epoch_change_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">get_epoch_change_ledger_info</span>(<span class="ident">version</span>)
+    <span class="kw">fn</span> <span class="ident">get_epoch_ending_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">storage</span>.<span class="ident">get_epoch_ending_ledger_info</span>(<span class="ident">version</span>)
     }
 
     <span class="kw">fn</span> <span class="ident">load_on_chain_configs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {

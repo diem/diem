@@ -1504,7 +1504,7 @@
         <span class="comment">// Retrieve the waypoint LI.</span>
         <span class="kw">let</span> <span class="ident">waypoint_li</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">executor_proxy</span>
-            .<span class="ident">get_epoch_change_ledger_info</span>(<span class="ident">waypoint_version</span>)<span class="question-mark">?</span>;
+            .<span class="ident">get_epoch_ending_ledger_info</span>(<span class="ident">waypoint_version</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Txns are up to the end of request epoch with the proofs relative to the waypoint LI.</span>
         <span class="kw">let</span> <span class="ident">end_of_epoch_li</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">waypoint_li</span>.<span class="ident">ledger_info</span>().<span class="ident">epoch</span>() <span class="op">&gt;</span> <span class="ident">request</span>.<span class="ident">current_epoch</span> {

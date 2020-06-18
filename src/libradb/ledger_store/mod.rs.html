@@ -544,7 +544,7 @@
     <span class="doccomment">/// [`start_epoch`, `end_epoch`). If there is no more than `limit` results, this function</span>
     <span class="doccomment">/// returns all of them, otherwise the first `limit` results are returned and a flag</span>
     <span class="doccomment">/// (when true) will be used to indicate the fact that there is more.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_epoch_change_ledger_infos</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_epoch_ending_ledger_infos</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">start_epoch</span>: <span class="ident">u64</span>,
         <span class="ident">end_epoch</span>: <span class="ident">u64</span>,
@@ -599,7 +599,7 @@
     }
 
     <span class="doccomment">/// Gets ledger info at specified version and ensures it&#39;s an epoch change.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_epoch_change_ledger_info</span>(
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_epoch_ending_ledger_info</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">version</span>: <span class="ident">Version</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span> {

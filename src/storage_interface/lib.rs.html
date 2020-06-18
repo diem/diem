@@ -522,11 +522,11 @@
 <span class="doccomment">/// Trait that is implemented by a DB that supports certain public (to client) read APIs</span>
 <span class="doccomment">/// expected of a Libra DB</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">DbReader</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
-    <span class="doccomment">/// See [`LibraDB::get_epoch_change_ledger_infos`].</span>
+    <span class="doccomment">/// See [`LibraDB::get_epoch_ending_ledger_infos`].</span>
     <span class="doccomment">///</span>
-    <span class="doccomment">/// [`LibraDB::get_epoch_change_ledger_infos`]:</span>
-    <span class="doccomment">/// ../libradb/struct.LibraDB.html#method.get_epoch_change_ledger_infos</span>
-    <span class="kw">fn</span> <span class="ident">get_epoch_change_ledger_infos</span>(
+    <span class="doccomment">/// [`LibraDB::get_epoch_ending_ledger_infos`]:</span>
+    <span class="doccomment">/// ../libradb/struct.LibraDB.html#method.get_epoch_ending_ledger_infos</span>
+    <span class="kw">fn</span> <span class="ident">get_epoch_ending_ledger_infos</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">start_epoch</span>: <span class="ident">u64</span>,
         <span class="ident">end_epoch</span>: <span class="ident">u64</span>,
@@ -641,7 +641,7 @@
     <span class="kw">fn</span> <span class="ident">get_latest_tree_state</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">TreeState</span><span class="op">&gt;</span>;
 
     <span class="doccomment">/// Get the ledger info of the epoch that `known_version` belongs to.</span>
-    <span class="kw">fn</span> <span class="ident">get_epoch_change_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">known_version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span>;
+    <span class="kw">fn</span> <span class="ident">get_epoch_ending_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">known_version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span>;
 }
 
 <span class="kw">impl</span> <span class="ident">MoveStorage</span> <span class="kw">for</span> <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">DbReader</span> {

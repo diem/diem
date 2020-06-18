@@ -697,7 +697,7 @@
         <span class="kw">let</span> <span class="ident">proof</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">storage</span>
             .<span class="ident">libra_db</span>()
-            .<span class="ident">get_epoch_change_ledger_infos</span>(<span class="ident">request</span>.<span class="ident">start_epoch</span>, <span class="ident">request</span>.<span class="ident">end_epoch</span>)
+            .<span class="ident">get_epoch_ending_ledger_infos</span>(<span class="ident">request</span>.<span class="ident">start_epoch</span>, <span class="ident">request</span>.<span class="ident">end_epoch</span>)
             .<span class="ident">context</span>(<span class="string">&quot;[EpochManager] Failed to get epoch proof&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="ident">ConsensusMsg</span>::<span class="ident">EpochChangeProof</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">proof</span>));
         <span class="self">self</span>.<span class="ident">network_sender</span>.<span class="ident">send_to</span>(<span class="ident">peer_id</span>, <span class="ident">msg</span>).<span class="ident">context</span>(<span class="macro">format</span><span class="macro">!</span>(

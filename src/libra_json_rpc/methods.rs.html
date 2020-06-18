@@ -501,7 +501,7 @@
     <span class="kw">let</span> (<span class="ident">version</span>, <span class="ident">timestamp</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">serde_json</span>::<span class="ident">from_value</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>(<span class="ident">request</span>.<span class="ident">get_param</span>(<span class="number">0</span>)) {
         <span class="prelude-val">Ok</span>(<span class="ident">version</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="comment">// TODO: fix once we have a real way to get transaction timestamps</span>
-            <span class="kw">let</span> <span class="ident">li</span> <span class="op">=</span> <span class="ident">service</span>.<span class="ident">db</span>.<span class="ident">get_epoch_change_ledger_info</span>(<span class="ident">version</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">li</span> <span class="op">=</span> <span class="ident">service</span>.<span class="ident">db</span>.<span class="ident">get_epoch_ending_ledger_info</span>(<span class="ident">version</span>)<span class="question-mark">?</span>;
             (<span class="ident">version</span>, <span class="ident">li</span>.<span class="ident">ledger_info</span>().<span class="ident">timestamp_usecs</span>())
         }
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> (
