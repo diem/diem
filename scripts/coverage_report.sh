@@ -81,7 +81,7 @@ then
 fi
 
 # Set the flags necessary for coverage output
-export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Coverflow-checks=off -Zno-landing-pads"
+export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Coverflow-checks=off"
 export RUSTC_BOOTSTRAP=1
 export CARGO_INCREMENTAL=0
 
