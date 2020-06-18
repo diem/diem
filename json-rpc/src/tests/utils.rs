@@ -252,7 +252,7 @@ impl DbReader for MockLibraDB {
         unimplemented!()
     }
 
-    fn get_epoch_change_ledger_infos(
+    fn get_epoch_ending_ledger_infos(
         &self,
         _start_epoch: u64,
         _end_epoch: u64,
@@ -260,7 +260,7 @@ impl DbReader for MockLibraDB {
         unimplemented!()
     }
 
-    fn get_epoch_change_ledger_info(&self, _: u64) -> Result<LedgerInfoWithSignatures> {
+    fn get_epoch_ending_ledger_info(&self, _: u64) -> Result<LedgerInfoWithSignatures> {
         unimplemented!()
     }
 }

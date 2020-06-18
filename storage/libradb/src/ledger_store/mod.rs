@@ -98,7 +98,7 @@ impl LedgerStore {
     /// [`start_epoch`, `end_epoch`). If there is no more than `limit` results, this function
     /// returns all of them, otherwise the first `limit` results are returned and a flag
     /// (when true) will be used to indicate the fact that there is more.
-    pub fn get_epoch_change_ledger_infos(
+    pub fn get_epoch_ending_ledger_infos(
         &self,
         start_epoch: u64,
         end_epoch: u64,
@@ -153,7 +153,7 @@ impl LedgerStore {
     }
 
     /// Gets ledger info at specified version and ensures it's an epoch change.
-    pub fn get_epoch_change_ledger_info(
+    pub fn get_epoch_ending_ledger_info(
         &self,
         version: Version,
     ) -> Result<LedgerInfoWithSignatures> {

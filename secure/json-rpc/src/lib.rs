@@ -609,11 +609,11 @@ mod test {
             unimplemented!()
         }
 
-        fn get_epoch_change_ledger_infos(&self, _: u64, _: u64) -> Result<EpochChangeProof> {
+        fn get_epoch_ending_ledger_infos(&self, _: u64, _: u64) -> Result<EpochChangeProof> {
             unimplemented!()
         }
 
-        fn get_epoch_change_ledger_info(&self, _: u64) -> Result<LedgerInfoWithSignatures> {
+        fn get_epoch_ending_ledger_info(&self, _: u64) -> Result<LedgerInfoWithSignatures> {
             unimplemented!()
         }
     }

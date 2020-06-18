@@ -128,11 +128,11 @@ impl From<libra_secure_net::Error> for Error {
 /// Trait that is implemented by a DB that supports certain public (to client) read APIs
 /// expected of a Libra DB
 pub trait DbReader: Send + Sync {
-    /// See [`LibraDB::get_epoch_change_ledger_infos`].
+    /// See [`LibraDB::get_epoch_ending_ledger_infos`].
     ///
-    /// [`LibraDB::get_epoch_change_ledger_infos`]:
-    /// ../libradb/struct.LibraDB.html#method.get_epoch_change_ledger_infos
-    fn get_epoch_change_ledger_infos(
+    /// [`LibraDB::get_epoch_ending_ledger_infos`]:
+    /// ../libradb/struct.LibraDB.html#method.get_epoch_ending_ledger_infos
+    fn get_epoch_ending_ledger_infos(
         &self,
         start_epoch: u64,
         end_epoch: u64,
@@ -247,7 +247,7 @@ pub trait DbReader: Send + Sync {
     fn get_latest_tree_state(&self) -> Result<TreeState>;
 
     /// Get the ledger info of the epoch that `known_version` belongs to.
-    fn get_epoch_change_ledger_info(&self, known_version: u64) -> Result<LedgerInfoWithSignatures>;
+    fn get_epoch_ending_ledger_info(&self, known_version: u64) -> Result<LedgerInfoWithSignatures>;
 }
 
 impl MoveStorage for &dyn DbReader {
