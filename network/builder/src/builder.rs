@@ -40,6 +40,9 @@ use network::{
     transport::{self, Connection, LibraNetTransport, LIBRA_TCP_TRANSPORT},
     ProtocolId,
 };
+use network_simple_onchain_discovery::{
+    ConfigurationChangeListener, ConfigurationChangeListenerConfig,
+};
 use onchain_discovery::builder::{OnchainDiscoveryBuilder, OnchainDiscoveryBuilderConfig};
 use std::{
     clone::Clone,
@@ -48,6 +51,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 use storage_interface::DbReader;
+use subscription_service::ReconfigSubscription;
 use tokio::runtime::{Builder, Handle, Runtime};
 
 #[derive(Debug)]
@@ -108,12 +112,16 @@ pub struct NetworkBuilder {
     max_fullnode_connections: usize,
     connectivity_manager_config: Option<ConnectivityManagerBuilderConfig>,
     connectivity_manager: Option<ConnectivityManagerService>,
+    configuration_change_listener_cfg: Option<ConfigurationChangeListenerConfig>,
+    configuration_change_listener: Option<ConfigurationChangeListener>,
     discovery_cfg: Option<DiscoveryBuilderConfig>,
     discovery: Option<DiscoveryService>,
     health_checker_cfg: Option<HealthCheckerBuilderConfig>,
     health_checker: Option<HealthCheckerService>,
     onchain_discovery_cfg: Option<OnchainDiscoveryBuilderConfig>,
     onchain_discovery: Option<OnchainDiscoveryBuilder>,
+
+    reconfig_subscriptions: Vec<ReconfigSubscription>,
 }
 
 impl NetworkBuilder {
@@ -160,12 +168,15 @@ impl NetworkBuilder {
             max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
             connectivity_manager_config: None,
             connectivity_manager: None,
-            discovery: None,
+            configuration_change_listener_cfg: None,
+            configuration_change_listener: None,
             discovery_cfg: None,
+            discovery: None,
             health_checker_cfg: None,
             health_checker: None,
             onchain_discovery_cfg: None,
             onchain_discovery: None,
+            reconfig_subscriptions: Vec::new(),
         }
     }
 
@@ -260,6 +271,10 @@ impl NetworkBuilder {
 
     pub fn peer_id(&self) -> PeerId {
         self.network_context.peer_id()
+    }
+
+    pub fn reconfig_subscriptions(&mut self) -> &mut Vec<ReconfigSubscription> {
+        &mut self.reconfig_subscriptions
     }
 
     /// Set network authentication mode.
@@ -375,8 +390,21 @@ impl NetworkBuilder {
             conn_mgr_reqs_rx,
             connection_limit,
         );
-
         self.connectivity_manager_config = Some(config);
+
+        if self.network_context.role() == RoleType::Validator {
+            // Set up to listen for network configuration changes
+            let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
+                network_simple_onchain_discovery::gen_simple_discovery_reconfig_subscription();
+            self.reconfig_subscriptions
+                .push(simple_discovery_reconfig_subscription);
+            self.configuration_change_listener_cfg = Some(ConfigurationChangeListenerConfig::new(
+                self.network_context.role(),
+                self.conn_mgr_reqs_tx().expect("We just set this value"),
+                simple_discovery_reconfig_rx,
+            ));
+        }
+
         self.build_connectivity_manager()
     }
 
@@ -388,6 +416,11 @@ impl NetworkBuilder {
                 config,
             );
             self.connectivity_manager = Some(conn_mgr);
+            if let Some(config) = self.configuration_change_listener_cfg.take() {
+                let configuration_change_listener =
+                    network_simple_onchain_discovery::build_configuration_change_listener(config);
+                self.configuration_change_listener = Some(configuration_change_listener);
+            }
         }
         self.start_connectivity_manager()
     }
@@ -397,6 +430,9 @@ impl NetworkBuilder {
         if let Some(conn_mgr) = self.connectivity_manager.take() {
             self.executor.spawn(conn_mgr.start());
             debug!("Started ConnectivityManager");
+            if let Some(configuration_change_listener) = self.configuration_change_listener.take() {
+                self.executor.spawn(configuration_change_listener.start());
+            }
         }
         self
     }

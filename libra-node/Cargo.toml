@@ -34,7 +34,6 @@ libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 libradb = { path = "../storage/libradb", version = "0.1.0" }
 network-builder = { path = "../network/builder", version = "0.1.0" }
-network-simple-onchain-discovery = { path = "../network/simple-onchain-discovery", version = "0.1.0"}
 storage-client = { path = "../storage/storage-client", version = "0.1.0" }
 state-synchronizer = { path = "../state-synchronizer", version = "0.1.0" }
 storage-interface= { path = "../storage/storage-interface", version = "0.1.0" }
