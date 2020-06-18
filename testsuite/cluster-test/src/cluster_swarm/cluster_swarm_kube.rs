@@ -223,7 +223,7 @@ impl ClusterSwarmKube {
                                 return Ok(true);
                             }
                         }
-                        if let Some(failed) = job_status.succeeded {
+                        if let Some(failed) = job_status.failed {
                             if failed as u32 == back_off_limit + 1 {
                                 error!("job {} failed to complete", job_name);
                                 return Ok(false);
