@@ -214,17 +214,44 @@ impl LibraDB {
         end_epoch: u64,
         limit: usize,
     ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
+        ensure!(
+            start_epoch <= end_epoch,
+            "Bad epoch range [{}, {})",
+            start_epoch,
+            end_epoch,
+        );
+        // Note that the latest epoch can be the same with the current epoch (in most cases), or
+        // current_epoch + 1 (when the latest ledger_info carries next validator set)
+        let latest_epoch = self
+            .ledger_store
+            .get_latest_ledger_info()?
+            .ledger_info()
+            .next_block_epoch();
+        ensure!(
+            end_epoch <= latest_epoch,
+            "Unable to provide epoch change ledger info for still open epoch. asked upper bound: {}, last sealed epoch: {}",
+            end_epoch,
+            latest_epoch - 1,  // okay to -1 because genesis LedgerInfo has .next_block_epoch() == 1
+        );
+
         let (paging_epoch, more) = if end_epoch - start_epoch > limit as u64 {
             (start_epoch + limit as u64, true)
         } else {
             (end_epoch, false)
         };
 
-        Ok((
-            self.ledger_store
-                .get_epoch_ending_ledger_infos(start_epoch, paging_epoch)?,
-            more,
-        ))
+        let lis = self
+            .ledger_store
+            .get_epoch_ending_ledger_info_iter(start_epoch, paging_epoch)?
+            .collect::<Result<Vec<_>>>()?;
+        ensure!(
+            lis.len() == (paging_epoch - start_epoch) as usize,
+            "DB corruption: missing epoch ending ledger info for epoch {}",
+            lis.last()
+                .map(|li| li.ledger_info().next_block_epoch())
+                .unwrap_or(start_epoch),
+        );
+        Ok((lis, more))
     }
 
     pub fn get_transaction_with_proof(
