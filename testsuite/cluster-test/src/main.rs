@@ -763,7 +763,7 @@ impl ClusterTestRunner {
 
     async fn wait_until_all_healthy(&mut self) -> Result<()> {
         info!("Waiting for all validators to be healthy");
-        let wait_deadline = Instant::now() + Duration::from_secs(20 * 60);
+        let wait_deadline = Instant::now() + Duration::from_secs(5 * 60);
         for instance in self.cluster.validator_instances() {
             self.health_check_runner.invalidate(instance.peer_name());
         }

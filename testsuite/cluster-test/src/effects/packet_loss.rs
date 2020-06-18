@@ -27,7 +27,7 @@ impl Effect for PacketLoss {
     async fn activate(&mut self) -> Result<()> {
         info!("PacketLoss {:.*}% for {}", 2, self.percent, self.instance);
         let cmd = format!(
-            "sudo tc qdisc add dev eth0 root netem loss {:.*}%",
+            "tc qdisc add dev eth0 root netem loss {:.*}%",
             2, self.percent
         );
         self.instance.util_cmd(cmd, "ac-packet-loss").await
@@ -35,7 +35,7 @@ impl Effect for PacketLoss {
 
     async fn deactivate(&mut self) -> Result<()> {
         info!("PacketLoss {:.*}% for {}", 2, self.percent, self.instance);
-        let cmd = "sudo tc qdisc delete dev eth0 root; true".to_string();
+        let cmd = "tc qdisc delete dev eth0 root; true".to_string();
         self.instance.util_cmd(cmd, "de-packet-loss").await
     }
 }
