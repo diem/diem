@@ -5,6 +5,7 @@
 
 mod error;
 mod genesis;
+mod json_rpc;
 mod key;
 mod layout;
 mod secure_backend;
@@ -50,6 +51,10 @@ pub enum Command {
     OperatorKey(crate::key::OperatorKey),
     #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
     OwnerKey(crate::key::OwnerKey),
+    #[structopt(about = "Read account state from JSON-RPC endpoint")]
+    ReadAccountState(crate::json_rpc::ReadAccountState),
+    #[structopt(about = "Submit a transaction to the blockchain")]
+    SubmitTransaction(crate::json_rpc::SubmitTransaction),
     #[structopt(about = "Submits a Layout doc to a shared storage")]
     SetLayout(SetLayout),
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
@@ -66,7 +71,9 @@ pub enum CommandName {
     InsertWaypoint,
     OperatorKey,
     OwnerKey,
+    ReadAccountState,
     SetLayout,
+    SubmitTransaction,
     ValidatorConfig,
     Verify,
 }
@@ -80,7 +87,9 @@ impl From<&Command> for CommandName {
             Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
+            Command::ReadAccountState(_) => CommandName::ReadAccountState,
             Command::SetLayout(_) => CommandName::SetLayout,
+            Command::SubmitTransaction(_) => CommandName::SubmitTransaction,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::Verify(_) => CommandName::Verify,
         }
@@ -96,7 +105,9 @@ impl std::fmt::Display for CommandName {
             CommandName::InsertWaypoint => "insert-waypoint",
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
+            CommandName::ReadAccountState => "read-account-state",
             CommandName::SetLayout => "set-layout",
+            CommandName::SubmitTransaction => "submit-transaction",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::Verify => "verify",
         };
@@ -113,7 +124,13 @@ impl Command {
             Command::InsertWaypoint(_) => self.insert_waypoint().unwrap().to_string(),
             Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
+            Command::ReadAccountState(_) => format!("{:?}", self.read_account_state().unwrap()),
             Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
+            Command::SubmitTransaction(_) => self
+                .submit_transaction()
+                .map(|_| "success!")
+                .unwrap()
+                .to_string(),
             Command::ValidatorConfig(_) => format!("{:?}", self.validator_config().unwrap()),
             Command::Verify(_) => self.verify().unwrap(),
         }
@@ -161,10 +178,24 @@ impl Command {
         }
     }
 
+    pub fn read_account_state(self) -> Result<libra_types::account_state::AccountState, Error> {
+        match self {
+            Command::ReadAccountState(read_account_state) => read_account_state.execute(),
+            _ => Err(self.unexpected_command(CommandName::ReadAccountState)),
+        }
+    }
+
     pub fn set_layout(self) -> Result<crate::layout::Layout, Error> {
         match self {
             Command::SetLayout(set_layout) => set_layout.execute(),
             _ => Err(self.unexpected_command(CommandName::SetLayout)),
+        }
+    }
+
+    pub fn submit_transaction(self) -> Result<(), Error> {
+        match self {
+            Command::SubmitTransaction(submit_transaction) => submit_transaction.execute(),
+            _ => Err(self.unexpected_command(CommandName::SubmitTransaction)),
         }
     }
 
