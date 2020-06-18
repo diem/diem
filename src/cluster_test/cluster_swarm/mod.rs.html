@@ -137,8 +137,6 @@
 <span id="137">137</span>
 <span id="138">138</span>
 <span id="139">139</span>
-<span id="140">140</span>
-<span id="141">141</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -159,8 +157,6 @@
 
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">ClusterSwarm</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">remove_all_network_effects</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span>;
-
     <span class="doccomment">/// Spawns a new instance.</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">spawn_new_instance</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,

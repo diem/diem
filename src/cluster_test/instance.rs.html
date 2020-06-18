@@ -554,14 +554,14 @@
     }
 
     <span class="doccomment">/// Runs command on the same host in separate utility container based on cluster-test-util image</span>
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">util_cmd</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">command</span>: <span class="ident">String</span>, <span class="ident">job_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">util_cmd</span><span class="op">&lt;</span><span class="ident">S</span>: <span class="ident">AsRef</span><span class="op">&lt;</span><span class="ident">str</span><span class="op">&gt;</span><span class="op">&gt;</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">command</span>: <span class="ident">S</span>, <span class="ident">job_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">backend</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">k8s_backend</span>();
         <span class="ident">backend</span>
             .<span class="ident">kube</span>
             .<span class="ident">run</span>(
                 <span class="kw-2">&amp;</span><span class="ident">backend</span>.<span class="ident">k8s_node</span>,
                 <span class="string">&quot;853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest&quot;</span>,
-                <span class="ident">command</span>,
+                <span class="ident">command</span>.<span class="ident">as_ref</span>(),
                 <span class="ident">job_name</span>,
             )
             .<span class="kw">await</span>
