@@ -4779,7 +4779,7 @@ dependencies = [
 
 [[package]]
 name = "serde-generate"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "maplit 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5729,7 +5729,7 @@ dependencies = [
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
- "serde-generate 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde-generate 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde-reflection 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_yaml 0.8.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6618,7 +6618,7 @@ dependencies = [
 "checksum semver 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "1d7eb9ef2c18661902cc47e535f9bc51b78acd254da71d375c2f6720d9a40403"
 "checksum semver-parser 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 "checksum serde 1.0.112 (registry+https://github.com/rust-lang/crates.io-index)" = "736aac72d1eafe8e5962d1d1c3d99b0df526015ba40915cb3c49d042e92ec243"
-"checksum serde-generate 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cd00f25f89ad8f3331224ce569b3423cdaa04402292b9ea8fc24cd9c8233676a"
+"checksum serde-generate 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b1a0bbfc88790d85018329bdad1b2fc8914262aeec3b6bb3c93f94ff5900a9f8"
 "checksum serde-name 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "92bb32dbe1df50291d7d00b5e573acb2c70b783baf3d1bce2d19c86be11c709e"
 "checksum serde-reflection 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5820d2a74b1f0694d959f48660bc52fa922239d5c2f6dcc17261c5307967b9e5"
 "checksum serde-value 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5a65a7291a8a568adcae4c10a677ebcedbc6c9cec91c054dee2ce40b0e3290eb"
