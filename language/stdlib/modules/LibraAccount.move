@@ -912,5 +912,28 @@ module LibraAccount {
         Roles::new_validator_operator_role(creator_account, &new_account);
         make_account(new_account, auth_key_prefix)
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // End of the proof of concept code
+    ///////////////////////////////////////////////////////////////////////////
+
+    // ****************** SPECIFICATIONS *******************
+
+    spec module {
+        /// Returns field `key_rotation_capability` of the
+        /// LibraAccount under `addr`.
+        define spec_get_key_rotation_cap(addr: address):
+            Option<KeyRotationCapability> {
+            global<LibraAccount>(addr).key_rotation_capability
+        }
+
+        /// Returns true if the LibraAccount at `addr` holds
+        /// `KeyRotationCapability` for itself.
+        define spec_holds_own_key_rotation_cap(addr: address): bool {
+            Option::spec_is_some(spec_get_key_rotation_cap(addr))
+            && addr == Option::spec_value_inside(
+                spec_get_key_rotation_cap(addr)).account_address
+        }
+    }
 }
 }

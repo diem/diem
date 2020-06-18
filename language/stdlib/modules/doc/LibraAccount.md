@@ -71,6 +71,7 @@
 -  [Function `bump_sequence_number`](#0x1_LibraAccount_bump_sequence_number)
 -  [Function `create_validator_account`](#0x1_LibraAccount_create_validator_account)
 -  [Function `create_validator_operator_account`](#0x1_LibraAccount_create_validator_operator_account)
+-  [Specification](#0x1_LibraAccount_Specification)
 
 
 
@@ -2325,3 +2326,39 @@ also be added. This account will be a child of
 
 
 </details>
+
+<a name="0x1_LibraAccount_Specification"></a>
+
+## Specification
+
+
+Returns field
+<code>key_rotation_capability</code> of the
+LibraAccount under
+<code>addr</code>.
+
+
+<a name="0x1_LibraAccount_spec_get_key_rotation_cap"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr: address):
+    <a href="Option.md#0x1_Option">Option</a>&lt;<a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a>&gt; {
+    <b>global</b>&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).key_rotation_capability
+}
+</code></pre>
+
+
+Returns true if the LibraAccount at
+<code>addr</code> holds
+<code><a href="#0x1_LibraAccount_KeyRotationCapability">KeyRotationCapability</a></code> for itself.
+
+
+<a name="0x1_LibraAccount_spec_holds_own_key_rotation_cap"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_holds_own_key_rotation_cap">spec_holds_own_key_rotation_cap</a>(addr: address): bool {
+    <a href="Option.md#0x1_Option_spec_is_some">Option::spec_is_some</a>(<a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr))
+    && addr == <a href="Option.md#0x1_Option_spec_value_inside">Option::spec_value_inside</a>(
+        <a href="#0x1_LibraAccount_spec_get_key_rotation_cap">spec_get_key_rotation_cap</a>(addr)).account_address
+}
+</code></pre>

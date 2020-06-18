@@ -484,10 +484,10 @@ because it's 0 for "none" or 1 for "some".
 Return true iff t contains none.
 
 
-<a name="0x1_Option_is_none_spec"></a>
+<a name="0x1_Option_spec_is_none"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_Option_is_none_spec">is_none_spec</a>&lt;Element&gt;(t: <a href="#0x1_Option">Option</a>&lt;Element&gt;): bool {
+<pre><code><b>define</b> <a href="#0x1_Option_spec_is_none">spec_is_none</a>&lt;Element&gt;(t: <a href="#0x1_Option">Option</a>&lt;Element&gt;): bool {
     len(t.vec) == 0
 }
 </code></pre>
@@ -496,11 +496,11 @@ Return true iff t contains none.
 Return true iff t contains some.
 
 
-<a name="0x1_Option_is_some_spec"></a>
+<a name="0x1_Option_spec_is_some"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_Option_is_some_spec">is_some_spec</a>&lt;Element&gt;(t: <a href="#0x1_Option">Option</a>&lt;Element&gt;): bool {
-    !<a href="#0x1_Option_is_none_spec">is_none_spec</a>(t)
+<pre><code><b>define</b> <a href="#0x1_Option_spec_is_some">spec_is_some</a>&lt;Element&gt;(t: <a href="#0x1_Option">Option</a>&lt;Element&gt;): bool {
+    !<a href="#0x1_Option_spec_is_none">spec_is_none</a>(t)
 }
 </code></pre>
 
@@ -508,10 +508,10 @@ Return true iff t contains some.
 Return the value inside of t.
 
 
-<a name="0x1_Option_value_inside"></a>
+<a name="0x1_Option_spec_value_inside"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_Option_value_inside">value_inside</a>&lt;Element&gt;(t: <a href="#0x1_Option">Option</a>&lt;Element&gt;): Element {
+<pre><code><b>define</b> <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>&lt;Element&gt;(t: <a href="#0x1_Option">Option</a>&lt;Element&gt;): Element {
     t.vec[0]
 }
 </code></pre>
@@ -530,7 +530,7 @@ Return the value inside of t.
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> <a href="#0x1_Option_is_none_spec">is_none_spec</a>(result);
+<b>ensures</b> <a href="#0x1_Option_spec_is_none">spec_is_none</a>(result);
 </code></pre>
 
 
@@ -547,8 +547,8 @@ Return the value inside of t.
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> <a href="#0x1_Option_is_some_spec">is_some_spec</a>(result);
-<b>ensures</b> <a href="#0x1_Option_value_inside">value_inside</a>(result) == e;
+<b>ensures</b> <a href="#0x1_Option_spec_is_some">spec_is_some</a>(result);
+<b>ensures</b> <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>(result) == e;
 </code></pre>
 
 
@@ -565,7 +565,7 @@ Return the value inside of t.
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="#0x1_Option_is_none_spec">is_none_spec</a>(t);
+<b>ensures</b> result == <a href="#0x1_Option_spec_is_none">spec_is_none</a>(t);
 </code></pre>
 
 
@@ -582,7 +582,7 @@ Return the value inside of t.
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == <a href="#0x1_Option_is_some_spec">is_some_spec</a>(t);
+<b>ensures</b> result == <a href="#0x1_Option_spec_is_some">spec_is_some</a>(t);
 </code></pre>
 
 
@@ -599,7 +599,7 @@ Return the value inside of t.
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == (<a href="#0x1_Option_is_some_spec">is_some_spec</a>(t) && <a href="#0x1_Option_value_inside">value_inside</a>(t) == e_ref);
+<b>ensures</b> result == (<a href="#0x1_Option_spec_is_some">spec_is_some</a>(t) && <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>(t) == e_ref);
 </code></pre>
 
 
@@ -615,8 +615,8 @@ Return the value inside of t.
 
 
 
-<pre><code><b>aborts_if</b> <a href="#0x1_Option_is_none_spec">is_none_spec</a>(t);
-<b>ensures</b> result == <a href="#0x1_Option_value_inside">value_inside</a>(t);
+<pre><code><b>aborts_if</b> <a href="#0x1_Option_spec_is_none">spec_is_none</a>(t);
+<b>ensures</b> result == <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>(t);
 </code></pre>
 
 
@@ -633,8 +633,8 @@ Return the value inside of t.
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> <a href="#0x1_Option_is_none_spec">is_none_spec</a>(t) ==&gt; result == default_ref;
-<b>ensures</b> <a href="#0x1_Option_is_some_spec">is_some_spec</a>(t) ==&gt; result == <a href="#0x1_Option_value_inside">value_inside</a>(t);
+<b>ensures</b> <a href="#0x1_Option_spec_is_none">spec_is_none</a>(t) ==&gt; result == default_ref;
+<b>ensures</b> <a href="#0x1_Option_spec_is_some">spec_is_some</a>(t) ==&gt; result == <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>(t);
 </code></pre>
 
 
@@ -651,8 +651,8 @@ Return the value inside of t.
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> <a href="#0x1_Option_is_none_spec">is_none_spec</a>(t) ==&gt; result == default;
-<b>ensures</b> <a href="#0x1_Option_is_some_spec">is_some_spec</a>(t) ==&gt; result == <a href="#0x1_Option_value_inside">value_inside</a>(t);
+<b>ensures</b> <a href="#0x1_Option_spec_is_none">spec_is_none</a>(t) ==&gt; result == default;
+<b>ensures</b> <a href="#0x1_Option_spec_is_some">spec_is_some</a>(t) ==&gt; result == <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>(t);
 </code></pre>
 
 
@@ -668,9 +668,9 @@ Return the value inside of t.
 
 
 
-<pre><code><b>aborts_if</b> <a href="#0x1_Option_is_some_spec">is_some_spec</a>(t);
-<b>ensures</b> <a href="#0x1_Option_is_some_spec">is_some_spec</a>(t);
-<b>ensures</b> <a href="#0x1_Option_value_inside">value_inside</a>(t) == e;
+<pre><code><b>aborts_if</b> <a href="#0x1_Option_spec_is_some">spec_is_some</a>(t);
+<b>ensures</b> <a href="#0x1_Option_spec_is_some">spec_is_some</a>(t);
+<b>ensures</b> <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>(t) == e;
 </code></pre>
 
 
@@ -686,9 +686,9 @@ Return the value inside of t.
 
 
 
-<pre><code><b>aborts_if</b> <a href="#0x1_Option_is_none_spec">is_none_spec</a>(t);
-<b>ensures</b> result == <a href="#0x1_Option_value_inside">value_inside</a>(<b>old</b>(t));
-<b>ensures</b> <a href="#0x1_Option_is_none_spec">is_none_spec</a>(t);
+<pre><code><b>aborts_if</b> <a href="#0x1_Option_spec_is_none">spec_is_none</a>(t);
+<b>ensures</b> result == <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>(<b>old</b>(t));
+<b>ensures</b> <a href="#0x1_Option_spec_is_none">spec_is_none</a>(t);
 </code></pre>
 
 
@@ -704,8 +704,8 @@ Return the value inside of t.
 
 
 
-<pre><code><b>aborts_if</b> <a href="#0x1_Option_is_none_spec">is_none_spec</a>(t);
-<b>ensures</b> result == <a href="#0x1_Option_value_inside">value_inside</a>(t);
+<pre><code><b>aborts_if</b> <a href="#0x1_Option_spec_is_none">spec_is_none</a>(t);
+<b>ensures</b> result == <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>(t);
 </code></pre>
 
 
@@ -721,10 +721,10 @@ Return the value inside of t.
 
 
 
-<pre><code><b>aborts_if</b> <a href="#0x1_Option_is_none_spec">is_none_spec</a>(t);
-<b>ensures</b> result == <a href="#0x1_Option_value_inside">value_inside</a>(<b>old</b>(t));
-<b>ensures</b> <a href="#0x1_Option_is_some_spec">is_some_spec</a>(t);
-<b>ensures</b> <a href="#0x1_Option_value_inside">value_inside</a>(t) == e;
+<pre><code><b>aborts_if</b> <a href="#0x1_Option_spec_is_none">spec_is_none</a>(t);
+<b>ensures</b> result == <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>(<b>old</b>(t));
+<b>ensures</b> <a href="#0x1_Option_spec_is_some">spec_is_some</a>(t);
+<b>ensures</b> <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>(t) == e;
 </code></pre>
 
 
@@ -741,8 +741,8 @@ Return the value inside of t.
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> <a href="#0x1_Option_is_none_spec">is_none_spec</a>(<b>old</b>(t)) ==&gt; result == default;
-<b>ensures</b> <a href="#0x1_Option_is_some_spec">is_some_spec</a>(<b>old</b>(t)) ==&gt; result == <a href="#0x1_Option_value_inside">value_inside</a>(<b>old</b>(t));
+<b>ensures</b> <a href="#0x1_Option_spec_is_none">spec_is_none</a>(<b>old</b>(t)) ==&gt; result == default;
+<b>ensures</b> <a href="#0x1_Option_spec_is_some">spec_is_some</a>(<b>old</b>(t)) ==&gt; result == <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>(<b>old</b>(t));
 </code></pre>
 
 
@@ -758,8 +758,8 @@ Return the value inside of t.
 
 
 
-<pre><code><b>aborts_if</b> <a href="#0x1_Option_is_none_spec">is_none_spec</a>(t);
-<b>ensures</b> result == <a href="#0x1_Option_value_inside">value_inside</a>(<b>old</b>(t));
+<pre><code><b>aborts_if</b> <a href="#0x1_Option_spec_is_none">spec_is_none</a>(t);
+<b>ensures</b> result == <a href="#0x1_Option_spec_value_inside">spec_value_inside</a>(<b>old</b>(t));
 </code></pre>
 
 
@@ -775,5 +775,5 @@ Return the value inside of t.
 
 
 
-<pre><code><b>aborts_if</b> <a href="#0x1_Option_is_some_spec">is_some_spec</a>(t);
+<pre><code><b>aborts_if</b> <a href="#0x1_Option_spec_is_some">spec_is_some</a>(t);
 </code></pre>
