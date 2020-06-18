@@ -5,7 +5,7 @@
 mod test;
 
 use crate::{
-    ledger_store::LedgerStore,
+    ledger_store::{EpochEndingLedgerInfoIter, LedgerStore},
     state_store::StateStore,
     transaction_store::{TransactionIter, TransactionStore},
 };
@@ -93,5 +93,14 @@ impl BackupHandler {
             .get_transaction_info_with_proof(version, ledger_info.ledger_info().version())?;
 
         Ok((txn_info, ledger_info))
+    }
+
+    pub fn get_epoch_ending_ledger_info_iter(
+        &self,
+        start_epoch: u64,
+        end_epoch: u64,
+    ) -> Result<EpochEndingLedgerInfoIter> {
+        self.ledger_store
+            .get_epoch_ending_ledger_info_iter(start_epoch, end_epoch)
     }
 }
