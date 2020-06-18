@@ -63,8 +63,6 @@ fn setup_debug_interface(config: &NodeConfig) -> NodeDebugService {
 }
 
 pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
-    crash_handler::setup_panic_handler();
-
     // Some of our code uses the rayon global thread pool. Name the rayon threads so it doesn't
     // cause confusion, otherwise the threads would have their parent's name.
     rayon::ThreadPoolBuilder::new()
