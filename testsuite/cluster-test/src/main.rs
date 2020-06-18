@@ -159,7 +159,7 @@ pub async fn main() {
         let logs = DebugPortLogWorker::spawn_new(&util.cluster).0;
         let mut health_check_runner = HealthCheckRunner::new_all(util.cluster);
         let duration = Duration::from_secs(args.duration);
-        exit_on_error(run_health_check(&logs, &mut health_check_runner, duration));
+        exit_on_error(run_health_check(&logs, &mut health_check_runner, duration).await);
         return;
     }
 
@@ -169,11 +169,9 @@ pub async fn main() {
 
     if args.health_check {
         let duration = Duration::from_secs(args.duration);
-        exit_on_error(run_health_check(
-            &runner.logs,
-            &mut runner.health_check_runner,
-            duration,
-        ));
+        exit_on_error(
+            run_health_check(&runner.logs, &mut runner.health_check_runner, duration).await,
+        );
     } else if args.perf_run {
         perf_msg = Some(exit_on_error(runner.perf_run().await));
     } else if args.cleanup {
@@ -319,7 +317,7 @@ pub async fn emit_tx(
     println!("Average rate: {}", stats.rate(duration));
 }
 
-fn run_health_check(
+async fn run_health_check(
     logs: &LogTail,
     health_check_runner: &mut HealthCheckRunner,
     duration: Duration,
@@ -331,7 +329,9 @@ fn run_health_check(
         // This assumes so far that event propagation time is << 1s, this need to be refined
         // in future to account for actual event propagation delay
         let events = logs.recv_all_until_deadline(deadline);
-        let result = health_check_runner.run(&events, &HashSet::new(), PrintFailures::All);
+        let result = health_check_runner
+            .run(&events, &HashSet::new(), PrintFailures::All)
+            .await;
         let now = Instant::now();
         if now > health_check_deadline {
             return result.map(|_| ());
@@ -682,9 +682,10 @@ impl ClusterTestRunner {
     ) -> Result<()> {
         self.wait_until_all_healthy().await?;
         let events = self.logs.recv_all();
-        if let Err(s) =
-            self.health_check_runner
-                .run(&events, &HashSet::new(), PrintFailures::UnexpectedOnly)
+        if let Err(s) = self
+            .health_check_runner
+            .run(&events, &HashSet::new(), PrintFailures::UnexpectedOnly)
+            .await
         {
             bail!(
                 "Some validators are unhealthy before experiment started : {}",
@@ -753,7 +754,7 @@ impl ClusterTestRunner {
                         &events,
                         &affected_validators,
                         PrintFailures::UnexpectedOnly,
-                    ) {
+                    ).await {
                         bail!("Validators which were not under experiment failed : {}", s);
                     }
                 }
@@ -774,9 +775,10 @@ impl ClusterTestRunner {
             }
             let deadline = now + HEALTH_POLL_INTERVAL;
             let events = self.logs.recv_all_until_deadline(deadline);
-            if let Ok(failed_instances) =
-                self.health_check_runner
-                    .run(&events, &HashSet::new(), PrintFailures::None)
+            if let Ok(failed_instances) = self
+                .health_check_runner
+                .run(&events, &HashSet::new(), PrintFailures::None)
+                .await
             {
                 if failed_instances.is_empty() {
                     break;
