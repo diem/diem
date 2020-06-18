@@ -26,7 +26,7 @@ pub async fn set_asg_size(
     let set_desired_capacity_type = SetDesiredCapacityType {
         auto_scaling_group_name: asg_name.to_string(),
         desired_capacity: min_desired_capacity + buffer,
-        honor_cooldown: Some(false),
+        honor_cooldown: Some(true),
     };
     let credentials_provider = WebIdentityProvider::from_k8s_env();
 
