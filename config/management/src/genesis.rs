@@ -1,12 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{constants, error::Error, layout::Layout, SingleBackend};
+use crate::{
+    constants, error::Error, layout::Layout, secure_backend::StorageLocation::RemoteStorage,
+    SingleBackend,
+};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{ASSOCIATION_KEY, OPERATOR_KEY};
-use libra_secure_storage::{KVStorage, Storage};
+use libra_secure_storage::KVStorage;
 use libra_types::transaction::{Transaction, TransactionPayload};
-use std::{convert::TryInto, fs::File, io::Write, path::PathBuf};
+use std::{fs::File, io::Write, path::PathBuf};
 use structopt::StructOpt;
 use vm_genesis::ValidatorRegistration;
 
@@ -51,17 +54,13 @@ impl Genesis {
     /// Retrieves association key from the remote storage. Note, at this point in time, genesis
     /// only supports a single association key.
     pub fn association(&self, layout: &Layout) -> Result<Ed25519PublicKey, Error> {
-        let mut association_config = self.backend.backend.clone();
-        association_config
-            .parameters
-            .insert("namespace".into(), layout.association[0].clone());
+        let association_config = self.backend.backend.clone();
+        let association_storage = association_config.new_available_storage_with_namespace(
+            RemoteStorage,
+            Some(layout.association[0].clone()),
+        )?;
 
-        let association: Storage = association_config.try_into()?;
-        association
-            .available()
-            .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
-
-        let association_key = association
+        let association_key = association_storage
             .get(ASSOCIATION_KEY)
             .map_err(|e| Error::RemoteStorageReadError(ASSOCIATION_KEY, e.to_string()))?;
         association_key
@@ -72,17 +71,13 @@ impl Genesis {
 
     /// Retrieves a layout from the remote storage.
     pub fn layout(&self) -> Result<Layout, Error> {
-        let mut common_config = self.backend.backend.clone();
-        common_config
-            .parameters
-            .insert("namespace".into(), constants::COMMON_NS.into());
+        let common_config = self.backend.backend.clone();
+        let common_storage = common_config.new_available_storage_with_namespace(
+            RemoteStorage,
+            Some(constants::COMMON_NS.into()),
+        )?;
 
-        let common: Storage = common_config.try_into()?;
-        common
-            .available()
-            .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
-
-        let layout = common
+        let layout = common_storage
             .get(constants::LAYOUT)
             .and_then(|v| v.value.string())
             .map_err(|e| Error::RemoteStorageReadError(constants::LAYOUT, e.to_string()))?;
@@ -98,15 +93,9 @@ impl Genesis {
         let mut validators = Vec::new();
 
         for owner in layout.owners.iter() {
-            let mut owner_config = self.backend.backend.clone();
-            owner_config
-                .parameters
-                .insert("namespace".into(), owner.into());
-
-            let owner_storage: Storage = owner_config.try_into()?;
-            owner_storage
-                .available()
-                .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
+            let owner_config = self.backend.backend.clone();
+            let owner_storage = owner_config
+                .new_available_storage_with_namespace(RemoteStorage, Some(owner.into()))?;
 
             let operator_key = owner_storage
                 .get(constants::VALIDATOR_OPERATOR)

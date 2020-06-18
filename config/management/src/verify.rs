@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, SingleBackend};
+use crate::{error::Error, secure_backend::StorageLocation::LocalStorage, SingleBackend};
 use executor::db_bootstrapper;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{
@@ -16,7 +16,7 @@ use libra_types::{
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use std::{
-    convert::{TryFrom, TryInto},
+    convert::TryFrom,
     fmt::Write,
     fs::File,
     io::Read,
@@ -41,10 +41,9 @@ pub struct Verify {
 
 impl Verify {
     pub fn execute(self) -> Result<String, Error> {
-        let storage: Storage = self.backend.backend.try_into()?;
-        storage
-            .available()
-            .map_err(|e| Error::LocalStorageUnavailable(e.to_string()))?;
+        let local_config = self.backend.backend;
+        let local_storage =
+            local_config.new_available_storage_with_namespace(LocalStorage, None)?;
         let mut buffer = String::new();
 
         writeln!(buffer, "Data stored in SecureStorage:").unwrap();
@@ -52,39 +51,55 @@ impl Verify {
         writeln!(buffer, "Keys").unwrap();
         write_break(&mut buffer);
 
-        write_ed25519_key(&storage, &mut buffer, CONSENSUS_KEY);
-        write_x25519_key(&storage, &mut buffer, FULLNODE_NETWORK_KEY);
-        write_ed25519_key(&storage, &mut buffer, libra_global_constants::OWNER_KEY);
-        write_ed25519_key(&storage, &mut buffer, libra_global_constants::OPERATOR_KEY);
-        write_ed25519_key(&storage, &mut buffer, VALIDATOR_NETWORK_KEY);
+        write_ed25519_key(&local_storage, &mut buffer, CONSENSUS_KEY);
+        write_x25519_key(&local_storage, &mut buffer, FULLNODE_NETWORK_KEY);
+        write_ed25519_key(
+            &local_storage,
+            &mut buffer,
+            libra_global_constants::OWNER_KEY,
+        );
+        write_ed25519_key(
+            &local_storage,
+            &mut buffer,
+            libra_global_constants::OPERATOR_KEY,
+        );
+        write_ed25519_key(&local_storage, &mut buffer, VALIDATOR_NETWORK_KEY);
 
         write_break(&mut buffer);
         writeln!(buffer, "Data").unwrap();
         write_break(&mut buffer);
 
         write_string(
-            &storage,
+            &local_storage,
             &mut buffer,
             libra_global_constants::OPERATOR_ACCOUNT,
         );
-        write_string(&storage, &mut buffer, libra_global_constants::OWNER_ACCOUNT);
-        write_u64(&storage, &mut buffer, libra_global_constants::EPOCH);
+        write_string(
+            &local_storage,
+            &mut buffer,
+            libra_global_constants::OWNER_ACCOUNT,
+        );
+        write_u64(&local_storage, &mut buffer, libra_global_constants::EPOCH);
         write_u64(
-            &storage,
+            &local_storage,
             &mut buffer,
             libra_global_constants::LAST_VOTED_ROUND,
         );
         write_u64(
-            &storage,
+            &local_storage,
             &mut buffer,
             libra_global_constants::PREFERRED_ROUND,
         );
-        write_waypoint(&storage, &mut buffer, libra_global_constants::WAYPOINT);
+        write_waypoint(
+            &local_storage,
+            &mut buffer,
+            libra_global_constants::WAYPOINT,
+        );
 
         write_break(&mut buffer);
 
         if let Some(genesis_path) = self.genesis_path.as_ref() {
-            compare_genesis(&storage, &mut buffer, genesis_path)?;
+            compare_genesis(&local_storage, &mut buffer, genesis_path)?;
         }
 
         Ok(buffer)
