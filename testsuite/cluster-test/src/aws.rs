@@ -12,13 +12,19 @@ use rusoto_core::Region;
 use rusoto_sts::WebIdentityProvider;
 
 /// set_asg_size sets the size of the given autoscaling group
+#[allow(clippy::collapsible_if)]
 pub async fn set_asg_size(
     min_desired_capacity: i64,
     buffer_percent: f64,
     asg_name: &str,
     wait_for_completion: bool,
+    scaling_down: bool,
 ) -> Result<()> {
-    let buffer = ((min_desired_capacity as f64 * buffer_percent) / 100_f64).ceil() as i64;
+    let buffer = if scaling_down {
+        0
+    } else {
+        ((min_desired_capacity as f64 * buffer_percent) / 100_f64).ceil() as i64
+    };
     info!(
         "Scaling to min_desired_capacity : {}, buffer: {}, asg_name: {}",
         min_desired_capacity, buffer, asg_name
@@ -59,32 +65,52 @@ pub async fn set_asg_size(
                     bail!("asgs.auto_scaling_groups.is_empty()");
                 }
                 let asg = &asgs.auto_scaling_groups[0];
-                total += asg
-                    .instances
-                    .clone()
-                    .ok_or_else(|| format_err!("instances not found for auto_scaling_group"))?
-                    .iter()
-                    .filter(|instance| instance.lifecycle_state == "InService")
-                    .count() as i64;
+                if scaling_down {
+                    total += asg
+                        .instances
+                        .clone()
+                        .ok_or_else(|| format_err!("instances not found for auto_scaling_group"))?
+                        .len() as i64;
+                } else {
+                    total += asg
+                        .instances
+                        .clone()
+                        .ok_or_else(|| format_err!("instances not found for auto_scaling_group"))?
+                        .iter()
+                        .filter(|instance| instance.lifecycle_state == "InService")
+                        .count() as i64;
+                }
                 if asgs.next_token.is_none() {
                     break;
                 }
                 current_token = asgs.next_token;
             }
             info!(
-                "Waiting for scale-up to complete. Current size: {}, Min Desired Size: {}",
+                "Waiting for scaling to complete. Current size: {}, Min Desired Size: {}",
                 total, min_desired_capacity
             );
-
-            if total < min_desired_capacity {
-                bail!(
-                    "Waiting for scale-up to complete. Current size: {}, Min Desired Size: {}",
+            if scaling_down {
+                if total > min_desired_capacity {
+                    bail!(
+                    "Waiting for scale-down to complete. Current size: {}, Min Desired Size: {}",
                     total,
                     min_desired_capacity
                 );
+                } else {
+                    info!("Scale down completed");
+                    Ok(())
+                }
             } else {
-                info!("Scale up completed");
-                Ok(())
+                if total < min_desired_capacity {
+                    bail!(
+                        "Waiting for scale-up to complete. Current size: {}, Min Desired Size: {}",
+                        total,
+                        min_desired_capacity
+                    );
+                } else {
+                    info!("Scale up completed");
+                    Ok(())
+                }
             }
         })
     })
