@@ -46,7 +46,7 @@ fn freeze_unfreeze_account() {
     let blessed = Account::new_blessed_tc();
     // Execute freeze on account
     executor.execute_and_apply(
-        blessed.signed_script_txn(encode_freeze_account(3, *account.address()), 0),
+        blessed.signed_script_txn(encode_freeze_account_script(3, *account.address()), 0),
     );
 
     // Attempt rotate key txn from frozen account
@@ -63,7 +63,7 @@ fn freeze_unfreeze_account() {
 
     // Execute unfreeze on account
     executor.execute_and_apply(
-        blessed.signed_script_txn(encode_unfreeze_account(4, *account.address()), 1),
+        blessed.signed_script_txn(encode_unfreeze_account_script(4, *account.address()), 1),
     );
     // execute rotate key transaction from unfrozen account now succeeds
     let output = &executor.execute_transaction(txn);
@@ -86,7 +86,7 @@ fn create_parent_and_child_vasp() {
     // create a parent VASP
     let add_all_currencies = false;
     executor.execute_and_apply(association.signed_script_txn(
-        encode_create_parent_vasp_account(
+        encode_create_parent_vasp_account_script(
             account_config::lbr_type_tag(),
             *parent.address(),
             parent.auth_key_prefix(),
@@ -100,7 +100,7 @@ fn create_parent_and_child_vasp() {
 
     // create a child VASP with a zero balance
     executor.execute_and_apply(parent.signed_script_txn(
-        encode_create_child_vasp_account(
+        encode_create_child_vasp_account_script(
             account_config::lbr_type_tag(),
             *child.address(),
             child.auth_key_prefix(),
@@ -145,7 +145,7 @@ fn create_child_vasp_all_currencies() {
     // create a parent VASP
     let add_all_currencies = true;
     executor.execute_and_apply(association.signed_script_txn(
-        encode_create_parent_vasp_account(
+        encode_create_parent_vasp_account_script(
             account_config::coin1_tag(),
             *parent.address(),
             parent.auth_key_prefix(),
@@ -176,7 +176,7 @@ fn create_child_vasp_all_currencies() {
 
     // create a child VASP with a balance of amount
     executor.execute_and_apply(parent.signed_script_txn(
-        encode_create_child_vasp_account(
+        encode_create_child_vasp_account_script(
             account_config::coin1_tag(),
             *child.address(),
             child.auth_key_prefix(),
@@ -211,7 +211,7 @@ fn create_child_vasp_with_balance() {
     // create a parent VASP
     let add_all_currencies = true;
     executor.execute_and_apply(association.signed_script_txn(
-        encode_create_parent_vasp_account(
+        encode_create_parent_vasp_account_script(
             account_config::coin1_tag(),
             *parent.address(),
             parent.auth_key_prefix(),
@@ -240,7 +240,7 @@ fn create_child_vasp_with_balance() {
 
     // create a child VASP with a balance of amount
     executor.execute_and_apply(parent.signed_script_txn(
-        encode_create_child_vasp_account(
+        encode_create_child_vasp_account_script(
             account_config::coin1_tag(),
             *child.address(),
             child.auth_key_prefix(),
@@ -281,7 +281,7 @@ fn dual_attestation_payment() {
     let payment_amount = 10_000_000_000u64;
 
     executor.execute_and_apply(association.signed_script_txn(
-        encode_create_parent_vasp_account(
+        encode_create_parent_vasp_account_script(
             account_config::coin1_tag(),
             *payment_sender.address(),
             payment_sender.auth_key_prefix(),
@@ -294,7 +294,7 @@ fn dual_attestation_payment() {
     ));
 
     executor.execute_and_apply(association.signed_script_txn(
-        encode_create_parent_vasp_account(
+        encode_create_parent_vasp_account_script(
             account_config::coin1_tag(),
             *payment_receiver.address(),
             payment_receiver.auth_key_prefix(),
@@ -317,7 +317,7 @@ fn dual_attestation_payment() {
 
     // create a child VASP with a balance of amount
     executor.execute_and_apply(payment_sender.signed_script_txn(
-        encode_create_child_vasp_account(
+        encode_create_child_vasp_account_script(
             account_config::coin1_tag(),
             *sender_child.address(),
             sender_child.auth_key_prefix(),
@@ -680,7 +680,7 @@ fn recovery_address() {
     // create a parent VASP
     let add_all_currencies = false;
     executor.execute_and_apply(association.signed_script_txn(
-        encode_create_parent_vasp_account(
+        encode_create_parent_vasp_account_script(
             account_config::lbr_type_tag(),
             *parent.address(),
             parent.auth_key_prefix(),
@@ -694,7 +694,7 @@ fn recovery_address() {
 
     // create a child VASP with a zero balance
     executor.execute_and_apply(parent.signed_script_txn(
-        encode_create_child_vasp_account(
+        encode_create_child_vasp_account_script(
             account_config::lbr_type_tag(),
             *child.address(),
             child.auth_key_prefix(),
@@ -705,11 +705,12 @@ fn recovery_address() {
     ));
 
     // publish a recovery address under the parent
-    executor.execute_and_apply(parent.signed_script_txn(encode_create_recovery_address(), 1));
+    executor
+        .execute_and_apply(parent.signed_script_txn(encode_create_recovery_address_script(), 1));
 
     // delegate authentication key of the child
     executor.execute_and_apply(child.signed_script_txn(
-        encode_add_recovery_rotation_capability(*parent.address()),
+        encode_add_recovery_rotation_capability_script(*parent.address()),
         0,
     ));
 
@@ -741,7 +742,7 @@ fn recovery_address() {
     // create another VASP unrelated to parent/child
     let add_all_currencies = false;
     executor.execute_and_apply(association.signed_script_txn(
-        encode_create_parent_vasp_account(
+        encode_create_parent_vasp_account_script(
             account_config::lbr_type_tag(),
             *other_vasp.address(),
             other_vasp.auth_key_prefix(),
@@ -755,7 +756,7 @@ fn recovery_address() {
 
     // try to delegate other_vasp's rotation cap to child--should abort
     let output = executor.execute_transaction(other_vasp.signed_script_txn(
-        encode_add_recovery_rotation_capability(*parent.address()),
+        encode_add_recovery_rotation_capability_script(*parent.address()),
         0,
     ));
     assert_eq!(

@@ -647,7 +647,7 @@ fn gen_create_child_txn_request(
 ) -> SignedTransaction {
     let add_all_currencies = false;
     gen_submit_transaction_request(
-        transaction_builder::encode_create_child_vasp_account(
+        transaction_builder::encode_create_child_vasp_account_script(
             account_config::coin1_tag(),
             *receiver,
             receiver_auth_key_prefix,

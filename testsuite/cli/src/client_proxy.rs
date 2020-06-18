@@ -522,9 +522,11 @@ impl ClientProxy {
         );
         match self.assoc_root_account {
             Some(_) => self.association_transaction_with_local_assoc_root_account(
-                TransactionPayload::Script(transaction_builder::encode_publishing_option_script(
-                    VMPublishingOption::CustomScripts,
-                )),
+                TransactionPayload::Script(
+                    transaction_builder::encode_modify_publishing_option_script(
+                        VMPublishingOption::CustomScripts,
+                    ),
+                ),
                 is_blocking,
             ),
             None => unimplemented!(),
@@ -548,9 +550,11 @@ impl ClientProxy {
         );
         match self.assoc_root_account {
             Some(_) => self.association_transaction_with_local_assoc_root_account(
-                TransactionPayload::Script(transaction_builder::encode_publishing_option_script(
-                    VMPublishingOption::Locked(StdlibScript::whitelist()),
-                )),
+                TransactionPayload::Script(
+                    transaction_builder::encode_modify_publishing_option_script(
+                        VMPublishingOption::Locked(StdlibScript::whitelist()),
+                    ),
+                ),
                 is_blocking,
             ),
             None => unimplemented!(),
