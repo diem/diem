@@ -13,7 +13,8 @@ use std::{
 use stdlib::{
     build_stdlib, build_stdlib_doc, build_transaction_script_abi, build_transaction_script_doc,
     compile_script, filter_move_files, save_binary, COMPILED_EXTENSION, COMPILED_OUTPUT_PATH,
-    COMPILED_STDLIB_NAME, TRANSACTION_SCRIPTS,
+    COMPILED_STDLIB_NAME, COMPILED_TRANSACTION_SCRIPTS_ABI_DIR, COMPILED_TRANSACTION_SCRIPTS_DIR,
+    STD_LIB_DOC_DIR, TRANSACTION_SCRIPTS, TRANSACTION_SCRIPTS_DOC_DIR,
 };
 
 // Generates the compiled stdlib and transaction scripts. Until this is run changes to the source
@@ -48,13 +49,9 @@ fn main() {
         println!("NOTE: run this program in --release mode for better speed");
     }
 
-    let mut scripts_path = PathBuf::from(COMPILED_OUTPUT_PATH);
-    scripts_path.push(TRANSACTION_SCRIPTS);
-
-    std::fs::create_dir_all(&scripts_path).unwrap();
-
     if !no_compiler {
         time_it("Creating stdlib blob", || {
+            std::fs::create_dir_all(COMPILED_OUTPUT_PATH).unwrap();
             let mut module_path = PathBuf::from(COMPILED_OUTPUT_PATH);
             module_path.push(COMPILED_STDLIB_NAME);
             module_path.set_extension(COMPILED_EXTENSION);
@@ -80,14 +77,15 @@ fn main() {
         .collect::<Vec<_>>();
     if !no_compiler {
         time_it("Staging transaction scripts", || {
+            std::fs::remove_dir_all(&COMPILED_TRANSACTION_SCRIPTS_DIR).unwrap_or(());
+            std::fs::create_dir_all(&COMPILED_TRANSACTION_SCRIPTS_DIR).unwrap();
+
             transaction_files.par_iter().for_each(|txn_file| {
                 let compiled_script = compile_script(txn_file.clone());
                 let mut txn_path = PathBuf::from(COMPILED_OUTPUT_PATH);
                 txn_path.push(txn_file.clone());
                 txn_path.set_extension(COMPILED_EXTENSION);
-                if save_binary(&txn_path, &compiled_script) {
-                    println!("Compiled script binary {} has changed", txn_file);
-                }
+                save_binary(&txn_path, &compiled_script);
             })
         });
     }
@@ -95,9 +93,13 @@ fn main() {
     // Generate documentation
     if !no_doc {
         time_it("Generating stdlib documentation", || {
+            std::fs::remove_dir_all(&STD_LIB_DOC_DIR).unwrap_or(());
+            std::fs::create_dir_all(&STD_LIB_DOC_DIR).unwrap();
             build_stdlib_doc();
         });
         time_it("Generating script documentation", || {
+            std::fs::remove_dir_all(&TRANSACTION_SCRIPTS_DOC_DIR).unwrap_or(());
+            std::fs::create_dir_all(&TRANSACTION_SCRIPTS_DOC_DIR).unwrap();
             transaction_files
                 .par_iter()
                 .for_each(|txn_file| build_transaction_script_doc(txn_file.clone()));
@@ -107,6 +109,9 @@ fn main() {
     // Generate script ABIs
     if !no_script_abi {
         time_it("Generating script ABIs", || {
+            std::fs::remove_dir_all(&COMPILED_TRANSACTION_SCRIPTS_ABI_DIR).unwrap_or(());
+            std::fs::create_dir_all(&COMPILED_TRANSACTION_SCRIPTS_ABI_DIR).unwrap();
+
             transaction_files
                 .par_iter()
                 .for_each(|txn_file| build_transaction_script_abi(txn_file.clone()));
