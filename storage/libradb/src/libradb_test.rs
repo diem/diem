@@ -47,7 +47,7 @@ fn verify_epochs(db: &LibraDB, ledger_infos_with_sigs: &[LedgerInfoWithSignature
 
     let expected_epoch_change_lis: Vec<_> = ledger_infos_with_sigs
         .iter()
-        .filter(|info| info.ledger_info().next_epoch_state().is_some())
+        .filter(|info| info.ledger_info().ends_epoch())
         .cloned()
         .collect();
     assert_eq!(actual_epoch_change_lis, expected_epoch_change_lis);
