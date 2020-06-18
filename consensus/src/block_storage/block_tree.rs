@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use libra_types::account_address::AccountAddress;
 use std::cmp::max;
 use libra_types::block_info::Round;
 use crate::counters;
@@ -87,6 +88,10 @@ pub struct BlockTree<T> {
     
     /// Blocks that the validator voted for. Only keep the last one for each fork since it is enough to compute the marker
     voted_blocks: Vec<HashValue>,
+    // The set of endorsers of a block
+    id_to_endorsers: HashMap<HashValue, HashSet<AccountAddress>>,
+    // genesis id, used for computing strong commit
+    genesis_id: HashValue,
 }
 
 impl<T> BlockTree<T>
@@ -121,6 +126,8 @@ where
         let pruned_block_ids = VecDeque::with_capacity(max_pruned_blocks_in_mem);
 
         let voted_blocks = Vec::new();
+        let id_to_endorsers = HashMap::new();
+        let genesis_id = root_id.clone();
 
         BlockTree {
             id_to_block,
@@ -133,6 +140,8 @@ where
             pruned_block_ids,
             max_pruned_blocks_in_mem,
             voted_blocks,
+            id_to_endorsers,
+            genesis_id,
         }
     }
 
@@ -152,10 +161,11 @@ where
             .expect("Root must exist")
     }
 
+    // Daniel: in order to compute strong commit, for now we don't remove any block or QC from the storage, even the blocks are committed
     fn remove_block(&mut self, block_id: HashValue) {
         // Remove the block from the store
-        self.id_to_block.remove(&block_id);
-        self.id_to_quorum_cert.remove(&block_id);
+        // self.id_to_block.remove(&block_id);
+        // self.id_to_quorum_cert.remove(&block_id);
     }
 
     pub(super) fn block_exists(&self, block_id: &HashValue) -> bool {
@@ -169,6 +179,10 @@ where
 
     pub(super) fn root(&self) -> Arc<ExecutedBlock<T>> {
         self.get_block(&self.root_id).expect("Root must exist")
+    }
+
+    pub(super) fn genesis(&self) -> Arc<ExecutedBlock<T>> {
+        self.get_block(&self.genesis_id).expect("Genesis must exist")
     }
 
     pub(super) fn highest_certified_block(&self) -> Arc<ExecutedBlock<T>> {
@@ -200,6 +214,17 @@ where
         self.id_to_quorum_cert.get(block_id).cloned()
     }
 
+    pub(super) fn get_endorsers_for_block(&self, block_id: &HashValue) -> Option<HashSet<AccountAddress>> {
+        self.id_to_endorsers.get(block_id).cloned()
+    }
+
+    pub(super) fn add_endorser(&mut self, block_id: HashValue, account: AccountAddress) {
+        let endorser = self.id_to_endorsers
+            .entry(block_id)
+            .or_insert(HashSet::new());
+        endorser.insert(account);
+    }
+
     pub(super) fn insert_block(
         &mut self,
         block: ExecutedBlock<T>,
@@ -225,9 +250,9 @@ where
         }
     }
 
-    pub(super) fn insert_quorum_cert(&mut self, qc: QuorumCert) -> anyhow::Result<()> {
-        let block_id = qc.certified_block().id();
-        let qc = Arc::new(qc);
+    pub(super) fn insert_quorum_cert(&mut self, quorumcert: QuorumCert) -> anyhow::Result<()> {
+        let block_id = quorumcert.certified_block().id();
+        let qc = Arc::new(quorumcert.clone());
 
         // Safety invariant: For any two quorum certificates qc1, qc2 in the block store,
         // qc1 == qc2 || qc1.round != qc2.round
@@ -260,7 +285,9 @@ where
             self.highest_commit_cert = qc;
         }
 
-        Ok(())
+        // update the endorsers of all previous blocks.
+        self.update_endorsers(quorumcert)
+
     }
 
     /// Find the blocks to prune up to next_root_id (keep next_root_id's block). Any branches not
@@ -453,6 +480,7 @@ where
         return Ok(result);
     }
 
+    // print voted blocks
     pub fn print_voted(&self) {
         for ind in 0..self.voted_blocks.len() {
             let mut res = vec![];
@@ -481,6 +509,72 @@ where
             }
             info!("****************************************");
         }
+    }
+
+    // Returns the blocks from the genesis to the current block id
+    // include the current block but exclude the genesis
+    // used to compute strong commit
+    pub(super) fn path_from_genesis(&self, block_id: HashValue) -> Option<Vec<Arc<ExecutedBlock<T>>>> {
+        let mut res = vec![];
+        let mut cur_block_id = block_id;
+        loop {
+            match self.get_block(&cur_block_id) {
+                Some(ref block) if block.round() <= self.genesis().round() => {
+                    break;
+                }
+                Some(block) => {
+                    cur_block_id = block.parent_id();
+                    res.push(block);
+                }
+                None => return None,
+            }
+        }
+        if cur_block_id != self.genesis_id {
+            return None;
+        }
+        // Called `.reverse()` to get the chronically increased order.
+        res.reverse();
+        Some(res)
+    }
+
+    pub(super) fn update_endorsers(&mut self, qc: QuorumCert) -> anyhow::Result<()> {
+        // if qc.vote_data().proposed().round()==0 {
+        //     return Ok(());
+        // }
+        let signatures = qc.ledger_info().signatures();
+        let markers = qc.ledger_info().markers();
+        let blocks_from_genesis_to_highest_certified = self
+            .path_from_genesis(self.highest_certified_block_id)
+            .unwrap_or_else(Vec::new);
+        // info!("daniel signatures {:?}, markers {:?}", signatures, markers);
+        for (account_address, _) in signatures {
+            let marker = markers.get(account_address).unwrap();
+            for block in &blocks_from_genesis_to_highest_certified {
+                // vote endorse a block if marker<block.round
+                // info!("account {:?}, marker {:?}, round {:?}", account_address, *marker, block.round());
+                if block.round() > *marker {
+                    self.add_endorser(block.id(), *account_address);
+                }
+            }
+        }
+        self.print_endorsers();
+
+        Ok(())
+    }
+
+    // print the round numbers and number of endorsers of blocks from genesis to current highest certified
+    pub fn print_endorsers(&self) {
+        info!("-------------------------print endorsers start-------------------------");
+        let blocks_from_genesis_to_highest_certified = self
+            .path_from_genesis(self.highest_certified_block_id)
+            .unwrap_or_else(Vec::new);
+        for block in blocks_from_genesis_to_highest_certified {
+            let id = block.id();
+            let round = block.round();
+            let endorsers = self.get_endorsers_for_block(&id).unwrap();
+            info!("block round {}, number of endorsers {:?}", round, endorsers.len());
+        }
+        info!("-------------------------print endorsers end-------------------------");
     }
 }
 

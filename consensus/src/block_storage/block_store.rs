@@ -227,6 +227,8 @@ impl<T: Payload> BlockStore<T> {
             "round": block_to_commit.round(),
             "parent_id": block_to_commit.parent_id().short_str(),
         );
+
+        // Daniel: in order to compute strong commit, for now we don't remove any block or QC from the storage, even the blocks are committed
         self.prune_tree(block_to_commit.id());
         Ok(())
     }
