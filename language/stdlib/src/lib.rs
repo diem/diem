@@ -36,6 +36,10 @@ pub const COMPILED_TRANSACTION_SCRIPTS_DIR: &str = "compiled/transaction_scripts
 /// The output path for transaction script ABIs.
 pub const COMPILED_TRANSACTION_SCRIPTS_ABI_DIR: &str = "compiled/transaction_scripts/abi";
 
+/// Where to write generated transaction builders.
+pub const TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH: &str =
+    "../transaction-builder/src/generated.rs";
+
 pub fn filter_move_files(dir_iter: impl Iterator<Item = PathBuf>) -> impl Iterator<Item = PathBuf> {
     dir_iter.flat_map(|path| {
         if path.extension()?.to_str()? == MOVE_EXTENSION {
@@ -150,4 +154,20 @@ fn build_abi(output_path: &str, sources: &[String], dep_path: &str, compiled_scr
     options.abigen.compiled_script_directory = compiled_script_path.to_string();
     options.setup_logging_for_test();
     move_prover::run_move_prover_errors_to_stderr(options).unwrap();
+}
+
+pub fn generate_rust_transaction_builders() {
+    let abis = transaction_builder_generator::read_abis(COMPILED_TRANSACTION_SCRIPTS_ABI_DIR)
+        .expect("Failed to read generated ABIs");
+    let mut f = std::fs::File::create(TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH)
+        .expect("Failed to open file for Rust script build generation");
+    transaction_builder_generator::local::output(&mut f, &abis)
+        .expect("Failed to generate Rust builders for Libra");
+
+    std::process::Command::new("rustfmt")
+        .arg("--config")
+        .arg("merge_imports=true")
+        .arg(TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH)
+        .status()
+        .expect("Failed to run rustfmt on generated code");
 }
