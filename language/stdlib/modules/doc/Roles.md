@@ -16,7 +16,6 @@
 -  [Struct `ParentVASPRole`](#0x1_Roles_ParentVASPRole)
 -  [Struct `ChildVASPRole`](#0x1_Roles_ChildVASPRole)
 -  [Struct `UnhostedRole`](#0x1_Roles_UnhostedRole)
--  [Function `parent_vasp_role_TESTNET_HACK`](#0x1_Roles_parent_vasp_role_TESTNET_HACK)
 -  [Function `ASSOCIATION_ROOT_ROLE_ID`](#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID)
 -  [Function `TREASURY_COMPLIANCE_ROLE_ID`](#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID)
 -  [Function `DESIGNATED_DEALER_ROLE_ID`](#0x1_Roles_DESIGNATED_DEALER_ROLE_ID)
@@ -407,31 +406,6 @@ correspond precisely to the RoleId.
 
 </dd>
 </dl>
-
-
-</details>
-
-<a name="0x1_Roles_parent_vasp_role_TESTNET_HACK"></a>
-
-## Function `parent_vasp_role_TESTNET_HACK`
-
-TODO: This needs to be removed.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_parent_vasp_role_TESTNET_HACK">parent_vasp_role_TESTNET_HACK</a>(): <a href="#0x1_Roles_ParentVASPRole">Roles::ParentVASPRole</a>
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_parent_vasp_role_TESTNET_HACK">parent_vasp_role_TESTNET_HACK</a>(): <a href="#0x1_Roles_ParentVASPRole">ParentVASPRole</a> {
-    <a href="#0x1_Roles_ParentVASPRole">ParentVASPRole</a>{}
-}
-</code></pre>
-
 
 
 </details>

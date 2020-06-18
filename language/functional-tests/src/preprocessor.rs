@@ -18,14 +18,28 @@ use once_cell::sync::Lazy;
 use regex::{Captures, Regex};
 
 /// Substitutes the placeholders (account names in double curly brackets) with addresses.
-pub fn substitute_addresses(config: &GlobalConfig, text: &str) -> String {
-    static PAT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\{\{([A-Za-z][A-Za-z0-9]*)\}\}").unwrap());
-    PAT.replace_all(text, |caps: &Captures| {
+pub fn substitute_addresses_and_auth_keys(config: &GlobalConfig, text: &str) -> String {
+    static AUTH_KEY_PAT: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"\{\{([A-Za-z][A-Za-z0-9]*)(::auth_key)\}\}").unwrap());
+    static ADDR_PAT: Lazy<Regex> =
+        Lazy::new(|| Regex::new(r"\{\{([A-Za-z][A-Za-z0-9]*)\}\}").unwrap());
+
+    let keyed = AUTH_KEY_PAT.replace_all(text, |caps: &Captures| {
         let name = &caps[1];
 
-        format!("0x{}", config.get_account_for_name(name).unwrap().address())
-    })
-    .to_string()
+        format!(
+            "x\"{}\"",
+            hex::encode(config.get_account_for_name(name).unwrap().auth_key_prefix())
+        )
+    });
+
+    ADDR_PAT
+        .replace_all(&keyed, |caps: &Captures| {
+            let name = &caps[1];
+
+            format!("0x{}", config.get_account_for_name(name).unwrap().address())
+        })
+        .to_string()
 }
 
 pub struct RawTransactionInput {
@@ -137,7 +151,7 @@ pub fn split_input(
             continue;
         }
 
-        let line = substitute_addresses(global_config, line);
+        let line = substitute_addresses_and_auth_keys(global_config, line);
         match &mut command {
             RawCommand::Transaction(txn) => {
                 if let Ok(entry) = line.parse::<TransactionConfigEntry>() {
