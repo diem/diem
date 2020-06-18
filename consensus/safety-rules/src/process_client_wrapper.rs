@@ -32,13 +32,7 @@ impl ProcessClientWrapper {
         let mut config = NodeConfig::random();
 
         let mut test_config = config.test.as_ref().unwrap().clone();
-        let author = config
-            .validator_network
-            .as_ref()
-            .unwrap()
-            .identity
-            .peer_id_from_config()
-            .unwrap();
+        let author = config.validator_network.as_ref().unwrap().peer_id();
         let private_key = test_config
             .consensus_keypair
             .as_mut()

@@ -119,8 +119,8 @@ impl FullNodeConfig {
         let mut full_node_config = self.build()?;
         let new_net = full_node_config.full_node_networks.swap_remove(0);
         for net in &config.full_node_networks {
-            let new_net_id = new_net.identity.peer_id_from_config().unwrap();
-            let net_id = net.identity.peer_id_from_config().unwrap();
+            let new_net_id = new_net.peer_id();
+            let net_id = net.peer_id();
             ensure!(new_net_id != net_id, "Network already exists");
         }
         config.full_node_networks.push(new_net);
@@ -178,7 +178,7 @@ impl FullNodeConfig {
             network.mutual_authentication = self.mutual_authentication;
 
             network_peers.insert(
-                network.identity.peer_id_from_config().unwrap(),
+                network.peer_id(),
                 network
                     .identity
                     .public_key_from_config()
@@ -195,10 +195,7 @@ impl FullNodeConfig {
             .ok_or(Error::MissingFullNodeNetwork)?;
         let seed_peers =
             generator::build_seed_peers(&validator_full_node_network, self.bootstrap.clone());
-        let upstream_peer_id = validator_full_node_network
-            .identity
-            .peer_id_from_config()
-            .unwrap();
+        let upstream_peer_id = validator_full_node_network.peer_id();
         for config in configs.iter_mut() {
             let network = config
                 .full_node_networks
@@ -208,7 +205,7 @@ impl FullNodeConfig {
             network.network_peers = network_peers.clone();
             network.seed_peers = seed_peers.clone();
             let mut upstream = UpstreamConfig::default();
-            let peer_id = network.identity.peer_id_from_config().unwrap();
+            let peer_id = network.peer_id();
             upstream.upstream_peers = vec![PeerNetworkId(peer_id, upstream_peer_id)]
                 .into_iter()
                 .collect::<HashSet<_>>();
@@ -241,10 +238,7 @@ mod test {
         network.verify_seed_peer_addrs().unwrap();
         let (seed_peer_id, seed_addrs) = network.seed_peers.iter().next().unwrap();
         assert_eq!(seed_addrs.len(), 1);
-        assert_ne!(
-            &network.identity.peer_id_from_config().unwrap(),
-            seed_peer_id
-        );
+        assert_ne!(&network.peer_id(), seed_peer_id);
         assert_ne!(
             &network.discovery_method.advertised_address(),
             &seed_addrs[0]

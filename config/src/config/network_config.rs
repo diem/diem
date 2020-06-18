@@ -128,7 +128,7 @@ impl NetworkConfig {
     }
 
     pub fn peer_id(&self) -> PeerId {
-        let key = match &self.identity {
+        match &self.identity {
             Identity::FromConfig(config) => Some(config.peer_id),
             Identity::FromStorage(config) => {
                 let storage: Storage = (&config.backend).into();
@@ -141,8 +141,8 @@ impl NetworkConfig {
                 Some(peer_id.try_into().expect("Unable to parse peer id"))
             }
             Identity::None => None,
-        };
-        key.expect("peer id should be present")
+        }
+        .expect("peer id should be present")
     }
 
     fn prepare_identity(&mut self) {
@@ -255,13 +255,6 @@ impl Identity {
             peer_id_name,
             backend,
         })
-    }
-
-    pub fn peer_id_from_config(&self) -> Option<PeerId> {
-        match self {
-            Identity::FromConfig(config) => Some(config.peer_id),
-            _ => None,
-        }
     }
 
     pub fn public_key_from_config(&self) -> Option<x25519::PublicKey> {
