@@ -585,6 +585,9 @@
 <span id="585">585</span>
 <span id="586">586</span>
 <span id="587">587</span>
+<span id="588">588</span>
+<span id="589">589</span>
+<span id="590">590</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -653,6 +656,7 @@
 };
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
+<span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Serialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">fmt</span>::<span class="ident">Debug</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">error</span>;
@@ -690,18 +694,20 @@
 }
 
 <span class="doccomment">/// A wrapper struct for an outbound rpc request and its associated context.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OutboundRpcRequest</span> {
     <span class="doccomment">/// Rpc method identifier, e.g., `/libra/rpc/0.1.0/consensus/0.1.0`. This is the</span>
     <span class="doccomment">/// protocol we will negotiate our outbound substream to.</span>
     <span class="kw">pub</span> <span class="ident">protocol</span>: <span class="ident">ProtocolId</span>,
     <span class="doccomment">/// The serialized request data to be sent to the receiver.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>)]</span>
     <span class="kw">pub</span> <span class="ident">data</span>: <span class="ident">Bytes</span>,
     <span class="doccomment">/// Channel over which the rpc response is sent from the rpc layer to the</span>
     <span class="doccomment">/// upper client layer.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// If there is an error while performing the rpc protocol, e.g., the remote</span>
     <span class="doccomment">/// peer drops the connection, we will send an [`RpcError`] over the channel.</span>
+    <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>)]</span>
     <span class="kw">pub</span> <span class="ident">res_tx</span>: <span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Bytes</span>, <span class="ident">RpcError</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The timeout duration for the entire rpc call. If the timeout elapses, the</span>
     <span class="doccomment">/// rpc layer will send an [`RpcError::TimedOut`] error over the</span>

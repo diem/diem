@@ -24,11 +24,23 @@
 <span id="24">24</span>
 <span id="25">25</span>
 <span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
+<span id="30">30</span>
+<span id="31">31</span>
+<span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
+<span id="35">35</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">peer_manager</span>::<span class="ident">ConnectionNotification</span>, <span class="ident">ConnectivityRequest</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">peer_manager</span>::{<span class="ident">ConnectionNotification</span>, <span class="ident">ConnectionRequest</span>, <span class="ident">PeerManagerRequest</span>},
+    <span class="ident">ConnectivityRequest</span>,
+};
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">network_id</span>::<span class="ident">NetworkContext</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">LoggingField</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
@@ -37,11 +49,13 @@
 <span class="doccomment">/// consistency among structured logs.</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">CONNECTIVITY_MANAGER_LOOP</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;connectivity_manager_loop&quot;</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">ONCHAIN_DISCOVERY_LOOP</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;onchain_discovery_loop&quot;</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">PEER_MANAGER_LOOP</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;peer_manager_loop&quot;</span>;
 
 <span class="doccomment">/// Common terms</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TYPE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;type&quot;</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">START</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;start&quot;</span>;
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">TERMINATION</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;termination&quot;</span>;
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">EVENT</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;event&quot;</span>;
 
 <span class="doccomment">/// Specific fields for logging</span>
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">NETWORK_CONTEXT</span>: <span class="ident">LoggingField</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">LoggingField</span>::<span class="ident">new</span>(<span class="string">&quot;network_context&quot;</span>);
@@ -50,6 +64,10 @@
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">CONNECTION_NOTIFICATION</span>: <span class="ident">LoggingField</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">ConnectionNotification</span><span class="op">&gt;</span> <span class="op">=</span>
     <span class="ident">LoggingField</span>::<span class="ident">new</span>(<span class="string">&quot;conn_notification&quot;</span>);
 <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">CONNECTIVITY_REQUEST</span>: <span class="ident">LoggingField</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span> <span class="op">=</span>
-    <span class="ident">LoggingField</span>::<span class="ident">new</span>(<span class="string">&quot;conn_request&quot;</span>);
+    <span class="ident">LoggingField</span>::<span class="ident">new</span>(<span class="string">&quot;connectivity_request&quot;</span>);
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">CONNECTION_REQUEST</span>: <span class="ident">LoggingField</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">ConnectionRequest</span><span class="op">&gt;</span> <span class="op">=</span>
+    <span class="ident">LoggingField</span>::<span class="ident">new</span>(<span class="string">&quot;connection_request&quot;</span>);
+<span class="kw">pub</span> <span class="kw">const</span> <span class="ident">PEER_MANAGER_REQUEST</span>: <span class="ident">LoggingField</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">PeerManagerRequest</span><span class="op">&gt;</span> <span class="op">=</span>
+    <span class="ident">LoggingField</span>::<span class="ident">new</span>(<span class="string">&quot;peer_manager_request&quot;</span>);
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "network";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>

@@ -961,6 +961,34 @@
 <span id="961">961</span>
 <span id="962">962</span>
 <span id="963">963</span>
+<span id="964">964</span>
+<span id="965">965</span>
+<span id="966">966</span>
+<span id="967">967</span>
+<span id="968">968</span>
+<span id="969">969</span>
+<span id="970">970</span>
+<span id="971">971</span>
+<span id="972">972</span>
+<span id="973">973</span>
+<span id="974">974</span>
+<span id="975">975</span>
+<span id="976">976</span>
+<span id="977">977</span>
+<span id="978">978</span>
+<span id="979">979</span>
+<span id="980">980</span>
+<span id="981">981</span>
+<span id="982">982</span>
+<span id="983">983</span>
+<span id="984">984</span>
+<span id="985">985</span>
+<span id="986">986</span>
+<span id="987">987</span>
+<span id="988">988</span>
+<span id="989">989</span>
+<span id="990">990</span>
+<span id="991">991</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -977,6 +1005,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">counters</span>,
     <span class="ident">interface</span>::{<span class="ident">NetworkNotification</span>, <span class="ident">NetworkProvider</span>, <span class="ident">NetworkRequest</span>},
+    <span class="ident">logging</span>,
     <span class="ident">peer</span>::<span class="ident">DisconnectReason</span>,
     <span class="ident">protocols</span>::{
         <span class="ident">direct_send</span>::<span class="ident">Message</span>,
@@ -1015,9 +1044,10 @@
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">error</span>::<span class="ident">PeerManagerError</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">network_id</span>::<span class="ident">NetworkContext</span>;
+<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">StructuredLogEntry</span>;
 
 <span class="doccomment">/// Request received by PeerManager from upstream actors.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">PeerManagerRequest</span> {
     <span class="doccomment">/// Send an RPC request to a remote peer.</span>
     <span class="ident">SendRpc</span>(<span class="ident">PeerId</span>, <span class="ident">OutboundRpcRequest</span>),
@@ -1034,14 +1064,17 @@
     <span class="ident">RecvMessage</span>(<span class="ident">PeerId</span>, <span class="ident">Message</span>),
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ConnectionRequest</span> {
     <span class="ident">DialPeer</span>(
         <span class="ident">PeerId</span>,
         <span class="ident">NetworkAddress</span>,
-        <span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PeerManagerError</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>)]</span> <span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PeerManagerError</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     ),
-    <span class="ident">DisconnectPeer</span>(<span class="ident">PeerId</span>, <span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PeerManagerError</span><span class="op">&gt;</span><span class="op">&gt;</span>),
+    <span class="ident">DisconnectPeer</span>(
+        <span class="ident">PeerId</span>,
+        <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>)]</span> <span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">PeerManagerError</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    ),
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Serialize</span>)]</span>
@@ -1289,22 +1322,45 @@
     <span class="doccomment">/// Start listening on the set address and return a future which runs PeerManager</span>
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="comment">// Start listening for connections.</span>
+        <span class="macro">send_struct_log</span><span class="macro">!</span>(<span class="ident">StructuredLogEntry</span>::<span class="ident">new_named</span>(<span class="ident">logging</span>::<span class="ident">PEER_MANAGER_LOOP</span>)
+            .<span class="ident">data</span>(<span class="ident">logging</span>::<span class="ident">TYPE</span>, <span class="ident">logging</span>::<span class="ident">START</span>)
+            .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">NETWORK_CONTEXT</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>));
         <span class="self">self</span>.<span class="ident">start_connection_listener</span>();
         <span class="kw">loop</span> {
             ::<span class="ident">futures</span>::<span class="macro">select</span><span class="macro">!</span> {
                 <span class="ident">connection_event</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">transport_notifs_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                  <span class="self">self</span>.<span class="ident">handle_connection_event</span>(<span class="ident">connection_event</span>);
+                    <span class="macro">send_struct_log</span><span class="macro">!</span>(<span class="ident">StructuredLogEntry</span>::<span class="ident">new_named</span>(<span class="ident">logging</span>::<span class="ident">PEER_MANAGER_LOOP</span>)
+                        .<span class="ident">data</span>(<span class="ident">logging</span>::<span class="ident">TYPE</span>, <span class="string">&quot;connection_event&quot;</span>)
+                        .<span class="ident">data</span>(<span class="ident">logging</span>::<span class="ident">EVENT</span>, <span class="kw-2">&amp;</span><span class="ident">connection_event</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">NETWORK_CONTEXT</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>)
+                    );
+                    <span class="self">self</span>.<span class="ident">handle_connection_event</span>(<span class="ident">connection_event</span>);
                 }
                 <span class="ident">request</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">requests_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                  <span class="self">self</span>.<span class="ident">handle_request</span>(<span class="ident">request</span>).<span class="kw">await</span>;
+                    <span class="macro">send_struct_log</span><span class="macro">!</span>(<span class="ident">StructuredLogEntry</span>::<span class="ident">new_named</span>(<span class="ident">logging</span>::<span class="ident">PEER_MANAGER_LOOP</span>)
+                        .<span class="ident">data</span>(<span class="ident">logging</span>::<span class="ident">TYPE</span>, <span class="string">&quot;request&quot;</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">NETWORK_CONTEXT</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">PEER_MANAGER_REQUEST</span>, <span class="kw-2">&amp;</span><span class="ident">request</span>)
+                    );
+                    <span class="self">self</span>.<span class="ident">handle_request</span>(<span class="ident">request</span>).<span class="kw">await</span>;
                 }
                 <span class="ident">connection_request</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">connection_reqs_rx</span>.<span class="ident">select_next_some</span>() <span class="op">=</span><span class="op">&gt;</span> {
-                  <span class="self">self</span>.<span class="ident">handle_connection_request</span>(<span class="ident">connection_request</span>).<span class="kw">await</span>;
+                    <span class="macro">send_struct_log</span><span class="macro">!</span>(<span class="ident">StructuredLogEntry</span>::<span class="ident">new_named</span>(<span class="ident">logging</span>::<span class="ident">PEER_MANAGER_LOOP</span>)
+                        .<span class="ident">data</span>(<span class="ident">logging</span>::<span class="ident">TYPE</span>, <span class="string">&quot;connection_request&quot;</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">NETWORK_CONTEXT</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">CONNECTION_REQUEST</span>, <span class="kw-2">&amp;</span><span class="ident">connection_request</span>)
+                    );
+                    <span class="self">self</span>.<span class="ident">handle_connection_request</span>(<span class="ident">connection_request</span>).<span class="kw">await</span>;
                 }
                 <span class="ident">complete</span> <span class="op">=</span><span class="op">&gt;</span> {
-                  <span class="comment">// TODO: This should be ok when running in client mode.</span>
-                  <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;{} Peer manager actor terminated&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
-                  <span class="kw">break</span>;
+                    <span class="comment">// TODO: This should be ok when running in client mode.</span>
+                    <span class="macro">send_struct_log</span><span class="macro">!</span>(<span class="ident">StructuredLogEntry</span>::<span class="ident">new_named</span>(<span class="ident">logging</span>::<span class="ident">PEER_MANAGER_LOOP</span>)
+                        .<span class="ident">data</span>(<span class="ident">logging</span>::<span class="ident">TYPE</span>, <span class="ident">logging</span>::<span class="ident">TERMINATION</span>)
+                        .<span class="ident">field</span>(<span class="kw-2">&amp;</span><span class="ident">logging</span>::<span class="ident">NETWORK_CONTEXT</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">network_context</span>)
+                        .<span class="ident">critical</span>()
+                    );
+                    <span class="macro">crit</span><span class="macro">!</span>(<span class="string">&quot;{} Peer manager actor terminated&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
+                    <span class="kw">break</span>;
                 }
             }
         }
@@ -1699,12 +1755,12 @@
     ),
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">TransportNotification</span><span class="op">&lt;</span><span class="ident">TSocket</span><span class="op">&gt;</span>
 <span class="kw">where</span>
     <span class="ident">TSocket</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">AsyncWrite</span>,
 {
-    <span class="ident">NewConnection</span>(<span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">TSocket</span><span class="op">&gt;</span>),
+    <span class="ident">NewConnection</span>(<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>)]</span> <span class="ident">Connection</span><span class="op">&lt;</span><span class="ident">TSocket</span><span class="op">&gt;</span>),
     <span class="ident">Disconnected</span>(<span class="ident">ConnectionMetadata</span>, <span class="ident">DisconnectReason</span>),
 }
 
