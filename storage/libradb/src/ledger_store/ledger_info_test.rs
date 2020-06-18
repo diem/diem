@@ -48,19 +48,12 @@ fn get_last_version(ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) -> Vers
         .version()
 }
 
-fn get_num_epoch_changes(ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) -> usize {
-    ledger_infos_with_sigs
-        .iter()
-        .filter(|x| x.ledger_info().next_epoch_state().is_some())
-        .count()
-}
-
 proptest! {
     #![proptest_config(ProptestConfig::with_cases(20))]
 
     #[test]
     fn test_get_epoch_ending_ledger_infos(
-        (ledger_infos_with_sigs, start_epoch, end_epoch, limit) in arb_ledger_infos_with_sigs()
+        (ledger_infos_with_sigs, start_epoch, end_epoch) in arb_ledger_infos_with_sigs()
             .prop_flat_map(|ledger_infos_with_sigs| {
                 let first_epoch = get_first_epoch(&ledger_infos_with_sigs);
                 let last_epoch = get_last_epoch(&ledger_infos_with_sigs);
@@ -71,22 +64,19 @@ proptest! {
             })
             .prop_flat_map(|(ledger_infos_with_sigs, start_epoch)| {
                 let last_epoch = get_last_epoch(&ledger_infos_with_sigs);
-                let num_epoch_changes = get_num_epoch_changes(&ledger_infos_with_sigs);
-                assert!(num_epoch_changes >= 1);
                 (
                     Just(ledger_infos_with_sigs),
                     Just(start_epoch),
                     (start_epoch..=last_epoch),
-                    1..num_epoch_changes * 2,
                 )
             })
     ) {
         let tmp_dir = TempPath::new();
         let db = set_up(&tmp_dir, &ledger_infos_with_sigs);
 
-        let (actual, more) = db
+        let actual = db
             .ledger_store
-            .get_epoch_ending_ledger_infos(start_epoch, end_epoch, limit)
+            .get_epoch_ending_ledger_infos(start_epoch, end_epoch)
             .unwrap();
         let all_epoch_changes = ledger_infos_with_sigs
             .into_iter()
@@ -97,9 +87,8 @@ proptest! {
                     && li.next_epoch_state().is_some()
             })
             .collect::<Vec<_>>();
-        prop_assert_eq!(more, all_epoch_changes.len() > limit);
 
-        let expected: Vec<_> = all_epoch_changes.into_iter().take(limit).collect();
+        let expected: Vec<_> = all_epoch_changes.into_iter().collect();
         prop_assert_eq!(actual, expected);
     }
 

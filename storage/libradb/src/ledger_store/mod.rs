@@ -102,15 +102,14 @@ impl LedgerStore {
         &self,
         start_epoch: u64,
         end_epoch: u64,
-        limit: usize,
-    ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
+    ) -> Result<Vec<LedgerInfoWithSignatures>> {
         ensure!(
             start_epoch <= end_epoch,
             "Bad epoch range [{}, {})",
             start_epoch,
             end_epoch,
         );
-        // Note that the latset epoch can be the same with the current epoch (in most cases), or
+        // Note that the latest epoch can be the same with the current epoch (in most cases), or
         // current_epoch + 1 (when the latest ledger_info carries next validator set)
         let latest_epoch = self
             .get_latest_ledger_info()?
@@ -134,9 +133,6 @@ impl LedgerStore {
             if epoch >= end_epoch {
                 break;
             }
-            if results.len() >= limit {
-                return Ok((results, true));
-            }
 
             ensure!(
                 ledger_info_with_sigs
@@ -149,7 +145,7 @@ impl LedgerStore {
             results.push(ledger_info_with_sigs);
         }
 
-        Ok((results, false))
+        Ok(results)
     }
 
     /// Gets ledger info at specified version and ensures it's an epoch change.
