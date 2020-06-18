@@ -1641,7 +1641,6 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
  "network 0.1.0",
- "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde-reflection 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -5791,17 +5790,17 @@ dependencies = [
 name = "transaction-builder-generator"
 version = "0.1.0"
 dependencies = [
- "generate-format 0.1.0",
+ "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "move-core-types 0.1.0",
  "serde-generate 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde-reflection 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_yaml 0.8.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "structopt 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "tempfile 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "textwrap 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "transaction-builder 0.1.0",
 ]
 
 [[package]]
