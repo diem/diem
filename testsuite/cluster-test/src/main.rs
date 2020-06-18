@@ -458,9 +458,9 @@ impl ClusterUtil {
                 instance_count += args.k8s_num_validators;
             }
         }
-        aws::set_asg_size(instance_count as i64, 5.0, &asg_name, true)
+        aws::set_asg_size(instance_count as i64, 5.0, &asg_name, true, false)
             .await
-            .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
+            .unwrap_or_else(|err| panic!("{} scaling failed: {}", asg_name, err));
         let (validators, fullnodes) = cluster_swarm
             .spawn_validator_and_fullnode_set(
                 args.k8s_num_validators,
@@ -508,7 +508,7 @@ impl ClusterTestRunner {
             .await
             .expect("Failed to get workspace");
         let asg_name = format!("{}-k8s-testnet-validators", workspace);
-        aws::set_asg_size(0, 0.0, &asg_name, false)
+        aws::set_asg_size(0, 0.0, &asg_name, true, true)
             .await
             .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
     }
