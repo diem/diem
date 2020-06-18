@@ -12,9 +12,10 @@ use std::{
 };
 use stdlib::{
     build_stdlib, build_stdlib_doc, build_transaction_script_abi, build_transaction_script_doc,
-    compile_script, filter_move_files, save_binary, COMPILED_EXTENSION, COMPILED_OUTPUT_PATH,
-    COMPILED_STDLIB_NAME, COMPILED_TRANSACTION_SCRIPTS_ABI_DIR, COMPILED_TRANSACTION_SCRIPTS_DIR,
-    STD_LIB_DOC_DIR, TRANSACTION_SCRIPTS, TRANSACTION_SCRIPTS_DOC_DIR,
+    compile_script, filter_move_files, generate_rust_transaction_builders, save_binary,
+    COMPILED_EXTENSION, COMPILED_OUTPUT_PATH, COMPILED_STDLIB_NAME,
+    COMPILED_TRANSACTION_SCRIPTS_ABI_DIR, COMPILED_TRANSACTION_SCRIPTS_DIR, STD_LIB_DOC_DIR,
+    TRANSACTION_SCRIPTS, TRANSACTION_SCRIPTS_DOC_DIR,
 };
 
 // Generates the compiled stdlib and transaction scripts. Until this is run changes to the source
@@ -32,7 +33,13 @@ fn main() {
         .arg(
             Arg::with_name("no-script-abi")
                 .long("no-script-abi")
+                .requires("no-compiler")
                 .help("do not generate script ABIs"),
+        )
+        .arg(
+            Arg::with_name("no-script-builder")
+                .long("no-script-builer")
+                .help("do not generate script builders"),
         )
         .arg(
             Arg::with_name("no-compiler")
@@ -42,6 +49,7 @@ fn main() {
     let matches = cli.get_matches();
     let no_doc = matches.is_present("no-doc");
     let no_script_abi = matches.is_present("no-script-abi");
+    let no_script_builder = matches.is_present("no-script-builder");
     let no_compiler = matches.is_present("no-compiler");
 
     #[cfg(debug_assertions)]
@@ -115,6 +123,13 @@ fn main() {
             transaction_files
                 .par_iter()
                 .for_each(|txn_file| build_transaction_script_abi(txn_file.clone()));
+        });
+    }
+
+    // Generate script builders in Rust
+    if !no_script_builder {
+        time_it("Generating Rust script builders", || {
+            generate_rust_transaction_builders();
         });
     }
 }
