@@ -63,10 +63,7 @@ impl QuorumCert {
 
     /// If the QC commits reconfiguration and starts a new epoch
     pub fn ends_epoch(&self) -> bool {
-        self.signed_ledger_info
-            .ledger_info()
-            .next_epoch_state()
-            .is_some()
+        self.signed_ledger_info.ledger_info().ends_epoch()
     }
 
     /// QuorumCert for the genesis block deterministically generated from end-epoch LedgerInfo:

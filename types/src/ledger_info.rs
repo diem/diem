@@ -118,6 +118,10 @@ impl LedgerInfo {
         self.commit_info.next_epoch_state()
     }
 
+    pub fn ends_epoch(&self) -> bool {
+        self.next_epoch_state().is_some()
+    }
+
     /// Returns hash of consensus voting data in this `LedgerInfo`.
     pub fn consensus_data_hash(&self) -> HashValue {
         self.consensus_data_hash

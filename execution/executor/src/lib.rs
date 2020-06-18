@@ -132,7 +132,7 @@ where
                 "Version of a given epoch LI does not match local computation."
             );
             ensure!(
-                epoch_change_li.ledger_info().next_epoch_state().is_some(),
+                epoch_change_li.ledger_info().ends_epoch(),
                 "Epoch change LI does not carry validator set"
             );
             ensure!(

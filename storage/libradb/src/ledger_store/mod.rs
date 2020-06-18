@@ -135,10 +135,7 @@ impl LedgerStore {
             }
 
             ensure!(
-                ledger_info_with_sigs
-                    .ledger_info()
-                    .next_epoch_state()
-                    .is_some(),
+                ledger_info_with_sigs.ledger_info().ends_epoch(),
                 "DB corruption: the last ledger info of epoch {} is missing next epoch info",
                 epoch,
             );
@@ -378,15 +375,13 @@ impl LedgerStore {
     ) -> Result<()> {
         let ledger_info = ledger_info_with_sigs.ledger_info();
 
-        if ledger_info.next_epoch_state().is_some() {
+        if ledger_info.ends_epoch() {
             // This is the last version of the current epoch, update the epoch by version index.
             cs.batch
                 .put::<EpochByVersionSchema>(&ledger_info.version(), &ledger_info.epoch())?;
         }
-        cs.batch.put::<LedgerInfoSchema>(
-            &ledger_info_with_sigs.ledger_info().epoch(),
-            ledger_info_with_sigs,
-        )
+        cs.batch
+            .put::<LedgerInfoSchema>(&ledger_info.epoch(), ledger_info_with_sigs)
     }
 }
 
