@@ -15,8 +15,6 @@
 <span id="15">15</span>
 <span id="16">16</span>
 <span id="17">17</span>
-<span id="18">18</span>
-<span id="19">19</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -26,16 +24,14 @@
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">avg_txns_per_block</span>(<span class="ident">prometheus</span>: <span class="kw-2">&amp;</span><span class="ident">Prometheus</span>, <span class="ident">start</span>: <span class="ident">Duration</span>, <span class="ident">end</span>: <span class="ident">Duration</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">f64</span><span class="op">&gt;</span> {
-    <span class="ident">libra_retrier</span>::<span class="ident">retry</span>(<span class="ident">libra_retrier</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">1_000</span>, <span class="number">5</span>), <span class="op">|</span><span class="op">|</span> {
-        <span class="ident">prometheus</span>
-            .<span class="ident">query_range_avg</span>(
-                <span class="string">&quot;irate(libra_consensus_num_txns_per_block_sum[1m])/irate(libra_consensus_num_txns_per_block_count[1m])&quot;</span>.<span class="ident">to_string</span>(),
-                <span class="kw-2">&amp;</span><span class="ident">start</span>,
-                <span class="kw-2">&amp;</span><span class="ident">end</span>,
-                <span class="number">10</span>, <span class="comment">/* step */</span>
-            )
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;No txns_per_block data: {}&quot;</span>, <span class="ident">e</span>))
-    })
+    <span class="ident">prometheus</span>
+        .<span class="ident">query_range_avg</span>(
+            <span class="string">&quot;irate(libra_consensus_num_txns_per_block_sum[1m])/irate(libra_consensus_num_txns_per_block_count[1m])&quot;</span>.<span class="ident">to_string</span>(),
+            <span class="kw-2">&amp;</span><span class="ident">start</span>,
+            <span class="kw-2">&amp;</span><span class="ident">end</span>,
+            <span class="number">10</span>, <span class="comment">/* step */</span>
+        )
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;No txns_per_block data: {}&quot;</span>, <span class="ident">e</span>))
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "cluster_test";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
