@@ -151,6 +151,7 @@ default-members = [
     "language/tools/disassembler",
     "language/tools/genesis-viewer",
     "language/tools/move-coverage",
+    "language/transaction-builder-generator",
     "language/resource-viewer",
     "libra-node",
     "secure/key-manager",

@@ -7,8 +7,9 @@
 //! cargo run -p transaction-builder-generator -- --help
 //! '''
 
+use std::path::PathBuf;
 use structopt::{clap::arg_enum, StructOpt};
-use transaction_builder_generator::{python3, rust};
+use transaction_builder_generator::{python3, read_abis, rust};
 
 arg_enum! {
 #[derive(Debug, StructOpt)]
@@ -26,11 +27,13 @@ enum Language {
 struct Options {
     #[structopt(long, possible_values = &Language::variants(), case_insensitive = true, default_value = "Python3")]
     language: Language,
+
+    abi_directory: PathBuf,
 }
 
 fn main() {
     let options = Options::from_args();
-    let abis = transaction_builder::get_stdlib_script_abis();
+    let abis = read_abis(options.abi_directory).expect("Failed to read ABI in directory");
 
     let mut out = std::io::stdout();
 

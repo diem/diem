@@ -10,8 +10,7 @@ use libra_types::{
     block_metadata::BlockMetadata,
     on_chain_config::{LibraVersion, VMPublishingOption},
     transaction::{
-        authenticator::AuthenticationKey, ArgumentABI, ChangeSet, Script, ScriptABI, Transaction,
-        TransactionArgument, TypeArgumentABI,
+        authenticator::AuthenticationKey, ChangeSet, Script, Transaction, TransactionArgument,
     },
     write_set::{WriteOp, WriteSetMut},
 };
@@ -120,17 +119,6 @@ macro_rules! register_all_txn_scripts {
                 doc: $comment
             }
         )*
-
-        pub fn get_stdlib_script_abis() -> Vec<ScriptABI> {
-            vec![$(
-                to_script_abi! {
-                    script: $script_name,
-                    type_args: [$($ty_arg_name),*],
-                    args: [$($arg_name: $arg_ty),*],
-                    doc: $comment
-                },
-            )*]
-        }
     }
 }
 
@@ -564,53 +552,4 @@ pub fn encode_stdlib_upgrade_transaction(option: StdLibOptions) -> ChangeSet {
         write_set.freeze().expect("Failed to create writeset"),
         vec![],
     )
-}
-
-#[cfg(test)]
-mod tests {
-
-    #[test]
-    fn test_abis() {
-        let abis = super::get_stdlib_script_abis();
-        assert_eq!(
-            vec![
-                "add_recovery_rotation_capability",
-                "add_validator",
-                "burn",
-                "burn_txn_fees",
-                "cancel_burn",
-                "create_recovery_address",
-                "peer_to_peer_with_metadata",
-                "preburn",
-                "publish_shared_ed25519_public_key",
-                "add_currency_to_account",
-                "remove_validator",
-                "rotate_compliance_public_key",
-                "rotate_base_url",
-                "rotate_authentication_key",
-                "rotate_authentication_key_with_recovery_address",
-                "rotate_shared_ed25519_public_key",
-                "mint",
-                "modify_publishing_option",
-                "update_libra_version",
-                "create_validator_account",
-                "mint_lbr",
-                "unmint_lbr",
-                "update_minting_ability",
-                "create_parent_vasp_account",
-                "create_child_vasp_account",
-                "tiered_mint",
-                "create_designated_dealer",
-                "freeze_account",
-                "unfreeze_account",
-                "rotate_authentication_key_with_nonce",
-                "update_exchange_rate",
-                "update_travel_rule_limit",
-                "update_unhosted_wallet_limits",
-                "set_validator_config",
-                "reconfigure",
-            ],
-            abis.iter().map(|x| x.name()).collect::<Vec<_>>()
-        );
-    }
 }
