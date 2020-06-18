@@ -624,6 +624,13 @@ fn make_position(line_str: &str, col_str: &str) -> Location {
 // -----------------------------------------------
 // # Boogie Model Analysis
 
+/// Represents whether the Vector type is implemented at the SMT level using integer maps or sequences
+#[derive(Debug, PartialEq, Eq)]
+pub enum ValueArrayRep {
+    ValueArrayIsMap,
+    ValueArrayIsSeq,
+}
+
 /// Represents a boogie model.
 #[derive(Debug)]
 pub struct Model {
@@ -631,6 +638,7 @@ pub struct Model {
     tracked_locals: BTreeMap<Loc, Vec<(LocalDescriptor, ModelValue)>>,
     tracked_aborts: BTreeMap<(String, LineIndex), AbortDescriptor>,
     tracked_exps: BTreeMap<ExpDescriptor, Vec<ModelValue>>,
+    value_array_rep: ValueArrayRep,
 }
 
 impl Model {
@@ -718,11 +726,17 @@ impl Model {
                 //    );
                 // }
                 // END DEBUG
+                let value_array_rep = if wrapper.options.backend.vector_using_sequences {
+                    ValueArrayRep::ValueArrayIsSeq
+                } else {
+                    ValueArrayRep::ValueArrayIsMap
+                };
                 let model = Model {
                     vars,
                     tracked_locals,
                     tracked_aborts,
                     tracked_exps,
+                    value_array_rep,
                 };
                 Ok(model)
             })
@@ -943,45 +957,87 @@ impl ModelValue {
         args[0].extract_value_array(model)
     }
 
-    /// Extracts a value array from `(ValueArray map_key size)`. This follows indirections in the
-    /// model. We find the value array map at `Select_[$int]$Value`. This has e.g. the form
-    ///
+    /// Extracts a value array from it's representation.
+    /// If the representation uses maps it is defined by `(ValueArray map_key size)`. The function
+    /// follows indirections in the model. We find the value array map at `Select_[$int]$Value`.
+    /// This has e.g. the form
     /// ```model
     ///   Select_[$int]$Value -> {
-    //      |T@[Int]Value!val!1| 0 -> (Integer 2)
-    //      |T@[Int]Value!val!1| 22 -> (Integer 2)
-    //      else -> (Integer 0)
-    //    }
-    // ```
+    ///      |T@[Int]Value!val!1| 0 -> (Integer 2)
+    ///      |T@[Int]Value!val!1| 22 -> (Integer 2)
+    ///      else -> (Integer 0)
+    ///    }
+    /// ```
+    /// If the value array is represented by a sequence instead, there are no indirections.
+    /// It has the form
+    /// ```(seq.++ (seq.unit (Integer 0)) (seq.unit (Integer 1)))```
+    /// or
+    /// ```(as seq.empty (Seq T@$Value))```
+    /// depending on whether it is an empty or nonempty sequence, respectively.
+    // In this case the sequence representation does not explicitly denote a constructor like ValueArray(..),
+    // instead reducing expressions to native SMT sequence theory expressions.
+
     fn extract_value_array(&self, model: &Model) -> Option<ModelValueVector> {
-        let args = self.extract_list("$ValueArray")?;
-        if args.len() != 2 {
-            return None;
-        }
-        let size = (&args[1]).extract_number()?;
-        let map_key = &args[0];
-        let value_array_map = model
-            .vars
-            .get(&ModelValue::literal("Select_[$int]$Value"))?
-            .extract_map()?;
-        let mut values = BTreeMap::new();
-        let mut default = ModelValue::error();
-        for (key, value) in value_array_map {
-            if let ModelValue::List(elems) = key {
-                if elems.len() == 2 && &elems[0] == map_key {
-                    if let Some(idx) = elems[1].extract_number() {
-                        values.insert(idx, value.clone());
-                    }
+        if ValueArrayRep::ValueArrayIsSeq == model.value_array_rep {
+            // Implementation of $ValueArray using sequences
+            let seq_type_modelvalue = ModelValue::List(vec![
+                ModelValue::literal("Seq"),
+                ModelValue::List(vec![ModelValue::literal("T@$Value")]),
+            ]);
+            let empty_seq_model_value = ModelValue::List(vec![
+                ModelValue::literal("as"),
+                ModelValue::List(vec![ModelValue::literal("seq.empty")]),
+                seq_type_modelvalue,
+            ]);
+            let default = ModelValue::error();
+            let (size, values) = if &empty_seq_model_value == self {
+                (0, BTreeMap::new())
+            } else {
+                let mut values = BTreeMap::new();
+                let seq_elems = self.extract_list("seq.++")?;
+                for (index, wrapped_seq_value_at_index) in seq_elems.iter().enumerate() {
+                    let seq_value_at_index =
+                        (&wrapped_seq_value_at_index).extract_list("seq.unit")?;
+                    values.insert(index, (&seq_value_at_index[0]).clone());
                 }
-            } else if key == &ModelValue::literal("else") {
-                default = value.clone();
+                (seq_elems.len(), values)
+            };
+            Some(ModelValueVector {
+                size,
+                values,
+                default,
+            })
+        } else {
+            // Implementation of $ValueArray using integer maps
+            let args = self.extract_list("$ValueArray")?;
+            if args.len() != 2 {
+                return None;
             }
+            let size = (&args[1]).extract_number()?;
+            let map_key = &args[0];
+            let value_array_map = model
+                .vars
+                .get(&ModelValue::literal("Select_[$int]$Value"))?
+                .extract_map()?;
+            let mut values = BTreeMap::new();
+            let mut default = ModelValue::error();
+            for (key, value) in value_array_map {
+                if let ModelValue::List(elems) = key {
+                    if elems.len() == 2 && &elems[0] == map_key {
+                        if let Some(idx) = elems[1].extract_number() {
+                            values.insert(idx, value.clone());
+                        }
+                    }
+                } else if key == &ModelValue::literal("else") {
+                    default = value.clone();
+                }
+            }
+            Some(ModelValueVector {
+                size,
+                values,
+                default,
+            })
         }
-        Some(ModelValueVector {
-            size,
-            values,
-            default,
-        })
     }
 
     fn extract_map(&self) -> Option<&BTreeMap<ModelValue, ModelValue>> {

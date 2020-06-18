@@ -372,30 +372,51 @@ impl<'env> ModuleTranslator<'env> {
             separate(vec![type_args_str.clone(), args_str.clone()], ", ")
         );
         self.writer.indent();
-        let mut ctor_expr = "$MapConstValue($DefaultValue())".to_owned();
-        for field_env in struct_env.get_fields() {
-            let field_param =
-                &format!("{}", field_env.get_name().display(struct_env.symbol_pool()));
-            let type_check = boogie_well_formed_check(
-                self.module_env.env,
-                field_param,
-                &field_env.get_type(),
-                WellFormedMode::Default,
-            );
-            emit!(self.writer, &type_check);
-            ctor_expr = format!(
-                "{}[{} := {}]",
+        // $Vector is either represented using sequences or integer maps
+        if self.options.backend.vector_using_sequences {
+            // Using sequences as the internal representation
+            let mut ctor_expr = "$EmptyValueArray()".to_owned();
+            for field_env in struct_env.get_fields() {
+                let field_param =
+                    &format!("{}", field_env.get_name().display(struct_env.symbol_pool()));
+                let type_check = boogie_well_formed_check(
+                    self.module_env.env,
+                    field_param,
+                    &field_env.get_type(),
+                    WellFormedMode::Default,
+                );
+                emit!(self.writer, &type_check);
+                // TODO: Remove the use of $ExtendValueArray; it is deprecated
+                ctor_expr = format!("$ExtendValueArray({},{})", ctor_expr, field_param);
+            }
+            emitln!(self.writer, "$struct := $Vector({});", ctor_expr);
+        } else {
+            // Using integer maps as the internal representation
+            let mut ctor_expr = "$MapConstValue($DefaultValue())".to_owned();
+            for field_env in struct_env.get_fields() {
+                let field_param =
+                    &format!("{}", field_env.get_name().display(struct_env.symbol_pool()));
+                let type_check = boogie_well_formed_check(
+                    self.module_env.env,
+                    field_param,
+                    &field_env.get_type(),
+                    WellFormedMode::Default,
+                );
+                emit!(self.writer, &type_check);
+                ctor_expr = format!(
+                    "{}[{} := {}]",
+                    ctor_expr,
+                    field_env.get_offset(),
+                    field_param
+                );
+            }
+            emitln!(
+                self.writer,
+                "$struct := $Vector($ValueArray({}, {}));",
                 ctor_expr,
-                field_env.get_offset(),
-                field_param
+                struct_env.get_field_count()
             );
         }
-        emitln!(
-            self.writer,
-            "$struct := $Vector($ValueArray({}, {}));",
-            ctor_expr,
-            struct_env.get_field_count()
-        );
 
         // Generate $DebugTrackLocal so we can see the constructed value before invariant
         // evaluation may abort.

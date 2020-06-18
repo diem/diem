@@ -153,6 +153,8 @@ pub struct BackendOptions {
     /// How many times to call the prover backend for the verification problem. This is used for
     /// benchmarking.
     pub bench_repeat: usize,
+    /// Whether to use the sequence theory as the internal representation for $Vector type.
+    pub vector_using_sequences: bool,
 }
 
 impl Default for BackendOptions {
@@ -173,6 +175,7 @@ impl Default for BackendOptions {
             aggressive_func_inline: "".to_owned(),
             func_inline: "{:inline}".to_owned(),
             serialize_bound: 4,
+            vector_using_sequences: false,
         }
     }
 }
