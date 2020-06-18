@@ -1460,6 +1460,16 @@
 <span id="1460">1460</span>
 <span id="1461">1461</span>
 <span id="1462">1462</span>
+<span id="1463">1463</span>
+<span id="1464">1464</span>
+<span id="1465">1465</span>
+<span id="1466">1466</span>
+<span id="1467">1467</span>
+<span id="1468">1468</span>
+<span id="1469">1469</span>
+<span id="1470">1470</span>
+<span id="1471">1471</span>
+<span id="1472">1472</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1490,8 +1500,8 @@
     <span class="ident">code_writer</span>::<span class="ident">CodeWriter</span>,
     <span class="ident">emit</span>, <span class="ident">emitln</span>,
     <span class="ident">env</span>::{
-        <span class="ident">GlobalEnv</span>, <span class="ident">SpecVarId</span>, <span class="ident">ABORTS_IF_IS_PARTIAL_PRAGMA</span>, <span class="ident">ABORTS_IF_IS_STRICT_PRAGMA</span>,
-        <span class="ident">REQUIRES_IF_ABORTS</span>, <span class="ident">SMOKE_TEST_PRAGMA</span>,
+        <span class="ident">ConditionInfo</span>, <span class="ident">GlobalEnv</span>, <span class="ident">SpecVarId</span>, <span class="ident">ABORTS_IF_IS_PARTIAL_PRAGMA</span>,
+        <span class="ident">ABORTS_IF_IS_STRICT_PRAGMA</span>, <span class="ident">REQUIRES_IF_ABORTS</span>,
     },
     <span class="ident">symbol</span>::<span class="ident">Symbol</span>,
     <span class="ident">ty</span>::<span class="ident">TypeDisplayContext</span>,
@@ -1500,6 +1510,12 @@
     <span class="ident">function_target</span>::<span class="ident">FunctionTarget</span>, <span class="ident">stackless_bytecode</span>::<span class="ident">SpecBlockId</span>,
 };
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeSet</span>;
+
+<span class="kw">const</span> <span class="ident">REQUIRES_FAILS_MESSAGE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;precondition does not hold at this call&quot;</span>;
+<span class="kw">const</span> <span class="ident">ENSURES_FAILS_MESSAGE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;post-condition does not hold&quot;</span>;
+<span class="kw">const</span> <span class="ident">ABORTS_IF_FAILS_MESSAGE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;function does not abort under this condition&quot;</span>;
+<span class="kw">const</span> <span class="ident">SUCCEEDS_IF_FAILS_MESSAGE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;function does not succeed under this condition&quot;</span>;
+<span class="kw">const</span> <span class="ident">INVARIANT_FAILS_MESSAGE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;data invariant does not hold&quot;</span>;
 
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">SpecEnv</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span><span class="op">&gt;</span> {
     <span class="ident">Module</span>(<span class="ident">ModuleEnv</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span><span class="op">&gt;</span>),
@@ -1841,6 +1857,7 @@
             <span class="comment">// function does not abort.</span>
             <span class="self">self</span>.<span class="ident">translate_seq</span>(<span class="ident">requires</span>.<span class="ident">iter</span>(), <span class="string">&quot;\n&quot;</span>, <span class="op">|</span><span class="ident">cond</span><span class="op">|</span> {
                 <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="ident">cond</span>.<span class="ident">loc</span>);
+                <span class="self">self</span>.<span class="ident">set_condition_info</span>(<span class="kw-2">&amp;</span><span class="ident">cond</span>.<span class="ident">loc</span>, <span class="ident">REQUIRES_FAILS_MESSAGE</span>);
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;requires b#$Boolean(&quot;</span>);
                 <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="kw-2">&amp;</span><span class="ident">cond</span>.<span class="ident">exp</span>);
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;)&quot;</span>);
@@ -1854,18 +1871,6 @@
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;;&quot;</span>)
             });
             <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>);
-        }
-
-        <span class="comment">// Smoke test mode</span>
-        <span class="kw">if</span> <span class="ident">func_target</span>.<span class="ident">is_pragma_true</span>(<span class="ident">SMOKE_TEST_PRAGMA</span>, <span class="op">|</span><span class="op">|</span> <span class="bool-val">false</span>) {
-            <span class="comment">// Generates `ensure $abort_flag;` to check if the move</span>
-            <span class="comment">// prover can prove `ensures false;` because the function</span>
-            <span class="comment">// always aborts.</span>
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_ensures</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">true</span>;
-            <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;ensures $abort_flag;\n&quot;</span>);
-            <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_ensures</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">false</span>;
-            <span class="comment">// Ignore the post-condition specifications for this function</span>
-            <span class="kw">return</span>;
         }
 
         <span class="comment">// Generate aborts_if. Logically, if we have abort conditions P1..Pn, we have</span>
@@ -1889,6 +1894,7 @@
             <span class="comment">// reports positions only back per entire ensures, not individual sub-expression.)</span>
             <span class="kw">for</span> <span class="ident">c</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">aborts_if</span> {
                 <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>.<span class="ident">loc</span>);
+                <span class="self">self</span>.<span class="ident">set_condition_info</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>.<span class="ident">loc</span>, <span class="ident">ABORTS_IF_FAILS_MESSAGE</span>);
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;ensures b#$Boolean(old(&quot;</span>);
                 <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>.<span class="ident">exp</span>);
                 <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;)) ==&gt; $abort_flag;&quot;</span>)
@@ -1916,6 +1922,7 @@
         <span class="kw">let</span> <span class="ident">succeeds_if</span> <span class="op">=</span> <span class="ident">spec</span>.<span class="ident">filter_kind</span>(<span class="ident">ConditionKind</span>::<span class="ident">SucceedsIf</span>).<span class="ident">collect_vec</span>();
         <span class="kw">for</span> <span class="ident">c</span> <span class="kw">in</span> <span class="ident">succeeds_if</span> {
             <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>.<span class="ident">loc</span>);
+            <span class="self">self</span>.<span class="ident">set_condition_info</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>.<span class="ident">loc</span>, <span class="ident">SUCCEEDS_IF_FAILS_MESSAGE</span>);
             <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;ensures b#$Boolean(old(&quot;</span>);
             <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>.<span class="ident">exp</span>);
             <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;)) ==&gt; !$abort_flag;&quot;</span>)
@@ -1927,12 +1934,24 @@
             <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_ensures</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">true</span>;
             <span class="self">self</span>.<span class="ident">translate_seq</span>(<span class="ident">ensures</span>.<span class="ident">iter</span>(), <span class="string">&quot;\n&quot;</span>, <span class="op">|</span><span class="ident">cond</span><span class="op">|</span> {
                 <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">set_location</span>(<span class="kw-2">&amp;</span><span class="ident">cond</span>.<span class="ident">loc</span>);
+                <span class="self">self</span>.<span class="ident">set_condition_info</span>(<span class="kw-2">&amp;</span><span class="ident">cond</span>.<span class="ident">loc</span>, <span class="ident">ENSURES_FAILS_MESSAGE</span>);
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;ensures !$abort_flag ==&gt; (b#$Boolean(&quot;</span>);
                 <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="kw-2">&amp;</span><span class="ident">cond</span>.<span class="ident">exp</span>);
                 <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;));&quot;</span>)
             });
             <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">in_ensures</span>.<span class="ident">borrow_mut</span>() <span class="op">=</span> <span class="bool-val">false</span>;
             <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>);
+        }
+    }
+
+    <span class="doccomment">/// Sets info for verification condition so it can be later retrieved by the boogie wrapper.</span>
+    <span class="doccomment">/// If info is already set, it will not be overriden.</span>
+    <span class="kw">fn</span> <span class="ident">set_condition_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">loc</span>: <span class="kw-2">&amp;</span><span class="ident">Loc</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) {
+        <span class="kw">let</span> <span class="ident">env</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module_env</span>().<span class="ident">env</span>;
+        <span class="kw">if</span> <span class="ident">env</span>.<span class="ident">get_condition_info</span>(<span class="ident">loc</span>).<span class="ident">is_none</span>() {
+            <span class="self">self</span>.<span class="ident">module_env</span>()
+                .<span class="ident">env</span>
+                .<span class="ident">set_condition_info</span>(<span class="ident">loc</span>.<span class="ident">clone</span>(), <span class="ident">ConditionInfo</span>::<span class="ident">for_message</span>(<span class="ident">message</span>.<span class="ident">to_string</span>()));
         }
     }
 
@@ -2306,6 +2325,7 @@
                 <span class="kw">if</span> <span class="ident">assume</span> {
                     <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assume b#$Boolean(&quot;</span>);
                 } <span class="kw">else</span> {
+                    <span class="self">self</span>.<span class="ident">set_condition_info</span>(<span class="kw-2">&amp;</span><span class="ident">inv</span>.<span class="ident">loc</span>, <span class="ident">INVARIANT_FAILS_MESSAGE</span>);
                     <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assert b#$Boolean(&quot;</span>);
                 }
                 <span class="self">self</span>.<span class="ident">with_invariant_target</span>(<span class="ident">target</span>, <span class="ident">old_target</span>, <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="kw-2">&amp;</span><span class="ident">inv</span>.<span class="ident">exp</span>));

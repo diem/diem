@@ -1351,56 +1351,6 @@
 <span id="1351">1351</span>
 <span id="1352">1352</span>
 <span id="1353">1353</span>
-<span id="1354">1354</span>
-<span id="1355">1355</span>
-<span id="1356">1356</span>
-<span id="1357">1357</span>
-<span id="1358">1358</span>
-<span id="1359">1359</span>
-<span id="1360">1360</span>
-<span id="1361">1361</span>
-<span id="1362">1362</span>
-<span id="1363">1363</span>
-<span id="1364">1364</span>
-<span id="1365">1365</span>
-<span id="1366">1366</span>
-<span id="1367">1367</span>
-<span id="1368">1368</span>
-<span id="1369">1369</span>
-<span id="1370">1370</span>
-<span id="1371">1371</span>
-<span id="1372">1372</span>
-<span id="1373">1373</span>
-<span id="1374">1374</span>
-<span id="1375">1375</span>
-<span id="1376">1376</span>
-<span id="1377">1377</span>
-<span id="1378">1378</span>
-<span id="1379">1379</span>
-<span id="1380">1380</span>
-<span id="1381">1381</span>
-<span id="1382">1382</span>
-<span id="1383">1383</span>
-<span id="1384">1384</span>
-<span id="1385">1385</span>
-<span id="1386">1386</span>
-<span id="1387">1387</span>
-<span id="1388">1388</span>
-<span id="1389">1389</span>
-<span id="1390">1390</span>
-<span id="1391">1391</span>
-<span id="1392">1392</span>
-<span id="1393">1393</span>
-<span id="1394">1394</span>
-<span id="1395">1395</span>
-<span id="1396">1396</span>
-<span id="1397">1397</span>
-<span id="1398">1398</span>
-<span id="1399">1399</span>
-<span id="1400">1400</span>
-<span id="1401">1401</span>
-<span id="1402">1402</span>
-<span id="1403">1403</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1410,7 +1360,7 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">anyhow</span>;
 
 <span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">collections</span>::{<span class="ident">BTreeMap</span>, <span class="ident">BTreeSet</span>, <span class="ident">HashSet</span>},
+    <span class="ident">collections</span>::{<span class="ident">BTreeMap</span>, <span class="ident">BTreeSet</span>},
     <span class="ident">fs</span>,
     <span class="ident">option</span>::<span class="prelude-ty">Option</span>::<span class="prelude-val">None</span>,
     <span class="ident">process</span>::<span class="ident">Command</span>,
@@ -1426,12 +1376,11 @@
 
 <span class="kw">use</span> <span class="ident">spec_lang</span>::{
     <span class="ident">code_writer</span>::<span class="ident">CodeWriter</span>,
-    <span class="ident">env</span>::{<span class="ident">FunId</span>, <span class="ident">GlobalEnv</span>, <span class="ident">Loc</span>, <span class="ident">ModuleId</span>, <span class="ident">StructId</span>, <span class="ident">SMOKE_TEST_PRAGMA</span>, <span class="ident">VERIFY_PRAGMA</span>},
-    <span class="ident">symbol</span>::<span class="ident">Symbol</span>,
+    <span class="ident">env</span>::{<span class="ident">FunId</span>, <span class="ident">GlobalEnv</span>, <span class="ident">Loc</span>, <span class="ident">ModuleId</span>, <span class="ident">StructId</span>},
     <span class="ident">ty</span>::{<span class="ident">PrimitiveType</span>, <span class="ident">Type</span>},
 };
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">cli</span>::{<span class="ident">Options</span>, <span class="ident">VerificationScope</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">cli</span>::<span class="ident">Options</span>;
 <span class="comment">// DEBUG</span>
 <span class="comment">// use backtrace::Backtrace;</span>
 <span class="kw">use</span> <span class="ident">spec_lang</span>::<span class="ident">env</span>::<span class="ident">NodeId</span>;
@@ -1498,12 +1447,6 @@
     <span class="ident">Pack</span>,
 }
 
-<span class="doccomment">/// The type of smoke test</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">SmokeTestKind</span> {
-    <span class="ident">AbortsIfTrue</span>,
-}
-
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span><span class="op">&gt;</span> <span class="ident">BoogieWrapper</span><span class="op">&lt;</span><span class="lifetime">&#39;env</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Calls boogie on the given file. On success, returns a struct representing the analyzed</span>
     <span class="doccomment">/// output of boogie.</span>
@@ -1549,14 +1492,13 @@
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;writing boogie log to {}&quot;</span>, <span class="ident">boogie_log_file</span>);
         <span class="ident">fs</span>::<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="ident">boogie_log_file</span>, <span class="kw-2">&amp;</span><span class="ident">all_output</span>)<span class="question-mark">?</span>;
 
-        <span class="comment">// Keep a list of function name symbols and the kind of smoke test for errors</span>
-        <span class="comment">// that come from smoke testing</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">smoke_test_errors</span>: <span class="ident">HashSet</span><span class="op">&lt;</span>(<span class="ident">Symbol</span>, <span class="ident">SmokeTestKind</span>)<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">HashSet</span>::<span class="ident">new</span>();
+        <span class="comment">// Keep the set of locations which had a negative condition failure. These are errors</span>
+        <span class="comment">// which are expected.</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">negative_cond_errors</span> <span class="op">=</span> <span class="ident">BTreeSet</span>::<span class="ident">new</span>();
 
         <span class="kw">for</span> <span class="ident">error</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">errors</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">res</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">try_get_smoke_test_error</span>(<span class="ident">error</span>) {
-                <span class="comment">// Errors from smoke test checks</span>
-                <span class="ident">smoke_test_errors</span>.<span class="ident">insert</span>(<span class="ident">res</span>);
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">fun</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">try_get_negative_error</span>(<span class="ident">error</span>) {
+                <span class="ident">negative_cond_errors</span>.<span class="ident">insert</span>(<span class="ident">fun</span>);
             } <span class="kw">else</span> {
                 <span class="comment">// Errors from counter examples to the specification</span>
                 <span class="self">self</span>.<span class="ident">add_error</span>(<span class="ident">error</span>);
@@ -1564,20 +1506,14 @@
         }
 
         <span class="comment">// Add errors for functions with smoke tests</span>
-        <span class="self">self</span>.<span class="ident">add_smoke_test_errors</span>(<span class="ident">smoke_test_errors</span>);
+        <span class="self">self</span>.<span class="ident">add_negative_errors</span>(<span class="ident">negative_cond_errors</span>);
 
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="doccomment">/// Helper that returns `Some` tuple of `Symbol` representing the function</span>
-    <span class="doccomment">/// the error appears in and `SmokeTestKind` representing the kind of smoke test</span>
-    <span class="doccomment">/// error.</span>
-    <span class="doccomment">/// Returns None if it&#39;s not a smoke test error.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// List of smoke test errors when `pragma smoke_test = true;` is declared:</span>
-    <span class="doccomment">///     1. Ignore specification post conditions and add `ensures $abort_flag;` to</span>
-    <span class="doccomment">///         the function to check if the function always aborts</span>
-    <span class="kw">fn</span> <span class="ident">try_get_smoke_test_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">error</span>: <span class="kw-2">&amp;</span><span class="ident">BoogieError</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span>(<span class="ident">Symbol</span>, <span class="ident">SmokeTestKind</span>)<span class="op">&gt;</span> {
+    <span class="doccomment">/// Determine whether the boogie error represents the failure of a negative condition</span>
+    <span class="doccomment">/// and return its location of so.</span>
+    <span class="kw">fn</span> <span class="ident">try_get_negative_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">error</span>: <span class="kw-2">&amp;</span><span class="ident">BoogieError</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Loc</span><span class="op">&gt;</span> {
         <span class="comment">// Find the source location of the error</span>
         <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">loc_opt</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">get_locations</span>(<span class="ident">error</span>.<span class="ident">position</span>);
         <span class="kw">let</span> <span class="ident">source_loc</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">to_proper_source_location</span>(<span class="ident">loc_opt</span>).<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">loc</span><span class="op">|</span> {
@@ -1588,71 +1524,29 @@
             }
         })<span class="question-mark">?</span>;
 
-        <span class="comment">// Find the function the error was raised in</span>
-        <span class="kw">let</span> <span class="ident">fun_env</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">env</span>.<span class="ident">get_enclosing_function</span>(<span class="ident">source_loc</span>)<span class="question-mark">?</span>;
-
-        <span class="comment">// Return whether the function of the error was in smoke test mode</span>
-        <span class="kw">if</span> <span class="ident">fun_env</span>.<span class="ident">is_pragma_true</span>(<span class="ident">SMOKE_TEST_PRAGMA</span>, <span class="op">|</span><span class="op">|</span> <span class="bool-val">false</span>) {
-            <span class="kw">let</span> <span class="ident">fname_symbol</span> <span class="op">=</span> <span class="ident">fun_env</span>.<span class="ident">get_name</span>();
-            <span class="comment">// Determine the kind of smoke test this error comes from</span>
-            <span class="comment">//</span>
-            <span class="comment">// TODO: Currently the only type of test is the aborts_if true check.</span>
-            <span class="comment">// We will need to condition based on the error trace or message</span>
-            <span class="comment">// for additional errors.</span>
-            <span class="kw">let</span> <span class="ident">kind</span> <span class="op">=</span> <span class="ident">SmokeTestKind</span>::<span class="ident">AbortsIfTrue</span>;
-            <span class="prelude-val">Some</span>((<span class="ident">fname_symbol</span>, <span class="ident">kind</span>))
-        } <span class="kw">else</span> {
-            <span class="prelude-val">None</span>
-        }
+        <span class="comment">// Check whether the condition which failed was a negative one.</span>
+        <span class="self">self</span>.<span class="ident">env</span>
+            .<span class="ident">get_condition_info</span>(<span class="kw-2">&amp;</span><span class="ident">source_loc</span>)
+            .<span class="ident">filter</span>(<span class="op">|</span><span class="ident">info</span><span class="op">|</span> <span class="ident">info</span>.<span class="ident">negative_cond</span>)<span class="question-mark">?</span>;
+        <span class="prelude-val">Some</span>(<span class="ident">source_loc</span>)
     }
 
-    <span class="doccomment">/// Helper function for adding smoke test errors as Diagnostics.</span>
-    <span class="doccomment">/// TODO: Ideally, we would like to use the FunId and ModuleIds to identify</span>
-    <span class="doccomment">/// where these errors `funs_with_errors` come from rather than a simple `Symbol`</span>
-    <span class="doccomment">/// name that refers to the function to avoid ambiguity in case there are</span>
-    <span class="doccomment">/// multiple modules.</span>
-    <span class="kw">fn</span> <span class="ident">add_smoke_test_errors</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">funs_with_errors</span>: <span class="ident">HashSet</span><span class="op">&lt;</span>(<span class="ident">Symbol</span>, <span class="ident">SmokeTestKind</span>)<span class="op">&gt;</span>) {
-        <span class="comment">// Add aborts_if true diagnostics.</span>
-        <span class="kw">for</span> <span class="ident">mod_env</span> <span class="kw">in</span> <span class="self">self</span>.<span class="ident">env</span>.<span class="ident">get_modules</span>() {
-            <span class="kw">for</span> <span class="ident">fun_env</span> <span class="kw">in</span> <span class="ident">mod_env</span>.<span class="ident">get_functions</span>() {
-                <span class="comment">// Look up the `verify` pragma property first in this function, then in</span>
-                <span class="comment">// the module, and finally fall back to the value of option `--verify`,</span>
-                <span class="comment">// as in the usual verification process.</span>
-                <span class="kw">let</span> <span class="ident">default</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">options</span>.<span class="ident">prover</span>.<span class="ident">verify_scope</span> {
-                    <span class="ident">VerificationScope</span>::<span class="ident">Public</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">fun_env</span>.<span class="ident">is_public</span>(),
-                    <span class="ident">VerificationScope</span>::<span class="ident">All</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
-                    <span class="ident">VerificationScope</span>::<span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
-                };
-                <span class="comment">// Ignore the function if we&#39;re not verifying it.</span>
-                <span class="kw">if</span> <span class="op">!</span><span class="ident">fun_env</span>.<span class="ident">is_pragma_true</span>(<span class="ident">VERIFY_PRAGMA</span>, <span class="ident">default</span>) {
-                    <span class="kw">continue</span>;
-                }
-                <span class="kw">if</span> <span class="ident">fun_env</span>.<span class="ident">is_pragma_true</span>(<span class="ident">SMOKE_TEST_PRAGMA</span>, <span class="op">|</span><span class="op">|</span> <span class="bool-val">false</span>) {
-                    <span class="comment">// Smoke test option turned on</span>
-                    <span class="kw">let</span> <span class="ident">fname_symbol</span> <span class="op">=</span> <span class="ident">fun_env</span>.<span class="ident">get_name</span>();
-                    <span class="kw">let</span> <span class="ident">fname</span> <span class="op">=</span> <span class="ident">fname_symbol</span>.<span class="ident">display</span>(<span class="ident">fun_env</span>.<span class="ident">symbol_pool</span>());
-                    <span class="kw">if</span> <span class="op">!</span><span class="ident">funs_with_errors</span>
-                        .<span class="ident">contains</span>(<span class="kw-2">&amp;</span>(<span class="ident">fun_env</span>.<span class="ident">get_name</span>(), <span class="ident">SmokeTestKind</span>::<span class="ident">AbortsIfTrue</span>))
-                    {
-                        <span class="comment">// No Boogie error found, which means the `ensures $abort_flag` statement passed</span>
-                        <span class="comment">// and we should flag this as a bug (contradictory assumptions).</span>
-                        <span class="kw">let</span> <span class="ident">fun_loc</span> <span class="op">=</span> <span class="ident">fun_env</span>.<span class="ident">get_loc</span>();
-                        <span class="kw">let</span> <span class="ident">diag</span> <span class="op">=</span> <span class="ident">Diagnostic</span>::<span class="ident">new</span>(
-                            <span class="ident">Severity</span>::<span class="ident">Error</span>,
-                            <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;function {} always aborts.&quot;</span>, <span class="ident">fname</span>),
-                            <span class="ident">Label</span>::<span class="ident">new</span>(<span class="ident">fun_loc</span>.<span class="ident">file_id</span>(), <span class="ident">fun_loc</span>.<span class="ident">span</span>(), <span class="string">&quot;&quot;</span>),
-                        );
-                        <span class="self">self</span>.<span class="ident">env</span>.<span class="ident">add_diag</span>(<span class="ident">diag</span>);
-                    } <span class="kw">else</span> {
-                        <span class="comment">// An error occured in verifying aborts_if true, this is expected.</span>
-                        <span class="macro">info</span><span class="macro">!</span>(
-                            <span class="string">&quot;function {} successfully passed the `aborts_if true;` smoke test.&quot;</span>,
-                            <span class="ident">fname</span>
-                        );
-                    }
-                }
+    <span class="doccomment">/// Go over all negative conditions and check whether errors occurred for them.</span>
+    <span class="doccomment">/// For those which did not occur, report error.</span>
+    <span class="kw">fn</span> <span class="ident">add_negative_errors</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">negative_cond_errors</span>: <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">Loc</span><span class="op">&gt;</span>) {
+        <span class="self">self</span>.<span class="ident">env</span>.<span class="ident">with_condition_infos</span>(<span class="op">|</span><span class="ident">loc</span>, <span class="ident">info</span><span class="op">|</span> {
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">info</span>.<span class="ident">negative_cond</span> <span class="op">|</span><span class="op">|</span> <span class="ident">negative_cond_errors</span>.<span class="ident">contains</span>(<span class="ident">loc</span>) {
+                <span class="comment">// Not a negative condition, or expected error happened.</span>
+                <span class="kw">return</span>;
             }
-        }
+            <span class="comment">// Expected error did not happen, report it.</span>
+            <span class="kw">let</span> <span class="ident">diag</span> <span class="op">=</span> <span class="ident">Diagnostic</span>::<span class="ident">new</span>(
+                <span class="ident">Severity</span>::<span class="ident">Error</span>,
+                <span class="ident">info</span>.<span class="ident">message</span>.<span class="ident">clone</span>(),
+                <span class="ident">Label</span>::<span class="ident">new</span>(<span class="ident">loc</span>.<span class="ident">file_id</span>(), <span class="ident">loc</span>.<span class="ident">span</span>(), <span class="string">&quot;&quot;</span>),
+            );
+            <span class="self">self</span>.<span class="ident">env</span>.<span class="ident">add_diag</span>(<span class="ident">diag</span>);
+        });
     }
 
     <span class="doccomment">/// Helper to add a boogie error as a codespan Diagnostic.</span>
@@ -1674,6 +1568,11 @@
         };
 
         <span class="comment">// Create the error</span>
+        <span class="kw">let</span> (<span class="ident">show_trace</span>, <span class="ident">message</span>) <span class="op">=</span> <span class="ident">loc_opt</span>
+            .<span class="ident">as_ref</span>()
+            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">loc</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">env</span>.<span class="ident">get_condition_info</span>(<span class="ident">loc</span>))
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">info</span><span class="op">|</span> (<span class="op">!</span><span class="ident">info</span>.<span class="ident">omit_trace</span>, <span class="ident">info</span>.<span class="ident">message</span>))
+            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> (<span class="bool-val">true</span>, <span class="ident">error</span>.<span class="ident">message</span>.<span class="ident">clone</span>()));
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">diag</span> <span class="op">=</span> <span class="ident">Diagnostic</span>::<span class="ident">new</span>(
             <span class="kw">if</span> <span class="ident">on_source</span> {
                 <span class="ident">Severity</span>::<span class="ident">Error</span>
@@ -1681,12 +1580,13 @@
                 <span class="comment">// Consider diags on boogie source as bugs</span>
                 <span class="ident">Severity</span>::<span class="ident">Bug</span>
             },
-            <span class="kw-2">&amp;</span><span class="ident">error</span>.<span class="ident">message</span>,
+            <span class="ident">message</span>,
             <span class="ident">label</span>,
         );
 
         <span class="comment">// Now add trace diagnostics.</span>
         <span class="kw">if</span> <span class="ident">error</span>.<span class="ident">kind</span>.<span class="ident">is_from_verification</span>()
+            <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="ident">show_trace</span>
             <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">error</span>.<span class="ident">execution_trace</span>.<span class="ident">is_empty</span>()
             <span class="comment">// Reporting errors on boogie source seems to have some non-determinism, so skip</span>
             <span class="comment">// this if stable output is required</span>

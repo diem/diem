@@ -432,22 +432,6 @@
 <span id="432">432</span>
 <span id="433">433</span>
 <span id="434">434</span>
-<span id="435">435</span>
-<span id="436">436</span>
-<span id="437">437</span>
-<span id="438">438</span>
-<span id="439">439</span>
-<span id="440">440</span>
-<span id="441">441</span>
-<span id="442">442</span>
-<span id="443">443</span>
-<span id="444">444</span>
-<span id="445">445</span>
-<span id="446">446</span>
-<span id="447">447</span>
-<span id="448">448</span>
-<span id="449">449</span>
-<span id="450">450</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -464,6 +448,7 @@
 <span class="kw">use</span> <span class="ident">simplelog</span>::{
     <span class="ident">CombinedLogger</span>, <span class="ident">Config</span>, <span class="ident">ConfigBuilder</span>, <span class="ident">LevelPadding</span>, <span class="ident">SimpleLogger</span>, <span class="ident">TermLogger</span>, <span class="ident">TerminalMode</span>,
 };
+<span class="kw">use</span> <span class="ident">spec_lang</span>::<span class="ident">env</span>::<span class="ident">VerificationScope</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">sync</span>::<span class="ident">atomic</span>::{<span class="ident">AtomicBool</span>, <span class="ident">Ordering</span>};
 
 <span class="doccomment">/// Represents the virtual path to the boogie prelude which is inlined into the binary.</span>
@@ -485,23 +470,6 @@
 
 <span class="doccomment">/// Atomic used to detect whether we are running in test mode.</span>
 <span class="kw">static</span> <span class="ident">TEST_MODE</span>: <span class="ident">AtomicBool</span> <span class="op">=</span> <span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>);
-
-<span class="doccomment">/// Default for what functions to verify.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
-<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">VerificationScope</span> {
-    <span class="doccomment">/// Verify only public functions.</span>
-    <span class="ident">Public</span>,
-    <span class="doccomment">/// Verify all functions.</span>
-    <span class="ident">All</span>,
-    <span class="doccomment">/// Verify no functions</span>
-    <span class="prelude-val">None</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">VerificationScope</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>::<span class="ident">Public</span>
-    }
-}
 
 <span class="doccomment">/// Represents options provided to the tool. Most of those options are configured via a toml</span>
 <span class="doccomment">/// source; some over the command line flags.</span>
