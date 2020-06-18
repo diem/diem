@@ -21,7 +21,7 @@ use std::collections::HashMap;
 
 fn verify_epochs(db: &LibraDB, ledger_infos_with_sigs: &[LedgerInfoWithSignatures]) {
     let (actual_epoch_change_lis, _) = db
-        .get_epoch_change_ledger_infos(
+        .get_epoch_ending_ledger_infos(
             0,
             ledger_infos_with_sigs
                 .last()

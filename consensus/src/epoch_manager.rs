@@ -183,7 +183,7 @@ impl EpochManager {
         let proof = self
             .storage
             .libra_db()
-            .get_epoch_change_ledger_infos(request.start_epoch, request.end_epoch)
+            .get_epoch_ending_ledger_infos(request.start_epoch, request.end_epoch)
             .context("[EpochManager] Failed to get epoch proof")?;
         let msg = ConsensusMsg::EpochChangeProof(Box::new(proof));
         self.network_sender.send_to(peer_id, msg).context(format!(

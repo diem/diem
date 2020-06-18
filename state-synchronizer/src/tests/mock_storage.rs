@@ -219,7 +219,7 @@ impl MockStorage {
     }
 
     // Find LedgerInfo for an epoch boundary version.
-    pub fn get_epoch_change_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+    pub fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
         for li in self.ledger_infos.values() {
             if li.ledger_info().version() == version {
                 li.ledger_info()

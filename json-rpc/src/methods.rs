@@ -132,7 +132,7 @@ async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Resul
     let (version, timestamp) = match serde_json::from_value::<u64>(request.get_param(0)) {
         Ok(version) => {
             // TODO: fix once we have a real way to get transaction timestamps
-            let li = service.db.get_epoch_change_ledger_info(version)?;
+            let li = service.db.get_epoch_ending_ledger_info(version)?;
             (version, li.ledger_info().timestamp_usecs())
         }
         _ => (

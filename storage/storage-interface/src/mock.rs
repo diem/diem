@@ -25,7 +25,7 @@ use std::convert::TryFrom;
 pub struct MockDbReader;
 
 impl DbReader for MockDbReader {
-    fn get_epoch_change_ledger_infos(
+    fn get_epoch_ending_ledger_infos(
         &self,
         _start_epoch: u64,
         _end_epoch: u64,
@@ -124,7 +124,7 @@ impl DbReader for MockDbReader {
         unimplemented!()
     }
 
-    fn get_epoch_change_ledger_info(
+    fn get_epoch_ending_ledger_info(
         &self,
         _known_version: u64,
     ) -> Result<LedgerInfoWithSignatures> {

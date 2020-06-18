@@ -549,7 +549,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         // Retrieve the waypoint LI.
         let waypoint_li = self
             .executor_proxy
-            .get_epoch_change_ledger_info(waypoint_version)?;
+            .get_epoch_ending_ledger_info(waypoint_version)?;
 
         // Txns are up to the end of request epoch with the proofs relative to the waypoint LI.
         let end_of_epoch_li = if waypoint_li.ledger_info().epoch() > request.current_epoch {

@@ -43,7 +43,7 @@ pub trait ExecutorProxyTrait: Send {
     fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures>;
 
     /// Get ledger info at an epoch boundary version.
-    fn get_epoch_change_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
+    fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures>;
 
     /// Load all on-chain configs from storage
     /// Note: this method is being exposed as executor proxy trait temporarily because storage read is currently
@@ -166,14 +166,14 @@ impl ExecutorProxyTrait for ExecutorProxy {
 
     fn get_epoch_proof(&self, epoch: u64) -> Result<LedgerInfoWithSignatures> {
         self.storage
-            .get_epoch_change_ledger_infos(epoch, epoch + 1)?
+            .get_epoch_ending_ledger_infos(epoch, epoch + 1)?
             .ledger_info_with_sigs
             .pop()
             .ok_or_else(|| format_err!("Empty EpochChangeProof"))
     }
 
-    fn get_epoch_change_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
-        self.storage.get_epoch_change_ledger_info(version)
+    fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+        self.storage.get_epoch_ending_ledger_info(version)
     }
 
     fn load_on_chain_configs(&mut self) -> Result<()> {
