@@ -272,8 +272,6 @@
 <span id="272">272</span>
 <span id="273">273</span>
 <span id="274">274</span>
-<span id="275">275</span>
-<span id="276">276</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -340,8 +338,6 @@
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">setup_environment</span>(<span class="ident">node_config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LibraHandle</span> {
-    <span class="ident">crash_handler</span>::<span class="ident">setup_panic_handler</span>();
-
     <span class="comment">// Some of our code uses the rayon global thread pool. Name the rayon threads so it doesn&#39;t</span>
     <span class="comment">// cause confusion, otherwise the threads would have their parent&#39;s name.</span>
     <span class="ident">rayon</span>::<span class="ident">ThreadPoolBuilder</span>::<span class="ident">new</span>()
