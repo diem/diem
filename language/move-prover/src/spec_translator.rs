@@ -1177,7 +1177,7 @@ impl<'env> SpecTranslator<'env> {
     fn translate_pack(&self, args: &[Exp]) {
         emit!(
             self.writer,
-            "$Vector({}$EmptyValueArray",
+            "$Vector({}$EmptyValueArray()",
             "$ExtendValueArray(".repeat(args.len())
         );
         for arg in args.iter() {

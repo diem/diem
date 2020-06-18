@@ -134,13 +134,107 @@ function {:inline} $IsValidNum(v: $Value): bool {
 // Value Array
 // -----------
 
+
+{{#if backend.vector_using_sequences}}
+
+// This is the implementation of $ValueArray using sequences
+
+type {:datatype} {:builtin "(Seq T@$Value)"} $ValueArray;
+
+function {:builtin "(as seq.empty (Seq T@$Value))"} $EmptyValueArray(): $ValueArray;
+
+function {:builtin "seq.nth"} $ReadValueArray(a: $ValueArray, i: int): $Value;
+
+function {:builtin "seq.len"} $LenValueArray(a: $ValueArray): int;
+
+function {:builtin "seq.extract"} $ValueArrayExtract(a: $ValueArray, offset: int, length: int): $ValueArray;
+
+function {:builtin "seq.++"} $ConcatValueArray(a: $ValueArray, b:$ValueArray): $ValueArray;
+
+function {:builtin "seq.unit"} $UnitValueArray(v: $Value): $ValueArray;
+
+
+function {{backend.func_inline}} $RemoveValueArray(a: $ValueArray): $ValueArray {
+    (
+        $ValueArrayExtract(a, 0, $LenValueArray(a) -1)
+    )
+}
+
+
+function {{backend.func_inline}} $RemoveIndexValueArray(a: $ValueArray, i: int): $ValueArray {
+    (
+        var prefix := $ValueArrayExtract(a, 0, i); (
+        var suffix := $ValueArrayExtract(a, i+1, $LenValueArray(a)-i-1);
+        $ConcatValueArray(prefix, suffix)
+    ))
+}
+
+// Note: The axioms for $ReverseValueArray are written assuming specific degenerate behaviour in the z3 operators underneath the functions used.
+// This behaviour could change with a different version of z3 or a different solver.
+// The implementation favours seq.extract over seq.nth because of weird behaviour in the latter for accesses outside the length of the sequence.
+function {{backend.func_inline}} $ReverseValueArray(a: $ValueArray): $ValueArray;
+axiom (forall a: $ValueArray :: $LenValueArray($ReverseValueArray(a)) == $LenValueArray(a));
+axiom (forall a: $ValueArray :: (forall i: int :: $ValueArrayExtract(a, i, 1) == $ValueArrayExtract(a, $LenValueArray(a)-1-i, 1)));
+
+function {{backend.func_inline}} $SliceValueArray(a: $ValueArray, i: int, j: int): $ValueArray { // return the sliced vector of a for the range [i, j)
+    (
+        $ValueArrayExtract(a, i, j-i)
+    )
+}
+
+function {{backend.func_inline}} $ExtendValueArray(a: $ValueArray, elem: $Value): $ValueArray {
+    (
+        $ConcatValueArray(a, $UnitValueArray(elem))
+    )
+}
+
+function {{backend.func_inline}} $UpdateValueArray(a: $ValueArray, i: int, elem: $Value): $ValueArray {
+    (
+        var prefix := $ValueArrayExtract(a, 0, i); (
+        var suffix := $ValueArrayExtract(a, i+1, $LenValueArray(a)-i-1);
+        $ConcatValueArray(prefix, $ConcatValueArray($UnitValueArray(elem), suffix))
+    ))
+}
+
+function {{backend.func_inline}} $SwapValueArray(a: $ValueArray, i: int, j: int): $ValueArray {
+    (
+        var lower := if i < j then i else j; (
+        var upper := if i < j then j else i; (
+        var beginning := $ValueArrayExtract(a, 0, lower); (
+        var middle := $ValueArrayExtract(a, lower+1, (upper-lower)-1); (
+        var end := $ValueArrayExtract(a, upper+1, $LenValueArray(a)-upper-1); (
+        var swap_first_part := $ConcatValueArray(beginning, $ValueArrayExtract(a,upper,1)); (
+        var swap_last_part := $ConcatValueArray($ValueArrayExtract(a,lower,1), end);
+        $ConcatValueArray(swap_first_part, $ConcatValueArray(middle, swap_last_part))
+    )))))))
+}
+
+function {:inline} $IsEmpty(a: $ValueArray): bool {
+    $LenValueArray(a) == 0
+}
+
+// All invalid elements of array are DefaultValue. This is useful in specialized
+// cases. This is used to defined normalization for $Vector
+// For sequences this is true by default
+function {:inline} $IsNormalizedValueArray(a: $ValueArray, len: int): bool {
+    (
+        true
+    )
+}
+
+
+{{else}}
+
+
+// This is the implementation of $ValueArray using integer maps
+
 type {:datatype} $ValueArray;
 
 function {:constructor} $ValueArray(v: [int]$Value, l: int): $ValueArray;
 
-const $EmptyValueArray: $ValueArray;
-axiom l#$ValueArray($EmptyValueArray) == 0;
-axiom v#$ValueArray($EmptyValueArray) == $MapConstValue($Error());
+function $EmptyValueArray(): $ValueArray;
+axiom l#$ValueArray($EmptyValueArray()) == 0;
+axiom v#$ValueArray($EmptyValueArray()) == $MapConstValue($Error());
 
 function {{backend.func_inline}} $ReadValueArray(a: $ValueArray, i: int): $Value {
     (
@@ -227,6 +321,10 @@ function {:inline} $IsEmpty(a: $ValueArray): bool {
 function {:inline} $IsNormalizedValueArray(a: $ValueArray, len: int): bool {
     (forall i: int :: i < 0 || i >= len ==> v#$ValueArray(a)[i] == $DefaultValue())
 }
+
+
+{{/if}} //end of backend.vector_using_sequences
+
 
 // Stratified Functions on Values
 // ------------------------------
@@ -366,7 +464,7 @@ function {:inline} $vlen_value(v: $Value): $Value {
     $Integer($vlen(v))
 }
 function {:inline} $mk_vector(): $Value {
-    $Vector($EmptyValueArray)
+    $Vector($EmptyValueArray())
 }
 function {:inline} $push_back_vector(v: $Value, elem: $Value): $Value {
     $Vector($ExtendValueArray(v#$Vector(v), elem))
@@ -869,6 +967,18 @@ function {:inline} $Vector_type_value(tv: $TypeValue): $TypeValue {
     $VectorType(tv)
 }
 
+{{#if backend.vector_using_sequences}}
+
+// This uses the implementation of $ValueArray using sequences
+function {:inline} $Vector_is_well_formed(v: $Value): bool {
+    (
+        is#$Vector(v)
+    )
+}
+
+{{else}}
+
+// This is uses the implementation of $ValueArray using integer maps
 function {:inline} $Vector_is_well_formed(v: $Value): bool {
     is#$Vector(v) &&
     (
@@ -880,6 +990,8 @@ function {:inline} $Vector_is_well_formed(v: $Value): bool {
         )
     )
 }
+
+{{/if}}
 
 procedure {:inline 1} $Vector_empty(ta: $TypeValue) returns (v: $Value) {
     v := $mk_vector();
