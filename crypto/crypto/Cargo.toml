@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.31"
-bytes = "0.5.4"
+bytes = "0.5.5"
 curve25519-dalek = { git = "https://github.com/novifinancial/curve25519-dalek.git", branch = "fiat2", default-features = false }
 digest = "0.9.0"
 ed25519-dalek = { git = "https://github.com/calibra/ed25519-dalek.git", branch = "fiat2", features = ["serde"], default-features = false }
