@@ -616,9 +616,6 @@
 <span id="616">616</span>
 <span id="617">617</span>
 <span id="618">618</span>
-<span id="619">619</span>
-<span id="620">620</span>
-<span id="621">621</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -628,7 +625,6 @@
 <span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">NodeDebugClient</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">NodeConfig</span>, <span class="ident">RoleType</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
-<span class="kw">use</span> <span class="ident">libra_secure_storage</span>::<span class="ident">config</span>;
 <span class="kw">use</span> <span class="ident">libra_temppath</span>::<span class="ident">TempPath</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -694,9 +690,7 @@
             .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Failed to load NodeConfig from file: {:?}&quot;</span>, <span class="ident">config_path</span>));
         <span class="kw">let</span> <span class="ident">log_file</span> <span class="op">=</span> <span class="ident">File</span>::<span class="ident">create</span>(<span class="kw-2">&amp;</span><span class="ident">log_path</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">validator_peer_id</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">role</span> {
-            <span class="ident">RoleType</span>::<span class="ident">Validator</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="prelude-val">Some</span>(<span class="ident">config</span>::<span class="ident">peer_id</span>(<span class="ident">config</span>.<span class="ident">validator_network</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>()))
-            }
+            <span class="ident">RoleType</span>::<span class="ident">Validator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">config</span>.<span class="ident">validator_network</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">peer_id</span>()),
             <span class="ident">RoleType</span>::<span class="ident">FullNode</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
         };
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_command</span> <span class="op">=</span> <span class="ident">Command</span>::<span class="ident">new</span>(<span class="ident">workspace_builder</span>::<span class="ident">get_bin</span>(<span class="ident">LIBRA_NODE_BIN</span>));

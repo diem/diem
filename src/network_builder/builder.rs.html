@@ -608,7 +608,6 @@
 <span id="608">608</span>
 <span id="609">609</span>
 <span id="610">610</span>
-<span id="611">611</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -632,7 +631,6 @@
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_metrics</span>::<span class="ident">IntCounterVec</span>;
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
-<span class="kw">use</span> <span class="ident">libra_secure_storage</span>::<span class="ident">config</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">waypoint</span>::<span class="ident">Waypoint</span>, <span class="ident">PeerId</span>};
 <span class="kw">use</span> <span class="ident">netcore</span>::<span class="ident">transport</span>::{<span class="ident">memory</span>, <span class="ident">Transport</span>};
 <span class="kw">use</span> <span class="ident">network</span>::{
@@ -1143,8 +1141,8 @@
         .<span class="ident">build</span>()
         .<span class="ident">expect</span>(<span class="string">&quot;Failed to start runtime. Won&#39;t be able to start networking.&quot;</span>);
 
-    <span class="kw">let</span> <span class="ident">identity_key</span> <span class="op">=</span> <span class="ident">config</span>::<span class="ident">identity_key</span>(<span class="ident">config</span>);
-    <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">config</span>::<span class="ident">peer_id</span>(<span class="ident">config</span>);
+    <span class="kw">let</span> <span class="ident">identity_key</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">identity_key</span>();
+    <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">peer_id</span>();
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network_builder</span> <span class="op">=</span> <span class="ident">NetworkBuilder</span>::<span class="ident">new</span>(
         <span class="ident">runtime</span>.<span class="ident">handle</span>().<span class="ident">clone</span>(),

@@ -510,7 +510,6 @@
 <span id="510">510</span>
 <span id="511">511</span>
 <span id="512">512</span>
-<span id="513">513</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -543,7 +542,6 @@
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">ConsensusConfig</span>, <span class="ident">ConsensusProposerType</span>, <span class="ident">NodeConfig</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_metrics</span>::<span class="ident">monitor</span>;
-<span class="kw">use</span> <span class="ident">libra_secure_storage</span>::<span class="ident">config</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">epoch_change</span>::<span class="ident">EpochChangeProof</span>,
@@ -605,7 +603,7 @@
         <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&gt;</span>,
         <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">author</span> <span class="op">=</span> <span class="ident">config</span>::<span class="ident">peer_id</span>(<span class="ident">node_config</span>.<span class="ident">validator_network</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>());
+        <span class="kw">let</span> <span class="ident">author</span> <span class="op">=</span> <span class="ident">node_config</span>.<span class="ident">validator_network</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>().<span class="ident">peer_id</span>();
         <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">node_config</span>.<span class="ident">consensus</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">safety_rules_manager</span> <span class="op">=</span> <span class="ident">SafetyRulesManager</span>::<span class="ident">new</span>(<span class="ident">node_config</span>);
         <span class="self">Self</span> {
