@@ -720,17 +720,214 @@ fn exp(
 fn exp_(
     context: &mut Context,
     result: &mut Block,
-    expected_type_opt: Option<&H::Type>,
-    te: T::Exp,
+    initial_expected_type_opt: Option<&H::Type>,
+    initial_e: T::Exp,
 ) -> H::Exp {
-    let e = exp_impl(context, result, te);
-    match (&e.exp.value, expected_type_opt) {
-        (H::UnannotatedExp_::Unreachable, _) => e,
-        (_, Some(ety)) if needs_freeze(&e.ty, ety) != Freeze::NotNeeded => {
-            freeze(context, result, ety, e)
-        }
-        _ => e,
+    use std::{cell::RefCell, rc::Rc};
+
+    struct Stack<'a> {
+        frames: Vec<Box<dyn FnOnce(&mut Self)>>,
+        operands: Vec<H::Exp>,
+        context: &'a mut Context,
     }
+
+    macro_rules! inner {
+        ($block:expr, $exp_ty_opt:expr, $e:expr) => {{
+            let e_result = $block.clone();
+            let e_exp_ty_opt = $exp_ty_opt;
+            move |s: &mut Stack| exp_loop(s, e_result, e_exp_ty_opt, $e)
+        }};
+    }
+
+    fn maybe_freeze(
+        context: &mut Context,
+        result: &mut Block,
+        expected_type_opt: Option<H::Type>,
+        e: H::Exp,
+    ) -> H::Exp {
+        match (&e.exp.value, expected_type_opt.as_ref()) {
+            (H::UnannotatedExp_::Unreachable, _) => e,
+            (_, Some(exty)) if needs_freeze(&e.ty, exty) != Freeze::NotNeeded => {
+                freeze(context, result, exty, e)
+            }
+            _ => e,
+        }
+    }
+
+    fn exp_loop(
+        stack: &mut Stack,
+        result: Rc<RefCell<Block>>,
+        cur_expected_type_opt: Option<H::Type>,
+        cur: Box<T::Exp>,
+    ) {
+        use H::{Statement_ as S, UnannotatedExp_ as HE};
+        use T::UnannotatedExp_ as TE;
+
+        let (tty, sp!(loc, cur_)) = (cur.ty, cur.exp);
+        let ty = type_(stack.context, tty);
+        match cur_ {
+            //***********************************************
+            // Stack-ified traversal
+            //***********************************************
+            TE::IfElse(cond, if_true, if_false) => {
+                let f_cond = inner!(result, None, cond);
+
+                let if_block = Rc::new(RefCell::new(Block::new()));
+                let f_if = inner!(if_block, Some(ty.clone()), if_true);
+
+                let else_block = Rc::new(RefCell::new(Block::new()));
+                let f_else = inner!(else_block, Some(ty.clone()), if_false);
+
+                let f_if_else = move |s: &mut Stack| {
+                    let ef = s.operands.pop().unwrap();
+                    let et = s.operands.pop().unwrap();
+                    let cond = Box::new(s.operands.pop().unwrap());
+
+                    let mut if_block = Rc::try_unwrap(if_block).unwrap().into_inner();
+                    let mut else_block = Rc::try_unwrap(else_block).unwrap().into_inner();
+                    let result = &mut *result.borrow_mut();
+
+                    let e_ = match (&et.exp.value, &ef.exp.value) {
+                        (HE::Unreachable, HE::Unreachable) => {
+                            let s_ = S::IfElse {
+                                cond,
+                                if_block,
+                                else_block,
+                            };
+                            result.push_back(sp(loc, s_));
+                            HE::Unreachable
+                        }
+                        _ => {
+                            let tmps = make_temps(s.context, loc, ty.clone());
+                            let tres = bind_exp_(&mut if_block, loc, tmps.clone(), et);
+                            let fres = bind_exp_(&mut else_block, loc, tmps, ef);
+                            let s_ = S::IfElse {
+                                cond,
+                                if_block,
+                                else_block,
+                            };
+                            result.push_back(sp(loc, s_));
+                            match (tres, fres) {
+                                (HE::Unreachable, HE::Unreachable) => unreachable!(),
+                                (HE::Unreachable, res) | (res, HE::Unreachable) | (res, _) => res,
+                            }
+                        }
+                    };
+                    let e_res = H::exp(ty, sp(loc, e_));
+                    // each branch is frozen so no need to freeze
+                    s.operands.push(e_res)
+                };
+
+                stack.frames.push(Box::new(f_if_else));
+                stack.frames.push(Box::new(f_else));
+                stack.frames.push(Box::new(f_if));
+                stack.frames.push(Box::new(f_cond));
+            }
+            TE::BinopExp(lhs, op, toperand_ty, rhs) => {
+                let operand_exp_ty_opt = match &op.value {
+                    BinOp_::And if bind_for_short_circuit(&rhs) => {
+                        let tfalse_ = sp(loc, TE::Value(sp(loc, Value_::Bool(false))));
+                        let tfalse = Box::new(T::exp(N::Type_::bool(loc), tfalse_));
+                        let if_else_ = sp(loc, TE::IfElse(lhs, rhs, tfalse));
+                        let if_else = Box::new(T::exp(N::Type_::bool(ty.loc), if_else_));
+                        return exp_loop(stack, result, cur_expected_type_opt, if_else);
+                    }
+                    BinOp_::Or if bind_for_short_circuit(&rhs) => {
+                        let ttrue_ = sp(loc, TE::Value(sp(loc, Value_::Bool(true))));
+                        let ttrue = Box::new(T::exp(N::Type_::bool(loc), ttrue_));
+                        let if_else_ = sp(loc, TE::IfElse(lhs, ttrue, rhs));
+                        let if_else = Box::new(T::exp(N::Type_::bool(ty.loc), if_else_));
+                        return exp_loop(stack, result, cur_expected_type_opt, if_else);
+                    }
+                    BinOp_::Eq | BinOp_::Neq => {
+                        let operand_ty = type_(stack.context, *toperand_ty);
+                        Some(freeze_ty(operand_ty))
+                    }
+                    _ => None,
+                };
+
+                let f_lhs = inner!(result, operand_exp_ty_opt.clone(), lhs);
+                let f_rhs = inner!(result, operand_exp_ty_opt, rhs);
+                let f_binop = move |s: &mut Stack| {
+                    let rhs = Box::new(s.operands.pop().unwrap());
+                    let lhs = Box::new(s.operands.pop().unwrap());
+
+                    let result = &mut *result.borrow_mut();
+
+                    let e_res = H::exp(ty, sp(loc, HE::BinopExp(lhs, op, rhs)));
+                    let e_res = maybe_freeze(s.context, result, cur_expected_type_opt, e_res);
+                    s.operands.push(e_res)
+                };
+                stack.frames.push(Box::new(f_binop));
+                stack.frames.push(Box::new(f_rhs));
+                stack.frames.push(Box::new(f_lhs));
+            }
+            TE::Builtin(bt, arguments) if matches!(&*bt, sp!(_, T::BuiltinFunction_::Assert)) => {
+                let tbool = N::Type_::bool(loc);
+                let tu64 = N::Type_::u64(loc);
+                let tunit = sp(loc, N::Type_::Unit);
+                let vcond = Var(sp(loc, new_temp_name()));
+                let vcode = Var(sp(loc, new_temp_name()));
+
+                let mut stmts = VecDeque::new();
+
+                let bvar = |v, st| sp(loc, T::LValue_::Var(v, st));
+                let bind_list = sp(
+                    loc,
+                    vec![
+                        bvar(vcond.clone(), Box::new(tbool.clone())),
+                        bvar(vcode.clone(), Box::new(tu64.clone())),
+                    ],
+                );
+                let tys = vec![Some(tbool.clone()), Some(tu64.clone())];
+                let bind = sp(loc, T::SequenceItem_::Bind(bind_list, tys, arguments));
+                stmts.push_back(bind);
+
+                let mvar = |var, st| {
+                    let from_user = false;
+                    let mv = TE::Move { from_user, var };
+                    T::exp(st, sp(loc, mv))
+                };
+                let econd = mvar(vcond, tu64);
+                let ecode = mvar(vcode, tbool);
+                let eabort = T::exp(tunit.clone(), sp(loc, TE::Abort(Box::new(ecode))));
+                let eunit = T::exp(tunit.clone(), sp(loc, TE::Unit { trailing: false }));
+                let inlined_ = TE::IfElse(Box::new(econd), Box::new(eunit), Box::new(eabort));
+                let inlined = T::exp(tunit.clone(), sp(loc, inlined_));
+                stmts.push_back(sp(loc, T::SequenceItem_::Seq(Box::new(inlined))));
+
+                let block = T::exp(tunit, sp(loc, TE::Block(stmts)));
+                exp_loop(stack, result, cur_expected_type_opt, Box::new(block));
+            }
+            te_ => {
+                let result = &mut *result.borrow_mut();
+                let e_res = exp_impl(stack.context, result, ty, loc, te_);
+                let e_res = maybe_freeze(stack.context, result, cur_expected_type_opt, e_res);
+                stack.operands.push(e_res)
+            }
+        }
+    }
+
+    let mut stack = Stack {
+        frames: vec![],
+        operands: vec![],
+        context,
+    };
+    let rc_result = Rc::new(RefCell::new(std::mem::replace(result, Block::new())));
+    exp_loop(
+        &mut stack,
+        rc_result.clone(),
+        initial_expected_type_opt.cloned(),
+        Box::new(initial_e),
+    );
+    while let Some(f) = stack.frames.pop() {
+        f(&mut stack)
+    }
+    let e_res = stack.operands.pop().unwrap();
+    assert!(stack.frames.is_empty());
+    assert!(stack.operands.is_empty());
+    *result = Rc::try_unwrap(rc_result).unwrap().into_inner();
+    e_res
 }
 
 enum TmpItem {
@@ -738,51 +935,18 @@ enum TmpItem {
     Splat(Loc, Vec<H::SingleType>),
 }
 
-fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
+fn exp_impl(
+    context: &mut Context,
+    result: &mut Block,
+    ty: H::Type,
+    eloc: Loc,
+    e_: T::UnannotatedExp_,
+) -> H::Exp {
     use H::{Command_ as C, Statement_ as S, UnannotatedExp_ as HE};
     use T::UnannotatedExp_ as TE;
 
-    let tloc = e.ty.loc;
-    let ty = type_(context, e.ty);
-    let sp!(eloc, e_) = e.exp;
     let res = match e_ {
         // Statement-like expressions
-        TE::IfElse(tb, tt, tf) => {
-            let cond = exp(context, result, None, *tb);
-
-            let mut if_block = Block::new();
-            let et = exp_(context, &mut if_block, Some(&ty), *tt);
-
-            let mut else_block = Block::new();
-            let ef = exp_(context, &mut else_block, Some(&ty), *tf);
-
-            match (&et.exp.value, &ef.exp.value) {
-                (HE::Unreachable, HE::Unreachable) => {
-                    let s_ = S::IfElse {
-                        cond,
-                        if_block,
-                        else_block,
-                    };
-                    result.push_back(sp(eloc, s_));
-                    HE::Unreachable
-                }
-                _ => {
-                    let tmps = make_temps(context, eloc, ty.clone());
-                    let tres = bind_exp_(&mut if_block, eloc, tmps.clone(), et);
-                    let fres = bind_exp_(&mut else_block, eloc, tmps, ef);
-                    let s_ = S::IfElse {
-                        cond,
-                        if_block,
-                        else_block,
-                    };
-                    result.push_back(sp(eloc, s_));
-                    match (tres, fres) {
-                        (HE::Unreachable, HE::Unreachable) => unreachable!(),
-                        (HE::Unreachable, res) | (res, HE::Unreachable) | (res, _) => res,
-                    }
-                }
-            }
-        }
         TE::While(tb, loop_body) => {
             let mut cond_block = Block::new();
             let cond_exp = exp(context, &mut cond_block, None, *tb);
@@ -897,43 +1061,6 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
             };
             HE::ModuleCall(Box::new(call))
         }
-        TE::Builtin(bt, arguments) if matches!(&*bt, sp!(_, T::BuiltinFunction_::Assert)) => {
-            let tbool = N::Type_::bool(eloc);
-            let tu64 = N::Type_::u64(eloc);
-            let tunit = sp(eloc, N::Type_::Unit);
-            let vcond = Var(sp(eloc, new_temp_name()));
-            let vcode = Var(sp(eloc, new_temp_name()));
-
-            let mut stmts = VecDeque::new();
-
-            let bvar = |v, st| sp(eloc, T::LValue_::Var(v, st));
-            let bind_list = sp(
-                eloc,
-                vec![
-                    bvar(vcond.clone(), Box::new(tbool.clone())),
-                    bvar(vcode.clone(), Box::new(tu64.clone())),
-                ],
-            );
-            let tys = vec![Some(tbool.clone()), Some(tu64.clone())];
-            let bind = sp(eloc, T::SequenceItem_::Bind(bind_list, tys, arguments));
-            stmts.push_back(bind);
-
-            let mvar = |var, st| {
-                let from_user = false;
-                let mv = TE::Move { from_user, var };
-                T::exp(st, sp(eloc, mv))
-            };
-            let econd = mvar(vcond, tu64);
-            let ecode = mvar(vcode, tbool);
-            let eabort = T::exp(tunit.clone(), sp(eloc, TE::Abort(Box::new(ecode))));
-            let eunit = T::exp(tunit.clone(), sp(eloc, TE::Unit { trailing: false }));
-            let inlined_ = TE::IfElse(Box::new(econd), Box::new(eunit), Box::new(eabort));
-            let inlined = T::exp(tunit.clone(), sp(eloc, inlined_));
-            stmts.push_back(sp(eloc, T::SequenceItem_::Seq(Box::new(inlined))));
-
-            let block = T::exp(tunit, sp(eloc, TE::Block(stmts)));
-            return exp_impl(context, result, block);
-        }
         TE::Builtin(bf, targ) => builtin(context, result, eloc, *bf, targ),
         TE::Dereference(te) => {
             let e = exp(context, result, None, *te);
@@ -942,62 +1069,6 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
         TE::UnaryExp(op, te) => {
             let e = exp(context, result, None, *te);
             HE::UnaryExp(op, e)
-        }
-
-        TE::BinopExp(tl, op @ sp!(_, BinOp_::Eq), toperand_ty, tr)
-        | TE::BinopExp(tl, op @ sp!(_, BinOp_::Neq), toperand_ty, tr) => {
-            let operand_ty = type_(context, *toperand_ty);
-            let (el, er) = {
-                let frozen_ty = freeze_ty(operand_ty);
-                let tes = vec![(*tl, Some(frozen_ty.clone())), (*tr, Some(frozen_ty))];
-                let mut es = exp_evaluation_order(context, result, tes);
-                assert!(es.len() == 2, "ICE exp_evaluation_order changed arity");
-                let er = es.pop().unwrap();
-                let el = es.pop().unwrap();
-                (Box::new(el), Box::new(er))
-            };
-            HE::BinopExp(el, op, er)
-        }
-        TE::BinopExp(tl, op @ sp!(_, BinOp_::And), _, tr) => {
-            if !bind_for_short_circuit(&tr) {
-                let el = exp(context, result, None, *tl);
-                let mut empty_result = Block::new();
-                let er = exp(context, &mut empty_result, None, *tr);
-                assert!(empty_result.is_empty(), "ICE bind_for_short_circuit failed");
-                HE::BinopExp(el, op, er)
-            } else {
-                let tfalse_ = sp(eloc, TE::Value(sp(eloc, Value_::Bool(false))));
-                let tfalse = Box::new(T::exp(N::Type_::bool(eloc), tfalse_));
-                let if_else_ = sp(eloc, TE::IfElse(tl, tr, tfalse));
-                let if_else = T::exp(N::Type_::bool(tloc), if_else_);
-                return exp_impl(context, result, if_else);
-            }
-        }
-        TE::BinopExp(tl, op @ sp!(_, BinOp_::Or), _, tr) => {
-            if !bind_for_short_circuit(&tr) {
-                let el = exp(context, result, None, *tl);
-                let mut empty_result = Block::new();
-                let er = exp(context, &mut empty_result, None, *tr);
-                assert!(empty_result.is_empty(), "ICE bind_for_short_circuit failed");
-                HE::BinopExp(el, op, er)
-            } else {
-                let ttrue_ = sp(eloc, TE::Value(sp(eloc, Value_::Bool(true))));
-                let ttrue = Box::new(T::exp(N::Type_::bool(eloc), ttrue_));
-                let if_else_ = sp(eloc, TE::IfElse(tl, ttrue, tr));
-                let if_else = T::exp(N::Type_::bool(tloc), if_else_);
-                return exp_impl(context, result, if_else);
-            }
-        }
-        TE::BinopExp(tl, op, _, tr) => {
-            let (el, er) = {
-                let tes = vec![(*tl, None), (*tr, None)];
-                let mut es = exp_evaluation_order(context, result, tes);
-                assert!(es.len() == 2, "ICE exp_evaluation_order changed arity");
-                let er = es.pop().unwrap();
-                let el = es.pop().unwrap();
-                (Box::new(el), Box::new(er))
-            };
-            HE::BinopExp(el, op, er)
         }
 
         TE::Pack(_, s, tbs, tfields) => {
@@ -1127,6 +1198,8 @@ fn exp_impl(context: &mut Context, result: &mut Block, e: T::Exp) -> H::Exp {
             assert!(context.has_errors());
             HE::UnresolvedError
         }
+
+        TE::IfElse(..) | TE::BinopExp(..) => unreachable!(),
     };
     H::exp(ty, sp(eloc, res))
 }

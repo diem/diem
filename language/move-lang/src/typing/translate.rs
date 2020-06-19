@@ -760,11 +760,155 @@ fn exp_vec(context: &mut Context, es: Vec<N::Exp>) -> Vec<T::Exp> {
     es.into_iter().map(|e| exp_(context, e)).collect()
 }
 
-fn exp(context: &mut Context, ne: N::Exp) -> Box<T::Exp> {
-    Box::new(exp_(context, ne))
+fn exp(context: &mut Context, ne: Box<N::Exp>) -> Box<T::Exp> {
+    Box::new(exp_(context, *ne))
 }
 
-fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
+fn exp_(context: &mut Context, initial_ne: N::Exp) -> T::Exp {
+    use N::Exp_ as NE;
+    use T::UnannotatedExp_ as TE;
+    struct Stack<'a> {
+        frames: Vec<Box<dyn FnOnce(&mut Self)>>,
+        operands: Vec<T::Exp>,
+        context: &'a mut Context,
+    }
+    macro_rules! inner {
+        ($e:expr) => {{
+            move |s: &mut Stack| exp_loop(s, $e)
+        }};
+    }
+    fn exp_loop(stack: &mut Stack, sp!(loc, cur_): N::Exp) {
+        match cur_ {
+            NE::BinopExp(nlhs, bop, nrhs) => {
+                let f_lhs = inner!(*nlhs);
+                let f_rhs = inner!(*nrhs);
+                let f_binop = move |s: &mut Stack| {
+                    let er = Box::new(s.operands.pop().unwrap());
+                    let el = Box::new(s.operands.pop().unwrap());
+                    use BinOp_::*;
+                    let msg = || format!("Incompatible arguments to '{}'", &bop);
+                    let context = &mut s.context;
+                    let (ty, operand_ty) = match &bop.value {
+                        Sub | Add | Mul | Mod | Div => {
+                            // TODO after typing refactor, just add to operand ty
+                            context.add_numeric_constraint(
+                                el.exp.loc,
+                                bop.value.symbol(),
+                                el.ty.clone(),
+                            );
+                            context.add_numeric_constraint(
+                                er.exp.loc,
+                                bop.value.symbol(),
+                                el.ty.clone(),
+                            );
+                            let operand_ty =
+                                join(context, er.exp.loc, msg, el.ty.clone(), er.ty.clone());
+                            (operand_ty.clone(), operand_ty)
+                        }
+
+                        BitOr | BitAnd | Xor => {
+                            // TODO after typing refactor, just add to operand ty
+                            context.add_bits_constraint(
+                                el.exp.loc,
+                                bop.value.symbol(),
+                                el.ty.clone(),
+                            );
+                            context.add_bits_constraint(
+                                er.exp.loc,
+                                bop.value.symbol(),
+                                el.ty.clone(),
+                            );
+                            let operand_ty =
+                                join(context, er.exp.loc, msg, el.ty.clone(), er.ty.clone());
+                            context.add_bits_constraint(
+                                loc,
+                                bop.value.symbol(),
+                                operand_ty.clone(),
+                            );
+                            (operand_ty.clone(), operand_ty)
+                        }
+
+                        Shl | Shr => {
+                            let msg = || format!("Invalid argument to '{}'", &bop);
+                            let u8ty = Type_::u8(er.exp.loc);
+                            context.add_bits_constraint(
+                                el.exp.loc,
+                                bop.value.symbol(),
+                                el.ty.clone(),
+                            );
+                            subtype(context, er.exp.loc, msg, er.ty.clone(), u8ty);
+                            (el.ty.clone(), el.ty.clone())
+                        }
+
+                        Lt | Gt | Le | Ge => {
+                            // TODO after typing refactor, just add to operand ty
+                            context.add_ordered_constraint(
+                                el.exp.loc,
+                                bop.value.symbol(),
+                                el.ty.clone(),
+                            );
+                            context.add_ordered_constraint(
+                                er.exp.loc,
+                                bop.value.symbol(),
+                                el.ty.clone(),
+                            );
+                            let operand_ty =
+                                join(context, er.exp.loc, msg, el.ty.clone(), er.ty.clone());
+                            (Type_::bool(loc), operand_ty)
+                        }
+
+                        Eq | Neq => {
+                            let ty = join(context, er.exp.loc, msg, el.ty.clone(), er.ty.clone());
+                            let msg = format!("Invalid arguments to '{}'", &bop);
+                            context.add_single_type_constraint(loc, msg, ty.clone());
+                            let msg = format!(
+                            "Cannot use '{}' on resource values. This would destroy the resource. Try \
+                             borrowing the values with '&' first.'",
+                            &bop
+                        );
+                            context.add_copyable_constraint(loc, msg, ty.clone());
+                            (Type_::bool(loc), ty)
+                        }
+
+                        And | Or => {
+                            let lloc = el.exp.loc;
+                            subtype(context, lloc, msg, el.ty.clone(), Type_::bool(lloc));
+                            let rloc = er.exp.loc;
+                            subtype(context, rloc, msg, er.ty.clone(), Type_::bool(lloc));
+                            (Type_::bool(loc), Type_::bool(loc))
+                        }
+
+                        Range | Implies => panic!("specification operator unexpected"),
+                    };
+                    let binop =
+                        T::exp(ty, sp(loc, TE::BinopExp(el, bop, Box::new(operand_ty), er)));
+                    s.operands.push(binop)
+                };
+
+                stack.frames.push(Box::new(f_binop));
+                stack.frames.push(Box::new(f_rhs));
+                stack.frames.push(Box::new(f_lhs));
+            }
+            cur_ => stack.operands.push(exp_inner(stack.context, sp(loc, cur_))),
+        }
+    }
+
+    let mut stack = Stack {
+        frames: vec![],
+        operands: vec![],
+        context,
+    };
+    exp_loop(&mut stack, initial_ne);
+    while let Some(f) = stack.frames.pop() {
+        f(&mut stack)
+    }
+    let e_res = stack.operands.pop().unwrap();
+    assert!(stack.frames.is_empty());
+    assert!(stack.operands.is_empty());
+    e_res
+}
+
+fn exp_inner(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
     use N::Exp_ as NE;
     use T::UnannotatedExp_ as TE;
     let (ty, e_) = match ne_ {
@@ -807,7 +951,7 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         }
 
         NE::IfElse(nb, nt, nf) => {
-            let eb = exp(context, *nb);
+            let eb = exp(context, nb);
             let bloc = eb.exp.loc;
             subtype(
                 context,
@@ -816,8 +960,8 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                 eb.ty.clone(),
                 Type_::bool(bloc),
             );
-            let et = exp(context, *nt);
-            let ef = exp(context, *nf);
+            let et = exp(context, nt);
+            let ef = exp(context, nf);
             let ty = join(
                 context,
                 eloc,
@@ -828,7 +972,7 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             (ty, TE::IfElse(eb, et, ef))
         }
         NE::While(nb, nloop) => {
-            let eb = exp(context, *nb);
+            let eb = exp(context, nb);
             let bloc = eb.exp.loc;
             subtype(
                 context,
@@ -837,11 +981,11 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                 eb.ty.clone(),
                 Type_::bool(bloc),
             );
-            let (_has_break, ty, body) = loop_body(context, eloc, false, *nloop);
+            let (_has_break, ty, body) = loop_body(context, eloc, false, nloop);
             (sp(eloc, ty.value), TE::While(eb, body))
         }
         NE::Loop(nloop) => {
-            let (has_break, ty, body) = loop_body(context, eloc, true, *nloop);
+            let (has_break, ty, body) = loop_body(context, eloc, true, nloop);
             let eloop = TE::Loop { has_break, body };
             (sp(eloc, ty.value), eloop)
         }
@@ -851,22 +995,22 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         }
 
         NE::Assign(na, nr) => {
-            let er = exp(context, *nr);
+            let er = exp(context, nr);
             let a = assign_list(context, na, er.ty.clone());
             let lvalue_ty = lvalues_expected_types(context, &a);
             (sp(eloc, Type_::Unit), TE::Assign(a, lvalue_ty, er))
         }
 
         NE::Mutate(nl, nr) => {
-            let el = exp(context, *nl);
-            let er = exp(context, *nr);
+            let el = exp(context, nl);
+            let er = exp(context, nr);
             check_mutation(context, el.exp.loc, el.ty.clone(), &er.ty);
             (sp(eloc, Type_::Unit), TE::Mutate(el, er))
         }
 
         NE::FieldMutate(ndotted, nr) => {
             let lhsloc = ndotted.loc;
-            let er = exp(context, *nr);
+            let er = exp(context, nr);
             let (edotted, _) = exp_dotted(context, "mutation", ndotted);
             let eborrow = exp_dotted_to_borrow(context, lhsloc, true, edotted);
             check_mutation(context, eborrow.exp.loc, eborrow.ty.clone(), &er.ty);
@@ -874,13 +1018,13 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         }
 
         NE::Return(nret) => {
-            let eret = exp(context, *nret);
+            let eret = exp(context, nret);
             let ret_ty = context.return_type.clone().unwrap();
             subtype(context, eloc, || "Invalid return", eret.ty.clone(), ret_ty);
             (sp(eloc, Type_::Anything), TE::Return(eret))
         }
         NE::Abort(ncode) => {
-            let ecode = exp(context, *ncode);
+            let ecode = exp(context, ncode);
             let code_ty = Type_::u64(eloc);
             subtype(context, eloc, || "Invalid abort", ecode.ty.clone(), code_ty);
             (sp(eloc, Type_::Anything), TE::Abort(ecode))
@@ -914,7 +1058,7 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         }
 
         NE::Dereference(nref) => {
-            let eref = exp(context, *nref);
+            let eref = exp(context, nref);
             let inner = core::make_tvar(context, eloc);
             let ref_ty = sp(eloc, Type_::Ref(false, Box::new(inner.clone())));
             subtype(
@@ -934,7 +1078,7 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         NE::UnaryExp(uop, nr) => {
             use UnaryOp_::*;
             let msg = || format!("Invalid argument to '{}'", &uop);
-            let er = exp(context, *nr);
+            let er = exp(context, nr);
             let ty = match &uop.value {
                 Not => {
                     let rloc = er.exp.loc;
@@ -943,70 +1087,6 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
                 }
             };
             (ty, TE::UnaryExp(uop, er))
-        }
-        NE::BinopExp(nl, bop, nr) => {
-            use BinOp_::*;
-            let msg = || format!("Incompatible arguments to '{}'", &bop);
-            let el = exp(context, *nl);
-            let er = exp(context, *nr);
-            let (ty, operand_ty) = match &bop.value {
-                Sub | Add | Mul | Mod | Div => {
-                    // TODO after typing refactor, just add to operand ty
-                    context.add_numeric_constraint(el.exp.loc, bop.value.symbol(), el.ty.clone());
-                    context.add_numeric_constraint(er.exp.loc, bop.value.symbol(), el.ty.clone());
-                    let operand_ty = join(context, er.exp.loc, msg, el.ty.clone(), er.ty.clone());
-                    (operand_ty.clone(), operand_ty)
-                }
-
-                BitOr | BitAnd | Xor => {
-                    // TODO after typing refactor, just add to operand ty
-                    context.add_bits_constraint(el.exp.loc, bop.value.symbol(), el.ty.clone());
-                    context.add_bits_constraint(er.exp.loc, bop.value.symbol(), el.ty.clone());
-                    let operand_ty = join(context, er.exp.loc, msg, el.ty.clone(), er.ty.clone());
-                    context.add_bits_constraint(eloc, bop.value.symbol(), operand_ty.clone());
-                    (operand_ty.clone(), operand_ty)
-                }
-
-                Shl | Shr => {
-                    let msg = || format!("Invalid argument to '{}'", &bop);
-                    let u8ty = Type_::u8(er.exp.loc);
-                    context.add_bits_constraint(el.exp.loc, bop.value.symbol(), el.ty.clone());
-                    subtype(context, er.exp.loc, msg, er.ty.clone(), u8ty);
-                    (el.ty.clone(), el.ty.clone())
-                }
-
-                Lt | Gt | Le | Ge => {
-                    // TODO after typing refactor, just add to operand ty
-                    context.add_ordered_constraint(el.exp.loc, bop.value.symbol(), el.ty.clone());
-                    context.add_ordered_constraint(er.exp.loc, bop.value.symbol(), el.ty.clone());
-                    let operand_ty = join(context, er.exp.loc, msg, el.ty.clone(), er.ty.clone());
-                    (Type_::bool(eloc), operand_ty)
-                }
-
-                Eq | Neq => {
-                    let ty = join(context, er.exp.loc, msg, el.ty.clone(), er.ty.clone());
-                    let msg = format!("Invalid arguments to '{}'", &bop);
-                    context.add_single_type_constraint(eloc, msg, ty.clone());
-                    let msg = format!(
-                        "Cannot use '{}' on resource values. This would destroy the resource. Try \
-                         borrowing the values with '&' first.'",
-                        &bop
-                    );
-                    context.add_copyable_constraint(eloc, msg, ty.clone());
-                    (Type_::bool(eloc), ty)
-                }
-
-                And | Or => {
-                    let lloc = el.exp.loc;
-                    subtype(context, lloc, msg, el.ty.clone(), Type_::bool(lloc));
-                    let rloc = er.exp.loc;
-                    subtype(context, rloc, msg, er.ty.clone(), Type_::bool(lloc));
-                    (Type_::bool(eloc), Type_::bool(eloc))
-                }
-
-                Range | Implies => panic!("specification operator unexpected"),
-            };
-            (ty, TE::BinopExp(el, bop, Box::new(operand_ty), er))
         }
 
         NE::ExpList(nes) => {
@@ -1087,7 +1167,7 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         }
 
         NE::Cast(nl, ty) => {
-            let el = exp(context, *nl);
+            let el = exp(context, nl);
             let tyloc = ty.loc;
             let rhs = core::instantiate(context, ty);
             context.add_numeric_constraint(el.exp.loc, "as", el.ty.clone());
@@ -1096,7 +1176,7 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
         }
 
         NE::Annotate(nl, ty_annot) => {
-            let el = exp(context, *nl);
+            let el = exp(context, nl);
             let annot_loc = ty_annot.loc;
             let rhs = core::instantiate(context, ty_annot);
             subtype(
@@ -1122,6 +1202,8 @@ fn exp_(context: &mut Context, sp!(eloc, ne_): N::Exp) -> T::Exp {
             assert!(context.has_errors());
             (context.error_type(eloc), TE::UnresolvedError)
         }
+
+        NE::BinopExp(..) => unreachable!(),
     };
     T::exp(ty, sp(eloc, e_))
 }
@@ -1130,7 +1212,7 @@ fn loop_body(
     context: &mut Context,
     eloc: Loc,
     is_loop: bool,
-    nloop: N::Exp,
+    nloop: Box<N::Exp>,
 ) -> (bool, Type, Box<T::Exp>) {
     let old_in_loop = std::mem::replace(&mut context.in_loop, true);
     let old_break_type = std::mem::replace(&mut context.break_type, None);
@@ -1510,7 +1592,7 @@ fn exp_dotted(
     let (edot_, ty) = match ndot_ {
         NE::Exp(ne) => {
             use Type_::*;
-            let e = exp(context, *ne);
+            let e = exp(context, ne);
             let ety = &e.ty;
             let unfolded = core::unfold_type(&context.subst, ety.clone());
             let (borrow_needed, ty) = match unfolded.value {
