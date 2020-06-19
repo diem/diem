@@ -13,7 +13,7 @@ use crate::{
 };
 use consensus_types::common::Author;
 use libra_config::config::{NodeConfig, SafetyRulesService};
-use libra_secure_storage::Storage;
+use libra_secure_storage::{KVStorage, Storage};
 use std::{
     convert::TryInto,
     net::SocketAddr,
@@ -29,6 +29,9 @@ pub fn extract_service_inputs(config: &mut NodeConfig) -> (Author, PersistentSaf
 
     let backend = &config.consensus.safety_rules.backend;
     let internal_storage: Storage = backend.try_into().expect("Unable to initialize storage");
+    internal_storage
+        .available()
+        .expect("Storage is not available");
 
     let storage = if let Some(test_config) = config.test.as_mut() {
         let private_key = test_config
