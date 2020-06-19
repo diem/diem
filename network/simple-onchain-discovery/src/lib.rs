@@ -17,6 +17,7 @@ use network::connectivity_manager::{ConnectivityRequest, DiscoverySource};
 use once_cell::sync::Lazy;
 use std::{convert::TryFrom, time::Instant};
 use subscription_service::ReconfigSubscription;
+use tokio::runtime::Handle;
 
 /// Histogram of idle time of spent in event processing loop
 pub static EVENT_PROCESSING_LOOP_IDLE_DURATION_S: Lazy<DurationHistogram> = Lazy::new(|| {
@@ -158,14 +159,14 @@ impl ConfigurationChangeListener {
     }
 }
 
-pub struct ConfigurationChangeListenerConfig {
+struct ConfigurationChangeListenerConfig {
     role: RoleType,
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
 }
 
 impl ConfigurationChangeListenerConfig {
-    pub fn new(
+    fn new(
         role: RoleType,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
@@ -178,8 +179,40 @@ impl ConfigurationChangeListenerConfig {
     }
 }
 
-pub fn build_configuration_change_listener(
-    config: ConfigurationChangeListenerConfig,
-) -> ConfigurationChangeListener {
-    ConfigurationChangeListener::new(config.conn_mgr_reqs_tx, config.reconfig_events, config.role)
+pub struct ConfigurationChangeListenerBuilder {
+    config: Option<ConfigurationChangeListenerConfig>,
+    listener: Option<ConfigurationChangeListener>,
+}
+
+impl ConfigurationChangeListenerBuilder {
+    pub fn create(
+        role: RoleType,
+        conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
+        reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
+    ) -> ConfigurationChangeListenerBuilder {
+        Self {
+            config: Some(ConfigurationChangeListenerConfig::new(
+                role,
+                conn_mgr_reqs_tx,
+                reconfig_events,
+            )),
+            listener: None,
+        }
+    }
+
+    pub fn build(&mut self) {
+        if let Some(config) = self.config.take() {
+            self.listener = Some(ConfigurationChangeListener::new(
+                config.conn_mgr_reqs_tx,
+                config.reconfig_events,
+                config.role,
+            ))
+        }
+    }
+
+    pub fn start(&mut self, executor: &Handle) {
+        if let Some(listener) = self.listener.take() {
+            executor.spawn(listener.start());
+        }
+    }
 }

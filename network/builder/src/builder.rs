@@ -31,9 +31,7 @@ use network::{
     },
     ProtocolId,
 };
-use network_simple_onchain_discovery::{
-    ConfigurationChangeListener, ConfigurationChangeListenerConfig,
-};
+use network_simple_onchain_discovery::ConfigurationChangeListenerBuilder;
 use onchain_discovery::builder::{OnchainDiscoveryBuilder, OnchainDiscoveryBuilderConfig};
 use std::{
     clone::Clone,
@@ -62,8 +60,7 @@ pub struct NetworkBuilder {
 
     peer_manager_builder: Option<PeerManagerBuilder>,
     connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
-    configuration_change_listener_cfg: Option<ConfigurationChangeListenerConfig>,
-    configuration_change_listener: Option<ConfigurationChangeListener>,
+    configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
     discovery_cfg: Option<DiscoveryBuilderConfig>,
     discovery: Option<DiscoveryService>,
     health_checker_cfg: Option<HealthCheckerBuilderConfig>,
@@ -106,8 +103,7 @@ impl NetworkBuilder {
             conn_mgr_reqs_tx: None,
             peer_manager_builder: Some(peer_manager_builder),
             connectivity_manager_builder: None,
-            configuration_change_listener_cfg: None,
-            configuration_change_listener: None,
+            configuration_change_listener_builder: None,
             discovery_cfg: None,
             discovery: None,
             health_checker_cfg: None,
@@ -305,13 +301,13 @@ impl NetworkBuilder {
                 network_simple_onchain_discovery::gen_simple_discovery_reconfig_subscription();
             self.reconfig_subscriptions
                 .push(simple_discovery_reconfig_subscription);
-            self.configuration_change_listener_cfg = Some(ConfigurationChangeListenerConfig::new(
-                self.network_context.role(),
-                self.conn_mgr_reqs_tx().expect("We just set this value"),
-                simple_discovery_reconfig_rx,
-            ));
+            self.configuration_change_listener_builder =
+                Some(ConfigurationChangeListenerBuilder::create(
+                    self.network_context.role(),
+                    self.conn_mgr_reqs_tx().expect("We just set this value"),
+                    simple_discovery_reconfig_rx,
+                ));
         }
-
         self.build_connectivity_manager()
     }
 
@@ -319,10 +315,10 @@ impl NetworkBuilder {
     fn build_connectivity_manager(&mut self) -> &mut Self {
         if let Some(ref mut connectivity_builder) = self.connectivity_manager_builder {
             connectivity_builder.build(&self.executor);
-            if let Some(config) = self.configuration_change_listener_cfg.take() {
-                let configuration_change_listener =
-                    network_simple_onchain_discovery::build_configuration_change_listener(config);
-                self.configuration_change_listener = Some(configuration_change_listener);
+            if let Some(ref mut change_listener_builder) =
+                self.configuration_change_listener_builder
+            {
+                change_listener_builder.build();
             }
         }
         self.start_connectivity_manager()
@@ -333,8 +329,10 @@ impl NetworkBuilder {
         if let Some(ref mut connectivity_builder) = self.connectivity_manager_builder {
             connectivity_builder.start(&self.executor);
             debug!("Started ConnectivityManager");
-            if let Some(configuration_change_listener) = self.configuration_change_listener.take() {
-                self.executor.spawn(configuration_change_listener.start());
+            if let Some(ref mut change_listener_builder) =
+                self.configuration_change_listener_builder
+            {
+                change_listener_builder.start(&self.executor);
             }
         }
         self
@@ -506,13 +504,19 @@ impl NetworkBuilder {
     /// can be attached to other components.
     pub fn add_protocol_handler<SenderT, EventT>(
         &mut self,
-        (rpc_protocols, direct_send_protocols, queue_preference, max_queue_size_per_peer, counter): (
-            Vec<ProtocolId>,
-            Vec<ProtocolId>,
-            QueueStyle,
-            usize,
-            Option<&'static IntCounterVec>,
-        ),
+        (
+                rpc_protocols,
+                direct_send_protocols,
+                queue_preference,
+                max_queue_size_per_peer,
+                counter,
+            ): (
+                Vec<ProtocolId>,
+                Vec<ProtocolId>,
+                QueueStyle,
+                usize,
+                Option<&'static IntCounterVec>,
+            ),
     ) -> (SenderT, EventT)
     where
         EventT: NewNetworkEvents,
