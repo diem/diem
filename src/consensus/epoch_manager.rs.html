@@ -510,6 +510,7 @@
 <span id="510">510</span>
 <span id="511">511</span>
 <span id="512">512</span>
+<span id="513">513</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -585,7 +586,7 @@
     <span class="ident">self_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">network_sender</span>: <span class="ident">ConsensusNetworkSender</span>,
     <span class="ident">timeout_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
-    <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
+    <span class="ident">txn_manager</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
     <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&gt;</span>,
     <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
     <span class="ident">safety_rules_manager</span>: <span class="ident">SafetyRulesManager</span>,
@@ -599,7 +600,7 @@
         <span class="ident">self_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">ConsensusMsg</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">network_sender</span>: <span class="ident">ConsensusNetworkSender</span>,
         <span class="ident">timeout_sender</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">Round</span><span class="op">&gt;</span>,
-        <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
+        <span class="ident">txn_manager</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
         <span class="ident">state_computer</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">StateComputer</span><span class="op">&gt;</span>,
         <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
@@ -1015,6 +1016,7 @@
                     }
                 }
             ) {
+                <span class="ident">counters</span>::<span class="ident">ERROR_COUNT</span>.<span class="ident">inc</span>();
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="ident">e</span>);
             }
             <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RoundProcessor</span>::<span class="ident">Normal</span>(<span class="ident">p</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">processor_mut</span>() {

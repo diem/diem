@@ -353,7 +353,7 @@
     <span class="kw">let</span> <span class="ident">proposal_generator</span> <span class="op">=</span> <span class="ident">ProposalGenerator</span>::<span class="ident">new</span>(
         <span class="ident">signer</span>.<span class="ident">author</span>(),
         <span class="ident">block_store</span>.<span class="ident">clone</span>(),
-        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">MockTransactionManager</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>)),
+        <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">MockTransactionManager</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>)),
         <span class="ident">time_service</span>,
         <span class="number">1</span>,
     );
@@ -373,7 +373,7 @@
         <span class="ident">proposal_generator</span>,
         <span class="ident">MetricsSafetyRules</span>::<span class="ident">new</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">safety_rules</span>)),
         <span class="ident">network</span>,
-        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">MockTransactionManager</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>)),
+        <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">MockTransactionManager</span>::<span class="ident">new</span>(<span class="prelude-val">None</span>)),
         <span class="ident">storage</span>,
     )
 }

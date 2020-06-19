@@ -198,7 +198,7 @@
     <span class="comment">// proposed block.</span>
     <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockReader</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
     <span class="comment">// Transaction manager is delivering the transactions.</span>
-    <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
+    <span class="ident">txn_manager</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
     <span class="comment">// Time service to generate block timestamps</span>
     <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
     <span class="comment">// Max number of transactions to be added to a proposed block.</span>
@@ -211,7 +211,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">author</span>: <span class="ident">Author</span>,
         <span class="ident">block_store</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">BlockReader</span> <span class="op">+</span> <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span><span class="op">&gt;</span>,
-        <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
+        <span class="ident">txn_manager</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
         <span class="ident">time_service</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TimeService</span><span class="op">&gt;</span>,
         <span class="ident">max_block_size</span>: <span class="ident">u64</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {

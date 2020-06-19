@@ -278,6 +278,14 @@
 <span id="278">278</span>
 <span id="279">279</span>
 <span id="280">280</span>
+<span id="281">281</span>
+<span id="282">282</span>
+<span id="283">283</span>
+<span id="284">284</span>
+<span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -295,6 +303,14 @@
 <span class="doccomment">/// Monitor counters, used by monitor! macro</span>
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">OP_COUNTERS</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">libra_metrics</span>::<span class="ident">OpMetrics</span><span class="op">&gt;</span> <span class="op">=</span>
     <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">libra_metrics</span>::<span class="ident">OpMetrics</span>::<span class="ident">new_and_registered</span>(<span class="string">&quot;consensus&quot;</span>));
+
+<span class="kw">pub</span> <span class="kw">static</span> <span class="ident">ERROR_COUNT</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntGauge</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {
+    <span class="macro">register_int_gauge</span><span class="macro">!</span>(
+        <span class="string">&quot;libra_consensus_error_count&quot;</span>,
+        <span class="string">&quot;Total number of errors in main loop&quot;</span>
+    )
+    .<span class="ident">unwrap</span>()
+});
 
 <span class="doccomment">/// This counter is set to the round of the highest committed block.</span>
 <span class="kw">pub</span> <span class="kw">static</span> <span class="ident">LAST_COMMITTED_ROUND</span>: <span class="ident">Lazy</span><span class="op">&lt;</span><span class="ident">IntGauge</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">Lazy</span>::<span class="ident">new</span>(<span class="op">|</span><span class="op">|</span> {

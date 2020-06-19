@@ -715,7 +715,6 @@
 <span id="715">715</span>
 <span id="716">716</span>
 <span id="717">717</span>
-<span id="718">718</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -902,7 +901,7 @@
     <span class="ident">proposal_generator</span>: <span class="ident">ProposalGenerator</span>,
     <span class="ident">safety_rules</span>: <span class="ident">MetricsSafetyRules</span>,
     <span class="ident">network</span>: <span class="ident">NetworkSender</span>,
-    <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
+    <span class="ident">txn_manager</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
     <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
 }
 
@@ -915,7 +914,7 @@
         <span class="ident">proposal_generator</span>: <span class="ident">ProposalGenerator</span>,
         <span class="ident">safety_rules</span>: <span class="ident">MetricsSafetyRules</span>,
         <span class="ident">network</span>: <span class="ident">NetworkSender</span>,
-        <span class="ident">txn_manager</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
+        <span class="ident">txn_manager</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span>,
         <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">PersistentLivenessStorage</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
@@ -947,7 +946,10 @@
     <span class="doccomment">/// Replica:</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// Do nothing</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_new_round_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">new_round_event</span>: <span class="ident">NewRoundEvent</span>) {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">process_new_round_event</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">new_round_event</span>: <span class="ident">NewRoundEvent</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;Processing {}&quot;</span>, <span class="ident">new_round_event</span>);
         <span class="ident">counters</span>::<span class="ident">CURRENT_ROUND</span>.<span class="ident">set</span>(<span class="ident">new_round_event</span>.<span class="ident">round</span> <span class="kw">as</span> <span class="ident">i64</span>);
         <span class="ident">counters</span>::<span class="ident">ROUND_TIMEOUT_MS</span>.<span class="ident">set</span>(<span class="ident">new_round_event</span>.<span class="ident">timeout</span>.<span class="ident">as_millis</span>() <span class="kw">as</span> <span class="ident">i64</span>);
@@ -959,22 +961,16 @@
                 <span class="ident">counters</span>::<span class="ident">TIMEOUT_ROUNDS_COUNT</span>.<span class="ident">inc</span>();
             }
         };
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>
+        <span class="kw">if</span> <span class="self">self</span>
             .<span class="ident">proposer_election</span>
             .<span class="ident">is_valid_proposer</span>(<span class="self">self</span>.<span class="ident">proposal_generator</span>.<span class="ident">author</span>(), <span class="ident">new_round_event</span>.<span class="ident">round</span>)
         {
-            <span class="kw">return</span>;
+            <span class="kw">let</span> <span class="ident">proposal_msg</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">generate_proposal</span>(<span class="ident">new_round_event</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network</span>.<span class="ident">clone</span>();
+            <span class="ident">network</span>.<span class="ident">broadcast_proposal</span>(<span class="ident">proposal_msg</span>).<span class="kw">await</span>;
+            <span class="ident">counters</span>::<span class="ident">PROPOSALS_COUNT</span>.<span class="ident">inc</span>();
         }
-        <span class="kw">let</span> <span class="ident">proposal_msg</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">generate_proposal</span>(<span class="ident">new_round_event</span>).<span class="kw">await</span> {
-            <span class="prelude-val">Ok</span>(<span class="ident">x</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">x</span>,
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error while generating proposal: {:?}&quot;</span>, <span class="ident">e</span>);
-                <span class="kw">return</span>;
-            }
-        };
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network</span>.<span class="ident">clone</span>();
-        <span class="ident">network</span>.<span class="ident">broadcast_proposal</span>(<span class="ident">proposal_msg</span>).<span class="kw">await</span>;
-        <span class="ident">counters</span>::<span class="ident">PROPOSALS_COUNT</span>.<span class="ident">inc</span>();
+        <span class="prelude-val">Ok</span>(())
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">generate_proposal</span>(
@@ -1156,7 +1152,7 @@
         <span class="ident">counters</span>::<span class="ident">PREFERRED_BLOCK_ROUND</span>.<span class="ident">set</span>(<span class="ident">consensus_state</span>.<span class="ident">preferred_round</span>() <span class="kw">as</span> <span class="ident">i64</span>);
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">new_round_event</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">round_state</span>.<span class="ident">process_certificates</span>(<span class="ident">sync_info</span>) {
-            <span class="self">self</span>.<span class="ident">process_new_round_event</span>(<span class="ident">new_round_event</span>).<span class="kw">await</span>;
+            <span class="self">self</span>.<span class="ident">process_new_round_event</span>(<span class="ident">new_round_event</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
     }
@@ -1226,7 +1222,7 @@
         <span class="kw">let</span> <span class="ident">compute_result</span> <span class="op">=</span> <span class="ident">executed_block</span>.<span class="ident">compute_result</span>();
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">txn_manager</span>
-            .<span class="ident">commit</span>(<span class="ident">executed_block</span>.<span class="ident">block</span>(), <span class="ident">compute_result</span>)
+            .<span class="ident">notify</span>(<span class="ident">executed_block</span>.<span class="ident">block</span>(), <span class="ident">compute_result</span>)
             .<span class="kw">await</span>
         {
             <span class="macro">error</span><span class="macro">!</span>(
@@ -1418,7 +1414,9 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">vote</span>) <span class="op">=</span> <span class="ident">last_vote_sent</span> {
             <span class="self">self</span>.<span class="ident">round_state</span>.<span class="ident">record_vote</span>(<span class="ident">vote</span>);
         }
-        <span class="self">self</span>.<span class="ident">process_new_round_event</span>(<span class="ident">new_round_event</span>).<span class="kw">await</span>;
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">process_new_round_event</span>(<span class="ident">new_round_event</span>).<span class="kw">await</span> {
+            <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;[RoundManager] Error during start: {:?}&quot;</span>, <span class="ident">e</span>);
+        }
     }
 
     <span class="doccomment">/// Inspect the current consensus state.</span>

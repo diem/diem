@@ -111,7 +111,6 @@
 <span id="111">111</span>
 <span id="112">112</span>
 <span id="113">113</span>
-<span id="114">114</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -126,6 +125,7 @@
 <span class="kw">use</span> <span class="ident">libra_mempool</span>::{
     <span class="ident">CommittedTransaction</span>, <span class="ident">ConsensusRequest</span>, <span class="ident">ConsensusResponse</span>, <span class="ident">TransactionExclusion</span>,
 };
+<span class="kw">use</span> <span class="ident">libra_metrics</span>::<span class="ident">monitor</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">transaction</span>::<span class="ident">TransactionStatus</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>;
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">time</span>::<span class="ident">timeout</span>;
@@ -146,11 +146,7 @@
 
 <span class="attribute">#[<span class="ident">async_trait</span>::<span class="ident">async_trait</span>]</span>
 <span class="kw">impl</span> <span class="ident">TxnManager</span> <span class="kw">for</span> <span class="ident">MempoolProxy</span> {
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">pull_txns</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">max_size</span>: <span class="ident">u64</span>,
-        <span class="ident">exclude_payloads</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Payload</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Payload</span><span class="op">&gt;</span> {
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">pull_txns</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">max_size</span>: <span class="ident">u64</span>, <span class="ident">exclude_payloads</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Payload</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Payload</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">exclude_txns</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">for</span> <span class="ident">payload</span> <span class="kw">in</span> <span class="ident">exclude_payloads</span> {
             <span class="kw">for</span> <span class="ident">transaction</span> <span class="kw">in</span> <span class="ident">payload</span> {
@@ -165,7 +161,10 @@
         <span class="comment">// send to shared mempool</span>
         <span class="self">self</span>.<span class="ident">consensus_to_mempool_sender</span>.<span class="ident">clone</span>().<span class="ident">try_send</span>(<span class="ident">req</span>)<span class="question-mark">?</span>;
         <span class="comment">// wait for response</span>
-        <span class="kw">match</span> <span class="ident">timeout</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">1</span>), <span class="ident">callback_rcv</span>).<span class="kw">await</span> {
+        <span class="kw">match</span> <span class="macro">monitor</span><span class="macro">!</span>(
+            <span class="string">&quot;pull_txn&quot;</span>,
+            <span class="ident">timeout</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">1</span>), <span class="ident">callback_rcv</span>).<span class="kw">await</span>
+        ) {
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(
                 <span class="string">&quot;[consensus] did not receive GetBlockResponse on time&quot;</span>
             )),
@@ -178,8 +177,8 @@
         }
     }
 
-    <span class="comment">// Consensus notifies mempool of committed transactions that were rejected</span>
-    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">commit</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Block</span>, <span class="ident">compute_results</span>: <span class="kw-2">&amp;</span><span class="ident">StateComputeResult</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="comment">// Consensus notifies mempool of executed transactions</span>
+    <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">notify</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Block</span>, <span class="ident">compute_results</span>: <span class="kw-2">&amp;</span><span class="ident">StateComputeResult</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rejected_txns</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">let</span> <span class="ident">txns</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">block</span>.<span class="ident">payload</span>() {
             <span class="prelude-val">Some</span>(<span class="ident">txns</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">txns</span>,
@@ -208,15 +207,14 @@
         <span class="comment">// send to shared mempool</span>
         <span class="self">self</span>.<span class="ident">consensus_to_mempool_sender</span>.<span class="ident">clone</span>().<span class="ident">try_send</span>(<span class="ident">req</span>)<span class="question-mark">?</span>;
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">timeout</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">1</span>), <span class="ident">callback_rcv</span>).<span class="kw">await</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="macro">monitor</span><span class="macro">!</span>(
+            <span class="string">&quot;notify_mempool&quot;</span>,
+            <span class="ident">timeout</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">1</span>), <span class="ident">callback_rcv</span>).<span class="kw">await</span>
+        ) {
             <span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;[consensus] txn manager did not receive ACK for commit notification sent to mempool on time: {:?}&quot;</span>, <span class="ident">e</span>))
         } <span class="kw">else</span> {
             <span class="prelude-val">Ok</span>(())
         }
-    }
-
-    <span class="kw">fn</span> <span class="ident">_clone_box</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">TxnManager</span><span class="op">&gt;</span> {
-        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">clone</span>())
     }
 
     <span class="kw">fn</span> <span class="ident">trace_transactions</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">block</span>: <span class="kw-2">&amp;</span><span class="ident">Block</span>) {

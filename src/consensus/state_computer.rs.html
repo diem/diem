@@ -112,6 +112,7 @@
 <span id="112">112</span>
 <span id="113">113</span>
 <span id="114">114</span>
+<span id="115">115</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -203,11 +204,12 @@
                 .<span class="ident">unwrap</span>()
                 .<span class="ident">commit_blocks</span>(<span class="ident">block_ids</span>, <span class="ident">finality_proof</span>)<span class="question-mark">?</span>
         );
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">synchronizer</span>
-            .<span class="ident">commit</span>(<span class="ident">committed_txns</span>, <span class="ident">reconfig_events</span>)
-            .<span class="kw">await</span>
-        {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="macro">monitor</span><span class="macro">!</span>(
+            <span class="string">&quot;notify_state_sync&quot;</span>,
+            <span class="self">self</span>.<span class="ident">synchronizer</span>
+                .<span class="ident">commit</span>(<span class="ident">committed_txns</span>, <span class="ident">reconfig_events</span>)
+                .<span class="kw">await</span>
+        ) {
             <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;failed to notify state synchronizer: {:?}&quot;</span>, <span class="ident">e</span>);
         }
         <span class="prelude-val">Ok</span>(())
