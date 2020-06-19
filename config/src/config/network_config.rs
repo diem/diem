@@ -228,6 +228,7 @@ impl DiscoveryMethod {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct GossipConfig {
     // The address that this node advertises to other nodes for the discovery protocol.
     pub advertised_address: NetworkAddress,
@@ -269,6 +270,7 @@ impl Identity {
 /// The identity is stored within the config.
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct IdentityFromConfig {
     #[serde(rename = "key")]
     pub keypair: KeyPair<x25519::PrivateKey>,
@@ -278,6 +280,7 @@ pub struct IdentityFromConfig {
 /// This represents an identity in a secure-storage as defined in NodeConfig::secure.
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct IdentityFromStorage {
     pub key_name: String,
     pub peer_id_name: String,

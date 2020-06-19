@@ -50,6 +50,7 @@ pub enum ConsensusProposerType {
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct LeaderReputationConfig {
     pub active_weights: u64,
     pub inactive_weights: u64,

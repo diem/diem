@@ -15,6 +15,7 @@ pub enum SecureBackend {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct GitHubConfig {
     /// The owner or account that hosts a repository
     pub repository_owner: String,
@@ -29,6 +30,7 @@ pub struct GitHubConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct VaultConfig {
     /// Optional SSL Certificate for the vault host, this is expected to be a full path.
     pub ca_certificate: Option<PathBuf>,
@@ -53,6 +55,7 @@ impl VaultConfig {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct OnDiskStorageConfig {
     // Required path for on disk storage
     pub path: PathBuf,
@@ -83,11 +86,13 @@ impl Token {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct TokenFromConfig {
     token: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct TokenFromDisk {
     path: PathBuf,
 }
