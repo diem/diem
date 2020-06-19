@@ -32,7 +32,7 @@ pub trait ClusterSwarm {
         enable_lsr: bool,
         lsr_backend: &str,
         image_tag: &str,
-        config_overrides: Vec<String>,
+        config_overrides: &[String],
         delete_data: bool,
     ) -> Result<Vec<Instance>> {
         let mut lsrs = vec![];
@@ -66,7 +66,7 @@ pub trait ClusterSwarm {
                 num_fullnodes: num_fullnodes_per_validator,
                 enable_lsr,
                 image_tag: image_tag.to_string(),
-                config_overrides: config_overrides.clone(),
+                config_overrides: config_overrides.to_vec(),
             };
             self.spawn_new_instance(Validator(validator_config), delete_data)
         });
@@ -81,7 +81,7 @@ pub trait ClusterSwarm {
         num_validators: u32,
         num_fullnodes_per_validator: u32,
         image_tag: &str,
-        config_overrides: Vec<String>,
+        config_overrides: &[String],
         delete_data: bool,
     ) -> Result<Vec<Instance>> {
         let fullnodes = (0..num_validators).flat_map(move |validator_index| {
@@ -93,7 +93,7 @@ pub trait ClusterSwarm {
                     validator_index,
                     num_validators,
                     image_tag: image_tag.to_string(),
-                    config_overrides: config_overrides.clone(),
+                    config_overrides: config_overrides.to_vec(),
                 };
                 self.spawn_new_instance(Fullnode(fullnode_config), delete_data)
             })
@@ -110,6 +110,7 @@ pub trait ClusterSwarm {
         enable_lsr: bool,
         lsr_backend: &str,
         image_tag: &str,
+        config_overrides: &[String],
         delete_data: bool,
     ) -> Result<(Vec<Instance>, Vec<Instance>)> {
         try_join!(
@@ -119,14 +120,14 @@ pub trait ClusterSwarm {
                 enable_lsr,
                 lsr_backend,
                 image_tag,
-                vec![],
+                config_overrides,
                 delete_data,
             ),
             self.spawn_fullnode_set(
                 num_validators,
                 num_fullnodes_per_validator,
                 image_tag,
-                vec![],
+                config_overrides,
                 delete_data,
             ),
         )

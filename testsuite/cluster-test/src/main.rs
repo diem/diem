@@ -99,6 +99,8 @@ struct Args {
 
     #[structopt(long, default_value = "1")]
     pub fullnodes_per_validator: u32,
+    #[structopt(long, default_value = "")]
+    pub cfg: Vec<String>,
     #[structopt(long, parse(try_from_str), default_value = "30")]
     pub num_validators: u32,
     #[structopt(long)]
@@ -454,6 +456,7 @@ impl ClusterUtil {
                 args.enable_lsr,
                 &args.lsr_backend,
                 current_tag,
+                args.cfg.as_slice(),
                 true,
             )
             .await
