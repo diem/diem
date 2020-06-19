@@ -21,10 +21,7 @@ use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_types::{waypoint::Waypoint, PeerId};
 use network::{
-    connectivity_manager,
-    connectivity_manager::{
-        ConnectivityManagerBuilderConfig, ConnectivityManagerService, ConnectivityRequest,
-    },
+    connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
     constants, counters,
     peer_manager::{builder::PeerManagerBuilder, conn_notifs_channel, ConnectionRequestSender},
     protocols::{
@@ -64,8 +61,7 @@ pub struct NetworkBuilder {
     conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
 
     peer_manager_builder: Option<PeerManagerBuilder>,
-    connectivity_manager_config: Option<ConnectivityManagerBuilderConfig>,
-    connectivity_manager: Option<ConnectivityManagerService>,
+    connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
     configuration_change_listener_cfg: Option<ConfigurationChangeListenerConfig>,
     configuration_change_listener: Option<ConfigurationChangeListener>,
     discovery_cfg: Option<DiscoveryBuilderConfig>,
@@ -109,8 +105,7 @@ impl NetworkBuilder {
             channel_size: constants::NETWORK_CHANNEL_SIZE,
             conn_mgr_reqs_tx: None,
             peer_manager_builder: Some(peer_manager_builder),
-            connectivity_manager_config: None,
-            connectivity_manager: None,
+            connectivity_manager_builder: None,
             configuration_change_listener_cfg: None,
             configuration_change_listener: None,
             discovery_cfg: None,
@@ -288,21 +283,21 @@ impl NetworkBuilder {
         } else {
             None
         };
-        let config = ConnectivityManagerBuilderConfig::new(
+        let builder = ConnectivityManagerBuilder::create(
             self.network_context(),
             self.trusted_peers.clone(),
             seed_peers,
             connectivity_check_interval_ms,
-            // TODO:  Move this to NetworkConfig
+            // TODO:  Move this value to NetworkConfig
             2, // Hard-coded constant
-            // TODO:  Move this to NetworkConfig
+            // TODO:  Move this value to NetworkConfig
             constants::MAX_CONNECTION_DELAY_MS,
             ConnectionRequestSender::new(connection_reqs_tx),
             pm_conn_mgr_notifs_rx,
             conn_mgr_reqs_rx,
             connection_limit,
         );
-        self.connectivity_manager_config = Some(config);
+        self.connectivity_manager_builder = Some(builder);
 
         if self.network_context.role() == RoleType::Validator {
             // Set up to listen for network configuration changes
@@ -322,12 +317,8 @@ impl NetworkBuilder {
 
     /// Build the ConnectivityManager from the provided configuration.
     fn build_connectivity_manager(&mut self) -> &mut Self {
-        if let Some(config) = self.connectivity_manager_config.take() {
-            let conn_mgr = connectivity_manager::build_connectivity_manager_from_config(
-                &self.executor,
-                config,
-            );
-            self.connectivity_manager = Some(conn_mgr);
+        if let Some(ref mut connectivity_builder) = self.connectivity_manager_builder {
+            connectivity_builder.build(&self.executor);
             if let Some(config) = self.configuration_change_listener_cfg.take() {
                 let configuration_change_listener =
                     network_simple_onchain_discovery::build_configuration_change_listener(config);
@@ -339,8 +330,8 @@ impl NetworkBuilder {
 
     /// Start the ConnectivityManager
     fn start_connectivity_manager(&mut self) -> &mut Self {
-        if let Some(conn_mgr) = self.connectivity_manager.take() {
-            self.executor.spawn(conn_mgr.start());
+        if let Some(ref mut connectivity_builder) = self.connectivity_manager_builder {
+            connectivity_builder.start(&self.executor);
             debug!("Started ConnectivityManager");
             if let Some(configuration_change_listener) = self.configuration_change_listener.take() {
                 self.executor.spawn(configuration_change_listener.start());
