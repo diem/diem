@@ -13,8 +13,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const TEST_GAS_PRICE: u64 = 0;
 
-static EMPTY_SCRIPT: &[u8] =
-    include_bytes!("../../../language/stdlib/compiled/transaction_scripts/empty_script.mv");
+static EMPTY_SCRIPT: &[u8] = include_bytes!("empty_script.mv");
 
 // Test helper for transaction creation
 pub fn get_test_signed_module_publishing_transaction(

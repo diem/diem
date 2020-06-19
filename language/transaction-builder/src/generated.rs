@@ -384,15 +384,6 @@ pub fn encode_create_validator_operator_account_script(
     )
 }
 
-/// Used for testing.
-pub fn encode_empty_script_script() -> Script {
-    Script::new(
-        vec![161, 28, 235, 11, 1, 0, 1, 5, 0, 1, 0, 0, 0, 0, 1, 2],
-        vec![],
-        vec![],
-    )
-}
-
 /// Freeze account `address`. Initiator must be authorized. `sliding_nonce` is a unique
 /// nonce for operation, see sliding_nonce.move for details.
 pub fn encode_freeze_account_script(
