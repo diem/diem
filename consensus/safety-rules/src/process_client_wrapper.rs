@@ -40,7 +40,7 @@ impl ProcessClientWrapper {
             .take_private()
             .unwrap();
         let signer = ValidatorSigner::new(author, private_key);
-        let waypoint = test_utils::validator_signers_to_waypoints(&[&signer]);
+        let waypoint = test_utils::validator_signers_to_waypoint(&[&signer]);
         config.base.waypoint = WaypointConfig::FromConfig(waypoint);
 
         config.consensus.safety_rules.backend = backend;

@@ -180,13 +180,13 @@ pub fn validator_signers_to_ledger_info(signers: &[&ValidatorSigner]) -> LedgerI
     LedgerInfo::mock_genesis(Some(validator_set))
 }
 
-pub fn validator_signers_to_waypoints(signers: &[&ValidatorSigner]) -> Waypoint {
+pub fn validator_signers_to_waypoint(signers: &[&ValidatorSigner]) -> Waypoint {
     let li = validator_signers_to_ledger_info(signers);
     Waypoint::new_epoch_boundary(&li).unwrap()
 }
 
 pub fn test_storage(signer: &ValidatorSigner) -> PersistentSafetyStorage {
-    let waypoint = validator_signers_to_waypoints(&[signer]);
+    let waypoint = validator_signers_to_waypoint(&[signer]);
     let storage = Storage::from(InMemoryStorage::new());
     PersistentSafetyStorage::initialize(storage, signer.private_key().clone(), waypoint)
 }

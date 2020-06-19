@@ -3,7 +3,7 @@
 
 use crate::{tests::suite, PersistentSafetyStorage, SafetyRulesManager, TSafetyRules};
 use libra_secure_storage::{KVStorage, Storage, VaultStorage};
-use libra_types::{validator_signer::ValidatorSigner, waypoint::Waypoint};
+use libra_types::validator_signer::ValidatorSigner;
 
 /// A test for verifying VaultStorage properly supports the SafetyRule backend.  This test
 /// depends on running Vault, which can be done by using the provided docker run script in
@@ -21,7 +21,7 @@ fn safety_rules() -> (Box<dyn TSafetyRules>, ValidatorSigner) {
     let mut storage = Storage::from(VaultStorage::new(host, token, None, None));
     storage.reset_and_clear().unwrap();
 
-    let waypoint = Waypoint::default();
+    let waypoint = crate::test_utils::validator_signers_to_waypoint(&[&signer]);
     let storage =
         PersistentSafetyStorage::initialize(storage, signer.private_key().clone(), waypoint);
     let safety_rules_manager = SafetyRulesManager::new_local(signer.author(), storage);
