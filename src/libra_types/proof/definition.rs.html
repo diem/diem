@@ -787,16 +787,6 @@
 <span id="787">787</span>
 <span id="788">788</span>
 <span id="789">789</span>
-<span id="790">790</span>
-<span id="791">791</span>
-<span id="792">792</span>
-<span id="793">793</span>
-<span id="794">794</span>
-<span id="795">795</span>
-<span id="796">796</span>
-<span id="797">797</span>
-<span id="798">798</span>
-<span id="799">799</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1440,11 +1430,6 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transaction_info_with_proof</span>
     }
 
-    <span class="doccomment">/// Returns the `transaction_info_to_event_proof` object in this proof.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transaction_info_to_event_proof</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">EventAccumulatorProof</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transaction_info_to_event_proof</span>
-    }
-
     <span class="doccomment">/// Verifies that a given event is correct using provided proof.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
@@ -1501,11 +1486,6 @@
     <span class="doccomment">/// Returns the list of `TransactionInfo` objects.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transaction_infos</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span>[<span class="ident">TransactionInfo</span>] {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transaction_infos</span>
-    }
-
-    <span class="doccomment">/// Retursn the accumulator proof</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">ledger_info_to_transaction_infos_proof</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">TransactionAccumulatorRangeProof</span> {
-        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">ledger_info_to_transaction_infos_proof</span>
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">left_siblings</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span> {

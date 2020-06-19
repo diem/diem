@@ -661,15 +661,6 @@
 <span id="661">661</span>
 <span id="662">662</span>
 <span id="663">663</span>
-<span id="664">664</span>
-<span id="665">665</span>
-<span id="666">666</span>
-<span id="667">667</span>
-<span id="668">668</span>
-<span id="669">669</span>
-<span id="670">670</span>
-<span id="671">671</span>
-<span id="672">672</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -799,15 +790,6 @@
         <span class="self">self</span>
     }
 
-    <span class="doccomment">/// Mutates the VMStatus sub status field to be the new `sub_status` passed in.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_sub_status</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">sub_status</span>: <span class="ident">u64</span>) {
-        <span class="self">self</span>.<span class="ident">sub_status</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">sub_status</span>);
-    }
-
-    <span class="doccomment">/// Mutates the VMStatus message field to be the new `message` passed in.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_message</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">message</span>: <span class="ident">String</span>) {
-        <span class="self">self</span>.<span class="ident">message</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">message</span>);
-    }
     <span class="doccomment">/// Append the message `message` to the message field of the VM status, and insert a seperator</span>
     <span class="doccomment">/// if the original message is non-empty.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">append_message_with_separator</span>(<span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">separator</span>: <span class="ident">char</span>, <span class="ident">message</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {

@@ -443,6 +443,7 @@
 <span id="443">443</span>
 <span id="444">444</span>
 <span id="445">445</span>
+<span id="446">446</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -726,7 +727,8 @@
 
     <span class="doccomment">/// Gets an iterator that yields `num_transaction_infos` transaction infos starting from</span>
     <span class="doccomment">/// `start_version`.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_transaction_info_iter</span>(
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+    <span class="kw">fn</span> <span class="ident">get_transaction_info_iter</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">start_version</span>: <span class="ident">Version</span>,
         <span class="ident">num_transaction_infos</span>: <span class="ident">u64</span>,

@@ -597,13 +597,6 @@
 <span id="597">597</span>
 <span id="598">598</span>
 <span id="599">599</span>
-<span id="600">600</span>
-<span id="601">601</span>
-<span id="602">602</span>
-<span id="603">603</span>
-<span id="604">604</span>
-<span id="605">605</span>
-<span id="606">606</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -981,13 +974,6 @@
 
 <span class="kw">impl</span> <span class="ident">ScriptView</span> {
     <span class="comment">// TODO cover all script types</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
-        <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">ScriptView</span>::<span class="ident">PeerToPeer</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;peer to peer transaction&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">ScriptView</span>::<span class="ident">Mint</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;mint transaction&quot;</span>.<span class="ident">to_string</span>(),
-            <span class="ident">ScriptView</span>::<span class="ident">Unknown</span> { .. } <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;unknown transaction&quot;</span>.<span class="ident">to_string</span>(),
-        }
-    }
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">TransactionDataView</span> {
