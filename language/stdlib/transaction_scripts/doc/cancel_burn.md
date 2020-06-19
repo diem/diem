@@ -13,6 +13,10 @@
 
 ## Function `cancel_burn`
 
+Cancel the oldest burn request from
+<code>preburn_address</code> and return the funds.
+Fails if the sender does not have a published
+<code>BurnCapability&lt;Token&gt;</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address)

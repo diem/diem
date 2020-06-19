@@ -13,6 +13,10 @@
 
 ## Function `rotate_authentication_key_with_nonce`
 
+Rotate the sender's authentication key to
+<code>new_key</code>.
+<code>new_key</code> should be a 256 bit sha3 hash of an ed25519 public key. This script also takes
+<code>sliding_nonce</code>, as a unique nonce for this operation. See sliding_nonce.move for details.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_authentication_key_with_nonce">rotate_authentication_key_with_nonce</a>(account: &signer, sliding_nonce: u64, new_key: vector&lt;u8&gt;)

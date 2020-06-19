@@ -5,6 +5,9 @@ use 0x1::TransactionFee;
 use 0x1::Coin1::Coin1;
 use 0x1::Coin2::Coin2;
 use 0x1::Roles::{Self, TreasuryComplianceRole};
+
+/// Burn transaction fees that have been collected in the given `currency`
+/// and relinquish to the association. The currency must be non-synthetic.
 fun burn_txn_fees<CoinType>(blessed_account: &signer) {
     TransactionFee::preburn_fees<CoinType>(blessed_account);
     let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(blessed_account);

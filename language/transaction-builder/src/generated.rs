@@ -11,6 +11,8 @@ use libra_types::{
 };
 use move_core_types::language_storage::TypeTag;
 
+///  Add the currency identified by the type `currency` to the sending accounts.
+///  Aborts if the account already holds a balance fo `currency` type.
 pub fn encode_add_currency_to_account_script(currency: TypeTag) -> Script {
     Script::new(
         vec![
@@ -44,6 +46,9 @@ pub fn encode_add_recovery_rotation_capability_script(recovery_address: AccountA
     )
 }
 
+///  Add `new_validator` to the pending validator set.
+///  Fails if the `new_validator` address is already in the validator set
+///  or does not have a `ValidatorConfig` resource stored at the address.
 pub fn encode_add_validator_script(validator_address: AccountAddress) -> Script {
     Script::new(
         vec![
@@ -94,6 +99,8 @@ pub fn encode_burn_script(
     )
 }
 
+///  Burn transaction fees that have been collected in the given `currency`
+///  and relinquish to the association. The currency must be non-synthetic.
 pub fn encode_burn_txn_fees_script(cointype: TypeTag) -> Script {
     Script::new(
         vec![
@@ -128,6 +135,8 @@ pub fn encode_burn_txn_fees_script(cointype: TypeTag) -> Script {
     )
 }
 
+///  Cancel the oldest burn request from `preburn_address` and return the funds.
+///  Fails if the sender does not have a published `BurnCapability<Token>`.
 pub fn encode_cancel_burn_script(token: TypeTag, preburn_address: AccountAddress) -> Script {
     Script::new(
         vec![
@@ -147,7 +156,8 @@ pub fn encode_cancel_burn_script(token: TypeTag, preburn_address: AccountAddress
 ///  `auth_key_prefix | child_address`.
 ///  If `add_all_currencies` is true, the child address will have a zero balance in all
 /// available
-///  currencies in the system
+///  currencies in the system.
+///  This account will a child of the transaction sender, which must be a ParentVASP.
 pub fn encode_create_child_vasp_account_script(
     cointype: TypeTag,
     child_address: AccountAddress,
@@ -189,10 +199,9 @@ pub fn encode_create_child_vasp_account_script(
     )
 }
 
-///  Script for Treasury Compliance Account to create designated dealer account at
-/// 'new_account_address'
-///  and 'auth_key_prefix' for nonsynthetic CoinType. Creates dealer and preburn resource
-/// for dd.
+///  Create designated dealer account at 'new_account_address' and 'auth_key_prefix' for
+/// nonsynthetic CoinType.
+///  Create dealer and preburn resource.
 pub fn encode_create_designated_dealer_script(
     cointype: TypeTag,
     sliding_nonce: u64,
@@ -232,6 +241,11 @@ pub fn encode_create_designated_dealer_script(
     )
 }
 
+///  Create an account with the ParentVASP role at `address` with authentication key
+///  `auth_key_prefix` | `new_account_address` and a 0 balance of type `currency`. If
+///  `add_all_currencies` is true, 0 balances for all available currencies in the system
+/// will
+///  also be added. This can only be invoked by an Association account.
 pub fn encode_create_parent_vasp_account_script(
     cointype: TypeTag,
     new_account_address: AccountAddress,
@@ -288,6 +302,7 @@ pub fn encode_create_recovery_address_script() -> Script {
     )
 }
 
+///  Create a validator account at `new_validator_address` with `auth_key_prefix`.
 pub fn encode_create_validator_account_script(
     new_account_address: AccountAddress,
     auth_key_prefix: Vec<u8>,
@@ -325,8 +340,8 @@ pub fn encode_empty_script_script() -> Script {
     )
 }
 
-///  Script for freezing account by authorized initiator
-///  sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
+///  Freeze account `address`. Initiator must be authorized.
+///  `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.
 pub fn encode_freeze_account_script(
     sliding_nonce: u64,
     to_freeze_account: AccountAddress,
@@ -357,6 +372,7 @@ pub fn encode_freeze_account_script(
     )
 }
 
+///  Update configs of all the validators and emit reconfiguration event.
 pub fn encode_main_script() -> Script {
     Script::new(
         vec![
@@ -379,6 +395,7 @@ pub fn encode_main_script() -> Script {
     )
 }
 
+///  Create `amount` coins for `payee`.
 pub fn encode_mint_script(
     token: TypeTag,
     payee: AccountAddress,
@@ -417,6 +434,8 @@ pub fn encode_mint_script(
     )
 }
 
+///  Mint `amount_lbr` LBR from the sending account's constituent coins and deposits the
+///  resulting LBR into the sending account.
 pub fn encode_mint_lbr_script(amount_lbr: u64) -> Script {
     Script::new(
         vec![
@@ -447,6 +466,8 @@ pub fn encode_mint_lbr_script(amount_lbr: u64) -> Script {
     )
 }
 
+///  Modify publishing options. Takes the LCS bytes of a `VMPublishingOption` object as
+/// input.
 pub fn encode_modify_publishing_option_script(args: Vec<u8>) -> Script {
     Script::new(
         vec![
@@ -461,6 +482,15 @@ pub fn encode_modify_publishing_option_script(args: Vec<u8>) -> Script {
     )
 }
 
+///  Transfer `amount` coins to `recipient_address` with (optional)
+///  associated metadata `metadata` and (optional) `signature` on the metadata, amount,
+/// and
+///  sender address. The `metadata` and `signature` parameters are only required if
+///  `amount` >= 1_000_000 micro LBR and the sender and recipient of the funds are two
+/// distinct VASPs.
+///  Fails if there is no account at the recipient address or if the sender's balance is
+/// lower
+///  than `amount`.
 pub fn encode_peer_to_peer_with_metadata_script(
     token: TypeTag,
     payee: AccountAddress,
@@ -516,6 +546,12 @@ pub fn encode_preburn_script(token: TypeTag, amount: u64) -> Script {
     )
 }
 
+///  (1) Rotate the authentication key of the sender to `public_key`
+///  (2) Publish a resource containing a 32-byte ed25519 public key and the rotation
+/// capability
+///      of the sender under the sender's address.
+///  Aborts if the sender already has a `SharedEd25519PublicKey` resource.
+///  Aborts if the length of `new_public_key` is not 32.
 pub fn encode_publish_shared_ed25519_public_key_script(public_key: Vec<u8>) -> Script {
     Script::new(
         vec![
@@ -529,6 +565,10 @@ pub fn encode_publish_shared_ed25519_public_key_script(public_key: Vec<u8>) -> S
     )
 }
 
+///  Adding `to_remove` to the set of pending validator removals. Fails if
+///  the `to_remove` address is already in the validator set or already in the pending
+/// removals.
+///  Callable by Validator's operator.
 pub fn encode_remove_validator_script(validator_address: AccountAddress) -> Script {
     Script::new(
         vec![
@@ -551,6 +591,8 @@ pub fn encode_remove_validator_script(validator_address: AccountAddress) -> Scri
     )
 }
 
+///  Rotate the sender's authentication key to `new_key`.
+///  `new_key` should be a 256 bit sha3 hash of an ed25519 public key.
 pub fn encode_rotate_authentication_key_script(new_key: Vec<u8>) -> Script {
     Script::new(
         vec![
@@ -571,6 +613,11 @@ pub fn encode_rotate_authentication_key_script(new_key: Vec<u8>) -> Script {
     )
 }
 
+///  Rotate the sender's authentication key to `new_key`.
+///  `new_key` should be a 256 bit sha3 hash of an ed25519 public key. This script also
+/// takes
+///  `sliding_nonce`, as a unique nonce for this operation. See sliding_nonce.move for
+/// details.
 pub fn encode_rotate_authentication_key_with_nonce_script(
     sliding_nonce: u64,
     new_key: Vec<u8>,
@@ -600,10 +647,9 @@ pub fn encode_rotate_authentication_key_with_nonce_script(
     )
 }
 
-///  Extract the `KeyRotationCapability` for `recovery_account` and publish it in a
-///  `RecoveryAddress` resource under  `recovery_account`.
-///  Aborts if `recovery_account` has delegated its `KeyRotationCapability`, already has a
-///  `RecoveryAddress` resource, or is not a VASP.
+///  Rotate the authentication key of `to_recover` to `new_key`. Can be invoked by either
+///  `recovery_address` or `to_recover`. Aborts if `recovery_address` does not have the
+///  `KeyRotationCapability` for `to_recover`.
 pub fn encode_rotate_authentication_key_with_recovery_address_script(
     recovery_address: AccountAddress,
     to_recover: AccountAddress,
@@ -626,6 +672,7 @@ pub fn encode_rotate_authentication_key_with_recovery_address_script(
     )
 }
 
+///  Rotate `vasp_root_addr`'s base URL to `new_url`.
 pub fn encode_rotate_base_url_script(new_url: Vec<u8>) -> Script {
     Script::new(
         vec![
@@ -639,6 +686,7 @@ pub fn encode_rotate_base_url_script(new_url: Vec<u8>) -> Script {
     )
 }
 
+///  Encode a program that rotates `vasp_root_addr`'s compliance public key to `new_key`.
 pub fn encode_rotate_compliance_public_key_script(new_key: Vec<u8>) -> Script {
     Script::new(
         vec![
@@ -653,6 +701,12 @@ pub fn encode_rotate_compliance_public_key_script(new_key: Vec<u8>) -> Script {
     )
 }
 
+///  (1) Rotate the public key stored in `account`'s `SharedEd25519PublicKey` resource to
+///  `new_public_key`
+///  (2) Rotate the authentication key using the capability stored in `account`'s
+///  `SharedEd25519PublicKey` to a new value derived from `new_public_key`
+///  Aborts if `account` does not have a `SharedEd25519PublicKey` resource.
+///  Aborts if the length of `new_public_key` is not 32.
 pub fn encode_rotate_shared_ed25519_public_key_script(public_key: Vec<u8>) -> Script {
     Script::new(
         vec![
@@ -667,6 +721,7 @@ pub fn encode_rotate_shared_ed25519_public_key_script(public_key: Vec<u8>) -> Sc
     )
 }
 
+///  Rotate validator's config.
 pub fn encode_rotate_validator_config_script(
     validator_account: AccountAddress,
     consensus_pubkey: Vec<u8>,
@@ -695,10 +750,10 @@ pub fn encode_rotate_validator_config_script(
     )
 }
 
-///  Script for Treasury Comliance Account to mint 'mint_amount' to
-/// 'designated_dealer_address' for
-///  'tier_index' tier
-///  sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
+///  Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
+///  Max valid tier index is 3 since there are max 4 tiers per DD.
+///  Sender should be treasury compliance account and receiver authorized DD.
+///  `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.
 pub fn encode_tiered_mint_script(
     cointype: TypeTag,
     sliding_nonce: u64,
@@ -739,8 +794,8 @@ pub fn encode_tiered_mint_script(
     )
 }
 
-///  Script for un-freezing account by authorized initiator
-///  sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
+///  Unfreeze account `address`. Initiator must be authorized.
+///  `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.
 pub fn encode_unfreeze_account_script(
     sliding_nonce: u64,
     to_unfreeze_account: AccountAddress,
@@ -772,6 +827,9 @@ pub fn encode_unfreeze_account_script(
     )
 }
 
+///  Unmints `amount_lbr` LBR from the sending account into the constituent coins and
+/// deposits
+///  the resulting coins into the sending account."
 pub fn encode_unmint_lbr_script(amount_lbr: u64) -> Script {
     Script::new(
         vec![
@@ -798,7 +856,8 @@ pub fn encode_unmint_lbr_script(amount_lbr: u64) -> Script {
     )
 }
 
-///  Script for Treasury Comliance Account to update <Currency> to LBR rate
+///  Update the on-chain exchange rate to LBR for the given `currency` to be given by
+///  `new_exchange_rate_denominator/new_exchange_rate_numerator`.
 pub fn encode_update_exchange_rate_script(
     currency: TypeTag,
     sliding_nonce: u64,
@@ -836,6 +895,7 @@ pub fn encode_update_exchange_rate_script(
     )
 }
 
+///  Update Libra version.
 pub fn encode_update_libra_version_script(major: u64) -> Script {
     Script::new(
         vec![
@@ -849,6 +909,7 @@ pub fn encode_update_libra_version_script(major: u64) -> Script {
     )
 }
 
+///  Allows--true--or disallows--false--minting of `currency` based upon `allow_minting`.
 pub fn encode_update_minting_ability_script(currency: TypeTag, allow_minting: bool) -> Script {
     Script::new(
         vec![
@@ -871,6 +932,7 @@ pub fn encode_update_minting_ability_script(currency: TypeTag, allow_minting: bo
     )
 }
 
+///  Update the travel rule limit to `new_micro_lbr_limit`.
 pub fn encode_update_travel_rule_limit_script(
     sliding_nonce: u64,
     new_micro_lbr_limit: u64,
@@ -904,11 +966,11 @@ pub fn encode_update_travel_rule_limit_script(
     )
 }
 
-///  Script for Treasury Comliance Account to optionally update global thresholds
-///  of max balance, total flow (inflow + outflow) (microLBR) for LimitsDefinition bound
-/// accounts.
-///  If the new threshold is zero, that particular config does not get updated.
-///  sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
+///  Optionally update global thresholds of max balance, total flow (inflow + outflow)
+/// (microLBR)
+///  for `LimitsDefinition` bound accounts.
+///  If a new threshold is 0, that particular config does not get updated.
+///  `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.
 pub fn encode_update_unhosted_wallet_limits_script(
     cointype: TypeTag,
     sliding_nonce: u64,

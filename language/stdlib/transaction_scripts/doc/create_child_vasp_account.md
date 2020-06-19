@@ -22,7 +22,8 @@ Create a
 <code>auth_key_prefix | child_address</code>.
 If
 <code>add_all_currencies</code> is true, the child address will have a zero balance in all available
-currencies in the system
+currencies in the system.
+This account will a child of the transaction sender, which must be a ParentVASP.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_child_vasp_account">create_child_vasp_account</a>&lt;CoinType&gt;(parent_vasp: &signer, child_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool, child_initial_balance: u64)

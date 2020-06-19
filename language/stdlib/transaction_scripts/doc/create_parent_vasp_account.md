@@ -13,6 +13,13 @@
 
 ## Function `create_parent_vasp_account`
 
+Create an account with the ParentVASP role at
+<code>address</code> with authentication key
+<code>auth_key_prefix</code> |
+<code>new_account_address</code> and a 0 balance of type
+<code>currency</code>. If
+<code>add_all_currencies</code> is true, 0 balances for all available currencies in the system will
+also be added. This can only be invoked by an Association account.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_parent_vasp_account">create_parent_vasp_account</a>&lt;CoinType&gt;(association: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;, add_all_currencies: bool)

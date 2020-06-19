@@ -4,8 +4,8 @@ use 0x1::FixedPoint32;
 use 0x1::SlidingNonce;
 use 0x1::Roles::{Self, TreasuryComplianceRole};
 
-/// Script for Treasury Comliance Account to update <Currency> to LBR rate
-
+/// Update the on-chain exchange rate to LBR for the given `currency` to be given by
+/// `new_exchange_rate_denominator/new_exchange_rate_numerator`.
 fun update_exchange_rate<Currency>(
     tc_account: &signer,
     sliding_nonce: u64,

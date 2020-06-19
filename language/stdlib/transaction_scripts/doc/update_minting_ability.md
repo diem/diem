@@ -13,6 +13,9 @@
 
 ## Function `update_minting_ability`
 
+Allows--true--or disallows--false--minting of
+<code>currency</code> based upon
+<code>allow_minting</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_update_minting_ability">update_minting_ability</a>&lt;Currency&gt;(account: &signer, allow_minting: bool)

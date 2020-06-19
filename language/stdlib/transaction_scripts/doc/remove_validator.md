@@ -13,6 +13,11 @@
 
 ## Function `remove_validator`
 
+Adding
+<code>to_remove</code> to the set of pending validator removals. Fails if
+the
+<code>to_remove</code> address is already in the validator set or already in the pending removals.
+Callable by Validator's operator.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_remove_validator">remove_validator</a>(account: &signer, validator_address: address)

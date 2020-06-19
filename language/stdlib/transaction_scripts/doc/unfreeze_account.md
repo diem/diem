@@ -13,8 +13,9 @@
 
 ## Function `unfreeze_account`
 
-Script for un-freezing account by authorized initiator
-sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
+Unfreeze account
+<code>address</code>. Initiator must be authorized.
+<code>sliding_nonce</code> is a unique nonce for operation, see sliding_nonce.move for details.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_unfreeze_account">unfreeze_account</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address)

@@ -1,7 +1,7 @@
 script {
     use 0x1::ValidatorConfig;
 
-    // Rotates validator's config
+    /// Rotate validator's config.
     fun rotate_validator_config(
         account: &signer,
         validator_account: address,

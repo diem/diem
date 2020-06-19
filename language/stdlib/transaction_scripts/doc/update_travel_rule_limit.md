@@ -13,6 +13,8 @@
 
 ## Function `update_travel_rule_limit`
 
+Update the travel rule limit to
+<code>new_micro_lbr_limit</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_update_travel_rule_limit">update_travel_rule_limit</a>(tc_account: &signer, sliding_nonce: u64, new_micro_lbr_limit: u64)

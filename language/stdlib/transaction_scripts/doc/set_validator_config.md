@@ -13,6 +13,7 @@
 
 ## Function `rotate_validator_config`
 
+Rotate validator's config.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_validator_config">rotate_validator_config</a>(account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;, validator_network_identity_pubkey: vector&lt;u8&gt;, validator_network_address: vector&lt;u8&gt;, fullnodes_network_identity_pubkey: vector&lt;u8&gt;, fullnodes_network_address: vector&lt;u8&gt;)

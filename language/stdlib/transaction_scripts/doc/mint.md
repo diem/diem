@@ -13,6 +13,9 @@
 
 ## Function `mint`
 
+Create
+<code>amount</code> coins for
+<code>payee</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_mint">mint</a>&lt;Token&gt;(account: &signer, payee: address, auth_key_prefix: vector&lt;u8&gt;, amount: u64)
