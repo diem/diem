@@ -55,7 +55,6 @@ pub struct NetworkBuilder {
     executor: Handle,
     network_context: Arc<NetworkContext>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
-    channel_size: usize,
     conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
 
     peer_manager_builder: Option<PeerManagerBuilder>,
@@ -99,7 +98,6 @@ impl NetworkBuilder {
             executor,
             network_context,
             trusted_peers,
-            channel_size: constants::NETWORK_CHANNEL_SIZE,
             conn_mgr_reqs_tx: None,
             peer_manager_builder: Some(peer_manager_builder),
             connectivity_manager_builder: None,
@@ -182,10 +180,12 @@ impl NetworkBuilder {
 
             network_builder
                 .trusted_peers(trusted_peers)
+                // TODO place channel_size in network_config
                 .add_connectivity_manager(
                     seed_peers,
                     config.connectivity_check_interval_ms,
                     constants::MAX_FULLNODE_CONNECTIONS,
+                    constants::NETWORK_CHANNEL_SIZE,
                 );
         } else {
             // TODO:  Why does ServerOnly and no seed_peers mean that a ConnectivityManager is unnecessary?
@@ -195,6 +195,7 @@ impl NetworkBuilder {
                     seed_peers,
                     config.connectivity_check_interval_ms,
                     constants::MAX_FULLNODE_CONNECTIONS,
+                    constants::NETWORK_CHANNEL_SIZE,
                 );
             }
         }
@@ -260,9 +261,10 @@ impl NetworkBuilder {
         seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
         connectivity_check_interval_ms: u64,
         max_fullnode_connections: usize,
+        channel_size: usize,
     ) -> &mut Self {
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
-            self.channel_size,
+            channel_size,
             &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
         );
         self.conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx);

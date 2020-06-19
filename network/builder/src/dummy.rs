@@ -142,6 +142,7 @@ pub fn setup_network() -> DummyNetwork {
             HashMap::new(),
             constants::CONNECTIVITY_CHECK_INTERNAL_MS,
             constants::MAX_FULLNODE_CONNECTIONS,
+            constants::NETWORK_CHANNEL_SIZE,
         );
     let (listener_sender, mut listener_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
@@ -166,6 +167,7 @@ pub fn setup_network() -> DummyNetwork {
                 .collect(),
             constants::CONNECTIVITY_CHECK_INTERNAL_MS,
             constants::MAX_FULLNODE_CONNECTIONS,
+            constants::NETWORK_CHANNEL_SIZE,
         );
     let (dialer_sender, mut dialer_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());

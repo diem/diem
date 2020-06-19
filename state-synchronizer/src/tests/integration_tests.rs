@@ -267,6 +267,7 @@ impl SynchronizerEnv {
                 seed_peers,
                 constants::CONNECTIVITY_CHECK_INTERNAL_MS,
                 constants::MAX_FULLNODE_CONNECTIONS,
+                constants::NETWORK_CHANNEL_SIZE,
             )
             .add_gossip_discovery(addr, constants::DISCOVERY_INTERVAL_MS, public_key);
 
