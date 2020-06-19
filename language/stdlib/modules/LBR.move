@@ -2,12 +2,15 @@ address 0x1 {
 
 module LBR {
     use 0x1::CoreAddresses;
+    use 0x1::CoreErrors;
     use 0x1::Coin1::Coin1;
     use 0x1::Coin2::Coin2;
     use 0x1::FixedPoint32::{Self, FixedPoint32};
     use 0x1::Libra::{Self, Libra,  RegisterNewCurrency};
     use 0x1::Signer;
     use 0x1::Roles::{Capability, TreasuryComplianceRole};
+
+    fun MODULE_ERROR_BASE(): u64 { 23000 }
 
     // The type tag for this coin type.
     resource struct LBR { }
@@ -44,7 +47,10 @@ module LBR {
         tc_capability: &Capability<TreasuryComplianceRole>,
     ) {
         // Opertational constraint
-        assert(Signer::address_of(association) == CoreAddresses::CURRENCY_INFO_ADDRESS(), 0);
+        assert(
+            Signer::address_of(association) == CoreAddresses::CURRENCY_INFO_ADDRESS(),
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
+        );
         // Register the LBR currency.
         let (mint_cap, burn_cap) = Libra::register_currency<LBR>(
             association,

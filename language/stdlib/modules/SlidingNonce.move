@@ -1,7 +1,13 @@
 address 0x1 {
 module SlidingNonce {
+    use 0x1::CoreErrors;
     use 0x1::Signer;
     use 0x1::Roles::{Self, Capability};
+
+    fun MODULE_ERROR_BASE(): u64 { 3000 }
+    public fun NONCE_TOO_OLD(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 1 }
+    public fun NONCE_TOO_NEW(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 2}
+    public fun NONCE_ALREADY_RECORDED(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 3}
 
     resource struct CreateSlidingNonce {}
 
@@ -31,20 +37,20 @@ module SlidingNonce {
     /// Tries to record this nonce in the account.
     /// Returns 0 if a nonce was recorded and non-0 otherwise
     /// Reasons for nonce to be rejected:
-    /// * code 10001: This nonce is too old and impossible to ensure whether it's duplicated or not
-    /// * code 10002: This nonce is too far in the future - this is not allowed to protect against nonce exhaustion
-    /// * code 10003: This nonce was already recorded previously
+    /// * NONCE_TOO_OLD: This nonce is too old and impossible to ensure whether it's duplicated or not
+    /// * NONCE_TOO_NEW: This nonce is too far in the future - this is not allowed to protect against nonce exhaustion
+    /// * NONCE_ALREADY_RECORDED: This nonce was already recorded previously
     public fun try_record_nonce(account: &signer, seq_nonce: u64): u64 acquires SlidingNonce {
         if (seq_nonce == 0) {
             return 0
         };
         let t = borrow_global_mut<SlidingNonce>(Signer::address_of(account));
         if (t.min_nonce > seq_nonce) {
-            return 10001
+            return NONCE_TOO_OLD()
         };
         let jump_limit = 10000; // Don't allow giant leaps in nonce to protect against nonce exhaustion
         if (t.min_nonce + jump_limit <= seq_nonce) {
-            return 10002
+            return NONCE_TOO_NEW()
         };
         let bit_pos = seq_nonce - t.min_nonce;
         let nonce_mask_size = 128; // size of SlidingNonce::nonce_mask in bits. no constants in move?
@@ -61,7 +67,7 @@ module SlidingNonce {
         let bit_pos = seq_nonce - t.min_nonce;
         let set = 1u128 << (bit_pos as u8);
         if (t.nonce_mask & set != 0) {
-            return 10003
+            return NONCE_ALREADY_RECORDED()
         };
         t.nonce_mask = t.nonce_mask | set;
         0

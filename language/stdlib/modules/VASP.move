@@ -1,16 +1,15 @@
-// Error codes:
-// 7000 -> INSUFFICIENT_PRIVILEGES
-// 7001 -> INVALID_PARENT_VASP_ACCOUNT
-// 7002 -> INVALID_CHILD_VASP_ACCOUNT
-// 7003 -> CHILD_ACCOUNT_STILL_PARENT
-// 7004 -> INVALID_PUBLIC_KEY
 address 0x1 {
 
 module VASP {
+    use 0x1::CoreErrors;
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
     use 0x1::Signature;
     use 0x1::Roles::{Capability, AssociationRootRole, ParentVASPRole};
+
+    fun MODULE_ERROR_BASE(): u64 { 4000 }
+    public fun INVALID_PUBLIC_KEY(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 1 }
+    public fun NOT_A_VASP_ACCOUNT(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 2 }
 
     /// Each VASP has a unique root account that holds a `ParentVASP` resource. This resource holds
     /// the VASP's globally unique name and all of the metadata that other VASPs need to perform
@@ -71,7 +70,7 @@ module VASP {
         base_url: vector<u8>,
         compliance_public_key: vector<u8>
     ) {
-        assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), 7004);
+        assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), INVALID_PUBLIC_KEY());
         move_to(
             vasp,
             ParentVASP {
@@ -93,7 +92,7 @@ module VASP {
         _: &Capability<ParentVASPRole>,
     ) acquires ParentVASP {
         let parent_vasp_addr = Signer::address_of(parent);
-        assert(exists<ParentVASP>(parent_vasp_addr), 7000);
+        assert(exists<ParentVASP>(parent_vasp_addr), CoreErrors::INSUFFICIENT_PRIVILEGE());
         let num_children = &mut borrow_global_mut<ParentVASP>(parent_vasp_addr).num_children;
         *num_children = *num_children + 1;
         move_to(child, ChildVASP { parent_vasp_addr });
@@ -111,7 +110,7 @@ module VASP {
         } else if (exists<ChildVASP>(addr)) {
             borrow_global<ChildVASP>(addr).parent_vasp_addr
         } else { // wrong account type, abort
-            abort(88)
+            abort(NOT_A_VASP_ACCOUNT())
         }
     }
 
@@ -169,7 +168,7 @@ module VASP {
         parent_vasp: &signer,
         new_key: vector<u8>
     ) acquires ParentVASP {
-        assert(Signature::ed25519_validate_pubkey(copy new_key), 7004);
+        assert(Signature::ed25519_validate_pubkey(copy new_key), INVALID_PUBLIC_KEY());
         let parent_addr = Signer::address_of(parent_vasp);
         borrow_global_mut<ParentVASP>(parent_addr).compliance_public_key = new_key
     }

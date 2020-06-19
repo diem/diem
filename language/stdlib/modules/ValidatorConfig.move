@@ -10,9 +10,12 @@
 address 0x1 {
 
 module ValidatorConfig {
+    use 0x1::CoreErrors;
     use 0x1::Option::{Self, Option};
     use 0x1::Signer;
     use 0x1::Roles::{Self, Capability, AssociationRootRole};
+
+    fun MODULE_ERROR_BASE(): u64 { 15000 }
 
     resource struct UpdateValidatorConfig {}
     resource struct DecertifyValidator {}
@@ -92,9 +95,10 @@ module ValidatorConfig {
         full_node_network_identity_pubkey: vector<u8>,
         full_node_network_address: vector<u8>,
     ) acquires ValidatorConfig {
+        // TODO(tzakian): should be made into a capability passing check
         assert(
             Signer::address_of(signer) == get_operator(validator_account),
-            1101
+            MODULE_ERROR_BASE() + CoreErrors::INSUFFICIENT_PRIVILEGE()
         );
         // TODO(valerini): verify the validity of new_config.consensus_pubkey and
         // the proof of posession
@@ -114,9 +118,10 @@ module ValidatorConfig {
         validator_account: address,
         consensus_pubkey: vector<u8>,
     ) acquires ValidatorConfig {
+        // TODO(tzakian): should be made into a capability passing check
         assert(
             Signer::address_of(account) == get_operator(validator_account),
-            1101
+            MODULE_ERROR_BASE() + CoreErrors::INSUFFICIENT_PRIVILEGE()
         );
         let t_config_ref = Option::borrow_mut(&mut borrow_global_mut<ValidatorConfig>(validator_account).config);
         t_config_ref.consensus_pubkey = consensus_pubkey;
@@ -137,7 +142,7 @@ module ValidatorConfig {
     // Get Config
     // Aborts if there is no ValidatorConfig resource of if its config is empty
     public fun get_config(addr: address): Config acquires ValidatorConfig {
-        assert(exists<ValidatorConfig>(addr), 1106);
+        assert(exists<ValidatorConfig>(addr), CoreErrors::CONFIG_DNE());
         let config = &borrow_global<ValidatorConfig>(addr).config;
         *Option::borrow(config)
     }
@@ -146,7 +151,7 @@ module ValidatorConfig {
     // Aborts if there is no ValidatorConfig resource, if its operator_account is
     // empty, returns the input
     public fun get_operator(addr: address): address acquires ValidatorConfig {
-        assert(exists<ValidatorConfig>(addr), 1106);
+        assert(exists<ValidatorConfig>(addr), CoreErrors::CONFIG_DNE());
         let t_ref = borrow_global<ValidatorConfig>(addr);
         *Option::borrow_with_default(&t_ref.operator_account, &addr)
     }

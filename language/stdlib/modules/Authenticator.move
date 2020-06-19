@@ -4,9 +4,15 @@
 
 address 0x1 {
 module Authenticator {
+    use 0x1::CoreErrors;
     use 0x1::Hash;
     use 0x1::LCS;
     use 0x1::Vector;
+
+    fun MODULE_ERROR_BASE(): u64 { 7000 }
+    public fun INVALID_THRESHOLD(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 1 }
+    public fun INVALID_NUMBER_OF_KEYS(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 2 }
+    public fun THRESHOLD_KEY_MISMATCH(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 3 }
 
     // A multi-ed25519 public key
     struct MultiEd25519PublicKey {
@@ -27,11 +33,12 @@ module Authenticator {
     ): MultiEd25519PublicKey {
         // check theshold requirements
         let len = Vector::length(&public_keys);
-        assert(threshold != 0, 7001);
-        assert((threshold as u64) <= len, 7002);
+        assert(threshold != 0, INVALID_THRESHOLD());
+        assert(len != 0, INVALID_NUMBER_OF_KEYS());
+        assert((threshold as u64) <= len, THRESHOLD_KEY_MISMATCH());
         // TODO: add constant MULTI_ED25519_MAX_KEYS
         // the multied25519 signature scheme allows at most 32 keys
-        assert(len <= 32, 7003);
+        assert(len <= 32, INVALID_THRESHOLD());
 
         MultiEd25519PublicKey { public_keys, threshold }
     }

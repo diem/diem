@@ -4,7 +4,11 @@ module DualAttestationLimit {
     use 0x1::LibraConfig::{Self, CreateOnChainConfig};
     use 0x1::Signer;
     use 0x1::CoreAddresses;
+    use 0x1::CoreErrors;
     use 0x1::Roles::{Self, Capability};
+
+    fun MODULE_ERROR_BASE(): u64 { 8000 }
+    public fun INVALID_LIMIT(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 1 }
 
     resource struct UpdateDualAttestationThreshold {}
 
@@ -28,7 +32,10 @@ module DualAttestationLimit {
         tc_account: &signer,
         create_on_chain_config_capability: &Capability<CreateOnChainConfig>,
     ) {
-        assert(Signer::address_of(account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
+        assert(
+            Signer::address_of(account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
+        );
         let cap = LibraConfig::publish_new_config_with_capability<DualAttestationLimit>(
             account,
             create_on_chain_config_capability,
@@ -49,7 +56,7 @@ module DualAttestationLimit {
     ) acquires ModifyLimitCapability {
         assert(
             micro_lbr_limit >= 1000,
-            4
+            INVALID_LIMIT(),
         );
         let modify_cap = &borrow_global<ModifyLimitCapability>(tc_address).cap;
         LibraConfig::set_with_capability<DualAttestationLimit>(

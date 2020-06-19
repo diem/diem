@@ -1,15 +1,13 @@
-// Error codes:
-// 0 -> INVALID_INITIALIZATION_SENDER
-// 1 -> INVALID_LIMITS_DEFINITION_NOT_CERTIFIED
-// 2 -> INVALID_ACCOUNT_MUTATION_CAPABILITY_SENDER
-// 3 -> WITHDREW_INVALID_CURRENCY
 address 0x1 {
 
 module AccountLimits {
     use 0x1::CoreAddresses;
+    use 0x1::CoreErrors;
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
     use 0x1::Roles::{Capability, TreasuryComplianceRole};
+
+    fun MODULE_ERROR_BASE(): u64 { 24000 }
 
     // An operations capability that restricts callers of this module since
     // the operations can mutate account states.
@@ -51,7 +49,10 @@ module AccountLimits {
     // Grant a capability to call this module. This does not necessarily
     // need to be a unique capability.
     public fun grant_calling_capability(account: &signer): CallingCapability {
-        assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 3000);
+        assert(
+            Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(),
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
+        );
         CallingCapability{}
     }
 
@@ -63,7 +64,6 @@ module AccountLimits {
         addr: address,
         _cap: &CallingCapability,
     ): bool acquires LimitsDefinition, Window {
-        assert(0x1::Testnet::is_testnet(), 10047);
         can_receive<CoinType>(
             amount,
             borrow_global_mut<Window>(addr),
@@ -79,7 +79,6 @@ module AccountLimits {
         addr: address,
         _cap: &CallingCapability,
     ): bool acquires LimitsDefinition, Window {
-        assert(0x1::Testnet::is_testnet(), 10048);
         can_withdraw<CoinType>(
             amount,
             borrow_global_mut<Window>(addr),

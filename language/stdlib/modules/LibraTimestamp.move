@@ -1,8 +1,11 @@
 address 0x1 {
 
 module LibraTimestamp {
+    use 0x1::CoreErrors;
     use 0x1::CoreAddresses;
     use 0x1::Signer;
+
+    fun MODULE_ERROR_BASE(): u64 { 22000 }
 
     // A singleton resource holding the current Unix time in microseconds
     resource struct CurrentTimeMicroseconds {
@@ -12,7 +15,10 @@ module LibraTimestamp {
     // Initialize the global wall clock time resource.
     public fun initialize(association: &signer) {
         // Only callable by the Association address
-        assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
+        assert(
+            Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(),
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
+        );
 
         // TODO: Should the initialized value be passed in to genesis?
         let timer = CurrentTimeMicroseconds { microseconds: 0 };
@@ -26,15 +32,18 @@ module LibraTimestamp {
         timestamp: u64
     ) acquires CurrentTimeMicroseconds {
         // Can only be invoked by LibraVM privilege.
-        assert(Signer::address_of(account) == CoreAddresses::VM_RESERVED_ADDRESS(), 33);
+        assert(
+            Signer::address_of(account) == CoreAddresses::VM_RESERVED_ADDRESS(),
+            MODULE_ERROR_BASE() + CoreErrors::INSUFFICIENT_PRIVILEGE()
+        );
 
         let global_timer = borrow_global_mut<CurrentTimeMicroseconds>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
         if (proposer == CoreAddresses::VM_RESERVED_ADDRESS()) {
             // NIL block with null address as proposer. Timestamp must be equal.
-            assert(timestamp == global_timer.microseconds, 5001);
+            assert(timestamp == global_timer.microseconds, CoreErrors::INVALID_TIMESTAMP());
         } else {
             // Normal block. Time must advance
-            assert(global_timer.microseconds < timestamp, 5001);
+            assert(global_timer.microseconds < timestamp, CoreErrors::INVALID_TIMESTAMP());
         };
         global_timer.microseconds = timestamp;
     }

@@ -2,6 +2,11 @@ address 0x1 {
 
 // A variable-sized container that can hold both unrestricted types and resources.
 module Vector {
+    use 0x1::CoreErrors;
+
+    fun MODULE_ERROR_BASE(): u64 { 13000 }
+    public fun INDEX_OUT_OF_BOUNDS(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 0 }
+
     native public fun empty<Element>(): vector<Element>;
 
     // Return the length of the vector.
@@ -87,7 +92,7 @@ module Vector {
     public fun remove<Element>(v: &mut vector<Element>, i: u64): Element {
         let len = length(v);
         // i out of bounds; abort
-        if (i >= len) abort 10;
+        if (i >= len) abort INDEX_OUT_OF_BOUNDS();
 
         len = len - 1;
         while (i < len) swap(v, i, { i = i + 1; i });

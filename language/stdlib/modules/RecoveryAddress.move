@@ -1,9 +1,13 @@
 address 0x1 {
 module RecoveryAddress {
+    use 0x1::CoreErrors;
     use 0x1::LibraAccount;
     use 0x1::Signer;
     use 0x1::VASP;
     use 0x1::Vector;
+
+    fun MODULE_ERROR_BASE(): u64 { 5000 }
+    public fun RECOVERY_ADDRESS_DNE(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 1 }
 
     /// A resource that holds the `KeyRotationCapability`s for several accounts belonging to the
     /// same VASP. A VASP account that delegates its `KeyRotationCapability` to
@@ -24,8 +28,7 @@ module RecoveryAddress {
     /// `RecoveryAddress` resource, or is not a VASP.
     public fun publish(recovery_account: &signer) {
         // Only VASPs can create a recovery address
-        // TODO: proper error code
-        assert(VASP::is_vasp(Signer::address_of(recovery_account)), 2222);
+        assert(VASP::is_vasp(Signer::address_of(recovery_account)), CoreErrors::INSUFFICIENT_PRIVILEGE());
         // put the rotation capability for the recovery account itself in `rotation_caps`. This
         // ensures two things:
         // (1) It's not possible to get into a "recovery cycle" where A is the recovery account for
@@ -50,8 +53,7 @@ module RecoveryAddress {
         let sender = Signer::address_of(account);
         // Both the original owner `to_recover` of the KeyRotationCapability and the
         // `recovery_address` can rotate the authentication key
-        // TODO: proper error code
-        assert(sender == recovery_address || sender == to_recover, 3333);
+        assert(sender == recovery_address || sender == to_recover, CoreErrors::INSUFFICIENT_PRIVILEGE());
 
         let caps = &borrow_global<RecoveryAddress>(recovery_address).rotation_caps;
         let i = 0;
@@ -66,7 +68,7 @@ module RecoveryAddress {
         };
         // Couldn't find `to_recover` in the account recovery resource; abort
         // TODO: proper error code
-        abort(555)
+        abort(RECOVERY_ADDRESS_DNE())
     }
 
     /// Add the `KeyRotationCapability` for `to_recover_account` to the `RecoveryAddress`
@@ -79,9 +81,8 @@ module RecoveryAddress {
         let addr = Signer::address_of(to_recover_account);
         // Only accept the rotation capability if both accounts belong to the same VASP
         assert(
-            VASP::parent_address(recovery_address) ==
-                VASP::parent_address(addr),
-            444 // TODO: proper error code
+            VASP::parent_address(recovery_address) == VASP::parent_address(addr),
+            MODULE_ERROR_BASE() + CoreErrors::INSUFFICIENT_PRIVILEGE()
         );
 
         let caps = &mut borrow_global_mut<RecoveryAddress>(recovery_address).rotation_caps;

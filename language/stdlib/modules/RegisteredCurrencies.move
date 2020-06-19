@@ -1,11 +1,14 @@
 address 0x1 {
 
 module RegisteredCurrencies {
+    use 0x1::CoreErrors;
     use 0x1::CoreAddresses;
     use 0x1::LibraConfig::{Self, CreateOnChainConfig};
     use 0x1::Signer;
     use 0x1::Vector;
     use 0x1::Roles::Capability;
+
+    fun MODULE_ERROR_BASE(): u64 { 19000 }
 
     // An on-chain config holding all of the currency codes for registered
     // currencies. The inner vector<u8>'s are string representations of
@@ -23,10 +26,10 @@ module RegisteredCurrencies {
         config_account: &signer,
         create_config_capability: &Capability<CreateOnChainConfig>,
     ): RegistrationCapability {
-        // enforce that this is only going to one specific address,
+        // Operational constraint; enforce that this is only going to one specific address,
         assert(
             Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
-            0
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
         );
         let cap = LibraConfig::publish_new_config_with_capability(
             config_account,

@@ -2,6 +2,7 @@ address 0x1 {
 
 module Libra {
     use 0x1::CoreAddresses;
+    use 0x1::CoreErrors;
     use 0x1::Event::{Self, EventHandle};
     use 0x1::FixedPoint32::{Self, FixedPoint32};
     use 0x1::RegisteredCurrencies::{Self, RegistrationCapability};
@@ -9,6 +10,13 @@ module Libra {
     use 0x1::Vector;
     use 0x1::Roles::{Self, Capability, TreasuryComplianceRole};
     use 0x1::LibraConfig::CreateOnChainConfig;
+
+    fun MODULE_ERROR_BASE(): u64 { 12000 }
+    public fun NOT_A_REGISTERED_CURRENCY(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 1 }
+    public fun CANNOT_MINT(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 2 }
+    public fun IS_SYNTHETIC_CURRENCY(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 3 }
+    public fun INVALID_WITHDRAWAL_AMOUNT(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 4 }
+    public fun NON_ZERO_VALUE(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 5 }
 
     resource struct RegisterNewCurrency {}
 
@@ -195,7 +203,7 @@ module Libra {
         // Operational constraint
         assert(
             Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
-            0
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
         );
         let cap = RegisteredCurrencies::initialize(config_account, create_config_capability);
         move_to(config_account, CurrencyRegistrationCapability{ cap })
@@ -289,7 +297,7 @@ module Libra {
         let currency_code = currency_code<CoinType>();
         // update market cap resource to reflect minting
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        assert(info.can_mint, 4);
+        assert(info.can_mint, CANNOT_MINT());
         info.total_value = info.total_value + (value as u128);
         // don't emit mint events for synthetic currenices
         if (!info.is_synthetic) {
@@ -344,7 +352,7 @@ module Libra {
     public fun create_preburn<CoinType>(
         _: &Capability<TreasuryComplianceRole>
     ): Preburn<CoinType> {
-        assert(is_currency<CoinType>(), 201);
+        assert_is_coin<CoinType>();
         Preburn<CoinType> { requests: Vector::empty() }
     }
 
@@ -356,7 +364,7 @@ module Libra {
         account: &signer,
         tc_capability: &Capability<TreasuryComplianceRole>,
     ) acquires CurrencyInfo {
-        assert(!is_synthetic_currency<CoinType>(), 202);
+        assert(!is_synthetic_currency<CoinType>(), IS_SYNTHETIC_CURRENCY());
         move_to(account, create_preburn<CoinType>(tc_capability))
     }
 
@@ -511,7 +519,7 @@ module Libra {
     /// value of the passed-in `coin`.
     public fun withdraw<CoinType>(coin: &mut Libra<CoinType>, amount: u64): Libra<CoinType> {
         // Check that `amount` is less than the coin's value
-        assert(coin.value >= amount, 10);
+        assert(coin.value >= amount, INVALID_WITHDRAWAL_AMOUNT());
         coin.value = coin.value - amount;
         Libra { value: amount }
     }
@@ -537,7 +545,7 @@ module Libra {
     /// a `BurnCapability` for the specific `CoinType`.
     public fun destroy_zero<CoinType>(coin: Libra<CoinType>) {
         let Libra { value } = coin;
-        assert(value == 0, 5)
+        assert(value == 0, NON_ZERO_VALUE())
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -569,7 +577,7 @@ module Libra {
         // address.
         assert(
             Signer::address_of(account) == CoreAddresses::CURRENCY_INFO_ADDRESS(),
-            8
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
         );
 
         move_to(account, CurrencyInfo<CoinType> {
@@ -699,7 +707,7 @@ module Libra {
 
     /// Asserts that `CoinType` is a registered currency.
     fun assert_is_coin<CoinType>() {
-        assert(is_currency<CoinType>(), 1);
+        assert(is_currency<CoinType>(), NOT_A_REGISTERED_CURRENCY());
     }
 
     /// **************** SPECIFICATIONS ****************

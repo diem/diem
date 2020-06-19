@@ -4,10 +4,13 @@
 
 address 0x1 {
 module SharedEd25519PublicKey {
+    use 0x1::CoreErrors;
     use 0x1::Authenticator;
     use 0x1::LibraAccount;
     use 0x1::Signature;
     use 0x1::Signer;
+
+    fun MODULE_ERROR_BASE(): u64 { 18000 }
 
     // A resource that forces the account associated with `rotation_cap` to use a ed25519
     // authentication key derived from `key`
@@ -36,7 +39,7 @@ module SharedEd25519PublicKey {
         // Cryptographic check of public key validity
         assert(
             Signature::ed25519_validate_pubkey(copy new_public_key),
-            9003, // TODO: proper error code
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_AUTH_KEY()
         );
         LibraAccount::rotate_authentication_key(
             &shared_key.rotation_cap,

@@ -1,15 +1,19 @@
 address 0x1 {
 
 module FixedPoint32 {
+    use 0x1::CoreErrors;
 
-    // Define a fixed-point numeric type with 32 fractional bits.
-    // This is just a u64 integer but it is wrapped in a struct to
-    // make a unique type.
+    fun MODULE_ERROR_BASE(): u64 { 11000 }
+    public fun INVALID_QUOTIENT(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 1 }
+
+    /// Define a fixed-point numeric type with 32 fractional bits.
+    /// This is just a u64 integer but it is wrapped in a struct to
+    /// make a unique type.
     struct FixedPoint32 { value: u64 }
 
-    // Multiply a u64 integer by a fixed-point number, truncating any
-    // fractional part of the product. This will abort if the product
-    // overflows.
+    /// Multiply a u64 integer by a fixed-point number, truncating any
+    /// fractional part of the product. This will abort if the product
+    /// overflows.
     public fun multiply_u64(num: u64, multiplier: FixedPoint32): u64 {
         // The product of two 64 bit values has 128 bits, so perform the
         // multiplication with u128 types and keep the full 128 bit product
@@ -24,9 +28,9 @@ module FixedPoint32 {
         (product as u64)
     }
 
-    // Divide a u64 integer by a fixed-point number, truncating any
-    // fractional part of the quotient. This will abort if the divisor
-    // is zero or if the quotient overflows.
+    /// Divide a u64 integer by a fixed-point number, truncating any
+    /// fractional part of the quotient. This will abort if the divisor
+    /// is zero or if the quotient overflows.
     public fun divide_u64(num: u64, divisor: FixedPoint32): u64 {
         // First convert to 128 bits and then shift left to
         // add 32 fractional zero bits to the dividend.
@@ -40,11 +44,11 @@ module FixedPoint32 {
         (quotient as u64)
     }
 
-    // Create a fixed-point value from a rational number specified by its
-    // numerator and denominator. This function is for convenience; it is also
-    // perfectly fine to create a fixed-point value by directly specifying the
-    // raw value. This will abort if the denominator is zero or if the ratio is
-    // not in the range 2^-32 .. 2^32-1.
+    /// Create a fixed-point value from a rational number specified by its
+    /// numerator and denominator. This function is for convenience; it is also
+    /// perfectly fine to create a fixed-point value by directly specifying the
+    /// raw value. This will abort if the denominator is zero or if the ratio is
+    /// not in the range 2^-32 .. 2^32-1.
     public fun create_from_rational(numerator: u64, denominator: u64): FixedPoint32 {
         // Scale the numerator to have 64 fractional bits and the denominator
         // to have 32 fractional bits, so that the quotient will have 32
@@ -57,7 +61,7 @@ module FixedPoint32 {
         // Check for underflow. Truncating to zero might be the desired result,
         // but if you really want a ratio of zero, it is easy to create that
         // from a raw value.
-        assert(quotient != 0 || numerator == 0, 16);
+        assert(quotient != 0 || numerator == 0, INVALID_QUOTIENT());
         // Return the quotient as a fixed-point number. The cast will fail
         // with an arithmetic error if the number is too large.
         FixedPoint32 { value: (quotient as u64) }
@@ -67,9 +71,9 @@ module FixedPoint32 {
         FixedPoint32 { value }
     }
 
-    // Accessor for the raw u64 value. Other less common operations, such as
-    // adding or subtracting FixedPoint32 values, can be done using the raw
-    // values directly.
+    /// Accessor for the raw u64 value. Other less common operations, such as
+    /// adding or subtracting FixedPoint32 values, can be done using the raw
+    /// values directly.
     public fun get_raw_value(num: FixedPoint32): u64 {
         num.value
     }

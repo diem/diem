@@ -1,11 +1,15 @@
 address 0x1 {
 module LibraConfig {
+    use 0x1::CoreErrors;
     use 0x1::CoreAddresses;
     use 0x1::Event;
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
     use 0x1::Offer;
     use 0x1::Roles::{Self, Capability, AssociationRootRole};
+
+    fun MODULE_ERROR_BASE(): u64 { 1000 }
+    public fun INVALID_RECONFIG_TIMESTAMP(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 1 }
 
     resource struct CreateOnChainConfig {}
 
@@ -42,7 +46,10 @@ module LibraConfig {
         _: &Capability<CreateOnChainConfig>,
     ) {
         // Operational constraint
-        assert(Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
+        assert(
+            Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
+        );
         move_to<Configuration>(
             config_account,
             Configuration {
@@ -56,7 +63,7 @@ module LibraConfig {
     // Get a copy of `Config` value stored under `addr`.
     public fun get<Config: copyable>(): Config acquires LibraConfig {
         let addr = CoreAddresses::DEFAULT_CONFIG_ADDRESS();
-        assert(exists<LibraConfig<Config>>(addr), 24);
+        assert(exists<LibraConfig<Config>>(addr), CoreErrors::CONFIG_DNE());
         *&borrow_global<LibraConfig<Config>>(addr).payload
     }
 
@@ -64,9 +71,12 @@ module LibraConfig {
     // reconfiguration.
     public fun set<Config: copyable>(account: &signer, payload: Config) acquires LibraConfig, Configuration {
         let addr = CoreAddresses::DEFAULT_CONFIG_ADDRESS();
-        assert(exists<LibraConfig<Config>>(addr), 24);
+        assert(exists<LibraConfig<Config>>(addr), CoreErrors::CONFIG_DNE());
         let signer_address = Signer::address_of(account);
-        assert(exists<ModifyConfigCapability<Config>>(signer_address), 24);
+        assert(
+            exists<ModifyConfigCapability<Config>>(signer_address),
+            MODULE_ERROR_BASE() + CoreErrors::INSUFFICIENT_PRIVILEGE()
+        );
 
         let config = borrow_global_mut<LibraConfig<Config>>(addr);
         config.payload = payload;
@@ -80,7 +90,7 @@ module LibraConfig {
         payload: Config
     ) acquires LibraConfig, Configuration {
         let addr = CoreAddresses::DEFAULT_CONFIG_ADDRESS();
-        assert(exists<LibraConfig<Config>>(addr), 24);
+        assert(exists<LibraConfig<Config>>(addr), CoreErrors::CONFIG_DNE());
         let config = borrow_global_mut<LibraConfig<Config>>(addr);
         config.payload = payload;
         reconfigure_();
@@ -93,7 +103,10 @@ module LibraConfig {
         _: &Capability<CreateOnChainConfig>,
         payload: Config,
     ): ModifyConfigCapability<Config> {
-        assert(Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
+        assert(
+            Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
+        );
         move_to(config_account, LibraConfig { payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the binary
         // to register this config into ON_CHAIN_CONFIG_REGISTRY then send another transaction to change
@@ -118,7 +131,10 @@ module LibraConfig {
         _: &Capability<CreateOnChainConfig>,
         payload: Config
     ) {
-        assert(Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
+        assert(
+            Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
+        );
         move_to(config_account, ModifyConfigCapability<Config> {});
         move_to(config_account, LibraConfig{ payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the binary
@@ -133,7 +149,10 @@ module LibraConfig {
         payload: Config,
         delegate: address,
     ) {
-        assert(Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
+        assert(
+            Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
+        );
         Offer::create(config_account, ModifyConfigCapability<Config>{}, delegate);
         move_to(config_account, LibraConfig { payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the
@@ -165,7 +184,10 @@ module LibraConfig {
        // correspondence between system reconfigurations and emitted ReconfigurationEvents.
 
        let current_block_time = LibraTimestamp::now_microseconds();
-       assert(current_block_time > config_ref.last_reconfiguration_time, 23);
+       assert(
+            current_block_time > config_ref.last_reconfiguration_time,
+            INVALID_RECONFIG_TIMESTAMP()
+       );
        config_ref.last_reconfiguration_time = current_block_time;
 
        emit_reconfiguration_event();

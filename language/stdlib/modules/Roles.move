@@ -32,7 +32,17 @@ address 0x1 {
 module Roles {
     use 0x1::Signer;
     use 0x1::CoreAddresses;
+    use 0x1::CoreErrors;
     use 0x1::LibraTimestamp;
+
+    fun MODULE_ERROR_BASE(): u64 { 9000 }
+    public fun INVALID_ROLE(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 1 }
+    public fun INVALID_ROOT_ADDRESS(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 2 }
+    public fun INVALID_TC_ADDRESS(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 3 }
+    public fun ROLE_ALREADY_ASSIGNED(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 4 }
+    public fun PRIV_ALREADY_EXTRACTED(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 5 }
+    public fun ACCOUNT_CAPABILITY_ADDR_MISMATCH(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 6 }
+    public fun UNRECOGNIZED_ACCOUNT_ROLE(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 7 }
 
     ///////////////////////////////////////////////////////////////////////////
     // Role ID constants
@@ -107,7 +117,7 @@ module Roles {
         role_id: u64,
     ) acquires RoleId {
         let account_role = borrow_global<RoleId>(Signer::address_of(account));
-        assert(account_role.role_id == role_id, 0);
+        assert(account_role.role_id == role_id, INVALID_ROLE());
         move_to(account, Privilege<Priv>{ witness, is_extracted: false })
     }
 
@@ -165,9 +175,9 @@ module Roles {
     public fun grant_root_association_role(
         association: &signer,
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
+        assert(LibraTimestamp::is_genesis(), CoreErrors::NOT_GENESIS());
         let owner_address = Signer::address_of(association);
-        assert(owner_address == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
+        assert(owner_address == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), INVALID_ROOT_ADDRESS());
         // Grant the role to the association root account
         move_to(association, RoleId { role_id: ASSOCIATION_ROOT_ROLE_ID() });
         move_to(association, Privilege<AssociationRootRole>{ witness: AssociationRootRole{}, is_extracted: false})
@@ -180,9 +190,9 @@ module Roles {
         treasury_compliance_account: &signer,
         _: &Capability<AssociationRootRole>,
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
+        assert(LibraTimestamp::is_genesis(), CoreErrors::NOT_GENESIS());
         let owner_address = Signer::address_of(treasury_compliance_account);
-        assert(owner_address == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), 0);
+        assert(owner_address == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), INVALID_TC_ADDRESS());
         // Grant the TC role to the treasury_compliance_account
         move_to(treasury_compliance_account, RoleId { role_id: TREASURY_COMPLIANCE_ROLE_ID() });
         move_to(treasury_compliance_account, Privilege<TreasuryComplianceRole>{ witness: TreasuryComplianceRole{}, is_extracted: false});
@@ -216,18 +226,18 @@ module Roles {
     ) acquires RoleId {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
-        assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
+        assert(!exists<RoleId>(Signer::address_of(new_account)), ROLE_ALREADY_ASSIGNED());
         if (role_id == DESIGNATED_DEALER_ROLE_ID()) {
             //assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), 0);
-            assert(calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID(), 0);
+            assert(calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID(), INVALID_ROLE());
             move_to(new_account, RoleId { role_id });
             move_to(new_account, Privilege<DesignatedDealerRole>{ witness: DesignatedDealerRole{}, is_extracted: false })
         } else if (role_id == VALIDATOR_ROLE_ID()) {
-            assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), 0);
+            assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), INVALID_ROLE());
             move_to(new_account, RoleId { role_id });
             move_to(new_account, Privilege<ValidatorRole>{ witness: ValidatorRole{}, is_extracted: false })
         } else if (role_id == VALIDATOR_OPERATOR_ROLE_ID()) {
-            assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), 0);
+            assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), INVALID_ROLE());
             move_to(new_account, RoleId { role_id });
             move_to(new_account, Privilege<ValidatorOperatorRole>{ witness: ValidatorOperatorRole{}, is_extracted: false })
         } else if (role_id == PARENT_VASP_ROLE_ID()) {
@@ -236,13 +246,13 @@ module Roles {
                 // XXX/HACK/REMOVE(tzakian): This is for testnet semantics
                 // only. THIS NEEDS TO BE REMOVED.
                 || calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID(),
-                0
+                INVALID_ROLE()
             );
             move_to(new_account, RoleId { role_id });
             move_to(new_account, Privilege<ParentVASPRole>{ witness: ParentVASPRole{}, is_extracted: false })
         } else if (role_id == CHILD_VASP_ROLE_ID()) {
             // calling_role must be a parent vasp role
-            assert(calling_role.role_id == PARENT_VASP_ROLE_ID(), 0);
+            assert(calling_role.role_id == PARENT_VASP_ROLE_ID(), INVALID_ROLE());
             move_to(new_account, RoleId { role_id });
             move_to(new_account, Privilege<ChildVASPRole>{ witness: ChildVASPRole{}, is_extracted: false })
         } else if (role_id == UNHOSTED_ROLE_ID()) {
@@ -251,8 +261,7 @@ module Roles {
             move_to(new_account, RoleId { role_id });
             move_to(new_account, Privilege<UnhostedRole>{ witness: UnhostedRole{}, is_extracted: false })
         } else {
-            // UNRECOGNIZED_ACCOUNT_ROLE
-            abort 2
+            abort(UNRECOGNIZED_ACCOUNT_ROLE())
         }
     }
 
@@ -287,10 +296,10 @@ module Roles {
     acquires Privilege {
         let owner_address = Signer::address_of(account);
         // Privilege doesn't exist
-        assert(exists<Privilege<Priv>>(owner_address), 3);
+        assert(exists<Privilege<Priv>>(owner_address), CoreErrors::INSUFFICIENT_PRIVILEGE());
         let priv = borrow_global_mut<Privilege<Priv>>(owner_address);
         // Make sure this privilege was not previously extracted
-        assert(!priv.is_extracted, 4);
+        assert(!priv.is_extracted, PRIV_ALREADY_EXTRACTED());
         // Set that the privilege is now extracted
         priv.is_extracted = true;
         Capability<Priv> { owner_address }
@@ -309,7 +318,7 @@ module Roles {
         let Capability<Priv>{ owner_address } = cap;
         // Make sure the owner of the privilege when we extracted it is the
         // same as the address we're putting it back under.
-        assert(owner_address == account_address, 4);
+        assert(owner_address == account_address, ACCOUNT_CAPABILITY_ADDR_MISMATCH());
         // Set that the privilege is now put back
         borrow_global_mut<Privilege<Priv>>(owner_address).is_extracted = false;
     }

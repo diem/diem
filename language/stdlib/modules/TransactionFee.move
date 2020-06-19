@@ -1,6 +1,7 @@
 address 0x1 {
 
 module TransactionFee {
+    use 0x1::CoreErrors;
     use 0x1::CoreAddresses;
     use 0x1::Coin1::Coin1;
     use 0x1::Coin2::Coin2;
@@ -9,6 +10,8 @@ module TransactionFee {
     use 0x1::LibraAccount;
     use 0x1::Signer;
     use 0x1::Roles::{Capability, AssociationRootRole, TreasuryComplianceRole};
+
+    fun MODULE_ERROR_BASE(): u64 { 17000 }
 
     /// The `TransactionFeeCollection` resource holds the
     /// `LibraAccount::WithdrawCapability` for the `CoreAddresses::TRANSACTION_FEE_ADDRESS()` account.
@@ -35,7 +38,7 @@ module TransactionFee {
     ) {
         assert(
             Signer::address_of(fee_account) == CoreAddresses::TRANSACTION_FEE_ADDRESS(),
-            0
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
         );
 
         LibraAccount::create_testnet_account<LBR>(
@@ -72,7 +75,7 @@ module TransactionFee {
     acquires TransactionFeeCollection, TransactionFeePreburn {
         assert(
             Signer::address_of(blessed_sender) == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(),
-            0
+            MODULE_ERROR_BASE() + CoreErrors::INSUFFICIENT_PRIVILEGE()
         );
         if (LBR::is_lbr<CoinType>()) {
             let amount = LibraAccount::balance<LBR>(CoreAddresses::TRANSACTION_FEE_ADDRESS());

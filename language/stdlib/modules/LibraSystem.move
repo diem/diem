@@ -1,16 +1,17 @@
-// Error codes:
-// 1100 -> OPERATOR_ACCOUNT_DOES_NOT_EXIST
-// 1101 -> INVALID_TRANSACTION_SENDER
 address 0x1 {
 
 module LibraSystem {
     use 0x1::CoreAddresses;
+    use 0x1::CoreErrors;
     use 0x1::LibraConfig::{Self, CreateOnChainConfig, ModifyConfigCapability};
     use 0x1::Option::{Self, Option};
     use 0x1::Signer;
     use 0x1::ValidatorConfig;
     use 0x1::Vector;
     use 0x1::Roles::Capability;
+
+    fun MODULE_ERROR_BASE(): u64 { 6000 }
+    public fun NOT_A_VALIDATOR(): u64 { MODULE_ERROR_BASE() + CoreErrors::CORE_ERR_RANGE() + 1 }
 
     struct ValidatorInfo {
         addr: address,
@@ -42,7 +43,7 @@ module LibraSystem {
     ) {
         assert(
             Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
-            1
+            MODULE_ERROR_BASE() + CoreErrors::INVALID_SINGLETON_ADDRESS()
         );
 
         let cap = LibraConfig::publish_new_config_with_capability<LibraSystem>(
@@ -59,7 +60,10 @@ module LibraSystem {
     // This copies the vector of validators into the LibraConfig's resource
     // under ValidatorSet address
     fun set_validator_set(value: LibraSystem) acquires CapabilityHolder {
-        LibraConfig::set_with_capability<LibraSystem>(&borrow_global<CapabilityHolder>(CoreAddresses::DEFAULT_CONFIG_ADDRESS()).cap, value)
+        LibraConfig::set_with_capability<LibraSystem>(
+            &borrow_global<CapabilityHolder>(CoreAddresses::DEFAULT_CONFIG_ADDRESS()).cap,
+            value
+        )
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -75,15 +79,18 @@ module LibraSystem {
         // Validator's operator can add its certified validator to the validator set
         assert(
             Signer::address_of(operator) == ValidatorConfig::get_operator(account_address),
-            22
+            MODULE_ERROR_BASE() + CoreErrors::INSUFFICIENT_PRIVILEGE()
         );
 
         // A prospective validator must have a validator config resource
-        assert(is_valid_and_certified(account_address), 33);
+        assert(is_valid_and_certified(account_address), CoreErrors::INSUFFICIENT_PRIVILEGE());
 
         let validator_set = get_validator_set();
         // Ensure that this address is not already a validator
-        assert(!is_validator_(account_address, &validator_set.validators), 18);
+        assert(
+            !is_validator_(account_address, &validator_set.validators),
+            MODULE_ERROR_BASE() + CoreErrors::INSUFFICIENT_PRIVILEGE()
+        );
         // Since ValidatorConfig::is_valid(account_address) == true,
         // it is guaranteed that the config is non-empty
         let config = ValidatorConfig::get_config(account_address);
@@ -102,13 +109,15 @@ module LibraSystem {
         account_address: address
     ) acquires CapabilityHolder {
         // Validator's operator can remove its certified validator from the validator set
-        assert(Signer::address_of(operator) ==
-                            ValidatorConfig::get_operator(account_address), 22);
+        assert(
+            Signer::address_of(operator) == ValidatorConfig::get_operator(account_address),
+            MODULE_ERROR_BASE() + CoreErrors::INSUFFICIENT_PRIVILEGE()
+        );
 
         let validator_set = get_validator_set();
         // Ensure that this address is an active validator
         let to_remove_index_vec = get_validator_index_(&validator_set.validators, account_address);
-        assert(Option::is_some(&to_remove_index_vec), 21);
+        assert(Option::is_some(&to_remove_index_vec), NOT_A_VALIDATOR());
         let to_remove_index = *Option::borrow(&to_remove_index_vec);
         // Remove corresponding ValidatorInfo from the validator set
         _  = Vector::swap_remove(&mut validator_set.validators, to_remove_index);
@@ -128,7 +137,10 @@ module LibraSystem {
     // Invalid or decertified validators will get removed from the Validator Set.
     // NewEpochEvent event will be fired.
     public fun update_and_reconfigure(account: &signer) acquires CapabilityHolder {
-        assert(is_authorized_to_reconfigure_(account), 22);
+        assert(
+            is_authorized_to_reconfigure_(account),
+            MODULE_ERROR_BASE() + CoreErrors::INSUFFICIENT_PRIVILEGE()
+        );
 
         let validator_set = get_validator_set();
         let validators = &mut validator_set.validators;
@@ -176,7 +188,7 @@ module LibraSystem {
     public fun get_validator_config(addr: address): ValidatorConfig::Config {
         let validator_set = get_validator_set();
         let validator_index_vec = get_validator_index_(&validator_set.validators, addr);
-        assert(Option::is_some(&validator_index_vec), 33);
+        assert(Option::is_some(&validator_index_vec), NOT_A_VALIDATOR());
         *&(Vector::borrow(&validator_set.validators, *Option::borrow(&validator_index_vec))).config
     }
 
