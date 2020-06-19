@@ -13,6 +13,8 @@
 
 ## Function `modify_publishing_option`
 
+Modify publishing options. Takes the LCS bytes of a
+<code>VMPublishingOption</code> object as input.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_modify_publishing_option">modify_publishing_option</a>(account: &signer, args: vector&lt;u8&gt;)

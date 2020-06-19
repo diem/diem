@@ -3,10 +3,10 @@ use 0x1::AccountLimits;
 use 0x1::SlidingNonce;
 use 0x1::Roles::{Self, TreasuryComplianceRole};
 
-/// Script for Treasury Comliance Account to optionally update global thresholds
-/// of max balance, total flow (inflow + outflow) (microLBR) for LimitsDefinition bound accounts.
-/// If the new threshold is zero, that particular config does not get updated.
-/// sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
+/// Optionally update global thresholds of max balance, total flow (inflow + outflow) (microLBR)
+/// for `LimitsDefinition` bound accounts.
+/// If a new threshold is 0, that particular config does not get updated.
+/// `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.
 fun update_unhosted_wallet_limits<CoinType>(
     tc_account: &signer,
     sliding_nonce: u64,

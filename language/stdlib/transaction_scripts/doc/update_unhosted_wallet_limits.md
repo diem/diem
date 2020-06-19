@@ -13,10 +13,11 @@
 
 ## Function `update_unhosted_wallet_limits`
 
-Script for Treasury Comliance Account to optionally update global thresholds
-of max balance, total flow (inflow + outflow) (microLBR) for LimitsDefinition bound accounts.
-If the new threshold is zero, that particular config does not get updated.
-sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
+Optionally update global thresholds of max balance, total flow (inflow + outflow) (microLBR)
+for
+<code>LimitsDefinition</code> bound accounts.
+If a new threshold is 0, that particular config does not get updated.
+<code>sliding_nonce</code> is a unique nonce for operation, see sliding_nonce.move for details.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_update_unhosted_wallet_limits">update_unhosted_wallet_limits</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_max_total_flow: u64, new_max_holding_balance: u64)

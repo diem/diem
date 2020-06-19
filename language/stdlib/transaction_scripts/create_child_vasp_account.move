@@ -6,7 +6,8 @@ use 0x1::Roles::{Self, ParentVASPRole};
 /// `child_initial_balance` in `CoinType` and an initial authentication_key
 /// `auth_key_prefix | child_address`.
 /// If `add_all_currencies` is true, the child address will have a zero balance in all available
-/// currencies in the system
+/// currencies in the system.
+/// This account will a child of the transaction sender, which must be a ParentVASP.
 fun create_child_vasp_account<CoinType>(
     parent_vasp: &signer,
     child_address: address,

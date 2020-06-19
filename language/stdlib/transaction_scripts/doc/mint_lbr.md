@@ -13,6 +13,9 @@
 
 ## Function `mint_lbr`
 
+Mint
+<code>amount_lbr</code> LBR from the sending account's constituent coins and deposits the
+resulting LBR into the sending account.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_mint_lbr">mint_lbr</a>(account: &signer, amount_lbr: u64)

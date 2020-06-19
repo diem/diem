@@ -4,9 +4,10 @@ use 0x1::LibraAccount;
 use 0x1::SlidingNonce;
 use 0x1::Roles::{Self, TreasuryComplianceRole};
 
-/// Script for Treasury Comliance Account to mint 'mint_amount' to 'designated_dealer_address' for
-/// 'tier_index' tier
-/// sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
+/// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
+/// Max valid tier index is 3 since there are max 4 tiers per DD.
+/// Sender should be treasury compliance account and receiver authorized DD.
+/// `sliding_nonce` is a unique nonce for operation, see sliding_nonce.move for details.
 fun tiered_mint<CoinType>(
     tc_account: &signer,
     sliding_nonce: u64,

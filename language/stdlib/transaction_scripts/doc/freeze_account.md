@@ -13,8 +13,9 @@
 
 ## Function `freeze_account`
 
-Script for freezing account by authorized initiator
-sliding_nonce is a unique nonce for operation, see sliding_nonce.move for details
+Freeze account
+<code>address</code>. Initiator must be authorized.
+<code>sliding_nonce</code> is a unique nonce for operation, see sliding_nonce.move for details.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_freeze_account">freeze_account</a>(account: &signer, sliding_nonce: u64, to_freeze_account: address)

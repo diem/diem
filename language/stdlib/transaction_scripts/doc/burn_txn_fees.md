@@ -13,6 +13,9 @@
 
 ## Function `burn_txn_fees`
 
+Burn transaction fees that have been collected in the given
+<code>currency</code>
+and relinquish to the association. The currency must be non-synthetic.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_burn_txn_fees">burn_txn_fees</a>&lt;CoinType&gt;(blessed_account: &signer)

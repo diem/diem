@@ -13,6 +13,9 @@
 
 ## Function `rotate_compliance_public_key`
 
+Encode a program that rotates
+<code>vasp_root_addr</code>'s compliance public key to
+<code>new_key</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_compliance_public_key">rotate_compliance_public_key</a>(vasp: &signer, new_key: vector&lt;u8&gt;)

@@ -13,6 +13,7 @@
 
 ## Function `main`
 
+Update configs of all the validators and emit reconfiguration event.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_main">main</a>(account: &signer)

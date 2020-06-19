@@ -13,8 +13,8 @@
 
 ## Function `create_designated_dealer`
 
-Script for Treasury Compliance Account to create designated dealer account at 'new_account_address'
-and 'auth_key_prefix' for nonsynthetic CoinType. Creates dealer and preburn resource for dd.
+Create designated dealer account at 'new_account_address' and 'auth_key_prefix' for nonsynthetic CoinType.
+Create dealer and preburn resource.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)

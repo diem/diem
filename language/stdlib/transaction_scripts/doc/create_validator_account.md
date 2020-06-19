@@ -13,6 +13,9 @@
 
 ## Function `create_validator_account`
 
+Create a validator account at
+<code>new_validator_address</code> with
+<code>auth_key_prefix</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_validator_account">create_validator_account</a>(creator: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)

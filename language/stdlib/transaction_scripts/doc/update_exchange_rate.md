@@ -13,7 +13,9 @@
 
 ## Function `update_exchange_rate`
 
-Script for Treasury Comliance Account to update <Currency> to LBR rate
+Update the on-chain exchange rate to LBR for the given
+<code>currency</code> to be given by
+<code>new_exchange_rate_denominator/new_exchange_rate_numerator</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_update_exchange_rate">update_exchange_rate</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, new_exchange_rate_denominator: u64, new_exchange_rate_numerator: u64)

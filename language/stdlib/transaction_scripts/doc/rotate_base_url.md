@@ -13,6 +13,9 @@
 
 ## Function `rotate_base_url`
 
+Rotate
+<code>vasp_root_addr</code>'s base URL to
+<code>new_url</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_base_url">rotate_base_url</a>(vasp: &signer, new_url: vector&lt;u8&gt;)

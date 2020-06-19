@@ -13,6 +13,10 @@
 
 ## Function `add_currency_to_account`
 
+Add the currency identified by the type
+<code>currency</code> to the sending accounts.
+Aborts if the account already holds a balance fo
+<code>currency</code> type.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_add_currency_to_account">add_currency_to_account</a>&lt;Currency&gt;(account: &signer)
