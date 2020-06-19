@@ -61,8 +61,6 @@ struct Args {
     #[structopt(long, group = "action")]
     perf_run: bool,
     #[structopt(long, group = "action")]
-    cleanup: bool,
-    #[structopt(long, group = "action")]
     run_ci_suite: bool,
 
     #[structopt(last = true)]
@@ -125,35 +123,10 @@ pub async fn main() {
         let util = BasicSwarmUtil::setup(&args);
         exit_on_error(util.diag().await);
         return;
-    } else if args.emit_tx {
-        let thread_params = EmitThreadParams {
-            wait_millis: args.wait_millis,
-            wait_committed: !args.burst,
-        };
-        let duration = Duration::from_secs(args.duration);
-        if args.swarm {
-            let util = BasicSwarmUtil::setup(&args);
-            emit_tx(
-                &util.cluster,
-                args.accounts_per_client,
-                args.workers_per_ac,
-                thread_params,
-                duration,
-            )
-            .await;
-            return;
-        } else {
-            let util = ClusterUtil::setup(&args).await;
-            emit_tx(
-                &util.cluster,
-                args.accounts_per_client,
-                args.workers_per_ac,
-                thread_params,
-                duration,
-            )
-            .await;
-            return;
-        }
+    } else if args.emit_tx && args.swarm {
+        let util = BasicSwarmUtil::setup(&args);
+        exit_on_error(emit_tx(&util.cluster, &args).await);
+        return;
     } else if args.health_check && args.swarm {
         let util = BasicSwarmUtil::setup(&args);
         let logs = DebugPortLogWorker::spawn_new(&util.cluster).0;
@@ -165,41 +138,9 @@ pub async fn main() {
 
     let mut runner = ClusterTestRunner::setup(&args).await;
 
-    let mut perf_msg = None;
-
-    if args.health_check {
-        let duration = Duration::from_secs(args.duration);
-        exit_on_error(
-            run_health_check(&runner.logs, &mut runner.health_check_runner, duration).await,
-        );
-    } else if args.perf_run {
-        perf_msg = Some(exit_on_error(runner.perf_run().await));
-    } else if args.cleanup {
-        runner.cleanup().await;
-    } else if args.run_ci_suite {
-        perf_msg = Some(exit_on_error(runner.run_ci_suite().await));
-    } else if let Some(experiment_name) = args.run {
-        let result = runner
-            .cleanup_and_run(get_experiment(
-                &experiment_name,
-                &args.last,
-                &runner.cluster,
-            ))
-            .await;
-        runner.cleanup().await;
-        runner.teardown().await;
-
-        exit_on_error(result);
-        info!(
-            "{}Experiment Result: {}{}",
-            style::Bold,
-            runner.report,
-            style::Reset
-        );
-    } else if args.changelog.is_none() && args.deploy.is_none() {
-        println!("No action specified");
-        process::exit(1);
-    }
+    let result = handle_cluster_test_runner_commands(&args, &mut runner).await;
+    runner.teardown().await;
+    let perf_msg = exit_on_error(result);
 
     if let Some(mut changelog) = args.changelog {
         if changelog.len() != 2 {
@@ -216,6 +157,36 @@ pub async fn main() {
     } else if let Some(perf_msg) = perf_msg {
         println!("{}", perf_msg);
     }
+}
+
+// This function contain handlers for commands that require cluster running for executing them
+async fn handle_cluster_test_runner_commands(
+    args: &Args,
+    runner: &mut ClusterTestRunner,
+) -> Result<Option<String>> {
+    runner.wait_until_all_healthy().await?;
+    let mut perf_msg = None;
+    if args.health_check {
+        let duration = Duration::from_secs(args.duration);
+        run_health_check(&runner.logs, &mut runner.health_check_runner, duration).await?
+    } else if args.perf_run {
+        perf_msg = Some(runner.perf_run().await?);
+    } else if args.run_ci_suite {
+        perf_msg = Some(runner.run_ci_suite().await?);
+    } else if let Some(experiment_name) = args.run.as_ref() {
+        runner
+            .run_and_report(get_experiment(experiment_name, &args.last, &runner.cluster))
+            .await?;
+        info!(
+            "{}Experiment Result: {}{}",
+            style::Bold,
+            runner.report,
+            style::Reset
+        );
+    } else if args.emit_tx {
+        emit_tx(&runner.cluster, &args).await?;
+    }
+    Ok(perf_msg)
 }
 
 fn exit_on_error<T>(r: Result<T>) -> T {
@@ -285,13 +256,14 @@ fn parse_host_port(s: &str) -> Result<(String, u32, Option<u32>)> {
     Ok((host, port, None))
 }
 
-pub async fn emit_tx(
-    cluster: &Cluster,
-    accounts_per_client: usize,
-    workers_per_ac: Option<usize>,
-    thread_params: EmitThreadParams,
-    duration: Duration,
-) {
+async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
+    let accounts_per_client = args.accounts_per_client;
+    let workers_per_ac = args.workers_per_ac;
+    let thread_params = EmitThreadParams {
+        wait_millis: args.wait_millis,
+        wait_committed: !args.burst,
+    };
+    let duration = Duration::from_secs(args.duration);
     let mut emitter = TxEmitter::new(cluster);
     let job = emitter
         .start_job(EmitJobRequest {
@@ -301,7 +273,7 @@ pub async fn emit_tx(
             thread_params,
         })
         .await
-        .expect("Failed to start emit job");
+        .map_err(|e| format_err!("Failed to start emit job: {}", e))?;
     let deadline = Instant::now() + duration;
     let mut prev_stats: Option<TxStats> = None;
     while Instant::now() < deadline {
@@ -315,6 +287,7 @@ pub async fn emit_tx(
     let stats = emitter.stop_job(job).await;
     println!("Total stats: {}", stats);
     println!("Average rate: {}", stats.rate(duration));
+    Ok(())
 }
 
 async fn run_health_check(
@@ -436,7 +409,10 @@ impl ClusterUtil {
         let cluster_swarm = ClusterSwarmKube::new()
             .await
             .expect("Failed to initialize ClusterSwarmKube");
-        cluster_swarm.delete_all().await.expect("delete_all failed");
+        cluster_swarm
+            .cleanup()
+            .await
+            .expect("cleanup on startup failed");
         let current_tag = args.deploy.as_deref().unwrap_or("master");
         info!(
             "Deploying with {} tag for validators and fullnodes",
@@ -502,6 +478,7 @@ impl ClusterUtil {
 
 impl ClusterTestRunner {
     pub async fn teardown(&mut self) {
+        self.cluster_swarm.cleanup().await.expect("Cleanup failed");
         let workspace = self
             .cluster_swarm
             .get_workspace()
@@ -577,7 +554,6 @@ impl ClusterTestRunner {
     pub async fn run_ci_suite(&mut self) -> Result<String> {
         let suite = ExperimentSuite::new_pre_release(&self.cluster);
         let result = self.run_suite(suite).await;
-        self.cluster_swarm.delete_all().await?;
         result?;
         let perf_msg = format!("Performance report:\n```\n{}\n```", self.report);
         Ok(perf_msg)
@@ -630,14 +606,11 @@ impl ClusterTestRunner {
         let suite_started = Instant::now();
         for experiment in suite.experiments {
             let experiment_name = format!("{}", experiment);
-            let result = self
-                .run_single_experiment(experiment, None)
+            self.run_single_experiment(experiment, None)
                 .await
-                .map_err(move |e| format_err!("Experiment `{}` failed: `{}`", experiment_name, e));
-            if result.is_err() {
-                self.teardown().await;
-                return result;
-            }
+                .map_err(move |e| {
+                    format_err!("Experiment `{}` failed: `{}`", experiment_name, e)
+                })?;
             delay_for(self.experiment_interval).await;
         }
         info!(
@@ -645,7 +618,6 @@ impl ClusterTestRunner {
             Instant::now().duration_since(suite_started)
         );
         self.print_report();
-        self.teardown().await;
         Ok(())
     }
 
@@ -664,12 +636,10 @@ impl ClusterTestRunner {
         Ok(self.report.to_string())
     }
 
-    pub async fn cleanup_and_run(&mut self, experiment: Box<dyn Experiment>) -> Result<()> {
-        self.cleanup().await;
+    pub async fn run_and_report(&mut self, experiment: Box<dyn Experiment>) -> Result<()> {
         let result = self
             .run_single_experiment(experiment, Some(self.global_emit_job_request.clone()))
             .await;
-        self.cluster_swarm.delete_all().await?;
         result?;
         self.print_report();
         Ok(())
@@ -680,7 +650,6 @@ impl ClusterTestRunner {
         experiment: Box<dyn Experiment>,
         global_emit_job_request: Option<EmitJobRequest>,
     ) -> Result<()> {
-        self.wait_until_all_healthy().await?;
         let events = self.logs.recv_all();
         if let Err(s) = self
             .health_check_runner
@@ -763,7 +732,7 @@ impl ClusterTestRunner {
     }
 
     async fn wait_until_all_healthy(&mut self) -> Result<()> {
-        info!("Waiting for all validators to be healthy");
+        info!("Waiting for all nodes to be healthy");
         let wait_deadline = Instant::now() + Duration::from_secs(5 * 60);
         for instance in self.cluster.validator_instances() {
             self.health_check_runner.invalidate(instance.peer_name());
@@ -771,7 +740,7 @@ impl ClusterTestRunner {
         loop {
             let now = Instant::now();
             if now > wait_deadline {
-                bail!("Validators did not become healthy after deployment");
+                bail!("Nodes did not become healthy after deployment");
             }
             let deadline = now + HEALTH_POLL_INTERVAL;
             let events = self.logs.recv_all_until_deadline(deadline);
@@ -785,7 +754,9 @@ impl ClusterTestRunner {
                 }
             }
         }
-        info!("All validators are now healthy. Checking json rpc endpoints of validators and full nodes");
+        info!(
+            "All nodes are now healthy. Checking json rpc endpoints of validators and full nodes"
+        );
         loop {
             let results = join_all(self.cluster.all_instances().map(Instance::try_json_rpc)).await;
 
@@ -812,12 +783,5 @@ impl ClusterTestRunner {
                 info!("Failed to send slack message: {}", e);
             }
         }
-    }
-
-    async fn cleanup(&mut self) {
-        self.cluster_swarm
-            .remove_all_network_effects()
-            .await
-            .expect("remove_all_network_effects failed on cluster_swarm");
     }
 }
