@@ -381,7 +381,6 @@ impl Client {
     pub fn unsealed(&self) -> Result<bool, Error> {
         let request = ureq::get(&format!("{}/v1/sys/seal-status", self.host));
         let resp = self.upgrade_request_without_token(request).call();
-        println!("{:?}", resp.synthetic_error());
         match resp.status() {
             200 => {
                 let resp: SealStatusResponse = serde_json::from_str(&resp.into_string()?)?;
