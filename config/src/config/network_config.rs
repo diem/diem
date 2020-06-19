@@ -37,22 +37,22 @@ pub type SeedPeersConfig = HashMap<PeerId, Vec<NetworkAddress>>;
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct NetworkConfig {
+    pub connectivity_check_interval_ms: u64,
+    // Enable this network to use either gossip discovery or onchain discovery.
+    pub discovery_method: DiscoveryMethod,
+    pub identity: Identity,
     // TODO: Add support for multiple listen/advertised addresses in config.
     // The address that this node is listening on for new connections.
     pub listen_address: NetworkAddress,
-    pub connectivity_check_interval_ms: u64,
     // Select this to enforce that both peers should authenticate each other, otherwise
     // authentication only occurs for outgoing connections.
     pub mutual_authentication: bool,
+    pub network_id: NetworkId,
     // Leveraged by mutual_authentication for incoming peers that may not have a well-defined
     // network address.
     pub network_peers: NetworkPeersConfig,
     // Initial set of peers to connect to
     pub seed_peers: SeedPeersConfig,
-    // Enable this network to use either gossip discovery or onchain discovery.
-    pub discovery_method: DiscoveryMethod,
-    pub identity: Identity,
-    pub network_id: NetworkId,
 }
 
 impl Default for NetworkConfig {
@@ -64,12 +64,12 @@ impl Default for NetworkConfig {
 impl NetworkConfig {
     pub fn network_with_id(network_id: NetworkId) -> NetworkConfig {
         let mut config = Self {
-            network_id,
-            listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             connectivity_check_interval_ms: 5000,
-            mutual_authentication: false,
             discovery_method: DiscoveryMethod::None,
             identity: Identity::None,
+            listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+            mutual_authentication: false,
+            network_id,
             network_peers: HashMap::default(),
             seed_peers: HashMap::default(),
         };
@@ -83,12 +83,12 @@ impl NetworkConfig {
     /// template for another config.
     pub fn clone_for_template(&self) -> Self {
         Self {
-            network_id: self.network_id.clone(),
-            listen_address: self.listen_address.clone(),
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
-            mutual_authentication: self.mutual_authentication,
             discovery_method: self.discovery_method.clone(),
             identity: Identity::None,
+            listen_address: self.listen_address.clone(),
+            mutual_authentication: self.mutual_authentication,
+            network_id: self.network_id.clone(),
             network_peers: self.network_peers.clone(),
             seed_peers: self.seed_peers.clone(),
         }
@@ -252,9 +252,9 @@ impl Identity {
 
     pub fn from_storage(key_name: String, peer_id_name: String, backend: SecureBackend) -> Self {
         Identity::FromStorage(IdentityFromStorage {
+            backend,
             key_name,
             peer_id_name,
-            backend,
         })
     }
 
@@ -282,7 +282,7 @@ pub struct IdentityFromConfig {
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct IdentityFromStorage {
+    pub backend: SecureBackend,
     pub key_name: String,
     pub peer_id_name: String,
-    pub backend: SecureBackend,
 }

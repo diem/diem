@@ -16,13 +16,12 @@ const DEFAULT_TXN_EXPIRATION_SECS: u64 = 3600; // 1 hour
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct KeyManagerConfig {
+    pub logger: LoggerConfig,
+    pub json_rpc_endpoint: String,
     pub rotation_period_secs: u64,
+    pub secure_backend: SecureBackend,
     pub sleep_period_secs: u64,
     pub txn_expiration_secs: u64,
-
-    pub json_rpc_endpoint: String,
-    pub logger: LoggerConfig,
-    pub secure_backend: SecureBackend,
 }
 
 impl Default for KeyManagerConfig {

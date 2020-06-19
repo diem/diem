@@ -8,8 +8,6 @@ use serde::{Deserialize, Serialize};
 pub struct StateSyncConfig {
     // Size of chunk to request for state synchronization
     pub chunk_limit: u64,
-    // interval used for checking state synchronization progress
-    pub tick_interval_ms: u64,
     // default timeout used for long polling to remote peer
     pub long_poll_timeout_ms: u64,
     // valid maximum chunk limit for sanity check
@@ -18,17 +16,19 @@ pub struct StateSyncConfig {
     pub max_timeout_ms: u64,
     // default timeout for sync request
     pub sync_request_timeout_ms: u64,
+    // interval used for checking state synchronization progress
+    pub tick_interval_ms: u64,
 }
 
 impl Default for StateSyncConfig {
     fn default() -> Self {
         Self {
             chunk_limit: 250,
-            tick_interval_ms: 100,
             long_poll_timeout_ms: 30000,
             max_chunk_limit: 1000,
             max_timeout_ms: 120_000,
             sync_request_timeout_ms: 60_000,
+            tick_interval_ms: 100,
         }
     }
 }
