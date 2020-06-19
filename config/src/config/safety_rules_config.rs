@@ -48,6 +48,7 @@ pub enum SafetyRulesService {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct RemoteService {
     pub server_address: SocketAddr,
 }

@@ -95,6 +95,7 @@ pub enum ExecutionCorrectnessService {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct RemoteExecutionService {
     pub server_address: SocketAddr,
 }

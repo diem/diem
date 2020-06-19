@@ -15,6 +15,7 @@ type AccountKeyPair = KeyPair<Ed25519PrivateKey>;
 type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct TestConfig {
     pub auth_key: Option<AuthenticationKey>,
     #[serde(rename = "operator_private_key")]
