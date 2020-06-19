@@ -283,6 +283,9 @@
 <span id="283">283</span>
 <span id="284">284</span>
 <span id="285">285</span>
+<span id="286">286</span>
+<span id="287">287</span>
+<span id="288">288</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -514,6 +517,7 @@
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GossipConfig</span> {
     <span class="comment">// The address that this node advertises to other nodes for the discovery protocol.</span>
     <span class="kw">pub</span> <span class="ident">advertised_address</span>: <span class="ident">NetworkAddress</span>,
@@ -555,6 +559,7 @@
 <span class="doccomment">/// The identity is stored within the config.</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>), <span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>))]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IdentityFromConfig</span> {
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;key&quot;</span>)]</span>
     <span class="kw">pub</span> <span class="ident">keypair</span>: <span class="ident">KeyPair</span><span class="op">&lt;</span><span class="ident">x25519</span>::<span class="ident">PrivateKey</span><span class="op">&gt;</span>,
@@ -564,6 +569,7 @@
 <span class="doccomment">/// This represents an identity in a secure-storage as defined in NodeConfig::secure.</span>
 <span class="attribute">#[<span class="ident">cfg_attr</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>), <span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">PartialEq</span>))]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">IdentityFromStorage</span> {
     <span class="kw">pub</span> <span class="ident">key_name</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">peer_id_name</span>: <span class="ident">String</span>,

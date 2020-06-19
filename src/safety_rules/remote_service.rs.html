@@ -60,7 +60,6 @@
 <span id="60">60</span>
 <span id="61">61</span>
 <span id="62">62</span>
-<span id="63">63</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -70,7 +69,6 @@
     <span class="ident">serializer</span>::{<span class="ident">SafetyRulesInput</span>, <span class="ident">SerializerClient</span>, <span class="ident">SerializerService</span>, <span class="ident">TSerializerClient</span>},
     <span class="ident">Error</span>, <span class="ident">SafetyRules</span>,
 };
-<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::<span class="ident">Author</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">warn</span>;
 <span class="kw">use</span> <span class="ident">libra_secure_net</span>::{<span class="ident">NetworkClient</span>, <span class="ident">NetworkServer</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">net</span>::<span class="ident">SocketAddr</span>;
@@ -85,8 +83,8 @@
     <span class="kw">fn</span> <span class="ident">server_address</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SocketAddr</span>;
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="ident">author</span>: <span class="ident">Author</span>, <span class="ident">storage</span>: <span class="ident">PersistentSafetyStorage</span>, <span class="ident">listen_addr</span>: <span class="ident">SocketAddr</span>) {
-    <span class="kw">let</span> <span class="ident">safety_rules</span> <span class="op">=</span> <span class="ident">SafetyRules</span>::<span class="ident">new</span>(<span class="ident">author</span>, <span class="ident">storage</span>);
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="ident">storage</span>: <span class="ident">PersistentSafetyStorage</span>, <span class="ident">listen_addr</span>: <span class="ident">SocketAddr</span>) {
+    <span class="kw">let</span> <span class="ident">safety_rules</span> <span class="op">=</span> <span class="ident">SafetyRules</span>::<span class="ident">new</span>(<span class="ident">storage</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">serializer_service</span> <span class="op">=</span> <span class="ident">SerializerService</span>::<span class="ident">new</span>(<span class="ident">safety_rules</span>);
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network_server</span> <span class="op">=</span> <span class="ident">NetworkServer</span>::<span class="ident">new</span>(<span class="ident">listen_addr</span>);
 

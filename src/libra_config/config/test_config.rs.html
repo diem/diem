@@ -128,6 +128,7 @@
 <span id="128">128</span>
 <span id="129">129</span>
 <span id="130">130</span>
+<span id="131">131</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -146,6 +147,7 @@
 <span class="kw">type</span> <span class="ident">ConsensusKeyPair</span> <span class="op">=</span> <span class="ident">KeyPair</span><span class="op">&lt;</span><span class="ident">Ed25519PrivateKey</span><span class="op">&gt;</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">serde</span>(<span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">TestConfig</span> {
     <span class="kw">pub</span> <span class="ident">auth_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AuthenticationKey</span><span class="op">&gt;</span>,
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">rename</span> <span class="op">=</span> <span class="string">&quot;operator_private_key&quot;</span>)]</span>
