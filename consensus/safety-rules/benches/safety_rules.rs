@@ -55,10 +55,11 @@ fn in_memory(n: u64) {
     let waypoint = test_utils::validator_signers_to_waypoint(&[&signer]);
     let storage = PersistentSafetyStorage::initialize(
         Storage::from(InMemoryStorage::new()),
+        signer.author(),
         signer.private_key().clone(),
         waypoint,
     );
-    let safety_rules_manager = SafetyRulesManager::new_local(signer.author(), storage);
+    let safety_rules_manager = SafetyRulesManager::new_local(storage);
     lsr(safety_rules_manager.client(), signer, n);
 }
 
@@ -68,10 +69,11 @@ fn on_disk(n: u64) {
     let waypoint = test_utils::validator_signers_to_waypoint(&[&signer]);
     let storage = PersistentSafetyStorage::initialize(
         Storage::from(OnDiskStorage::new(file_path)),
+        signer.author(),
         signer.private_key().clone(),
         waypoint,
     );
-    let safety_rules_manager = SafetyRulesManager::new_local(signer.author(), storage);
+    let safety_rules_manager = SafetyRulesManager::new_local(storage);
     lsr(safety_rules_manager.client(), signer, n);
 }
 
@@ -81,10 +83,11 @@ fn serializer(n: u64) {
     let waypoint = test_utils::validator_signers_to_waypoint(&[&signer]);
     let storage = PersistentSafetyStorage::initialize(
         Storage::from(OnDiskStorage::new(file_path)),
+        signer.author(),
         signer.private_key().clone(),
         waypoint,
     );
-    let safety_rules_manager = SafetyRulesManager::new_serializer(signer.author(), storage);
+    let safety_rules_manager = SafetyRulesManager::new_serializer(storage);
     lsr(safety_rules_manager.client(), signer, n);
 }
 
@@ -94,10 +97,11 @@ fn thread(n: u64) {
     let waypoint = test_utils::validator_signers_to_waypoint(&[&signer]);
     let storage = PersistentSafetyStorage::initialize(
         Storage::from(OnDiskStorage::new(file_path)),
+        signer.author(),
         signer.private_key().clone(),
         waypoint,
     );
-    let safety_rules_manager = SafetyRulesManager::new_thread(signer.author(), storage);
+    let safety_rules_manager = SafetyRulesManager::new_thread(storage);
     lsr(safety_rules_manager.client(), signer, n);
 }
 

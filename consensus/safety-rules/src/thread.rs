@@ -11,7 +11,6 @@ use crate::{
     persistent_safety_storage::PersistentSafetyStorage,
     remote_service::{self, RemoteService},
 };
-use consensus_types::common::Author;
 use libra_config::utils;
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
@@ -26,12 +25,12 @@ pub struct ThreadService {
 }
 
 impl ThreadService {
-    pub fn new(author: Author, storage: PersistentSafetyStorage) -> Self {
+    pub fn new(storage: PersistentSafetyStorage) -> Self {
         let listen_port = utils::get_available_port();
         let listen_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), listen_port);
         let server_addr = listen_addr;
 
-        let child = thread::spawn(move || remote_service::execute(author, storage, listen_addr));
+        let child = thread::spawn(move || remote_service::execute(storage, listen_addr));
 
         Self {
             _child: child,

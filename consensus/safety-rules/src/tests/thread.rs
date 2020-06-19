@@ -12,7 +12,7 @@ fn test() {
 fn safety_rules() -> (Box<dyn TSafetyRules>, ValidatorSigner) {
     let signer = ValidatorSigner::from_int(0);
     let storage = test_utils::test_storage(&signer);
-    let safety_rules_manager = SafetyRulesManager::new_thread(signer.author(), storage);
+    let safety_rules_manager = SafetyRulesManager::new_thread(storage);
     let safety_rules = safety_rules_manager.client();
     (safety_rules, signer)
 }

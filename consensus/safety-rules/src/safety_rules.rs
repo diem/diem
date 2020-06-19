@@ -23,26 +23,20 @@ use libra_types::{
 /// 3) ownership of the consensus private key
 /// @TODO add a benchmark to evaluate SafetyRules
 /// @TODO consider a cache of verified QCs to cut down on verification costs
-/// @TODO bootstrap with a hash of a ledger info (waypoint) that includes a validator set
-/// @TODO update storage with hash of ledger info (waypoint) during epoch changes (includes a new validator
-/// set)
 pub struct SafetyRules {
     persistent_storage: PersistentSafetyStorage,
     validator_signer: Option<ValidatorSigner>,
     validator_verifier: Option<ValidatorVerifier>,
-    author: Author,
 }
 
 impl SafetyRules {
     /// Constructs a new instance of SafetyRules with the given persistent storage and the
     /// consensus private keys
-    /// @TODO replace this with an API that takes in a SafetyRulesConfig
-    pub fn new(author: Author, persistent_storage: PersistentSafetyStorage) -> Self {
+    pub fn new(persistent_storage: PersistentSafetyStorage) -> Self {
         Self {
             persistent_storage,
             validator_signer: None,
             validator_verifier: None,
-            author,
         }
     }
 
@@ -104,7 +98,8 @@ impl SafetyRules {
     ///     1. Validator not in the set
     ///     2. Validator in the set, but no matching key found in storage
     fn reconcile_key(&mut self, epoch_state: &EpochState) -> Result<(), Error> {
-        if let Some(expected_key) = epoch_state.verifier.get_public_key(&self.author) {
+        let author = self.persistent_storage.author()?;
+        if let Some(expected_key) = epoch_state.verifier.get_public_key(&author) {
             let curr_key = self.signer().ok().map(|s| s.public_key());
             if curr_key != Some(expected_key.clone()) {
                 let consensus_key = self
@@ -120,9 +115,9 @@ impl SafetyRules {
                     })?;
                 debug!(
                     "Reconciled pub key for signer {} [{:#?} -> {}]",
-                    self.author, curr_key, expected_key
+                    author, curr_key, expected_key
                 );
-                self.validator_signer = Some(ValidatorSigner::new(self.author, consensus_key));
+                self.validator_signer = Some(ValidatorSigner::new(author, consensus_key));
             } else {
                 debug!("Validator key matches the key in validator set.");
             }

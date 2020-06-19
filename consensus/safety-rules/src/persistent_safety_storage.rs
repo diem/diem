@@ -2,9 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use consensus_types::common::Round;
+use consensus_types::common::{Author, Round};
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
-use libra_global_constants::{CONSENSUS_KEY, EPOCH, LAST_VOTED_ROUND, PREFERRED_ROUND, WAYPOINT};
+use libra_global_constants::{
+    CONSENSUS_KEY, EPOCH, LAST_VOTED_ROUND, OPERATOR_ACCOUNT, PREFERRED_ROUND, WAYPOINT,
+};
 use libra_secure_storage::{CryptoStorage, InMemoryStorage, KVStorage, Storage, Value};
 use libra_types::waypoint::Waypoint;
 use std::str::FromStr;
@@ -21,29 +23,32 @@ pub struct PersistentSafetyStorage {
 impl PersistentSafetyStorage {
     pub fn in_memory(private_key: Ed25519PrivateKey) -> Self {
         let storage = Storage::from(InMemoryStorage::new());
-        Self::initialize(storage, private_key, Waypoint::default())
+        Self::initialize(storage, Author::random(), private_key, Waypoint::default())
     }
 
     /// Use this to instantiate a PersistentStorage for a new data store, one that has no
     /// SafetyRules values set.
     pub fn initialize(
         mut internal_store: Storage,
+        author: Author,
         private_key: Ed25519PrivateKey,
         waypoint: Waypoint,
     ) -> Self {
-        Self::initialize_(&mut internal_store, private_key, waypoint)
+        Self::initialize_(&mut internal_store, author, private_key, waypoint)
             .expect("Unable to initialize backend storage");
         Self { internal_store }
     }
 
     fn initialize_(
         internal_store: &mut Storage,
+        author: Author,
         private_key: Ed25519PrivateKey,
         waypoint: Waypoint,
     ) -> Result<()> {
         internal_store.import_private_key(CONSENSUS_KEY, private_key)?;
         internal_store.set(EPOCH, Value::U64(1))?;
         internal_store.set(LAST_VOTED_ROUND, Value::U64(0))?;
+        internal_store.set(OPERATOR_ACCOUNT, Value::String(author.to_string()))?;
         internal_store.set(PREFERRED_ROUND, Value::U64(0))?;
         internal_store.set(WAYPOINT, Value::String(waypoint.to_string()))?;
         Ok(())
@@ -53,6 +58,12 @@ impl PersistentSafetyStorage {
     /// for constructed environments.
     pub fn new(internal_store: Storage) -> Self {
         Self { internal_store }
+    }
+
+    pub fn author(&self) -> Result<Author> {
+        let res = self.internal_store.get(OPERATOR_ACCOUNT)?;
+        let res = res.value.string()?;
+        std::str::FromStr::from_str(&res)
     }
 
     pub fn consensus_key_for_version(

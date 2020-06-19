@@ -678,8 +678,9 @@ fn test_reconcile_key(_func: Callback) {
     // Initialize the storage with two versions of signer keys
     let signer = ValidatorSigner::from_int(0);
     let mut storage = test_utils::test_storage(&signer);
+
     let new_pub_key = storage.internal_store().rotate_key(CONSENSUS_KEY).unwrap();
-    let mut safety_rules = Box::new(SafetyRules::new(signer.author(), storage));
+    let mut safety_rules = Box::new(SafetyRules::new(storage));
 
     let (proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
