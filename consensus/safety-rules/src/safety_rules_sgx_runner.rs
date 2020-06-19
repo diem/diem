@@ -12,12 +12,15 @@ extern crate enclave_runner;
 extern crate sgxs_loaders;
 
 use aesm_client::AesmClient;
-use enclave_runner::usercalls::{SyncListener, SyncStream, UsercallExtension};
-//use enclave_runner::usercalls::{AsyncListener, UsercallExtension};
+use enclave_runner::usercalls::{SyncStream, UsercallExtension};
 use std::io::{Read, Write, Result as IoResult};
 use std::thread;
 use enclave_runner::EnclaveBuilder;
 use sgxs_loaders::isgx::Device as IsgxDevice;
+use std::process::{Child, Command, Stdio};
+use tokio::sync::lock::Lock;
+use tokio::prelude::Async;
+
 
 
 /// This example demonstrates use of usercall extensions for bind call.
@@ -42,35 +45,68 @@ fn parse_args() -> Result<String, ()> {
 	Ok("dummy.sgxs".into())
 }
 
+struct LSRService{
+    c: Lock<Child>,
+}
+
+impl LSRService{
+    fn new() -> Result<LSRService, std::io::Error> {
+        Command::new("/bin/cat")
+            .stdout(Stdio::piped())
+            .stdin(Stdio::piped())
+            .spawn()
+            .map(|c| Lock::new(c))
+            .map(|c| LSRService{ c })
+    }
+}
+
+macro_rules! poll_lock_wouldblock {
+    ($lock:expr) => {
+        match $lock.clone().poll_lock() {
+            Async::NotReady => Err(std::io::ErrorKind::WouldBlock.into()),
+            Async::Ready(ret) => IoResult::Ok(ret),
+        }
+    }
+}
+
+
+impl SyncStream for LSRService {
+    fn read(&self, buf: &mut [u8]) -> IoResult<usize> {
+        poll_lock_wouldblock!(self.c)?.stdout.as_mut().unwrap().read(buf)
+    }
+
+    fn write(&self, buf: &[u8]) -> IoResult<usize> {
+        poll_lock_wouldblock!(self.c)?.stdin.as_mut().unwrap().write(buf)
+    }
+
+    fn flush(&self) -> IoResult<()> {
+        poll_lock_wouldblock!(self.c)?.stdin.as_mut().unwrap().flush()
+    }
+
+
+}
+
 #[derive(Debug)]
-struct LSRService;
-impl UsercallExtension for LSRService {
-	fn connect_stream(
-	&self,
-	_addr: &str,
-	_local_addr: Option<&mut String>,
+struct ExternalService;
+// Ignoring local_addr and peer_addr, as they are not relavent in the current context.
+impl UsercallExtension for ExternalService {
+    fn connect_stream(
+        &self,
+        addr: &str,
+        _local_addr: Option<&mut String>,
         _peer_addr: Option<&mut String>,
-	) -> IoResult<Option<Box<dyn SyncStream>>> {
-		Ok(None)
-	}
-}
-
-impl Read for LSRService {
-    fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
-        IoResult::Ok().stdout.as_mut().unwrap().read(buf)
+    ) -> IoResult<Option<Box<dyn SyncStream>>> {
+        // If the passed address is not "cat", we return none, whereby the passed address gets treated as
+        // an IP address which is the default behavior.
+        match &*addr {
+            "cat" => {
+                let stream = LSRService::new()?;
+                Ok(Some(Box::new(stream)))
+            }
+            _ => Ok(None),
+        }
     }
 }
-
-impl Write for LSRService {
-    fn write(&mut self, buf: &mut[u8]) -> IoResult<usize> {
-        IoResult::new(10u8)
-    }
-
-    fn flush(&mut self) -> IoResult<()> {
-        Ok(())
-    }
-}
-
 
 fn run_server(file: String) -> Result<(), ()> {
     let mut device = IsgxDevice::new()
@@ -82,7 +118,7 @@ fn run_server(file: String) -> Result<(), ()> {
 
     let mut enclave_builder = EnclaveBuilder::new(file.as_ref());
     enclave_builder.dummy_signature();
-    enclave_builder.usercall_extension(LSRService);
+    enclave_builder.usercall_extension(ExternalService);
     let enclave = enclave_builder.build(&mut device).unwrap();
 
     enclave.run().map_err(|e| {
@@ -95,3 +131,7 @@ pub fn start_lsr_enclave() {
     let server = thread::spawn(move || run_server(file));
     let _ = server.join().unwrap();
 }
+
+
+
+
