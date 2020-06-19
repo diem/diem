@@ -39,14 +39,14 @@ module Roles {
     ///////////////////////////////////////////////////////////////////////////
 
     // TODO: Change these to constants once the source language has them
-    public fun ASSOCIATION_ROOT_ROLE_ID(): u64 { 0 }
-    public fun TREASURY_COMPLIANCE_ROLE_ID(): u64 { 1 }
-    public fun DESIGNATED_DEALER_ROLE_ID(): u64 { 2 }
-    public fun VALIDATOR_ROLE_ID(): u64 { 3 }
-    public fun VALIDATOR_OPERATOR_ROLE_ID(): u64 { 4 }
-    public fun PARENT_VASP_ROLE_ID(): u64 { 5 }
-    public fun CHILD_VASP_ROLE_ID(): u64 { 6 }
-    public fun UNHOSTED_ROLE_ID(): u64 { 7 }
+    fun ASSOCIATION_ROOT_ROLE_ID(): u64 { 0 }
+    fun TREASURY_COMPLIANCE_ROLE_ID(): u64 { 1 }
+    fun DESIGNATED_DEALER_ROLE_ID(): u64 { 2 }
+    fun VALIDATOR_ROLE_ID(): u64 { 3 }
+    fun VALIDATOR_OPERATOR_ROLE_ID(): u64 { 4 }
+    fun PARENT_VASP_ROLE_ID(): u64 { 5 }
+    fun CHILD_VASP_ROLE_ID(): u64 { 6 }
+    fun UNHOSTED_ROLE_ID(): u64 { 7 }
 
     /// The roleId contains the role id for the account. This is only moved
     /// to an account as a top-level resource, and is otherwise immovable.
@@ -209,51 +209,92 @@ module Roles {
     ///    Roles::add_privilege_to_account(account, Roles::R_ROLE_ID());
     /// }
     ///```
-    public fun new_role(
+    ///
+    /// Publish a DesignatedDealer `RoleId` under `new_account`.
+    /// The `creating_account` must be TreasuryCompliance
+    public fun new_designated_dealer_role(
         creating_account: &signer,
         new_account: &signer,
-        role_id: u64,
     ) acquires RoleId {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        if (role_id == DESIGNATED_DEALER_ROLE_ID()) {
-            //assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), 0);
-            assert(calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID(), 0);
-            move_to(new_account, RoleId { role_id });
-            move_to(new_account, Privilege<DesignatedDealerRole>{ witness: DesignatedDealerRole{}, is_extracted: false })
-        } else if (role_id == VALIDATOR_ROLE_ID()) {
-            assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), 0);
-            move_to(new_account, RoleId { role_id });
-            move_to(new_account, Privilege<ValidatorRole>{ witness: ValidatorRole{}, is_extracted: false })
-        } else if (role_id == VALIDATOR_OPERATOR_ROLE_ID()) {
-            assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), 0);
-            move_to(new_account, RoleId { role_id });
-            move_to(new_account, Privilege<ValidatorOperatorRole>{ witness: ValidatorOperatorRole{}, is_extracted: false })
-        } else if (role_id == PARENT_VASP_ROLE_ID()) {
-            assert(
+        //assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), 0);
+        assert(calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID(), 0);
+        move_to(new_account, RoleId { role_id: DESIGNATED_DEALER_ROLE_ID() });
+        move_to(new_account, Privilege<DesignatedDealerRole>{ witness: DesignatedDealerRole{}, is_extracted: false })
+    }
+
+    /// Publish a Validator `RoleId` under `new_account`.
+    /// The `creating_account` must be LibraRoot
+    public fun new_validator_role(
+        creating_account: &signer,
+        new_account: &signer
+    ) acquires RoleId {
+        let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
+        // A role cannot have previously been assigned to `new_account`.
+        assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
+        assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), 0);
+        move_to(new_account, RoleId { role_id: VALIDATOR_ROLE_ID() });
+        move_to(new_account, Privilege<ValidatorRole>{ witness: ValidatorRole{}, is_extracted: false })
+    }
+
+    /// Publish a ValidatorOperator `RoleId` under `new_account`.
+    /// The `creating_account` must be LibraRoot
+    public fun new_validator_operator_role(
+        creating_account: &signer,
+        new_account: &signer,
+    ) acquires RoleId {
+        let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
+        // A role cannot have previously been assigned to `new_account`.
+        assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
+        assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), 0);
+        move_to(new_account, RoleId { role_id: VALIDATOR_OPERATOR_ROLE_ID() });
+        move_to(new_account, Privilege<ValidatorOperatorRole>{ witness: ValidatorOperatorRole{}, is_extracted: false })
+    }
+
+    /// Publish a ParentVASP `RoleId` under `new_account`.
+    /// The `creating_account` must be TreasuryCompliance
+    public fun new_parent_vasp_role(
+        creating_account: &signer,
+        new_account: &signer,
+    ) acquires RoleId {
+        let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
+        // A role cannot have previously been assigned to `new_account`.
+        assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
+        assert(
                 calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID()
                 // XXX/HACK/REMOVE(tzakian): This is for testnet semantics
                 // only. THIS NEEDS TO BE REMOVED.
                 || calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID(),
                 0
             );
-            move_to(new_account, RoleId { role_id });
+            move_to(new_account, RoleId { role_id: PARENT_VASP_ROLE_ID() });
             move_to(new_account, Privilege<ParentVASPRole>{ witness: ParentVASPRole{}, is_extracted: false })
-        } else if (role_id == CHILD_VASP_ROLE_ID()) {
-            // calling_role must be a parent vasp role
-            assert(calling_role.role_id == PARENT_VASP_ROLE_ID(), 0);
-            move_to(new_account, RoleId { role_id });
-            move_to(new_account, Privilege<ChildVASPRole>{ witness: ChildVASPRole{}, is_extracted: false })
-        } else if (role_id == UNHOSTED_ROLE_ID()) {
-            // TODO(tzakian): remove unhosted creation/guard so that only
-            // assoc root can create.
-            move_to(new_account, RoleId { role_id });
-            move_to(new_account, Privilege<UnhostedRole>{ witness: UnhostedRole{}, is_extracted: false })
-        } else {
-            // UNRECOGNIZED_ACCOUNT_ROLE
-            abort 2
-        }
+    }
+
+    /// Publish a ChildVASP `RoleId` under `new_account`.
+    /// The `creating_account` must be a ParentVASP
+    public fun new_child_vasp_role(
+        creating_account: &signer,
+        new_account: &signer,
+    ) acquires RoleId {
+        let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
+        // A role cannot have previously been assigned to `new_account`.
+        assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
+        assert(calling_role.role_id == PARENT_VASP_ROLE_ID(), 0);
+        move_to(new_account, RoleId { role_id: CHILD_VASP_ROLE_ID() });
+        move_to(new_account, Privilege<ChildVASPRole>{ witness: ChildVASPRole{}, is_extracted: false })
+    }
+
+    /// Publish an Unhosted `RoleId` under `new_account`.
+    // TODO(tzakian): remove unhosted creation/guard so that only
+    // assoc root can create.
+    public fun new_unhosted_role(_creating_account: &signer, new_account: &signer) {
+        // A role cannot have previously been assigned to `new_account`.
+        assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
+        move_to(new_account, RoleId { role_id: UNHOSTED_ROLE_ID() });
+        move_to(new_account, Privilege<UnhostedRole>{ witness: UnhostedRole{}, is_extracted: false })
     }
 
     ///////////////////////////////////////////////////////////////////////////

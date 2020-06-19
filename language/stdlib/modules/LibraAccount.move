@@ -415,7 +415,7 @@ module LibraAccount {
     // TODO: get rid of this and just use normal VASP creation
     // Creates a new testnet account at `fresh_address` with a balance of
     // zero `Token` type coins, and authentication key `auth_key_prefix` | `fresh_address`.
-    // Trying to create an account at address 0x1 will cause runtime failure as it is a
+    // Trying to create an account at address 0x0 will cause runtime failure as it is a
     // reserved address for the MoveVM.
     public fun create_testnet_account<Token>(
         creator_account: &signer,
@@ -427,22 +427,17 @@ module LibraAccount {
         // TODO: refactor so that every attempt to create an existing account hits this check
         // cannot create an account at an address that already has one
         assert(!exists_at(new_account_address), 777777);
-        let new_account = create_signer(new_account_address);
-        Roles::new_role(
+        create_parent_vasp_account<Token>(
             creator_account,
-            &new_account,
-            Roles::PARENT_VASP_ROLE_ID()
-        );
-        VASP::publish_parent_vasp_credential(
-            &new_account,
             parent_vasp_creation_capability,
+            new_account_address,
+            auth_key_prefix,
             b"testnet",
             b"https://libra.org",
             // A bogus (but valid ed25519) compliance public key
-            x"b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde"
-        );
-        Event::publish_generator(&new_account);
-        make_account<Token>(new_account, auth_key_prefix, false)
+            x"b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde",
+            false // all_all_currencies
+        )
     }
 
     /// Creates a new account with account at `new_account_address` with a balance of
@@ -450,7 +445,7 @@ module LibraAccount {
     /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
     /// also be added.
     /// Aborts if there is already an account at `new_account_address`.
-    /// Creating an account at address 0x1 will abort as it is a reserved address for the MoveVM.
+    /// Creating an account at address 0x0 will abort as it is a reserved address for the MoveVM.
     fun make_account<Token>(
         new_account: signer,
         auth_key_prefix: vector<u8>,
@@ -516,11 +511,7 @@ module LibraAccount {
         assert(LibraTimestamp::is_genesis(), 0);
         assert(new_account_address == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
         let new_account = create_signer(new_account_address);
-        Roles::new_role(
-            creator_account,
-            &new_account,
-            Roles::PARENT_VASP_ROLE_ID(),
-        );
+        Roles::new_parent_vasp_role(creator_account, &new_account);
         make_account<Token>(new_account, auth_key_prefix, false)
     }
 
@@ -577,11 +568,7 @@ module LibraAccount {
         Event::publish_generator(&new_dd_account);
         Libra::publish_preburn_to_account<CoinType>(&new_dd_account, tc_capability);
         DesignatedDealer::publish_designated_dealer_credential(&new_dd_account, tc_capability);
-        Roles::new_role(
-            creator_account,
-            &new_dd_account,
-            Roles::DESIGNATED_DEALER_ROLE_ID(),
-        );
+        Roles::new_designated_dealer_role(creator_account, &new_dd_account);
         make_account<CoinType>(new_dd_account, auth_key_prefix, false)
     }
 
@@ -603,11 +590,7 @@ module LibraAccount {
         add_all_currencies: bool
     ) {
         let new_account = create_signer(new_account_address);
-        Roles::new_role(
-            creator_account,
-            &new_account,
-            Roles::PARENT_VASP_ROLE_ID(),
-        );
+        Roles::new_parent_vasp_role(creator_account, &new_account);
         VASP::publish_parent_vasp_credential(
             &new_account,
             parent_vasp_creation_capability,
@@ -631,11 +614,7 @@ module LibraAccount {
         add_all_currencies: bool,
     ) {
         let new_account = create_signer(new_account_address);
-        Roles::new_role(
-            parent,
-            &new_account,
-            Roles::CHILD_VASP_ROLE_ID(),
-        );
+        Roles::new_child_vasp_role(parent, &new_account);
         VASP::publish_child_vasp_credential(
             parent,
             &new_account,
@@ -662,11 +641,7 @@ module LibraAccount {
         assert(Testnet::is_testnet(), 10042);
         assert(!exists_at(new_account_address), 777777);
         let new_account = create_signer(new_account_address);
-        Roles::new_role(
-            creator_account,
-            &new_account,
-            Roles::UNHOSTED_ROLE_ID(),
-        );
+        Roles::new_unhosted_role(creator_account, &new_account);
         Event::publish_generator(&new_account);
         make_account<Token>(new_account, auth_key_prefix, add_all_currencies)
     }
@@ -905,11 +880,7 @@ module LibraAccount {
     ) {
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
-        Roles::new_role(
-            creator_account,
-            &new_account,
-            Roles::VALIDATOR_ROLE_ID(),
-        );
+        Roles::new_validator_role(creator_account, &new_account);
         ValidatorConfig::publish(&new_account, assoc_root_capability);
         make_account<Token>(new_account, auth_key_prefix, false)
     }
