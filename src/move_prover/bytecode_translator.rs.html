@@ -1662,13 +1662,110 @@
 <span id="1662">1662</span>
 <span id="1663">1663</span>
 <span id="1664">1664</span>
+<span id="1665">1665</span>
+<span id="1666">1666</span>
+<span id="1667">1667</span>
+<span id="1668">1668</span>
+<span id="1669">1669</span>
+<span id="1670">1670</span>
+<span id="1671">1671</span>
+<span id="1672">1672</span>
+<span id="1673">1673</span>
+<span id="1674">1674</span>
+<span id="1675">1675</span>
+<span id="1676">1676</span>
+<span id="1677">1677</span>
+<span id="1678">1678</span>
+<span id="1679">1679</span>
+<span id="1680">1680</span>
+<span id="1681">1681</span>
+<span id="1682">1682</span>
+<span id="1683">1683</span>
+<span id="1684">1684</span>
+<span id="1685">1685</span>
+<span id="1686">1686</span>
+<span id="1687">1687</span>
+<span id="1688">1688</span>
+<span id="1689">1689</span>
+<span id="1690">1690</span>
+<span id="1691">1691</span>
+<span id="1692">1692</span>
+<span id="1693">1693</span>
+<span id="1694">1694</span>
+<span id="1695">1695</span>
+<span id="1696">1696</span>
+<span id="1697">1697</span>
+<span id="1698">1698</span>
+<span id="1699">1699</span>
+<span id="1700">1700</span>
+<span id="1701">1701</span>
+<span id="1702">1702</span>
+<span id="1703">1703</span>
+<span id="1704">1704</span>
+<span id="1705">1705</span>
+<span id="1706">1706</span>
+<span id="1707">1707</span>
+<span id="1708">1708</span>
+<span id="1709">1709</span>
+<span id="1710">1710</span>
+<span id="1711">1711</span>
+<span id="1712">1712</span>
+<span id="1713">1713</span>
+<span id="1714">1714</span>
+<span id="1715">1715</span>
+<span id="1716">1716</span>
+<span id="1717">1717</span>
+<span id="1718">1718</span>
+<span id="1719">1719</span>
+<span id="1720">1720</span>
+<span id="1721">1721</span>
+<span id="1722">1722</span>
+<span id="1723">1723</span>
+<span id="1724">1724</span>
+<span id="1725">1725</span>
+<span id="1726">1726</span>
+<span id="1727">1727</span>
+<span id="1728">1728</span>
+<span id="1729">1729</span>
+<span id="1730">1730</span>
+<span id="1731">1731</span>
+<span id="1732">1732</span>
+<span id="1733">1733</span>
+<span id="1734">1734</span>
+<span id="1735">1735</span>
+<span id="1736">1736</span>
+<span id="1737">1737</span>
+<span id="1738">1738</span>
+<span id="1739">1739</span>
+<span id="1740">1740</span>
+<span id="1741">1741</span>
+<span id="1742">1742</span>
+<span id="1743">1743</span>
+<span id="1744">1744</span>
+<span id="1745">1745</span>
+<span id="1746">1746</span>
+<span id="1747">1747</span>
+<span id="1748">1748</span>
+<span id="1749">1749</span>
+<span id="1750">1750</span>
+<span id="1751">1751</span>
+<span id="1752">1752</span>
+<span id="1753">1753</span>
+<span id="1754">1754</span>
+<span id="1755">1755</span>
+<span id="1756">1756</span>
+<span id="1757">1757</span>
+<span id="1758">1758</span>
+<span id="1759">1759</span>
+<span id="1760">1760</span>
+<span id="1761">1761</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="doccomment">//! This module translates the bytecode of a module to Boogie code.</span>
 
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">BTreeSet</span>;
+<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeMap</span>, <span class="ident">BTreeSet</span>};
 
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_imports</span>)]</span>
@@ -1683,11 +1780,13 @@
 <span class="kw">use</span> <span class="ident">stackless_bytecode_generator</span>::{
     <span class="ident">function_target</span>::<span class="ident">FunctionTarget</span>,
     <span class="ident">function_target_pipeline</span>::<span class="ident">FunctionTargetsHolder</span>,
+    <span class="ident">graph</span>::{<span class="ident">Graph</span>, <span class="ident">Reducible</span>},
     <span class="ident">stackless_bytecode</span>::{
         <span class="ident">AssignKind</span>, <span class="ident">BorrowNode</span>,
         <span class="ident">Bytecode</span>::{<span class="self">self</span>, <span class="kw-2">*</span>},
-        <span class="ident">Constant</span>, <span class="ident">Operation</span>, <span class="ident">SpecBlockId</span>,
+        <span class="ident">Constant</span>, <span class="ident">Label</span>, <span class="ident">Operation</span>, <span class="ident">SpecBlockId</span>,
     },
+    <span class="ident">stackless_control_flow_graph</span>::{<span class="ident">BlockId</span>, <span class="ident">StacklessControlFlowGraph</span>},
 };
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">file_format</span>::<span class="ident">CodeOffset</span>;
 
@@ -1725,12 +1824,119 @@
     <span class="doccomment">/// over-approximation; however, the execution trace visualizer will remove redundant</span>
     <span class="doccomment">/// entries, so it is more of a performance concern.</span>
     <span class="ident">mutable_refs</span>: <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+    <span class="ident">loop_targets</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
 
-<span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">BytecodeContext</span> {
-    <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> {
-            <span class="ident">mutable_refs</span>: <span class="ident">BTreeSet</span>::<span class="ident">new</span>(),
+<span class="kw">impl</span> <span class="ident">BytecodeContext</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">func_target</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionTarget</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">mutable_refs</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">collect_mutable_refs</span>(<span class="ident">func_target</span>);
+        <span class="kw">let</span> <span class="ident">loop_targets</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">collect_loop_targets</span>(<span class="ident">func_target</span>);
+        <span class="ident">BytecodeContext</span> {
+            <span class="ident">mutable_refs</span>,
+            <span class="ident">loop_targets</span>,
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">collect_mutable_refs</span>(<span class="ident">func_target</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionTarget</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_bytecode</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mutable_refs</span> <span class="op">=</span> <span class="ident">BTreeSet</span>::<span class="ident">new</span>();
+        <span class="comment">// Walk over the bytecode and collect various context information.</span>
+        <span class="kw">for</span> <span class="ident">bytecode</span> <span class="kw">in</span> <span class="ident">code</span> {
+            <span class="kw">match</span> <span class="ident">bytecode</span> {
+                <span class="ident">Call</span>(<span class="kw">_</span>, <span class="ident">dsts</span>, <span class="ident">oper</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="kw">use</span> <span class="ident">Operation</span>::<span class="kw-2">*</span>;
+                    <span class="kw">match</span> <span class="ident">oper</span> {
+                        <span class="ident">BorrowLoc</span> <span class="op">|</span> <span class="ident">BorrowGlobal</span>(..) <span class="op">|</span> <span class="ident">BorrowField</span>(..) <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="kw">let</span> <span class="ident">dst</span> <span class="op">=</span> <span class="ident">dsts</span>[<span class="number">0</span>];
+                            <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="ident">dst</span>);
+                            <span class="kw">if</span> <span class="ident">ty</span>.<span class="ident">is_mutable_reference</span>() {
+                                <span class="comment">// Track that we create a mutable reference here.</span>
+                                <span class="ident">mutable_refs</span>.<span class="ident">insert</span>(<span class="ident">dst</span>);
+                            }
+                        }
+                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {}
+                    }
+                }
+                <span class="ident">Assign</span>(<span class="kw">_</span>, <span class="ident">dst</span>, <span class="ident">src</span>, <span class="ident">AssignKind</span>::<span class="ident">Move</span>) <span class="op">|</span> <span class="ident">Assign</span>(<span class="kw">_</span>, <span class="ident">dst</span>, <span class="ident">src</span>, <span class="ident">AssignKind</span>::<span class="ident">Store</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="comment">// Propagate information from src to dst.</span>
+                    <span class="kw">if</span> <span class="ident">mutable_refs</span>.<span class="ident">contains</span>(<span class="ident">src</span>) {
+                        <span class="ident">mutable_refs</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">dst</span>);
+                    }
+                }
+                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {}
+            }
+        }
+        <span class="ident">mutable_refs</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">collect_loop_targets</span>(<span class="ident">func_target</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionTarget</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Label</span>, <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_bytecode</span>();
+        <span class="kw">let</span> <span class="ident">cfg</span> <span class="op">=</span> <span class="ident">StacklessControlFlowGraph</span>::<span class="ident">new_forward</span>(<span class="ident">code</span>);
+        <span class="kw">let</span> <span class="ident">entry</span> <span class="op">=</span> <span class="ident">cfg</span>.<span class="ident">entry_blocks</span>()[<span class="number">0</span>];
+        <span class="kw">let</span> <span class="ident">nodes</span> <span class="op">=</span> <span class="ident">cfg</span>.<span class="ident">blocks</span>();
+        <span class="kw">let</span> <span class="ident">edges</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">BlockId</span>, <span class="ident">BlockId</span>)<span class="op">&gt;</span> <span class="op">=</span> <span class="ident">nodes</span>
+            .<span class="ident">iter</span>()
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
+                <span class="ident">cfg</span>.<span class="ident">successors</span>(<span class="kw-2">*</span><span class="ident">x</span>)
+                    .<span class="ident">iter</span>()
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">y</span><span class="op">|</span> (<span class="kw-2">*</span><span class="ident">x</span>, <span class="kw-2">*</span><span class="ident">y</span>))
+                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">BlockId</span>, <span class="ident">BlockId</span>)<span class="op">&gt;</span><span class="op">&gt;</span>()
+            })
+            .<span class="ident">flatten</span>()
+            .<span class="ident">collect</span>();
+        <span class="kw">let</span> <span class="ident">graph</span> <span class="op">=</span> <span class="ident">Graph</span>::<span class="ident">new</span>(<span class="ident">entry</span>, <span class="ident">nodes</span>, <span class="ident">edges</span>);
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">loop_targets</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">Reducible</span> {
+            <span class="ident">loop_headers</span>,
+            <span class="ident">natural_loops</span>,
+        }) <span class="op">=</span> <span class="ident">graph</span>.<span class="ident">compute_reducible</span>()
+        {
+            <span class="kw">let</span> <span class="ident">block_id_to_label</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">BlockId</span>, <span class="ident">Label</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">loop_headers</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="ident">Label</span>(<span class="kw">_</span>, <span class="ident">label</span>) <span class="op">=</span> <span class="ident">code</span>[<span class="ident">cfg</span>.<span class="ident">block_start</span>(<span class="kw-2">*</span><span class="ident">x</span>) <span class="kw">as</span> <span class="ident">usize</span>] {
+                        <span class="prelude-val">Some</span>((<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">label</span>))
+                    } <span class="kw">else</span> {
+                        <span class="prelude-val">None</span>
+                    }
+                })
+                .<span class="ident">flatten</span>()
+                .<span class="ident">collect</span>();
+            <span class="kw">for</span> (<span class="ident">back_edge</span>, <span class="ident">natural_loop</span>) <span class="kw">in</span> <span class="ident">natural_loops</span> {
+                <span class="kw">let</span> <span class="ident">loop_header_label</span> <span class="op">=</span> <span class="ident">block_id_to_label</span>[<span class="kw-2">&amp;</span><span class="ident">back_edge</span>.<span class="number">1</span>];
+                <span class="ident">loop_targets</span>
+                    .<span class="ident">entry</span>(<span class="ident">loop_header_label</span>)
+                    .<span class="ident">or_insert_with</span>(<span class="ident">BTreeSet</span>::<span class="ident">new</span>);
+                <span class="kw">let</span> <span class="ident">natural_loop_targets</span> <span class="op">=</span> <span class="ident">natural_loop</span>
+                    .<span class="ident">iter</span>()
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">block_id</span><span class="op">|</span> {
+                        <span class="ident">cfg</span>.<span class="ident">instr_indexes</span>(<span class="kw-2">*</span><span class="ident">block_id</span>)
+                            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="self">Self</span>::<span class="ident">targets</span>(<span class="kw-2">&amp;</span><span class="ident">code</span>[<span class="ident">x</span> <span class="kw">as</span> <span class="ident">usize</span>]))
+                            .<span class="ident">flatten</span>()
+                            .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+                    })
+                    .<span class="ident">flatten</span>()
+                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+                <span class="kw">for</span> <span class="ident">target</span> <span class="kw">in</span> <span class="ident">natural_loop_targets</span> {
+                    <span class="ident">loop_targets</span>.<span class="ident">entry</span>(<span class="ident">loop_header_label</span>).<span class="ident">and_modify</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
+                        <span class="ident">x</span>.<span class="ident">insert</span>(<span class="ident">target</span>);
+                    });
+                }
+            }
+        }
+        <span class="ident">loop_targets</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">targets</span>(<span class="ident">bytecode</span>: <span class="kw-2">&amp;</span><span class="ident">Bytecode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
+        <span class="kw">use</span> <span class="ident">BorrowNode</span>::<span class="kw-2">*</span>;
+        <span class="kw">match</span> <span class="ident">bytecode</span> {
+            <span class="ident">Assign</span>(<span class="kw">_</span>, <span class="ident">dest</span>, <span class="kw">_</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="kw-2">*</span><span class="ident">dest</span>],
+            <span class="ident">Call</span>(<span class="kw">_</span>, <span class="ident">dests</span>, <span class="kw">_</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">dests</span>.<span class="ident">clone</span>(),
+            <span class="ident">Load</span>(<span class="kw">_</span>, <span class="ident">dest</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="kw-2">*</span><span class="ident">dest</span>],
+            <span class="ident">WriteBack</span>(<span class="kw">_</span>, <span class="ident">LocalRoot</span>(<span class="ident">dest</span>), <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="kw-2">*</span><span class="ident">dest</span>],
+            <span class="ident">WriteBack</span>(<span class="kw">_</span>, <span class="ident">Reference</span>(<span class="ident">dest</span>), <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="kw-2">*</span><span class="ident">dest</span>],
+            <span class="ident">Splice</span>(<span class="kw">_</span>, <span class="ident">dest</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="kw-2">*</span><span class="ident">dest</span>],
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">vec</span><span class="macro">!</span>[],
         }
     }
 }
@@ -2256,37 +2462,8 @@
     <span class="doccomment">/// This generates boogie code for everything after the function signature</span>
     <span class="doccomment">/// The function body is only generated for the &quot;inline&quot; version of the function.</span>
     <span class="kw">fn</span> <span class="ident">generate_inline_function_body</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">func_target</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionTarget</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) {
-        <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_bytecode</span>();
-
         <span class="comment">// Construct context for bytecode translation.</span>
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">BytecodeContext</span>::<span class="ident">default</span>();
-
-        <span class="comment">// Walk over the bytecode and collect various context information.</span>
-        <span class="kw">for</span> <span class="ident">bytecode</span> <span class="kw">in</span> <span class="ident">code</span> {
-            <span class="kw">match</span> <span class="ident">bytecode</span> {
-                <span class="ident">Call</span>(<span class="kw">_</span>, <span class="ident">dsts</span>, <span class="ident">oper</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">use</span> <span class="ident">Operation</span>::<span class="kw-2">*</span>;
-                    <span class="kw">match</span> <span class="ident">oper</span> {
-                        <span class="ident">BorrowLoc</span> <span class="op">|</span> <span class="ident">BorrowGlobal</span>(..) <span class="op">|</span> <span class="ident">BorrowField</span>(..) <span class="op">=</span><span class="op">&gt;</span> {
-                            <span class="kw">let</span> <span class="ident">dst</span> <span class="op">=</span> <span class="ident">dsts</span>[<span class="number">0</span>];
-                            <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="ident">dst</span>);
-                            <span class="kw">if</span> <span class="ident">ty</span>.<span class="ident">is_mutable_reference</span>() {
-                                <span class="comment">// Track that we create a mutable reference here.</span>
-                                <span class="ident">context</span>.<span class="ident">mutable_refs</span>.<span class="ident">insert</span>(<span class="ident">dst</span>);
-                            }
-                        }
-                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {}
-                    }
-                }
-                <span class="ident">Assign</span>(<span class="kw">_</span>, <span class="ident">dst</span>, <span class="ident">src</span>, <span class="ident">AssignKind</span>::<span class="ident">Move</span>) <span class="op">|</span> <span class="ident">Assign</span>(<span class="kw">_</span>, <span class="ident">dst</span>, <span class="ident">src</span>, <span class="ident">AssignKind</span>::<span class="ident">Store</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="comment">// Propagate information from src to dst.</span>
-                    <span class="kw">if</span> <span class="ident">context</span>.<span class="ident">mutable_refs</span>.<span class="ident">contains</span>(<span class="ident">src</span>) {
-                        <span class="ident">context</span>.<span class="ident">mutable_refs</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">dst</span>);
-                    }
-                }
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {}
-            }
-        }
+        <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="ident">BytecodeContext</span>::<span class="ident">new</span>(<span class="ident">func_target</span>);
 
         <span class="comment">// Be sure to set back location to the whole function definition as a default, otherwise</span>
         <span class="comment">// we may get unassigned code locations associated with condition locations.</span>
@@ -2329,6 +2506,7 @@
         <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;\n// bytecode translation starts here&quot;</span>);
 
         <span class="comment">// Generate bytecode</span>
+        <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_bytecode</span>();
         <span class="kw">for</span> (<span class="ident">offset</span>, <span class="ident">bytecode</span>) <span class="kw">in</span> <span class="ident">code</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
             <span class="self">self</span>.<span class="ident">translate_bytecode</span>(<span class="ident">func_target</span>, <span class="kw-2">&amp;</span><span class="ident">context</span>, <span class="ident">offset</span> <span class="kw">as</span> <span class="ident">CodeOffset</span>, <span class="ident">bytecode</span>);
         }
@@ -2483,16 +2661,32 @@
             <span class="ident">Label</span>(<span class="kw">_</span>, <span class="ident">label</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">unindent</span>();
                 <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;L{}:&quot;</span>, <span class="ident">label</span>.<span class="ident">as_usize</span>());
-                <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assume !$abort_flag;&quot;</span>);
-                <span class="kw">for</span> <span class="ident">idx</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">func_target</span>.<span class="ident">get_local_count</span>() {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">ref_proxy_idx</span>) <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_ref_proxy_index</span>(<span class="ident">idx</span>) {
-                        <span class="kw">let</span> <span class="ident">ref_proxy_var_name</span> <span class="op">=</span> <span class="ident">str_local</span>(<span class="kw-2">*</span><span class="ident">ref_proxy_idx</span>);
-                        <span class="kw">let</span> <span class="ident">proxy_idx</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_proxy_index</span>(<span class="ident">idx</span>).<span class="ident">unwrap</span>();
-                        <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>,
+                <span class="kw">if</span> <span class="ident">ctx</span>.<span class="ident">loop_targets</span>.<span class="ident">contains_key</span>(<span class="ident">label</span>) {
+                    <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;assume !$abort_flag;&quot;</span>);
+                    <span class="kw">let</span> <span class="ident">targets</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">ctx</span>.<span class="ident">loop_targets</span>[<span class="ident">label</span>];
+                    <span class="kw">for</span> <span class="ident">idx</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">func_target</span>.<span class="ident">get_local_count</span>() {
+                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">ref_proxy_idx</span>) <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_ref_proxy_index</span>(<span class="ident">idx</span>) {
+                            <span class="kw">if</span> <span class="ident">targets</span>.<span class="ident">contains</span>(<span class="ident">ref_proxy_idx</span>) {
+                                <span class="kw">let</span> <span class="ident">ref_proxy_var_name</span> <span class="op">=</span> <span class="ident">str_local</span>(<span class="kw-2">*</span><span class="ident">ref_proxy_idx</span>);
+                                <span class="kw">let</span> <span class="ident">proxy_idx</span> <span class="op">=</span> <span class="ident">func_target</span>.<span class="ident">get_proxy_index</span>(<span class="ident">idx</span>).<span class="ident">unwrap</span>();
+                                <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>,
                             <span class="string">&quot;assume l#$Reference({}) == $Local({}) &amp;&amp; p#$Reference({}) == $EmptyPath;&quot;</span>,
                             <span class="ident">ref_proxy_var_name</span>,
                             <span class="ident">proxy_idx</span>,
                             <span class="ident">ref_proxy_var_name</span>);
+                            }
+                        }
+                        <span class="kw">if</span> <span class="ident">targets</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">idx</span>) {
+                            <span class="macro">emit</span><span class="macro">!</span>(
+                                <span class="self">self</span>.<span class="ident">writer</span>,
+                                <span class="kw-2">&amp;</span><span class="ident">boogie_well_formed_check</span>(
+                                    <span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">env</span>,
+                                    <span class="ident">str_local</span>(<span class="ident">idx</span>).<span class="ident">as_str</span>(),
+                                    <span class="kw-2">&amp;</span><span class="ident">func_target</span>.<span class="ident">get_local_type</span>(<span class="ident">idx</span>),
+                                    <span class="ident">WellFormedMode</span>::<span class="ident">Default</span>,
+                                )
+                            );
+                        }
                     }
                 }
                 <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">indent</span>();

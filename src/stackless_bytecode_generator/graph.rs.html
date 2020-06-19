@@ -284,8 +284,8 @@
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Graph</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Ord</span> <span class="op">+</span> <span class="ident">Copy</span> <span class="op">+</span> <span class="ident">Debug</span><span class="op">&gt;</span> {
     <span class="ident">entry</span>: <span class="ident">T</span>,
-    <span class="ident">nodes</span>: <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
-    <span class="ident">edges</span>: <span class="ident">BTreeSet</span><span class="op">&lt;</span>(<span class="ident">T</span>, <span class="ident">T</span>)<span class="op">&gt;</span>,
+    <span class="ident">nodes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>,
+    <span class="ident">edges</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">T</span>, <span class="ident">T</span>)<span class="op">&gt;</span>,
     <span class="ident">predecessors</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">successors</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span>,
 }
@@ -293,7 +293,7 @@
 <span class="kw">impl</span><span class="op">&lt;</span><span class="ident">T</span>: <span class="ident">Ord</span> <span class="op">+</span> <span class="ident">Copy</span> <span class="op">+</span> <span class="ident">Debug</span><span class="op">&gt;</span> <span class="ident">Graph</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span> {
     <span class="doccomment">/// This function creates a graph from a set of nodes (with a unique entry node)</span>
     <span class="doccomment">/// and a set of edges.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">entry</span>: <span class="ident">T</span>, <span class="ident">nodes</span>: <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">edges</span>: <span class="ident">BTreeSet</span><span class="op">&lt;</span>(<span class="ident">T</span>, <span class="ident">T</span>)<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">entry</span>: <span class="ident">T</span>, <span class="ident">nodes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span>, <span class="ident">edges</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">T</span>, <span class="ident">T</span>)<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">predecessors</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
             <span class="ident">nodes</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> (<span class="kw-2">*</span><span class="ident">x</span>, <span class="ident">BTreeSet</span>::<span class="ident">new</span>())).<span class="ident">collect</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">successors</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">T</span>, <span class="ident">BTreeSet</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> <span class="op">=</span>
@@ -320,17 +320,17 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compute_reducible</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Reducible</span><span class="op">&lt;</span><span class="ident">T</span><span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">dom_relation</span> <span class="op">=</span> <span class="ident">DomRelation</span>::<span class="ident">new</span>(<span class="self">self</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">loop_headers</span> <span class="op">=</span> <span class="ident">BTreeSet</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">back_edges</span> <span class="op">=</span> <span class="ident">BTreeSet</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">non_back_edges</span> <span class="op">=</span> <span class="ident">BTreeSet</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">back_edges</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">non_back_edges</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">for</span> <span class="ident">e</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">edges</span> {
             <span class="kw">if</span> <span class="op">!</span><span class="ident">dom_relation</span>.<span class="ident">is_reachable</span>(<span class="ident">e</span>.<span class="number">0</span>) {
                 <span class="kw">continue</span>;
             }
             <span class="kw">if</span> <span class="ident">dom_relation</span>.<span class="ident">is_dominated_by</span>(<span class="ident">e</span>.<span class="number">0</span>, <span class="ident">e</span>.<span class="number">1</span>) {
-                <span class="ident">back_edges</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">e</span>);
+                <span class="ident">back_edges</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">e</span>);
                 <span class="ident">loop_headers</span>.<span class="ident">insert</span>(<span class="ident">e</span>.<span class="number">1</span>);
             } <span class="kw">else</span> {
-                <span class="ident">non_back_edges</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">e</span>);
+                <span class="ident">non_back_edges</span>.<span class="ident">push</span>(<span class="kw-2">*</span><span class="ident">e</span>);
             }
         }
         <span class="kw">if</span> <span class="ident">Graph</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">entry</span>, <span class="self">self</span>.<span class="ident">nodes</span>.<span class="ident">clone</span>(), <span class="ident">non_back_edges</span>).<span class="ident">is_acyclic</span>() {
