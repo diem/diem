@@ -85,7 +85,6 @@ pub trait ClusterSwarm {
         delete_data: bool,
     ) -> Result<Vec<Instance>> {
         let fullnodes = (0..num_validators).flat_map(move |validator_index| {
-            let config_overrides = config_overrides.clone();
             (0..num_fullnodes_per_validator).map(move |fullnode_index| {
                 let fullnode_config = FullnodeConfig {
                     fullnode_index,
