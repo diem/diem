@@ -54,6 +54,10 @@
 <span id="54">54</span>
 <span id="55">55</span>
 <span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -64,9 +68,11 @@
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">cfg</span>;
 <span class="kw">mod</span> <span class="ident">constant_fold</span>;
 <span class="kw">mod</span> <span class="ident">eliminate_locals</span>;
+<span class="kw">mod</span> <span class="ident">inline_blocks</span>;
 <span class="kw">mod</span> <span class="ident">liveness</span>;
 <span class="kw">mod</span> <span class="ident">locals</span>;
 <span class="kw">mod</span> <span class="ident">remove_no_ops</span>;
+<span class="kw">mod</span> <span class="ident">simplify_jumps</span>;
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">mod</span> <span class="ident">translate</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
@@ -103,8 +109,10 @@
 ) {
     <span class="kw">loop</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">changed</span> <span class="op">=</span> <span class="bool-val">false</span>;
-        <span class="ident">changed</span> <span class="op">=</span> <span class="ident">eliminate_locals</span>::<span class="ident">optimize</span>(<span class="ident">cfg</span>) <span class="op">|</span><span class="op">|</span> <span class="ident">changed</span>;
-        <span class="ident">changed</span> <span class="op">=</span> <span class="ident">constant_fold</span>::<span class="ident">optimize</span>(<span class="ident">cfg</span>) <span class="op">|</span><span class="op">|</span> <span class="ident">changed</span>;
+        <span class="ident">changed</span> <span class="op">|</span><span class="op">=</span> <span class="ident">eliminate_locals</span>::<span class="ident">optimize</span>(<span class="ident">cfg</span>);
+        <span class="ident">changed</span> <span class="op">|</span><span class="op">=</span> <span class="ident">constant_fold</span>::<span class="ident">optimize</span>(<span class="ident">cfg</span>);
+        <span class="ident">changed</span> <span class="op">|</span><span class="op">=</span> <span class="ident">simplify_jumps</span>::<span class="ident">optimize</span>(<span class="ident">cfg</span>);
+        <span class="ident">changed</span> <span class="op">|</span><span class="op">=</span> <span class="ident">inline_blocks</span>::<span class="ident">optimize</span>(<span class="ident">cfg</span>);
 
         <span class="kw">if</span> <span class="op">!</span><span class="ident">changed</span> {
             <span class="kw">break</span>;
