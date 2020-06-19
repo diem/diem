@@ -211,7 +211,9 @@ fn function_body(
                 &mut cfg,
                 &infinite_loop_starts,
             );
-            cfgir::optimize(signature, &locals, &mut cfg);
+            if context.errors.is_empty() {
+                cfgir::optimize(signature, &locals, &mut cfg);
+            }
 
             GB::Defined {
                 locals,
