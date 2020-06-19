@@ -1215,22 +1215,17 @@ Aborts if the
     // TODO: refactor so that every attempt <b>to</b> create an existing account hits this check
     // cannot create an account at an address that already has one
     <b>assert</b>(!<a href="#0x1_LibraAccount_exists_at">exists_at</a>(new_account_address), 777777);
-    <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
-    <a href="Roles.md#0x1_Roles_new_role">Roles::new_role</a>(
+    <a href="#0x1_LibraAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(
         creator_account,
-        &new_account,
-        <a href="Roles.md#0x1_Roles_PARENT_VASP_ROLE_ID">Roles::PARENT_VASP_ROLE_ID</a>()
-    );
-    <a href="VASP.md#0x1_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(
-        &new_account,
         parent_vasp_creation_capability,
+        new_account_address,
+        auth_key_prefix,
         b"testnet",
         b"https://libra.org",
         // A bogus (but valid ed25519) compliance <b>public</b> key
-        x"b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde"
-    );
-    <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="#0x1_LibraAccount_make_account">make_account</a>&lt;Token&gt;(new_account, auth_key_prefix, <b>false</b>)
+        x"b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde",
+        <b>false</b> // all_all_currencies
+    )
 }
 </code></pre>
 
@@ -1252,7 +1247,7 @@ zero in
 also be added.
 Aborts if there is already an account at
 <code>new_account_address</code>.
-Creating an account at address 0x1 will abort as it is a reserved address for the MoveVM.
+Creating an account at address 0x0 will abort as it is a reserved address for the MoveVM.
 
 
 <pre><code><b>fun</b> <a href="#0x1_LibraAccount_make_account">make_account</a>&lt;Token&gt;(new_account: signer, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
@@ -1348,11 +1343,7 @@ Create an account for the on-chain config account at
     <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
     <b>assert</b>(new_account_address == <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(), 1);
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
-    <a href="Roles.md#0x1_Roles_new_role">Roles::new_role</a>(
-        creator_account,
-        &new_account,
-        <a href="Roles.md#0x1_Roles_PARENT_VASP_ROLE_ID">Roles::PARENT_VASP_ROLE_ID</a>(),
-    );
+    <a href="Roles.md#0x1_Roles_new_parent_vasp_role">Roles::new_parent_vasp_role</a>(creator_account, &new_account);
     <a href="#0x1_LibraAccount_make_account">make_account</a>&lt;Token&gt;(new_account, auth_key_prefix, <b>false</b>)
 }
 </code></pre>
@@ -1468,11 +1459,7 @@ Creates Preburn resource under account 'new_account_address'
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_dd_account);
     <a href="Libra.md#0x1_Libra_publish_preburn_to_account">Libra::publish_preburn_to_account</a>&lt;CoinType&gt;(&new_dd_account, tc_capability);
     <a href="DesignatedDealer.md#0x1_DesignatedDealer_publish_designated_dealer_credential">DesignatedDealer::publish_designated_dealer_credential</a>(&new_dd_account, tc_capability);
-    <a href="Roles.md#0x1_Roles_new_role">Roles::new_role</a>(
-        creator_account,
-        &new_dd_account,
-        <a href="Roles.md#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">Roles::DESIGNATED_DEALER_ROLE_ID</a>(),
-    );
+    <a href="Roles.md#0x1_Roles_new_designated_dealer_role">Roles::new_designated_dealer_role</a>(creator_account, &new_dd_account);
     <a href="#0x1_LibraAccount_make_account">make_account</a>&lt;CoinType&gt;(new_dd_account, auth_key_prefix, <b>false</b>)
 }
 </code></pre>
@@ -1513,11 +1500,7 @@ all available currencies in the system will also be added.
     add_all_currencies: bool
 ) {
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
-    <a href="Roles.md#0x1_Roles_new_role">Roles::new_role</a>(
-        creator_account,
-        &new_account,
-        <a href="Roles.md#0x1_Roles_PARENT_VASP_ROLE_ID">Roles::PARENT_VASP_ROLE_ID</a>(),
-    );
+    <a href="Roles.md#0x1_Roles_new_parent_vasp_role">Roles::new_parent_vasp_role</a>(creator_account, &new_account);
     <a href="VASP.md#0x1_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(
         &new_account,
         parent_vasp_creation_capability,
@@ -1565,11 +1548,7 @@ also be added. This account will be a child of
     add_all_currencies: bool,
 ) {
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
-    <a href="Roles.md#0x1_Roles_new_role">Roles::new_role</a>(
-        parent,
-        &new_account,
-        <a href="Roles.md#0x1_Roles_CHILD_VASP_ROLE_ID">Roles::CHILD_VASP_ROLE_ID</a>(),
-    );
+    <a href="Roles.md#0x1_Roles_new_child_vasp_role">Roles::new_child_vasp_role</a>(parent, &new_account);
     <a href="VASP.md#0x1_VASP_publish_child_vasp_credential">VASP::publish_child_vasp_credential</a>(
         parent,
         &new_account,
@@ -1608,11 +1587,7 @@ also be added. This account will be a child of
     <b>assert</b>(<a href="Testnet.md#0x1_Testnet_is_testnet">Testnet::is_testnet</a>(), 10042);
     <b>assert</b>(!<a href="#0x1_LibraAccount_exists_at">exists_at</a>(new_account_address), 777777);
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
-    <a href="Roles.md#0x1_Roles_new_role">Roles::new_role</a>(
-        creator_account,
-        &new_account,
-        <a href="Roles.md#0x1_Roles_UNHOSTED_ROLE_ID">Roles::UNHOSTED_ROLE_ID</a>(),
-    );
+    <a href="Roles.md#0x1_Roles_new_unhosted_role">Roles::new_unhosted_role</a>(creator_account, &new_account);
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="#0x1_LibraAccount_make_account">make_account</a>&lt;Token&gt;(new_account, auth_key_prefix, add_all_currencies)
 }
@@ -2273,11 +2248,7 @@ also be added. This account will be a child of
 ) {
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="Roles.md#0x1_Roles_new_role">Roles::new_role</a>(
-        creator_account,
-        &new_account,
-        <a href="Roles.md#0x1_Roles_VALIDATOR_ROLE_ID">Roles::VALIDATOR_ROLE_ID</a>(),
-    );
+    <a href="Roles.md#0x1_Roles_new_validator_role">Roles::new_validator_role</a>(creator_account, &new_account);
     <a href="ValidatorConfig.md#0x1_ValidatorConfig_publish">ValidatorConfig::publish</a>(&new_account, assoc_root_capability);
     <a href="#0x1_LibraAccount_make_account">make_account</a>&lt;Token&gt;(new_account, auth_key_prefix, <b>false</b>)
 }

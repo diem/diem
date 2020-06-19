@@ -35,7 +35,12 @@
 -  [Function `add_privilege_to_account_unhosted_role`](#0x1_Roles_add_privilege_to_account_unhosted_role)
 -  [Function `grant_root_association_role`](#0x1_Roles_grant_root_association_role)
 -  [Function `grant_treasury_compliance_role`](#0x1_Roles_grant_treasury_compliance_role)
--  [Function `new_role`](#0x1_Roles_new_role)
+-  [Function `new_designated_dealer_role`](#0x1_Roles_new_designated_dealer_role)
+-  [Function `new_validator_role`](#0x1_Roles_new_validator_role)
+-  [Function `new_validator_operator_role`](#0x1_Roles_new_validator_operator_role)
+-  [Function `new_parent_vasp_role`](#0x1_Roles_new_parent_vasp_role)
+-  [Function `new_child_vasp_role`](#0x1_Roles_new_child_vasp_role)
+-  [Function `new_unhosted_role`](#0x1_Roles_new_unhosted_role)
 -  [Function `extract_privilege_to_capability`](#0x1_Roles_extract_privilege_to_capability)
 -  [Function `restore_capability_to_privilege`](#0x1_Roles_restore_capability_to_privilege)
 
@@ -416,7 +421,7 @@ correspond precisely to the RoleId.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(): u64
+<pre><code><b>fun</b> <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(): u64
 </code></pre>
 
 
@@ -425,7 +430,7 @@ correspond precisely to the RoleId.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(): u64 { 0 }
+<pre><code><b>fun</b> <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(): u64 { 0 }
 </code></pre>
 
 
@@ -438,7 +443,7 @@ correspond precisely to the RoleId.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>(): u64
+<pre><code><b>fun</b> <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>(): u64
 </code></pre>
 
 
@@ -447,7 +452,7 @@ correspond precisely to the RoleId.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>(): u64 { 1 }
+<pre><code><b>fun</b> <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>(): u64 { 1 }
 </code></pre>
 
 
@@ -460,7 +465,7 @@ correspond precisely to the RoleId.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">DESIGNATED_DEALER_ROLE_ID</a>(): u64
+<pre><code><b>fun</b> <a href="#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">DESIGNATED_DEALER_ROLE_ID</a>(): u64
 </code></pre>
 
 
@@ -469,7 +474,7 @@ correspond precisely to the RoleId.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">DESIGNATED_DEALER_ROLE_ID</a>(): u64 { 2 }
+<pre><code><b>fun</b> <a href="#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">DESIGNATED_DEALER_ROLE_ID</a>(): u64 { 2 }
 </code></pre>
 
 
@@ -482,7 +487,7 @@ correspond precisely to the RoleId.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>(): u64
+<pre><code><b>fun</b> <a href="#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>(): u64
 </code></pre>
 
 
@@ -491,7 +496,7 @@ correspond precisely to the RoleId.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>(): u64 { 3 }
+<pre><code><b>fun</b> <a href="#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>(): u64 { 3 }
 </code></pre>
 
 
@@ -504,7 +509,7 @@ correspond precisely to the RoleId.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>(): u64
+<pre><code><b>fun</b> <a href="#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>(): u64
 </code></pre>
 
 
@@ -513,7 +518,7 @@ correspond precisely to the RoleId.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>(): u64 { 4 }
+<pre><code><b>fun</b> <a href="#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>(): u64 { 4 }
 </code></pre>
 
 
@@ -526,7 +531,7 @@ correspond precisely to the RoleId.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>(): u64
+<pre><code><b>fun</b> <a href="#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>(): u64
 </code></pre>
 
 
@@ -535,7 +540,7 @@ correspond precisely to the RoleId.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>(): u64 { 5 }
+<pre><code><b>fun</b> <a href="#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>(): u64 { 5 }
 </code></pre>
 
 
@@ -548,7 +553,7 @@ correspond precisely to the RoleId.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_CHILD_VASP_ROLE_ID">CHILD_VASP_ROLE_ID</a>(): u64
+<pre><code><b>fun</b> <a href="#0x1_Roles_CHILD_VASP_ROLE_ID">CHILD_VASP_ROLE_ID</a>(): u64
 </code></pre>
 
 
@@ -557,7 +562,7 @@ correspond precisely to the RoleId.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_CHILD_VASP_ROLE_ID">CHILD_VASP_ROLE_ID</a>(): u64 { 6 }
+<pre><code><b>fun</b> <a href="#0x1_Roles_CHILD_VASP_ROLE_ID">CHILD_VASP_ROLE_ID</a>(): u64 { 6 }
 </code></pre>
 
 
@@ -570,7 +575,7 @@ correspond precisely to the RoleId.
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_UNHOSTED_ROLE_ID">UNHOSTED_ROLE_ID</a>(): u64
+<pre><code><b>fun</b> <a href="#0x1_Roles_UNHOSTED_ROLE_ID">UNHOSTED_ROLE_ID</a>(): u64
 </code></pre>
 
 
@@ -579,7 +584,7 @@ correspond precisely to the RoleId.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_UNHOSTED_ROLE_ID">UNHOSTED_ROLE_ID</a>(): u64 { 7 }
+<pre><code><b>fun</b> <a href="#0x1_Roles_UNHOSTED_ROLE_ID">UNHOSTED_ROLE_ID</a>(): u64 { 7 }
 </code></pre>
 
 
@@ -904,9 +909,9 @@ and roles.
 
 </details>
 
-<a name="0x1_Roles_new_role"></a>
+<a name="0x1_Roles_new_designated_dealer_role"></a>
 
-## Function `new_role`
+## Function `new_designated_dealer_role`
 
 Generic new role creation (for role ids != ASSOCIATION_ROOT_ROLE_ID
 and TREASURY_COMPLIANCE_ROLE_ID).
@@ -929,10 +934,16 @@ the new permission. e.g.
 public fun publish_new_privilege(account: &signer, _: &Capability<R>) {
 Roles::add_privilege_to_account(account, Roles::R_ROLE_ID());
 }
-```
+``
+<code>
+
+Publish a <a href="DesignatedDealer.md#0x1_DesignatedDealer">DesignatedDealer</a> </code>RoleId
+<code> under </code>new_account
+<code>.
+The </code>creating_account` must be TreasuryCompliance
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_role">new_role</a>(creating_account: &signer, new_account: &signer, role_id: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_designated_dealer_role">new_designated_dealer_role</a>(creating_account: &signer, new_account: &signer)
 </code></pre>
 
 
@@ -941,51 +952,201 @@ Roles::add_privilege_to_account(account, Roles::R_ROLE_ID());
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_role">new_role</a>(
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_designated_dealer_role">new_designated_dealer_role</a>(
     creating_account: &signer,
     new_account: &signer,
-    role_id: u64,
 ) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
     <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
     // A role cannot have previously been assigned <b>to</b> `new_account`.
     <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
-    <b>if</b> (role_id == <a href="#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">DESIGNATED_DEALER_ROLE_ID</a>()) {
-        //<b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(), 0);
-        <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>(), 0);
-        move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id });
-        move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_DesignatedDealerRole">DesignatedDealerRole</a>&gt;{ witness: <a href="#0x1_Roles_DesignatedDealerRole">DesignatedDealerRole</a>{}, is_extracted: <b>false</b> })
-    } <b>else</b> <b>if</b> (role_id == <a href="#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>()) {
-        <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(), 0);
-        move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id });
-        move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_ValidatorRole">ValidatorRole</a>&gt;{ witness: <a href="#0x1_Roles_ValidatorRole">ValidatorRole</a>{}, is_extracted: <b>false</b> })
-    } <b>else</b> <b>if</b> (role_id == <a href="#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>()) {
-        <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(), 0);
-        move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id });
-        move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_ValidatorOperatorRole">ValidatorOperatorRole</a>&gt;{ witness: <a href="#0x1_Roles_ValidatorOperatorRole">ValidatorOperatorRole</a>{}, is_extracted: <b>false</b> })
-    } <b>else</b> <b>if</b> (role_id == <a href="#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>()) {
-        <b>assert</b>(
+    //<b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(), 0);
+    <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>(), 0);
+    move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">DESIGNATED_DEALER_ROLE_ID</a>() });
+    move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_DesignatedDealerRole">DesignatedDealerRole</a>&gt;{ witness: <a href="#0x1_Roles_DesignatedDealerRole">DesignatedDealerRole</a>{}, is_extracted: <b>false</b> })
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Roles_new_validator_role"></a>
+
+## Function `new_validator_role`
+
+Publish a Validator
+<code><a href="#0x1_Roles_RoleId">RoleId</a></code> under
+<code>new_account</code>.
+The
+<code>creating_account</code> must be LibraRoot
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_validator_role">new_validator_role</a>(creating_account: &signer, new_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_validator_role">new_validator_role</a>(
+    creating_account: &signer,
+    new_account: &signer
+) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
+    <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
+    // A role cannot have previously been assigned <b>to</b> `new_account`.
+    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
+    <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(), 0);
+    move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>() });
+    move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_ValidatorRole">ValidatorRole</a>&gt;{ witness: <a href="#0x1_Roles_ValidatorRole">ValidatorRole</a>{}, is_extracted: <b>false</b> })
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Roles_new_validator_operator_role"></a>
+
+## Function `new_validator_operator_role`
+
+Publish a ValidatorOperator
+<code><a href="#0x1_Roles_RoleId">RoleId</a></code> under
+<code>new_account</code>.
+The
+<code>creating_account</code> must be LibraRoot
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_validator_operator_role">new_validator_operator_role</a>(creating_account: &signer, new_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_validator_operator_role">new_validator_operator_role</a>(
+    creating_account: &signer,
+    new_account: &signer,
+) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
+    <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
+    // A role cannot have previously been assigned <b>to</b> `new_account`.
+    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
+    <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(), 0);
+    move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>() });
+    move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_ValidatorOperatorRole">ValidatorOperatorRole</a>&gt;{ witness: <a href="#0x1_Roles_ValidatorOperatorRole">ValidatorOperatorRole</a>{}, is_extracted: <b>false</b> })
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Roles_new_parent_vasp_role"></a>
+
+## Function `new_parent_vasp_role`
+
+Publish a ParentVASP
+<code><a href="#0x1_Roles_RoleId">RoleId</a></code> under
+<code>new_account</code>.
+The
+<code>creating_account</code> must be TreasuryCompliance
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_parent_vasp_role">new_parent_vasp_role</a>(creating_account: &signer, new_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_parent_vasp_role">new_parent_vasp_role</a>(
+    creating_account: &signer,
+    new_account: &signer,
+) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
+    <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
+    // A role cannot have previously been assigned <b>to</b> `new_account`.
+    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
+    <b>assert</b>(
             calling_role.role_id == <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>()
             // XXX/HACK/REMOVE(tzakian): This is for testnet semantics
             // only. THIS NEEDS TO BE REMOVED.
             || calling_role.role_id == <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>(),
             0
         );
-        move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id });
+        move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>() });
         move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_ParentVASPRole">ParentVASPRole</a>&gt;{ witness: <a href="#0x1_Roles_ParentVASPRole">ParentVASPRole</a>{}, is_extracted: <b>false</b> })
-    } <b>else</b> <b>if</b> (role_id == <a href="#0x1_Roles_CHILD_VASP_ROLE_ID">CHILD_VASP_ROLE_ID</a>()) {
-        // calling_role must be a parent vasp role
-        <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>(), 0);
-        move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id });
-        move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_ChildVASPRole">ChildVASPRole</a>&gt;{ witness: <a href="#0x1_Roles_ChildVASPRole">ChildVASPRole</a>{}, is_extracted: <b>false</b> })
-    } <b>else</b> <b>if</b> (role_id == <a href="#0x1_Roles_UNHOSTED_ROLE_ID">UNHOSTED_ROLE_ID</a>()) {
-        // TODO(tzakian): remove unhosted creation/guard so that only
-        // assoc root can create.
-        move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id });
-        move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_UnhostedRole">UnhostedRole</a>&gt;{ witness: <a href="#0x1_Roles_UnhostedRole">UnhostedRole</a>{}, is_extracted: <b>false</b> })
-    } <b>else</b> {
-        // UNRECOGNIZED_ACCOUNT_ROLE
-        <b>abort</b> 2
-    }
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Roles_new_child_vasp_role"></a>
+
+## Function `new_child_vasp_role`
+
+Publish a ChildVASP
+<code><a href="#0x1_Roles_RoleId">RoleId</a></code> under
+<code>new_account</code>.
+The
+<code>creating_account</code> must be a ParentVASP
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_child_vasp_role">new_child_vasp_role</a>(creating_account: &signer, new_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_child_vasp_role">new_child_vasp_role</a>(
+    creating_account: &signer,
+    new_account: &signer,
+) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
+    <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
+    // A role cannot have previously been assigned <b>to</b> `new_account`.
+    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
+    <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>(), 0);
+    move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_CHILD_VASP_ROLE_ID">CHILD_VASP_ROLE_ID</a>() });
+    move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_ChildVASPRole">ChildVASPRole</a>&gt;{ witness: <a href="#0x1_Roles_ChildVASPRole">ChildVASPRole</a>{}, is_extracted: <b>false</b> })
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Roles_new_unhosted_role"></a>
+
+## Function `new_unhosted_role`
+
+Publish an Unhosted
+<code><a href="#0x1_Roles_RoleId">RoleId</a></code> under
+<code>new_account</code>.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_unhosted_role">new_unhosted_role</a>(_creating_account: &signer, new_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_unhosted_role">new_unhosted_role</a>(_creating_account: &signer, new_account: &signer) {
+    // A role cannot have previously been assigned <b>to</b> `new_account`.
+    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
+    move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_UNHOSTED_ROLE_ID">UNHOSTED_ROLE_ID</a>() });
+    move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_UnhostedRole">UnhostedRole</a>&gt;{ witness: <a href="#0x1_Roles_UnhostedRole">UnhostedRole</a>{}, is_extracted: <b>false</b> })
 }
 </code></pre>
 
