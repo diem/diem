@@ -12,6 +12,7 @@ use regex::Regex;
 use reqwest::{Client, Url};
 use serde_json::Value;
 use std::{collections::HashSet, fmt, str::FromStr};
+use tokio::process::Command;
 
 static VAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"val-(\d+)").unwrap());
 static FULLNODE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"fn-(\d+)").unwrap());
@@ -270,6 +271,42 @@ impl Instance {
                 job_name,
             )
             .await
+    }
+
+    /// Unlike util_cmd, exec runs command inside the container
+    pub async fn exec(&self, command: &str) -> Result<()> {
+        let child = Command::new("kubectl")
+            .arg("exec")
+            .arg(&self.peer_name)
+            .arg("--container")
+            .arg("main")
+            .arg("--")
+            .arg("sh")
+            .arg("-c")
+            .arg(command)
+            .kill_on_drop(true)
+            .spawn()
+            .map_err(|e| {
+                format_err!(
+                    "Failed to spawn child process {} on {}: {}",
+                    command,
+                    self.peer_name(),
+                    e
+                )
+            })?;
+        let status = child
+            .await
+            .map_err(|e| format_err!("Error running {} on {}: {}", command, self.peer_name(), e))?;
+        if !status.success() {
+            Err(format_err!(
+                "Running {} on {}, exit code {:?}",
+                command,
+                self.peer_name(),
+                status.code()
+            ))
+        } else {
+            Ok(())
+        }
     }
 }
 

@@ -62,6 +62,8 @@ struct Args {
     perf_run: bool,
     #[structopt(long, group = "action")]
     run_ci_suite: bool,
+    #[structopt(long, group = "action")]
+    exec: Option<String>,
 
     #[structopt(last = true)]
     last: Vec<String>,
@@ -185,6 +187,14 @@ async fn handle_cluster_test_runner_commands(
         );
     } else if args.emit_tx {
         emit_tx(&runner.cluster, &args).await?;
+    } else if let Some(ref exec) = args.exec {
+        let pos = exec.find(':');
+        let pos = pos.ok_or_else(|| {
+            format_err!("Format for exec command is pod:command, for example val-1:date")
+        })?;
+        let (pod, cmd) = exec.split_at(pos);
+        let cmd = &cmd[1..];
+        runner.exec_on_pod(pod, cmd).await?;
     }
     Ok(perf_msg)
 }
@@ -783,5 +793,13 @@ impl ClusterTestRunner {
                 info!("Failed to send slack message: {}", e);
             }
         }
+    }
+
+    pub async fn exec_on_pod(&self, pod: &str, cmd: &str) -> Result<()> {
+        let instance = self
+            .cluster
+            .find_instance_by_pod(pod)
+            .ok_or_else(|| format_err!("Can not find instance with pod {}", pod))?;
+        instance.exec(cmd).await
     }
 }
