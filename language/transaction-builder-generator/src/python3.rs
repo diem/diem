@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::type_not_allowed;
+use crate::common::type_not_allowed;
 use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 
@@ -53,6 +53,7 @@ fn output_builder(out: &mut dyn Write, abi: &ScriptABI) -> Result<()> {
 }
 
 fn quote_doc(doc: &str) -> String {
+    let doc = crate::common::prepare_doc_string(doc);
     let s: Vec<_> = doc.splitn(2, |c| c == '.').collect();
     if s.len() <= 1 || s[1].is_empty() {
         format!("    \"\"\"{}.\"\"\"", s[0])
