@@ -22,3 +22,4 @@ pub const PING_FAILURES_TOLERATED: u64 = 10;
 pub const MAX_CONCURRENT_NETWORK_REQS: usize = 100;
 pub const MAX_CONCURRENT_NETWORK_NOTIFS: usize = 100;
 pub const MAX_CONNECTION_DELAY_MS: u64 = 60_000; /* 1 minute */
+pub const MAX_FULLNODE_CONNECTIONS: usize = 3;

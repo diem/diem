@@ -116,6 +116,8 @@ pub struct NetworkBuilder {
     max_concurrent_network_reqs: usize,
     max_concurrent_network_notifs: usize,
     max_connection_delay_ms: u64,
+    /// For now full node connections are limited by
+    max_fullnode_connections: usize,
 }
 
 impl NetworkBuilder {
@@ -167,6 +169,7 @@ impl NetworkBuilder {
             max_concurrent_network_reqs: constants::MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
+            max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
         }
     }
 
@@ -299,6 +302,11 @@ impl NetworkBuilder {
         let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
         let conn_mgr = self.executor.enter(|| {
+            let connection_limit = if let RoleType::FullNode = self.network_context.role() {
+                Some(self.max_fullnode_connections)
+            } else {
+                None
+            };
             ConnectivityManager::new(
                 self.network_context.clone(),
                 trusted_peers,
@@ -309,6 +317,7 @@ impl NetworkBuilder {
                 conn_mgr_reqs_rx,
                 ExponentialBackoff::from_millis(2).factor(1000),
                 max_connection_delay_ms,
+                connection_limit,
             )
         });
         self.executor.spawn(conn_mgr.start());

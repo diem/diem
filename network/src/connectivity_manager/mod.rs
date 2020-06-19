@@ -42,6 +42,10 @@ use libra_logger::{prelude::*, StructuredLogEntry};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use num_variants::NumVariants;
+use rand::{
+    prelude::{SeedableRng, SmallRng},
+    seq::SliceRandom,
+};
 use serde::Serialize;
 use std::{
     cmp::min,
@@ -85,6 +89,10 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
     /// A local counter incremented on receiving an incoming message. Printing this in debugging
     /// allows for easy debugging.
     event_id: u32,
+    /// A way to limit the number of connected peers by outgoing dials.
+    connection_limit: Option<usize>,
+    /// Random for shuffling which peers will be dialed
+    rng: SmallRng,
 }
 
 /// Different sources for peer addresses, ordered by priority (Onchain=highest,
@@ -110,11 +118,12 @@ pub enum ConnectivityRequest {
 }
 
 /// The set of `NetworkAddress`'s for all peers.
+#[derive(Serialize)]
 struct PeerAddresses(HashMap<PeerId, Addresses>);
 
 /// A set of `NetworkAddress`'s for a single peer, bucketed by DiscoverySource in
 /// priority order.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Serialize)]
 struct Addresses([Vec<NetworkAddress>; DiscoverySource::NUM_VARIANTS]);
 
 #[derive(Debug)]
@@ -151,6 +160,7 @@ where
         requests_rx: channel::Receiver<ConnectivityRequest>,
         backoff_strategy: TBackoff,
         max_delay_ms: u64,
+        connection_limit: Option<usize>,
     ) -> Self {
         {
             // Reconcile the keysets eligible is only used to allow us to dial the remote peer
@@ -201,6 +211,8 @@ where
             backoff_strategy,
             max_delay_ms,
             event_id: 0,
+            connection_limit,
+            rng: SmallRng::from_entropy(),
         }
     }
 
@@ -338,13 +350,26 @@ where
             })
             .collect();
 
+        // Limit the number of dialed connections from a Full Node
+        // This does not limit the number of incoming connections
+        // It enforces that a full node cannot have more outgoing connections than `connection_limit`
+        // including in flight dials.
+        let to_connect_size = if let Some(conn_limit) = self.connection_limit {
+            min(
+                conn_limit - self.connected.len() - self.dial_queue.len(),
+                to_connect.len(),
+            )
+        } else {
+            to_connect.len()
+        };
+
         // The initial dial state; it has zero dial delay and uses the first
         // address.
         let init_dial_state = DialState::new(self.backoff_strategy.clone());
 
-        for (p, addrs) in to_connect.into_iter() {
+        for (p, addrs) in to_connect.choose_multiple(&mut self.rng, to_connect_size) {
             let mut connction_reqs_tx = self.connection_reqs_tx.clone();
-            let peer_id = *p;
+            let peer_id = **p;
             let dial_state = self
                 .dial_states
                 .entry(peer_id)

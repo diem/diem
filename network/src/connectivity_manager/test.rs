@@ -10,13 +10,14 @@ use channel::{libra_channel, message_queues::QueueStyle};
 use core::str::FromStr;
 use futures::SinkExt;
 use libra_config::{config::RoleType, network_id::NetworkId};
-use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
+use libra_crypto::{x25519, x25519::PublicKey, Uniform};
 use libra_logger::info;
 use libra_network_address::NetworkAddress;
-use rand::{rngs::StdRng, SeedableRng};
 use std::{io, num::NonZeroUsize};
 use tokio::runtime::Runtime;
 use tokio_retry::strategy::FixedInterval;
+
+const MAX_TEST_CONNECTIONS: usize = 3;
 
 fn setup_conn_mgr(
     rt: &mut Runtime,
@@ -30,20 +31,34 @@ fn setup_conn_mgr(
 ) {
     let network_context =
         NetworkContext::new(NetworkId::Validator, RoleType::Validator, PeerId::random());
+
+    let eligible_peers = eligible_peers
+        .into_iter()
+        .map(|peer_id| {
+            let identity_public_key = x25519::PrivateKey::generate_for_testing().public_key();
+            (peer_id, identity_public_key)
+        })
+        .collect::<HashMap<_, _>>();
+
+    setup_conn_mgr_with_context(network_context, rt, eligible_peers, seed_peers)
+}
+
+fn setup_conn_mgr_with_context(
+    network_context: NetworkContext,
+    rt: &mut Runtime,
+    eligible_peers: HashMap<PeerId, PublicKey>,
+    seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
+) -> (
+    libra_channel::Receiver<PeerId, ConnectionRequest>,
+    conn_notifs_channel::Sender,
+    channel::Sender<ConnectivityRequest>,
+    channel::Sender<()>,
+) {
     let (connection_reqs_tx, connection_reqs_rx) =
         libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(1).unwrap(), None);
     let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
     let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new_test(0);
     let (ticker_tx, ticker_rx) = channel::new_test(0);
-    let mut rng = StdRng::from_seed(TEST_SEED);
-
-    let eligible_peers = eligible_peers
-        .into_iter()
-        .map(|peer_id| {
-            let identity_public_key = x25519::PrivateKey::generate(&mut rng).public_key();
-            (peer_id, identity_public_key)
-        })
-        .collect::<HashMap<_, _>>();
 
     let conn_mgr = {
         ConnectivityManager::new(
@@ -56,6 +71,7 @@ fn setup_conn_mgr(
             conn_mgr_reqs_rx,
             FixedInterval::from_millis(100),
             300, /* ms */
+            Some(MAX_TEST_CONNECTIONS),
         )
     };
     rt.spawn(conn_mgr.start());
@@ -69,9 +85,15 @@ fn setup_conn_mgr(
 
 fn gen_peer() -> (PeerId, x25519::PublicKey) {
     let peer_id = PeerId::random();
-    let mut rng = StdRng::from_seed(TEST_SEED);
-    let identity_public_key = x25519::PrivateKey::generate(&mut rng).public_key();
-    (peer_id, identity_public_key)
+    let public_key = x25519::PrivateKey::generate_for_testing().public_key();
+    (peer_id, public_key)
+}
+
+fn generate_peer_with_addr() -> (PeerId, NetworkAddress, PublicKey) {
+    let (peer_id, public_key) = gen_peer();
+    let addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+    let addr = addr.append_prod_protos(public_key, libra_config::config::HANDSHAKE_VERSION);
+    (peer_id, addr, public_key)
 }
 
 async fn get_dial_queue_size(conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>) -> usize {
@@ -170,16 +192,54 @@ async fn expect_dial_request(
     }
 }
 
+async fn expect_num_dials(
+    connection_reqs_rx: &mut libra_channel::Receiver<PeerId, ConnectionRequest>,
+    connection_notifs_tx: &mut conn_notifs_channel::Sender,
+    conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>,
+    num_expected: usize,
+) {
+    for _ in 0..num_expected {
+        if let ConnectionRequest::DialPeer(peer_id, address, error_tx) =
+            connection_reqs_rx.next().await.unwrap()
+        {
+            error_tx.send(Ok(())).unwrap();
+
+            info!(
+                "Sending NewPeer notification for peer: {}",
+                peer_id.short_str()
+            );
+            send_notification_await_delivery(
+                connection_notifs_tx,
+                peer_id,
+                peer_manager::ConnectionNotification::NewPeer(
+                    peer_id,
+                    address,
+                    NetworkContext::mock(),
+                ),
+            )
+            .await;
+        } else {
+            panic!("unexpected request to peer manager");
+        }
+    }
+
+    // Wait for dial queue to be empty. Without this, it's impossible to guarantee that a completed
+    // dial is removed from a dial queue. We need this guarantee to see the effects of future
+    // triggers for connectivity check.
+    info!("Waiting for dial queue to be empty");
+    loop {
+        let queue_size = get_dial_queue_size(conn_mgr_reqs_tx).await;
+        if queue_size == 0 {
+            break;
+        }
+    }
+}
+
 #[test]
 fn connect_to_seeds_on_startup() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
-    let seed_peer_id = PeerId::random();
-    let seed_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-    let seed_addr = seed_addr.append_prod_protos(
-        x25519::PrivateKey::generate_for_testing().public_key(),
-        libra_config::config::HANDSHAKE_VERSION,
-    );
+    let (seed_peer_id, seed_addr, _) = generate_peer_with_addr();
     let seed_peers = vec![(seed_peer_id, vec![seed_addr.clone()])]
         .into_iter()
         .collect::<HashMap<_, _>>();
@@ -1106,6 +1166,55 @@ fn multiple_addrs_shrinking() {
             Ok(()),
         )
         .await;
+    };
+    rt.block_on(f_peer_mgr);
+}
+
+#[test]
+fn test_public_connection_limit() {
+    ::libra_logger::Logger::new().environment_only(true).init();
+    let mut rt = Runtime::new().unwrap();
+    let mut seed_peers: HashMap<PeerId, Vec<NetworkAddress>> = HashMap::new();
+    let mut eligible_peers: HashMap<PeerId, PublicKey> = HashMap::new();
+    for _ in 0..MAX_TEST_CONNECTIONS + 1 {
+        let (peer_id, addr, key) = generate_peer_with_addr();
+        eligible_peers.insert(peer_id, key);
+        seed_peers.insert(peer_id, vec![addr]);
+    }
+
+    info!("Seed peers are {:?}", eligible_peers);
+    let network_context = NetworkContext::new(
+        NetworkId::vfn_network(),
+        RoleType::FullNode,
+        PeerId::random(),
+    );
+    let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
+        setup_conn_mgr_with_context(network_context, &mut rt, eligible_peers, seed_peers);
+
+    // Fake peer manager and discovery.
+    let f_peer_mgr = async move {
+        // Peer manager receives a request to connect to the other peer.
+        info!("Waiting to receive dial request");
+        expect_num_dials(
+            &mut connection_reqs_rx,
+            &mut connection_notifs_tx,
+            &mut conn_mgr_reqs_tx,
+            MAX_TEST_CONNECTIONS,
+        )
+        .await;
+
+        // Queue should be empty
+        let queue_size = get_dial_queue_size(&mut conn_mgr_reqs_tx).await;
+        assert_eq!(0, queue_size);
+
+        // Trigger connectivity check.
+        info!("Sending tick to trigger connectivity check");
+        ticker_tx.send(()).await.unwrap();
+
+        // There shouldn't be dials, we already cleared the queue, just to ensure it's still clear
+        info!("Check queue size");
+        let queue_size = get_dial_queue_size(&mut conn_mgr_reqs_tx).await;
+        assert_eq!(0, queue_size);
     };
     rt.block_on(f_peer_mgr);
 }
