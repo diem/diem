@@ -22,7 +22,7 @@ use libra_network_address::NetworkAddress;
 use libra_types::{waypoint::Waypoint, PeerId};
 use network::{
     connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
-    constants, counters,
+    constants,
     peer_manager::{builder::PeerManagerBuilder, conn_notifs_channel, ConnectionRequestSender},
     protocols::{
         discovery::{self, DiscoveryBuilderConfig, DiscoveryService},
@@ -55,7 +55,6 @@ pub struct NetworkBuilder {
     executor: Handle,
     network_context: Arc<NetworkContext>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
-    conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
 
     peer_manager_builder: Option<PeerManagerBuilder>,
     connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
@@ -98,7 +97,6 @@ impl NetworkBuilder {
             executor,
             network_context,
             trusted_peers,
-            conn_mgr_reqs_tx: None,
             peer_manager_builder: Some(peer_manager_builder),
             connectivity_manager_builder: None,
             configuration_change_listener_builder: None,
@@ -235,7 +233,10 @@ impl NetworkBuilder {
     }
 
     pub fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
-        self.conn_mgr_reqs_tx.clone()
+        match self.connectivity_manager_builder {
+            Some(ref conn_mgr) => Some(conn_mgr.conn_mgr_reqs_tx()),
+            None => None,
+        }
     }
 
     pub fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {
@@ -263,11 +264,6 @@ impl NetworkBuilder {
         max_fullnode_connections: usize,
         channel_size: usize,
     ) -> &mut Self {
-        let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
-            channel_size,
-            &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
-        );
-        self.conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx);
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
         let connection_reqs_tx = match &self.peer_manager_builder {
             Some(builder) => builder.connection_reqs_tx(),
@@ -290,9 +286,9 @@ impl NetworkBuilder {
             2, // Hard-coded constant
             // TODO:  Move this value to NetworkConfig
             constants::MAX_CONNECTION_DELAY_MS,
+            channel_size,
             ConnectionRequestSender::new(connection_reqs_tx),
             pm_conn_mgr_notifs_rx,
-            conn_mgr_reqs_rx,
             connection_limit,
         );
         self.connectivity_manager_builder = Some(builder);
@@ -355,7 +351,7 @@ impl NetworkBuilder {
     ) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
-            .expect("ConnectivityManager not enabled");
+            .expect("connectivityManager msut be enabled");
         // Get handles for network events and sender.
         let (discovery_network_tx, discovery_network_rx) =
             self.add_protocol_handler(discovery::network_endpoint_config());

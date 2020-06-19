@@ -3,8 +3,10 @@
 
 use crate::{
     connectivity_manager::{ConnectivityManager, ConnectivityRequest},
+    counters,
     peer_manager::{conn_notifs_channel, ConnectionRequestSender},
 };
+use channel::{self};
 use futures::stream::StreamExt;
 use futures_util::stream::Fuse;
 use libra_config::network_id::NetworkContext;
@@ -41,6 +43,7 @@ struct ConnectivityManagerBuilderConfig {
 pub struct ConnectivityManagerBuilder {
     config: Option<ConnectivityManagerBuilderConfig>,
     connectivity_manager: Option<ConnectivityManagerService>,
+    conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
 }
 
 impl ConnectivityManagerBuilder {
@@ -51,11 +54,15 @@ impl ConnectivityManagerBuilder {
         connectivity_check_interval_ms: u64,
         backoff_base: u64,
         max_connection_delay_ms: u64,
+        channel_size: usize,
         connection_reqs_tx: ConnectionRequestSender,
         connection_notifs_rx: conn_notifs_channel::Receiver,
-        requests_rx: channel::Receiver<ConnectivityRequest>,
         connection_limit: Option<usize>,
     ) -> Self {
+        let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
+            channel_size,
+            &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
+        );
         Self {
             config: Some(ConnectivityManagerBuilderConfig {
                 network_context,
@@ -66,11 +73,16 @@ impl ConnectivityManagerBuilder {
                 max_connection_delay_ms,
                 connection_reqs_tx,
                 connection_notifs_rx,
-                requests_rx,
+                requests_rx: conn_mgr_reqs_rx,
                 connection_limit,
             }),
             connectivity_manager: None,
+            conn_mgr_reqs_tx,
         }
+    }
+
+    pub fn conn_mgr_reqs_tx(&self) -> channel::Sender<ConnectivityRequest> {
+        self.conn_mgr_reqs_tx.clone()
     }
 
     pub fn build(&mut self, executor: &Handle) {
