@@ -132,8 +132,5 @@ pub trait ClusterSwarm {
         )
     }
 
-    /// Deletes all validators and fullnodes in this cluster
-    async fn delete_all(&self) -> Result<()>;
-
     async fn get_grafana_baseurl(&self) -> Result<String>;
 }

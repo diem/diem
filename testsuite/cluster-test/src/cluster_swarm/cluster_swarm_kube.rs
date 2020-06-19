@@ -54,9 +54,9 @@ impl ClusterSwarmKube {
             .spawn()?;
         libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(2000, 60), || {
             Box::pin(async move {
-                info!("Running healthcheck on http://127.0.0.1:8001");
+                debug!("Running local kube pod healthcheck on http://127.0.0.1:8001");
                 reqwest::get("http://127.0.0.1:8001").await?.text().await?;
-                info!("Healthcheck passed");
+                info!("Local kube pod healthcheck passed");
                 Ok::<(), reqwest::Error>(())
             })
         })
@@ -549,22 +549,20 @@ impl ClusterSwarmKube {
         self.delete_resource::<Service>(&service_name).await
     }
 
-    pub async fn remove_all_network_effects(&self) -> Result<()> {
+    async fn remove_all_network_effects(&self) -> Result<()> {
         libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 3), || {
             Box::pin(async move { self.remove_all_network_effects_helper().await })
         })
         .await
     }
-}
 
-#[async_trait]
-impl ClusterSwarm for ClusterSwarmKube {
-    async fn spawn_new_instance(
-        &self,
-        instance_config: InstanceConfig,
-        delete_data: bool,
-    ) -> Result<Instance> {
-        self.upsert_node(instance_config, delete_data).await
+    pub async fn cleanup(&self) -> Result<()> {
+        self.delete_all()
+            .await
+            .map_err(|e| format_err!("delete_all failed: {}", e))?;
+        self.remove_all_network_effects()
+            .await
+            .map_err(|e| format_err!("remove_all_network_effects: {}", e))
     }
 
     async fn delete_all(&self) -> Result<()> {
@@ -638,6 +636,17 @@ impl ClusterSwarm for ClusterSwarmKube {
             .map(|job_name| self.delete_resource::<Job>(job_name));
         try_join_all(delete_futures).await?;
         Ok(())
+    }
+}
+
+#[async_trait]
+impl ClusterSwarm for ClusterSwarmKube {
+    async fn spawn_new_instance(
+        &self,
+        instance_config: InstanceConfig,
+        delete_data: bool,
+    ) -> Result<Instance> {
+        self.upsert_node(instance_config, delete_data).await
     }
 
     async fn get_grafana_baseurl(&self) -> Result<String> {
