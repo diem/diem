@@ -38,8 +38,6 @@ pub static ROTATE_AUTHENTICATION_KEY_TXN: Lazy<Vec<u8>> =
 
 pub static TESTNET_MINT_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("testnet_mint"));
 
-pub static EMPTY_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("empty_script"));
-
 #[cfg(test)]
 mod test {
     use super::*;
@@ -54,7 +52,6 @@ mod test {
             &SET_VALIDATOR_CONFIG_TXN,
             &ROTATE_AUTHENTICATION_KEY_TXN,
             &TESTNET_MINT_TXN,
-            &EMPTY_TXN,
         ];
 
         for txn_script in txn_scripts.iter() {
