@@ -6,7 +6,6 @@ use crate::{
     serializer::{SafetyRulesInput, SerializerClient, SerializerService, TSerializerClient},
     Error, SafetyRules,
 };
-use consensus_types::common::Author;
 use libra_logger::warn;
 use libra_secure_net::{NetworkClient, NetworkServer};
 use std::net::SocketAddr;
@@ -21,8 +20,8 @@ pub trait RemoteService {
     fn server_address(&self) -> SocketAddr;
 }
 
-pub fn execute(author: Author, storage: PersistentSafetyStorage, listen_addr: SocketAddr) {
-    let safety_rules = SafetyRules::new(author, storage);
+pub fn execute(storage: PersistentSafetyStorage, listen_addr: SocketAddr) {
+    let safety_rules = SafetyRules::new(storage);
     let mut serializer_service = SerializerService::new(safety_rules);
     let mut network_server = NetworkServer::new(listen_addr);
 

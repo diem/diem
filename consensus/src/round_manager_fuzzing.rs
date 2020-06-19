@@ -106,7 +106,7 @@ fn create_node_for_fuzzing() -> RoundManager {
 
     // TODO: remove
     let proof = make_initial_epoch_change_proof(&signer);
-    let mut safety_rules = SafetyRules::new(signer.author(), test_utils::test_storage(&signer));
+    let mut safety_rules = SafetyRules::new(test_utils::test_storage(&signer));
     safety_rules.initialize(&proof).unwrap();
 
     // TODO: mock channels

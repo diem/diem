@@ -22,9 +22,13 @@ fn safety_rules() -> (Box<dyn TSafetyRules>, ValidatorSigner) {
     storage.reset_and_clear().unwrap();
 
     let waypoint = crate::test_utils::validator_signers_to_waypoint(&[&signer]);
-    let storage =
-        PersistentSafetyStorage::initialize(storage, signer.private_key().clone(), waypoint);
-    let safety_rules_manager = SafetyRulesManager::new_local(signer.author(), storage);
+    let storage = PersistentSafetyStorage::initialize(
+        storage,
+        signer.author(),
+        signer.private_key().clone(),
+        waypoint,
+    );
+    let safety_rules_manager = SafetyRulesManager::new_local(storage);
     let safety_rules = safety_rules_manager.client();
     (safety_rules, signer)
 }

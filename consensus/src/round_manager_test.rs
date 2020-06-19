@@ -102,13 +102,13 @@ impl NodeSetup {
         for (id, signer) in signers.iter().take(num_nodes).enumerate() {
             let (initial_data, storage) = MockStorage::start_for_testing((&validators).into());
 
-            let author = signer.author();
             let safety_storage = PersistentSafetyStorage::initialize(
                 Storage::from(libra_secure_storage::InMemoryStorage::new()),
+                signer.author(),
                 signer.private_key().clone(),
                 waypoint,
             );
-            let safety_rules_manager = SafetyRulesManager::new_local(author, safety_storage);
+            let safety_rules_manager = SafetyRulesManager::new_local(safety_storage);
 
             nodes.push(Self::new(
                 playground,
