@@ -165,4 +165,8 @@ impl Cluster {
         assert!(!instances.is_empty(), "No instances for subcluster");
         self.new_validator_sub_cluster(instances)
     }
+
+    pub fn find_instance_by_pod(&self, pod: &str) -> Option<&Instance> {
+        self.all_instances().find(|i| i.peer_name() == pod)
+    }
 }
