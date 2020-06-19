@@ -8,8 +8,8 @@ use std::path::PathBuf;
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct ConsensusConfig {
-    pub max_block_size: u64,
     pub contiguous_rounds: u32,
+    pub max_block_size: u64,
     pub max_pruned_blocks_in_mem: usize,
     pub round_initial_timeout_ms: u64,
     pub proposer_type: ConsensusProposerType,
@@ -19,14 +19,14 @@ pub struct ConsensusConfig {
 impl Default for ConsensusConfig {
     fn default() -> ConsensusConfig {
         ConsensusConfig {
+            contiguous_rounds: 2,
             max_block_size: 1000,
+            max_pruned_blocks_in_mem: 10000,
+            round_initial_timeout_ms: 1000,
             proposer_type: ConsensusProposerType::LeaderReputation(LeaderReputationConfig {
                 active_weights: 99,
                 inactive_weights: 1,
             }),
-            contiguous_rounds: 2,
-            max_pruned_blocks_in_mem: 10000,
-            round_initial_timeout_ms: 1000,
             safety_rules: SafetyRulesConfig::default(),
         }
     }
