@@ -33,6 +33,10 @@
 <span id="33">33</span>
 <span id="34">34</span>
 <span id="35">35</span>
+<span id="36">36</span>
+<span id="37">37</span>
+<span id="38">38</span>
+<span id="39">39</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -64,6 +68,10 @@
     <span class="ident">RemoteStorageWriteError</span>(<span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>, <span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Remote storage unavailable, please check your configuration: {0}&quot;</span>)]</span>
     <span class="ident">RemoteStorageUnavailable</span>(<span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Unable to read file, {0}, error {1}&quot;</span>)]</span>
+    <span class="ident">UnableToReadFile</span>(<span class="ident">String</span>, <span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Unable to parse file, {0}, error {1}&quot;</span>)]</span>
+    <span class="ident">UnableToParseFile</span>(<span class="ident">String</span>, <span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Unexpected command, expected {0}, found {1}&quot;</span>)]</span>
     <span class="ident">UnexpectedCommand</span>(<span class="ident">CommandName</span>, <span class="ident">CommandName</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Unexpected error: {0}&quot;</span>)]</span>

@@ -439,6 +439,37 @@
 <span id="439">439</span>
 <span id="440">440</span>
 <span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -447,6 +478,7 @@
 
 <span class="kw">mod</span> <span class="ident">error</span>;
 <span class="kw">mod</span> <span class="ident">genesis</span>;
+<span class="kw">mod</span> <span class="ident">json_rpc</span>;
 <span class="kw">mod</span> <span class="ident">key</span>;
 <span class="kw">mod</span> <span class="ident">layout</span>;
 <span class="kw">mod</span> <span class="ident">secure_backend</span>;
@@ -492,6 +524,10 @@
     <span class="ident">OperatorKey</span>(<span class="kw">crate</span>::<span class="ident">key</span>::<span class="ident">OperatorKey</span>),
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Submits an Ed25519PublicKey for the owner&quot;</span>)]</span>
     <span class="ident">OwnerKey</span>(<span class="kw">crate</span>::<span class="ident">key</span>::<span class="ident">OwnerKey</span>),
+    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Read account state from JSON-RPC endpoint&quot;</span>)]</span>
+    <span class="ident">ReadAccountState</span>(<span class="kw">crate</span>::<span class="ident">json_rpc</span>::<span class="ident">ReadAccountState</span>),
+    <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Submit a transaction to the blockchain&quot;</span>)]</span>
+    <span class="ident">SubmitTransaction</span>(<span class="kw">crate</span>::<span class="ident">json_rpc</span>::<span class="ident">SubmitTransaction</span>),
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Submits a Layout doc to a shared storage&quot;</span>)]</span>
     <span class="ident">SetLayout</span>(<span class="ident">SetLayout</span>),
     <span class="attribute">#[<span class="ident">structopt</span>(<span class="ident">about</span> <span class="op">=</span> <span class="string">&quot;Constructs and signs a ValidatorConfig&quot;</span>)]</span>
@@ -508,7 +544,9 @@
     <span class="ident">InsertWaypoint</span>,
     <span class="ident">OperatorKey</span>,
     <span class="ident">OwnerKey</span>,
+    <span class="ident">ReadAccountState</span>,
     <span class="ident">SetLayout</span>,
+    <span class="ident">SubmitTransaction</span>,
     <span class="ident">ValidatorConfig</span>,
     <span class="ident">Verify</span>,
 }
@@ -522,7 +560,9 @@
             <span class="ident">Command</span>::<span class="ident">InsertWaypoint</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">InsertWaypoint</span>,
             <span class="ident">Command</span>::<span class="ident">OperatorKey</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">OperatorKey</span>,
             <span class="ident">Command</span>::<span class="ident">OwnerKey</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">OwnerKey</span>,
+            <span class="ident">Command</span>::<span class="ident">ReadAccountState</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">ReadAccountState</span>,
             <span class="ident">Command</span>::<span class="ident">SetLayout</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">SetLayout</span>,
+            <span class="ident">Command</span>::<span class="ident">SubmitTransaction</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">SubmitTransaction</span>,
             <span class="ident">Command</span>::<span class="ident">ValidatorConfig</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">ValidatorConfig</span>,
             <span class="ident">Command</span>::<span class="ident">Verify</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">CommandName</span>::<span class="ident">Verify</span>,
         }
@@ -538,7 +578,9 @@
             <span class="ident">CommandName</span>::<span class="ident">InsertWaypoint</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;insert-waypoint&quot;</span>,
             <span class="ident">CommandName</span>::<span class="ident">OperatorKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;operator-key&quot;</span>,
             <span class="ident">CommandName</span>::<span class="ident">OwnerKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;owner-key&quot;</span>,
+            <span class="ident">CommandName</span>::<span class="ident">ReadAccountState</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;read-account-state&quot;</span>,
             <span class="ident">CommandName</span>::<span class="ident">SetLayout</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;set-layout&quot;</span>,
+            <span class="ident">CommandName</span>::<span class="ident">SubmitTransaction</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;submit-transaction&quot;</span>,
             <span class="ident">CommandName</span>::<span class="ident">ValidatorConfig</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;validator-config&quot;</span>,
             <span class="ident">CommandName</span>::<span class="ident">Verify</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;verify&quot;</span>,
         };
@@ -555,7 +597,13 @@
             <span class="ident">Command</span>::<span class="ident">InsertWaypoint</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">insert_waypoint</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
             <span class="ident">Command</span>::<span class="ident">OperatorKey</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">operator_key</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
             <span class="ident">Command</span>::<span class="ident">OwnerKey</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">owner_key</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
+            <span class="ident">Command</span>::<span class="ident">ReadAccountState</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.<span class="ident">read_account_state</span>().<span class="ident">unwrap</span>()),
             <span class="ident">Command</span>::<span class="ident">SetLayout</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">set_layout</span>().<span class="ident">unwrap</span>().<span class="ident">to_string</span>(),
+            <span class="ident">Command</span>::<span class="ident">SubmitTransaction</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>
+                .<span class="ident">submit_transaction</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="string">&quot;success!&quot;</span>)
+                .<span class="ident">unwrap</span>()
+                .<span class="ident">to_string</span>(),
             <span class="ident">Command</span>::<span class="ident">ValidatorConfig</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{:?}&quot;</span>, <span class="self">self</span>.<span class="ident">validator_config</span>().<span class="ident">unwrap</span>()),
             <span class="ident">Command</span>::<span class="ident">Verify</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">verify</span>().<span class="ident">unwrap</span>(),
         }
@@ -603,10 +651,24 @@
         }
     }
 
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_account_state</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">libra_types</span>::<span class="ident">account_state</span>::<span class="ident">AccountState</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Command</span>::<span class="ident">ReadAccountState</span>(<span class="ident">read_account_state</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">read_account_state</span>.<span class="ident">execute</span>(),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="self">self</span>.<span class="ident">unexpected_command</span>(<span class="ident">CommandName</span>::<span class="ident">ReadAccountState</span>)),
+        }
+    }
+
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_layout</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="kw">crate</span>::<span class="ident">layout</span>::<span class="ident">Layout</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">Command</span>::<span class="ident">SetLayout</span>(<span class="ident">set_layout</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">set_layout</span>.<span class="ident">execute</span>(),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="self">self</span>.<span class="ident">unexpected_command</span>(<span class="ident">CommandName</span>::<span class="ident">SetLayout</span>)),
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">submit_transaction</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">Command</span>::<span class="ident">SubmitTransaction</span>(<span class="ident">submit_transaction</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">submit_transaction</span>.<span class="ident">execute</span>(),
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="self">self</span>.<span class="ident">unexpected_command</span>(<span class="ident">CommandName</span>::<span class="ident">SubmitTransaction</span>)),
         }
     }
 
