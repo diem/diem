@@ -69,7 +69,7 @@ if [ -n "${CFG_OVERRIDES}" ]; then
       KEY="${KEY_VAL[0]}"
       VAL="${KEY_VAL[1]}"
       echo "Overriding ${KEY} = ${VAL} in node config"
-      sed "s/^${KEY} = .*/${KEY} = ${VAL}/g" /opt/libra/etc/node.config.toml > /tmp/node.config.toml
+      sed "s/^  ${KEY}:.*/  ${KEY}: ${VAL}/g" /opt/libra/etc/node.config.toml > /tmp/node.config.toml
       mv /tmp/node.config.toml /opt/libra/etc/node.config.toml
   done
 fi
