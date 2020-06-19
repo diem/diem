@@ -37,10 +37,30 @@ pub struct BlockCFG<'a> {
 
 impl<'a> BlockCFG<'a> {
     pub fn new(start: Label, blocks: &'a mut BasicBlocks) -> (BlockCFG, Errors) {
+        let mut cfg = BlockCFG {
+            start,
+            blocks,
+            successor_map: BTreeMap::new(),
+            predecessor_map: BTreeMap::new(),
+        };
+
+        // no dead code
+        let dead_code = cfg.recompute();
+        let mut errors = Errors::new();
+        for (_label, block) in dead_code {
+            let err = dead_code_error(&block);
+            errors.push(err)
+        }
+        (cfg, errors)
+    }
+
+    /// Recomputes successor/predecessor maps. returns removed, dead blocks
+    pub fn recompute(&mut self) -> BasicBlocks {
+        let blocks = &self.blocks;
         let mut seen = BTreeSet::new();
         let mut work_list = VecDeque::new();
-        seen.insert(start);
-        work_list.push_back(start);
+        seen.insert(self.start);
+        work_list.push_back(self.start);
 
         // build successor map from reachable code
         let mut successor_map = BTreeMap::new();
@@ -69,28 +89,22 @@ impl<'a> BlockCFG<'a> {
             }
         }
 
-        // no dead code
-        let mut errors = Errors::new();
-        let mut dead_blocks = vec![];
-        for label in blocks.keys() {
-            if !successor_map.contains_key(label) {
-                assert!(!predecessor_map.contains_key(label));
-                dead_blocks.push(*label);
-                let err = dead_code_error(blocks.get(label).unwrap());
-                errors.push(err)
+        self.successor_map = successor_map;
+        self.predecessor_map = predecessor_map;
+
+        let mut dead_block_labels = vec![];
+        for label in self.blocks.keys() {
+            if !self.successor_map.contains_key(label) {
+                assert!(!self.predecessor_map.contains_key(label));
+                dead_block_labels.push(*label);
             }
         }
-        for label in dead_blocks {
-            blocks.remove(&label);
-        }
 
-        let cfg = BlockCFG {
-            start,
-            blocks,
-            successor_map,
-            predecessor_map,
-        };
-        (cfg, errors)
+        let mut dead_blocks = BasicBlocks::new();
+        for label in dead_block_labels {
+            dead_blocks.insert(label, self.blocks.remove(&label).unwrap());
+        }
+        dead_blocks
     }
 
     pub fn blocks(&self) -> &BasicBlocks {

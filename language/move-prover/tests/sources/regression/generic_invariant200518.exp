@@ -7,7 +7,7 @@ error: precondition does not hold at this call
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/regression/generic_invariant200518.move:24:5: remove_privilege (entry)
-    =     at tests/sources/regression/generic_invariant200518.move:28:9: remove_privilege
+    =     at tests/sources/regression/generic_invariant200518.move:26:57: remove_privilege
     =         addr = <redacted>,
     =         $t1 = <redacted>
     =     at tests/sources/regression/generic_invariant200518.move:40:5: root_address (entry)
