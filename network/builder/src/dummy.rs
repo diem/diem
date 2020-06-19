@@ -134,11 +134,15 @@ pub fn setup_network() -> DummyNetwork {
         RoleType::Validator,
         listener_peer_id,
         listener_addr,
+        AuthenticationMode::Mutual(listener_identity_private_key),
     );
     network_builder
-        .authentication_mode(AuthenticationMode::Mutual(listener_identity_private_key))
         .trusted_peers(trusted_peers.clone())
-        .add_connectivity_manager(HashMap::new(), constants::CONNECTIVITY_CHECK_INTERNAL_MS);
+        .add_connectivity_manager(
+            HashMap::new(),
+            constants::CONNECTIVITY_CHECK_INTERNAL_MS,
+            constants::MAX_FULLNODE_CONNECTIONS,
+        );
     let (listener_sender, mut listener_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
     let listener_addr = network_builder.build();
@@ -151,9 +155,9 @@ pub fn setup_network() -> DummyNetwork {
         RoleType::Validator,
         dialer_peer_id,
         dialer_addr,
+        AuthenticationMode::Mutual(dialer_identity_private_key),
     );
     network_builder
-        .authentication_mode(AuthenticationMode::Mutual(dialer_identity_private_key))
         .trusted_peers(trusted_peers)
         .add_connectivity_manager(
             [(listener_peer_id, vec![listener_addr])]
@@ -161,6 +165,7 @@ pub fn setup_network() -> DummyNetwork {
                 .cloned()
                 .collect(),
             constants::CONNECTIVITY_CHECK_INTERNAL_MS,
+            constants::MAX_FULLNODE_CONNECTIONS,
         );
     let (dialer_sender, mut dialer_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());

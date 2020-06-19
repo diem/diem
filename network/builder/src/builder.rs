@@ -9,7 +9,7 @@
 //! authentication -- a network end-point running with remote authentication enabled will
 //! connect to or accept connections from an end-point running in authenticated mode as
 //! long as the latter is in its trusted peers set.
-use channel::{self, libra_channel, message_queues::QueueStyle};
+use channel::{self, message_queues::QueueStyle};
 use libra_config::{
     chain_id::ChainId,
     config::{DiscoveryMethod, NetworkConfig, RoleType, HANDSHAKE_VERSION},
@@ -20,24 +20,18 @@ use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_types::{waypoint::Waypoint, PeerId};
-use netcore::transport::{memory, Transport};
 use network::{
     connectivity_manager,
     connectivity_manager::{
         ConnectivityManagerBuilderConfig, ConnectivityManagerService, ConnectivityRequest,
     },
     constants, counters,
-    peer_manager::{
-        conn_notifs_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
-        PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
-    },
+    peer_manager::{builder::PeerManagerBuilder, conn_notifs_channel, ConnectionRequestSender},
     protocols::{
         discovery::{self, DiscoveryBuilderConfig, DiscoveryService},
         health_checker::{self, HealthCheckerBuilderConfig, HealthCheckerService},
         network::{NewNetworkEvents, NewNetworkSender},
-        wire::handshake::v1::SupportedProtocols,
     },
-    transport::{self, Connection, LibraNetTransport, LIBRA_TCP_TRANSPORT},
     ProtocolId,
 };
 use network_simple_onchain_discovery::{
@@ -47,39 +41,13 @@ use onchain_discovery::builder::{OnchainDiscoveryBuilder, OnchainDiscoveryBuilde
 use std::{
     clone::Clone,
     collections::HashMap,
-    num::NonZeroUsize,
     sync::{Arc, RwLock},
 };
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
 use tokio::runtime::{Builder, Handle, Runtime};
 
-#[derive(Debug)]
-pub enum AuthenticationMode {
-    /// Inbound and outbound connections are secured with NoiseIK; however, only
-    /// clients/dialers will authenticate the servers/listeners. More specifically,
-    /// dialers will pin the connection to a specific, expected pubkey while
-    /// listeners will accept any inbound dialer's pubkey.
-    ServerOnly(x25519::PrivateKey),
-    /// Inbound and outbound connections are secured with NoiseIK. Both dialer and
-    /// listener will only accept connections that successfully authenticate to a
-    /// pubkey in their "trusted peers" set.
-    Mutual(x25519::PrivateKey),
-}
-
-impl AuthenticationMode {
-    /// Convenience method to retrieve the public key for the auth mode's inner
-    /// network identity key.
-    ///
-    /// Note: this only works because all auth modes are Noise-based.
-    pub fn public_key(&self) -> x25519::PublicKey {
-        match self {
-            AuthenticationMode::ServerOnly(key) | AuthenticationMode::Mutual(key) => {
-                key.public_key()
-            }
-        }
-    }
-}
+pub use network::peer_manager::builder::AuthenticationMode;
 
 /// Build Network module with custom configuration values.
 /// Methods can be chained in order to set the configuration values.
@@ -90,26 +58,12 @@ impl AuthenticationMode {
 // pretty tangled.
 pub struct NetworkBuilder {
     executor: Handle,
-    chain_id: ChainId,
     network_context: Arc<NetworkContext>,
-    // TODO(philiphayes): better support multiple listening addrs
-    listen_address: NetworkAddress,
     trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
-    authentication_mode: Option<AuthenticationMode>,
     channel_size: usize,
-    direct_send_protocols: Vec<ProtocolId>,
-    rpc_protocols: Vec<ProtocolId>,
-    upstream_handlers:
-        HashMap<ProtocolId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
-    connection_event_handlers: Vec<conn_notifs_channel::Sender>,
-    pm_reqs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
-    pm_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
-    connection_reqs_tx: libra_channel::Sender<PeerId, ConnectionRequest>,
-    connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
     conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
-    max_concurrent_network_reqs: usize,
-    max_concurrent_network_notifs: usize,
-    max_fullnode_connections: usize,
+
+    peer_manager_builder: Option<PeerManagerBuilder>,
     connectivity_manager_config: Option<ConnectivityManagerBuilderConfig>,
     connectivity_manager: Option<ConnectivityManagerService>,
     configuration_change_listener_cfg: Option<ConfigurationChangeListenerConfig>,
@@ -133,39 +87,28 @@ impl NetworkBuilder {
         role: RoleType,
         peer_id: PeerId,
         listen_address: NetworkAddress,
+        authentication_mode: AuthenticationMode,
     ) -> NetworkBuilder {
-        // Setup channel to send requests to peer manager.
-        let (pm_reqs_tx, pm_reqs_rx) = libra_channel::new(
-            QueueStyle::FIFO,
-            NonZeroUsize::new(constants::NETWORK_CHANNEL_SIZE).unwrap(),
-            Some(&counters::PENDING_PEER_MANAGER_REQUESTS),
-        );
-        // Setup channel to send connection requests to peer manager.
-        let (connection_reqs_tx, connection_reqs_rx) = libra_channel::new(
-            QueueStyle::FIFO,
-            NonZeroUsize::new(constants::NETWORK_CHANNEL_SIZE).unwrap(),
-            None,
+        let network_context = Arc::new(NetworkContext::new(network_id, role, peer_id));
+        let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
+
+        let peer_manager_builder = PeerManagerBuilder::create(
+            chain_id,
+            network_context.clone(),
+            listen_address,
+            trusted_peers.clone(),
+            authentication_mode,
+            constants::NETWORK_CHANNEL_SIZE,
+            constants::MAX_CONCURRENT_NETWORK_REQS,
+            constants::MAX_CONCURRENT_NETWORK_NOTIFS,
         );
         NetworkBuilder {
             executor,
-            chain_id,
-            network_context: Arc::new(NetworkContext::new(network_id, role, peer_id)),
-            listen_address,
-            trusted_peers: Arc::new(RwLock::new(HashMap::new())),
-            authentication_mode: None,
+            network_context,
+            trusted_peers,
             channel_size: constants::NETWORK_CHANNEL_SIZE,
-            direct_send_protocols: vec![],
-            rpc_protocols: vec![],
-            upstream_handlers: HashMap::new(),
-            connection_event_handlers: Vec::new(),
-            pm_reqs_tx,
-            pm_reqs_rx,
-            connection_reqs_tx,
-            connection_reqs_rx,
             conn_mgr_reqs_tx: None,
-            max_concurrent_network_reqs: constants::MAX_CONCURRENT_NETWORK_REQS,
-            max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
-            max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
+            peer_manager_builder: Some(peer_manager_builder),
             connectivity_manager_config: None,
             connectivity_manager: None,
             configuration_change_listener_cfg: None,
@@ -198,8 +141,15 @@ impl NetworkBuilder {
             .build()
             .expect("Failed to start runtime. Won't be able to start networking.");
 
-        let identity_key = config.identity_key();
         let peer_id = config.peer_id();
+        let identity_key = config.identity_key();
+        let public_key = identity_key.public_key();
+
+        let authentication_mode = if config.mutual_authentication {
+            AuthenticationMode::Mutual(identity_key)
+        } else {
+            AuthenticationMode::ServerOnly(identity_key)
+        };
 
         let mut network_builder = NetworkBuilder::new(
             runtime.handle().clone(),
@@ -208,6 +158,7 @@ impl NetworkBuilder {
             role,
             peer_id,
             config.listen_address.clone(),
+            authentication_mode,
         );
         network_builder.add_connection_monitoring(
             // TODO:  move into NetworkConfig
@@ -239,17 +190,21 @@ impl NetworkBuilder {
             );
 
             network_builder
-                .authentication_mode(AuthenticationMode::Mutual(identity_key))
                 .trusted_peers(trusted_peers)
-                .add_connectivity_manager(seed_peers, config.connectivity_check_interval_ms);
+                .add_connectivity_manager(
+                    seed_peers,
+                    config.connectivity_check_interval_ms,
+                    constants::MAX_FULLNODE_CONNECTIONS,
+                );
         } else {
-            // Enforce the outgoing connection (dialer) verifies the identity of the listener (server)
-            network_builder.authentication_mode(AuthenticationMode::ServerOnly(identity_key));
             // TODO:  Why does ServerOnly and no seed_peers mean that a ConnectivityManager is unnecessary?
             // My understanding is that ConnectivityManager is responsible for keeping connections to neighbors alive.
             if !seed_peers.is_empty() {
-                network_builder
-                    .add_connectivity_manager(seed_peers, config.connectivity_check_interval_ms);
+                network_builder.add_connectivity_manager(
+                    seed_peers,
+                    config.connectivity_check_interval_ms,
+                    constants::MAX_FULLNODE_CONNECTIONS,
+                );
             }
         }
 
@@ -258,6 +213,7 @@ impl NetworkBuilder {
                 network_builder.add_gossip_discovery(
                     gossip_config.advertised_address.clone(),
                     gossip_config.discovery_interval_ms,
+                    public_key,
                 );
             }
             DiscoveryMethod::Onchain => {
@@ -277,12 +233,6 @@ impl NetworkBuilder {
         &mut self.reconfig_subscriptions
     }
 
-    /// Set network authentication mode.
-    pub fn authentication_mode(&mut self, authentication_mode: AuthenticationMode) -> &mut Self {
-        self.authentication_mode = Some(authentication_mode);
-        self
-    }
-
     /// Set trusted peers.
     pub fn trusted_peers(
         &mut self,
@@ -296,58 +246,13 @@ impl NetworkBuilder {
         self.conn_mgr_reqs_tx.clone()
     }
 
-    fn supported_protocols(&self) -> SupportedProtocols {
-        self.direct_send_protocols
-            .iter()
-            .chain(&self.rpc_protocols)
-            .into()
-    }
-
-    /// Add a handler for given protocols using raw bytes.
-    fn inner_add_protocol_handler(
-        &mut self,
-        rpc_protocols: Vec<ProtocolId>,
-        direct_send_protocols: Vec<ProtocolId>,
-        queue_preference: QueueStyle,
-        max_queue_size_per_peer: usize,
-        counter: Option<&'static IntCounterVec>,
-    ) -> (
-        PeerManagerRequestSender,
-        libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
-        ConnectionRequestSender,
-        conn_notifs_channel::Receiver,
-    ) {
-        self.direct_send_protocols
-            .extend(direct_send_protocols.clone());
-        self.rpc_protocols.extend(rpc_protocols.clone());
-        let (network_notifs_tx, network_notifs_rx) = libra_channel::new(
-            queue_preference,
-            NonZeroUsize::new(max_queue_size_per_peer).unwrap(),
-            counter,
-        );
-        for protocol in rpc_protocols
-            .iter()
-            .chain(direct_send_protocols.iter())
-            .cloned()
-        {
-            self.upstream_handlers
-                .insert(protocol, network_notifs_tx.clone());
-        }
-        let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
-        // Auto-subscribe all application level handlers to connection events.
-        self.connection_event_handlers.push(connection_notifs_tx);
-        (
-            PeerManagerRequestSender::new(self.pm_reqs_tx.clone()),
-            network_notifs_rx,
-            ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
-            connection_notifs_rx,
-        )
-    }
-
     pub fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {
-        let (tx, rx) = conn_notifs_channel::new();
-        self.connection_event_handlers.push(tx);
-        rx
+        match &mut self.peer_manager_builder {
+            Some(builder) => builder.add_connection_event_listener(),
+            None => panic!(
+                "Cannot add a conneciton event listener if PeerManagerBuilder does not exist"
+            ),
+        }
     }
 
     /// Add a [`ConnectivityManager`] to the network.
@@ -363,6 +268,7 @@ impl NetworkBuilder {
         &mut self,
         seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
         connectivity_check_interval_ms: u64,
+        max_fullnode_connections: usize,
     ) -> &mut Self {
         let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
             self.channel_size,
@@ -370,9 +276,15 @@ impl NetworkBuilder {
         );
         self.conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx);
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
+        let connection_reqs_tx = match &self.peer_manager_builder {
+            Some(builder) => builder.connection_reqs_tx(),
+            None => {
+                panic!("Cannot add a ConnectivityManager if the PeerManagerBuilder is not present")
+            }
+        };
 
         let connection_limit = if let RoleType::FullNode = self.network_context.role() {
-            Some(self.max_fullnode_connections)
+            Some(max_fullnode_connections)
         } else {
             None
         };
@@ -385,7 +297,7 @@ impl NetworkBuilder {
             2, // Hard-coded constant
             // TODO:  Move this to NetworkConfig
             constants::MAX_CONNECTION_DELAY_MS,
-            ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
+            ConnectionRequestSender::new(connection_reqs_tx),
             pm_conn_mgr_notifs_rx,
             conn_mgr_reqs_rx,
             connection_limit,
@@ -448,6 +360,7 @@ impl NetworkBuilder {
         &mut self,
         advertised_address: NetworkAddress,
         discovery_interval_ms: u64,
+        pubkey: x25519::PublicKey,
     ) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
@@ -467,11 +380,6 @@ impl NetworkBuilder {
         // TODO(philiphayes): in network_builder setup, only bind the channels.
         // wait until PeerManager is running to actual setup gossip discovery.
 
-        let authentication_mode = self
-            .authentication_mode
-            .as_ref()
-            .expect("Authentication Mode not set");
-        let pubkey = authentication_mode.public_key();
         let advertised_address = advertised_address.append_prod_protos(pubkey, HANDSHAKE_VERSION);
 
         let addrs = vec![advertised_address];
@@ -591,98 +499,16 @@ impl NetworkBuilder {
         self
     }
 
-    /// Create the configured transport and start PeerManager.
-    /// Return the actual NetworkAddress over which this peer is listening.
-    pub fn build(mut self) -> NetworkAddress {
-        use libra_network_address::Protocol::*;
-
-        let chain_id = self.chain_id.clone();
-        let network_id = self.network_context.network_id().clone();
-        let protos = self.supported_protocols();
-
-        let authentication_mode = self
-            .authentication_mode
-            .take()
-            .expect("Authentication Mode not set");
-
-        let (key, maybe_trusted_peers, peer_id) = match authentication_mode {
-            // validator-operated full node
-            AuthenticationMode::ServerOnly(key)
-                if self.network_context.peer_id() == PeerId::ZERO =>
-            {
-                let public_key = key.public_key();
-                let peer_id = PeerId::from_identity_public_key(public_key);
-                (key, None, peer_id)
-            }
-            // full node
-            AuthenticationMode::ServerOnly(key) => (key, None, self.network_context.peer_id()),
-            // validator
-            AuthenticationMode::Mutual(key) => (
-                key,
-                Some(self.trusted_peers.clone()),
-                self.network_context.peer_id(),
-            ),
-        };
-
-        match self.listen_address.as_slice() {
-            [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => {
-                self.build_with_transport(LibraNetTransport::new(
-                    LIBRA_TCP_TRANSPORT.clone(),
-                    peer_id,
-                    key,
-                    maybe_trusted_peers,
-                    HANDSHAKE_VERSION,
-                    chain_id,
-                    network_id,
-                    protos,
-                ))
-            }
-            [Memory(_)] => self.build_with_transport(LibraNetTransport::new(
-                memory::MemoryTransport,
-                peer_id,
-                key,
-                maybe_trusted_peers,
-                HANDSHAKE_VERSION,
-                chain_id,
-                network_id,
-                protos,
-            )),
-            _ => panic!(
-                "{} Unsupported listen_address: '{}', expected '/memory/<port>', \
-                 '/ip4/<addr>/tcp/<port>', or '/ip6/<addr>/tcp/<port>'.",
-                self.network_context, self.listen_address
-            ),
-        }
+    pub fn build(&mut self) -> NetworkAddress {
+        self.build_peer_manager()
     }
 
-    /// Given a transport build and launch PeerManager.
-    /// Return the actual NetworkAddress over which this peer is listening.
-    fn build_with_transport<TTransport, TSocket>(self, transport: TTransport) -> NetworkAddress
-    where
-        TTransport: Transport<Output = Connection<TSocket>> + Send + 'static,
-        TSocket: transport::TSocket,
-    {
-        let peer_mgr = PeerManager::new(
-            self.executor.clone(),
-            transport,
-            self.network_context.clone(),
-            // TODO(philiphayes): peer manager should take `Vec<NetworkAddress>`
-            // (which could be empty, like in client use case)
-            self.listen_address,
-            self.pm_reqs_rx,
-            self.connection_reqs_rx,
-            self.upstream_handlers,
-            self.connection_event_handlers,
-            self.max_concurrent_network_reqs,
-            self.max_concurrent_network_notifs,
-            self.channel_size,
-        );
-        let listen_addr = peer_mgr.listen_addr().clone();
-
-        self.executor.spawn(peer_mgr.start());
-        debug!("{} Started peer manager", self.network_context);
-
-        listen_addr
+    fn build_peer_manager(&mut self) -> NetworkAddress {
+        let peer_manager_builder = self
+            .peer_manager_builder
+            .take()
+            .expect("PeerManagerBuilder must exist");
+        peer_manager_builder.build(&self.executor)
     }
 
     /// Adds a endpoints for the provided configuration.  Returns NetworkSender and NetworkEvent which
@@ -701,14 +527,17 @@ impl NetworkBuilder {
         EventT: NewNetworkEvents,
         SenderT: NewNetworkSender,
     {
-        let (peer_mgr_reqs_tx, peer_mgr_reqs_rx, connection_reqs_tx, connection_notifs_rx) = self
-            .inner_add_protocol_handler(
-                rpc_protocols,
-                direct_send_protocols,
-                queue_preference,
-                max_queue_size_per_peer,
-                counter,
-            );
+        let (peer_mgr_reqs_tx, peer_mgr_reqs_rx, connection_reqs_tx, connection_notifs_rx) =
+            match &mut self.peer_manager_builder {
+                Some(builder) => builder.add_protocol_handler(
+                    rpc_protocols,
+                    direct_send_protocols,
+                    queue_preference,
+                    max_queue_size_per_peer,
+                    counter,
+                ),
+                None => panic!("Cannot add protocol handler if PeerManagerBuilder does not exist"),
+            };
         (
             SenderT::new(peer_mgr_reqs_tx, connection_reqs_tx),
             EventT::new(peer_mgr_reqs_rx, connection_notifs_rx),

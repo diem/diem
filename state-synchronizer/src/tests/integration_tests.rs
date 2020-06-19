@@ -249,6 +249,9 @@ impl SynchronizerEnv {
                 vec![self.peer_addresses[new_peer_idx - 1].clone()],
             );
         }
+        let authentication_mode =
+            AuthenticationMode::Mutual(self.network_keys[new_peer_idx].clone());
+        let public_key = authentication_mode.public_key();
         let mut network_builder = NetworkBuilder::new(
             self.runtime.handle().clone(),
             ChainId::default(),
@@ -256,14 +259,16 @@ impl SynchronizerEnv {
             RoleType::Validator,
             self.peer_ids[new_peer_idx],
             addr.clone(),
+            authentication_mode,
         );
         network_builder
-            .authentication_mode(AuthenticationMode::Mutual(
-                self.network_keys[new_peer_idx].clone(),
-            ))
             .trusted_peers(trusted_peers)
-            .add_connectivity_manager(seed_peers, constants::CONNECTIVITY_CHECK_INTERNAL_MS)
-            .add_gossip_discovery(addr, constants::DISCOVERY_INTERVAL_MS);
+            .add_connectivity_manager(
+                seed_peers,
+                constants::CONNECTIVITY_CHECK_INTERNAL_MS,
+                constants::MAX_FULLNODE_CONNECTIONS,
+            )
+            .add_gossip_discovery(addr, constants::DISCOVERY_INTERVAL_MS, public_key);
 
         let (sender, events) =
             network_builder.add_protocol_handler(crate::network::network_endpoint_config());
