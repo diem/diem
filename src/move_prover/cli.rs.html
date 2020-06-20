@@ -432,6 +432,9 @@
 <span id="432">432</span>
 <span id="433">433</span>
 <span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -588,6 +591,8 @@
     <span class="doccomment">/// How many times to call the prover backend for the verification problem. This is used for</span>
     <span class="doccomment">/// benchmarking.</span>
     <span class="kw">pub</span> <span class="ident">bench_repeat</span>: <span class="ident">usize</span>,
+    <span class="doccomment">/// Whether to use the sequence theory as the internal representation for $Vector type.</span>
+    <span class="kw">pub</span> <span class="ident">vector_using_sequences</span>: <span class="ident">bool</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">BackendOptions</span> {
@@ -608,6 +613,7 @@
             <span class="ident">aggressive_func_inline</span>: <span class="string">&quot;&quot;</span>.<span class="ident">to_owned</span>(),
             <span class="ident">func_inline</span>: <span class="string">&quot;{:inline}&quot;</span>.<span class="ident">to_owned</span>(),
             <span class="ident">serialize_bound</span>: <span class="number">4</span>,
+            <span class="ident">vector_using_sequences</span>: <span class="bool-val">false</span>,
         }
     }
 }

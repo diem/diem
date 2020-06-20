@@ -2660,7 +2660,7 @@
     <span class="kw">fn</span> <span class="ident">translate_pack</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">args</span>: <span class="kw-2">&amp;</span>[<span class="ident">Exp</span>]) {
         <span class="macro">emit</span><span class="macro">!</span>(
             <span class="self">self</span>.<span class="ident">writer</span>,
-            <span class="string">&quot;$Vector({}$EmptyValueArray&quot;</span>,
+            <span class="string">&quot;$Vector({}$EmptyValueArray()&quot;</span>,
             <span class="string">&quot;$ExtendValueArray(&quot;</span>.<span class="ident">repeat</span>(<span class="ident">args</span>.<span class="ident">len</span>())
         );
         <span class="kw">for</span> <span class="ident">arg</span> <span class="kw">in</span> <span class="ident">args</span>.<span class="ident">iter</span>() {

@@ -1759,6 +1759,27 @@
 <span id="1759">1759</span>
 <span id="1760">1760</span>
 <span id="1761">1761</span>
+<span id="1762">1762</span>
+<span id="1763">1763</span>
+<span id="1764">1764</span>
+<span id="1765">1765</span>
+<span id="1766">1766</span>
+<span id="1767">1767</span>
+<span id="1768">1768</span>
+<span id="1769">1769</span>
+<span id="1770">1770</span>
+<span id="1771">1771</span>
+<span id="1772">1772</span>
+<span id="1773">1773</span>
+<span id="1774">1774</span>
+<span id="1775">1775</span>
+<span id="1776">1776</span>
+<span id="1777">1777</span>
+<span id="1778">1778</span>
+<span id="1779">1779</span>
+<span id="1780">1780</span>
+<span id="1781">1781</span>
+<span id="1782">1782</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2134,30 +2155,51 @@
             <span class="ident">separate</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">type_args_str</span>.<span class="ident">clone</span>(), <span class="ident">args_str</span>.<span class="ident">clone</span>()], <span class="string">&quot;, &quot;</span>)
         );
         <span class="self">self</span>.<span class="ident">writer</span>.<span class="ident">indent</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctor_expr</span> <span class="op">=</span> <span class="string">&quot;$MapConstValue($DefaultValue())&quot;</span>.<span class="ident">to_owned</span>();
-        <span class="kw">for</span> <span class="ident">field_env</span> <span class="kw">in</span> <span class="ident">struct_env</span>.<span class="ident">get_fields</span>() {
-            <span class="kw">let</span> <span class="ident">field_param</span> <span class="op">=</span>
-                <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">field_env</span>.<span class="ident">get_name</span>().<span class="ident">display</span>(<span class="ident">struct_env</span>.<span class="ident">symbol_pool</span>()));
-            <span class="kw">let</span> <span class="ident">type_check</span> <span class="op">=</span> <span class="ident">boogie_well_formed_check</span>(
-                <span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">env</span>,
-                <span class="ident">field_param</span>,
-                <span class="kw-2">&amp;</span><span class="ident">field_env</span>.<span class="ident">get_type</span>(),
-                <span class="ident">WellFormedMode</span>::<span class="ident">Default</span>,
-            );
-            <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="ident">type_check</span>);
-            <span class="ident">ctor_expr</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;{}[{} := {}]&quot;</span>,
+        <span class="comment">// $Vector is either represented using sequences or integer maps</span>
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">options</span>.<span class="ident">backend</span>.<span class="ident">vector_using_sequences</span> {
+            <span class="comment">// Using sequences as the internal representation</span>
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctor_expr</span> <span class="op">=</span> <span class="string">&quot;$EmptyValueArray()&quot;</span>.<span class="ident">to_owned</span>();
+            <span class="kw">for</span> <span class="ident">field_env</span> <span class="kw">in</span> <span class="ident">struct_env</span>.<span class="ident">get_fields</span>() {
+                <span class="kw">let</span> <span class="ident">field_param</span> <span class="op">=</span>
+                    <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">field_env</span>.<span class="ident">get_name</span>().<span class="ident">display</span>(<span class="ident">struct_env</span>.<span class="ident">symbol_pool</span>()));
+                <span class="kw">let</span> <span class="ident">type_check</span> <span class="op">=</span> <span class="ident">boogie_well_formed_check</span>(
+                    <span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">env</span>,
+                    <span class="ident">field_param</span>,
+                    <span class="kw-2">&amp;</span><span class="ident">field_env</span>.<span class="ident">get_type</span>(),
+                    <span class="ident">WellFormedMode</span>::<span class="ident">Default</span>,
+                );
+                <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="ident">type_check</span>);
+                <span class="comment">// TODO: Remove the use of $ExtendValueArray; it is deprecated</span>
+                <span class="ident">ctor_expr</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;$ExtendValueArray({},{})&quot;</span>, <span class="ident">ctor_expr</span>, <span class="ident">field_param</span>);
+            }
+            <span class="macro">emitln</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="string">&quot;$struct := $Vector({});&quot;</span>, <span class="ident">ctor_expr</span>);
+        } <span class="kw">else</span> {
+            <span class="comment">// Using integer maps as the internal representation</span>
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">ctor_expr</span> <span class="op">=</span> <span class="string">&quot;$MapConstValue($DefaultValue())&quot;</span>.<span class="ident">to_owned</span>();
+            <span class="kw">for</span> <span class="ident">field_env</span> <span class="kw">in</span> <span class="ident">struct_env</span>.<span class="ident">get_fields</span>() {
+                <span class="kw">let</span> <span class="ident">field_param</span> <span class="op">=</span>
+                    <span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">field_env</span>.<span class="ident">get_name</span>().<span class="ident">display</span>(<span class="ident">struct_env</span>.<span class="ident">symbol_pool</span>()));
+                <span class="kw">let</span> <span class="ident">type_check</span> <span class="op">=</span> <span class="ident">boogie_well_formed_check</span>(
+                    <span class="self">self</span>.<span class="ident">module_env</span>.<span class="ident">env</span>,
+                    <span class="ident">field_param</span>,
+                    <span class="kw-2">&amp;</span><span class="ident">field_env</span>.<span class="ident">get_type</span>(),
+                    <span class="ident">WellFormedMode</span>::<span class="ident">Default</span>,
+                );
+                <span class="macro">emit</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">writer</span>, <span class="kw-2">&amp;</span><span class="ident">type_check</span>);
+                <span class="ident">ctor_expr</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+                    <span class="string">&quot;{}[{} := {}]&quot;</span>,
+                    <span class="ident">ctor_expr</span>,
+                    <span class="ident">field_env</span>.<span class="ident">get_offset</span>(),
+                    <span class="ident">field_param</span>
+                );
+            }
+            <span class="macro">emitln</span><span class="macro">!</span>(
+                <span class="self">self</span>.<span class="ident">writer</span>,
+                <span class="string">&quot;$struct := $Vector($ValueArray({}, {}));&quot;</span>,
                 <span class="ident">ctor_expr</span>,
-                <span class="ident">field_env</span>.<span class="ident">get_offset</span>(),
-                <span class="ident">field_param</span>
+                <span class="ident">struct_env</span>.<span class="ident">get_field_count</span>()
             );
         }
-        <span class="macro">emitln</span><span class="macro">!</span>(
-            <span class="self">self</span>.<span class="ident">writer</span>,
-            <span class="string">&quot;$struct := $Vector($ValueArray({}, {}));&quot;</span>,
-            <span class="ident">ctor_expr</span>,
-            <span class="ident">struct_env</span>.<span class="ident">get_field_count</span>()
-        );
 
         <span class="comment">// Generate $DebugTrackLocal so we can see the constructed value before invariant</span>
         <span class="comment">// evaluation may abort.</span>

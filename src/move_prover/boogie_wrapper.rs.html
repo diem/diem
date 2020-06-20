@@ -1351,6 +1351,62 @@
 <span id="1351">1351</span>
 <span id="1352">1352</span>
 <span id="1353">1353</span>
+<span id="1354">1354</span>
+<span id="1355">1355</span>
+<span id="1356">1356</span>
+<span id="1357">1357</span>
+<span id="1358">1358</span>
+<span id="1359">1359</span>
+<span id="1360">1360</span>
+<span id="1361">1361</span>
+<span id="1362">1362</span>
+<span id="1363">1363</span>
+<span id="1364">1364</span>
+<span id="1365">1365</span>
+<span id="1366">1366</span>
+<span id="1367">1367</span>
+<span id="1368">1368</span>
+<span id="1369">1369</span>
+<span id="1370">1370</span>
+<span id="1371">1371</span>
+<span id="1372">1372</span>
+<span id="1373">1373</span>
+<span id="1374">1374</span>
+<span id="1375">1375</span>
+<span id="1376">1376</span>
+<span id="1377">1377</span>
+<span id="1378">1378</span>
+<span id="1379">1379</span>
+<span id="1380">1380</span>
+<span id="1381">1381</span>
+<span id="1382">1382</span>
+<span id="1383">1383</span>
+<span id="1384">1384</span>
+<span id="1385">1385</span>
+<span id="1386">1386</span>
+<span id="1387">1387</span>
+<span id="1388">1388</span>
+<span id="1389">1389</span>
+<span id="1390">1390</span>
+<span id="1391">1391</span>
+<span id="1392">1392</span>
+<span id="1393">1393</span>
+<span id="1394">1394</span>
+<span id="1395">1395</span>
+<span id="1396">1396</span>
+<span id="1397">1397</span>
+<span id="1398">1398</span>
+<span id="1399">1399</span>
+<span id="1400">1400</span>
+<span id="1401">1401</span>
+<span id="1402">1402</span>
+<span id="1403">1403</span>
+<span id="1404">1404</span>
+<span id="1405">1405</span>
+<span id="1406">1406</span>
+<span id="1407">1407</span>
+<span id="1408">1408</span>
+<span id="1409">1409</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1978,6 +2034,13 @@
 <span class="comment">// -----------------------------------------------</span>
 <span class="comment">// # Boogie Model Analysis</span>
 
+<span class="doccomment">/// Represents whether the Vector type is implemented at the SMT level using integer maps or sequences</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ValueArrayRep</span> {
+    <span class="ident">ValueArrayIsMap</span>,
+    <span class="ident">ValueArrayIsSeq</span>,
+}
+
 <span class="doccomment">/// Represents a boogie model.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Model</span> {
@@ -1985,6 +2048,7 @@
     <span class="ident">tracked_locals</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Loc</span>, <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">LocalDescriptor</span>, <span class="ident">ModelValue</span>)<span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">tracked_aborts</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span>(<span class="ident">String</span>, <span class="ident">LineIndex</span>), <span class="ident">AbortDescriptor</span><span class="op">&gt;</span>,
     <span class="ident">tracked_exps</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ExpDescriptor</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ModelValue</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+    <span class="ident">value_array_rep</span>: <span class="ident">ValueArrayRep</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Model</span> {
@@ -2072,11 +2136,17 @@
                 <span class="comment">//    );</span>
                 <span class="comment">// }</span>
                 <span class="comment">// END DEBUG</span>
+                <span class="kw">let</span> <span class="ident">value_array_rep</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">wrapper</span>.<span class="ident">options</span>.<span class="ident">backend</span>.<span class="ident">vector_using_sequences</span> {
+                    <span class="ident">ValueArrayRep</span>::<span class="ident">ValueArrayIsSeq</span>
+                } <span class="kw">else</span> {
+                    <span class="ident">ValueArrayRep</span>::<span class="ident">ValueArrayIsMap</span>
+                };
                 <span class="kw">let</span> <span class="ident">model</span> <span class="op">=</span> <span class="ident">Model</span> {
                     <span class="ident">vars</span>,
                     <span class="ident">tracked_locals</span>,
                     <span class="ident">tracked_aborts</span>,
                     <span class="ident">tracked_exps</span>,
+                    <span class="ident">value_array_rep</span>,
                 };
                 <span class="prelude-val">Ok</span>(<span class="ident">model</span>)
             })
@@ -2297,45 +2367,87 @@
         <span class="ident">args</span>[<span class="number">0</span>].<span class="ident">extract_value_array</span>(<span class="ident">model</span>)
     }
 
-    <span class="doccomment">/// Extracts a value array from `(ValueArray map_key size)`. This follows indirections in the</span>
-    <span class="doccomment">/// model. We find the value array map at `Select_[$int]$Value`. This has e.g. the form</span>
-    <span class="doccomment">///</span>
+    <span class="doccomment">/// Extracts a value array from it&#39;s representation.</span>
+    <span class="doccomment">/// If the representation uses maps it is defined by `(ValueArray map_key size)`. The function</span>
+    <span class="doccomment">/// follows indirections in the model. We find the value array map at `Select_[$int]$Value`.</span>
+    <span class="doccomment">/// This has e.g. the form</span>
     <span class="doccomment">/// ```model</span>
     <span class="doccomment">///   Select_[$int]$Value -&gt; {</span>
-    <span class="comment">//      |T@[Int]Value!val!1| 0 -&gt; (Integer 2)</span>
-    <span class="comment">//      |T@[Int]Value!val!1| 22 -&gt; (Integer 2)</span>
-    <span class="comment">//      else -&gt; (Integer 0)</span>
-    <span class="comment">//    }</span>
-    <span class="comment">// ```</span>
+    <span class="doccomment">///      |T@[Int]Value!val!1| 0 -&gt; (Integer 2)</span>
+    <span class="doccomment">///      |T@[Int]Value!val!1| 22 -&gt; (Integer 2)</span>
+    <span class="doccomment">///      else -&gt; (Integer 0)</span>
+    <span class="doccomment">///    }</span>
+    <span class="doccomment">/// ```</span>
+    <span class="doccomment">/// If the value array is represented by a sequence instead, there are no indirections.</span>
+    <span class="doccomment">/// It has the form</span>
+    <span class="doccomment">/// ```(seq.++ (seq.unit (Integer 0)) (seq.unit (Integer 1)))```</span>
+    <span class="doccomment">/// or</span>
+    <span class="doccomment">/// ```(as seq.empty (Seq T@$Value))```</span>
+    <span class="doccomment">/// depending on whether it is an empty or nonempty sequence, respectively.</span>
+    <span class="comment">// In this case the sequence representation does not explicitly denote a constructor like ValueArray(..),</span>
+    <span class="comment">// instead reducing expressions to native SMT sequence theory expressions.</span>
+
     <span class="kw">fn</span> <span class="ident">extract_value_array</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">model</span>: <span class="kw-2">&amp;</span><span class="ident">Model</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModelValueVector</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extract_list</span>(<span class="string">&quot;$ValueArray&quot;</span>)<span class="question-mark">?</span>;
-        <span class="kw">if</span> <span class="ident">args</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">2</span> {
-            <span class="kw">return</span> <span class="prelude-val">None</span>;
-        }
-        <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="ident">args</span>[<span class="number">1</span>]).<span class="ident">extract_number</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">map_key</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">args</span>[<span class="number">0</span>];
-        <span class="kw">let</span> <span class="ident">value_array_map</span> <span class="op">=</span> <span class="ident">model</span>
-            .<span class="ident">vars</span>
-            .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">ModelValue</span>::<span class="ident">literal</span>(<span class="string">&quot;Select_[$int]$Value&quot;</span>))<span class="question-mark">?</span>
-            .<span class="ident">extract_map</span>()<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">values</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">default</span> <span class="op">=</span> <span class="ident">ModelValue</span>::<span class="ident">error</span>();
-        <span class="kw">for</span> (<span class="ident">key</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="ident">value_array_map</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="ident">ModelValue</span>::<span class="ident">List</span>(<span class="ident">elems</span>) <span class="op">=</span> <span class="ident">key</span> {
-                <span class="kw">if</span> <span class="ident">elems</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">2</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="kw-2">&amp;</span><span class="ident">elems</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="ident">map_key</span> {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="ident">elems</span>[<span class="number">1</span>].<span class="ident">extract_number</span>() {
-                        <span class="ident">values</span>.<span class="ident">insert</span>(<span class="ident">idx</span>, <span class="ident">value</span>.<span class="ident">clone</span>());
-                    }
+        <span class="kw">if</span> <span class="ident">ValueArrayRep</span>::<span class="ident">ValueArrayIsSeq</span> <span class="op">=</span><span class="op">=</span> <span class="ident">model</span>.<span class="ident">value_array_rep</span> {
+            <span class="comment">// Implementation of $ValueArray using sequences</span>
+            <span class="kw">let</span> <span class="ident">seq_type_modelvalue</span> <span class="op">=</span> <span class="ident">ModelValue</span>::<span class="ident">List</span>(<span class="macro">vec</span><span class="macro">!</span>[
+                <span class="ident">ModelValue</span>::<span class="ident">literal</span>(<span class="string">&quot;Seq&quot;</span>),
+                <span class="ident">ModelValue</span>::<span class="ident">List</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">ModelValue</span>::<span class="ident">literal</span>(<span class="string">&quot;T@$Value&quot;</span>)]),
+            ]);
+            <span class="kw">let</span> <span class="ident">empty_seq_model_value</span> <span class="op">=</span> <span class="ident">ModelValue</span>::<span class="ident">List</span>(<span class="macro">vec</span><span class="macro">!</span>[
+                <span class="ident">ModelValue</span>::<span class="ident">literal</span>(<span class="string">&quot;as&quot;</span>),
+                <span class="ident">ModelValue</span>::<span class="ident">List</span>(<span class="macro">vec</span><span class="macro">!</span>[<span class="ident">ModelValue</span>::<span class="ident">literal</span>(<span class="string">&quot;seq.empty&quot;</span>)]),
+                <span class="ident">seq_type_modelvalue</span>,
+            ]);
+            <span class="kw">let</span> <span class="ident">default</span> <span class="op">=</span> <span class="ident">ModelValue</span>::<span class="ident">error</span>();
+            <span class="kw">let</span> (<span class="ident">size</span>, <span class="ident">values</span>) <span class="op">=</span> <span class="kw">if</span> <span class="kw-2">&amp;</span><span class="ident">empty_seq_model_value</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span> {
+                (<span class="number">0</span>, <span class="ident">BTreeMap</span>::<span class="ident">new</span>())
+            } <span class="kw">else</span> {
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">values</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
+                <span class="kw">let</span> <span class="ident">seq_elems</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extract_list</span>(<span class="string">&quot;seq.++&quot;</span>)<span class="question-mark">?</span>;
+                <span class="kw">for</span> (<span class="ident">index</span>, <span class="ident">wrapped_seq_value_at_index</span>) <span class="kw">in</span> <span class="ident">seq_elems</span>.<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
+                    <span class="kw">let</span> <span class="ident">seq_value_at_index</span> <span class="op">=</span>
+                        (<span class="kw-2">&amp;</span><span class="ident">wrapped_seq_value_at_index</span>).<span class="ident">extract_list</span>(<span class="string">&quot;seq.unit&quot;</span>)<span class="question-mark">?</span>;
+                    <span class="ident">values</span>.<span class="ident">insert</span>(<span class="ident">index</span>, (<span class="kw-2">&amp;</span><span class="ident">seq_value_at_index</span>[<span class="number">0</span>]).<span class="ident">clone</span>());
                 }
-            } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">key</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">ModelValue</span>::<span class="ident">literal</span>(<span class="string">&quot;else&quot;</span>) {
-                <span class="ident">default</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">clone</span>();
+                (<span class="ident">seq_elems</span>.<span class="ident">len</span>(), <span class="ident">values</span>)
+            };
+            <span class="prelude-val">Some</span>(<span class="ident">ModelValueVector</span> {
+                <span class="ident">size</span>,
+                <span class="ident">values</span>,
+                <span class="ident">default</span>,
+            })
+        } <span class="kw">else</span> {
+            <span class="comment">// Implementation of $ValueArray using integer maps</span>
+            <span class="kw">let</span> <span class="ident">args</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">extract_list</span>(<span class="string">&quot;$ValueArray&quot;</span>)<span class="question-mark">?</span>;
+            <span class="kw">if</span> <span class="ident">args</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">2</span> {
+                <span class="kw">return</span> <span class="prelude-val">None</span>;
             }
+            <span class="kw">let</span> <span class="ident">size</span> <span class="op">=</span> (<span class="kw-2">&amp;</span><span class="ident">args</span>[<span class="number">1</span>]).<span class="ident">extract_number</span>()<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">map_key</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">args</span>[<span class="number">0</span>];
+            <span class="kw">let</span> <span class="ident">value_array_map</span> <span class="op">=</span> <span class="ident">model</span>
+                .<span class="ident">vars</span>
+                .<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">ModelValue</span>::<span class="ident">literal</span>(<span class="string">&quot;Select_[$int]$Value&quot;</span>))<span class="question-mark">?</span>
+                .<span class="ident">extract_map</span>()<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">values</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">default</span> <span class="op">=</span> <span class="ident">ModelValue</span>::<span class="ident">error</span>();
+            <span class="kw">for</span> (<span class="ident">key</span>, <span class="ident">value</span>) <span class="kw">in</span> <span class="ident">value_array_map</span> {
+                <span class="kw">if</span> <span class="kw">let</span> <span class="ident">ModelValue</span>::<span class="ident">List</span>(<span class="ident">elems</span>) <span class="op">=</span> <span class="ident">key</span> {
+                    <span class="kw">if</span> <span class="ident">elems</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">2</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="kw-2">&amp;</span><span class="ident">elems</span>[<span class="number">0</span>] <span class="op">=</span><span class="op">=</span> <span class="ident">map_key</span> {
+                        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="ident">elems</span>[<span class="number">1</span>].<span class="ident">extract_number</span>() {
+                            <span class="ident">values</span>.<span class="ident">insert</span>(<span class="ident">idx</span>, <span class="ident">value</span>.<span class="ident">clone</span>());
+                        }
+                    }
+                } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">key</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">ModelValue</span>::<span class="ident">literal</span>(<span class="string">&quot;else&quot;</span>) {
+                    <span class="ident">default</span> <span class="op">=</span> <span class="ident">value</span>.<span class="ident">clone</span>();
+                }
+            }
+            <span class="prelude-val">Some</span>(<span class="ident">ModelValueVector</span> {
+                <span class="ident">size</span>,
+                <span class="ident">values</span>,
+                <span class="ident">default</span>,
+            })
         }
-        <span class="prelude-val">Some</span>(<span class="ident">ModelValueVector</span> {
-            <span class="ident">size</span>,
-            <span class="ident">values</span>,
-            <span class="ident">default</span>,
-        })
     }
 
     <span class="kw">fn</span> <span class="ident">extract_map</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModelValue</span>, <span class="ident">ModelValue</span><span class="op">&gt;</span><span class="op">&gt;</span> {
