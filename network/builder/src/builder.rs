@@ -32,7 +32,7 @@ use network::{
     ProtocolId,
 };
 use network_simple_onchain_discovery::ConfigurationChangeListenerBuilder;
-use onchain_discovery::builder::{OnchainDiscoveryBuilder, OnchainDiscoveryBuilderConfig};
+use onchain_discovery::builder::OnchainDiscoveryBuilder;
 use std::{
     clone::Clone,
     collections::HashMap,
@@ -63,8 +63,7 @@ pub struct NetworkBuilder {
     discovery: Option<DiscoveryService>,
     health_checker_cfg: Option<HealthCheckerBuilderConfig>,
     health_checker: Option<HealthCheckerService>,
-    onchain_discovery_cfg: Option<OnchainDiscoveryBuilderConfig>,
-    onchain_discovery: Option<OnchainDiscoveryBuilder>,
+    onchain_discovery_builder: Option<OnchainDiscoveryBuilder>,
 
     reconfig_subscriptions: Vec<ReconfigSubscription>,
 }
@@ -104,8 +103,7 @@ impl NetworkBuilder {
             discovery: None,
             health_checker_cfg: None,
             health_checker: None,
-            onchain_discovery_cfg: None,
-            onchain_discovery: None,
+            onchain_discovery_builder: None,
             reconfig_subscriptions: Vec::new(),
         }
     }
@@ -408,7 +406,7 @@ impl NetworkBuilder {
         let (network_tx, discovery_events) = self
             .add_protocol_handler(onchain_discovery::network_interface::network_endpoint_config());
 
-        let onchain_config = OnchainDiscoveryBuilderConfig::new(
+        let onchain_discovery_builder = OnchainDiscoveryBuilder::create(
             self.conn_mgr_reqs_tx()
                 .expect("ConnectivityManager must be installed"),
             network_tx,
@@ -422,23 +420,21 @@ impl NetworkBuilder {
             8, // Legacy hard-coded value.
         );
 
-        self.onchain_discovery_cfg = Some(onchain_config);
+        self.onchain_discovery_builder = Some(onchain_discovery_builder);
 
         self.build_onchain_discovery()
     }
 
     fn build_onchain_discovery(&mut self) -> &mut Self {
-        if let Some(config) = self.onchain_discovery_cfg.take() {
-            let onchain_discovery_builder = OnchainDiscoveryBuilder::build(config, &self.executor);
-            self.onchain_discovery = Some(onchain_discovery_builder);
-            debug!("Built OnchainDiscovery");
+        if let Some(ref mut onchain_discovery_builder) = self.onchain_discovery_builder {
+            onchain_discovery_builder.build(&self.executor);
         }
         self.start_onchain_discovery()
     }
 
     fn start_onchain_discovery(&mut self) -> &mut Self {
-        if let Some(onchain_discovery) = self.onchain_discovery.take() {
-            onchain_discovery.start(&self.executor);
+        if let Some(ref mut onchain_discovery_builder) = self.onchain_discovery_builder {
+            onchain_discovery_builder.start(&self.executor);
             debug!("Started Onchain Discovery");
         }
         self
