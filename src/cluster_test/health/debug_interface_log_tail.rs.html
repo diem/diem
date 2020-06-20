@@ -145,12 +145,6 @@
 <span id="145">145</span>
 <span id="146">146</span>
 <span id="147">147</span>
-<span id="148">148</span>
-<span id="149">149</span>
-<span id="150">150</span>
-<span id="151">151</span>
-<span id="152">152</span>
-<span id="153">153</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -194,16 +188,10 @@
         <span class="kw">let</span> <span class="ident">pending_messages</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicI64</span>::<span class="ident">new</span>(<span class="number">0</span>));
         <span class="kw">let</span> (<span class="ident">trace_sender</span>, <span class="ident">trace_receiver</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">channel</span>();
         <span class="kw">let</span> <span class="ident">trace_enabled</span> <span class="op">=</span> <span class="ident">Arc</span>::<span class="ident">new</span>(<span class="ident">AtomicBool</span>::<span class="ident">new</span>(<span class="bool-val">false</span>));
-        <span class="kw">let</span> <span class="ident">http_client</span> <span class="op">=</span> <span class="ident">reqwest</span>::<span class="ident">Client</span>::<span class="ident">new</span>();
         <span class="kw">for</span> <span class="ident">instance</span> <span class="kw">in</span> <span class="ident">cluster</span>.<span class="ident">all_instances</span>() {
             <span class="kw">let</span> (<span class="ident">started_sender</span>, <span class="ident">started_receiver</span>) <span class="op">=</span> <span class="ident">mpsc</span>::<span class="ident">channel</span>();
             <span class="ident">started_receivers</span>.<span class="ident">push</span>(<span class="ident">started_receiver</span>);
-            <span class="kw">let</span> <span class="ident">debug_interface_port</span> <span class="op">=</span> <span class="ident">instance</span>
-                .<span class="ident">debug_interface_port</span>()
-                .<span class="ident">expect</span>(<span class="string">&quot;Debug interface port is not found&quot;</span>)
-                <span class="kw">as</span> <span class="ident">u16</span>;
-            <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span>
-                <span class="ident">AsyncNodeDebugClient</span>::<span class="ident">new</span>(<span class="ident">http_client</span>.<span class="ident">clone</span>(), <span class="ident">instance</span>.<span class="ident">ip</span>(), <span class="ident">debug_interface_port</span>);
+            <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">debug_interface_client</span>();
             <span class="kw">let</span> <span class="ident">debug_port_log_worker</span> <span class="op">=</span> <span class="ident">DebugPortLogWorker</span> {
                 <span class="ident">instance</span>: <span class="ident">instance</span>.<span class="ident">clone</span>(),
                 <span class="ident">client</span>,

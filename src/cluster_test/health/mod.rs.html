@@ -241,6 +241,10 @@
 <span id="241">241</span>
 <span id="242">242</span>
 <span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -249,6 +253,7 @@
 
 <span class="kw">mod</span> <span class="ident">commit_check</span>;
 <span class="kw">mod</span> <span class="ident">debug_interface_log_tail</span>;
+<span class="kw">mod</span> <span class="ident">fullnode_check</span>;
 <span class="kw">mod</span> <span class="ident">liveness_check</span>;
 <span class="kw">mod</span> <span class="ident">log_tail</span>;
 
@@ -257,6 +262,7 @@
 <span class="kw">use</span> <span class="ident">async_trait</span>::<span class="ident">async_trait</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">commit_check</span>::<span class="ident">CommitHistoryHealthCheck</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">debug_interface_log_tail</span>::<span class="ident">DebugPortLogWorker</span>;
+<span class="kw">pub</span> <span class="kw">use</span> <span class="ident">fullnode_check</span>::<span class="ident">FullNodeHealthCheck</span>;
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">liveness_check</span>::<span class="ident">LivenessHealthCheck</span>;
 <span class="kw">pub</span> <span class="kw">use</span> <span class="ident">log_tail</span>::{<span class="ident">LogTail</span>, <span class="ident">TraceTail</span>};
@@ -305,7 +311,7 @@
 <span class="attribute">#[<span class="ident">async_trait</span>]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">HealthCheck</span>: <span class="ident">Send</span> {
     <span class="doccomment">/// Verify specific event</span>
-    <span class="kw">fn</span> <span class="ident">on_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">event</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorEvent</span>, <span class="ident">ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">HealthCheckContext</span>);
+    <span class="kw">fn</span> <span class="ident">on_event</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_event</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorEvent</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">HealthCheckContext</span>) {}
     <span class="doccomment">/// Periodic verification (happens even if when no events produced)</span>
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">_ctx</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">HealthCheckContext</span>);
     <span class="doccomment">/// Optionally marks validator as failed, requiring waiting for at least one event from it to</span>
@@ -335,11 +341,13 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new_all</span>(<span class="ident">cluster</span>: <span class="ident">Cluster</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">liveness_health_check</span> <span class="op">=</span> <span class="ident">LivenessHealthCheck</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">cluster</span>);
+        <span class="kw">let</span> <span class="ident">fullnode_check</span> <span class="op">=</span> <span class="ident">FullNodeHealthCheck</span>::<span class="ident">new</span>(<span class="ident">cluster</span>.<span class="ident">clone</span>());
         <span class="self">Self</span>::<span class="ident">new</span>(
             <span class="ident">cluster</span>,
             <span class="macro">vec</span><span class="macro">!</span>[
                 <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">CommitHistoryHealthCheck</span>::<span class="ident">new</span>()),
                 <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">liveness_health_check</span>),
+                <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">fullnode_check</span>),
             ],
         )
     }

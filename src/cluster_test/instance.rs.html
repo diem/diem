@@ -329,6 +329,16 @@
 <span id="329">329</span>
 <span id="330">330</span>
 <span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
+<span id="339">339</span>
+<span id="340">340</span>
+<span id="341">341</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -337,6 +347,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">cluster_swarm</span>::<span class="ident">cluster_swarm_kube</span>::<span class="ident">ClusterSwarmKube</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">format_err</span>, <span class="prelude-ty">Result</span>};
+<span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">AsyncNodeDebugClient</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">NodeConfig</span>;
 <span class="kw">use</span> <span class="ident">libra_json_rpc_client</span>::{<span class="ident">JsonRpcAsyncClient</span>, <span class="ident">JsonRpcBatch</span>};
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
@@ -639,6 +650,15 @@
         } <span class="kw">else</span> {
             <span class="prelude-val">Ok</span>(())
         }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">debug_interface_client</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AsyncNodeDebugClient</span> {
+        <span class="ident">AsyncNodeDebugClient</span>::<span class="ident">new</span>(
+            <span class="self">self</span>.<span class="ident">http_client</span>.<span class="ident">clone</span>(),
+            <span class="self">self</span>.<span class="ident">ip</span>(),
+            <span class="self">self</span>.<span class="ident">debug_interface_port</span>
+                .<span class="ident">expect</span>(<span class="string">&quot;debug_interface_port is not known on this instance&quot;</span>) <span class="kw">as</span> <span class="ident">u16</span>,
+        )
     }
 }
 
