@@ -81,7 +81,7 @@ libra-types = {{ path = "../libra-types", version = "0.1.0" }}
     std::fs::create_dir(dir_path.join("src")).unwrap();
     let source_path = dir_path.join("src/lib.rs");
     let mut source = std::fs::File::create(&source_path).unwrap();
-    buildgen::rust::output(&mut source, &abis).unwrap();
+    buildgen::rust::output(&mut source, &abis, /* local types */ false).unwrap();
 
     // Use a stable `target` dir to avoid downloading and recompiling crates everytime.
     let target_dir = std::env::current_dir().unwrap().join("../../target");

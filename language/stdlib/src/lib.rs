@@ -161,7 +161,7 @@ pub fn generate_rust_transaction_builders() {
         .expect("Failed to read generated ABIs");
     let mut f = std::fs::File::create(TRANSACTION_BUILDERS_GENERATED_SOURCE_PATH)
         .expect("Failed to open file for Rust script build generation");
-    transaction_builder_generator::local::output(&mut f, &abis)
+    transaction_builder_generator::rust::output(&mut f, &abis, /* local types */ true)
         .expect("Failed to generate Rust builders for Libra");
 
     std::process::Command::new("rustfmt")

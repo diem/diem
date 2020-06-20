@@ -7,6 +7,7 @@ use move_core_types::language_storage::TypeTag;
 
 use std::io::{Result, Write};
 
+/// Output transaction builders in Python for the given ABIs.
 pub fn output(out: &mut dyn Write, abis: &[ScriptABI]) -> Result<()> {
     output_preamble(out)?;
     for abi in abis {
