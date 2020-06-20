@@ -22,12 +22,15 @@ module Holder {
 //! new-transaction
 script {
     use 0x1::LibraAccount;
+    use 0x1::Roles::{Self, AssociationRootRole};
     fun main(sender: &signer) {
-        LibraAccount::initialize(sender);
+        let cap = Roles::extract_privilege_to_capability<AssociationRootRole>(sender);
+        LibraAccount::initialize(sender, &cap);
+        Roles::restore_capability_to_privilege(sender, cap);
     }
 }
 // check: ABORTED
-// check: 0
+// check: 3
 
 //! new-transaction
 //! sender: bob

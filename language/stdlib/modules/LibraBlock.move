@@ -27,7 +27,7 @@ module LibraBlock {
     // This can only be invoked by the Association address, and only a single time.
     // Currently, it is invoked in the genesis transaction
     public fun initialize_block_metadata(account: &signer) {
-      // Only callable by the Association address
+      // Operational constraint, only callable by the Association address
       assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
 
       move_to<BlockMetadata>(

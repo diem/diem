@@ -9,7 +9,7 @@ module AccountLimits {
     use 0x1::CoreAddresses;
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
-    use 0x1::Roles::{Capability, TreasuryComplianceRole};
+    use 0x1::Roles::{Capability, TreasuryComplianceRole, AssociationRootRole};
 
     // An operations capability that restricts callers of this module since
     // the operations can mutate account states.
@@ -50,8 +50,7 @@ module AccountLimits {
 
     // Grant a capability to call this module. This does not necessarily
     // need to be a unique capability.
-    public fun grant_calling_capability(account: &signer): CallingCapability {
-        assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 3000);
+    public fun grant_calling_capability(_: &Capability<AssociationRootRole>): CallingCapability {
         CallingCapability{}
     }
 

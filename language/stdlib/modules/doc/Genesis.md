@@ -83,7 +83,7 @@
         &tc_capability,
     );
 
-    <a href="LibraAccount.md#0x1_LibraAccount_initialize">LibraAccount::initialize</a>(association);
+    <a href="LibraAccount.md#0x1_LibraAccount_initialize">LibraAccount::initialize</a>(association, &assoc_root_capability);
     <a href="LibraAccount.md#0x1_LibraAccount_create_root_association_account">LibraAccount::create_root_association_account</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association),
         <b>copy</b> dummy_auth_key_prefix,

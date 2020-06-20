@@ -4,6 +4,7 @@ module LibraTransactionTimeout {
   use 0x1::CoreAddresses;
   use 0x1::Signer;
   use 0x1::LibraTimestamp;
+  use 0x1::Roles::{Capability, AssociationRootRole};
 
   resource struct TTL {
     // Only transactions with timestamp in between block time and block time + duration would be accepted.
@@ -11,16 +12,13 @@ module LibraTransactionTimeout {
   }
 
   public fun initialize(association: &signer) {
-    // Only callable by the Association address
+    // Operational constraint, only callable by the Association address
     assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
     // Currently set to 1day.
     move_to(association, TTL {duration_microseconds: 86400000000});
   }
 
-  public fun set_timeout(association: &signer, new_duration: u64) acquires TTL {
-    // Only callable by the Association address
-    assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
-
+  public fun set_timeout(_: &Capability<AssociationRootRole>, new_duration: u64) acquires TTL {
     let timeout = borrow_global_mut<TTL>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
     timeout.duration_microseconds = new_duration;
   }

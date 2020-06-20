@@ -160,7 +160,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_calling_capability">grant_calling_capability</a>(account: &signer): <a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_calling_capability">grant_calling_capability</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;): <a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>
 </code></pre>
 
 
@@ -169,8 +169,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_calling_capability">grant_calling_capability</a>(account: &signer): <a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a> {
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 3000);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_calling_capability">grant_calling_capability</a>(_: &Capability&lt;AssociationRootRole&gt;): <a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a> {
     <a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>{}
 }
 </code></pre>
