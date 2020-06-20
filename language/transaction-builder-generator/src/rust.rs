@@ -7,23 +7,44 @@ use move_core_types::language_storage::TypeTag;
 
 use std::io::{Result, Write};
 
-pub fn output(out: &mut dyn Write, abis: &[ScriptABI]) -> Result<()> {
-    output_preamble(out)?;
+/// Output transaction builders in Rust for the given ABIs.
+/// If `local_types` is true, we generate a file suitable for the Libra codebase itself
+/// rather than using serde-generated, standalone definitions.
+pub fn output(out: &mut dyn Write, abis: &[ScriptABI], local_types: bool) -> Result<()> {
+    output_preamble(out, local_types)?;
     for abi in abis {
-        output_builder(out, abi)?;
+        output_builder(out, abi, local_types)?;
     }
     Ok(())
 }
 
-fn output_preamble(out: &mut dyn Write) -> Result<()> {
-    writeln!(out, "use libra_types as libra;",)
+fn output_preamble(out: &mut dyn Write, local_types: bool) -> Result<()> {
+    let preamble = if local_types {
+        r#"
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+// This file was generated. Do not modify!
+//
+// To re-generate this code, run: `(cd language/stdlib && cargo run --release)`
+
+use move_core_types::language_storage::TypeTag;
+use libra_types::transaction::{Script, TransactionArgument};
+use libra_types::account_address::AccountAddress;
+"#
+    } else {
+        r#"
+use libra_types::{AccountAddress, TypeTag, Script, TransactionArgument};
+"#
+    };
+    writeln!(out, "{}", preamble)
 }
 
-fn output_builder(out: &mut dyn Write, abi: &ScriptABI) -> Result<()> {
+fn output_builder(out: &mut dyn Write, abi: &ScriptABI, local_types: bool) -> Result<()> {
     write!(out, "\n{}", quote_doc(abi.doc()))?;
     writeln!(
         out,
-        "pub fn encode_{}_script({}) -> libra::Script {{",
+        "pub fn encode_{}_script({}) -> Script {{",
         abi.name(),
         [
             quote_type_parameters(abi.ty_args()),
@@ -32,17 +53,31 @@ fn output_builder(out: &mut dyn Write, abi: &ScriptABI) -> Result<()> {
         .concat()
         .join(", ")
     )?;
-    writeln!(
-        out,
-        r#"    libra::Script {{
+    if local_types {
+        writeln!(
+            out,
+            r#"    Script::new(
+        {},
+        vec![{}],
+        vec![{}],
+    )"#,
+            quote_code(abi.code()),
+            quote_type_arguments(abi.ty_args()),
+            quote_arguments(abi.args()),
+        )?;
+    } else {
+        writeln!(
+            out,
+            r#"    Script {{
         code: {},
         ty_args: vec![{}],
         args: vec![{}],
     }}"#,
-        quote_code(abi.code()),
-        quote_type_arguments(abi.ty_args()),
-        quote_arguments(abi.args()),
-    )?;
+            quote_code(abi.code()),
+            quote_type_arguments(abi.ty_args()),
+            quote_arguments(abi.args()),
+        )?;
+    }
     writeln!(out, "}}")?;
     Ok(())
 }
@@ -56,7 +91,7 @@ fn quote_doc(doc: &str) -> String {
 fn quote_type_parameters(ty_args: &[TypeArgumentABI]) -> Vec<String> {
     ty_args
         .iter()
-        .map(|ty_arg| format!("{}: libra::TypeTag", ty_arg.name()))
+        .map(|ty_arg| format!("{}: TypeTag", ty_arg.name()))
         .collect()
 }
 
@@ -98,7 +133,7 @@ fn quote_type(type_tag: &TypeTag) -> String {
         U8 => "u8".into(),
         U64 => "u64".into(),
         U128 => "u128".into(),
-        Address => "libra::AccountAddress".into(),
+        Address => "AccountAddress".into(),
         Vector(type_tag) => match type_tag.as_ref() {
             U8 => "Vec<u8>".into(),
             _ => type_not_allowed(type_tag),
@@ -111,13 +146,13 @@ fn quote_type(type_tag: &TypeTag) -> String {
 fn make_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
     use TypeTag::*;
     match type_tag {
-        Bool => format!("libra::TransactionArgument::Bool({})", name),
-        U8 => format!("libra::TransactionArgument::U8({})", name),
-        U64 => format!("libra::TransactionArgument::U64({})", name),
-        U128 => format!("libra::TransactionArgument::U128({})", name),
-        Address => format!("libra::TransactionArgument::Address({})", name),
+        Bool => format!("TransactionArgument::Bool({})", name),
+        U8 => format!("TransactionArgument::U8({})", name),
+        U64 => format!("TransactionArgument::U64({})", name),
+        U128 => format!("TransactionArgument::U128({})", name),
+        Address => format!("TransactionArgument::Address({})", name),
         Vector(type_tag) => match type_tag.as_ref() {
-            U8 => format!("libra::TransactionArgument::U8Vector({})", name),
+            U8 => format!("TransactionArgument::U8Vector({})", name),
             _ => type_not_allowed(type_tag),
         },
 

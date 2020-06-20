@@ -39,6 +39,6 @@ fn main() {
 
     match options.language {
         Language::Python3 => python3::output(&mut out, &abis).unwrap(),
-        Language::Rust => rust::output(&mut out, &abis).unwrap(),
+        Language::Rust => rust::output(&mut out, &abis, /* local types */ false).unwrap(),
     }
 }
