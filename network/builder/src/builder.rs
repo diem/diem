@@ -25,7 +25,7 @@ use network::{
     constants,
     peer_manager::{builder::PeerManagerBuilder, conn_notifs_channel, ConnectionRequestSender},
     protocols::{
-        discovery::{self, DiscoveryBuilderConfig, DiscoveryService},
+        discovery::{self, builder::DiscoveryBuilder},
         health_checker::{self, HealthCheckerBuilderConfig, HealthCheckerService},
         network::{NewNetworkEvents, NewNetworkSender},
     },
@@ -56,14 +56,13 @@ pub struct NetworkBuilder {
     network_context: Arc<NetworkContext>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
 
-    peer_manager_builder: Option<PeerManagerBuilder>,
     connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
     configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
-    discovery_cfg: Option<DiscoveryBuilderConfig>,
-    discovery: Option<DiscoveryService>,
+    discovery_builder: Option<DiscoveryBuilder>,
     health_checker_cfg: Option<HealthCheckerBuilderConfig>,
     health_checker: Option<HealthCheckerService>,
     onchain_discovery_builder: Option<OnchainDiscoveryBuilder>,
+    peer_manager_builder: Option<PeerManagerBuilder>,
 
     reconfig_subscriptions: Vec<ReconfigSubscription>,
 }
@@ -99,8 +98,7 @@ impl NetworkBuilder {
             peer_manager_builder: Some(peer_manager_builder),
             connectivity_manager_builder: None,
             configuration_change_listener_builder: None,
-            discovery_cfg: None,
-            discovery: None,
+            discovery_builder: None,
             health_checker_cfg: None,
             health_checker: None,
             onchain_discovery_builder: None,
@@ -368,7 +366,7 @@ impl NetworkBuilder {
         let advertised_address = advertised_address.append_prod_protos(pubkey, HANDSHAKE_VERSION);
 
         let addrs = vec![advertised_address];
-        let discovery_cfg = DiscoveryBuilderConfig::new(
+        let discovery_builder = DiscoveryBuilder::create(
             self.network_context.clone(),
             addrs,
             discovery_interval_ms,
@@ -377,22 +375,21 @@ impl NetworkBuilder {
             conn_mgr_reqs_tx,
         );
 
-        self.discovery_cfg = Some(discovery_cfg);
+        self.discovery_builder = Some(discovery_builder);
 
         self.build_gossip_discovery()
     }
 
     fn build_gossip_discovery(&mut self) -> &mut Self {
-        if let Some(discovery_cfg) = self.discovery_cfg.take() {
-            let discovery = discovery::build_discovery_from_config(&self.executor, discovery_cfg);
-            self.discovery = Some(discovery);
+        if let Some(ref mut discovery_builder) = self.discovery_builder {
+            discovery_builder.build(&self.executor);
         }
         self.start_gossip_discovery()
     }
 
     fn start_gossip_discovery(&mut self) -> &mut Self {
-        if let Some(discovery) = self.discovery.take() {
-            self.executor.spawn(discovery.start());
+        if let Some(ref mut discovery) = self.discovery_builder {
+            discovery.start(&self.executor);
             debug!("{} Started discovery protocol actor", self.network_context);
         }
         self
