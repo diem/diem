@@ -166,6 +166,10 @@
 <span id="166">166</span>
 <span id="167">167</span>
 <span id="168">168</span>
+<span id="169">169</span>
+<span id="170">170</span>
+<span id="171">171</span>
+<span id="172">172</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -333,6 +337,10 @@
         }
         <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">instances</span>.<span class="ident">is_empty</span>(), <span class="string">&quot;No instances for subcluster&quot;</span>);
         <span class="self">self</span>.<span class="ident">new_validator_sub_cluster</span>(<span class="ident">instances</span>)
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">find_instance_by_pod</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">pod</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Instance</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">all_instances</span>().<span class="ident">find</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> <span class="ident">i</span>.<span class="ident">peer_name</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">pod</span>)
     }
 }
 </pre></div>
