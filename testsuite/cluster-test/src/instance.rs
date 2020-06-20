@@ -5,6 +5,7 @@
 
 use crate::cluster_swarm::cluster_swarm_kube::ClusterSwarmKube;
 use anyhow::{format_err, Result};
+use debug_interface::AsyncNodeDebugClient;
 use libra_config::config::NodeConfig;
 use libra_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch};
 use once_cell::sync::Lazy;
@@ -307,6 +308,15 @@ impl Instance {
         } else {
             Ok(())
         }
+    }
+
+    pub fn debug_interface_client(&self) -> AsyncNodeDebugClient {
+        AsyncNodeDebugClient::new(
+            self.http_client.clone(),
+            self.ip(),
+            self.debug_interface_port
+                .expect("debug_interface_port is not known on this instance") as u16,
+        )
     }
 }
 

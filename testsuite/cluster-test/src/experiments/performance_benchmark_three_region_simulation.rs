@@ -98,7 +98,7 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
     }
 
     fn deadline(&self) -> Duration {
-        Duration::from_secs(420)
+        Duration::from_secs(600)
     }
 }
 
