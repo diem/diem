@@ -61,6 +61,9 @@ fn whitelist_json_metrics(
 async fn serve_metrics(req: Request<Body>) -> Result<Response<Body>, hyper::Error> {
     let mut resp = Response::new(Body::empty());
     match (req.method(), req.uri().path()) {
+        (&Method::GET, "/-/healthy") => {
+            *resp.body_mut() = Body::from("libra-node:ok");
+        }
         (&Method::GET, "/metrics") => {
             //Prometheus server expects metrics to be on host:port/metrics
             let encoder = TextEncoder::new();
