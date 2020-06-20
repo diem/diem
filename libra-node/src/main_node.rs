@@ -59,6 +59,15 @@ fn setup_debug_interface(config: &NodeConfig) -> NodeDebugService {
 }
 
 pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
+    let metrics_port = node_config.debug_interface.metrics_server_port;
+    let metric_host = node_config.debug_interface.address.clone();
+    thread::spawn(move || metric_server::start_server(metric_host, metrics_port, false));
+    let public_metrics_port = node_config.debug_interface.public_metrics_server_port;
+    let public_metric_host = node_config.debug_interface.address.clone();
+    thread::spawn(move || {
+        metric_server::start_server(public_metric_host, public_metrics_port, true)
+    });
+
     // Some of our code uses the rayon global thread pool. Name the rayon threads so it doesn't
     // cause confusion, otherwise the threads would have their parent's name.
     rayon::ThreadPoolBuilder::new()
@@ -261,15 +270,6 @@ pub fn setup_environment(node_config: &NodeConfig) -> LibraHandle {
     }
 
     let debug_if = setup_debug_interface(&node_config);
-
-    let metrics_port = node_config.debug_interface.metrics_server_port;
-    let metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || metric_server::start_server(metric_host, metrics_port, false));
-    let public_metrics_port = node_config.debug_interface.public_metrics_server_port;
-    let public_metric_host = node_config.debug_interface.address.clone();
-    thread::spawn(move || {
-        metric_server::start_server(public_metric_host, public_metrics_port, true)
-    });
 
     LibraHandle {
         _network_runtimes: network_runtimes,
