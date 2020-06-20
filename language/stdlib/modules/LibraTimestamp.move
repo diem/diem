@@ -11,7 +11,7 @@ module LibraTimestamp {
 
     // Initialize the global wall clock time resource.
     public fun initialize(association: &signer) {
-        // Only callable by the Association address
+        // Operational constraint, only callable by the Association address
         assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
 
         // TODO: Should the initialized value be passed in to genesis?

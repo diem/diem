@@ -88,7 +88,7 @@ module Genesis {
             &tc_capability,
         );
 
-        LibraAccount::initialize(association);
+        LibraAccount::initialize(association, &assoc_root_capability);
         LibraAccount::create_root_association_account<LBR>(
             Signer::address_of(association),
             copy dummy_auth_key_prefix,

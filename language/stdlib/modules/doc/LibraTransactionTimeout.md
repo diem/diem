@@ -56,7 +56,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_initialize">initialize</a>(association: &signer) {
-  // Only callable by the Association address
+  // Operational constraint, only callable by the Association address
   <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1);
   // Currently set <b>to</b> 1day.
   move_to(association, <a href="#0x1_LibraTransactionTimeout_TTL">TTL</a> {duration_microseconds: 86400000000});
@@ -73,7 +73,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_set_timeout">set_timeout</a>(association: &signer, new_duration: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_set_timeout">set_timeout</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;, new_duration: u64)
 </code></pre>
 
 
@@ -82,10 +82,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_set_timeout">set_timeout</a>(association: &signer, new_duration: u64) <b>acquires</b> <a href="#0x1_LibraTransactionTimeout_TTL">TTL</a> {
-  // Only callable by the Association address
-  <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1);
-
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_set_timeout">set_timeout</a>(_: &Capability&lt;AssociationRootRole&gt;, new_duration: u64) <b>acquires</b> <a href="#0x1_LibraTransactionTimeout_TTL">TTL</a> {
   <b>let</b> timeout = borrow_global_mut&lt;<a href="#0x1_LibraTransactionTimeout_TTL">TTL</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>());
   timeout.duration_microseconds = new_duration;
 }

@@ -18,6 +18,7 @@ module LibraWriteSetManager {
     }
 
     public fun initialize(account: &signer) {
+        // Operational constraint
         assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
 
         move_to(

@@ -142,13 +142,16 @@ module LibraAccount {
         Roles::add_privilege_to_account_treasury_compliance_role(account, AccountUnfreezing{});
     }
 
-    public fun initialize(association: &signer) {
+    public fun initialize(
+        association: &signer,
+        assoc_root_capability: &Capability<AssociationRootRole>,
+    ) {
         // Operational constraint, not a privilege constraint.
         assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
         move_to(
             association,
             AccountOperationsCapability {
-                limits_cap: AccountLimits::grant_calling_capability(association),
+                limits_cap: AccountLimits::grant_calling_capability(assoc_root_capability),
                 freeze_event_handle: Event::new_event_handle(association),
                 unfreeze_event_handle: Event::new_event_handle(association),
             }
