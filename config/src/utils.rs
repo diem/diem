@@ -55,10 +55,6 @@ pub fn get_available_port_in_multiaddr(is_ipv4: bool) -> NetworkAddress {
     NetworkAddress::from(ip_proto).push(Protocol::Tcp(get_available_port()))
 }
 
-pub fn get_genesis_txn(config: &NodeConfig) -> anyhow::Result<&Transaction> {
-    config
-        .execution
-        .genesis
-        .as_ref()
-        .ok_or_else(|| anyhow::format_err!("Genesis txn not present."))
+pub fn get_genesis_txn(config: &NodeConfig) -> Option<&Transaction> {
+    config.execution.genesis.as_ref()
 }

@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{ensure, Result};
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
@@ -18,6 +17,8 @@ mod consensus_config;
 pub use consensus_config::*;
 mod debug_interface_config;
 pub use debug_interface_config::*;
+mod error;
+pub use error::*;
 mod execution_config;
 pub use execution_config::*;
 mod key_manager_config;
@@ -165,7 +166,7 @@ impl RoleType {
 impl FromStr for RoleType {
     type Err = ParseRoleError;
 
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "validator" => Ok(RoleType::Validator),
             "full_node" => Ok(RoleType::FullNode),
@@ -227,18 +228,18 @@ impl NodeConfig {
     /// Reads the config file and returns the configuration object in addition to doing some
     /// post-processing of the config
     /// Paths used in the config are either absolute or relative to the config location
-    pub fn load<P: AsRef<Path>>(input_path: P) -> Result<Self> {
+    pub fn load<P: AsRef<Path>>(input_path: P) -> Result<Self, Error> {
         let mut config = Self::load_config(&input_path)?;
         if config.base.role.is_validator() {
-            ensure!(
+            invariant(
                 config.validator_network.is_some(),
-                "Missing a validator network config for a validator node"
-            );
+                "Missing a validator network config for a validator node".into(),
+            )?;
         } else {
-            ensure!(
+            invariant(
                 config.validator_network.is_none(),
-                "Provided a validator network config for a full_node node"
-            );
+                "Provided a validator network config for a full_node node".into(),
+            )?;
         }
 
         let mut network_ids = HashSet::new();
@@ -253,17 +254,17 @@ impl NodeConfig {
 
             // Validate that a network isn't repeated
             let network_id = network.network_id.clone();
-            ensure!(
+            invariant(
                 !network_ids.contains(&network_id),
-                format!("network_id {:?} was repeated", network_id)
-            );
+                format!("network_id {:?} was repeated", network_id),
+            )?;
             network_ids.insert(network_id);
         }
         config.set_data_dir(config.data_dir().clone());
         Ok(config)
     }
 
-    pub fn save<P: AsRef<Path>>(&mut self, output_path: P) -> Result<()> {
+    pub fn save<P: AsRef<Path>>(&mut self, output_path: P) -> Result<(), Error> {
         let output_dir = RootPath::new(&output_path);
         self.execution.save(&output_dir)?;
         // This must be last as calling save on subconfigs may change their fields
@@ -363,24 +364,27 @@ impl NodeConfig {
 }
 
 pub trait PersistableConfig: Serialize + DeserializeOwned {
-    fn load_config<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let mut file = File::open(&path)?;
+    fn load_config<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let mut file = File::open(&path)
+            .map_err(|e| Error::IO(path.as_ref().to_str().unwrap().to_string(), e))?;
         let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
+        file.read_to_string(&mut contents)
+            .map_err(|e| Error::IO(path.as_ref().to_str().unwrap().to_string(), e))?;
         Self::parse(&contents)
     }
 
-    fn save_config<P: AsRef<Path>>(&self, output_file: P) -> Result<()> {
-        let contents = serde_yaml::to_vec(&self)?;
-        let mut file = File::create(output_file)?;
-        file.write_all(&contents)?;
-        // @TODO This causes a major perf regression that needs to be evaluated before enabling
-        // file.sync_all()?;
+    fn save_config<P: AsRef<Path>>(&self, output_file: P) -> Result<(), Error> {
+        let contents = serde_yaml::to_vec(&self)
+            .map_err(|e| Error::Yaml(output_file.as_ref().to_str().unwrap().to_string(), e))?;
+        let mut file = File::create(output_file.as_ref())
+            .map_err(|e| Error::IO(output_file.as_ref().to_str().unwrap().to_string(), e))?;
+        file.write_all(&contents)
+            .map_err(|e| Error::IO(output_file.as_ref().to_str().unwrap().to_string(), e))?;
         Ok(())
     }
 
-    fn parse(serialized: &str) -> Result<Self> {
-        Ok(serde_yaml::from_str(&serialized)?)
+    fn parse(serialized: &str) -> Result<Self, Error> {
+        serde_yaml::from_str(&serialized).map_err(|e| Error::Yaml("config".to_string(), e))
     }
 }
 

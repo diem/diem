@@ -1,8 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::config::{LoggerConfig, PersistableConfig, SecureBackend};
-use anyhow::Result;
+use crate::config::{Error, LoggerConfig, PersistableConfig, SecureBackend};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -40,14 +39,13 @@ impl Default for KeyManagerConfig {
 impl KeyManagerConfig {
     /// Reads the key manager config file from the given input_path. Paths used in the config are
     /// either absolute or relative to the config location
-    pub fn load<P: AsRef<Path>>(input_path: P) -> Result<Self> {
+    pub fn load<P: AsRef<Path>>(input_path: P) -> Result<Self, Error> {
         Self::load_config(&input_path)
     }
 
     /// Saves the key manager config file to the given output_path.
-    pub fn save<P: AsRef<Path>>(&mut self, output_path: P) -> Result<()> {
-        self.save_config(&output_path)?;
-        Ok(())
+    pub fn save<P: AsRef<Path>>(&mut self, output_path: P) -> Result<(), Error> {
+        self.save_config(&output_path)
     }
 
     pub fn set_data_dir(&mut self, data_dir: PathBuf) {
