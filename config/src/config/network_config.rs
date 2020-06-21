@@ -2,12 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::{RoleType, SecureBackend},
+    config::{Error, RoleType, SecureBackend},
     keys::KeyPair,
     network_id::NetworkId,
     utils,
 };
-use anyhow::{anyhow, ensure, Result};
 use libra_crypto::{x25519, Uniform};
 use libra_network_address::NetworkAddress;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
@@ -111,16 +110,17 @@ impl NetworkConfig {
         key.expect("identity key should be present")
     }
 
-    pub fn load(&mut self, network_role: RoleType) -> Result<()> {
+    pub fn load(&mut self, network_role: RoleType) -> Result<(), Error> {
         if self.listen_address.to_string().is_empty() {
-            self.listen_address = utils::get_local_ip().ok_or_else(|| anyhow!("No local IP"))?;
+            self.listen_address = utils::get_local_ip()
+                .ok_or_else(|| Error::InvariantViolation("No local IP".to_string()))?;
         }
 
         if network_role.is_validator() {
-            ensure!(
+            crate::config::invariant(
                 self.network_peers.is_empty(),
-                "Validators should not define network_peers"
-            );
+                "Validators should not define network_peers".into(),
+            )?;
         }
 
         self.prepare_identity();
@@ -186,15 +186,17 @@ impl NetworkConfig {
     }
 
     /// Check that all seed peer addresses look like canonical LibraNet addresses
-    pub fn verify_seed_peer_addrs(&self) -> Result<()> {
+    pub fn verify_seed_peer_addrs(&self) -> Result<(), Error> {
         for (peer_id, addrs) in self.seed_peers.iter() {
             for addr in addrs {
-                ensure!(
+                crate::config::invariant(
                     addr.is_libranet_addr(),
-                    "Unexpected seed peer address format: peer_id: {}, addr: '{}'",
-                    peer_id.short_str(),
-                    addr,
-                );
+                    format!(
+                        "Unexpected seed peer address format: peer_id: {}, addr: '{}'",
+                        peer_id.short_str(),
+                        addr,
+                    ),
+                )?;
             }
         }
         Ok(())

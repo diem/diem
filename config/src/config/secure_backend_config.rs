@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
+use crate::config::Error;
 use libra_secure_storage::{
     GitHubStorage, InMemoryStorage, NamespacedStorage, OnDiskStorage, Storage, VaultStorage,
 };
@@ -48,11 +48,11 @@ pub struct VaultConfig {
 }
 
 impl VaultConfig {
-    pub fn ca_certificate(&self) -> Result<String> {
+    pub fn ca_certificate(&self) -> Result<String, Error> {
         let path = self
             .ca_certificate
             .as_ref()
-            .ok_or_else(|| anyhow!("No Certificate path"))?;
+            .ok_or_else(|| Error::Missing("ca_certificate"))?;
         read_file(path)
     }
 }
@@ -80,7 +80,7 @@ pub enum Token {
 }
 
 impl Token {
-    pub fn read_token(&self) -> Result<String> {
+    pub fn read_token(&self) -> Result<String, Error> {
         match self {
             Token::FromDisk(path) => read_file(path),
             Token::FromConfig(token) => Ok(token.clone()),
@@ -124,10 +124,12 @@ impl OnDiskStorageConfig {
     }
 }
 
-fn read_file(path: &PathBuf) -> Result<String> {
-    let mut file = File::open(path)?;
+fn read_file(path: &PathBuf) -> Result<String, Error> {
+    let mut file =
+        File::open(path).map_err(|e| Error::IO(path.to_str().unwrap().to_string(), e))?;
     let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
+    file.read_to_string(&mut contents)
+        .map_err(|e| Error::IO(path.to_str().unwrap().to_string(), e))?;
     Ok(contents)
 }
 
