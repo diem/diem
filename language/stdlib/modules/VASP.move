@@ -71,6 +71,9 @@ module VASP {
         base_url: vector<u8>,
         compliance_public_key: vector<u8>
     ) {
+        let vasp_addr = Signer::address_of(vasp);
+        // TODO: proper error code
+        assert(!exists<ChildVASP>(vasp_addr), 7000);
         assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), 7004);
         move_to(
             vasp,
@@ -92,6 +95,9 @@ module VASP {
         child: &signer,
         _: &Capability<ParentVASPRole>,
     ) acquires ParentVASP {
+        let child_vasp_addr = Signer::address_of(child);
+        // TODO: proper error code
+        assert(!exists<ParentVASP>(child_vasp_addr), 7000);
         let parent_vasp_addr = Signer::address_of(parent);
         assert(exists<ParentVASP>(parent_vasp_addr), 7000);
         let num_children = &mut borrow_global_mut<ParentVASP>(parent_vasp_addr).num_children;
@@ -174,6 +180,138 @@ module VASP {
         borrow_global_mut<ParentVASP>(parent_addr).compliance_public_key = new_key
     }
 
+    // **************** SPECIFICATIONS ****************
+
+    /// # Module specifications
+
+    spec module {
+        /// > TODO(emmazzz): verification is turned off because `Signature` module
+        /// > has not been specified. See issue #4666.
+        pragma verify = false;
+    }
+
+    spec module {
+        /// Returns true if `addr` is a VASP.
+        define spec_is_vasp(addr: address): bool {
+            spec_is_parent_vasp(addr) || spec_is_child_vasp(addr)
+        }
+
+        /// Returns true if `addr` is a ParentVASP.
+        define spec_is_parent_vasp(addr: address): bool {
+            exists<ParentVASP>(addr)
+        }
+
+        /// Returns true if `addr` is a ChildVASP.
+        define spec_is_child_vasp(addr: address): bool {
+            exists<ChildVASP>(addr)
+        }
+
+        /// Returns the number of children under `parent`.
+        define spec_get_num_children(parent: address): u64 {
+            global<ParentVASP>(parent).num_children
+        }
+
+        /// Returns the parent address of a VASP.
+        define spec_parent_address(addr: address): address {
+            if (exists<ParentVASP>(addr)) {
+                addr
+            } else {
+                global<ChildVASP>(addr).parent_vasp_addr
+            }
+        }
+
+        define spec_cert_lifetime(): u64 {
+            31540000000000
+        }
+
+        define spec_root_address(): address {
+            0xA550C18
+        }
+    }
+
+
+    /// ## Number of children is consistent
+    /// > PROVER TODO(emmazzz): implement the features that allows users
+    /// > to reason about number of resources with certain property,
+    /// > such as "number of ChildVASPs whose parent address is 0xDD".
+    /// > See issue #4665.
+
+
+    /// ## Number of children does not change
+
+    spec schema NumChildrenRemainsSame {
+        ensures forall parent: address
+            where old(spec_is_parent_vasp(parent)):
+                old(spec_get_num_children(parent))
+                 == spec_get_num_children(parent);
+    }
+
+    spec module {
+        apply NumChildrenRemainsSame to * except publish_child_vasp_credential;
+    }
+
+    /// ## Specifications for individual functions
+    spec schema AbortsIfNotVASP {
+        addr: address;
+        aborts_if !spec_is_vasp(addr);
+    }
+
+    spec module {
+        apply AbortsIfNotVASP to parent_address, human_name, base_url,
+            compliance_public_key, expiration_date, num_children;
+    }
+
+    spec schema AbortsIfParentIsNotParentVASP {
+        addr: address;
+        aborts_if !spec_is_parent_vasp(spec_parent_address(addr));
+    }
+
+    spec module {
+        apply AbortsIfParentIsNotParentVASP to human_name, base_url,
+            compliance_public_key, expiration_date, num_children;
+    }
+
+    spec fun recertify_vasp {
+        aborts_if !exists<LibraTimestamp::CurrentTimeMicroseconds>(spec_root_address());
+        aborts_if LibraTimestamp::assoc_unix_time() + spec_cert_lifetime() > max_u64();
+        ensures parent_vasp.expiration_date
+             == LibraTimestamp::assoc_unix_time() + spec_cert_lifetime();
+    }
+
+    spec fun decertify_vasp {
+        aborts_if false;
+        ensures parent_vasp.expiration_date == 0;
+    }
+
+    spec fun publish_parent_vasp_credential {
+        aborts_if spec_is_vasp(Signer::get_address(vasp));
+        ensures spec_is_parent_vasp(Signer::get_address(vasp));
+        ensures spec_get_num_children(Signer::get_address(vasp)) == 0;
+    }
+
+    spec fun publish_child_vasp_credential {
+        aborts_if spec_is_vasp(Signer::get_address(child));
+        aborts_if !spec_is_parent_vasp(Signer::get_address(parent));
+        aborts_if spec_get_num_children(Signer::get_address(parent)) + 1
+                > max_u64();
+        ensures spec_get_num_children(Signer::get_address(parent))
+             == old(spec_get_num_children(Signer::get_address(parent))) + 1;
+        ensures spec_is_child_vasp(Signer::get_address(child));
+        ensures spec_parent_address(Signer::get_address(child))
+             == Signer::get_address(parent);
+    }
+
+    spec fun rotate_base_url {
+        aborts_if !spec_is_parent_vasp(Signer::get_address(parent_vasp));
+        ensures global<ParentVASP>(Signer::get_address(parent_vasp)).base_url
+             == new_url;
+    }
+
+    spec fun rotate_compliance_public_key {
+        aborts_if !spec_is_parent_vasp(Signer::get_address(parent_vasp));
+        ensures global<ParentVASP>(Signer::get_address(parent_vasp)).compliance_public_key
+             == new_key;
+    }
 }
 
 }

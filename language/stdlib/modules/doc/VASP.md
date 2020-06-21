@@ -23,6 +23,17 @@
 -  [Function `num_children`](#0x1_VASP_num_children)
 -  [Function `rotate_base_url`](#0x1_VASP_rotate_base_url)
 -  [Function `rotate_compliance_public_key`](#0x1_VASP_rotate_compliance_public_key)
+-  [Specification](#0x1_VASP_Specification)
+    -  [Module specifications](#0x1_VASP_@Module_specifications)
+        -  [Number of children is consistent](#0x1_VASP_@Number_of_children_is_consistent)
+        -  [Number of children does not change](#0x1_VASP_@Number_of_children_does_not_change)
+        -  [Specifications for individual functions](#0x1_VASP_@Specifications_for_individual_functions)
+    -  [Function `recertify_vasp`](#0x1_VASP_Specification_recertify_vasp)
+    -  [Function `decertify_vasp`](#0x1_VASP_Specification_decertify_vasp)
+    -  [Function `publish_parent_vasp_credential`](#0x1_VASP_Specification_publish_parent_vasp_credential)
+    -  [Function `publish_child_vasp_credential`](#0x1_VASP_Specification_publish_child_vasp_credential)
+    -  [Function `rotate_base_url`](#0x1_VASP_Specification_rotate_base_url)
+    -  [Function `rotate_compliance_public_key`](#0x1_VASP_Specification_rotate_compliance_public_key)
 
 
 
@@ -229,6 +240,9 @@ Aborts if
     base_url: vector&lt;u8&gt;,
     compliance_public_key: vector&lt;u8&gt;
 ) {
+    <b>let</b> vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(vasp);
+    // TODO: proper error code
+    <b>assert</b>(!exists&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(vasp_addr), 7000);
     <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> compliance_public_key), 7004);
     move_to(
         vasp,
@@ -272,6 +286,9 @@ Aborts if
     child: &signer,
     _: &Capability&lt;ParentVASPRole&gt;,
 ) <b>acquires</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
+    <b>let</b> child_vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(child);
+    // TODO: proper error code
+    <b>assert</b>(!exists&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(child_vasp_addr), 7000);
     <b>let</b> parent_vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(parent);
     <b>assert</b>(exists&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent_vasp_addr), 7000);
     <b>let</b> num_children = &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent_vasp_addr).num_children;
@@ -587,3 +604,289 @@ Rotate the compliance public key for
 
 
 </details>
+
+<a name="0x1_VASP_Specification"></a>
+
+## Specification
+
+
+<a name="0x1_VASP_@Module_specifications"></a>
+
+### Module specifications
+
+
+> TODO(emmazzz): verification is turned off because
+<code><a href="Signature.md#0x1_Signature">Signature</a></code> module
+> has not been specified. See issue #4666.
+
+
+<pre><code>pragma verify = <b>false</b>;
+</code></pre>
+
+
+
+Returns true if
+<code>addr</code> is a VASP.
+
+
+<a name="0x1_VASP_spec_is_vasp"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(addr: address): bool {
+    <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(addr) || <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(addr)
+}
+</code></pre>
+
+
+Returns true if
+<code>addr</code> is a ParentVASP.
+
+
+<a name="0x1_VASP_spec_is_parent_vasp"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(addr: address): bool {
+    exists&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(addr)
+}
+</code></pre>
+
+
+Returns true if
+<code>addr</code> is a ChildVASP.
+
+
+<a name="0x1_VASP_spec_is_child_vasp"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(addr: address): bool {
+    exists&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr)
+}
+</code></pre>
+
+
+Returns the number of children under
+<code>parent</code>.
+
+
+<a name="0x1_VASP_spec_get_num_children"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent: address): u64 {
+    <b>global</b>&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent).num_children
+}
+</code></pre>
+
+
+Returns the parent address of a VASP.
+
+
+<a name="0x1_VASP_spec_parent_address"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr: address): address {
+    <b>if</b> (exists&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(addr)) {
+        addr
+    } <b>else</b> {
+        <b>global</b>&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr).parent_vasp_addr
+    }
+}
+<a name="0x1_VASP_spec_cert_lifetime"></a>
+<b>define</b> <a href="#0x1_VASP_spec_cert_lifetime">spec_cert_lifetime</a>(): u64 {
+    31540000000000
+}
+<a name="0x1_VASP_spec_root_address"></a>
+<b>define</b> <a href="#0x1_VASP_spec_root_address">spec_root_address</a>(): address {
+    0xA550C18
+}
+</code></pre>
+
+
+
+<a name="0x1_VASP_@Number_of_children_is_consistent"></a>
+
+#### Number of children is consistent
+
+> PROVER TODO(emmazzz): implement the features that allows users
+> to reason about number of resources with certain property,
+> such as "number of ChildVASPs whose parent address is 0xDD".
+> See issue #4665.
+
+<a name="0x1_VASP_@Number_of_children_does_not_change"></a>
+
+#### Number of children does not change
+
+
+
+<a name="0x1_VASP_NumChildrenRemainsSame"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_VASP_NumChildrenRemainsSame">NumChildrenRemainsSame</a> {
+    <b>ensures</b> forall parent: address
+        where <b>old</b>(<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(parent)):
+            <b>old</b>(<a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent))
+             == <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_VASP_NumChildrenRemainsSame">NumChildrenRemainsSame</a> <b>to</b> * <b>except</b> publish_child_vasp_credential;
+</code></pre>
+
+
+
+<a name="0x1_VASP_@Specifications_for_individual_functions"></a>
+
+#### Specifications for individual functions
+
+
+
+<a name="0x1_VASP_AbortsIfNotVASP"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_VASP_AbortsIfNotVASP">AbortsIfNotVASP</a> {
+    addr: address;
+    <b>aborts_if</b> !<a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(addr);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_VASP_AbortsIfNotVASP">AbortsIfNotVASP</a> <b>to</b> parent_address, human_name, base_url,
+    compliance_public_key, expiration_date, num_children;
+</code></pre>
+
+
+
+
+<a name="0x1_VASP_AbortsIfParentIsNotParentVASP"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_VASP_AbortsIfParentIsNotParentVASP">AbortsIfParentIsNotParentVASP</a> {
+    addr: address;
+    <b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr));
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_VASP_AbortsIfParentIsNotParentVASP">AbortsIfParentIsNotParentVASP</a> <b>to</b> human_name, base_url,
+    compliance_public_key, expiration_date, num_children;
+</code></pre>
+
+
+
+<a name="0x1_VASP_Specification_recertify_vasp"></a>
+
+### Function `recertify_vasp`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_recertify_vasp">recertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">VASP::ParentVASP</a>)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !exists&lt;<a href="LibraTimestamp.md#0x1_LibraTimestamp_CurrentTimeMicroseconds">LibraTimestamp::CurrentTimeMicroseconds</a>&gt;(<a href="#0x1_VASP_spec_root_address">spec_root_address</a>());
+<b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_assoc_unix_time">LibraTimestamp::assoc_unix_time</a>() + <a href="#0x1_VASP_spec_cert_lifetime">spec_cert_lifetime</a>() &gt; max_u64();
+<b>ensures</b> parent_vasp.expiration_date
+     == <a href="LibraTimestamp.md#0x1_LibraTimestamp_assoc_unix_time">LibraTimestamp::assoc_unix_time</a>() + <a href="#0x1_VASP_spec_cert_lifetime">spec_cert_lifetime</a>();
+</code></pre>
+
+
+
+<a name="0x1_VASP_Specification_decertify_vasp"></a>
+
+### Function `decertify_vasp`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_decertify_vasp">decertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">VASP::ParentVASP</a>)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> <b>false</b>;
+<b>ensures</b> parent_vasp.expiration_date == 0;
+</code></pre>
+
+
+
+<a name="0x1_VASP_Specification_publish_parent_vasp_credential"></a>
+
+### Function `publish_parent_vasp_credential`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(vasp: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(vasp));
+<b>ensures</b> <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(vasp));
+<b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(vasp)) == 0;
+</code></pre>
+
+
+
+<a name="0x1_VASP_Specification_publish_child_vasp_credential"></a>
+
+### Function `publish_child_vasp_credential`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_child_vasp_credential">publish_child_vasp_credential</a>(parent: &signer, child: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_ParentVASPRole">Roles::ParentVASPRole</a>&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(child));
+<b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent));
+<b>aborts_if</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent)) + 1
+        &gt; max_u64();
+<b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent))
+     == <b>old</b>(<a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent))) + 1;
+<b>ensures</b> <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(child));
+<b>ensures</b> <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(child))
+     == <a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent);
+</code></pre>
+
+
+
+<a name="0x1_VASP_Specification_rotate_base_url"></a>
+
+### Function `rotate_base_url`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_rotate_base_url">rotate_base_url</a>(parent_vasp: &signer, new_url: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent_vasp));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent_vasp)).base_url
+     == new_url;
+</code></pre>
+
+
+
+<a name="0x1_VASP_Specification_rotate_compliance_public_key"></a>
+
+### Function `rotate_compliance_public_key`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_rotate_compliance_public_key">rotate_compliance_public_key</a>(parent_vasp: &signer, new_key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent_vasp));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent_vasp)).compliance_public_key
+     == new_key;
+</code></pre>
