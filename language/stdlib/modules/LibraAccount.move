@@ -443,16 +443,35 @@ module LibraAccount {
         )
     }
 
+    fun add_currencies_for_account<Token>(
+        new_account: &signer,
+        add_all_currencies: bool,
+    ) {
+        let new_account_addr = Signer::address_of(new_account);
+        add_currency<Token>(new_account);
+        if (add_all_currencies) {
+            if (!exists<Balance<Coin1>>(new_account_addr)) {
+                add_currency<Coin1>(new_account);
+            };
+            if (!exists<Balance<Coin2>>(new_account_addr)) {
+                add_currency<Coin2>(new_account);
+            };
+            if (!exists<Balance<LBR>>(new_account_addr)) {
+                add_currency<LBR>(new_account);
+            };
+        };
+    }
+
+
     /// Creates a new account with account at `new_account_address` with a balance of
     /// zero in `Token` and authentication key `auth_key_prefix` | `fresh_address`. If
     /// `add_all_currencies` is true, 0 balances for all available currencies in the system will
     /// also be added.
     /// Aborts if there is already an account at `new_account_address`.
     /// Creating an account at address 0x0 will abort as it is a reserved address for the MoveVM.
-    fun make_account<Token>(
+    fun make_account(
         new_account: signer,
         auth_key_prefix: vector<u8>,
-        add_all_currencies: bool,
     ) {
         let new_account_addr = Signer::address_of(&new_account);
         // cannot create an account at the reserved address 0x0
@@ -482,21 +501,8 @@ module LibraAccount {
                 is_frozen: false,
             }
         );
-        // (2) publish Balance resource(s)
-        add_currency<Token>(&new_account);
-        if (add_all_currencies) {
-            if (!exists<Balance<Coin1>>(new_account_addr)) {
-                add_currency<Coin1>(&new_account);
-            };
-            if (!exists<Balance<Coin2>>(new_account_addr)) {
-                add_currency<Coin2>(&new_account);
-            };
-            if (!exists<Balance<LBR>>(new_account_addr)) {
-                add_currency<LBR>(&new_account);
-            };
-        };
-        // (3) TODO: publish account limits?
 
+        // (2) TODO: publish account limits?
         destroy_signer(new_account);
     }
 
@@ -505,7 +511,7 @@ module LibraAccount {
     /// `auth_key_prefix` | `new_account_address`. Called in genesis.
     // TODO: can we get rid of this? the main thing this does is create an account without an
     // EventGenerator resource (which is just needed to avoid circular dep issues in gensis)
-    public fun create_config_account<Token>(
+    public fun create_config_account(
         creator_account: &signer,
         _: &Capability<CreateOnChainConfig>,
         new_account_address: address,
@@ -515,23 +521,23 @@ module LibraAccount {
         assert(new_account_address == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
         let new_account = create_signer(new_account_address);
         Roles::new_parent_vasp_role(creator_account, &new_account);
-        make_account<Token>(new_account, auth_key_prefix, false)
+        make_account(new_account, auth_key_prefix)
     }
 
     /// Creates the root association account in genesis.
-    public fun create_root_association_account<Token>(
+    public fun create_root_association_account(
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
         assert(LibraTimestamp::is_genesis(), 0);
         assert(new_account_address == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
         let new_account = create_signer(new_account_address);
-        make_account<Token>(new_account, auth_key_prefix, false)
+        make_account(new_account, auth_key_prefix)
     }
 
     /// Create a treasury/compliance account at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address`
-    public fun create_treasury_compliance_account<Token>(
+    public fun create_treasury_compliance_account(
         _: &Capability<AssociationRootRole>,
         tc_capability: &Capability<TreasuryComplianceRole>,
         sliding_nonce_creation_capability: &Capability<CreateSlidingNonce>,
@@ -550,7 +556,7 @@ module LibraAccount {
         Libra::publish_burn_capability<Coin2>(&new_account, coin2_burn_cap, tc_capability);
         SlidingNonce::publish_nonce_resource(sliding_nonce_creation_capability, &new_account);
         Event::publish_generator(&new_account);
-        make_account<Token>(new_account, auth_key_prefix, false)
+        make_account(new_account, auth_key_prefix)
     }
 
 
@@ -572,7 +578,8 @@ module LibraAccount {
         Libra::publish_preburn_to_account<CoinType>(&new_dd_account, tc_capability);
         DesignatedDealer::publish_designated_dealer_credential(&new_dd_account, tc_capability);
         Roles::new_designated_dealer_role(creator_account, &new_dd_account);
-        make_account<CoinType>(new_dd_account, auth_key_prefix, false)
+        add_currencies_for_account<CoinType>(&new_dd_account, false);
+        make_account(new_dd_account, auth_key_prefix)
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -602,7 +609,8 @@ module LibraAccount {
             compliance_public_key
         );
         Event::publish_generator(&new_account);
-        make_account<Token>(new_account, auth_key_prefix, add_all_currencies)
+        add_currencies_for_account<Token>(&new_account, add_all_currencies);
+        make_account(new_account, auth_key_prefix)
     }
 
     /// Create an account with the ChildVASP role at `new_account_address` with authentication key
@@ -624,7 +632,8 @@ module LibraAccount {
             child_vasp_creation_capability,
         );
         Event::publish_generator(&new_account);
-        make_account<Token>(new_account, auth_key_prefix, add_all_currencies)
+        add_currencies_for_account<Token>(&new_account, add_all_currencies);
+        make_account(new_account, auth_key_prefix)
     }
 
     // TODO: who can create an unhosted account?
@@ -646,7 +655,8 @@ module LibraAccount {
         let new_account = create_signer(new_account_address);
         Roles::new_unhosted_role(creator_account, &new_account);
         Event::publish_generator(&new_account);
-        make_account<Token>(new_account, auth_key_prefix, add_all_currencies)
+        add_currencies_for_account<Token>(&new_account, add_all_currencies);
+        make_account(new_account, auth_key_prefix)
     }
 
 
@@ -799,8 +809,11 @@ module LibraAccount {
 
         // Check that the account has enough balance for all of the gas
         let max_transaction_fee = txn_gas_price * txn_max_gas_units;
-        let balance_amount = balance<Token>(transaction_sender);
-        assert(balance_amount >= max_transaction_fee, 6);
+        // Don't grab the balance if the transaction fee is zero
+        if (max_transaction_fee > 0) {
+            let balance_amount = balance<Token>(transaction_sender);
+            assert(balance_amount >= max_transaction_fee, 6);
+        };
 
         // Check that the transaction sequence number matches the sequence number of the account
         assert(txn_sequence_number >= sender_account.sequence_number, 3);
@@ -816,12 +829,12 @@ module LibraAccount {
     ) acquires LibraAccount, Balance, AccountOperationsCapability {
         // Load the transaction sender's account and balance resources
         let sender_account = borrow_global_mut<LibraAccount>(sender);
-        let sender_balance = borrow_global_mut<Balance<Token>>(sender);
 
         // Bump the sequence number
         sender_account.sequence_number = txn_sequence_number + 1;
 
         if (transaction_fee_amount > 0) {
+            let sender_balance = borrow_global_mut<Balance<Token>>(sender);
             let transaction_fee = withdraw_from_balance(sender, sender_balance, transaction_fee_amount);
             Libra::deposit(&mut borrow_global_mut<Balance<Token>>(CoreAddresses::TRANSACTION_FEE_ADDRESS()).coin, transaction_fee);
         }
@@ -836,15 +849,13 @@ module LibraAccount {
         gas_units_remaining: u64
     ) acquires LibraAccount, Balance, AccountOperationsCapability {
         let sender = Signer::address_of(account);
-        // Load the transaction sender's account and balance resources
-        let sender_balance = borrow_global_mut<Balance<Token>>(sender);
 
         // Charge for gas
         let transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
-        assert(
-            balance_for(sender_balance) >= transaction_fee_amount,
-            6
-        );
+
+        // Load the transaction sender's balance resource only if it exists. If it doesn't we default the value to 0
+        let sender_balance = if (exists<Balance<Token>>(sender)) balance<Token>(sender) else 0;
+        assert(sender_balance >= transaction_fee_amount, 6);
         epilogue<Token>(sender, transaction_fee_amount, txn_sequence_number);
     }
 
@@ -871,7 +882,11 @@ module LibraAccount {
         sender_account.sequence_number = sender_account.sequence_number + 1;
     }
 
-    public fun create_validator_account<Token>(
+    ///////////////////////////////////////////////////////////////////////////
+    // Proof of concept code used for Validator and ValidatorOperator roles management
+    ///////////////////////////////////////////////////////////////////////////
+
+    public fun create_validator_account(
         creator_account: &signer,
         assoc_root_capability: &Capability<AssociationRootRole>,
         new_account_address: address,
@@ -881,10 +896,10 @@ module LibraAccount {
         Event::publish_generator(&new_account);
         Roles::new_validator_role(creator_account, &new_account);
         ValidatorConfig::publish(&new_account, assoc_root_capability);
-        make_account<Token>(new_account, auth_key_prefix, false)
+        make_account(new_account, auth_key_prefix)
     }
 
-    public fun create_validator_operator_account<Token>(
+    public fun create_validator_operator_account(
         creator_account: &signer,
         _: &Capability<AssociationRootRole>,
         new_account_address: address,
@@ -893,7 +908,7 @@ module LibraAccount {
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
         Roles::new_validator_operator_role(creator_account, &new_account);
-        make_account<Token>(new_account, auth_key_prefix, false)
+        make_account(new_account, auth_key_prefix)
     }
 }
 }

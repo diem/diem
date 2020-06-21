@@ -151,7 +151,7 @@ pub fn create_validator_account_txn(
         StdlibScript::CreateValidatorAccount
             .compiled_bytes()
             .into_vec(),
-        vec![lbr_type_tag()],
+        vec![],
         args,
         seq_num,
         gas_costs::TXN_RESERVED * 3,

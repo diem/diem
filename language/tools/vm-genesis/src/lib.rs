@@ -150,7 +150,6 @@ fn create_and_initialize_main_accounts(
             Value::transaction_argument_signer_reference(root_association_address),
             Value::transaction_argument_signer_reference(config_address()),
             Value::transaction_argument_signer_reference(fee_account_address),
-            Value::transaction_argument_signer_reference(account_config::CORE_CODE_ADDRESS),
             Value::transaction_argument_signer_reference(tc_account_address),
             Value::address(tc_account_address),
             Value::vector_u8(genesis_auth_key.to_vec()),
@@ -184,19 +183,12 @@ fn create_and_initialize_validators(
     context: &mut GenesisContext,
     validators: &[ValidatorRegistration],
 ) {
-    let lbr_ty = TypeTag::Struct(StructTag {
-        address: *account_config::LBR_MODULE.address(),
-        module: account_config::LBR_MODULE.name().to_owned(),
-        name: account_config::LBR_STRUCT_NAME.to_owned(),
-        type_params: vec![],
-    });
     for (account_key, registration) in validators {
         context.set_sender(account_config::association_address());
 
         let auth_key = AuthenticationKey::ed25519(&account_key);
         let account = auth_key.derived_address();
         let create_script = transaction_builder::encode_create_validator_account(
-            lbr_ty.clone(),
             account,
             auth_key.prefix().to_vec(),
         );
