@@ -1,6 +1,7 @@
 //! account: validatorvivian, 10000000, 0, validator
 //! account: bob, 100000000, 0, unhosted
 //! account: alice, 100000000, 0, unhosted
+//! account: otherblessed, 0, 0, unhosted
 
 //! new-transaction
 //! sender: association
@@ -33,7 +34,7 @@ script {
 script {
 use 0x1::LibraAccount;
 fun main(account: &signer) {
-    LibraAccount::mint_lbr_to_address(account, {{blessed}}, 1);
+    LibraAccount::mint_lbr_to_address(account, {{otherblessed}}, 1);
 }
 }
 // TODO: fix
@@ -177,13 +178,13 @@ script {
 script {
 use 0x1::LibraAccount;
 fun main(account: &signer) {
-    LibraAccount::mint_lbr_to_address(account, {{blessed}}, 2);
+    LibraAccount::mint_lbr_to_address(account, {{otherblessed}}, 2);
 }
 }
 // check: EXECUTED
 
 //! new-transaction
-//! sender: blessed
+//! sender: otherblessed
 script {
     use 0x1::LibraAccount;
     use 0x1::LBR::LBR;

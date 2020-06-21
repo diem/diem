@@ -10,7 +10,7 @@ module Genesis {
     use 0x1::Coin2;
     use 0x1::DualAttestationLimit;
     use 0x1::Event;
-    use 0x1::LBR::{Self, LBR};
+    use 0x1::LBR;
     use 0x1::Libra::{Self, RegisterNewCurrency};
     use 0x1::LibraAccount;
     use 0x1::LibraBlock;
@@ -32,7 +32,6 @@ module Genesis {
         association: &signer,
         config_account: &signer,
         fee_account: &signer,
-        core_code_account: &signer,
         tc_account: &signer,
         tc_addr: address,
         genesis_auth_key: vector<u8>,
@@ -87,15 +86,8 @@ module Genesis {
         );
 
         LibraAccount::initialize(association, &assoc_root_capability);
-        LibraAccount::create_root_association_account<LBR>(
+        LibraAccount::create_root_association_account(
             Signer::address_of(association),
-            copy dummy_auth_key_prefix,
-        );
-
-        LibraAccount::create_testnet_account<LBR>(
-            association,
-            &assoc_root_capability,
-            Signer::address_of(core_code_account),
             copy dummy_auth_key_prefix,
         );
 
@@ -109,7 +101,7 @@ module Genesis {
         );
 
         // Create the treasury compliance account
-        LibraAccount::create_treasury_compliance_account<LBR>(
+        LibraAccount::create_treasury_compliance_account(
             &assoc_root_capability,
             &tc_capability,
             &create_sliding_nonce_capability,
@@ -124,7 +116,7 @@ module Genesis {
         AccountLimits::certify_limits_definition(&tc_capability, tc_addr);
 
         // Create the config account
-        LibraAccount::create_config_account<LBR>(
+        LibraAccount::create_config_account(
             association,
             &create_config_capability,
             CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
@@ -166,10 +158,6 @@ module Genesis {
         let tc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(tc_account);
         LibraAccount::rotate_authentication_key(&tc_rotate_key_cap, copy genesis_auth_key);
         LibraAccount::restore_key_rotation_capability(tc_rotate_key_cap);
-
-        let core_code_rotate_key_cap = LibraAccount::extract_key_rotation_capability(core_code_account);
-        LibraAccount::rotate_authentication_key(&core_code_rotate_key_cap, genesis_auth_key);
-        LibraAccount::restore_key_rotation_capability(core_code_rotate_key_cap);
 
         // Restore privileges
         Roles::restore_capability_to_privilege(association, create_config_capability);

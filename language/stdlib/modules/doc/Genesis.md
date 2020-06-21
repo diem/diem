@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(association: &signer, config_account: &signer, fee_account: &signer, core_code_account: &signer, tc_account: &signer, tc_addr: address, genesis_auth_key: vector&lt;u8&gt;, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(association: &signer, config_account: &signer, fee_account: &signer, tc_account: &signer, tc_addr: address, genesis_auth_key: vector&lt;u8&gt;, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -28,7 +28,6 @@
     association: &signer,
     config_account: &signer,
     fee_account: &signer,
-    core_code_account: &signer,
     tc_account: &signer,
     tc_addr: address,
     genesis_auth_key: vector&lt;u8&gt;,
@@ -83,15 +82,8 @@
     );
 
     <a href="LibraAccount.md#0x1_LibraAccount_initialize">LibraAccount::initialize</a>(association, &assoc_root_capability);
-    <a href="LibraAccount.md#0x1_LibraAccount_create_root_association_account">LibraAccount::create_root_association_account</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(
+    <a href="LibraAccount.md#0x1_LibraAccount_create_root_association_account">LibraAccount::create_root_association_account</a>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association),
-        <b>copy</b> dummy_auth_key_prefix,
-    );
-
-    <a href="LibraAccount.md#0x1_LibraAccount_create_testnet_account">LibraAccount::create_testnet_account</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(
-        association,
-        &assoc_root_capability,
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(core_code_account),
         <b>copy</b> dummy_auth_key_prefix,
     );
 
@@ -105,7 +97,7 @@
     );
 
     // Create the treasury compliance account
-    <a href="LibraAccount.md#0x1_LibraAccount_create_treasury_compliance_account">LibraAccount::create_treasury_compliance_account</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(
+    <a href="LibraAccount.md#0x1_LibraAccount_create_treasury_compliance_account">LibraAccount::create_treasury_compliance_account</a>(
         &assoc_root_capability,
         &tc_capability,
         &create_sliding_nonce_capability,
@@ -120,7 +112,7 @@
     <a href="AccountLimits.md#0x1_AccountLimits_certify_limits_definition">AccountLimits::certify_limits_definition</a>(&tc_capability, tc_addr);
 
     // Create the config account
-    <a href="LibraAccount.md#0x1_LibraAccount_create_config_account">LibraAccount::create_config_account</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(
+    <a href="LibraAccount.md#0x1_LibraAccount_create_config_account">LibraAccount::create_config_account</a>(
         association,
         &create_config_capability,
         <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(),
@@ -162,10 +154,6 @@
     <b>let</b> tc_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(tc_account);
     <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&tc_rotate_key_cap, <b>copy</b> genesis_auth_key);
     <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(tc_rotate_key_cap);
-
-    <b>let</b> core_code_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(core_code_account);
-    <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&core_code_rotate_key_cap, genesis_auth_key);
-    <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(core_code_rotate_key_cap);
 
     // Restore privileges
     <a href="Roles.md#0x1_Roles_restore_capability_to_privilege">Roles::restore_capability_to_privilege</a>(association, create_config_capability);

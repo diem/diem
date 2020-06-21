@@ -328,7 +328,7 @@ register_all_txn_scripts! {
 {
     script: CreateValidatorAccount,
     builder: encode_create_validator_account,
-    type_args: [currency],
+    type_args: [],
     args: [new_validator_address: Address, auth_key_prefix: Bytes],
     doc: "Creates a validator account at `new_validator_address` with `auth_key_prefix`"
 }

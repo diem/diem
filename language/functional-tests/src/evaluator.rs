@@ -280,17 +280,22 @@ fn get_transaction_parameters<'a>(
         .gas_currency_code
         .clone()
         .unwrap_or_else(|| LBR_NAME.to_owned());
-    let account_balance = exec
-        .read_balance_resource(
-            config.sender,
-            account_config::from_currency_code_string(&gas_currency_code).unwrap(),
-        )
-        .unwrap_or_else(|| panic!("Couldn't read balance of type {:?} for account {:?}; did you forget to specify //! gas-currency: {:?} ?", config.sender.address(), gas_currency_code, gas_currency_code));
     let max_number_of_gas_units = GasConstants::default().maximum_number_of_gas_units;
     let max_gas_amount = config.max_gas.unwrap_or_else(|| {
         if gas_unit_price == 0 {
             max_number_of_gas_units.get()
         } else {
+            let account_balance = exec
+                .read_balance_resource(
+                    config.sender,
+                    account_config::from_currency_code_string(&gas_currency_code).unwrap(),
+                )
+                .unwrap_or_else(|| panic!(
+                        "Couldn't read balance of type {:?} for account {:?}; did you forget to specify //! gas-currency: {:?} ?",
+                        config.sender.address(),
+                        gas_currency_code,
+                        gas_currency_code
+                ));
             std::cmp::min(
                 max_number_of_gas_units.get(),
                 account_balance.coin() / gas_unit_price,

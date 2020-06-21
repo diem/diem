@@ -9,33 +9,19 @@ use crate::{
     executor::FakeExecutor,
 };
 use libra_types::{
-    account_config,
     on_chain_config::new_epoch_event_key,
     transaction::TransactionStatus,
     vm_error::{StatusCode, VMStatus},
 };
-use transaction_builder::*;
 
 #[test]
 fn validator_add() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let blessed_account = Account::new_blessed_tc();
     let assoc_root_account = Account::new_association();
     let validator_account = Account::new();
 
     let txn = create_validator_account_txn(&assoc_root_account, &validator_account, 1);
     executor.execute_and_apply(txn);
-
-    let mint_amount = 10_000_000;
-    executor.execute_and_apply(blessed_account.signed_script_txn(
-        encode_mint_script(
-            account_config::lbr_type_tag(),
-            &validator_account.address(),
-            vec![],
-            mint_amount,
-        ),
-        0,
-    ));
     executor.new_block();
 
     let txn = set_validator_config_txn(
@@ -65,23 +51,11 @@ fn validator_add() {
 #[test]
 fn validator_rotate_key() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let blessed_account = Account::new_blessed_tc();
     let assoc_root_account = Account::new_association();
     let validator_account = Account::new();
 
     let txn = create_validator_account_txn(&assoc_root_account, &validator_account, 1);
     executor.execute_and_apply(txn);
-
-    let mint_amount = 10_000_000;
-    executor.execute_and_apply(blessed_account.signed_script_txn(
-        encode_mint_script(
-            account_config::lbr_type_tag(),
-            &validator_account.address(),
-            vec![],
-            mint_amount,
-        ),
-        0,
-    ));
     executor.new_block();
 
     let txn = set_validator_config_txn(
