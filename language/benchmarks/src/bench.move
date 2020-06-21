@@ -7,7 +7,7 @@ module Bench {
     //
     // Global helpers
     //
-    fun assert(check: bool, code: u64) {
+    fun check(check: bool, code: u64) {
         if (check) () else abort code
     }
 
@@ -25,7 +25,7 @@ module Bench {
             7 + 5;
             let x = 1;
             let y = x + 3;
-            assert(x + y == 5, 10);
+            check(x + y == 5, 10);
             i = i + 1;
         };
     }
@@ -50,7 +50,7 @@ module Bench {
         b
     }
 
-    fun call_1_1(addr: &address): bool {
+    fun call_1_1(_addr: &address): bool {
         true
     }
 
@@ -60,11 +60,11 @@ module Bench {
 
     fun call_2(b: bool) {
         call_2_1(b);
-        assert(call_2_2() == 400, 200);
+        check(call_2_2() == 400, 200);
     }
 
     fun call_2_1(b: bool) {
-        assert(b == b, 100)
+        check(b == b, 100)
     }
 
     fun call_2_2(): u64 {

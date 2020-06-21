@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use bytecode_verifier::VerifiedModule;
 use criterion::Criterion;
 use libra_state_view::StateView;
 use libra_types::{access_path::AccessPath, account_address::AccountAddress};
@@ -16,33 +15,41 @@ use move_lang::{compiled_unit::CompiledUnit, shared::Address};
 use move_vm_runtime::{data_cache::TransactionDataCache, move_vm::MoveVM};
 use move_vm_types::gas_schedule::{zero_cost_schedule, CostStrategy};
 use std::path::PathBuf;
+use vm::CompiledModule;
 
 /// Entry point for the bench, provide a function name to invoke in Module Bench in bench.move.
 pub fn bench(c: &mut Criterion, fun: &str) {
-    let module = compile_module();
     let move_vm = MoveVM::new();
-    execute(c, &move_vm, module, fun);
+
+    let addr = [0u8; AccountAddress::LENGTH];
+    let module = compile_module(&addr);
+    let sender = AccountAddress::new(addr);
+    execute(c, &move_vm, sender, module, fun);
 }
 
 // Compile `bench.move`
-fn compile_module() -> VerifiedModule {
+fn compile_module(addr: &[u8; AccountAddress::LENGTH]) -> CompiledModule {
     // TODO: this has only been tried with `cargo bench` from `libra/src/language/benchmarks`
     let mut path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push("src/bench.move");
     let s = path.to_str().expect("no path specified").to_owned();
 
     let (_, mut modules) =
-        move_lang::move_compile(&[s], &[], Some(Address::default())).expect("Error compiling...");
+        move_lang::move_compile(&[s], &[], Some(Address::new(*addr))).expect("Error compiling...");
     match modules.remove(0) {
-        CompiledUnit::Module { module, .. } => {
-            VerifiedModule::new(module).expect("Cannot verify code in file")
-        }
+        CompiledUnit::Module { module, .. } => module,
         CompiledUnit::Script { .. } => panic!("Expected a module but received a script"),
     }
 }
 
 // execute a given function in the Bench module
-fn execute(c: &mut Criterion, move_vm: &MoveVM, module: VerifiedModule, fun: &str) {
+fn execute(
+    c: &mut Criterion,
+    move_vm: &MoveVM,
+    sender: AccountAddress,
+    module: CompiledModule,
+    fun: &str,
+) {
     // establish running context
     let state = EmptyStateView;
     let gas_schedule = zero_cost_schedule();
@@ -50,8 +57,12 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, module: VerifiedModule, fun: &st
     let mut data_store = TransactionDataCache::new(&data_cache);
     let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(100_000_000));
 
+    let mut mod_blob = vec![];
+    module
+        .serialize(&mut mod_blob)
+        .expect("Module serialization error");
     move_vm
-        .cache_module(module, &mut data_store)
+        .publish_module(mod_blob, sender, &mut data_store, &mut cost_strategy)
         .expect("Module must load");
 
     // module and function to call
@@ -67,10 +78,11 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, module: VerifiedModule, fun: &st
                     &fun_name,
                     vec![],
                     vec![],
+                    sender,
                     &mut data_store,
                     &mut cost_strategy,
                 )
-                .unwrap_or_else(|_| panic!("Cannot execute function {}", fun))
+                .unwrap_or_else(|err| panic!("{:?}::{} failed with {:?}", &module_id, fun, err))
         })
     });
 }
@@ -83,7 +95,7 @@ fn execute(c: &mut Criterion, move_vm: &MoveVM, module: VerifiedModule, fun: &st
 struct EmptyStateView;
 
 impl StateView for EmptyStateView {
-    fn get(&self, _access_path: &AccessPath) -> Result<Option<Vec<u8>>> {
+    fn get(&self, _: &AccessPath) -> Result<Option<Vec<u8>>> {
         Ok(None)
     }
 
