@@ -396,7 +396,6 @@ fn test_voting(func: Callback) {
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
     safety_rules.update(b3.block().quorum_cert()).unwrap_err();
-    vote = safety_rules.construct_and_sign_vote(&b3).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
     safety_rules.update(a4.block().quorum_cert()).unwrap();
@@ -414,7 +413,7 @@ fn test_voting(func: Callback) {
     safety_rules.update(b4.block().quorum_cert()).unwrap_err();
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b4),
-        Err(Error::ProposalRoundLowerThenPreferredBlock { preferred_round: 4 })
+        Err(Error::ProposalRoundLowerThanPreferredBlock { preferred_round: 4 })
     );
 }
 
@@ -606,7 +605,7 @@ fn test_sign_proposal_with_early_preferred_round(func: Callback) {
         .unwrap_err();
     assert_eq!(
         err,
-        Error::InvalidQuorumCertificate("Preferred round too early".into())
+        Error::InvalidQuorumCertificate("Parent round too old".into())
     );
 }
 

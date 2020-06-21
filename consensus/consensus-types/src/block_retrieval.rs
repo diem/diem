@@ -86,7 +86,7 @@ impl BlockRetrievalResponse {
         self.blocks
             .iter()
             .try_fold(block_id, |expected_id, block| {
-                block.validate_signatures(sig_verifier)?;
+                block.validate_signature(sig_verifier)?;
                 block.verify_well_formed()?;
                 ensure!(
                     block.id() == expected_id,

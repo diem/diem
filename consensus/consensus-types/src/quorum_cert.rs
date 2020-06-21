@@ -102,10 +102,13 @@ impl QuorumCert {
             self.ledger_info().ledger_info().consensus_data_hash() == vote_hash,
             "Quorum Cert's hash mismatch LedgerInfo"
         );
+
+        let parent_round = self.parent_block().round();
+        let certified_round = self.certified_block().round();
         // Genesis's QC is implicitly agreed upon, it doesn't have real signatures.
         // If someone sends us a QC on a fake genesis, it'll fail to insert into BlockStore
         // because of the round constraint.
-        if self.certified_block().round() == 0 {
+        if certified_round == 0 {
             ensure!(
                 self.parent_block() == self.certified_block(),
                 "Genesis QC has inconsistent parent block with certified block"
@@ -119,7 +122,16 @@ impl QuorumCert {
                 "Genesis QC should not carry signatures"
             );
             return Ok(());
+        } else {
+            ensure!(
+                parent_round < certified_round,
+                format!(
+                    "parent round ({}) cannot be larger than certified round ({})",
+                    parent_round, certified_round
+                )
+            );
         }
+
         self.ledger_info()
             .verify_signatures(validator)
             .context("Fail to verify QuorumCert")?;

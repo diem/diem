@@ -194,7 +194,7 @@ impl Block {
 
     /// Verifies that the proposal and the QC are correctly signed.
     /// If this is the genesis block, we skip these checks.
-    pub fn validate_signatures(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
+    pub fn validate_signature(&self, validator: &ValidatorVerifier) -> anyhow::Result<()> {
         match self.block_data.block_type() {
             BlockType::Genesis => bail!("We should not accept genesis from others"),
             BlockType::NilBlock => self.quorum_cert().verify(validator),

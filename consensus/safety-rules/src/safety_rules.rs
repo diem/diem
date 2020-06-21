@@ -75,20 +75,31 @@ impl SafetyRules {
     }
 
     /// This verifies a QC makes sense in the current context, specifically that this is for the
-    /// current epoch and extends from the preffered round.
-    fn verify_qc(&self, qc: &QuorumCert) -> Result<(), Error> {
+    /// current epoch and extends from the preferred round.
+    fn verify_qc(&self, qc: &QuorumCert, start_from_parent: bool) -> Result<(), Error> {
         let validator_verifier = self.verifier()?;
 
         qc.verify(validator_verifier)
             .map_err(|e| Error::InvalidQuorumCertificate(e.to_string()))?;
 
-        if qc.parent_block().round() < self.persistent_storage.preferred_round()? {
-            Err(Error::InvalidQuorumCertificate(
-                "Preferred round too early".into(),
-            ))
+        if start_from_parent {
+            if qc.parent_block().round() < self.persistent_storage.preferred_round()? {
+                return Err(Error::InvalidQuorumCertificate(
+                    "Parent round too old".into(),
+                ));
+            }
         } else {
-            Ok(())
+            let preferred_round = self.persistent_storage.preferred_round()?;
+            if qc.certified_block().round() < preferred_round {
+                debug!(
+                    "Vote proposal certified round is lower than preferred round, {} < {}",
+                    qc.certified_block().round(),
+                    preferred_round,
+                );
+                return Err(Error::ProposalRoundLowerThanPreferredBlock { preferred_round });
+            }
         }
+        Ok(())
     }
 
     /// This reconciles the key pair of a validator signer with a given validator set
@@ -204,7 +215,7 @@ impl TSafetyRules for SafetyRules {
     /// Verify the QC is correct and up to date, if it is either set the preferred round or start a
     /// new epoch.
     fn update(&mut self, qc: &QuorumCert) -> Result<(), Error> {
-        self.verify_qc(qc)?;
+        self.verify_qc(qc, true)?;
         if qc.ends_epoch() {
             self.start_new_epoch(qc.ledger_info().ledger_info())
         } else {
@@ -214,8 +225,6 @@ impl TSafetyRules for SafetyRules {
         }
     }
 
-    /// @TODO verify signature on vote proposal
-    /// @TODO verify QC correctness
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error> {
         debug!("Incoming vote proposal to sign.");
         self.signer()?;
@@ -233,16 +242,10 @@ impl TSafetyRules for SafetyRules {
                 last_voted_round: self.persistent_storage.last_voted_round()?,
             });
         }
+        proposed_block.validate_signature(self.verifier()?)?;
 
-        let preferred_round = self.persistent_storage.preferred_round()?;
-        if proposed_block.quorum_cert().certified_block().round() < preferred_round {
-            debug!(
-                "Vote proposal certified round is lower than preferred round, {} < {}",
-                proposed_block.quorum_cert().certified_block().round(),
-                preferred_round,
-            );
-            return Err(Error::ProposalRoundLowerThenPreferredBlock { preferred_round });
-        }
+        let qc = proposed_block.quorum_cert();
+        self.verify_qc(qc, false)?;
 
         let new_tree = vote_proposal
             .accumulator_extension_proof()
@@ -266,7 +269,7 @@ impl TSafetyRules for SafetyRules {
                     new_tree.version(),
                     vote_proposal.next_epoch_state().cloned(),
                 ),
-                proposed_block.quorum_cert().certified_block().clone(),
+                qc.certified_block().clone(),
             ),
             validator_signer.author(),
             self.construct_ledger_info(proposed_block),
@@ -294,18 +297,7 @@ impl TSafetyRules for SafetyRules {
         }
 
         let qc = block_data.quorum_cert();
-        self.verify_qc(qc)?;
-        let preferred_round = self.persistent_storage.preferred_round()?;
-        if qc.certified_block().round() < preferred_round {
-            debug!(
-                "QC round does not match preferred round {} < {}",
-                qc.certified_block().round(),
-                preferred_round
-            );
-            return Err(Error::InvalidQuorumCertificate(
-                "QC's certified round is older than the preferred round".into(),
-            ));
-        }
+        self.verify_qc(qc, true)?;
 
         COUNTERS.sign_proposal.inc();
         Ok(Block::new_proposal_from_block_data(
