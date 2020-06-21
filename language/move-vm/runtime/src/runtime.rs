@@ -33,8 +33,9 @@ impl VMRuntime {
     pub(crate) fn publish_module(
         &self,
         module: Vec<u8>,
-        sender: &AccountAddress,
+        sender: AccountAddress,
         data_store: &mut dyn DataStore,
+        _cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
         let compiled_module = match CompiledModule::deserialize(&module) {
             Ok(module) => module,
@@ -47,7 +48,7 @@ impl VMRuntime {
         // Make sure the module's self address matches the transaction sender. The self address is
         // where the module will actually be published. If we did not check this, the sender could
         // publish a module under anyone's account.
-        if compiled_module.address() != sender {
+        if compiled_module.address() != &sender {
             return Err(verification_error(
                 IndexKind::AddressIdentifier,
                 compiled_module.self_handle_idx().0 as usize,
@@ -141,14 +142,6 @@ impl VMRuntime {
             cost_strategy,
             &self.loader,
         )
-    }
-
-    pub(crate) fn cache_module(
-        &self,
-        module: VerifiedModule,
-        data_store: &mut dyn DataStore,
-    ) -> VMResult<()> {
-        self.loader.cache_module(module, data_store)
     }
 }
 

@@ -388,21 +388,6 @@ impl Loader {
         })
     }
 
-    pub(crate) fn cache_module(
-        &self,
-        module: VerifiedModule,
-        data_store: &mut dyn DataStore,
-    ) -> VMResult<()> {
-        self.check_dependencies(&module, data_store)?;
-        Self::check_natives(&module)?;
-        let module_id = module.self_id();
-        self.module_cache
-            .lock()
-            .unwrap()
-            .insert(module_id, module)
-            .and_then(|_| Ok(()))
-    }
-
     fn load_module(&self, id: &ModuleId, data_store: &mut dyn DataStore) -> VMResult<Arc<Module>> {
         if let Some(module) = self.module_cache.lock().unwrap().get(id) {
             return Ok(module);

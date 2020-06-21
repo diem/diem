@@ -45,12 +45,7 @@ impl<'a> GenesisContext<'a> {
     pub fn new(data_cache: &'a StateViewCache<'a>, stdlib_modules: &[VerifiedModule]) -> Self {
         let vm = MoveVM::new();
         let mut data_store = GenesisDataCache::new(data_cache);
-        for module in stdlib_modules {
-            vm.cache_module(module.clone(), &mut data_store)
-                .unwrap_or_else(|_| {
-                    panic!("Failure loading stdlib module {}", module.as_inner().name())
-                });
-        }
+        data_store.initialize_code(stdlib_modules);
 
         Self {
             vm,
@@ -100,6 +95,7 @@ impl<'a> GenesisContext<'a> {
                 &Self::name(function_name),
                 type_params,
                 args,
+                self.sender,
                 &mut self.data_store,
                 &mut cost_strategy,
             )
@@ -168,6 +164,7 @@ impl StateView for GenesisStateView {
 
 pub struct GenesisDataCache<'txn> {
     data_store: TransactionDataCache<'txn>,
+    code_map: HashMap<ModuleId, Vec<u8>>,
     type_map: BTreeMap<Vec<u8>, FatStructType>,
 }
 
@@ -175,7 +172,23 @@ impl<'txn> GenesisDataCache<'txn> {
     pub fn new(cache: &'txn dyn RemoteCache) -> Self {
         Self {
             data_store: TransactionDataCache::new(cache),
+            code_map: HashMap::new(),
             type_map: BTreeMap::new(),
+        }
+    }
+
+    // Given a set of modules, initialize the data cache with those modules so
+    // that any code reference during execution can be resolved.
+    // The modules will not be published in the final `WriteSet`, and one
+    // could think of them as the startup code.
+    fn initialize_code(&mut self, stdlib_modules: &[VerifiedModule]) {
+        for module in stdlib_modules {
+            let module_id: ModuleId = module.self_id();
+            let mut blob = vec![];
+            module
+                .serialize(&mut blob)
+                .unwrap_or_else(|_| panic!("{:?} did not serialize", module_id));
+            self.code_map.insert(module_id, blob);
         }
     }
 
@@ -218,7 +231,14 @@ impl<'txn> DataStore for GenesisDataCache<'txn> {
         self.data_store.move_resource_from(ap, ty)
     }
 
+    // Check first if a module reference is in the modules provided at initialization,
+    // otherwise check in the "live" data store.
+    // Normally the only code requested is in the `code_map`, it was initialized
+    // at startup.
     fn load_module(&self, module: &ModuleId) -> VMResult<Vec<u8>> {
+        if let Some(binary) = self.code_map.get(module) {
+            return Ok(binary.clone());
+        }
         self.data_store.load_module(module)
     }
 

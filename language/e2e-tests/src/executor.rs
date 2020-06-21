@@ -25,6 +25,7 @@ use libra_types::{
 };
 use libra_vm::{data_cache::RemoteStorage, LibraVM, VMExecutor, VMValidator};
 use move_core_types::{
+    account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
@@ -284,6 +285,7 @@ impl FakeExecutor {
         function_name: &str,
         type_params: Vec<TypeTag>,
         args: Vec<Value>,
+        sender: &AccountAddress,
     ) {
         let write_set = {
             let cost_table = zero_cost_schedule();
@@ -296,6 +298,7 @@ impl FakeExecutor {
                 &Self::name(function_name),
                 type_params,
                 args,
+                *sender,
                 &mut cache,
                 &mut cost_strategy,
             )

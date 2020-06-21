@@ -347,13 +347,19 @@ impl LibraVM {
                     // Module publishing is currently restricted to the Association, so we choose to
                     // publish all modules under the address 0x0...1 for convenience.
                     // This will change to the sender's address once module publishing becomes open.
+                    // REVIEW: should we check that the address of the Module is in fact
+                    // `CORE_CODE_ADDRESS`?
                     let module_address = if self.on_chain_config()?.publishing_option.is_open() {
                         txn_data.sender()
                     } else {
                         account_config::CORE_CODE_ADDRESS
                     };
-                    self.move_vm
-                        .publish_module(m, module_address, &mut data_store)
+                    self.move_vm.publish_module(
+                        m,
+                        module_address,
+                        &mut data_store,
+                        &mut cost_strategy,
+                    )
                 }),
             VerifiedTransactionPayload::Script(s, ty_args, args) => {
                 let ret = cost_strategy
@@ -536,6 +542,7 @@ impl LibraVM {
                 &BLOCK_PROLOGUE,
                 vec![],
                 args,
+                txn_data.sender,
                 &mut data_store,
                 &mut cost_strategy,
             )?
@@ -595,6 +602,7 @@ impl LibraVM {
             vec![Value::transaction_argument_signer_reference(
                 txn_data.sender,
             )],
+            txn_data.sender,
             &mut data_store,
             &mut cost_strategy,
         )?;
@@ -697,6 +705,7 @@ impl LibraVM {
                     Value::u64(txn_max_gas_units),
                     Value::u64(txn_expiration_time),
                 ],
+                txn_data.sender,
                 data_store,
                 cost_strategy,
             )
@@ -730,6 +739,7 @@ impl LibraVM {
                 Value::u64(txn_max_gas_units),
                 Value::u64(gas_remaining),
             ],
+            txn_data.sender,
             data_store,
             cost_strategy,
         )
@@ -762,6 +772,7 @@ impl LibraVM {
                 Value::u64(txn_max_gas_units),
                 Value::u64(gas_remaining),
             ],
+            txn_data.sender,
             data_store,
             cost_strategy,
         )
@@ -789,6 +800,7 @@ impl LibraVM {
                     Value::u64(txn_sequence_number),
                     Value::vector_u8(txn_public_key),
                 ],
+                txn_data.sender,
                 data_store,
                 &mut cost_strategy,
             )
@@ -817,6 +829,7 @@ impl LibraVM {
                 Value::transaction_argument_signer_reference(txn_data.sender),
                 Value::vector_u8(change_set_bytes),
             ],
+            txn_data.sender,
             data_store,
             &mut cost_strategy,
         )
