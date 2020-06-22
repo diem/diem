@@ -26,7 +26,7 @@ use network::{
     peer_manager::{builder::PeerManagerBuilder, conn_notifs_channel, ConnectionRequestSender},
     protocols::{
         discovery::{self, builder::DiscoveryBuilder},
-        health_checker::{self, HealthCheckerBuilderConfig, HealthCheckerService},
+        health_checker::{self, builder::HealthCheckerBuilder},
         network::{NewNetworkEvents, NewNetworkSender},
     },
     ProtocolId,
@@ -59,8 +59,7 @@ pub struct NetworkBuilder {
     connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
     configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
     discovery_builder: Option<DiscoveryBuilder>,
-    health_checker_cfg: Option<HealthCheckerBuilderConfig>,
-    health_checker: Option<HealthCheckerService>,
+    health_checker_builder: Option<HealthCheckerBuilder>,
     onchain_discovery_builder: Option<OnchainDiscoveryBuilder>,
     peer_manager_builder: Option<PeerManagerBuilder>,
 
@@ -99,8 +98,7 @@ impl NetworkBuilder {
             connectivity_manager_builder: None,
             configuration_change_listener_builder: None,
             discovery_builder: None,
-            health_checker_cfg: None,
-            health_checker: None,
+            health_checker_builder: None,
             onchain_discovery_builder: None,
             reconfig_subscriptions: Vec::new(),
         }
@@ -445,7 +443,7 @@ impl NetworkBuilder {
         // Initialize and start HealthChecker.
         let (hc_network_tx, hc_network_rx) =
             self.add_protocol_handler(health_checker::network_endpoint_config());
-        let health_checker_config = HealthCheckerBuilderConfig::new(
+        let health_checker_builder = HealthCheckerBuilder::create(
             self.network_context.clone(),
             ping_interval_ms,
             ping_timeout_ms,
@@ -454,26 +452,21 @@ impl NetworkBuilder {
             hc_network_rx,
         );
 
-        self.health_checker_cfg = Some(health_checker_config);
+        self.health_checker_builder = Some(health_checker_builder);
 
         self.build_connection_monitoring()
     }
 
     fn build_connection_monitoring(&mut self) -> &mut Self {
-        if let Some(health_checker_config) = self.health_checker_cfg.take() {
-            let health_checker = health_checker::build_health_checker_from_config(
-                &self.executor,
-                health_checker_config,
-            );
-            self.health_checker = Some(health_checker);
+        if let Some(ref mut health_checker_builder) = self.health_checker_builder {
+            health_checker_builder.build(&self.executor);
         }
-
         self.start_connection_monitoring()
     }
 
     fn start_connection_monitoring(&mut self) -> &mut Self {
-        if let Some(health_checker) = self.health_checker.take() {
-            self.executor.spawn(health_checker.start());
+        if let Some(ref mut health_checker_builder) = self.health_checker_builder {
+            health_checker_builder.start(&self.executor);
             debug!("{} Started health checker", self.network_context);
         }
         self

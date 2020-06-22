@@ -34,7 +34,6 @@ use futures::{
     channel::oneshot,
     stream::{FusedStream, FuturesUnordered, Stream, StreamExt},
 };
-use futures_util::stream::Fuse;
 use libra_config::network_id::NetworkContext;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
@@ -43,11 +42,8 @@ use libra_types::PeerId;
 use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc, time::Duration};
-use tokio::{
-    runtime::Handle,
-    time::{interval, Interval},
-};
 
+pub mod builder;
 #[cfg(test)]
 mod test;
 
@@ -396,53 +392,4 @@ where
     fn sample_nonce(&mut self) -> u32 {
         self.rng.gen::<u32>()
     }
-}
-
-/// Configuration for a HealthCheckerBuilder.
-pub struct HealthCheckerBuilderConfig {
-    network_context: Arc<NetworkContext>,
-    ping_interval_ms: u64,
-    ping_timeout_ms: u64,
-    ping_failures_tolerated: u64,
-    network_tx: HealthCheckerNetworkSender,
-    network_rx: HealthCheckerNetworkEvents,
-}
-
-impl HealthCheckerBuilderConfig {
-    pub fn new(
-        network_context: Arc<NetworkContext>,
-        ping_interval_ms: u64,
-        ping_timeout_ms: u64,
-        ping_failures_tolerated: u64,
-        network_tx: HealthCheckerNetworkSender,
-        network_rx: HealthCheckerNetworkEvents,
-    ) -> Self {
-        Self {
-            network_context,
-            ping_interval_ms,
-            ping_timeout_ms,
-            ping_failures_tolerated,
-            network_tx,
-            network_rx,
-        }
-    }
-}
-
-pub type HealthCheckerService = HealthChecker<Fuse<Interval>>;
-
-/// Build a HealthChecker service from the provided HealthCheckerBuilderConfig.
-pub fn build_health_checker_from_config(
-    executor: &Handle,
-    config: HealthCheckerBuilderConfig,
-) -> HealthCheckerService {
-    executor.enter(|| {
-        HealthChecker::new(
-            config.network_context,
-            interval(Duration::from_millis(config.ping_interval_ms)).fuse(),
-            config.network_tx,
-            config.network_rx,
-            Duration::from_millis(config.ping_timeout_ms),
-            config.ping_failures_tolerated,
-        )
-    })
 }
