@@ -54,20 +54,65 @@ The functional testing framework is very convenient, but can't express all of th
 ## Coding conventions
 
 ### Naming
-- Module names should be capitalized and camel case.
-- File names should be lowercase-underscore; e.g., a module named `MyModule` should be stored in a file named `my_module.move`
-- Modules that declare a single resource or struct type should name the type `T`. The reason for this convention is to avoid redundancy: outside of the module, the type will be referred to as `ModuleName::T`.
-- If a module declares multiple resources/structs, the "main" type that clients of the module will use should be called `T` (this is obviously subjective).
-- Function names should be lowercase-underscore
-- Generic type parameter names should be long and descriptive (e.g., `deposit<Token>(t: Token)`). `T` should not be used as a generic type parameter name to avoid confusion with the resource/struct naming convention.
+- **Module names**: are camel case e.g., `LibraAccount`, `Libra`
+- **Type names**: are camel case e.g., `WithdrawalCapability`, `KeyRotationCapability`
+- **Function names**: are lower snake case e.g., `register_currency`
+- **Constant names**: are upper snake case e.g., `TREASURY_COMPLIANCE_ADDRESS`
+- Generic types should be descriptive, or anti-descriptive where appropriate (e.g. `T` for the Vector generic type parameter, `LibraAccount` for the core `LibraAccount` resource, `deposit<CoinType>(t: CoinType)` for depositing a token in the `Libra` module). Most of the time the "main" type in a module should be the same name as the module e.g., `Libra::Libra`, `LibraAccount::LibraAccount`.
+- **Module file names**: are the same as the module name e.g., `LibraAccount.move`
+- **Script file names**: should be lower snake case and named after the name of the “main” function in the script.
+- **Mixed file names**: If the file contains multiple modules and/or scripts, the file name should be lower_snake_case, where the name does not match any particular module/script inside.
+
+### Imports
+- Functions and constants are imported and used fully qualified from the module in which they are declared, and not imported at the top level.
+- Types are imported at the top-level. Where there are name clashes, `as` should be used to rename the type locally as appropriate.
+ e.g. if there is a module
+```rust
+module Foo {
+    resource struct Foo { }
+    public const CONST_FOO: u64 = 0;
+    public fun do_foo(): Foo { Foo{} }
+    ...
+}
+```
+this would be imported and used as:
+```rust
+module Bar {
+    use 0x1::Foo::{Self, Foo};
+
+    public fun do_bar(x: u64): Foo {
+        if (x == Foo::CONST_FOO) {
+            Foo::do_foo()
+        } else {
+            abort 0
+        }
+    }
+    ...
+}
+```
+And, if there is a local name-clash when importing two modules:
+```rust
+module OtherFoo {
+    resource struct Foo {}
+    ...
+}
+
+module Importer {
+    use 0x1::OtherFoo::Foo as OtherFoo;
+    use 0x1::Foo::Foo;
+....
+}
+```
+
 
 ### Comments
 
 - Each module, struct, resource, and public function declaration should be commented
-- Note: Move only has `//` comments (no block or doc comments like `///`, `//!` or `/* */`) at the moment
+- Move has both doc comments `///`, regular single-line comments `//`, and block comments `/* */`
+
 
 ## Formatting
 We plan to have an autoformatter to enforce these conventions at some point. In the meantime...
 
-- Four space identation
+- Four space indentation except for `script` and `address` blocks whose contents should not be indented
 - Break lines longer than 100 characters
