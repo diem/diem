@@ -985,7 +985,7 @@ function {:inline} $Vector_is_well_formed(v: $Value): bool {
         var va := v#$Vector(v);
         (
             var l := l#$ValueArray(va);
-            0 <= l &&
+            0 <= l && l <= $MAX_U64 &&
             (forall x: int :: {v#$ValueArray(va)[x]} x < 0 || x >= l ==> v#$ValueArray(va)[x] == $DefaultValue())
         )
     )
