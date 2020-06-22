@@ -79,6 +79,13 @@
 <span id="79">79</span>
 <span id="80">80</span>
 <span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -134,10 +141,17 @@
         <span class="self">self</span>.<span class="ident">fractional_part</span>
     }
 
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">exchange_rate</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">f32</span> {
+        <span class="comment">// Exchange rates are represented as 32|32 fixed-point numbers on-chain. So we divide by the scaling</span>
+        <span class="comment">// factor (2^32) of the number to arrive at the floating point representation of the number.</span>
+        <span class="comment">// The exchange rate returned is the on-chain rate to two decimal places rounded up (e.g. 1.3333</span>
+        <span class="comment">// would be rounded to 1.34).</span>
+        <span class="kw">let</span> <span class="ident">unrounded</span> <span class="op">=</span> (<span class="self">self</span>.<span class="ident">to_lbr_exchange_rate</span> <span class="kw">as</span> <span class="ident">f32</span>) <span class="op">/</span> <span class="number">2f32</span>.<span class="ident">powf</span>(<span class="number">32f32</span>);
+        (<span class="ident">unrounded</span> <span class="op">*</span> <span class="number">100.0</span>).<span class="ident">round</span>() <span class="op">/</span> <span class="number">100.0</span>
+    }
+
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">convert_to_lbr</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">amount</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">mult</span> <span class="op">=</span> (<span class="ident">amount</span> <span class="kw">as</span> <span class="ident">u128</span>) <span class="op">*</span> (<span class="self">self</span>.<span class="ident">to_lbr_exchange_rate</span> <span class="kw">as</span> <span class="ident">u128</span>);
-        <span class="ident">mult</span> <span class="op">&gt;</span><span class="op">&gt;</span><span class="op">=</span> <span class="number">32</span>;
-        <span class="ident">mult</span> <span class="kw">as</span> <span class="ident">u64</span>
+        (<span class="self">self</span>.<span class="ident">exchange_rate</span>() <span class="op">*</span> (<span class="ident">amount</span> <span class="kw">as</span> <span class="ident">f32</span>)) <span class="kw">as</span> <span class="ident">u64</span>
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">struct_tag_for</span>(<span class="ident">currency_code</span>: <span class="ident">Identifier</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StructTag</span> {

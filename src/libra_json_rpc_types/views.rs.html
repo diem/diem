@@ -597,6 +597,8 @@
 <span id="597">597</span>
 <span id="598">598</span>
 <span id="599">599</span>
+<span id="600">600</span>
+<span id="601">601</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1098,6 +1100,7 @@
     <span class="kw">pub</span> <span class="ident">code</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">scaling_factor</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">fractional_part</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">to_lbr_exchange_rate</span>: <span class="ident">f32</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">CurrencyInfoResource</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">CurrencyInfoView</span> {
@@ -1106,6 +1109,7 @@
             <span class="ident">code</span>: <span class="ident">info</span>.<span class="ident">currency_code</span>().<span class="ident">to_string</span>(),
             <span class="ident">scaling_factor</span>: <span class="ident">info</span>.<span class="ident">scaling_factor</span>(),
             <span class="ident">fractional_part</span>: <span class="ident">info</span>.<span class="ident">fractional_part</span>(),
+            <span class="ident">to_lbr_exchange_rate</span>: <span class="ident">info</span>.<span class="ident">exchange_rate</span>(),
         }
     }
 }
