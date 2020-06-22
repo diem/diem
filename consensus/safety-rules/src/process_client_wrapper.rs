@@ -3,8 +3,7 @@
 
 use crate::{test_utils, ConsensusState, Error, SafetyRulesManager, TSafetyRules};
 use consensus_types::{
-    block::Block, block_data::BlockData, quorum_cert::QuorumCert, timeout::Timeout, vote::Vote,
-    vote_proposal::VoteProposal,
+    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote, vote_proposal::VoteProposal,
 };
 use libra_config::{
     config::{NodeConfig, RemoteService, SafetyRulesService, SecureBackend, WaypointConfig},
@@ -68,10 +67,6 @@ impl TSafetyRules for ProcessClientWrapper {
 
     fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error> {
         self.safety_rules.initialize(proof)
-    }
-
-    fn update(&mut self, qc: &QuorumCert) -> Result<(), Error> {
-        self.safety_rules.update(qc)
     }
 
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error> {

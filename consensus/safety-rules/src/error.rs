@@ -57,8 +57,8 @@ pub enum Error {
     #[error("Serialization error: {0}")]
     SerializationError(String),
 
-    #[error("Waypoint mismatch: {0}")]
-    WaypointMismatch(String),
+    #[error("Invalid EpochChangeProof: {0}")]
+    InvalidEpochChangeProof(String),
 }
 
 impl From<anyhow::Error> for Error {

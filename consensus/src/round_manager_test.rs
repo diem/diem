@@ -97,8 +97,6 @@ impl NodeSetup {
             Waypoint::new_epoch_boundary(&LedgerInfo::mock_genesis(Some(validator_set))).unwrap();
 
         let mut nodes = vec![];
-        //let mut id = 0;
-        //for signer in signers.iter().take(num_nodes) {
         for (id, signer) in signers.iter().take(num_nodes).enumerate() {
             let (initial_data, storage) = MockStorage::start_for_testing((&validators).into());
 
@@ -120,7 +118,6 @@ impl NodeSetup {
                 safety_rules_manager,
                 id,
             ));
-            //id += 1;
         }
         nodes
     }

@@ -3,8 +3,7 @@
 
 use crate::{ConsensusState, Error};
 use consensus_types::{
-    block::Block, block_data::BlockData, quorum_cert::QuorumCert, timeout::Timeout, vote::Vote,
-    vote_proposal::VoteProposal,
+    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote, vote_proposal::VoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
 use libra_types::epoch_change::EpochChangeProof;
@@ -20,10 +19,6 @@ pub trait TSafetyRules {
     /// This uses a EpochChangeProof because there's a possibility that consensus migrated to a
     /// new epoch but SafetyRules did not.
     fn initialize(&mut self, proof: &EpochChangeProof) -> Result<(), Error>;
-
-    /// Learn about a new quorum certificate. This can lead to updating the preferred round or the
-    /// validator verifier if this ends an epoch and increments the epoch as well.
-    fn update(&mut self, qc: &QuorumCert) -> Result<(), Error>;
 
     /// Attempts to vote for a given proposal following the voting rules.
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error>;
