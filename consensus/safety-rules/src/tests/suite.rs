@@ -179,13 +179,9 @@ fn test_end_to_end(func: Callback) {
     );
 
     safety_rules.initialize(&proof).unwrap();
-    safety_rules.update(p0.block().quorum_cert()).unwrap();
     safety_rules.construct_and_sign_vote(&p0).unwrap();
-    safety_rules.update(p1.block().quorum_cert()).unwrap();
     safety_rules.construct_and_sign_vote(&p1).unwrap();
-    safety_rules.update(p2.block().quorum_cert()).unwrap();
     safety_rules.construct_and_sign_vote(&p2).unwrap();
-    safety_rules.update(p3.block().quorum_cert()).unwrap();
     safety_rules.construct_and_sign_vote(&p3).unwrap();
 
     let state = safety_rules.consensus_state().unwrap();
@@ -210,7 +206,7 @@ fn test_initialize(func: Callback) {
     let (bad_proof, _bad_genesis_qc) = make_genesis(&signer1);
 
     match safety_rules.initialize(&bad_proof) {
-        Err(Error::WaypointMismatch(_)) => (),
+        Err(Error::InvalidEpochChangeProof(_)) => (),
         _ => panic!("Unexpected output"),
     };
 }
@@ -241,43 +237,43 @@ fn test_preferred_block_rule(func: Callback) {
 
     safety_rules.initialize(&proof).unwrap();
 
-    safety_rules.update(a1.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&a1).unwrap();
     assert_eq!(
         safety_rules.consensus_state().unwrap().preferred_round(),
         genesis_round
     );
 
-    safety_rules.update(b1.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&b1).unwrap();
     assert_eq!(
         safety_rules.consensus_state().unwrap().preferred_round(),
         genesis_round
     );
 
-    safety_rules.update(a2.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&a2).unwrap();
     assert_eq!(
         safety_rules.consensus_state().unwrap().preferred_round(),
         genesis_round
     );
 
-    safety_rules.update(b2.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&b2).unwrap_err();
     assert_eq!(
         safety_rules.consensus_state().unwrap().preferred_round(),
         genesis_round
     );
 
-    safety_rules.update(a3.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&a3).unwrap();
     assert_eq!(
         safety_rules.consensus_state().unwrap().preferred_round(),
         b1.block().round()
     );
 
-    safety_rules.update(b3.block().quorum_cert()).unwrap_err();
+    safety_rules.construct_and_sign_vote(&b3).unwrap_err();
     assert_eq!(
         safety_rules.consensus_state().unwrap().preferred_round(),
         b1.block().round()
     );
 
-    safety_rules.update(a4.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&a4).unwrap();
     assert_eq!(
         safety_rules.consensus_state().unwrap().preferred_round(),
         a2.block().round()
@@ -302,7 +298,7 @@ fn test_sign_timeout(func: Callback) {
     let p4 = make_proposal_with_parent(round + 5, &p3, None, &signer);
 
     safety_rules.initialize(&proof).unwrap();
-    safety_rules.update(p0.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&p0).unwrap();
 
     // Verify multiple signings are the same
     let timeout = Timeout::new(epoch, p0.block().round());
@@ -320,7 +316,7 @@ fn test_sign_timeout(func: Callback) {
     assert_eq!(actual_err, expected_err);
 
     // Verify cannot sign last_voted_round < vote < preferred_round
-    safety_rules.update(p4.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&p4).unwrap();
     let preferred_round = p4.block().quorum_cert().parent_block().round();
     let ptimeout = Timeout::new(timeout.epoch(), preferred_round - 1);
     let actual_err = safety_rules.sign_timeout(&ptimeout).unwrap_err();
@@ -369,19 +365,14 @@ fn test_voting(func: Callback) {
 
     safety_rules.initialize(&proof).unwrap();
 
-    safety_rules.update(a1.block().quorum_cert()).unwrap();
     let mut vote = safety_rules.construct_and_sign_vote(&a1).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(b1.block().quorum_cert()).unwrap();
     vote = safety_rules.construct_and_sign_vote(&b1).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(a2.block().quorum_cert()).unwrap();
     vote = safety_rules.construct_and_sign_vote(&a2).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
-
-    safety_rules.update(b2.block().quorum_cert()).unwrap();
 
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b2),
@@ -391,15 +382,12 @@ fn test_voting(func: Callback) {
         })
     );
 
-    safety_rules.update(a3.block().quorum_cert()).unwrap();
     vote = safety_rules.construct_and_sign_vote(&a3).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(b3.block().quorum_cert()).unwrap_err();
     vote = safety_rules.construct_and_sign_vote(&b3).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
-    safety_rules.update(a4.block().quorum_cert()).unwrap();
     vote = safety_rules.construct_and_sign_vote(&a4).unwrap();
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
@@ -411,7 +399,6 @@ fn test_voting(func: Callback) {
         })
     );
 
-    safety_rules.update(b4.block().quorum_cert()).unwrap_err();
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b4),
         Err(Error::ProposalRoundLowerThenPreferredBlock { preferred_round: 4 })
@@ -437,7 +424,7 @@ fn test_voting_bad_epoch(func: Callback) {
         None,
     );
     safety_rules.initialize(&proof).unwrap();
-    safety_rules.update(a1.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&a1).unwrap();
 
     assert_eq!(
         safety_rules.construct_and_sign_vote(&a2),
@@ -470,12 +457,10 @@ fn test_voting_potential_commit_id(func: Callback) {
     safety_rules.initialize(&proof).unwrap();
 
     for b in &[&a1, &b1, &a2, &a3] {
-        safety_rules.update(b.block().quorum_cert()).unwrap();
         let vote = safety_rules.construct_and_sign_vote(b).unwrap();
         assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
     }
 
-    safety_rules.update(a4.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules
             .construct_and_sign_vote(&a4)
@@ -485,7 +470,6 @@ fn test_voting_potential_commit_id(func: Callback) {
         a2.block().id(),
     );
 
-    safety_rules.update(a5.block().quorum_cert()).unwrap();
     assert_eq!(
         safety_rules
             .construct_and_sign_vote(&a5)
@@ -506,7 +490,6 @@ fn test_sign_old_proposal(func: Callback) {
     safety_rules.initialize(&proof).unwrap();
 
     let a1 = test_utils::make_proposal_with_qc(round, genesis_qc, &signer);
-    safety_rules.update(a1.block().quorum_cert()).unwrap();
     let err = safety_rules
         .sign_proposal(a1.block().block_data().clone())
         .unwrap_err();
@@ -529,7 +512,6 @@ fn test_sign_proposal_with_bad_signer(func: Callback) {
     safety_rules.initialize(&proof).unwrap();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
-    safety_rules.update(a1.block().quorum_cert()).unwrap();
     safety_rules
         .sign_proposal(a1.block().block_data().clone())
         .unwrap();
@@ -556,7 +538,6 @@ fn test_sign_proposal_with_invalid_qc(func: Callback) {
     safety_rules.initialize(&proof).unwrap();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
-    safety_rules.update(a1.block().quorum_cert()).unwrap();
     safety_rules
         .sign_proposal(a1.block().block_data().clone())
         .unwrap();
@@ -582,7 +563,6 @@ fn test_sign_proposal_with_early_preferred_round(func: Callback) {
     safety_rules.initialize(&proof).unwrap();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
-    safety_rules.update(a1.block().quorum_cert()).unwrap();
     safety_rules
         .sign_proposal(a1.block().block_data().clone())
         .unwrap();
@@ -591,9 +571,9 @@ fn test_sign_proposal_with_early_preferred_round(func: Callback) {
     let a2 = make_proposal_with_parent(round + 2, &a1, None, &signer);
     let a3 = make_proposal_with_parent(round + 3, &a2, None, &signer);
     let a4 = make_proposal_with_parent(round + 4, &a3, Some(&a2), &signer);
-    safety_rules.update(a2.block().quorum_cert()).unwrap();
-    safety_rules.update(a3.block().quorum_cert()).unwrap();
-    safety_rules.update(a4.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&a2).unwrap();
+    safety_rules.construct_and_sign_vote(&a3).unwrap();
+    safety_rules.construct_and_sign_vote(&a4).unwrap();
 
     let a5 = make_proposal_with_qc_and_proof(
         round + 5,
@@ -606,7 +586,7 @@ fn test_sign_proposal_with_early_preferred_round(func: Callback) {
         .unwrap_err();
     assert_eq!(
         err,
-        Error::InvalidQuorumCertificate("Preferred round too early".into())
+        Error::ProposalRoundLowerThenPreferredBlock { preferred_round: 2 }
     );
 }
 
@@ -619,15 +599,15 @@ fn test_uninitialized_signer(func: Callback) {
     let round = genesis_qc.certified_block().round();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
-    let err = safety_rules.update(a1.block().quorum_cert()).unwrap_err();
-    assert_eq!(err, Error::NotInitialized("validator_verifier".into()));
+    let err = safety_rules.construct_and_sign_vote(&a1).unwrap_err();
+    assert_eq!(err, Error::NotInitialized("epoch_state".into()));
     let err = safety_rules
         .sign_proposal(a1.block().block_data().clone())
         .unwrap_err();
     assert_eq!(err, Error::NotInitialized("validator_signer".into()));
 
     safety_rules.initialize(&proof).unwrap();
-    safety_rules.update(a1.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&a1).unwrap();
 }
 
 fn test_validator_not_in_set(func: Callback) {
@@ -637,7 +617,7 @@ fn test_validator_not_in_set(func: Callback) {
 
     let (mut safety_rules, signer) = func();
 
-    let (proof, genesis_qc) = make_genesis(&signer);
+    let (mut proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
 
     safety_rules.initialize(&proof).unwrap();
@@ -663,7 +643,11 @@ fn test_validator_not_in_set(func: Callback) {
         Some(1),
         Some(next_epoch_state),
     );
-    safety_rules.update(a2.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&a2).unwrap();
+    proof
+        .ledger_info_with_sigs
+        .push(a2.block().quorum_cert().ledger_info().clone());
+    safety_rules.initialize(&proof).unwrap();
 
     let state = safety_rules.consensus_state().unwrap();
     assert_eq!(state.in_validator_set(), false);
@@ -682,17 +666,17 @@ fn test_reconcile_key(_func: Callback) {
     let new_pub_key = storage.internal_store().rotate_key(CONSENSUS_KEY).unwrap();
     let mut safety_rules = Box::new(SafetyRules::new(storage));
 
-    let (proof, genesis_qc) = make_genesis(&signer);
+    let (mut proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
 
     safety_rules.initialize(&proof).unwrap();
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer);
-    safety_rules.update(a1.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&a1).unwrap();
 
     // Update validator epoch state, reconciling the old key with the new pub key
     let mut next_epoch_state = EpochState::empty();
-    next_epoch_state.epoch = 1;
+    next_epoch_state.epoch = 2;
     next_epoch_state.verifier = ValidatorVerifier::new_single(signer.author(), new_pub_key);
     let a2 = test_utils::make_proposal_with_parent_and_overrides(
         vec![],
@@ -703,7 +687,11 @@ fn test_reconcile_key(_func: Callback) {
         Some(1),
         Some(next_epoch_state),
     );
-    safety_rules.update(a2.block().quorum_cert()).unwrap();
+    safety_rules.construct_and_sign_vote(&a2).unwrap();
+    proof
+        .ledger_info_with_sigs
+        .push(a2.block().quorum_cert().ledger_info().clone());
+    safety_rules.initialize(&proof).unwrap();
 
     // Verification fails for proposal signed by the outdated key
     let outdated_signer = &signer;
@@ -713,10 +701,10 @@ fn test_reconcile_key(_func: Callback) {
         &a2,
         Some(&a2),
         outdated_signer,
-        Some(1),
+        Some(2),
         None,
     );
-    let err = safety_rules.update(a3.block().quorum_cert()).unwrap_err();
+    let err = safety_rules.construct_and_sign_vote(&a3).unwrap_err();
     assert_eq!(
         err,
         Error::InvalidQuorumCertificate("Fail to verify QuorumCert".into())
@@ -726,7 +714,7 @@ fn test_reconcile_key(_func: Callback) {
 // Tests for fetching a missing validator key from persistent storage.
 fn test_key_not_in_store(func: Callback) {
     let (mut safety_rules, signer) = func();
-    let (proof, genesis_qc) = make_genesis(&signer);
+    let (mut proof, genesis_qc) = make_genesis(&signer);
     let round = genesis_qc.certified_block().round();
 
     safety_rules.initialize(&proof).unwrap();
@@ -749,7 +737,10 @@ fn test_key_not_in_store(func: Callback) {
         Some(1),
         Some(next_epoch_state),
     );
-    let err = safety_rules.update(a2.block().quorum_cert()).unwrap_err();
+    proof
+        .ledger_info_with_sigs
+        .push(a2.block().quorum_cert().ledger_info().clone());
+    let err = safety_rules.initialize(&proof).unwrap_err();
     assert_eq!(
         err,
         Error::InternalError {

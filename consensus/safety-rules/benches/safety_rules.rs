@@ -23,17 +23,14 @@ fn lsr(mut safety_rules: Box<dyn TSafetyRules>, signer: ValidatorSigner, n: u64)
 
     round += 1;
     let mut b0 = test_utils::make_proposal_with_qc(round, genesis_qc, &signer);
-    safety_rules.update(b0.block().quorum_cert()).unwrap();
     safety_rules.construct_and_sign_vote(&b0).unwrap();
 
     round += 1;
     let mut b1 = test_utils::make_proposal_with_parent(data.clone(), round, &b0, None, &signer);
-    safety_rules.update(b1.block().quorum_cert()).unwrap();
     safety_rules.construct_and_sign_vote(&b1).unwrap();
 
     round += 1;
     let mut b2 = test_utils::make_proposal_with_parent(data.clone(), round, &b1, None, &signer);
-    safety_rules.update(b2.block().quorum_cert()).unwrap();
     safety_rules.construct_and_sign_vote(&b2).unwrap();
 
     for _i in 0..n {
@@ -41,7 +38,6 @@ fn lsr(mut safety_rules: Box<dyn TSafetyRules>, signer: ValidatorSigner, n: u64)
         let b3 =
             test_utils::make_proposal_with_parent(data.clone(), round, &b2, Some(&b0), &signer);
 
-        safety_rules.update(b3.block().quorum_cert()).unwrap();
         safety_rules.construct_and_sign_vote(&b3).unwrap();
 
         b0 = b1;

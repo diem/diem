@@ -13,9 +13,9 @@ use libra_crypto::{ed25519::Ed25519Signature, hash::HashValue};
 use libra_logger::debug;
 use libra_types::{
     block_info::BlockInfo, epoch_change::EpochChangeProof, epoch_state::EpochState,
-    ledger_info::LedgerInfo, validator_signer::ValidatorSigner,
-    validator_verifier::ValidatorVerifier, waypoint::Waypoint,
+    ledger_info::LedgerInfo, validator_signer::ValidatorSigner, waypoint::Waypoint,
 };
+use std::cmp::Ordering;
 
 /// SafetyRules is responsible for the safety of the consensus:
 /// 1) voting rules
@@ -26,7 +26,7 @@ use libra_types::{
 pub struct SafetyRules {
     persistent_storage: PersistentSafetyStorage,
     validator_signer: Option<ValidatorSigner>,
-    validator_verifier: Option<ValidatorVerifier>,
+    epoch_state: Option<EpochState>,
 }
 
 impl SafetyRules {
@@ -36,7 +36,7 @@ impl SafetyRules {
         Self {
             persistent_storage,
             validator_signer: None,
-            validator_verifier: None,
+            epoch_state: None,
         }
     }
 
@@ -46,12 +46,82 @@ impl SafetyRules {
             .ok_or_else(|| Error::NotInitialized("validator_signer".into()))
     }
 
-    fn verifier(&self) -> Result<&ValidatorVerifier, Error> {
-        self.validator_verifier
+    fn epoch_state(&self) -> Result<&EpochState, Error> {
+        self.epoch_state
             .as_ref()
-            .ok_or_else(|| Error::NotInitialized("validator_verifier".into()))
+            .ok_or_else(|| Error::NotInitialized("epoch_state".into()))
     }
 
+    /// First voting rule
+    fn check_last_vote_round(&self, proposed_block: &BlockData) -> Result<(), Error> {
+        let last_voted_round = self.persistent_storage.last_voted_round()?;
+        if proposed_block.round() <= last_voted_round {
+            debug!(
+                "Vote proposal is old {} <= {}",
+                proposed_block.round(),
+                last_voted_round
+            );
+            return Err(Error::OldProposal {
+                proposal_round: proposed_block.round(),
+                last_voted_round: self.persistent_storage.last_voted_round()?,
+            });
+        }
+        Ok(())
+    }
+
+    /// Second voting rule
+    fn check_and_update_preferred_round(&mut self, quorum_cert: &QuorumCert) -> Result<(), Error> {
+        let preferred_round = self.persistent_storage.preferred_round()?;
+        let one_chain_round = quorum_cert.certified_block().round();
+        let two_chain_round = quorum_cert.parent_block().round();
+
+        if one_chain_round < preferred_round {
+            debug!(
+                "QC round does not match preferred round {} < {}",
+                one_chain_round, preferred_round
+            );
+            return Err(Error::ProposalRoundLowerThenPreferredBlock { preferred_round });
+        }
+
+        // Update the preferred round
+        match two_chain_round.cmp(&preferred_round) {
+            Ordering::Greater => self
+                .persistent_storage
+                .set_preferred_round(quorum_cert.parent_block().round())?,
+            Ordering::Less => debug!(
+                "2-chain round {} is lower than preferred round {} but 1-chain round {} is higher.",
+                two_chain_round, preferred_round, one_chain_round
+            ),
+            Ordering::Equal => (),
+        }
+        Ok(())
+    }
+
+    /// Check if the executed result extends the parent result.
+    fn extension_check(&self, vote_proposal: &VoteProposal) -> Result<VoteData, Error> {
+        let proposed_block = vote_proposal.block();
+        let new_tree = vote_proposal
+            .accumulator_extension_proof()
+            .verify(
+                proposed_block
+                    .quorum_cert()
+                    .certified_block()
+                    .executed_state_id(),
+            )
+            .map_err(|e| Error::InvalidAccumulatorExtension {
+                error: format!("{}", e),
+            })?;
+        Ok(VoteData::new(
+            proposed_block.gen_block_info(
+                new_tree.root_hash(),
+                new_tree.version(),
+                vote_proposal.next_epoch_state().cloned(),
+            ),
+            proposed_block.quorum_cert().certified_block().clone(),
+        ))
+    }
+
+    /// Commit rule
     /// Produces a LedgerInfo that either commits a block based upon the 3-chain commit rule
     /// or an empty LedgerInfo for no commit. The 3-chain commit rule is: B0 (as well as its
     /// prefix) can be committed if there exist certified blocks B1 and B2 that satisfy:
@@ -74,21 +144,13 @@ impl SafetyRules {
         }
     }
 
-    /// This verifies a QC makes sense in the current context, specifically that this is for the
-    /// current epoch and extends from the preffered round.
+    /// This verifies a QC has valid signatures.
     fn verify_qc(&self, qc: &QuorumCert) -> Result<(), Error> {
-        let validator_verifier = self.verifier()?;
+        let epoch_state = self.epoch_state()?;
 
-        qc.verify(validator_verifier)
+        qc.verify(&epoch_state.verifier)
             .map_err(|e| Error::InvalidQuorumCertificate(e.to_string()))?;
-
-        if qc.parent_block().round() < self.persistent_storage.preferred_round()? {
-            Err(Error::InvalidQuorumCertificate(
-                "Preferred round too early".into(),
-            ))
-        } else {
-            Ok(())
-        }
+        Ok(())
     }
 
     /// This reconciles the key pair of a validator signer with a given validator set
@@ -138,7 +200,6 @@ impl SafetyRules {
             .cloned()
             .ok_or(Error::InvalidLedgerInfo)?;
         self.reconcile_key(&epoch_state)?;
-        self.validator_verifier = Some(epoch_state.verifier);
 
         let current_epoch = self.persistent_storage.epoch()?;
 
@@ -154,6 +215,7 @@ impl SafetyRules {
             self.persistent_storage.set_preferred_round(0)?;
             self.persistent_storage.set_epoch(epoch_state.epoch)?;
         }
+        self.epoch_state = Some(epoch_state);
 
         Ok(())
     }
@@ -197,77 +259,25 @@ impl TSafetyRules for SafetyRules {
         let waypoint = self.persistent_storage.waypoint()?;
         let last_li = proof
             .verify(&waypoint)
-            .map_err(|e| Error::WaypointMismatch(format!("{}", e)))?;
+            .map_err(|e| Error::InvalidEpochChangeProof(format!("{}", e)))?;
         self.start_new_epoch(last_li.ledger_info())
     }
 
-    /// Verify the QC is correct and up to date, if it is either set the preferred round or start a
-    /// new epoch.
-    fn update(&mut self, qc: &QuorumCert) -> Result<(), Error> {
-        self.verify_qc(qc)?;
-        if qc.ends_epoch() {
-            self.start_new_epoch(qc.ledger_info().ledger_info())
-        } else {
-            self.persistent_storage
-                .set_preferred_round(qc.parent_block().round())
-                .map_err(|e| e.into())
-        }
-    }
-
     /// @TODO verify signature on vote proposal
-    /// @TODO verify QC correctness
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error> {
         debug!("Incoming vote proposal to sign.");
-        self.signer()?;
         let proposed_block = vote_proposal.block();
         self.verify_epoch(proposed_block.epoch())?;
-        let last_voted_round = self.persistent_storage.last_voted_round()?;
-        if proposed_block.round() <= last_voted_round {
-            debug!(
-                "Vote proposal is old {} <= {}",
-                proposed_block.round(),
-                last_voted_round
-            );
-            return Err(Error::OldProposal {
-                proposal_round: proposed_block.round(),
-                last_voted_round: self.persistent_storage.last_voted_round()?,
-            });
-        }
+        self.verify_qc(proposed_block.quorum_cert())?;
 
-        let preferred_round = self.persistent_storage.preferred_round()?;
-        if proposed_block.quorum_cert().certified_block().round() < preferred_round {
-            debug!(
-                "Vote proposal certified round is lower than preferred round, {} < {}",
-                proposed_block.quorum_cert().certified_block().round(),
-                preferred_round,
-            );
-            return Err(Error::ProposalRoundLowerThenPreferredBlock { preferred_round });
-        }
-
-        let new_tree = vote_proposal
-            .accumulator_extension_proof()
-            .verify(
-                proposed_block
-                    .quorum_cert()
-                    .certified_block()
-                    .executed_state_id(),
-            )
-            .map_err(|e| Error::InvalidAccumulatorExtension {
-                error: format!("{}", e),
-            })?;
-
+        self.check_and_update_preferred_round(proposed_block.quorum_cert())?;
+        self.check_last_vote_round(proposed_block.block_data())?;
+        let vote_data = self.extension_check(vote_proposal)?;
         self.persistent_storage
             .set_last_voted_round(proposed_block.round())?;
         let validator_signer = self.signer()?;
         Ok(Vote::new(
-            VoteData::new(
-                proposed_block.gen_block_info(
-                    new_tree.root_hash(),
-                    new_tree.version(),
-                    vote_proposal.next_epoch_state().cloned(),
-                ),
-                proposed_block.quorum_cert().certified_block().clone(),
-            ),
+            vote_data,
             validator_signer.author(),
             self.construct_ledger_info(proposed_block),
             &validator_signer,
@@ -276,37 +286,16 @@ impl TSafetyRules for SafetyRules {
 
     fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
         debug!("Incoming proposal to sign.");
-        let validator_signer = self.signer()?;
         self.verify_author(block_data.author())?;
         self.verify_epoch(block_data.epoch())?;
 
-        let last_voted_round = self.persistent_storage.last_voted_round()?;
-        if block_data.round() <= last_voted_round {
-            debug!(
-                "Block round is older than last_voted_round ({} <= {})",
-                block_data.round(),
-                last_voted_round
-            );
-            return Err(Error::OldProposal {
-                proposal_round: block_data.round(),
-                last_voted_round,
-            });
-        }
+        self.check_last_vote_round(&block_data)?;
 
         let qc = block_data.quorum_cert();
         self.verify_qc(qc)?;
-        let preferred_round = self.persistent_storage.preferred_round()?;
-        if qc.certified_block().round() < preferred_round {
-            debug!(
-                "QC round does not match preferred round {} < {}",
-                qc.certified_block().round(),
-                preferred_round
-            );
-            return Err(Error::InvalidQuorumCertificate(
-                "QC's certified round is older than the preferred round".into(),
-            ));
-        }
+        self.check_and_update_preferred_round(&qc)?;
 
+        let validator_signer = self.signer()?;
         COUNTERS.sign_proposal.inc();
         Ok(Block::new_proposal_from_block_data(
             block_data,

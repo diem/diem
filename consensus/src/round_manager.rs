@@ -429,10 +429,6 @@ impl RoundManager {
     /// This function is called only after all the dependencies of the given QC have been retrieved.
     async fn process_certificates(&mut self) -> anyhow::Result<()> {
         let sync_info = self.block_store.sync_info();
-        self.safety_rules.update(sync_info.highest_quorum_cert())?;
-        let consensus_state = self.safety_rules.consensus_state()?;
-        counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
-
         if let Some(new_round_event) = self.round_state.process_certificates(sync_info) {
             self.process_new_round_event(new_round_event).await?;
         }
@@ -551,6 +547,7 @@ impl RoundManager {
 
         let consensus_state = self.safety_rules.consensus_state()?;
         counters::LAST_VOTE_ROUND.set(consensus_state.last_voted_round() as i64);
+        counters::PREFERRED_BLOCK_ROUND.set(consensus_state.preferred_round() as i64);
         self.storage
             .save_vote(&vote)
             .context("[RoundManager] Fail to persist last vote")?;
