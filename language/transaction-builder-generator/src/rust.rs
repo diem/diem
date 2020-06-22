@@ -5,7 +5,10 @@ use crate::common::type_not_allowed;
 use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 
-use std::io::{Result, Write};
+use std::{
+    io::{Result, Write},
+    path::PathBuf,
+};
 
 /// Output transaction builders in Rust for the given ABIs.
 /// If `local_types` is true, we generate a file suitable for the Libra codebase itself
@@ -157,5 +160,51 @@ fn make_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
         },
 
         Struct(_) | Signer => type_not_allowed(type_tag),
+    }
+}
+
+pub struct Installer {
+    install_dir: PathBuf,
+    libra_types_version: String,
+}
+
+impl Installer {
+    pub fn new(install_dir: PathBuf, libra_types_version: String) -> Self {
+        Installer {
+            install_dir,
+            libra_types_version,
+        }
+    }
+}
+
+impl crate::SourceInstaller for Installer {
+    type Error = Box<dyn std::error::Error>;
+
+    fn install_transaction_builders(
+        &self,
+        name: &str,
+        abis: &[ScriptABI],
+    ) -> std::result::Result<(), Self::Error> {
+        let dir_path = self.install_dir.join(name);
+        std::fs::create_dir_all(&dir_path)?;
+        let mut cargo = std::fs::File::create(&dir_path.join("Cargo.toml"))?;
+        write!(
+            cargo,
+            r#"[package]
+name = "{}"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+serde = {{ version = "1.0", features = ["derive"] }}
+libra_types = "{}"
+"#,
+            name, self.libra_types_version,
+        )?;
+        std::fs::create_dir(dir_path.join("src"))?;
+        let source_path = dir_path.join("src/lib.rs");
+        let mut source = std::fs::File::create(&source_path)?;
+        output(&mut source, abis, /* local_types */ false)?;
+        Ok(())
     }
 }

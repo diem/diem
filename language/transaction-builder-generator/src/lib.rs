@@ -30,3 +30,15 @@ pub fn read_abis<P: AsRef<std::path::Path>>(dir_path: P) -> anyhow::Result<Vec<S
     abis.sort_by(|a, b| a.name().cmp(b.name()));
     Ok(abis)
 }
+
+/// How to copy ABI-generated source code for a given language.
+pub trait SourceInstaller {
+    type Error;
+
+    /// Create a module exposing the transaction builders for the given ABIs.
+    fn install_transaction_builders(
+        &self,
+        name: &str,
+        abis: &[ScriptABI],
+    ) -> std::result::Result<(), Self::Error>;
+}
