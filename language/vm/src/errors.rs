@@ -2,22 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::IndexKind;
-use libra_types::{
+use move_core_types::{
     account_address::AccountAddress,
-    transaction::TransactionStatus,
     vm_error::{StatusCode, VMStatus},
 };
-
-// We may want to eventually move this into the VM runtime since it is a semantic decision that
-// need to be made by the VM. But for now, this will reside here.
-pub fn vm_result_to_transaction_status<T>(result: &VMResult<T>) -> TransactionStatus {
-    // The decision as to whether or not a transaction should be dropped should be able to be
-    // determined solely by the VMStatus. This then means that we can audit/verify any decisions
-    // made by the VM externally on whether or not to discard or keep the transaction output by
-    // inspecting the contained VMStatus.
-    let vm_status = vm_status_of_result(result);
-    vm_status.into()
-}
 
 // TODO: Fill in the details for Locations. Ideally it should be a unique handle into a function and
 // a pc.

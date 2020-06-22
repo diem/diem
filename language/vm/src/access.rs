@@ -4,8 +4,8 @@
 //! Defines accessors for compiled modules.
 
 use crate::{file_format::*, internals::ModuleIndex};
-use libra_types::account_address::AccountAddress;
 use move_core_types::{
+    account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
 };
