@@ -9,8 +9,7 @@ use crate::file_format::{
     StructDefinition, StructFieldInformation, StructHandle, StructHandleIndex, TableIndex,
     TypeSignature,
 };
-use libra_types::account_address::AccountAddress;
-use move_core_types::identifier::Identifier;
+use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use proptest::{
     collection::{btree_set, vec, SizeRange},
     option,

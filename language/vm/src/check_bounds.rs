@@ -11,7 +11,7 @@ use crate::{
     internals::ModuleIndex,
     IndexKind,
 };
-use libra_types::vm_error::{StatusCode, VMStatus};
+use move_core_types::vm_error::{StatusCode, VMStatus};
 use std::u8;
 
 pub struct BoundsChecker<'a> {

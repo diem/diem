@@ -3,11 +3,11 @@
 
 use crate::{errors::*, file_format::*, file_format_common::*};
 use byteorder::{LittleEndian, ReadBytesExt};
-use libra_types::{
+use move_core_types::{
     account_address::AccountAddress,
+    identifier::Identifier,
     vm_error::{StatusCode, VMStatus},
 };
-use move_core_types::identifier::Identifier;
 use std::{
     collections::HashSet,
     convert::TryInto,
