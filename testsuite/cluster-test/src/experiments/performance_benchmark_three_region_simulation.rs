@@ -74,13 +74,20 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         let avg_tps = stats.committed / window.as_secs();
         let avg_latency_client = stats.latency / stats.committed;
         let p99_latency = stats.latency_buckets.percentile(99, 100);
+        let submitted_txn = stats.submitted;
+        let expired_txn = stats.expired;
         info!(
             "Tx status from client side: txn {}, avg latency {}",
             stats.committed as u64, avg_latency_client
         );
 
         effects::deactivate_all(&mut effects).await?;
-
+        context
+            .report
+            .report_metric(&self, "submitted_txn", submitted_txn as f64);
+        context
+            .report
+            .report_metric(&self, "expired_txn", expired_txn as f64);
         context
             .report
             .report_metric(&self, "avg_tps", avg_tps as f64);
@@ -90,9 +97,14 @@ impl Experiment for PerformanceBenchmarkThreeRegionSimulation {
         context
             .report
             .report_metric(&self, "p99_latency", p99_latency as f64);
+        let expired_text = if expired_txn == 0 {
+            "no expired txns".to_string()
+        } else {
+            format!("(!) expired {} out of {} txns", expired_txn, submitted_txn)
+        };
         context.report.report_text(format!(
-            "{} : {:.0} TPS, {:.1} ms latency, {:.1} ms p99 latency",
-            self, avg_tps, avg_latency_client, p99_latency
+            "{} : {:.0} TPS, {:.1} ms latency, {:.1} ms p99 latency, {}",
+            self, avg_tps, avg_latency_client, p99_latency, expired_text
         ));
         Ok(())
     }
