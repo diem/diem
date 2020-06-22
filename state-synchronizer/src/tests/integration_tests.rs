@@ -252,8 +252,8 @@ impl SynchronizerEnv {
         let authentication_mode =
             AuthenticationMode::Mutual(self.network_keys[new_peer_idx].clone());
         let public_key = authentication_mode.public_key();
+        let executor = self.runtime.handle().clone();
         let mut network_builder = NetworkBuilder::new(
-            self.runtime.handle().clone(),
             ChainId::default(),
             self.network_id.clone(),
             RoleType::Validator,
@@ -273,8 +273,8 @@ impl SynchronizerEnv {
 
         let (sender, events) =
             network_builder.add_protocol_handler(crate::network::network_endpoint_config());
-        let peer_addr = network_builder.build();
-
+        network_builder.build(&executor);
+        let peer_addr = network_builder.listen_address();
         let mut config = config_builder::test_config().0;
         config.base.role = role;
         config.state_sync.sync_request_timeout_ms = timeout_ms;

@@ -127,8 +127,8 @@ pub fn setup_network() -> DummyNetwork {
     .collect();
 
     // Set up the listener network
+    let listener_executor = runtime.handle().clone();
     let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
         chain_id.clone(),
         network_id.clone(),
         RoleType::Validator,
@@ -146,11 +146,11 @@ pub fn setup_network() -> DummyNetwork {
         );
     let (listener_sender, mut listener_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
-    let listener_addr = network_builder.build();
-
+    network_builder.build(&listener_executor);
+    let listener_addr = network_builder.listen_address();
     // Set up the dialer network
+    let dialer_executor = runtime.handle().clone();
     let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
         chain_id,
         network_id,
         RoleType::Validator,
@@ -171,7 +171,7 @@ pub fn setup_network() -> DummyNetwork {
         );
     let (dialer_sender, mut dialer_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
-    let _dialer_addr = network_builder.build();
+    network_builder.build(&dialer_executor);
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();

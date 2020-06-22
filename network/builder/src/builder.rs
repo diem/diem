@@ -52,7 +52,6 @@ pub use network::peer_manager::builder::AuthenticationMode;
 // TODO(philiphayes): refactor NetworkBuilder and libra-node; current config is
 // pretty tangled.
 pub struct NetworkBuilder {
-    executor: Handle,
     network_context: Arc<NetworkContext>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
 
@@ -69,7 +68,6 @@ pub struct NetworkBuilder {
 impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
     pub fn new(
-        executor: Handle,
         chain_id: ChainId,
         network_id: NetworkId,
         role: RoleType,
@@ -91,7 +89,6 @@ impl NetworkBuilder {
             constants::MAX_CONCURRENT_NETWORK_NOTIFS,
         );
         NetworkBuilder {
-            executor,
             network_context,
             trusted_peers,
             peer_manager_builder: Some(peer_manager_builder),
@@ -102,10 +99,6 @@ impl NetworkBuilder {
             onchain_discovery_builder: None,
             reconfig_subscriptions: Vec::new(),
         }
-    }
-
-    pub fn network_context(&self) -> Arc<NetworkContext> {
-        self.network_context.clone()
     }
 
     pub fn create(
@@ -133,7 +126,6 @@ impl NetworkBuilder {
         };
 
         let mut network_builder = NetworkBuilder::new(
-            runtime.handle().clone(),
             chain_id.clone(),
             config.network_id.clone(),
             role,
@@ -209,12 +201,42 @@ impl NetworkBuilder {
         (runtime, network_builder)
     }
 
+    pub fn build(&mut self, executor: &Handle) -> &mut Self {
+        self.build_connection_monitoring(&executor)
+            .build_connectivity_manager(&executor)
+            .build_gossip_discovery(&executor)
+            .build_onchain_discovery(&executor)
+            .build_peer_manager(&executor);
+        self
+    }
+
+    pub fn start(&mut self, executor: &Handle) -> &mut Self {
+        self.start_connection_monitoring(executor)
+            .start_connectivity_manager(executor)
+            .start_gossip_discovery(executor)
+            .start_onchain_discovery(executor)
+            .start_peer_manager(executor);
+
+        self
+    }
+
+    pub fn network_context(&self) -> Arc<NetworkContext> {
+        self.network_context.clone()
+    }
+
     pub fn peer_id(&self) -> PeerId {
         self.network_context.peer_id()
     }
 
     pub fn reconfig_subscriptions(&mut self) -> &mut Vec<ReconfigSubscription> {
         &mut self.reconfig_subscriptions
+    }
+
+    pub fn listen_address(&self) -> NetworkAddress {
+        self.peer_manager_builder
+            .as_ref()
+            .expect("PeerManagerBuilder must exist")
+            .listen_address()
     }
 
     /// Set trusted peers.
@@ -300,31 +322,31 @@ impl NetworkBuilder {
                     simple_discovery_reconfig_rx,
                 ));
         }
-        self.build_connectivity_manager()
+        self
     }
 
     /// Build the ConnectivityManager from the provided configuration.
-    fn build_connectivity_manager(&mut self) -> &mut Self {
+    fn build_connectivity_manager(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut connectivity_builder) = self.connectivity_manager_builder {
-            connectivity_builder.build(&self.executor);
+            connectivity_builder.build(executor);
             if let Some(ref mut change_listener_builder) =
                 self.configuration_change_listener_builder
             {
                 change_listener_builder.build();
             }
         }
-        self.start_connectivity_manager()
+        self.start_connectivity_manager(executor)
     }
 
     /// Start the ConnectivityManager
-    fn start_connectivity_manager(&mut self) -> &mut Self {
+    fn start_connectivity_manager(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut connectivity_builder) = self.connectivity_manager_builder {
-            connectivity_builder.start(&self.executor);
+            connectivity_builder.start(executor);
             debug!("Started ConnectivityManager");
             if let Some(ref mut change_listener_builder) =
                 self.configuration_change_listener_builder
             {
-                change_listener_builder.start(&self.executor);
+                change_listener_builder.start(executor);
             }
         }
         self
@@ -375,19 +397,19 @@ impl NetworkBuilder {
 
         self.discovery_builder = Some(discovery_builder);
 
-        self.build_gossip_discovery()
+        self
     }
 
-    fn build_gossip_discovery(&mut self) -> &mut Self {
+    fn build_gossip_discovery(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut discovery_builder) = self.discovery_builder {
-            discovery_builder.build(&self.executor);
+            discovery_builder.build(executor);
         }
-        self.start_gossip_discovery()
+        self.start_gossip_discovery(executor)
     }
 
-    fn start_gossip_discovery(&mut self) -> &mut Self {
+    fn start_gossip_discovery(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut discovery) = self.discovery_builder {
-            discovery.start(&self.executor);
+            discovery.start(executor);
             debug!("{} Started discovery protocol actor", self.network_context);
         }
         self
@@ -417,19 +439,19 @@ impl NetworkBuilder {
 
         self.onchain_discovery_builder = Some(onchain_discovery_builder);
 
-        self.build_onchain_discovery()
+        self
     }
 
-    fn build_onchain_discovery(&mut self) -> &mut Self {
+    fn build_onchain_discovery(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut onchain_discovery_builder) = self.onchain_discovery_builder {
-            onchain_discovery_builder.build(&self.executor);
+            onchain_discovery_builder.build(executor);
         }
-        self.start_onchain_discovery()
+        self.start_onchain_discovery(executor)
     }
 
-    fn start_onchain_discovery(&mut self) -> &mut Self {
+    fn start_onchain_discovery(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut onchain_discovery_builder) = self.onchain_discovery_builder {
-            onchain_discovery_builder.start(&self.executor);
+            onchain_discovery_builder.start(executor);
             debug!("Started Onchain Discovery");
         }
         self
@@ -454,34 +476,38 @@ impl NetworkBuilder {
 
         self.health_checker_builder = Some(health_checker_builder);
 
-        self.build_connection_monitoring()
+        self
     }
 
-    fn build_connection_monitoring(&mut self) -> &mut Self {
+    fn build_connection_monitoring(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut health_checker_builder) = self.health_checker_builder {
-            health_checker_builder.build(&self.executor);
+            health_checker_builder.build(executor);
         }
-        self.start_connection_monitoring()
+        self.start_connection_monitoring(executor)
     }
 
-    fn start_connection_monitoring(&mut self) -> &mut Self {
+    fn start_connection_monitoring(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut health_checker_builder) = self.health_checker_builder {
-            health_checker_builder.start(&self.executor);
+            health_checker_builder.start(executor);
             debug!("{} Started health checker", self.network_context);
         }
         self
     }
 
-    pub fn build(&mut self) -> NetworkAddress {
-        self.build_peer_manager()
+    fn build_peer_manager(&mut self, executor: &Handle) -> &mut Self {
+        self.peer_manager_builder
+            .as_mut()
+            .expect("PeerManagerBuilder must exist")
+            .build(executor);
+        self
     }
 
-    fn build_peer_manager(&mut self) -> NetworkAddress {
-        let peer_manager_builder = self
-            .peer_manager_builder
-            .take()
-            .expect("PeerManagerBuilder must exist");
-        peer_manager_builder.build(&self.executor)
+    fn start_peer_manager(&mut self, executor: &Handle) -> &mut Self {
+        self.peer_manager_builder
+            .as_mut()
+            .expect("PeerManagerBuilder must exist")
+            .start(executor);
+        self
     }
 
     /// Adds a endpoints for the provided configuration.  Returns NetworkSender and NetworkEvent which
