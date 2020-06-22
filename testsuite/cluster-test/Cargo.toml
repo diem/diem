@@ -21,7 +21,7 @@ reqwest = { version = "0.10.6", features = ["blocking", "json", "rustls-tls"], d
 serde_json = "1.0.55"
 serde_yaml = "0.8.13"
 termion = "1.5.5"
-serde = { version = "1.0.112", features = ["derive"] }
+serde = { version = "1.0.114", features = ["derive"] }
 structopt = "0.3.15"
 rusoto_core = {version = "0.44.0", default-features = false, features = ["rustls"] }
 rusoto_autoscaling = {version = "0.44.0", default-features = false, features = ["rustls"] }
