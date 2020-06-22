@@ -329,14 +329,15 @@ impl RoundManager {
                         .log();
                     e
                 })?;
-            self.block_store
+            let result = self
+                .block_store
                 .add_certs(&sync_info, self.create_block_retriever(author))
-                .await?;
-
-            // Update safety rules and round_state and potentially start a new round.
+                .await;
             self.process_certificates().await?;
+            result
+        } else {
+            Ok(())
         }
-        Ok(())
     }
 
     /// The function makes sure that it ensures the message_round equal to what we have locally,
@@ -630,20 +631,22 @@ impl RoundManager {
         qc: Arc<QuorumCert>,
         preferred_peer: Author,
     ) -> anyhow::Result<()> {
-        self.block_store
+        let result = self
+            .block_store
             .insert_quorum_cert(&qc, &mut self.create_block_retriever(preferred_peer))
             .await
-            .context("[RoundManager] Failed to process a newly aggregated QC")?;
-        self.process_certificates().await
+            .context("[RoundManager] Failed to process a newly aggregated QC");
+        self.process_certificates().await?;
+        result
     }
 
     async fn new_tc_aggregated(&mut self, tc: Arc<TimeoutCertificate>) -> anyhow::Result<()> {
-        self.block_store
+        let result = self
+            .block_store
             .insert_timeout_certificate(tc.clone())
-            .context("[RoundManager] Failed to process a newly aggregated TC")?;
-
-        // Process local highest qc should be no-op
-        self.process_certificates().await
+            .context("[RoundManager] Failed to process a newly aggregated TC");
+        self.process_certificates().await?;
+        result
     }
 
     /// Retrieve a n chained blocks from the block store starting from
