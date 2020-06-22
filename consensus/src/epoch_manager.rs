@@ -9,6 +9,7 @@ use crate::{
         proposal_generator::ProposalGenerator,
         proposer_election::ProposerElection,
         rotating_proposer_election::{choose_leader, RotatingProposer},
+        round_proposer_election::RoundProposer,
         round_state::{ExponentialTimeInterval, RoundState},
     },
     metrics_safety_rules::MetricsSafetyRules,
@@ -148,7 +149,7 @@ impl EpochManager {
             .verifier
             .get_ordered_account_addresses_iter()
             .collect::<Vec<_>>();
-        match self.config.proposer_type {
+        match &self.config.proposer_type {
             ConsensusProposerType::RotatingProposer => Box::new(RotatingProposer::new(
                 proposers,
                 self.config.contiguous_rounds,
@@ -171,6 +172,14 @@ impl EpochManager {
                     heuristic_config.inactive_weights,
                 ));
                 Box::new(LeaderReputation::new(proposers, backend, heuristic))
+            }
+            ConsensusProposerType::RoundProposer(round_proposers) => {
+                // Hardcoded to the first proposer
+                let default_proposer = proposers.get(0).unwrap();
+                Box::new(RoundProposer::new(
+                    round_proposers.clone(),
+                    *default_proposer,
+                ))
             }
         }
     }
