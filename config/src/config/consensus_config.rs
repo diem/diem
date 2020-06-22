@@ -2,8 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::SafetyRulesConfig;
+use libra_types::{account_address::AccountAddress, block_info::Round};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
@@ -38,7 +39,7 @@ impl ConsensusConfig {
     }
 }
 
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum ConsensusProposerType {
     // Choose the smallest PeerId as the proposer
@@ -47,6 +48,10 @@ pub enum ConsensusProposerType {
     RotatingProposer,
     // Committed history based proposer election
     LeaderReputation(LeaderReputationConfig),
+    // Pre-specified proposers for each round,
+    // or default proposer if round proposer not
+    // specified
+    RoundProposer(HashMap<Round, AccountAddress>),
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]

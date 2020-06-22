@@ -186,7 +186,7 @@ impl SMRNode {
                 .unwrap()
                 .waypoint = Some(waypoint);
             config.base.waypoint = WaypointConfig::FromConfig(waypoint);
-            config.consensus.proposer_type = proposer_type;
+            config.consensus.proposer_type = proposer_type.clone();
             config.consensus.safety_rules.verify_vote_proposal_signature = false;
 
             let author = config.validator_network.as_ref().unwrap().peer_id();
