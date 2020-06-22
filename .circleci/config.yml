@@ -420,7 +420,7 @@ jobs:
           name: Terraform validate
           command: terraform validate
           working_directory: terraform/
-  build-docker:
+  lint-docker:
     machine:
       image: ubuntu-1604:201903-01
     resource_class: large
@@ -436,23 +436,6 @@ jobs:
           command: |
             export HADOLINT=${HOME}/hadolint
             ${HADOLINT} -c .lintrules/hadolint.yaml $CHANGED_DOCKER_FILES || true
-      - run:
-          name: Build each of the updated docker files
-          command: |
-            # Use the dockerfile own build.sh script if it has one.
-            for docker_file in $CHANGED_DOCKER_FILES; do
-              echo "Checking $docker_file"
-              build_script=$(dirname $docker_file)/build.sh
-              if [ -f "$build_script" ]; then
-                $build_script
-              elif [ -f "$docker_file" ]; then
-                file_no_ext=$(basename $docker_file)
-                module=${file_no_ext%.Dockerfile}
-                docker build -f $docker_file --tag commit_verify_${CIRCLE_BUILD_NUM}_$module .
-              else
-                echo "$docker_file is renamed or removed in pull request."
-              fi
-            done
   check-breaking-change:
     executor: audit-executor
     description: Detect breaking change in CLI
@@ -560,7 +543,7 @@ jobs:
 workflows:
   commit-workflow:
     jobs:
-      - build-docker
+      - lint-docker
       - validate-cluster-test-dockerfile
       - terraform
       - prefetch-crates
