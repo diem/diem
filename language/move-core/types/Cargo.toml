@@ -17,7 +17,7 @@ proptest = { version = "0.10.0", default-features = false, optional = true }
 mirai-annotations = "1.8.0"
 proptest-derive = { version = "0.2.0", default-features = false, optional = true }
 ref-cast = "1.0.2"
-serde = { version = "1.0.112", default-features = false }
+serde = { version = "1.0.114", default-features = false }
 thiserror = "1.0.20"
 
 lcs = { path = "../../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }

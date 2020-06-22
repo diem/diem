@@ -14,7 +14,7 @@ base64 = "0.12.2"
 chrono = "0.4.11"
 enum_dispatch = "0.3.1"
 rand = "0.7.3"
-serde = { version = "1.0.112", features = ["rc"], default-features = false }
+serde = { version = "1.0.114", features = ["rc"], default-features = false }
 serde_json = "1.0.55"
 thiserror = "1.0.20"
 

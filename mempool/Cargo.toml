@@ -13,7 +13,7 @@ edition = "2018"
 anyhow = "1.0.31"
 futures = "0.3.5"
 once_cell = "1.4.0"
-serde = { version = "1.0.112", default-features = false }
+serde = { version = "1.0.114", default-features = false }
 tokio = { version = "0.2.21", features = ["full"] }
 
 bounded-executor = { path = "../common/bounded-executor", version = "0.1.0" }

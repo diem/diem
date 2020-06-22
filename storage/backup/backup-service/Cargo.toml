@@ -13,7 +13,7 @@ anyhow = "1.0.31"
 bytes = "0.5.5"
 futures = "0.3.5"
 hyper = "0.13.6"
-serde = { version = "1.0.112", default-features = false }
+serde = { version = "1.0.114", default-features = false }
 tokio = { version = "0.2.21", features = ["full"] }
 warp = "0.2.3"
 
