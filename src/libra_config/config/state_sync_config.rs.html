@@ -43,8 +43,6 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StateSyncConfig</span> {
     <span class="comment">// Size of chunk to request for state synchronization</span>
     <span class="kw">pub</span> <span class="ident">chunk_limit</span>: <span class="ident">u64</span>,
-    <span class="comment">// interval used for checking state synchronization progress</span>
-    <span class="kw">pub</span> <span class="ident">tick_interval_ms</span>: <span class="ident">u64</span>,
     <span class="comment">// default timeout used for long polling to remote peer</span>
     <span class="kw">pub</span> <span class="ident">long_poll_timeout_ms</span>: <span class="ident">u64</span>,
     <span class="comment">// valid maximum chunk limit for sanity check</span>
@@ -53,17 +51,19 @@
     <span class="kw">pub</span> <span class="ident">max_timeout_ms</span>: <span class="ident">u64</span>,
     <span class="comment">// default timeout for sync request</span>
     <span class="kw">pub</span> <span class="ident">sync_request_timeout_ms</span>: <span class="ident">u64</span>,
+    <span class="comment">// interval used for checking state synchronization progress</span>
+    <span class="kw">pub</span> <span class="ident">tick_interval_ms</span>: <span class="ident">u64</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">StateSyncConfig</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">chunk_limit</span>: <span class="number">250</span>,
-            <span class="ident">tick_interval_ms</span>: <span class="number">100</span>,
             <span class="ident">long_poll_timeout_ms</span>: <span class="number">30000</span>,
             <span class="ident">max_chunk_limit</span>: <span class="number">1000</span>,
             <span class="ident">max_timeout_ms</span>: <span class="number">120_000</span>,
             <span class="ident">sync_request_timeout_ms</span>: <span class="number">60_000</span>,
+            <span class="ident">tick_interval_ms</span>: <span class="number">100</span>,
         }
     }
 }

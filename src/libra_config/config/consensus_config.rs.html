@@ -66,8 +66,8 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConsensusConfig</span> {
-    <span class="kw">pub</span> <span class="ident">max_block_size</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">contiguous_rounds</span>: <span class="ident">u32</span>,
+    <span class="kw">pub</span> <span class="ident">max_block_size</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">max_pruned_blocks_in_mem</span>: <span class="ident">usize</span>,
     <span class="kw">pub</span> <span class="ident">round_initial_timeout_ms</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">proposer_type</span>: <span class="ident">ConsensusProposerType</span>,
@@ -77,14 +77,14 @@
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">ConsensusConfig</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">ConsensusConfig</span> {
         <span class="ident">ConsensusConfig</span> {
+            <span class="ident">contiguous_rounds</span>: <span class="number">2</span>,
             <span class="ident">max_block_size</span>: <span class="number">1000</span>,
+            <span class="ident">max_pruned_blocks_in_mem</span>: <span class="number">10000</span>,
+            <span class="ident">round_initial_timeout_ms</span>: <span class="number">1000</span>,
             <span class="ident">proposer_type</span>: <span class="ident">ConsensusProposerType</span>::<span class="ident">LeaderReputation</span>(<span class="ident">LeaderReputationConfig</span> {
                 <span class="ident">active_weights</span>: <span class="number">99</span>,
                 <span class="ident">inactive_weights</span>: <span class="number">1</span>,
             }),
-            <span class="ident">contiguous_rounds</span>: <span class="number">2</span>,
-            <span class="ident">max_pruned_blocks_in_mem</span>: <span class="number">10000</span>,
-            <span class="ident">round_initial_timeout_ms</span>: <span class="number">1000</span>,
             <span class="ident">safety_rules</span>: <span class="ident">SafetyRulesConfig</span>::<span class="ident">default</span>(),
         }
     }

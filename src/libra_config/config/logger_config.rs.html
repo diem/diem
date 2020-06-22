@@ -36,10 +36,10 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">LoggerConfig</span> {
-    <span class="comment">// Use async logging</span>
-    <span class="kw">pub</span> <span class="ident">is_async</span>: <span class="ident">bool</span>,
     <span class="comment">// channel size for the asychronous channel for node logging.</span>
     <span class="kw">pub</span> <span class="ident">chan_size</span>: <span class="ident">usize</span>,
+    <span class="comment">// Use async logging</span>
+    <span class="kw">pub</span> <span class="ident">is_async</span>: <span class="ident">bool</span>,
     <span class="comment">// The default logging level for slog.</span>
     <span class="kw">pub</span> <span class="ident">level</span>: <span class="ident">Level</span>,
 }
@@ -47,8 +47,8 @@
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">LoggerConfig</span> {
     <span class="kw">fn</span> <span class="ident">default</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">LoggerConfig</span> {
         <span class="ident">LoggerConfig</span> {
-            <span class="ident">is_async</span>: <span class="bool-val">true</span>,
             <span class="ident">chan_size</span>: <span class="ident">CHANNEL_SIZE</span>,
+            <span class="ident">is_async</span>: <span class="bool-val">true</span>,
             <span class="ident">level</span>: <span class="ident">Level</span>::<span class="ident">Info</span>,
         }
     }

@@ -36,7 +36,6 @@
 <span id="36">36</span>
 <span id="37">37</span>
 <span id="38">38</span>
-<span id="39">39</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -47,15 +46,14 @@
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">MempoolConfig</span> {
     <span class="kw">pub</span> <span class="ident">broadcast_transactions</span>: <span class="ident">bool</span>,
-    <span class="kw">pub</span> <span class="ident">shared_mempool_tick_interval_ms</span>: <span class="ident">u64</span>,
+    <span class="kw">pub</span> <span class="ident">capacity</span>: <span class="ident">usize</span>,
+    <span class="kw">pub</span> <span class="ident">capacity_per_user</span>: <span class="ident">usize</span>,
+    <span class="kw">pub</span> <span class="ident">max_broadcasts_per_peer</span>: <span class="ident">usize</span>,
     <span class="kw">pub</span> <span class="ident">shared_mempool_backoff_interval_ms</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">shared_mempool_batch_size</span>: <span class="ident">usize</span>,
     <span class="kw">pub</span> <span class="ident">shared_mempool_max_concurrent_inbound_syncs</span>: <span class="ident">usize</span>,
     <span class="kw">pub</span> <span class="ident">shared_mempool_min_broadcast_recipient_count</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">max_broadcasts_per_peer</span>: <span class="ident">usize</span>,
-    <span class="kw">pub</span> <span class="ident">capacity</span>: <span class="ident">usize</span>,
-    <span class="comment">// max number of transactions per user in Mempool</span>
-    <span class="kw">pub</span> <span class="ident">capacity_per_user</span>: <span class="ident">usize</span>,
+    <span class="kw">pub</span> <span class="ident">shared_mempool_tick_interval_ms</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">system_transaction_timeout_secs</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">system_transaction_gc_interval_ms</span>: <span class="ident">u64</span>,
 }
