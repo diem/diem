@@ -81,19 +81,13 @@
 <span id="81">81</span>
 <span id="82">82</span>
 <span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
-<span id="88">88</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">test_utils</span>, <span class="ident">ConsensusState</span>, <span class="ident">Error</span>, <span class="ident">SafetyRulesManager</span>, <span class="ident">TSafetyRules</span>};
 <span class="kw">use</span> <span class="ident">consensus_types</span>::{
-    <span class="ident">block</span>::<span class="ident">Block</span>, <span class="ident">block_data</span>::<span class="ident">BlockData</span>, <span class="ident">quorum_cert</span>::<span class="ident">QuorumCert</span>, <span class="ident">timeout</span>::<span class="ident">Timeout</span>, <span class="ident">vote</span>::<span class="ident">Vote</span>,
-    <span class="ident">vote_proposal</span>::<span class="ident">VoteProposal</span>,
+    <span class="ident">block</span>::<span class="ident">Block</span>, <span class="ident">block_data</span>::<span class="ident">BlockData</span>, <span class="ident">timeout</span>::<span class="ident">Timeout</span>, <span class="ident">vote</span>::<span class="ident">Vote</span>, <span class="ident">vote_proposal</span>::<span class="ident">VoteProposal</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_config</span>::{
     <span class="ident">config</span>::{<span class="ident">NodeConfig</span>, <span class="ident">RemoteService</span>, <span class="ident">SafetyRulesService</span>, <span class="ident">SecureBackend</span>, <span class="ident">WaypointConfig</span>},
@@ -157,10 +151,6 @@
 
     <span class="kw">fn</span> <span class="ident">initialize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">proof</span>: <span class="kw-2">&amp;</span><span class="ident">EpochChangeProof</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">safety_rules</span>.<span class="ident">initialize</span>(<span class="ident">proof</span>)
-    }
-
-    <span class="kw">fn</span> <span class="ident">update</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">qc</span>: <span class="kw-2">&amp;</span><span class="ident">QuorumCert</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">safety_rules</span>.<span class="ident">update</span>(<span class="ident">qc</span>)
     }
 
     <span class="kw">fn</span> <span class="ident">construct_and_sign_vote</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">vote_proposal</span>: <span class="kw-2">&amp;</span><span class="ident">VoteProposal</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vote</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
