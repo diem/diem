@@ -168,7 +168,10 @@ async fn handle_cluster_test_runner_commands(
     args: &Args,
     runner: &mut ClusterTestRunner,
 ) -> Result<Option<String>> {
-    runner.wait_until_all_healthy().await?;
+    let startup_timeout = Duration::from_secs(5 * 60);
+    runner
+        .wait_until_all_healthy(Instant::now() + startup_timeout)
+        .await?;
     let mut perf_msg = None;
     if args.health_check {
         let duration = Duration::from_secs(args.duration);
@@ -690,7 +693,9 @@ impl ClusterTestRunner {
             style::Reset
         );
 
-        self.experiment_loop(experiment, global_emit_job_request)
+        let deadline = Instant::now() + experiment.deadline();
+
+        self.experiment_loop(experiment, global_emit_job_request, deadline)
             .await?;
 
         info!(
@@ -699,7 +704,7 @@ impl ClusterTestRunner {
             style::Reset
         );
 
-        self.wait_until_all_healthy().await?;
+        self.wait_until_all_healthy(deadline).await?;
 
         info!("Experiment completed");
         Ok(())
@@ -711,10 +716,9 @@ impl ClusterTestRunner {
         &mut self,
         mut experiment: Box<dyn Experiment>,
         mut global_emit_job_request: Option<EmitJobRequest>,
+        deadline: Instant,
     ) -> Result<()> {
         let affected_validators = experiment.affected_validators();
-        let deadline = experiment.deadline();
-        let experiment_deadline = Instant::now() + deadline;
         let mut context = Context::new(
             &mut self.tx_emitter,
             &mut self.trace_tail,
@@ -726,7 +730,7 @@ impl ClusterTestRunner {
             &self.cluster_swarm,
             &self.current_tag[..],
         );
-        let mut deadline_future = delay_until(TokioInstant::from_std(experiment_deadline)).fuse();
+        let mut deadline_future = delay_until(TokioInstant::from_std(deadline)).fuse();
         let mut run_future = experiment.run(&mut context).fuse();
         loop {
             select! {
@@ -750,15 +754,14 @@ impl ClusterTestRunner {
         }
     }
 
-    async fn wait_until_all_healthy(&mut self) -> Result<()> {
+    async fn wait_until_all_healthy(&mut self, deadline: Instant) -> Result<()> {
         info!("Waiting for all nodes to be healthy");
-        let wait_deadline = Instant::now() + Duration::from_secs(10 * 60);
         for instance in self.cluster.validator_instances() {
             self.health_check_runner.invalidate(instance.peer_name());
         }
         loop {
             let now = Instant::now();
-            if now > wait_deadline {
+            if now > deadline {
                 bail!("Nodes did not become healthy after deployment");
             }
             let deadline = now + HEALTH_POLL_INTERVAL;
@@ -782,7 +785,7 @@ impl ClusterTestRunner {
             if results.iter().all(Result::is_ok) {
                 break;
             }
-            if Instant::now() > wait_deadline {
+            if Instant::now() > deadline {
                 for (instance, result) in zip(self.cluster.all_instances(), results) {
                     if let Err(err) = result {
                         warn!("Instance {} still unhealthy: {}", instance, err);
