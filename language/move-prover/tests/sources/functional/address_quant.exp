@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error: precondition does not hold at this call
+error: post-condition does not hold
 
     ┌── tests/sources/functional/address_quant.move:53:10 ───
     │

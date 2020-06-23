@@ -68,6 +68,7 @@ impl TestInstrumenter {
         // Add ConditionInfo to global environment for backend error reporting.
         let info = ConditionInfo {
             message: "function always aborts".to_string(),
+            message_if_requires: None,
             omit_trace: true,    // no error trace needed
             negative_cond: true, // this is a negative condition: we report above error if it passes
         };

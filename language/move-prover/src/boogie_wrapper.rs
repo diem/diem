@@ -217,7 +217,16 @@ impl<'env> BoogieWrapper<'env> {
         let (show_trace, message) = loc_opt
             .as_ref()
             .and_then(|loc| self.env.get_condition_info(loc))
-            .map(|info| (!info.omit_trace, info.message))
+            .map(|info| {
+                if let Some(msg) = info.message_if_requires.as_ref() {
+                    // Check whether the Boogie error indicates a precondition, or if this is
+                    // the only message we have.
+                    if error.message.contains("Precondition") || info.message.is_empty() {
+                        return (!info.omit_trace, msg.clone());
+                    }
+                }
+                (!info.omit_trace, info.message)
+            })
             .unwrap_or_else(|| (true, error.message.clone()));
         let mut diag = Diagnostic::new(
             if on_source {

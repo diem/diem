@@ -384,7 +384,7 @@ impl<'env> SpecTranslator<'env> {
             // function does not abort.
             self.translate_seq(requires.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
-                self.set_condition_info(&cond.loc, REQUIRES_FAILS_MESSAGE);
+                self.set_condition_info(&cond.loc, REQUIRES_FAILS_MESSAGE, true);
                 emit!(self.writer, "requires b#$Boolean(");
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, ")");
@@ -421,7 +421,7 @@ impl<'env> SpecTranslator<'env> {
             // reports positions only back per entire ensures, not individual sub-expression.)
             for c in &aborts_if {
                 self.writer.set_location(&c.loc);
-                self.set_condition_info(&c.loc, ABORTS_IF_FAILS_MESSAGE);
+                self.set_condition_info(&c.loc, ABORTS_IF_FAILS_MESSAGE, false);
                 emit!(self.writer, "ensures b#$Boolean(old(");
                 self.translate_exp(&c.exp);
                 emitln!(self.writer, ")) ==> $abort_flag;")
@@ -449,7 +449,7 @@ impl<'env> SpecTranslator<'env> {
         let succeeds_if = spec.filter_kind(ConditionKind::SucceedsIf).collect_vec();
         for c in succeeds_if {
             self.writer.set_location(&c.loc);
-            self.set_condition_info(&c.loc, SUCCEEDS_IF_FAILS_MESSAGE);
+            self.set_condition_info(&c.loc, SUCCEEDS_IF_FAILS_MESSAGE, false);
             emit!(self.writer, "ensures b#$Boolean(old(");
             self.translate_exp(&c.exp);
             emitln!(self.writer, ")) ==> !$abort_flag;")
@@ -461,7 +461,7 @@ impl<'env> SpecTranslator<'env> {
             *self.in_ensures.borrow_mut() = true;
             self.translate_seq(ensures.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
-                self.set_condition_info(&cond.loc, ENSURES_FAILS_MESSAGE);
+                self.set_condition_info(&cond.loc, ENSURES_FAILS_MESSAGE, false);
                 emit!(self.writer, "ensures !$abort_flag ==> (b#$Boolean(");
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, "));")
@@ -472,14 +472,29 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Sets info for verification condition so it can be later retrieved by the boogie wrapper.
-    /// If info is already set, it will not be overriden.
-    fn set_condition_info(&self, loc: &Loc, message: &str) {
+    /// If info is already set, it will not be overridden.
+    fn set_condition_info(&self, loc: &Loc, message: &str, is_requires: bool) {
         let env = self.module_env().env;
-        if env.get_condition_info(loc).is_none() {
-            self.module_env()
-                .env
-                .set_condition_info(loc.clone(), ConditionInfo::for_message(message.to_string()));
+        let mut info = if let Some(info) = env.get_condition_info(loc) {
+            if is_requires {
+                if info.message_if_requires.is_some() {
+                    // already set
+                    return;
+                }
+            } else if !info.message.is_empty() {
+                // already set
+                return;
+            }
+            info
+        } else {
+            ConditionInfo::default()
+        };
+        if is_requires {
+            info.message_if_requires = Some(message.to_string());
+        } else {
+            info.message = message.to_string();
         }
+        self.module_env().env.set_condition_info(loc.clone(), info);
     }
 
     /// Assumes preconditions for function. This is used for the top-level verification
@@ -852,7 +867,7 @@ impl<'env> SpecTranslator<'env> {
                 if assume {
                     emit!(self.writer, "assume b#$Boolean(");
                 } else {
-                    self.set_condition_info(&inv.loc, INVARIANT_FAILS_MESSAGE);
+                    self.set_condition_info(&inv.loc, INVARIANT_FAILS_MESSAGE, false);
                     emit!(self.writer, "assert b#$Boolean(");
                 }
                 self.with_invariant_target(target, old_target, || self.translate_exp(&inv.exp));
