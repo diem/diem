@@ -99,7 +99,7 @@ pub fn encode_burn_script(
 
 /// Burn transaction fees that have been collected in the given `currency` and relinquish
 /// to the association. The currency must be non-synthetic.
-pub fn encode_burn_txn_fees_script(cointype: TypeTag) -> Script {
+pub fn encode_burn_txn_fees_script(coin_type: TypeTag) -> Script {
     Script::new(
         vec![
             161, 28, 235, 11, 1, 0, 7, 1, 0, 12, 2, 12, 22, 3, 34, 42, 4, 76, 26, 5, 102, 80, 7,
@@ -128,7 +128,7 @@ pub fn encode_burn_txn_fees_script(cointype: TypeTag) -> Script {
             3, 14, 4, 56, 8, 5, 36, 10, 0, 56, 9, 12, 1, 14, 1, 56, 10, 10, 0, 11, 1, 14, 4, 56,
             11, 11, 0, 11, 4, 56, 12, 2,
         ],
-        vec![cointype],
+        vec![coin_type],
         vec![],
     )
 }
@@ -154,7 +154,7 @@ pub fn encode_cancel_burn_script(token: TypeTag, preburn_address: AccountAddress
 /// will have a zero balance in all available currencies in the system. This account will
 /// a child of the transaction sender, which must be a ParentVASP.
 pub fn encode_create_child_vasp_account_script(
-    cointype: TypeTag,
+    coin_type: TypeTag,
     child_address: AccountAddress,
     auth_key_prefix: Vec<u8>,
     add_all_currencies: bool,
@@ -184,7 +184,7 @@ pub fn encode_create_child_vasp_account_script(
             0, 0, 0, 0, 0, 0, 0, 36, 3, 14, 5, 23, 10, 0, 17, 3, 12, 6, 14, 6, 10, 1, 10, 4, 56, 2,
             11, 6, 17, 5, 11, 0, 11, 5, 56, 3, 2,
         ],
-        vec![cointype],
+        vec![coin_type],
         vec![
             TransactionArgument::Address(child_address),
             TransactionArgument::U8Vector(auth_key_prefix),
@@ -197,7 +197,7 @@ pub fn encode_create_child_vasp_account_script(
 /// Create designated dealer account at 'new_account_address' and 'auth_key_prefix' for
 /// nonsynthetic CoinType. Create dealer and preburn resource.
 pub fn encode_create_designated_dealer_script(
-    cointype: TypeTag,
+    coin_type: TypeTag,
     sliding_nonce: u64,
     new_account_address: AccountAddress,
     auth_key_prefix: Vec<u8>,
@@ -226,7 +226,7 @@ pub fn encode_create_designated_dealer_script(
             0, 0, 0, 17, 2, 14, 4, 10, 2, 6, 128, 240, 250, 2, 0, 0, 0, 0, 17, 2, 14, 4, 10, 2, 6,
             0, 101, 205, 29, 0, 0, 0, 0, 17, 2, 11, 0, 11, 4, 56, 2, 2,
         ],
-        vec![cointype],
+        vec![coin_type],
         vec![
             TransactionArgument::U64(sliding_nonce),
             TransactionArgument::Address(new_account_address),
@@ -240,7 +240,7 @@ pub fn encode_create_designated_dealer_script(
 /// `add_all_currencies` is true, 0 balances for all available currencies in the system
 /// will also be added. This can only be invoked by an Association account.
 pub fn encode_create_parent_vasp_account_script(
-    cointype: TypeTag,
+    coin_type: TypeTag,
     new_account_address: AccountAddress,
     auth_key_prefix: Vec<u8>,
     human_name: Vec<u8>,
@@ -266,7 +266,7 @@ pub fn encode_create_parent_vasp_account_script(
             1, 1, 1, 5, 6, 16, 10, 0, 56, 0, 12, 7, 10, 0, 14, 7, 10, 1, 11, 2, 11, 3, 11, 4, 11,
             5, 10, 6, 56, 1, 11, 0, 11, 7, 56, 2, 2,
         ],
-        vec![cointype],
+        vec![coin_type],
         vec![
             TransactionArgument::Address(new_account_address),
             TransactionArgument::U8Vector(auth_key_prefix),
@@ -738,7 +738,7 @@ pub fn encode_rotate_validator_config_script(
 /// compliance account and receiver authorized DD. `sliding_nonce` is a unique nonce for
 /// operation, see sliding_nonce.move for details.
 pub fn encode_tiered_mint_script(
-    cointype: TypeTag,
+    coin_type: TypeTag,
     sliding_nonce: u64,
     designated_dealer_address: AccountAddress,
     mint_amount: u64,
@@ -767,7 +767,7 @@ pub fn encode_tiered_mint_script(
             6, 10, 3, 10, 2, 10, 4, 56, 1, 12, 5, 10, 0, 11, 6, 56, 2, 11, 0, 10, 2, 11, 5, 56, 3,
             2,
         ],
-        vec![cointype],
+        vec![coin_type],
         vec![
             TransactionArgument::U64(sliding_nonce),
             TransactionArgument::Address(designated_dealer_address),
@@ -953,7 +953,7 @@ pub fn encode_update_travel_rule_limit_script(
 /// particular config does not get updated. `sliding_nonce` is a unique nonce for
 /// operation, see sliding_nonce.move for details.
 pub fn encode_update_unhosted_wallet_limits_script(
-    cointype: TypeTag,
+    coin_type: TypeTag,
     sliding_nonce: u64,
     new_max_total_flow: u64,
     new_max_holding_balance: u64,
@@ -977,7 +977,7 @@ pub fn encode_update_unhosted_wallet_limits_script(
             116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 6, 7, 14, 10, 0, 10, 1, 17,
             3, 10, 0, 56, 0, 12, 4, 14, 4, 10, 2, 10, 3, 17, 2, 11, 0, 11, 4, 56, 1, 2,
         ],
-        vec![cointype],
+        vec![coin_type],
         vec![
             TransactionArgument::U64(sliding_nonce),
             TransactionArgument::U64(new_max_total_flow),
