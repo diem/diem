@@ -260,10 +260,6 @@
 <span id="260">260</span>
 <span id="261">261</span>
 <span id="262">262</span>
-<span id="263">263</span>
-<span id="264">264</span>
-<span id="265">265</span>
-<span id="266">266</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -308,16 +304,15 @@
     <span class="ident">PeerToPeerWithMetadata</span>,
     <span class="ident">Preburn</span>,
     <span class="ident">PublishSharedEd2551PublicKey</span>,
-    <span class="ident">RegisterValidator</span>,
+    <span class="ident">Reconfigure</span>,
     <span class="ident">RemoveValidator</span>,
     <span class="ident">RotateAuthenticationKey</span>,
     <span class="ident">RotateAuthenticationKeyWithNonce</span>,
     <span class="ident">RotateAuthenticationKeyWithRecoveryAddress</span>,
     <span class="ident">RotateBaseUrl</span>,
     <span class="ident">RotateCompliancePublicKey</span>,
-    <span class="ident">RotateValidatorConfig</span>,
-    <span class="ident">RotateConsensusPubkey</span>,
     <span class="ident">RotateSharedEd2551PublicKey</span>,
+    <span class="ident">SetValidatorConfig</span>,
     <span class="ident">TieredMint</span>,
     <span class="ident">UpdateTravelRuleLimit</span>,
     <span class="ident">UnfreezeAccount</span>,
@@ -354,16 +349,15 @@
             <span class="ident">PeerToPeerWithMetadata</span>,
             <span class="ident">Preburn</span>,
             <span class="ident">PublishSharedEd2551PublicKey</span>,
-            <span class="ident">RegisterValidator</span>,
+            <span class="ident">Reconfigure</span>,
             <span class="ident">RemoveValidator</span>,
             <span class="ident">RotateAuthenticationKey</span>,
             <span class="ident">RotateAuthenticationKeyWithNonce</span>,
             <span class="ident">RotateAuthenticationKeyWithRecoveryAddress</span>,
             <span class="ident">RotateBaseUrl</span>,
             <span class="ident">RotateCompliancePublicKey</span>,
-            <span class="ident">RotateValidatorConfig</span>,
-            <span class="ident">RotateConsensusPubkey</span>,
             <span class="ident">RotateSharedEd2551PublicKey</span>,
+            <span class="ident">SetValidatorConfig</span>,
             <span class="ident">TieredMint</span>,
             <span class="ident">UpdateTravelRuleLimit</span>,
             <span class="ident">UnfreezeAccount</span>,
@@ -371,8 +365,7 @@
             <span class="ident">UpdateUnhostedWalletLimits</span>,
             <span class="ident">UpdateLibraVersion</span>,
             <span class="ident">UpdateExchangeRate</span>,
-            <span class="ident">UpdateMintingAbility</span>,
-            <span class="comment">// ...add new scripts here</span>
+            <span class="ident">UpdateMintingAbility</span>, <span class="comment">// ...add new scripts here</span>
         ]
     }
 
@@ -478,7 +471,7 @@
                 <span class="ident">PeerToPeerWithMetadata</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;peer_to_peer_with_metadata&quot;</span>,
                 <span class="ident">Preburn</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;preburn&quot;</span>,
                 <span class="ident">PublishSharedEd2551PublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;publish_shared_ed25519_public_key&quot;</span>,
-                <span class="ident">RegisterValidator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;register_validator&quot;</span>,
+                <span class="ident">Reconfigure</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;reconfigure&quot;</span>,
                 <span class="ident">RemoveValidator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;remove_validator&quot;</span>,
                 <span class="ident">RotateAuthenticationKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_authentication_key&quot;</span>,
                 <span class="ident">RotateAuthenticationKeyWithNonce</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_authentication_key_with_nonce&quot;</span>,
@@ -486,9 +479,8 @@
                     <span class="string">&quot;rotate_authentication_key_with_recovery_address&quot;</span>,
                 <span class="ident">RotateBaseUrl</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_base_url&quot;</span>,
                 <span class="ident">RotateCompliancePublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_compliance_public_key&quot;</span>,
-                <span class="ident">RotateValidatorConfig</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_validator_config&quot;</span>,
-                <span class="ident">RotateConsensusPubkey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_consensus_pubkey&quot;</span>,
                 <span class="ident">RotateSharedEd2551PublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_shared_ed25519_public_key&quot;</span>,
+                <span class="ident">SetValidatorConfig</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;set_validator_config&quot;</span>,
                 <span class="ident">TieredMint</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;tiered_mint&quot;</span>,
                 <span class="ident">UpdateTravelRuleLimit</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;update_travel_rule_limit&quot;</span>,
                 <span class="ident">UnfreezeAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;unfreeze_account&quot;</span>,

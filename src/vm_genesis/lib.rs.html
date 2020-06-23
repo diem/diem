@@ -319,6 +319,20 @@
 <span id="319">319</span>
 <span id="320">320</span>
 <span id="321">321</span>
+<span id="322">322</span>
+<span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -524,8 +538,21 @@
         );
         <span class="ident">context</span>.<span class="ident">exec_script</span>(<span class="kw-2">&amp;</span><span class="ident">create_script</span>);
 
+        <span class="comment">// Set config for the validator</span>
         <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">account</span>);
         <span class="ident">context</span>.<span class="ident">exec_script</span>(<span class="ident">registration</span>);
+
+        <span class="comment">// Add validator to the set</span>
+        <span class="ident">context</span>.<span class="ident">set_sender</span>(<span class="ident">account_config</span>::<span class="ident">association_address</span>());
+        <span class="ident">context</span>.<span class="ident">exec</span>(
+            <span class="string">&quot;LibraSystem&quot;</span>,
+            <span class="string">&quot;add_validator&quot;</span>,
+            <span class="macro">vec</span><span class="macro">!</span>[],
+            <span class="macro">vec</span><span class="macro">!</span>[
+                <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">account_config</span>::<span class="ident">association_address</span>()),
+                <span class="ident">Value</span>::<span class="ident">address</span>(<span class="ident">account</span>),
+            ],
+        );
     }
 }
 
@@ -630,14 +657,15 @@
             <span class="comment">// TODO(philiphayes): do something with n.full_node_networks instead</span>
             <span class="comment">// of ignoring them?</span>
 
-            <span class="kw">let</span> <span class="ident">register_script</span> <span class="op">=</span> <span class="ident">transaction_builder</span>::<span class="ident">encode_register_validator_script</span>(
+            <span class="kw">let</span> <span class="ident">script</span> <span class="op">=</span> <span class="ident">transaction_builder</span>::<span class="ident">encode_set_validator_config_script</span>(
+                <span class="ident">AuthenticationKey</span>::<span class="ident">ed25519</span>(<span class="kw-2">&amp;</span><span class="ident">account_key</span>).<span class="ident">derived_address</span>(),
                 <span class="ident">consensus_key</span>.<span class="ident">to_bytes</span>().<span class="ident">to_vec</span>(),
                 <span class="ident">identity_key</span>.<span class="ident">to_bytes</span>(),
                 <span class="ident">raw_advertised_address</span>.<span class="ident">clone</span>().<span class="ident">into</span>(),
                 <span class="ident">identity_key</span>.<span class="ident">to_bytes</span>(),
                 <span class="ident">raw_advertised_address</span>.<span class="ident">into</span>(),
             );
-            (<span class="ident">account_key</span>, <span class="ident">register_script</span>)
+            (<span class="ident">account_key</span>, <span class="ident">script</span>)
         })
         .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
 }

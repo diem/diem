@@ -47,7 +47,6 @@
 <span id="47">47</span>
 <span id="48">48</span>
 <span id="49">49</span>
-<span id="50">50</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -64,7 +63,6 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ValidatorConfigResource</span> {
     <span class="kw">pub</span> <span class="ident">validator_config</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ValidatorConfig</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">delegated_account</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountAddress</span><span class="op">&gt;</span>,
-    <span class="kw">pub</span> <span class="ident">is_certified</span>: <span class="ident">bool</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">MoveResource</span> <span class="kw">for</span> <span class="ident">ValidatorConfigResource</span> {
