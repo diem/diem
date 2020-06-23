@@ -458,6 +458,7 @@
 <span id="458">458</span>
 <span id="459">459</span>
 <span id="460">460</span>
+<span id="461">461</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -522,6 +523,7 @@
     <span class="ident">cmp</span>::<span class="ident">max</span>,
     <span class="ident">collections</span>::{<span class="ident">HashMap</span>, <span class="ident">HashSet</span>},
     <span class="ident">convert</span>::<span class="ident">TryInto</span>,
+    <span class="ident">sync</span>::<span class="ident">Arc</span>,
     <span class="ident">time</span>::<span class="ident">SystemTime</span>,
 };
 
@@ -590,7 +592,7 @@
     <span class="doccomment">/// Note for self, which is prefixed with an underscore as this is not used but is in</span>
     <span class="doccomment">/// preparation for logic that changes the advertised Note while the validator is running.</span>
     <span class="ident">note</span>: <span class="ident">Note</span>,
-    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+    <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The DNS domain name other public full nodes should query to get this</span>
     <span class="doccomment">/// validator&#39;s list of full nodes.</span>
     <span class="ident">dns_seed_addr</span>: <span class="ident">Bytes</span>,
@@ -616,7 +618,7 @@
     <span class="ident">TTicker</span>: <span class="ident">Stream</span> <span class="op">+</span> <span class="ident">FusedStream</span> <span class="op">+</span> <span class="ident">Unpin</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+        <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
         <span class="ident">self_addrs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span>,
         <span class="ident">ticker</span>: <span class="ident">TTicker</span>,
         <span class="ident">network_reqs_tx</span>: <span class="ident">DiscoveryNetworkSender</span>,

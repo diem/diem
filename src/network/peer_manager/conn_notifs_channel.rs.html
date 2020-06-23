@@ -98,6 +98,23 @@
 <span id="98"> 98</span>
 <span id="99"> 99</span>
 <span id="100">100</span>
+<span id="101">101</span>
+<span id="102">102</span>
+<span id="103">103</span>
+<span id="104">104</span>
+<span id="105">105</span>
+<span id="106">106</span>
+<span id="107">107</span>
+<span id="108">108</span>
+<span id="109">109</span>
+<span id="110">110</span>
+<span id="111">111</span>
+<span id="112">112</span>
+<span id="113">113</span>
+<span id="114">114</span>
+<span id="115">115</span>
+<span id="116">116</span>
+<span id="117">117</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -126,6 +143,7 @@
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
     <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">peer</span>::<span class="ident">DisconnectReason</span>;
     <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">executor</span>::<span class="ident">block_on</span>, <span class="ident">future</span>::<span class="ident">FutureExt</span>, <span class="ident">stream</span>::<span class="ident">StreamExt</span>};
+    <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">network_id</span>::<span class="ident">NetworkContext</span>;
     <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 
     <span class="attribute">#[<span class="ident">test</span>]</span>
@@ -137,7 +155,11 @@
             <span class="ident">sender</span>
                 .<span class="ident">push</span>(
                     <span class="ident">peer_id_a</span>,
-                    <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id_a</span>, <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>()),
+                    <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(
+                        <span class="ident">peer_id_a</span>,
+                        <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>(),
+                        <span class="ident">NetworkContext</span>::<span class="ident">mock</span>(),
+                    ),
                 )
                 .<span class="ident">unwrap</span>();
             <span class="ident">sender</span>
@@ -153,7 +175,11 @@
             <span class="ident">sender</span>
                 .<span class="ident">push</span>(
                     <span class="ident">peer_id_a</span>,
-                    <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id_a</span>, <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>()),
+                    <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(
+                        <span class="ident">peer_id_a</span>,
+                        <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>(),
+                        <span class="ident">NetworkContext</span>::<span class="ident">mock</span>(),
+                    ),
                 )
                 .<span class="ident">unwrap</span>();
             <span class="ident">sender</span>
@@ -181,13 +207,21 @@
             <span class="ident">sender</span>
                 .<span class="ident">push</span>(
                     <span class="ident">peer_id_a</span>,
-                    <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id_a</span>, <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>()),
+                    <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(
+                        <span class="ident">peer_id_a</span>,
+                        <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>(),
+                        <span class="ident">NetworkContext</span>::<span class="ident">mock</span>(),
+                    ),
                 )
                 .<span class="ident">unwrap</span>();
             <span class="ident">sender</span>
                 .<span class="ident">push</span>(
                     <span class="ident">peer_id_b</span>,
-                    <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id_b</span>, <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>()),
+                    <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(
+                        <span class="ident">peer_id_b</span>,
+                        <span class="ident">NetworkAddress</span>::<span class="ident">mock</span>(),
+                        <span class="ident">NetworkContext</span>::<span class="ident">mock</span>(),
+                    ),
                 )
                 .<span class="ident">unwrap</span>();
             <span class="comment">// Assert that we receive 2 updates, since they are sent for different peers.</span>

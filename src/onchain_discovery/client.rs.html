@@ -463,7 +463,7 @@
 <span class="doccomment">/// latest discovery set and notifying the `ConnectivityManager` of updates.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">OnchainDiscovery</span><span class="op">&lt;</span><span class="ident">TTicker</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Network Context, includes all information about this node in it&#39;s network</span>
-    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+    <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The current trusted state, which keeps track of the latest verified</span>
     <span class="doccomment">/// ledger version and validator set. This version can be ahead of other</span>
     <span class="doccomment">/// components (e.g., state sync) since we only rely on syncing epoch change</span>
@@ -504,7 +504,7 @@
     <span class="ident">TTicker</span>: <span class="ident">Stream</span> <span class="op">+</span> <span class="ident">FusedStream</span> <span class="op">+</span> <span class="ident">Unpin</span>,
 {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+        <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
         <span class="ident">waypoint</span>: <span class="ident">Waypoint</span>,
         <span class="ident">network_tx</span>: <span class="ident">OnchainDiscoveryNetworkSender</span>,
         <span class="ident">conn_mgr_reqs_tx</span>: <span class="ident">channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span>,
@@ -612,7 +612,7 @@
 
     <span class="kw">fn</span> <span class="ident">handle_connection_notif</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">notif</span>: <span class="ident">ConnectionNotification</span>) {
         <span class="kw">match</span> <span class="ident">notif</span> {
-            <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>, <span class="ident">_network_context</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">trace</span><span class="macro">!</span>(
                     <span class="string">&quot;{} connected to new peer: {}&quot;</span>,
                     <span class="self">self</span>.<span class="ident">network_context</span>,
@@ -824,7 +824,7 @@
 <span class="doccomment">/// Query a remote peer for their latest discovery set and a epoch change</span>
 <span class="doccomment">/// proof.</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">peer_query_discovery_set</span>(
-    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+    <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
     <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
     <span class="ident">req_msg</span>: <span class="ident">QueryDiscoverySetRequest</span>,
     <span class="ident">outbound_rpc_timeout</span>: <span class="ident">Duration</span>,

@@ -989,6 +989,10 @@
 <span id="989">989</span>
 <span id="990">990</span>
 <span id="991">991</span>
+<span id="992">992</span>
+<span id="993">993</span>
+<span id="994">994</span>
+<span id="995">995</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1024,7 +1028,8 @@
     <span class="ident">sink</span>::<span class="ident">SinkExt</span>,
     <span class="ident">stream</span>::{<span class="ident">Fuse</span>, <span class="ident">FuturesUnordered</span>, <span class="ident">StreamExt</span>},
 };
-<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">network_id</span>::<span class="ident">NetworkContext</span>;
+<span class="kw">use</span> <span class="ident">libra_logger</span>::{<span class="ident">prelude</span>::<span class="kw-2">*</span>, <span class="ident">StructuredLogEntry</span>};
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">netcore</span>::<span class="ident">transport</span>::{<span class="ident">ConnectionOrigin</span>, <span class="ident">Transport</span>};
@@ -1033,6 +1038,7 @@
     <span class="ident">collections</span>::{<span class="ident">hash_map</span>::<span class="ident">Entry</span>, <span class="ident">HashMap</span>},
     <span class="ident">fmt</span>::<span class="ident">Debug</span>,
     <span class="ident">marker</span>::<span class="ident">PhantomData</span>,
+    <span class="ident">sync</span>::<span class="ident">Arc</span>,
     <span class="ident">time</span>::<span class="ident">Duration</span>,
 };
 <span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">runtime</span>::<span class="ident">Handle</span>;
@@ -1043,8 +1049,6 @@
 <span class="kw">mod</span> <span class="ident">tests</span>;
 
 <span class="kw">pub</span> <span class="kw">use</span> <span class="self">self</span>::<span class="ident">error</span>::<span class="ident">PeerManagerError</span>;
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">network_id</span>::<span class="ident">NetworkContext</span>;
-<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">StructuredLogEntry</span>;
 
 <span class="doccomment">/// Request received by PeerManager from upstream actors.</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Serialize</span>)]</span>
@@ -1080,7 +1084,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ConnectionNotification</span> {
     <span class="doccomment">/// Connection with a new peer has been established.</span>
-    <span class="ident">NewPeer</span>(<span class="ident">PeerId</span>, <span class="ident">NetworkAddress</span>),
+    <span class="ident">NewPeer</span>(<span class="ident">PeerId</span>, <span class="ident">NetworkAddress</span>, <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>),
     <span class="doccomment">/// Connection to a peer has been terminated. This could have been triggered from either end.</span>
     <span class="ident">LostPeer</span>(<span class="ident">PeerId</span>, <span class="ident">NetworkAddress</span>, <span class="ident">DisconnectReason</span>),
 }
@@ -1208,7 +1212,7 @@
     <span class="ident">TTransport</span>: <span class="ident">Transport</span>,
     <span class="ident">TSocket</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">AsyncWrite</span>,
 {
-    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+    <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
     <span class="doccomment">/// A handle to a tokio executor.</span>
     <span class="ident">executor</span>: <span class="ident">Handle</span>,
     <span class="doccomment">/// Address to listen on for incoming connections.</span>
@@ -1262,7 +1266,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">executor</span>: <span class="ident">Handle</span>,
         <span class="ident">transport</span>: <span class="ident">TTransport</span>,
-        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+        <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
         <span class="ident">listen_addr</span>: <span class="ident">NetworkAddress</span>,
         <span class="ident">requests_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">ProtocolId</span>), <span class="ident">PeerManagerRequest</span><span class="op">&gt;</span>,
         <span class="ident">connection_reqs_rx</span>: <span class="ident">libra_channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">ConnectionRequest</span><span class="op">&gt;</span>,
@@ -1629,7 +1633,11 @@
                 <span class="ident">handler</span>
                     .<span class="ident">push</span>(
                         <span class="ident">peer_id</span>,
-                        <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">conn_meta</span>.<span class="ident">addr</span>().<span class="ident">clone</span>()),
+                        <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(
+                            <span class="ident">peer_id</span>,
+                            <span class="ident">conn_meta</span>.<span class="ident">addr</span>().<span class="ident">clone</span>(),
+                            <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">clone</span>(),
+                        ),
                     )
                     .<span class="ident">unwrap</span>();
             }
@@ -1690,7 +1698,7 @@
     }
 
     <span class="kw">fn</span> <span class="ident">handle_inbound_event</span>(
-        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+        <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
         <span class="ident">inbound_event</span>: <span class="ident">NetworkNotification</span>,
         <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
         <span class="ident">upstream_handlers</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">HashMap</span><span class="op">&lt;</span>
@@ -1770,7 +1778,7 @@
     <span class="ident">TTransport</span>: <span class="ident">Transport</span>,
     <span class="ident">TSocket</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">AsyncWrite</span>,
 {
-    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+    <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
     <span class="doccomment">/// [`Transport`] that is used to establish connections</span>
     <span class="ident">transport</span>: <span class="ident">TTransport</span>,
     <span class="ident">listener</span>: <span class="ident">Fuse</span><span class="op">&lt;</span><span class="ident">TTransport</span>::<span class="ident">Listener</span><span class="op">&gt;</span>,
@@ -1787,7 +1795,7 @@
     <span class="ident">TSocket</span>: <span class="ident">AsyncRead</span> <span class="op">+</span> <span class="ident">AsyncWrite</span> <span class="op">+</span> <span class="lifetime">&#39;static</span>,
 {
     <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+        <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
         <span class="ident">transport</span>: <span class="ident">TTransport</span>,
         <span class="ident">listen_addr</span>: <span class="ident">NetworkAddress</span>,
         <span class="ident">transport_reqs_rx</span>: <span class="ident">channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">TransportRequest</span><span class="op">&gt;</span>,

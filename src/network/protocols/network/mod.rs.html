@@ -423,7 +423,7 @@
     <span class="ident">notif</span>: <span class="ident">ConnectionNotification</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Event</span><span class="op">&lt;</span><span class="ident">TMessage</span><span class="op">&gt;</span>, <span class="ident">NetworkError</span><span class="op">&gt;</span> {
     <span class="kw">match</span> <span class="ident">notif</span> {
-        <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Event</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>)),
+        <span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>, <span class="ident">_context</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Event</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>)),
         <span class="ident">ConnectionNotification</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>, <span class="ident">_addr</span>, <span class="ident">_reason</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Event</span>::<span class="ident">LostPeer</span>(<span class="ident">peer_id</span>)),
     }
 }

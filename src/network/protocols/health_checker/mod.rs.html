@@ -436,7 +436,7 @@
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">rand</span>::{<span class="ident">rngs</span>::<span class="ident">SmallRng</span>, <span class="ident">seq</span>::<span class="ident">SliceRandom</span>, <span class="ident">Rng</span>, <span class="ident">SeedableRng</span>};
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashMap</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span>;
@@ -527,7 +527,7 @@
 
 <span class="doccomment">/// The actor performing health checks by running the Ping protocol</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">HealthChecker</span><span class="op">&lt;</span><span class="ident">TTicker</span><span class="op">&gt;</span> {
-    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+    <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Ticker to trigger ping to a random peer. In production, the ticker is likely to be</span>
     <span class="doccomment">/// fixed duration interval timer.</span>
     <span class="ident">ticker</span>: <span class="ident">TTicker</span>,
@@ -556,7 +556,7 @@
 {
     <span class="doccomment">/// Create new instance of the [`HealthChecker`] actor.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+        <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
         <span class="ident">ticker</span>: <span class="ident">TTicker</span>,
         <span class="ident">network_tx</span>: <span class="ident">HealthCheckerNetworkSender</span>,
         <span class="ident">network_rx</span>: <span class="ident">HealthCheckerNetworkEvents</span>,
@@ -755,7 +755,7 @@
     }
 
     <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">ping_peer</span>(
-        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+        <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
         <span class="kw-2">mut</span> <span class="ident">network_tx</span>: <span class="ident">HealthCheckerNetworkSender</span>,
         <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
         <span class="ident">round</span>: <span class="ident">u64</span>,

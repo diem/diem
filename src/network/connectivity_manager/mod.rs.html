@@ -725,7 +725,7 @@
 
 <span class="doccomment">/// The ConnectivityManager actor.</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConnectivityManager</span><span class="op">&lt;</span><span class="ident">TTicker</span>, <span class="ident">TBackoff</span><span class="op">&gt;</span> {
-    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+    <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Nodes which are eligible to join the network.</span>
     <span class="ident">eligible</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">x25519</span>::<span class="ident">PublicKey</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="doccomment">/// PeerId and address of remote peers to which this peer is connected.</span>
@@ -810,7 +810,7 @@
 {
     <span class="doccomment">/// Creates a new instance of the [`ConnectivityManager`] actor.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
-        <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+        <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
         <span class="ident">eligible</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">x25519</span>::<span class="ident">PublicKey</span><span class="op">&gt;</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">seed_peers</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span><span class="op">&gt;</span>,
         <span class="ident">ticker</span>: <span class="ident">TTicker</span>,
@@ -1169,7 +1169,7 @@
 
     <span class="kw">fn</span> <span class="ident">handle_control_notification</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">notif</span>: <span class="ident">peer_manager</span>::<span class="ident">ConnectionNotification</span>) {
         <span class="kw">match</span> <span class="ident">notif</span> {
-            <span class="ident">peer_manager</span>::<span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">peer_manager</span>::<span class="ident">ConnectionNotification</span>::<span class="ident">NewPeer</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>, <span class="ident">_context</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">connected</span>.<span class="ident">insert</span>(<span class="ident">peer_id</span>, <span class="ident">addr</span>);
                 <span class="comment">// Cancel possible queued dial to this peer.</span>
                 <span class="self">self</span>.<span class="ident">dial_states</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">peer_id</span>);
@@ -1196,7 +1196,7 @@
 }
 
 <span class="kw">fn</span> <span class="ident">log_dial_result</span>(
-    <span class="ident">network_context</span>: <span class="ident">NetworkContext</span>,
+    <span class="ident">network_context</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span>,
     <span class="ident">peer_id</span>: <span class="ident">PeerId</span>,
     <span class="ident">addr</span>: <span class="ident">NetworkAddress</span>,
     <span class="ident">dial_result</span>: <span class="ident">DialResult</span>,
