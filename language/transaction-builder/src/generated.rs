@@ -133,8 +133,8 @@ pub fn encode_burn_txn_fees_script(coin_type: TypeTag) -> Script {
     )
 }
 
-///  Cancel the oldest burn request from `preburn_address` and return the funds.
-///  Fails if the sender does not have a published `BurnCapability<Token>`.
+/// Cancel the oldest burn request from `preburn_address` and return the funds. Fails if
+/// the sender does not have a published `BurnCapability<Token>`.
 pub fn encode_cancel_burn_script(token: TypeTag, preburn_address: AccountAddress) -> Script {
     Script::new(
         vec![
@@ -325,6 +325,7 @@ pub fn encode_create_validator_account_script(
     )
 }
 
+/// Used for testing.
 pub fn encode_empty_script_script() -> Script {
     Script::new(
         vec![161, 28, 235, 11, 1, 0, 1, 5, 0, 1, 0, 0, 0, 0, 1, 2],
@@ -362,29 +363,6 @@ pub fn encode_freeze_account_script(
             TransactionArgument::U64(sliding_nonce),
             TransactionArgument::Address(to_freeze_account),
         ],
-    )
-}
-
-///  Update configs of all the validators and emit reconfiguration event.
-pub fn encode_main_script() -> Script {
-    Script::new(
-        vec![
-            161, 28, 235, 11, 1, 0, 7, 1, 0, 4, 2, 4, 9, 3, 13, 17, 4, 30, 4, 5, 34, 34, 7, 68,
-            136, 1, 8, 204, 1, 16, 0, 0, 0, 1, 1, 2, 1, 0, 1, 3, 1, 1, 3, 1, 4, 0, 1, 1, 3, 1, 5,
-            2, 3, 1, 3, 0, 6, 4, 3, 0, 0, 6, 1, 6, 1, 6, 12, 1, 11, 1, 1, 9, 0, 2, 6, 12, 11, 1, 1,
-            9, 0, 0, 1, 6, 11, 1, 1, 8, 0, 1, 11, 1, 1, 8, 0, 1, 8, 0, 11, 76, 105, 98, 114, 97,
-            83, 121, 115, 116, 101, 109, 5, 82, 111, 108, 101, 115, 19, 65, 115, 115, 111, 99, 105,
-            97, 116, 105, 111, 110, 82, 111, 111, 116, 82, 111, 108, 101, 10, 67, 97, 112, 97, 98,
-            105, 108, 105, 116, 121, 31, 101, 120, 116, 114, 97, 99, 116, 95, 112, 114, 105, 118,
-            105, 108, 101, 103, 101, 95, 116, 111, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116,
-            121, 31, 114, 101, 115, 116, 111, 114, 101, 95, 99, 97, 112, 97, 98, 105, 108, 105,
-            116, 121, 95, 116, 111, 95, 112, 114, 105, 118, 105, 108, 101, 103, 101, 22, 117, 112,
-            100, 97, 116, 101, 95, 97, 110, 100, 95, 114, 101, 99, 111, 110, 102, 105, 103, 117,
-            114, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 5, 9, 10, 0, 56, 0, 12,
-            1, 14, 1, 17, 2, 11, 0, 11, 1, 56, 1, 2,
-        ],
-        vec![],
-        vec![],
     )
 }
 
@@ -552,6 +530,29 @@ pub fn encode_publish_shared_ed25519_public_key_script(public_key: Vec<u8>) -> S
     )
 }
 
+/// Update configs of all the validators and emit reconfiguration event.
+pub fn encode_reconfigure_script() -> Script {
+    Script::new(
+        vec![
+            161, 28, 235, 11, 1, 0, 7, 1, 0, 4, 2, 4, 9, 3, 13, 17, 4, 30, 4, 5, 34, 34, 7, 68,
+            136, 1, 8, 204, 1, 16, 0, 0, 0, 1, 1, 2, 1, 0, 1, 3, 1, 1, 3, 1, 4, 0, 1, 1, 3, 1, 5,
+            2, 3, 1, 3, 0, 6, 4, 3, 0, 0, 6, 1, 6, 1, 6, 12, 1, 11, 1, 1, 9, 0, 2, 6, 12, 11, 1, 1,
+            9, 0, 0, 1, 6, 11, 1, 1, 8, 0, 1, 11, 1, 1, 8, 0, 1, 8, 0, 11, 76, 105, 98, 114, 97,
+            83, 121, 115, 116, 101, 109, 5, 82, 111, 108, 101, 115, 19, 65, 115, 115, 111, 99, 105,
+            97, 116, 105, 111, 110, 82, 111, 111, 116, 82, 111, 108, 101, 10, 67, 97, 112, 97, 98,
+            105, 108, 105, 116, 121, 31, 101, 120, 116, 114, 97, 99, 116, 95, 112, 114, 105, 118,
+            105, 108, 101, 103, 101, 95, 116, 111, 95, 99, 97, 112, 97, 98, 105, 108, 105, 116,
+            121, 31, 114, 101, 115, 116, 111, 114, 101, 95, 99, 97, 112, 97, 98, 105, 108, 105,
+            116, 121, 95, 116, 111, 95, 112, 114, 105, 118, 105, 108, 101, 103, 101, 22, 117, 112,
+            100, 97, 116, 101, 95, 97, 110, 100, 95, 114, 101, 99, 111, 110, 102, 105, 103, 117,
+            114, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 5, 9, 10, 0, 56, 0, 12,
+            1, 14, 1, 17, 2, 11, 0, 11, 1, 56, 1, 2,
+        ],
+        vec![],
+        vec![],
+    )
+}
+
 /// Adding `to_remove` to the set of pending validator removals. Fails if the `to_remove`
 /// address is already in the validator set or already in the pending removals. Callable
 /// by Validator's operator.
@@ -704,8 +705,8 @@ pub fn encode_rotate_shared_ed25519_public_key_script(public_key: Vec<u8>) -> Sc
     )
 }
 
-/// Rotate validator's config.
-pub fn encode_rotate_validator_config_script(
+/// Set validator's config.
+pub fn encode_set_validator_config_script(
     validator_account: AccountAddress,
     consensus_pubkey: Vec<u8>,
     validator_network_identity_pubkey: Vec<u8>,
