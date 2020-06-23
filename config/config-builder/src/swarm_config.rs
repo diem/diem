@@ -41,7 +41,7 @@ impl SwarmConfig {
         Ok(SwarmConfig {
             config_files,
             faucet_key_path,
-            waypoint: configs[0].base.waypoint.waypoint_from_config().unwrap(),
+            waypoint: configs[0].base.waypoint.waypoint(),
         })
     }
 }

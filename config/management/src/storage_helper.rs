@@ -19,6 +19,7 @@ pub struct StorageHelper {
     temppath: libra_temppath::TempPath,
 }
 
+#[allow(dead_code)]
 impl StorageHelper {
     pub fn new() -> Self {
         let temppath = libra_temppath::TempPath::new();
