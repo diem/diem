@@ -225,11 +225,6 @@ impl NetworkBuilder {
         self.network_context.clone()
     }
 
-    // TODO: remove this function.
-    pub fn peer_id(&self) -> PeerId {
-        self.network_context.peer_id()
-    }
-
     pub fn reconfig_subscriptions(&mut self) -> &mut Vec<ReconfigSubscription> {
         &mut self.reconfig_subscriptions
     }
