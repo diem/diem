@@ -44,6 +44,8 @@
 <span id="44">44</span>
 <span id="45">45</span>
 <span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -72,12 +74,14 @@
 }
 
 <span class="kw">impl</span> <span class="ident">ThreadService</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">storage</span>: <span class="ident">PersistentSafetyStorage</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">storage</span>: <span class="ident">PersistentSafetyStorage</span>, <span class="ident">verify_vote_proposal_signature</span>: <span class="ident">bool</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">listen_port</span> <span class="op">=</span> <span class="ident">utils</span>::<span class="ident">get_available_port</span>();
         <span class="kw">let</span> <span class="ident">listen_addr</span> <span class="op">=</span> <span class="ident">SocketAddr</span>::<span class="ident">new</span>(<span class="ident">IpAddr</span>::<span class="ident">V4</span>(<span class="ident">Ipv4Addr</span>::<span class="ident">LOCALHOST</span>), <span class="ident">listen_port</span>);
         <span class="kw">let</span> <span class="ident">server_addr</span> <span class="op">=</span> <span class="ident">listen_addr</span>;
 
-        <span class="kw">let</span> <span class="ident">child</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> <span class="ident">remote_service</span>::<span class="ident">execute</span>(<span class="ident">storage</span>, <span class="ident">listen_addr</span>));
+        <span class="kw">let</span> <span class="ident">child</span> <span class="op">=</span> <span class="ident">thread</span>::<span class="ident">spawn</span>(<span class="kw">move</span> <span class="op">|</span><span class="op">|</span> {
+            <span class="ident">remote_service</span>::<span class="ident">execute</span>(<span class="ident">storage</span>, <span class="ident">listen_addr</span>, <span class="ident">verify_vote_proposal_signature</span>)
+        });
 
         <span class="self">Self</span> {
             <span class="ident">_child</span>: <span class="ident">child</span>,

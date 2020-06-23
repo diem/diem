@@ -637,6 +637,16 @@
 <span id="637">637</span>
 <span id="638">638</span>
 <span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1217,6 +1227,16 @@
         <span class="ident">SPARSE_MERKLE_INTERNAL_HASHER</span>,
         <span class="ident">SPARSE_MERKLE_INTERNAL_SEED</span>,
         <span class="string">b&quot;SparseMerkleInternal&quot;</span>
+    )
+}
+
+<span class="macro">define_hasher</span><span class="macro">!</span> {
+    <span class="doccomment">/// The hasher used to compute the hash of an internal node in the transaction accumulator.</span>
+    (
+        <span class="ident">VoteProposalHasher</span>,
+        <span class="ident">VOTE_PROPOSAL_HASHER</span>,
+        <span class="ident">VOTE_PROPOSAL_SEED</span>,
+        <span class="string">b&quot;VoteProposalHasher&quot;</span>
     )
 }
 

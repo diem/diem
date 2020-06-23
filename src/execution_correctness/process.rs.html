@@ -42,24 +42,36 @@
 <span id="42">42</span>
 <span id="43">43</span>
 <span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">remote_service</span>::{<span class="self">self</span>, <span class="ident">RemoteService</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">execution_correctness_manager</span>,
+    <span class="ident">remote_service</span>::{<span class="self">self</span>, <span class="ident">RemoteService</span>},
+};
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">ExecutionCorrectnessService</span>, <span class="ident">NodeConfig</span>};
+<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">ed25519</span>::<span class="ident">Ed25519PrivateKey</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">net</span>::<span class="ident">SocketAddr</span>;
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Process</span> {
     <span class="ident">config</span>: <span class="ident">NodeConfig</span>,
+    <span class="ident">prikey</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Ed25519PrivateKey</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Process</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">config</span>: <span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">config</span> }
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="kw-2">mut</span> <span class="ident">config</span>: <span class="ident">NodeConfig</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> <span class="ident">prikey</span> <span class="op">=</span> <span class="ident">execution_correctness_manager</span>::<span class="ident">extract_execution_prikey</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">config</span>);
+        <span class="self">Self</span> { <span class="ident">config</span>, <span class="ident">prikey</span> }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">start</span>(<span class="self">self</span>) {
         <span class="kw">let</span> <span class="ident">service</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">config</span>.<span class="ident">execution</span>.<span class="ident">service</span>;
         <span class="kw">let</span> <span class="ident">server_addr</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">service</span> {
             <span class="ident">ExecutionCorrectnessService</span>::<span class="ident">Process</span>(<span class="ident">remote_service</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">remote_service</span>.<span class="ident">server_address</span>,
@@ -68,7 +80,7 @@
             }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Unexpected ExecutionCorrectness service: {:?}&quot;</span>, <span class="ident">service</span>),
         };
-        <span class="ident">remote_service</span>::<span class="ident">execute</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">storage</span>.<span class="ident">address</span>, <span class="ident">server_addr</span>);
+        <span class="ident">remote_service</span>::<span class="ident">execute</span>(<span class="self">self</span>.<span class="ident">config</span>.<span class="ident">storage</span>.<span class="ident">address</span>, <span class="ident">server_addr</span>, <span class="self">self</span>.<span class="ident">prikey</span>);
     }
 }
 

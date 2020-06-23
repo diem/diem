@@ -52,6 +52,8 @@
 <span id="52">52</span>
 <span id="53">53</span>
 <span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -65,6 +67,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">SafetyRulesConfig</span> {
     <span class="kw">pub</span> <span class="ident">backend</span>: <span class="ident">SecureBackend</span>,
     <span class="kw">pub</span> <span class="ident">service</span>: <span class="ident">SafetyRulesService</span>,
+    <span class="kw">pub</span> <span class="ident">verify_vote_proposal_signature</span>: <span class="ident">bool</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">SafetyRulesConfig</span> {
@@ -72,6 +75,7 @@
         <span class="self">Self</span> {
             <span class="ident">backend</span>: <span class="ident">SecureBackend</span>::<span class="ident">InMemoryStorage</span>,
             <span class="ident">service</span>: <span class="ident">SafetyRulesService</span>::<span class="ident">Thread</span>,
+            <span class="ident">verify_vote_proposal_signature</span>: <span class="bool-val">true</span>,
         }
     }
 }

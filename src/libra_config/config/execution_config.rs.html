@@ -148,11 +148,26 @@
 <span id="148">148</span>
 <span id="149">149</span>
 <span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
+<span id="157">157</span>
+<span id="158">158</span>
+<span id="159">159</span>
+<span id="160">160</span>
+<span id="161">161</span>
+<span id="162">162</span>
+<span id="163">163</span>
+<span id="164">164</span>
+<span id="165">165</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::{<span class="ident">Error</span>, <span class="ident">RootPath</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">config</span>::{<span class="ident">Error</span>, <span class="ident">RootPath</span>, <span class="ident">SecureBackend</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">transaction</span>::<span class="ident">Transaction</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -169,8 +184,10 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ExecutionConfig</span> {
     <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">skip</span>)]</span>
     <span class="kw">pub</span> <span class="ident">genesis</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Transaction</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">sign_vote_proposal</span>: <span class="ident">bool</span>,
     <span class="kw">pub</span> <span class="ident">genesis_file_location</span>: <span class="ident">PathBuf</span>,
     <span class="kw">pub</span> <span class="ident">service</span>: <span class="ident">ExecutionCorrectnessService</span>,
+    <span class="kw">pub</span> <span class="ident">backend</span>: <span class="ident">SecureBackend</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="ident">Debug</span> <span class="kw">for</span> <span class="ident">ExecutionConfig</span> {
@@ -183,8 +200,13 @@
         }
         <span class="macro">write</span><span class="macro">!</span>(
             <span class="ident">f</span>,
-            <span class="string">&quot;, genesis_file_location: {:?} }}&quot;</span>,
+            <span class="string">&quot;, genesis_file_location: {:?} &quot;</span>,
             <span class="self">self</span>.<span class="ident">genesis_file_location</span>
+        )<span class="question-mark">?</span>;
+        <span class="macro">write</span><span class="macro">!</span>(
+            <span class="ident">f</span>,
+            <span class="string">&quot;, sign_vote_proposal: {:?}, service: {:?}, backend: {:?} }}&quot;</span>,
+            <span class="self">self</span>.<span class="ident">sign_vote_proposal</span>, <span class="self">self</span>.<span class="ident">service</span>, <span class="self">self</span>.<span class="ident">backend</span>
         )<span class="question-mark">?</span>;
         <span class="self">self</span>.<span class="ident">service</span>.<span class="ident">fmt</span>(<span class="ident">f</span>)
     }
@@ -196,6 +218,8 @@
             <span class="ident">genesis</span>: <span class="prelude-val">None</span>,
             <span class="ident">genesis_file_location</span>: <span class="ident">PathBuf</span>::<span class="ident">new</span>(),
             <span class="ident">service</span>: <span class="ident">ExecutionCorrectnessService</span>::<span class="ident">Thread</span>,
+            <span class="ident">backend</span>: <span class="ident">SecureBackend</span>::<span class="ident">InMemoryStorage</span>,
+            <span class="ident">sign_vote_proposal</span>: <span class="bool-val">true</span>,
         }
     }
 }
@@ -227,6 +251,12 @@
                 .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">IO</span>(<span class="string">&quot;genesis&quot;</span>.<span class="ident">into</span>(), <span class="ident">e</span>))<span class="question-mark">?</span>;
         }
         <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_data_dir</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">data_dir</span>: <span class="ident">PathBuf</span>) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="ident">SecureBackend</span>::<span class="ident">OnDiskStorage</span>(<span class="ident">backend</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">backend</span> {
+            <span class="ident">backend</span>.<span class="ident">set_data_dir</span>(<span class="ident">data_dir</span>);
+        }
     }
 }
 

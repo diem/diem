@@ -410,6 +410,56 @@
 <span id="410">410</span>
 <span id="411">411</span>
 <span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -421,6 +471,7 @@
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{
+    <span class="ident">ed25519</span>::<span class="ident">Ed25519Signature</span>,
     <span class="ident">hash</span>::{<span class="ident">EventAccumulatorHasher</span>, <span class="ident">TransactionAccumulatorHasher</span>, <span class="ident">SPARSE_MERKLE_PLACEHOLDER_HASH</span>},
     <span class="ident">HashValue</span>,
 };
@@ -430,7 +481,7 @@
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
     <span class="ident">epoch_state</span>::<span class="ident">EpochState</span>,
     <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>,
-    <span class="ident">proof</span>::{<span class="ident">accumulator</span>::<span class="ident">InMemoryAccumulator</span>, <span class="ident">SparseMerkleProof</span>},
+    <span class="ident">proof</span>::{<span class="ident">accumulator</span>::<span class="ident">InMemoryAccumulator</span>, <span class="ident">AccumulatorExtensionProof</span>, <span class="ident">SparseMerkleProof</span>},
     <span class="ident">transaction</span>::{<span class="ident">Transaction</span>, <span class="ident">TransactionListWithProof</span>, <span class="ident">TransactionStatus</span>, <span class="ident">Version</span>},
 };
 <span class="kw">use</span> <span class="ident">scratchpad</span>::{<span class="ident">ProofRead</span>, <span class="ident">SparseMerkleTree</span>};
@@ -495,24 +546,36 @@
 <span class="doccomment">/// of success / failure of the transactions.</span>
 <span class="doccomment">/// Note that the specific details of compute_status are opaque to StateMachineReplication,</span>
 <span class="doccomment">/// which is going to simply pass the results between StateComputer and TxnManager.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Default</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>, <span class="ident">Clone</span>, <span class="ident">Serialize</span>, <span class="ident">Deserialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StateComputeResult</span> {
     <span class="doccomment">/// transaction accumulator root hash is identified as `state_id` in Consensus.</span>
     <span class="ident">root_hash</span>: <span class="ident">HashValue</span>,
     <span class="doccomment">/// Represents the roots of all the full subtrees from left to right in this accumulator</span>
     <span class="doccomment">/// after the execution. For details, please see [`InMemoryAccumulator`](accumulator::InMemoryAccumulator).</span>
     <span class="ident">frozen_subtree_roots</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
+
+    <span class="doccomment">/// The frozen subtrees roots of the parent block,</span>
+    <span class="ident">parent_frozen_subtree_roots</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
+
     <span class="doccomment">/// The number of leaves of the transaction accumulator after executing a proposed block.</span>
     <span class="doccomment">/// This state must be persisted to ensure that on restart that the version is calculated correctly.</span>
     <span class="ident">num_leaves</span>: <span class="ident">u64</span>,
+
+    <span class="doccomment">/// The number of leaves after executing the parent block,</span>
+    <span class="ident">parent_num_leaves</span>: <span class="ident">u64</span>,
+
     <span class="doccomment">/// If set, this is the new epoch info that should be changed to if this block is committed.</span>
     <span class="ident">epoch_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochState</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The compute status (success/failure) of the given payload. The specific details are opaque</span>
     <span class="doccomment">/// for StateMachineReplication, which is merely passing it between StateComputer and</span>
     <span class="doccomment">/// TxnManager.</span>
     <span class="ident">compute_status</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionStatus</span><span class="op">&gt;</span>,
+
     <span class="doccomment">/// The transaction info hashes of all success txns.</span>
     <span class="ident">transaction_info_hashes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
+
+    <span class="doccomment">/// The signature of the VoteProposal corresponding to this block.</span>
+    <span class="ident">signature</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Ed25519Signature</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">StateComputeResult</span> {
@@ -520,6 +583,8 @@
         <span class="ident">root_hash</span>: <span class="ident">HashValue</span>,
         <span class="ident">frozen_subtree_roots</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
         <span class="ident">num_leaves</span>: <span class="ident">u64</span>,
+        <span class="ident">parent_frozen_subtree_roots</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
+        <span class="ident">parent_num_leaves</span>: <span class="ident">u64</span>,
         <span class="ident">epoch_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochState</span><span class="op">&gt;</span>,
         <span class="ident">compute_status</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TransactionStatus</span><span class="op">&gt;</span>,
         <span class="ident">transaction_info_hashes</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
@@ -528,9 +593,12 @@
             <span class="ident">root_hash</span>,
             <span class="ident">frozen_subtree_roots</span>,
             <span class="ident">num_leaves</span>,
+            <span class="ident">parent_frozen_subtree_roots</span>,
+            <span class="ident">parent_num_leaves</span>,
             <span class="ident">epoch_state</span>,
             <span class="ident">compute_status</span>,
             <span class="ident">transaction_info_hashes</span>,
+            <span class="ident">signature</span>: <span class="prelude-val">None</span>,
         }
     }
 }
@@ -552,6 +620,14 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">epoch_state</span>
     }
 
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">extension_proof</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccumulatorExtensionProof</span><span class="op">&lt;</span><span class="ident">TransactionAccumulatorHasher</span><span class="op">&gt;</span> {
+        <span class="ident">AccumulatorExtensionProof</span>::<span class="op">&lt;</span><span class="ident">TransactionAccumulatorHasher</span><span class="op">&gt;</span>::<span class="ident">new</span>(
+            <span class="self">self</span>.<span class="ident">parent_frozen_subtree_roots</span>.<span class="ident">clone</span>(),
+            <span class="self">self</span>.<span class="ident">parent_num_leaves</span>(),
+            <span class="self">self</span>.<span class="ident">transaction_info_hashes</span>().<span class="ident">clone</span>(),
+        )
+    }
+
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">transaction_info_hashes</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">transaction_info_hashes</span>
     }
@@ -564,8 +640,24 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">frozen_subtree_roots</span>
     }
 
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parent_num_leaves</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
+        <span class="self">self</span>.<span class="ident">parent_num_leaves</span>
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">parent_frozen_subtree_roots</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">parent_frozen_subtree_roots</span>
+    }
+
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">has_reconfiguration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
         <span class="self">self</span>.<span class="ident">epoch_state</span>.<span class="ident">is_some</span>()
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">signature</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Ed25519Signature</span><span class="op">&gt;</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">signature</span>
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">set_signature</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">sig</span>: <span class="ident">Ed25519Signature</span>) {
+        <span class="self">self</span>.<span class="ident">signature</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">sig</span>);
     }
 }
 
@@ -702,29 +794,37 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">epoch_state</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">state_compute_result</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StateComputeResult</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">has_reconfiguration</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="self">self</span>.<span class="ident">epoch_state</span>.<span class="ident">is_some</span>()
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">compute_result</span>(
+        <span class="kw-2">&amp;</span><span class="self">self</span>,
+        <span class="ident">parent_frozen_subtree_roots</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
+        <span class="ident">parent_num_leaves</span>: <span class="ident">u64</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">StateComputeResult</span> {
         <span class="kw">let</span> <span class="ident">txn_accu</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">executed_trees</span>().<span class="ident">txn_accumulator</span>();
-        <span class="ident">StateComputeResult</span> {
-            <span class="comment">// Now that we have the root hash and execution status we can send the response to</span>
-            <span class="comment">// consensus.</span>
-            <span class="comment">// TODO: The VM will support a special transaction to set the validators for the</span>
-            <span class="comment">// next epoch that is part of a block execution.</span>
-            <span class="ident">root_hash</span>: <span class="self">self</span>.<span class="ident">accu_root</span>(),
-            <span class="ident">num_leaves</span>: <span class="ident">txn_accu</span>.<span class="ident">num_leaves</span>(),
-            <span class="ident">epoch_state</span>: <span class="self">self</span>.<span class="ident">epoch_state</span>.<span class="ident">clone</span>(),
-            <span class="ident">frozen_subtree_roots</span>: <span class="ident">txn_accu</span>.<span class="ident">frozen_subtree_roots</span>().<span class="ident">clone</span>(),
-            <span class="ident">compute_status</span>: <span class="self">self</span>
-                .<span class="ident">transaction_data</span>()
+        <span class="comment">// Now that we have the root hash and execution status we can send the response to</span>
+        <span class="comment">// consensus.</span>
+        <span class="comment">// TODO: The VM will support a special transaction to set the validators for the</span>
+        <span class="comment">// next epoch that is part of a block execution.</span>
+        <span class="ident">StateComputeResult</span>::<span class="ident">new</span>(
+            <span class="self">self</span>.<span class="ident">accu_root</span>(),
+            <span class="ident">txn_accu</span>.<span class="ident">frozen_subtree_roots</span>().<span class="ident">clone</span>(),
+            <span class="ident">txn_accu</span>.<span class="ident">num_leaves</span>(),
+            <span class="ident">parent_frozen_subtree_roots</span>,
+            <span class="ident">parent_num_leaves</span>,
+            <span class="self">self</span>.<span class="ident">epoch_state</span>.<span class="ident">clone</span>(),
+            <span class="self">self</span>.<span class="ident">transaction_data</span>()
                 .<span class="ident">iter</span>()
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">txn_data</span><span class="op">|</span> <span class="ident">txn_data</span>.<span class="ident">status</span>())
                 .<span class="ident">cloned</span>()
                 .<span class="ident">collect</span>(),
-            <span class="ident">transaction_info_hashes</span>: <span class="self">self</span>
-                .<span class="ident">transaction_data</span>()
+            <span class="self">self</span>.<span class="ident">transaction_data</span>()
                 .<span class="ident">iter</span>()
                 .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">txn_info_hash</span>())
                 .<span class="ident">collect</span>(),
-        }
+        )
     }
 }
 

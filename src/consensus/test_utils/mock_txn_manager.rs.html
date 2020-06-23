@@ -76,6 +76,8 @@
 <span id="76">76</span>
 <span id="77">77</span>
 <span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -140,6 +142,8 @@
                 <span class="ident">compute_results</span>.<span class="ident">root_hash</span>(),
                 <span class="ident">compute_results</span>.<span class="ident">frozen_subtree_roots</span>().<span class="ident">clone</span>(),
                 <span class="ident">compute_results</span>.<span class="ident">num_leaves</span>(),
+                <span class="ident">compute_results</span>.<span class="ident">parent_frozen_subtree_roots</span>().<span class="ident">clone</span>(),
+                <span class="ident">compute_results</span>.<span class="ident">parent_num_leaves</span>(),
                 <span class="ident">compute_results</span>.<span class="ident">epoch_state</span>().<span class="ident">clone</span>(),
                 <span class="ident">mock_transaction_status</span>(<span class="ident">block</span>.<span class="ident">payload</span>().<span class="ident">map_or</span>(<span class="number">0</span>, <span class="op">|</span><span class="ident">txns</span><span class="op">|</span> <span class="ident">txns</span>.<span class="ident">len</span>())),
                 <span class="ident">compute_results</span>.<span class="ident">transaction_info_hashes</span>().<span class="ident">clone</span>(),

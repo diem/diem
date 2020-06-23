@@ -195,6 +195,22 @@
 <span id="195">195</span>
 <span id="196">196</span>
 <span id="197">197</span>
+<span id="198">198</span>
+<span id="199">199</span>
+<span id="200">200</span>
+<span id="201">201</span>
+<span id="202">202</span>
+<span id="203">203</span>
+<span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
+<span id="208">208</span>
+<span id="209">209</span>
+<span id="210">210</span>
+<span id="211">211</span>
+<span id="212">212</span>
+<span id="213">213</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -207,9 +223,14 @@
     <span class="ident">timeout</span>::<span class="ident">Timeout</span>,
     <span class="ident">vote</span>::<span class="ident">Vote</span>,
     <span class="ident">vote_data</span>::<span class="ident">VoteData</span>,
-    <span class="ident">vote_proposal</span>::<span class="ident">VoteProposal</span>,
+    <span class="ident">vote_proposal</span>::{<span class="ident">MaybeSignedVoteProposal</span>, <span class="ident">VoteProposal</span>},
 };
-<span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">hash</span>::{<span class="ident">CryptoHash</span>, <span class="ident">TransactionAccumulatorHasher</span>};
+<span class="kw">use</span> <span class="ident">libra_crypto</span>::{
+    <span class="ident">ed25519</span>::<span class="ident">Ed25519PrivateKey</span>,
+    <span class="ident">hash</span>::{<span class="ident">CryptoHash</span>, <span class="ident">TransactionAccumulatorHasher</span>},
+    <span class="ident">traits</span>::<span class="ident">SigningKey</span>,
+    <span class="ident">Uniform</span>,
+};
 <span class="kw">use</span> <span class="ident">libra_secure_storage</span>::{<span class="ident">InMemoryStorage</span>, <span class="ident">Storage</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">block_info</span>::<span class="ident">BlockInfo</span>,
@@ -238,8 +259,9 @@
     <span class="ident">proof</span>: <span class="ident">Proof</span>,
     <span class="ident">qc</span>: <span class="ident">QuorumCert</span>,
     <span class="ident">validator_signer</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorSigner</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span> {
-    <span class="ident">VoteProposal</span>::<span class="ident">new</span>(
+    <span class="ident">exec_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Ed25519PrivateKey</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MaybeSignedVoteProposal</span> {
+    <span class="kw">let</span> <span class="ident">vote_proposal</span> <span class="op">=</span> <span class="ident">VoteProposal</span>::<span class="ident">new</span>(
         <span class="ident">proof</span>,
         <span class="ident">Block</span>::<span class="ident">new_proposal</span>(
             <span class="ident">payload</span>,
@@ -252,26 +274,33 @@
             <span class="ident">validator_signer</span>,
         ),
         <span class="prelude-val">None</span>,
-    )
+    );
+    <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">exec_key</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">key</span><span class="op">|</span> <span class="ident">key</span>.<span class="ident">sign_message</span>(<span class="kw-2">&amp;</span><span class="ident">vote_proposal</span>.<span class="ident">hash</span>()));
+    <span class="ident">MaybeSignedVoteProposal</span> {
+        <span class="ident">vote_proposal</span>,
+        <span class="ident">signature</span>,
+    }
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_proposal_with_qc</span>(
     <span class="ident">round</span>: <span class="ident">Round</span>,
     <span class="ident">qc</span>: <span class="ident">QuorumCert</span>,
     <span class="ident">validator_signer</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorSigner</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span> {
-    <span class="ident">make_proposal_with_qc_and_proof</span>(<span class="macro">vec</span><span class="macro">!</span>[], <span class="ident">round</span>, <span class="ident">empty_proof</span>(), <span class="ident">qc</span>, <span class="ident">validator_signer</span>)
+    <span class="ident">exec_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Ed25519PrivateKey</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MaybeSignedVoteProposal</span> {
+    <span class="ident">make_proposal_with_qc_and_proof</span>(<span class="macro">vec</span><span class="macro">!</span>[], <span class="ident">round</span>, <span class="ident">empty_proof</span>(), <span class="ident">qc</span>, <span class="ident">validator_signer</span>, <span class="ident">exec_key</span>)
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_proposal_with_parent_and_overrides</span>(
     <span class="ident">payload</span>: <span class="ident">Payload</span>,
     <span class="ident">round</span>: <span class="ident">Round</span>,
-    <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">VoteProposal</span>,
-    <span class="ident">committed</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">VoteProposal</span><span class="op">&gt;</span>,
+    <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">MaybeSignedVoteProposal</span>,
+    <span class="ident">committed</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">MaybeSignedVoteProposal</span><span class="op">&gt;</span>,
     <span class="ident">validator_signer</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorSigner</span>,
     <span class="ident">epoch</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
     <span class="ident">next_epoch_state</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">EpochState</span><span class="op">&gt;</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span> {
+    <span class="ident">exec_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Ed25519PrivateKey</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MaybeSignedVoteProposal</span> {
     <span class="kw">let</span> <span class="ident">block_epoch</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">epoch</span> {
         <span class="prelude-val">Some</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>,
         <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">parent</span>.<span class="ident">block</span>().<span class="ident">epoch</span>(),
@@ -349,16 +378,17 @@
 
     <span class="kw">let</span> <span class="ident">qc</span> <span class="op">=</span> <span class="ident">QuorumCert</span>::<span class="ident">new</span>(<span class="ident">vote_data</span>, <span class="ident">ledger_info_with_signatures</span>);
 
-    <span class="ident">make_proposal_with_qc_and_proof</span>(<span class="ident">payload</span>, <span class="ident">round</span>, <span class="ident">proof</span>, <span class="ident">qc</span>, <span class="ident">validator_signer</span>)
+    <span class="ident">make_proposal_with_qc_and_proof</span>(<span class="ident">payload</span>, <span class="ident">round</span>, <span class="ident">proof</span>, <span class="ident">qc</span>, <span class="ident">validator_signer</span>, <span class="ident">exec_key</span>)
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_proposal_with_parent</span>(
     <span class="ident">payload</span>: <span class="ident">Payload</span>,
     <span class="ident">round</span>: <span class="ident">Round</span>,
-    <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">VoteProposal</span>,
-    <span class="ident">committed</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">VoteProposal</span><span class="op">&gt;</span>,
+    <span class="ident">parent</span>: <span class="kw-2">&amp;</span><span class="ident">MaybeSignedVoteProposal</span>,
+    <span class="ident">committed</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">MaybeSignedVoteProposal</span><span class="op">&gt;</span>,
     <span class="ident">validator_signer</span>: <span class="kw-2">&amp;</span><span class="ident">ValidatorSigner</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VoteProposal</span> {
+    <span class="ident">exec_key</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">Ed25519PrivateKey</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MaybeSignedVoteProposal</span> {
     <span class="ident">make_proposal_with_parent_and_overrides</span>(
         <span class="ident">payload</span>,
         <span class="ident">round</span>,
@@ -367,6 +397,7 @@
         <span class="ident">validator_signer</span>,
         <span class="prelude-val">None</span>,
         <span class="prelude-val">None</span>,
+        <span class="ident">exec_key</span>,
     )
 }
 
@@ -390,6 +421,7 @@
         <span class="ident">storage</span>,
         <span class="ident">signer</span>.<span class="ident">author</span>(),
         <span class="ident">signer</span>.<span class="ident">private_key</span>().<span class="ident">clone</span>(),
+        <span class="ident">Ed25519PrivateKey</span>::<span class="ident">generate_for_testing</span>(),
         <span class="ident">waypoint</span>,
     )
 }

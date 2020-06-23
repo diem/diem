@@ -786,7 +786,6 @@
 <span id="786">786</span>
 <span id="787">787</span>
 <span id="788">788</span>
-<span id="789">789</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1536,9 +1535,8 @@
 }
 
 <span class="doccomment">/// A proof that first verifies that establishes correct computation of the root and then</span>
-<span class="doccomment">/// returns the new tree to acquire a new root and version. Note: this is used internally by</span>
-<span class="doccomment">/// VoteProposal hence why it exists within consensus-types andd not libra-types.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Serialize</span>)]</span>
+<span class="doccomment">/// returns the new tree to acquire a new root and version.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">AccumulatorExtensionProof</span><span class="op">&lt;</span><span class="ident">H</span><span class="op">&gt;</span> {
     <span class="doccomment">/// Represents the roots of all the full subtrees from left to right in the original accumulator.</span>
     <span class="ident">frozen_subtree_roots</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">HashValue</span><span class="op">&gt;</span>,
