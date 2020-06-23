@@ -40,6 +40,7 @@
 -  [Function `value`](#0x1_Libra_value)
 -  [Function `split`](#0x1_Libra_split)
 -  [Function `withdraw`](#0x1_Libra_withdraw)
+-  [Function `withdraw_all`](#0x1_Libra_withdraw_all)
 -  [Function `join`](#0x1_Libra_join)
 -  [Function `deposit`](#0x1_Libra_deposit)
 -  [Function `destroy_zero`](#0x1_Libra_destroy_zero)
@@ -1555,6 +1556,37 @@ value of the passed-in
     <b>assert</b>(coin.value &gt;= amount, 10);
     coin.value = coin.value - amount;
     <a href="#0x1_Libra">Libra</a> { value: amount }
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_Libra_withdraw_all"></a>
+
+## Function `withdraw_all`
+
+Return a
+<code><a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;</code> worth
+<code>coin.value</code> and reduces the
+<code>value</code> of the input
+<code>coin</code> to
+zero. Does not abort.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_withdraw_all">withdraw_all</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;): <a href="#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_withdraw_all">withdraw_all</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;): <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt; {
+    <b>let</b> val = <a href="#0x1_Libra_value">value</a>(coin);
+    <a href="#0x1_Libra_withdraw">withdraw</a>(coin, val)
 }
 </code></pre>
 

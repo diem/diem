@@ -16,6 +16,7 @@ module LibraAccount {
     use 0x1::Signer;
     use 0x1::SlidingNonce;
     use 0x1::Testnet;
+    use 0x1::TransactionFee;
     use 0x1::ValidatorConfig;
     use 0x1::VASP;
     use 0x1::Vector;
@@ -835,8 +836,9 @@ module LibraAccount {
 
         if (transaction_fee_amount > 0) {
             let sender_balance = borrow_global_mut<Balance<Token>>(sender);
-            let transaction_fee = withdraw_from_balance(sender, sender_balance, transaction_fee_amount);
-            Libra::deposit(&mut borrow_global_mut<Balance<Token>>(CoreAddresses::TRANSACTION_FEE_ADDRESS()).coin, transaction_fee);
+            TransactionFee::pay_fee(
+                withdraw_from_balance(sender, sender_balance, transaction_fee_amount)
+            )
         }
     }
 

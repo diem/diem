@@ -9,7 +9,6 @@
 -  [Function `CURRENCY_INFO_ADDRESS`](#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS)
 -  [Function `TREASURY_COMPLIANCE_ADDRESS`](#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS)
 -  [Function `VM_RESERVED_ADDRESS`](#0x1_CoreAddresses_VM_RESERVED_ADDRESS)
--  [Function `TRANSACTION_FEE_ADDRESS`](#0x1_CoreAddresses_TRANSACTION_FEE_ADDRESS)
 -  [Function `DEFAULT_CONFIG_ADDRESS`](#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS)
 
 
@@ -120,33 +119,6 @@ is no signer for the transaction.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_CoreAddresses_VM_RESERVED_ADDRESS">VM_RESERVED_ADDRESS</a>(): address {
     0x0
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_CoreAddresses_TRANSACTION_FEE_ADDRESS"></a>
-
-## Function `TRANSACTION_FEE_ADDRESS`
-
-This account holds the transaction fees collected, and is the account where
-they are sent at the end of every transaction until they are collected
-(burned). This account is created in genesis.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_CoreAddresses_TRANSACTION_FEE_ADDRESS">TRANSACTION_FEE_ADDRESS</a>(): address
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_CoreAddresses_TRANSACTION_FEE_ADDRESS">TRANSACTION_FEE_ADDRESS</a>(): address {
-    0xFEE
 }
 </code></pre>
 

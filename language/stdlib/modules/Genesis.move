@@ -31,7 +31,6 @@ module Genesis {
     fun initialize(
         association: &signer,
         config_account: &signer,
-        fee_account: &signer,
         tc_account: &signer,
         tc_addr: address,
         genesis_auth_key: vector<u8>,
@@ -91,13 +90,10 @@ module Genesis {
             copy dummy_auth_key_prefix,
         );
 
-        // Register transaction fee accounts
+        // Register transaction fee resource
         TransactionFee::initialize(
             association,
-            fee_account,
-            &assoc_root_capability,
             &tc_capability,
-            copy dummy_auth_key_prefix
         );
 
         // Create the treasury compliance account
@@ -150,10 +146,6 @@ module Genesis {
         let config_rotate_key_cap = LibraAccount::extract_key_rotation_capability(config_account);
         LibraAccount::rotate_authentication_key(&config_rotate_key_cap, copy genesis_auth_key);
         LibraAccount::restore_key_rotation_capability(config_rotate_key_cap);
-
-        let fee_rotate_key_cap = LibraAccount::extract_key_rotation_capability(fee_account);
-        LibraAccount::rotate_authentication_key(&fee_rotate_key_cap, copy genesis_auth_key);
-        LibraAccount::restore_key_rotation_capability(fee_rotate_key_cap);
 
         let tc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(tc_account);
         LibraAccount::rotate_authentication_key(&tc_rotate_key_cap, copy genesis_auth_key);

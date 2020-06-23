@@ -31,13 +31,6 @@ module CoreAddresses {
         0x0
     }
 
-    /// This account holds the transaction fees collected, and is the account where
-    /// they are sent at the end of every transaction until they are collected
-    /// (burned). This account is created in genesis.
-    public fun TRANSACTION_FEE_ADDRESS(): address {
-        0xFEE
-    }
-
     /// The address under which all on-chain configs are stored, and where
     /// off-chain APIs know to look for this information (e.g. VM version,
     /// list of registered currencies).
