@@ -331,6 +331,21 @@ pub fun Vector::swap_remove<$tv0>(v: &mut vector<#0>, i: u64): #0 {
 }
 
 
+pub fun Signer::address_of(s: &signer): address {
+    var $t1: &signer
+    var $t2: &address
+    var $t3: address
+    $t1 := move(s)
+    $t2 := Signer::borrow_address($t1)
+    $t3 := read_ref($t2)
+    return $t3
+}
+
+
+pub fun Signer::borrow_address(s: &signer): &address {
+}
+
+
 pub fun Libra::market_cap<$tv0>(): u128 {
     var $t0: address
     var $t1: &Libra::Info<#0>
@@ -383,14 +398,16 @@ pub fun Libra::preburn<$tv0>(preburn_ref: &mut Libra::Preburn<#0>, coin: Libra::
 }
 
 
-pub fun Libra::preburn_to_sender<$tv0>(coin: Libra::T<#0>) {
-    var $t1: address
-    var $t2: &mut Libra::Preburn<#0>
-    var $t3: Libra::T<#0>
-    $t1 := txn_sender
-    $t2 := borrow_global<Libra::Preburn<#0>>($t1)
-    $t3 := move(coin)
-    Libra::preburn<#0>($t2, $t3)
+pub fun Libra::preburn_to<$tv0>(account: &signer, coin: Libra::T<#0>) {
+    var $t2: &signer
+    var $t3: address
+    var $t4: &mut Libra::Preburn<#0>
+    var $t5: Libra::T<#0>
+    $t2 := move(account)
+    $t3 := Signer::address_of($t2)
+    $t4 := borrow_global<Libra::Preburn<#0>>($t3)
+    $t5 := move(coin)
+    Libra::preburn<#0>($t4, $t5)
     return ()
 }
 
