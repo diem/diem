@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{libra_interface::JsonRpcLibraInterface, Action, Error, KeyManager, LibraInterface};
+use crate::{
+    libra_interface::JsonRpcLibraInterface, Action, Error, KeyManager, LibraInterface,
+    GAS_UNIT_PRICE, MAX_GAS_AMOUNT,
+};
 use anyhow::Result;
 use executor::{db_bootstrapper, Executor};
 use executor_types::BlockExecutor;
@@ -12,20 +15,21 @@ use libra_config::{
     utils::get_genesis_txn,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, x25519, HashValue, PrivateKey, Uniform};
-use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
+use libra_global_constants::{ASSOCIATION_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_network_address::RawNetworkAddress;
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Value};
 use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
     account_address::AccountAddress,
     account_config,
+    account_config::{association_address, LBR_NAME},
     account_state::AccountState,
     block_info::BlockInfo,
     block_metadata::{BlockMetadata, LibraBlockResource},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::{ConfigurationResource, ValidatorSet},
-    transaction::Transaction,
+    transaction::{RawTransaction, Script, Transaction},
     validator_config::ValidatorConfig,
     validator_info::ValidatorInfo,
 };
@@ -38,6 +42,8 @@ use tokio::runtime::Runtime;
 use vm_validator::{
     mocks::mock_vm_validator::MockVMValidator, vm_validator::TransactionValidation,
 };
+
+const TXN_EXPIRATION_SECS: u64 = 100;
 
 struct Node<T: LibraInterface> {
     account: AccountAddress,
@@ -406,10 +412,7 @@ fn setup_secure_storage(
         .set(crate::CONSENSUS_KEY, Value::Ed25519PrivateKey(c_prikey))
         .unwrap();
     sec_storage
-        .set(
-            crate::ASSOCIATION_KEY,
-            Value::Ed25519PrivateKey(genesis_key),
-        )
+        .set(ASSOCIATION_KEY, Value::Ed25519PrivateKey(genesis_key))
         .unwrap();
 
     sec_storage
@@ -518,18 +521,18 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
         &RawNetworkAddress::new(Vec::new()),
         &new_network_pubkey,
         &RawNetworkAddress::new(Vec::new()),
-        Duration::from_secs(node.time.now() + 100),
+        Duration::from_secs(node.time.now() + TXN_EXPIRATION_SECS),
     );
     let txn1 = txn1
         .sign(&account_prikey, account_prikey.public_key())
         .unwrap();
     let txn1 = Transaction::UserTransaction(txn1.into_inner());
 
-    let txn2 = crate::build_reconfiguration_transaction(
+    let txn2 = build_reconfiguration_transaction(
         account_config::association_address(),
         1,
         &genesis_key,
-        Duration::from_secs(node.time.now() + 100),
+        Duration::from_secs(node.time.now() + TXN_EXPIRATION_SECS),
     );
 
     node.execute_and_commit(vec![txn1, txn2]);
@@ -556,6 +559,8 @@ fn test_key_manager_init_and_basic_rotation() {
 }
 
 fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
+    let (_, _, genesis_key) = create_test_configs();
+
     // Verify correct initialization (on-chain and in storage)
     node.key_manager.compare_storage_to_config().unwrap();
     node.key_manager.compare_info_to_config().unwrap();
@@ -575,6 +580,7 @@ fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
     assert_ne!(pre_exe_rotated_info.consensus_public_key(), &new_key);
 
     // Execute key rotation on-chain
+    submit_reconfiguration_transaction(genesis_key, &node);
     node.execute_and_commit(node.libra.take_all_transactions());
     let rotated_info = node.libra.retrieve_validator_info(node.account).unwrap();
     assert_ne!(
@@ -613,7 +619,7 @@ fn test_execute() {
 }
 
 fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
-    let (_, key_manager_config, _) = create_test_configs();
+    let (_, key_manager_config, genesis_key) = create_test_configs();
 
     // Verify correct initial state (i.e., nothing to be done by key manager)
     assert_eq!(0, node.time.now());
@@ -659,6 +665,7 @@ fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
     // executed to re-sync everything up (on-chain).
     node.update_libra_timestamp();
     node.key_manager.execute_once().unwrap();
+    submit_reconfiguration_transaction(genesis_key, &node);
     node.execute_and_commit(node.libra.take_all_transactions());
     assert_eq!(
         Action::NoAction,
@@ -705,4 +712,48 @@ fn verify_execute_error<T: LibraInterface>(mut node: Node<T>) {
     // Check that execute() now returns an error and doesn't spin forever.
     node.update_libra_timestamp();
     assert!(node.key_manager.execute().is_err());
+}
+
+// Creates and submits a reconfiguration transaction to the given libra interface.
+fn submit_reconfiguration_transaction<T: LibraInterface>(
+    association_prikey: Ed25519PrivateKey,
+    node: &Node<T>,
+) {
+    let association_account = association_address();
+    let seq_id = node
+        .libra
+        .retrieve_sequence_number(association_account)
+        .unwrap();
+    let expiration = Duration::from_secs(node.time.now() + TXN_EXPIRATION_SECS);
+    let txn = build_reconfiguration_transaction(
+        association_account,
+        seq_id,
+        &association_prikey,
+        expiration,
+    );
+    node.libra.submit_transaction(txn).unwrap();
+}
+
+fn build_reconfiguration_transaction(
+    sender: AccountAddress,
+    seq_id: u64,
+    signing_key: &Ed25519PrivateKey,
+    expiration: Duration,
+) -> Transaction {
+    let script = Script::new(
+        libra_transaction_scripts::RECONFIGURE_TXN.clone(),
+        vec![],
+        vec![],
+    );
+    let raw_txn = RawTransaction::new_script(
+        sender,
+        seq_id,
+        script,
+        MAX_GAS_AMOUNT,
+        GAS_UNIT_PRICE,
+        LBR_NAME.to_owned(),
+        expiration,
+    );
+    let signed_txn = raw_txn.sign(signing_key, signing_key.public_key()).unwrap();
+    Transaction::UserTransaction(signed_txn.into_inner())
 }
