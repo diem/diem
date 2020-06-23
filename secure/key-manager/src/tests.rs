@@ -513,7 +513,6 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
     let txn1 = crate::build_rotation_transaction(
         node.account,
         0,
-        &account_prikey,
         &new_pubkey,
         &new_network_pubkey,
         &RawNetworkAddress::new(Vec::new()),
@@ -521,12 +520,18 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
         &RawNetworkAddress::new(Vec::new()),
         Duration::from_secs(node.time.now() + 100),
     );
+    let txn1 = txn1
+        .sign(&account_prikey, account_prikey.public_key())
+        .unwrap();
+    let txn1 = Transaction::UserTransaction(txn1.into_inner());
+
     let txn2 = crate::build_reconfiguration_transaction(
         account_config::association_address(),
         1,
         &genesis_key,
         Duration::from_secs(node.time.now() + 100),
     );
+
     node.execute_and_commit(vec![txn1, txn2]);
 
     let new_config = node.libra.retrieve_validator_config(node.account).unwrap();
