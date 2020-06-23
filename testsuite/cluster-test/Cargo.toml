@@ -26,6 +26,7 @@ structopt = "0.3.15"
 rusoto_core = {version = "0.44.0", default-features = false, features = ["rustls"] }
 rusoto_autoscaling = {version = "0.44.0", default-features = false, features = ["rustls"] }
 rusoto_sts = {version = "0.44.0", default-features = false, features = ["rustls"] }
+chrono = "0.4.11"
 
 debug-interface = { path = "../../common/debug-interface", version = "0.1.0"}
 libra-json-rpc-client = { path = "../../client/json-rpc", version = "0.1.0"}
