@@ -124,6 +124,28 @@ impl EmitJobRequest {
             },
         }
     }
+
+    pub fn fixed_tps_params(instance_count: usize, tps: u64) -> (usize, u64) {
+        if tps < 1 {
+            panic!("Target tps {} can not less than 1", tps)
+        }
+        let num_workers = tps as usize / instance_count + 1;
+        let wait_time = (instance_count * num_workers * 1000_usize / tps as usize) as u64;
+        (num_workers, wait_time)
+    }
+
+    pub fn fixed_tps(instances: Vec<Instance>, tps: u64) -> Self {
+        let (num_workers, wait_time) = EmitJobRequest::fixed_tps_params(instances.len(), tps);
+        Self {
+            instances,
+            accounts_per_client: 1,
+            workers_per_ac: Some(num_workers),
+            thread_params: EmitThreadParams {
+                wait_millis: wait_time,
+                wait_committed: true,
+            },
+        }
+    }
 }
 
 impl TxEmitter {
@@ -829,5 +851,23 @@ impl fmt::Display for TxStatsRate {
             "submitted: {} txn/s, committed: {} txn/s, expired: {} txn/s, latency: {} ms, p99 latency: {} ms",
             self.submitted, self.committed, self.expired, self.latency, self.p99_latency,
         )
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::tx_emitter::EmitJobRequest;
+
+    #[test]
+    pub fn test_fixed_tps_params() {
+        let inst_num = 30;
+        let target_tps = 10;
+        let (num_workers, wait_time) = EmitJobRequest::fixed_tps_params(inst_num, target_tps);
+        assert_eq!(num_workers, 1usize);
+        assert_eq!(wait_time, 3000u64);
+        let target_tps = 30;
+        let (num_workers, wait_time) = EmitJobRequest::fixed_tps_params(inst_num, target_tps);
+        assert_eq!(num_workers, 2usize);
+        assert_eq!(wait_time, 2000u64);
     }
 }

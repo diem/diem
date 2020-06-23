@@ -38,6 +38,8 @@ pub struct PerformanceBenchmarkParams {
     help = "Duration of an experiment in seconds"
     )]
     pub duration: u64,
+    #[structopt(long, help = "Set fixed tps during perf experiment")]
+    pub tps: Option<u64>,
 }
 
 pub struct PerformanceBenchmark {
@@ -47,6 +49,7 @@ pub struct PerformanceBenchmark {
     percent_nodes_down: usize,
     duration: Duration,
     trace: bool,
+    tps: Option<u64>,
 }
 
 pub const DEFAULT_BENCH_DURATION: u64 = 120;
@@ -57,6 +60,16 @@ impl PerformanceBenchmarkParams {
             percent_nodes_down,
             duration: DEFAULT_BENCH_DURATION,
             trace: false,
+            tps: None,
+        }
+    }
+
+    pub fn new_fixed_tps(percent_nodes_down: usize, fixed_tps: u64) -> Self {
+        Self {
+            percent_nodes_down,
+            duration: DEFAULT_BENCH_DURATION,
+            trace: false,
+            tps: Some(fixed_tps),
         }
     }
 }
@@ -85,6 +98,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
             percent_nodes_down: self.percent_nodes_down,
             duration: Duration::from_secs(self.duration),
             trace: self.trace,
+            tps: self.tps,
         }
     }
 }
@@ -100,16 +114,14 @@ impl Experiment for PerformanceBenchmark {
         try_join_all(futures).await?;
         let buffer = Duration::from_secs(60);
         let window = self.duration + buffer * 2;
-        let emit_job_request = if context.emit_to_validator {
-            EmitJobRequest::for_instances(
-                self.up_validators.clone(),
-                context.global_emit_job_request,
-            )
+        let instances = if context.emit_to_validator {
+            self.up_validators.clone()
         } else {
-            EmitJobRequest::for_instances(
-                self.up_fullnodes.clone(),
-                context.global_emit_job_request,
-            )
+            self.up_fullnodes.clone()
+        };
+        let emit_job_request = match self.tps {
+            Some(tps) => EmitJobRequest::fixed_tps(instances, tps),
+            None => EmitJobRequest::for_instances(instances, context.global_emit_job_request),
         };
         let emit_txn = context.tx_emitter.emit_txn_for(window, emit_job_request);
         let trace_tail = &context.trace_tail;
@@ -208,7 +220,9 @@ impl Experiment for PerformanceBenchmark {
 
 impl Display for PerformanceBenchmark {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        if self.percent_nodes_down == 0 {
+        if let Some(tps) = self.tps {
+            write!(f, "fixed tps {}", tps)
+        } else if self.percent_nodes_down == 0 {
             write!(f, "all up")
         } else {
             write!(f, "{}% down", self.percent_nodes_down)
