@@ -50,3 +50,7 @@ validator_network:
                 from_disk: "/full/path/to/token"
     mutual_authentication: true
     network_id: "validator"
+
+upstream:
+    networks:
+        - validator
