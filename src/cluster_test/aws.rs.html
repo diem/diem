@@ -133,7 +133,7 @@
 <span class="doccomment">/// set_asg_size sets the size of the given autoscaling group</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">clippy</span>::<span class="ident">collapsible_if</span>)]</span>
 <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">set_asg_size</span>(
-    <span class="ident">min_desired_capacity</span>: <span class="ident">i64</span>,
+    <span class="ident">desired_capacity</span>: <span class="ident">i64</span>,
     <span class="ident">buffer_percent</span>: <span class="ident">f64</span>,
     <span class="ident">asg_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
     <span class="ident">wait_for_completion</span>: <span class="ident">bool</span>,
@@ -142,15 +142,15 @@
     <span class="kw">let</span> <span class="ident">buffer</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">scaling_down</span> {
         <span class="number">0</span>
     } <span class="kw">else</span> {
-        ((<span class="ident">min_desired_capacity</span> <span class="kw">as</span> <span class="ident">f64</span> <span class="op">*</span> <span class="ident">buffer_percent</span>) <span class="op">/</span> <span class="number">100_f64</span>).<span class="ident">ceil</span>() <span class="kw">as</span> <span class="ident">i64</span>
+        ((<span class="ident">desired_capacity</span> <span class="kw">as</span> <span class="ident">f64</span> <span class="op">*</span> <span class="ident">buffer_percent</span>) <span class="op">/</span> <span class="number">100_f64</span>).<span class="ident">ceil</span>() <span class="kw">as</span> <span class="ident">i64</span>
     };
     <span class="macro">info</span><span class="macro">!</span>(
-        <span class="string">&quot;Scaling to min_desired_capacity : {}, buffer: {}, asg_name: {}&quot;</span>,
-        <span class="ident">min_desired_capacity</span>, <span class="ident">buffer</span>, <span class="ident">asg_name</span>
+        <span class="string">&quot;Scaling to desired_capacity : {}, buffer: {}, asg_name: {}&quot;</span>,
+        <span class="ident">desired_capacity</span>, <span class="ident">buffer</span>, <span class="ident">asg_name</span>
     );
     <span class="kw">let</span> <span class="ident">set_desired_capacity_type</span> <span class="op">=</span> <span class="ident">SetDesiredCapacityType</span> {
         <span class="ident">auto_scaling_group_name</span>: <span class="ident">asg_name</span>.<span class="ident">to_string</span>(),
-        <span class="ident">desired_capacity</span>: <span class="ident">min_desired_capacity</span> <span class="op">+</span> <span class="ident">buffer</span>,
+        <span class="ident">desired_capacity</span>: <span class="ident">desired_capacity</span> <span class="op">+</span> <span class="ident">buffer</span>,
         <span class="ident">honor_cooldown</span>: <span class="prelude-val">Some</span>(<span class="bool-val">false</span>),
     };
     <span class="kw">let</span> <span class="ident">credentials_provider</span> <span class="op">=</span> <span class="ident">WebIdentityProvider</span>::<span class="ident">from_k8s_env</span>();
@@ -206,25 +206,25 @@
             }
             <span class="macro">info</span><span class="macro">!</span>(
                 <span class="string">&quot;Waiting for scaling to complete. Current size: {}, Min Desired Size: {}&quot;</span>,
-                <span class="ident">total</span>, <span class="ident">min_desired_capacity</span>
+                <span class="ident">total</span>, <span class="ident">desired_capacity</span>
             );
             <span class="kw">if</span> <span class="ident">scaling_down</span> {
-                <span class="kw">if</span> <span class="ident">total</span> <span class="op">&gt;</span> <span class="ident">min_desired_capacity</span> {
+                <span class="kw">if</span> <span class="ident">total</span> <span class="op">&gt;</span> <span class="ident">desired_capacity</span> {
                     <span class="macro">bail</span><span class="macro">!</span>(
                     <span class="string">&quot;Waiting for scale-down to complete. Current size: {}, Min Desired Size: {}&quot;</span>,
                     <span class="ident">total</span>,
-                    <span class="ident">min_desired_capacity</span>
+                    <span class="ident">desired_capacity</span>
                 );
                 } <span class="kw">else</span> {
                     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Scale down completed&quot;</span>);
                     <span class="prelude-val">Ok</span>(())
                 }
             } <span class="kw">else</span> {
-                <span class="kw">if</span> <span class="ident">total</span> <span class="op">&lt;</span> <span class="ident">min_desired_capacity</span> {
+                <span class="kw">if</span> <span class="ident">total</span> <span class="op">&lt;</span> <span class="ident">desired_capacity</span> {
                     <span class="macro">bail</span><span class="macro">!</span>(
                         <span class="string">&quot;Waiting for scale-up to complete. Current size: {}, Min Desired Size: {}&quot;</span>,
                         <span class="ident">total</span>,
-                        <span class="ident">min_desired_capacity</span>
+                        <span class="ident">desired_capacity</span>
                     );
                 } <span class="kw">else</span> {
                     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Scale up completed&quot;</span>);
