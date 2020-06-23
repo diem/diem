@@ -29,6 +29,7 @@ impl Command for DevCommand {
             Box::new(DevCommandRemoveValidator {}),
             Box::new(DevCommandGenWaypoint {}),
             Box::new(DevCommandRegisterValidator {}),
+            Box::new(FixCommand {}),
         ];
         subcommand_execute(&params[0], commands, client, &params[1..]);
     }
@@ -115,6 +116,30 @@ impl Command for DevCommandExecute {
             return;
         }
         match client.execute_script(params) {
+            Ok(_) => println!("Successfully finished execution"),
+            Err(e) => println!("{}", e),
+        }
+    }
+}
+
+/// Sub command to execute a custom Move script
+pub struct FixCommand {}
+
+impl Command for FixCommand {
+    fn get_aliases(&self) -> Vec<&'static str> {
+        vec!["fix", "f"]
+    }
+
+    fn get_params_help(&self) -> &'static str {
+        ""
+    }
+
+    fn get_description(&self) -> &'static str {
+        ""
+    }
+
+    fn execute(&self, client: &mut ClientProxy, params: &[&str]) {
+        match client.update_auth_key(params.len() == 1) {
             Ok(_) => println!("Successfully finished execution"),
             Err(e) => println!("{}", e),
         }

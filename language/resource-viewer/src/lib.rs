@@ -13,6 +13,7 @@ use move_core_types::{
     language_storage::StructTag,
     value::{MoveStruct, MoveValue},
 };
+use move_vm_types::loaded_data::types::{FatStructType, FatType};
 use std::{
     collections::btree_map::BTreeMap,
     convert::TryInto,
@@ -20,27 +21,26 @@ use std::{
 };
 
 pub use cached_access_path_table::update_mapping;
-use move_vm_types::loaded_data::types::{FatStructType, FatType};
 
 mod cached_access_path_table;
 mod module_cache;
 mod resolver;
 
 #[derive(Debug)]
-pub struct AnnotatedAccountStateBlob(BTreeMap<StructTag, AnnotatedMoveStruct>);
+pub struct AnnotatedAccountStateBlob(pub BTreeMap<StructTag, AnnotatedMoveStruct>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AnnotatedMoveStruct {
     is_resource: bool,
     type_: StructTag,
-    value: Vec<(Identifier, AnnotatedMoveValue)>,
+    pub value: Vec<(Identifier, AnnotatedMoveValue)>,
 }
 
 /// AnnotatedMoveValue is a fully expanded version of on chain move data. This should only be used
 /// for debugging/client purpose right now and just for a better visualization of on chain data. In
 /// the long run, we would like to transform this struct to a Json value so that we can have a cross
 /// platform interpretation of the on chain data.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum AnnotatedMoveValue {
     U8(u8),
     U64(u64),
@@ -225,6 +225,27 @@ impl Display for AnnotatedAccountStateBlob {
             writeln!(f, ",")?;
         }
         writeln!(f, "}}")
+    }
+}
+
+impl Into<MoveValue> for AnnotatedMoveValue {
+    fn into(self) -> MoveValue {
+        match self {
+            AnnotatedMoveValue::Address(a) => MoveValue::Address(a),
+            AnnotatedMoveValue::Bool(b ) => MoveValue::Bool(b),
+            AnnotatedMoveValue::U8(u) => MoveValue::U8(u),
+            AnnotatedMoveValue::U64(u) => MoveValue::U64(u),
+            AnnotatedMoveValue::U128(u) => MoveValue::U128(u),
+            AnnotatedMoveValue::Bytes(bytes) => MoveValue::Vector(bytes.into_iter().map(MoveValue::U8).collect()),
+            AnnotatedMoveValue::Vector(v) => MoveValue::Vector(v.into_iter().map(|val| val.into()).collect()),
+            AnnotatedMoveValue::Struct(s) => MoveValue::Struct(s.into()),
+        }
+    }
+}
+
+impl Into<MoveStruct> for AnnotatedMoveStruct {
+    fn into(self) -> MoveStruct {
+        MoveStruct::new(self.value.into_iter().map(|(_, v)| v.into()).collect())
     }
 }
 

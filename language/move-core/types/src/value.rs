@@ -63,6 +63,10 @@ impl MoveStruct {
         Ok(lcs::from_bytes_seed(ty, blob)?)
     }
 
+    pub fn simple_serialize(&self) -> Option<Vec<u8>> {
+        lcs::to_bytes(self).ok()
+    }
+
     pub fn fields(&self) -> &[MoveValue] {
         &self.0
     }

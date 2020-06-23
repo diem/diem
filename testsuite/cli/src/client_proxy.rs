@@ -36,6 +36,7 @@ use libra_types::{
     },
     vm_error::StatusCode,
     waypoint::Waypoint,
+    write_set::{WriteSetMut, WriteOp},
 };
 use libra_wallet::{io_utils, WalletLibrary};
 use num_traits::{
@@ -43,7 +44,7 @@ use num_traits::{
     identities::Zero,
 };
 use reqwest::Url;
-use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator, NullStateView};
+use resource_viewer::{AnnotatedAccountStateBlob, MoveValueAnnotator, NullStateView, AnnotatedMoveValue};
 use rust_decimal::Decimal;
 use std::{
     collections::HashMap,
@@ -56,6 +57,13 @@ use std::{
     thread, time,
 };
 use transaction_builder::encode_register_validator_script;
+use libra_types::account_config::AccountResource;
+use move_core_types::{
+    value::{MoveValue, MoveStruct, MoveStructLayout},
+    move_resource::MoveResource,
+    identifier::Identifier,
+};
+use libra_types::transaction::ChangeSet;
 
 const CLIENT_WALLET_MNEMONIC_FILE: &str = "client.mnemonic";
 const GAS_UNIT_PRICE: u64 = 0;
@@ -473,6 +481,23 @@ impl ClientProxy {
                 is_blocking,
             ),
         }
+    }
+
+    /// Allow executing arbitrary script in the network.
+    pub fn update_auth_key(&mut self, reset: bool) -> Result<()> {
+        let blob = self.get_annotate_account_blob(treasury_compliance_account_address())?.0.unwrap();
+        let auth_key = self.get_account_resource_and_update(association_address())?.authentication_key.into_bytes()?;
+        let mut old_resource = blob.0.get(&AccountResource::struct_tag()).unwrap().clone();
+        for (field_name, value) in old_resource.value.iter_mut() {
+            if field_name == &Identifier::new("authentication_key").unwrap() {
+                *value = AnnotatedMoveValue::Bytes(auth_key.clone());
+            }
+        };
+        let account_resource: MoveStruct = old_resource.into();
+        let resource_bytes = account_resource.simple_serialize().unwrap();
+        let write_set = WriteSetMut::new(vec![(AccessPath::new(treasury_compliance_account_address(), AccountResource::struct_tag().access_vector()), WriteOp::Value(resource_bytes))]).freeze()?;
+        println!("local auth key: {:?}", hex::encode(self.assoc_root_account.as_ref().unwrap().authentication_key.as_ref().unwrap()));
+        self.association_transaction_with_local_assoc_root_account(TransactionPayload::WriteSet(ChangeSet::new(write_set, vec![])), true)
     }
 
     /// Allow executing arbitrary script in the network.
@@ -1404,14 +1429,14 @@ impl ClientProxy {
         let sender_address = sender.address;
         let txn = self.create_txn_to_submit(payload, sender, None, None, None)?;
         let mut sender_mut = self.assoc_root_account.as_mut().unwrap();
-        let resp = self.client.submit_transaction(Some(&mut sender_mut), txn);
+        self.client.submit_transaction(Some(&mut sender_mut), txn)?;
         if is_blocking {
             self.wait_for_transaction(
                 sender_address,
                 self.assoc_root_account.as_ref().unwrap().sequence_number,
             )?;
         }
-        resp
+        Ok(())
     }
 
     fn association_transaction_with_local_treasury_compliance_account(

@@ -624,6 +624,7 @@ dependencies = [
  "libra-types 0.1.0",
  "libra-wallet 0.1.0",
  "libra-workspace-hack 0.1.0",
+ "move-core-types 0.1.0",
  "num-traits 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "reqwest 0.10.6 (registry+https://github.com/rust-lang/crates.io-index)",
