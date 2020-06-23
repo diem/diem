@@ -759,6 +759,7 @@ impl<'env> ModuleTranslator<'env> {
                 args
             )
         }
+
         self.writer.unindent();
         emitln!(self.writer, "}");
         emitln!(self.writer);

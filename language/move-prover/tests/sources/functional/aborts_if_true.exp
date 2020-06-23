@@ -11,15 +11,30 @@ error: function always aborts
 
 error: function always aborts
 
-    ┌── tests/sources/functional/aborts_if_true.move:22:5 ───
+    ┌── tests/sources/functional/aborts_if_true.move:21:5 ───
     │
- 22 │ ╭     public fun aborts_if_true_smoke_test_fails_2(): u64 {
- 23 │ │         let x: u64;
- 24 │ │         x = 1;
- 25 │ │         if (x > 0) {
- 26 │ │             abort 1
- 27 │ │         };
- 28 │ │         x
- 29 │ │     }
+ 21 │ ╭     public fun aborts_if_true_smoke_test_fails_2(): u64 {
+ 22 │ │         let x: u64;
+ 23 │ │         x = 1;
+ 24 │ │         if (x > 0) {
+ 25 │ │             abort 1
+ 26 │ │         };
+ 27 │ │         x
+ 28 │ │     }
+    │ ╰─────^
+    │
+
+error: function always aborts
+
+    ┌── tests/sources/functional/aborts_if_true.move:41:5 ───
+    │
+ 41 │ ╭     public fun aborts_when_incorrect_inv_holds(): u64
+ 42 │ │     acquires S {
+ 43 │ │         let x = borrow_global_mut<S>(0x0).x;
+ 44 │ │         if (x < 100) {
+ 45 │ │             abort 1
+ 46 │ │         };
+ 47 │ │         x
+ 48 │ │     }
     │ ╰─────^
     │

@@ -6,7 +6,7 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
 };
 use spec_lang::{
-    ast::{Condition, ConditionKind, Exp, PropertyBag, Spec, Value},
+    ast::{Condition, ConditionKind, Exp, PropertyBag, Spec},
     env::{ConditionInfo, ConditionTag, FunctionEnv, VerificationScope, ALWAYS_ABORTS_TEST_PRAGMA},
     ty::BOOL_TYPE,
 };
@@ -33,7 +33,7 @@ impl FunctionTargetProcessor for TestInstrumenter {
         mut data: FunctionTargetData,
     ) -> FunctionTargetData {
         if !func_env.should_verify(self.verification_scope) {
-            // Do not instrument if function is not in verification scope.
+            // Do not instrument if function is in verification scope.
             return data;
         }
         if func_env.is_pragma_true(ALWAYS_ABORTS_TEST_PRAGMA, || false) {
@@ -52,15 +52,32 @@ impl TestInstrumenter {
     /// letting the boogie wrapper check whether it was not violated, this way identifying whether
     /// a function always aborts.
     fn instrument_always_aborts(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData) {
+        let mut conds = vec![];
+        // Keep the preconditions
+        for cond in &func_env.get_spec().conditions {
+            match cond.kind {
+                ConditionKind::Requires | ConditionKind::RequiresModule => {
+                    let st_requires = Condition {
+                        loc: cond.loc.clone(),
+                        kind: ConditionKind::RequiresSmokeTest,
+                        properties: Default::default(),
+                        exp: cond.exp.clone(),
+                    };
+                    conds.push(st_requires);
+                }
+                _ => ()
+            }
+        }
         // Override specification with `aborts_if true`.
         let cond = self.make_condition(
             func_env,
-            ConditionKind::AbortsIf,
-            self.make_bool_exp(func_env, true),
+            ConditionKind::EnsuresSmokeTest,
+            self.make_abort_flag_bool_exp(func_env),
         );
         let cond_loc = cond.loc.clone();
+        conds.push(cond);
         let spec = Spec {
-            conditions: vec![cond],
+            conditions: conds,
             properties: Default::default(),
             on_impl: Default::default(),
         };
@@ -84,12 +101,15 @@ impl TestInstrumenter {
 // Helpers
 
 impl TestInstrumenter {
-    /// Helper to create a boolean constant expression.
-    fn make_bool_exp(&self, func_env: &FunctionEnv<'_>, val: bool) -> Exp {
+    /// Helper to create the $abort_flag variable.
+    fn make_abort_flag_bool_exp(&self, func_env: &FunctionEnv<'_>) -> Exp {
         let node_id = func_env
             .module_env
             .new_node(func_env.get_loc(), BOOL_TYPE.clone());
-        Exp::Value(node_id, Value::Bool(val))
+        let symbol_id = func_env
+            .symbol_pool()
+            .make("$Boolean($abort_flag)");
+        Exp::LocalVar(node_id, symbol_id)
     }
 
     /// Helper to create a specification condition.
