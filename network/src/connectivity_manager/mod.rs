@@ -338,19 +338,6 @@ where
             })
             .collect();
 
-        // We tune max delay depending on the number of peers to which we're not connected. This
-        // ensures that if we're disconnected from a large fraction of peers, we keep the retry
-        // window smaller.
-        let max_delay = Duration::from_millis(
-            (self.max_delay_ms as f64
-                * (1.0
-                    - ((self.dial_queue.len() + to_connect.len()) as f64
-                        / eligible
-                            .iter()
-                            .filter(|(peer_id, _)| self.peer_addresses.0.contains_key(&peer_id))
-                            .count() as f64))) as u64,
-        );
-
         // The initial dial state; it has zero dial delay and uses the first
         // address.
         let init_dial_state = DialState::new(self.backoff_strategy.clone());
@@ -371,7 +358,8 @@ where
             // Using the DialState's backoff strategy, compute the delay until
             // the next dial attempt for this peer.
             let now = Instant::now();
-            let dial_delay = dial_state.next_backoff_delay(max_delay);
+            let dial_delay =
+                dial_state.next_backoff_delay(Duration::from_millis(self.max_delay_ms));
             let f_delay = time::delay_for(dial_delay);
 
             let (cancel_tx, cancel_rx) = oneshot::channel();
