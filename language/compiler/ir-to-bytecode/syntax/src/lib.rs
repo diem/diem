@@ -107,9 +107,6 @@
 //! ```text
 //! // module operators are available only inside the module that declares n.
 //! mop ∈ ModuleOp ::=
-//!   | move_to_sender<n>(e) // type: 'Self.n -> unit'
-//!                          // publishes resource struct 'n' under sender's address
-//!                          // fails if there is already a resource present for 'Self.n'
 //!   | move_from<n>(e)      // type: 'address -> Self.n'
 //!                          // removes the resource struct 'n' at the specified address
 //!                          // fails if there is no resource present for 'Self.n'
@@ -128,7 +125,6 @@
 //!                               // releases the reference given
 //!   | freeze(x)                 // type: '&mut t -> &t'
 //!                               // coerce a mutable reference to an immutable reference
-//!   | get_txn_sender()          // type: 'unit -> address'
 //!
 //! call ∈ Call ::=
 //!   | mop

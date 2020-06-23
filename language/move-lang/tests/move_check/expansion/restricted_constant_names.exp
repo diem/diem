@@ -50,71 +50,63 @@ error:
 
     ┌── tests/move_check/expansion/restricted_constant_names.move:10:11 ───
     │
- 10 │     const move_to_sender: u64 = 0;
-    │           ^^^^^^^^^^^^^^ Invalid constant name 'move_to_sender'. Constant names must start with 'A'..'Z'
+ 10 │     const move_to: u64 = 0;
+    │           ^^^^^^^ Invalid constant name 'move_to'. Constant names must start with 'A'..'Z'
     │
 
 error: 
 
     ┌── tests/move_check/expansion/restricted_constant_names.move:11:11 ───
     │
- 11 │     const move_to: u64 = 0;
-    │           ^^^^^^^ Invalid constant name 'move_to'. Constant names must start with 'A'..'Z'
+ 11 │     const move_from: u64 = 0;
+    │           ^^^^^^^^^ Invalid constant name 'move_from'. Constant names must start with 'A'..'Z'
     │
 
 error: 
 
     ┌── tests/move_check/expansion/restricted_constant_names.move:12:11 ───
     │
- 12 │     const move_from: u64 = 0;
-    │           ^^^^^^^^^ Invalid constant name 'move_from'. Constant names must start with 'A'..'Z'
+ 12 │     const borrow_global: u64 = 0;
+    │           ^^^^^^^^^^^^^ Invalid constant name 'borrow_global'. Constant names must start with 'A'..'Z'
     │
 
 error: 
 
     ┌── tests/move_check/expansion/restricted_constant_names.move:13:11 ───
     │
- 13 │     const borrow_global: u64 = 0;
-    │           ^^^^^^^^^^^^^ Invalid constant name 'borrow_global'. Constant names must start with 'A'..'Z'
+ 13 │     const borrow_global_mut: u64 = 0;
+    │           ^^^^^^^^^^^^^^^^^ Invalid constant name 'borrow_global_mut'. Constant names must start with 'A'..'Z'
     │
 
 error: 
 
     ┌── tests/move_check/expansion/restricted_constant_names.move:14:11 ───
     │
- 14 │     const borrow_global_mut: u64 = 0;
-    │           ^^^^^^^^^^^^^^^^^ Invalid constant name 'borrow_global_mut'. Constant names must start with 'A'..'Z'
+ 14 │     const exists: u64 = 0;
+    │           ^^^^^^ Invalid constant name 'exists'. Constant names must start with 'A'..'Z'
     │
 
 error: 
 
     ┌── tests/move_check/expansion/restricted_constant_names.move:15:11 ───
     │
- 15 │     const exists: u64 = 0;
-    │           ^^^^^^ Invalid constant name 'exists'. Constant names must start with 'A'..'Z'
+ 15 │     const freeze: u64 = 0;
+    │           ^^^^^^ Invalid constant name 'freeze'. Constant names must start with 'A'..'Z'
     │
 
 error: 
 
     ┌── tests/move_check/expansion/restricted_constant_names.move:16:11 ───
     │
- 16 │     const freeze: u64 = 0;
-    │           ^^^^^^ Invalid constant name 'freeze'. Constant names must start with 'A'..'Z'
+ 16 │     const assert: u64 = 0;
+    │           ^^^^^^ Invalid constant name 'assert'. Constant names must start with 'A'..'Z'
     │
 
 error: 
 
     ┌── tests/move_check/expansion/restricted_constant_names.move:17:11 ───
     │
- 17 │     const assert: u64 = 0;
-    │           ^^^^^^ Invalid constant name 'assert'. Constant names must start with 'A'..'Z'
-    │
-
-error: 
-
-    ┌── tests/move_check/expansion/restricted_constant_names.move:18:11 ───
-    │
- 18 │     const Self: u64 = 0;
+ 17 │     const Self: u64 = 0;
     │           ^^^^ Invalid module member name 'Self'. 'Self' is restricted and cannot be used to name a module member
     │
 

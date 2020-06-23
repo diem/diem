@@ -12,7 +12,6 @@ module M {
         foo as u64,
         foo as u128,
         foo as vector,
-        foo as move_to_sender,
         foo as move_to,
         foo as move_from,
         foo as borrow_global,

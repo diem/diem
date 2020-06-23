@@ -1,13 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::shared::{fake_natives::transaction as TXN, Address};
 use regex::{Captures, NoExpand, Regex};
 use std::{fs, path::Path};
-
-fn txn(n: &str) -> String {
-    format!("{}::{}::{}(", Address::LIBRA_CORE, TXN::MOD, n)
-}
 
 macro_rules! replace {
     ($input:ident, $pat:expr, $replacer:expr) => {{
@@ -18,8 +13,6 @@ macro_rules! replace {
 
 #[allow(clippy::trivial_regex)]
 pub fn fix_syntax_and_write(out_path: &Path, contents: String) {
-    // get_txn_sender() ~> 0x0::Transaction::sender()
-    let contents = replace!(contents, r"get_txn_sender\(", NoExpand(&txn(TXN::SENDER)));
     // move(x) ~> move x
     let contents = replace!(contents, r"move\((\w+)\)", "move $1");
     // copy(x) ~> copy x

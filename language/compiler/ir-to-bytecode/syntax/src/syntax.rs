@@ -389,9 +389,7 @@ fn parse_qualified_function_name<'input>(
         Tok::Exists
         | Tok::BorrowGlobal
         | Tok::BorrowGlobalMut
-        | Tok::GetTxnSender
         | Tok::MoveFrom
-        | Tok::MoveToSender
         | Tok::MoveTo
         | Tok::Freeze
         | Tok::ToU8
@@ -528,9 +526,7 @@ fn parse_call_or_term_<'input>(
         Tok::Exists
         | Tok::BorrowGlobal
         | Tok::BorrowGlobalMut
-        | Tok::GetTxnSender
         | Tok::MoveFrom
-        | Tok::MoveToSender
         | Tok::MoveTo
         | Tok::Freeze
         | Tok::DotNameValue
@@ -694,9 +690,7 @@ fn consume_end_of_generics<'input>(
 //     "exists<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
 //     "borrow_global<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
 //     "borrow_global_mut<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
-//     "get_txn_sender" => Builtin::GetTxnSender,
 //     "move_from<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ... },
-//     "move_to_sender<" <name_and_type_actuals: NameAndTypeActuals> ">" =>? { ...},
 //     "freeze" => Builtin::Freeze,
 // }
 
@@ -730,21 +724,11 @@ fn parse_builtin<'input>(
                 type_actuals,
             ))
         }
-        Tok::GetTxnSender => {
-            tokens.advance()?;
-            Ok(Builtin::GetTxnSender)
-        }
         Tok::MoveFrom => {
             tokens.advance()?;
             let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
             consume_end_of_generics(tokens)?;
             Ok(Builtin::MoveFrom(StructName::new(name), type_actuals))
-        }
-        Tok::MoveToSender => {
-            tokens.advance()?;
-            let (name, type_actuals) = parse_name_and_type_actuals(tokens)?;
-            consume_end_of_generics(tokens)?;
-            Ok(Builtin::MoveToSender(StructName::new(name), type_actuals))
         }
         Tok::MoveTo => {
             tokens.advance()?;
@@ -928,9 +912,7 @@ fn parse_cmd_<'input>(tokens: &mut Lexer<'input>) -> Result<Cmd_, ParseError<Loc
         Tok::Exists
         | Tok::BorrowGlobal
         | Tok::BorrowGlobalMut
-        | Tok::GetTxnSender
         | Tok::MoveFrom
-        | Tok::MoveToSender
         | Tok::MoveTo
         | Tok::Freeze
         | Tok::DotNameValue

@@ -201,7 +201,7 @@ fn builtin_function(
             }
         }
 
-        B::MoveToSender(bt) | B::MoveTo(bt) | B::Exists(bt) => {
+        B::MoveTo(bt) | B::Exists(bt) => {
             let msg = mk_msg(b_.display_name());
             check_global_access(context, loc, msg, bt);
         }

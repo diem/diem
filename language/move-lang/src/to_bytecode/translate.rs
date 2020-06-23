@@ -810,7 +810,7 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
 
         E::ModuleCall(mcall) => {
             exp(context, code, mcall.arguments);
-            call(
+            module_call(
                 context,
                 code,
                 mcall.module,
@@ -907,23 +907,6 @@ fn exp_(context: &mut Context, code: &mut IR::BytecodeBlock, e: H::Exp) {
     }
 }
 
-fn call(
-    context: &mut Context,
-    code: &mut IR::BytecodeBlock,
-    m: ModuleIdent,
-    f: FunctionName,
-    tys: Vec<H::BaseType>,
-) {
-    use crate::shared::fake_natives::transaction as TXN;
-    use Address as A;
-    use IR::Bytecode_ as B;
-
-    match (&m.0.value.address, m.0.value.name.value(), f.value()) {
-        (&A::LIBRA_CORE, TXN::MOD, TXN::SENDER) => code.push(sp(f.loc(), B::GetTxnSenderAddress)),
-        _ => module_call(context, code, m, f, tys),
-    }
-}
-
 fn module_call(
     context: &mut Context,
     code: &mut IR::BytecodeBlock,
@@ -943,10 +926,6 @@ fn builtin(context: &mut Context, code: &mut IR::BytecodeBlock, sp!(loc, b_): H:
     code.push(sp(
         loc,
         match b_ {
-            HB::MoveToSender(bt) => {
-                let (n, tys) = struct_definition_name_base(context, bt);
-                B::MoveToSender(n, tys)
-            }
             HB::MoveTo(bt) => {
                 let (n, tys) = struct_definition_name_base(context, bt);
                 B::MoveTo(n, tys)

@@ -42,7 +42,6 @@ mod count {
     use crate::{
         hlir::ast::*,
         parser::ast::{BinOp, UnaryOp, Var},
-        shared::*,
     };
     use std::collections::{BTreeMap, BTreeSet};
 
@@ -206,6 +205,7 @@ mod count {
             | E::Builtin(_, _)
             | E::Freeze(_)
             | E::Dereference(_)
+            | E::ModuleCall(_)
             | E::Move { .. }
             | E::Borrow(_, _, _) => false,
 
@@ -216,7 +216,6 @@ mod count {
             E::BinopExp(e1, op, e2) => {
                 can_subst_exp_binary(op) && can_subst_exp_single(e1) && can_subst_exp_single(e2)
             }
-            E::ModuleCall(mcall) => can_subst_exp_module_call(mcall),
             E::ExpList(es) => es.iter().all(|i| can_subst_exp_item(i)),
             E::Pack(_, _, fields) => fields.iter().all(|(_, _, e)| can_subst_exp_single(e)),
 
@@ -230,26 +229,6 @@ mod count {
 
     fn can_subst_exp_binary(sp!(_, op_): &BinOp) -> bool {
         op_.is_pure()
-    }
-
-    fn can_subst_exp_module_call(mcall: &ModuleCall) -> bool {
-        use crate::shared::fake_natives::transaction as TXN;
-        let ModuleCall {
-            module,
-            name,
-            arguments,
-            ..
-        } = mcall;
-        let a_m_f = (
-            &module.0.value.address,
-            module.0.value.name.value(),
-            name.value(),
-        );
-        let call_is_pure = match a_m_f {
-            (&Address::LIBRA_CORE, TXN::MOD, TXN::SENDER) => true,
-            _ => false,
-        };
-        call_is_pure && can_subst_exp_single(arguments)
     }
 
     fn can_subst_exp_item(item: &ExpListItem) -> bool {

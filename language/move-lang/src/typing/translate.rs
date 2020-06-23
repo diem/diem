@@ -1777,12 +1777,6 @@ fn builtin_call(
     };
     let (b_, params_ty, ret_ty);
     match nb_ {
-        NB::MoveToSender(ty_arg_opt) => {
-            let ty_arg = mk_ty_arg(ty_arg_opt);
-            b_ = TB::MoveToSender(ty_arg.clone());
-            params_ty = vec![ty_arg];
-            ret_ty = sp(loc, Type_::Unit);
-        }
         NB::MoveTo(ty_arg_opt) => {
             let ty_arg = mk_ty_arg(ty_arg_opt);
             b_ = TB::MoveTo(ty_arg.clone());

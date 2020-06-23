@@ -117,7 +117,6 @@ pub struct ModuleCall {
 #[derive(Debug, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum BuiltinFunction_ {
-    MoveToSender(Type),
     MoveTo(Type),
     MoveFrom(Type),
     BorrowGlobal(bool, Type),
@@ -217,7 +216,6 @@ impl BuiltinFunction_ {
         use crate::naming::ast::BuiltinFunction_ as NB;
         use BuiltinFunction_ as B;
         match self {
-            B::MoveToSender(_) => NB::MOVE_TO_SENDER,
             B::MoveTo(_) => NB::MOVE_TO,
             B::MoveFrom(_) => NB::MOVE_FROM,
             B::BorrowGlobal(false, _) => NB::BORROW_GLOBAL,
@@ -605,7 +603,6 @@ impl AstDebug for BuiltinFunction_ {
         use crate::naming::ast::BuiltinFunction_ as NF;
         use BuiltinFunction_ as F;
         let (n, bt_opt) = match self {
-            F::MoveToSender(bt) => (NF::MOVE_TO_SENDER, Some(bt)),
             F::MoveTo(bt) => (NF::MOVE_TO, Some(bt)),
             F::MoveFrom(bt) => (NF::MOVE_FROM, Some(bt)),
             F::BorrowGlobal(true, bt) => (NF::BORROW_GLOBAL_MUT, Some(bt)),
