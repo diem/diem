@@ -2991,6 +2991,7 @@ dependencies = [
 name = "libra-vm"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "debug-interface 0.1.0",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",

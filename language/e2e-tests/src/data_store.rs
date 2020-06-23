@@ -13,7 +13,11 @@ use libra_types::{
     transaction::ChangeSet,
     write_set::{WriteOp, WriteSet},
 };
-use move_core_types::language_storage::ModuleId;
+use libra_vm::data_cache::RemoteStorage;
+use move_core_types::{
+    account_address::AccountAddress,
+    language_storage::{ModuleId, TypeTag},
+};
 use move_vm_runtime::data_cache::RemoteCache;
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
@@ -89,9 +93,9 @@ impl FakeDataStore {
     }
 }
 
-impl ConfigStorage for &FakeDataStore {
+impl ConfigStorage for FakeDataStore {
     fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
-        StateView::get(*self, &access_path).unwrap_or_default()
+        StateView::get(self, &access_path).unwrap_or_default()
     }
 }
 
@@ -112,9 +116,12 @@ impl StateView for FakeDataStore {
     }
 }
 
-// This is used by the `process_transaction` API.
 impl RemoteCache for FakeDataStore {
-    fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
-        Ok(StateView::get(self, access_path).expect("it should not error"))
+    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+        RemoteStorage::new(self).get_module(module_id)
+    }
+
+    fn get_resource(&self, address: &AccountAddress, tag: &TypeTag) -> VMResult<Option<Vec<u8>>> {
+        RemoteStorage::new(self).get_resource(address, tag)
     }
 }

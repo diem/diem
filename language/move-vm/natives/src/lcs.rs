@@ -27,7 +27,7 @@ pub fn native_to_bytes(
     // delegate to the LCS serialization for `Value`
     let serialized_value = ref_to_val
         .read_ref()?
-        .simple_serialize(&arg_type)
+        .simple_serialize_fat(&arg_type)
         .ok_or_else(|| {
             VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
                 .with_sub_status(NFE_LCS_SERIALIZATION_FAILURE)

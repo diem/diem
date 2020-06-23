@@ -9,13 +9,11 @@ use bytecode_verifier::{
 };
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use libra_types::{
-    access_path::AccessPath,
-    vm_status::{StatusCode, VMStatus},
-};
 use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ModuleId, StructTag, TypeTag},
+    value::{MoveKind, MoveKindInfo, MoveStructLayout, MoveTypeLayout},
+    vm_status::{StatusCode, VMStatus},
 };
 use move_vm_types::{
     data_store::DataStore,
@@ -34,12 +32,12 @@ use vm::{
     access::{ModuleAccess, ScriptAccess},
     errors::{verification_error, vm_status, Location, VMResult},
     file_format::{
-        Bytecode, CompiledScript, Constant, ConstantPoolIndex, FieldHandleIndex,
+        Bytecode, CompiledModule, CompiledScript, Constant, ConstantPoolIndex, FieldHandleIndex,
         FieldInstantiationIndex, FunctionDefinition, FunctionHandleIndex,
         FunctionInstantiationIndex, Kind, Signature, SignatureToken, StructDefInstantiationIndex,
         StructDefinition, StructDefinitionIndex, StructFieldInformation,
     },
-    CompiledModule, IndexKind,
+    IndexKind,
 };
 
 // A simple cache that offers both a HashMap and a Vector lookup.
@@ -107,7 +105,7 @@ impl ScriptCache {
 // It holds all Modules, Types and Functions loaded.
 // Types and Functions are pushed globally to the ModuleCache.
 // A ModuleCache is accessed under lock.
-struct ModuleCache {
+pub struct ModuleCache {
     modules: BinaryCache<ModuleId, Module>,
     structs: Vec<Arc<StructType>>,
     functions: Vec<Arc<Function>>,
@@ -307,6 +305,34 @@ impl ModuleCache {
     }
 }
 
+struct StructInfo {
+    struct_tag: Option<StructTag>,
+    struct_layout: Option<MoveStructLayout>,
+    kind_info: Option<(MoveKind, Vec<MoveKindInfo>)>,
+}
+
+impl StructInfo {
+    fn new() -> Self {
+        Self {
+            struct_tag: None,
+            struct_layout: None,
+            kind_info: None,
+        }
+    }
+}
+
+pub(crate) struct TypeCache {
+    structs: HashMap<usize, HashMap<Vec<Type>, StructInfo>>,
+}
+
+impl TypeCache {
+    fn new() -> Self {
+        Self {
+            structs: HashMap::new(),
+        }
+    }
+}
+
 // A Loader is responsible to load scripts and modules and holds the cache of all loaded
 // entities. Each cache is protected by a `Mutex`. Operation in the Loader must be thread safe
 // (operating on values on the stack) and when cache needs updating the mutex must be taken.
@@ -314,15 +340,16 @@ impl ModuleCache {
 pub(crate) struct Loader {
     scripts: Mutex<ScriptCache>,
     module_cache: Mutex<ModuleCache>,
-    libra_cache: Mutex<HashMap<ModuleId, LibraCache>>,
+    type_cache: Mutex<TypeCache>,
 }
 
 impl Loader {
     pub(crate) fn new() -> Self {
+        //println!("new loader");
         Self {
             scripts: Mutex::new(ScriptCache::new()),
             module_cache: Mutex::new(ModuleCache::new()),
-            libra_cache: Mutex::new(HashMap::new()),
+            type_cache: Mutex::new(TypeCache::new()),
         }
     }
 
@@ -618,13 +645,7 @@ impl Loader {
         data_store: &mut dyn DataStore,
     ) -> VMResult<CompiledModule> {
         let module = match data_store.load_module(id) {
-            Ok(blob) => match CompiledModule::deserialize(&blob) {
-                Ok(module) => module,
-                Err(err) => {
-                    crit!("[VM] Storage contains a malformed module with id {:?}", id);
-                    return Err(err);
-                }
-            },
+            Ok(m) => m,
             Err(err) => {
                 crit!("[VM] Error fetching module with id {:?}", id);
                 return Err(err);
@@ -725,8 +746,15 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    pub(crate) fn struct_type_at(&self, idx: usize) -> Arc<StructType> {
-        self.loader.struct_at(idx)
+    pub(crate) fn struct_gidx_at(&self, idx: StructDefinitionIndex) -> usize {
+        match &self.binary {
+            BinaryType::Module(module) => module.struct_at(idx),
+            BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
+        }
+    }
+
+    pub(crate) fn struct_type_at(&self, gidx: usize) -> Arc<StructType> {
+        self.loader.struct_at(gidx)
     }
 
     pub(crate) fn struct_instantiation_at(
@@ -737,6 +765,25 @@ impl<'a> Resolver<'a> {
             BinaryType::Module(module) => module.struct_instantiation_at(idx.0),
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         }
+    }
+
+    pub(crate) fn get_struct_type(&self, idx: StructDefinitionIndex) -> Type {
+        Type::Struct(self.struct_gidx_at(idx))
+    }
+
+    pub(crate) fn get_struct_instantiation_type(
+        &self,
+        idx: StructDefInstantiationIndex,
+        ty_args: &[Type],
+    ) -> VMResult<Type> {
+        let si = self.struct_instantiation_at(idx);
+        Ok(Type::StructInstantiation(
+            si.get_def_idx(),
+            si.get_instantiation()
+                .iter()
+                .map(|ty| ty.subst(ty_args))
+                .collect::<VMResult<_>>()?,
+        ))
     }
 
     pub(crate) fn field_offset(&self, idx: FieldHandleIndex) -> usize {
@@ -765,17 +812,6 @@ impl<'a> Resolver<'a> {
             BinaryType::Module(module) => module.field_instantiation_count(idx.0),
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
         }
-    }
-
-    pub(crate) fn get_libra_type_info(
-        &self,
-        module_id: &ModuleId,
-        name: &IdentStr,
-        ty_args: &[Type],
-        data_store: &mut dyn DataStore,
-    ) -> VMResult<Arc<LibraType>> {
-        self.loader.load_module(module_id, data_store)?;
-        self.loader.get_libra_type_info(module_id, name, ty_args)
     }
 
     pub fn type_to_fat_type(&self, ty: &Type) -> VMResult<FatType> {
@@ -1316,106 +1352,6 @@ fn function_match(function: &Function, module: &ModuleId, name: &IdentStr) -> bo
     function.name.as_ident_str() == name && function.module_id() == Some(module)
 }
 
-//
-// What follows is the API to get serde info for Move values (FatStructType) and
-// resource keys for AccessPath.
-// All of that should go into the data cache once the data cache is refactored.
-// There is no reason to put this knowledge into the Move VM and it would be better
-// handled by the data cache and the Move <-> Libra layer.
-//
-
-#[derive(Debug)]
-pub(crate) struct LibraType {
-    fat_type: FatStructType,
-    resource_key: Vec<u8>,
-}
-
-impl LibraType {
-    fn make(fat_type: FatStructType) -> VMResult<Self> {
-        let mut type_params = vec![];
-        for ty in &fat_type.ty_args {
-            type_params.push(ty.type_tag()?);
-        }
-        let tag = StructTag {
-            address: fat_type.address,
-            module: fat_type.module.clone(),
-            name: fat_type.name.clone(),
-            type_params,
-        };
-        let resource_key = AccessPath::resource_access_vec(&tag);
-        Ok(Self {
-            fat_type,
-            resource_key,
-        })
-    }
-
-    pub(crate) fn fat_type(&self) -> &FatStructType {
-        &self.fat_type
-    }
-
-    pub(crate) fn resource_key(&self) -> &[u8] {
-        &self.resource_key
-    }
-}
-
-#[derive(Debug)]
-struct LibraTypeInfo {
-    instantiations: HashMap<Vec<Type>, Arc<LibraType>>,
-}
-
-impl LibraTypeInfo {
-    fn new() -> Self {
-        Self {
-            instantiations: HashMap::new(),
-        }
-    }
-
-    fn get(&self, instantiation: &[Type]) -> Option<&Arc<LibraType>> {
-        self.instantiations.get(instantiation)
-    }
-
-    fn add(&mut self, instantiation: Vec<Type>, libra_type: LibraType) -> Arc<LibraType> {
-        Arc::clone(
-            self.instantiations
-                .entry(instantiation)
-                .or_insert_with(|| Arc::new(libra_type)),
-        )
-    }
-}
-
-#[derive(Debug)]
-struct LibraCache {
-    cache: HashMap<Identifier, LibraTypeInfo>,
-}
-
-impl LibraCache {
-    fn new() -> Self {
-        Self {
-            cache: HashMap::new(),
-        }
-    }
-
-    fn get_libra_type_info(
-        &self,
-        name: &IdentStr,
-        instantiation: &[Type],
-    ) -> Option<&Arc<LibraType>> {
-        self.cache
-            .get(name)
-            .and_then(|type_info| type_info.get(instantiation))
-    }
-
-    fn set_libra_type_info(
-        &mut self,
-        name: Identifier,
-        instantiation: Vec<Type>,
-        libra_type: LibraType,
-    ) -> Arc<LibraType> {
-        let type_info = self.cache.entry(name).or_insert_with(LibraTypeInfo::new);
-        type_info.add(instantiation, libra_type)
-    }
-}
-
 impl Loader {
     fn type_to_fat_type(&self, ty: &Type) -> VMResult<FatType> {
         use Type::*;
@@ -1442,6 +1378,193 @@ impl Loader {
         })
     }
 
+    fn struct_gidx_to_type_tag(&self, gidx: usize, ty_args: &[Type]) -> VMResult<StructTag> {
+        if let Some(struct_map) = self.type_cache.lock().unwrap().structs.get(&gidx) {
+            if let Some(struct_info) = struct_map.get(ty_args) {
+                if let Some(struct_tag) = &struct_info.struct_tag {
+                    return Ok(struct_tag.clone());
+                }
+            }
+        }
+
+        let ty_arg_tags = ty_args
+            .iter()
+            .map(|ty| self.type_to_type_tag(ty))
+            .collect::<VMResult<Vec<_>>>()?;
+        let struct_type = self.module_cache.lock().unwrap().struct_at(gidx);
+        let struct_tag = StructTag {
+            address: *struct_type.module.address(),
+            module: struct_type.module.name().to_owned(),
+            name: struct_type.name.clone(),
+            type_params: ty_arg_tags,
+        };
+
+        self.type_cache
+            .lock()
+            .unwrap()
+            .structs
+            .entry(gidx)
+            .or_insert_with(HashMap::new)
+            .entry(ty_args.to_vec())
+            .or_insert_with(StructInfo::new)
+            .struct_tag = Some(struct_tag.clone());
+
+        Ok(struct_tag)
+    }
+
+    pub(crate) fn type_to_type_tag(&self, ty: &Type) -> VMResult<TypeTag> {
+        Ok(match ty {
+            Type::Bool => TypeTag::Bool,
+            Type::U8 => TypeTag::U8,
+            Type::U64 => TypeTag::U64,
+            Type::U128 => TypeTag::U128,
+            Type::Address => TypeTag::Address,
+            Type::Signer => TypeTag::Signer,
+            Type::Vector(ty) => TypeTag::Vector(Box::new(self.type_to_type_tag(ty)?)),
+            Type::Struct(gidx) => TypeTag::Struct(self.struct_gidx_to_type_tag(*gidx, &[])?),
+            Type::StructInstantiation(gidx, ty_args) => {
+                TypeTag::Struct(self.struct_gidx_to_type_tag(*gidx, ty_args)?)
+            }
+            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("no type tag for {:?}", ty)))
+            }
+        })
+    }
+
+    fn struct_gidx_to_type_layout(
+        &self,
+        gidx: usize,
+        ty_args: &[Type],
+    ) -> VMResult<MoveStructLayout> {
+        if let Some(struct_map) = self.type_cache.lock().unwrap().structs.get(&gidx) {
+            if let Some(struct_info) = struct_map.get(ty_args) {
+                if let Some(layout) = &struct_info.struct_layout {
+                    return Ok(layout.clone());
+                }
+            }
+        }
+
+        let struct_type = self.module_cache.lock().unwrap().struct_at(gidx);
+        let field_tys = struct_type
+            .fields
+            .iter()
+            .map(|ty| ty.subst(ty_args))
+            .collect::<VMResult<Vec<_>>>()?;
+        let field_layouts = field_tys
+            .iter()
+            .map(|ty| self.type_to_type_layout(ty))
+            .collect::<VMResult<Vec<_>>>()?;
+        let struct_layout = MoveStructLayout::new(field_layouts);
+
+        self.type_cache
+            .lock()
+            .unwrap()
+            .structs
+            .entry(gidx)
+            .or_insert_with(HashMap::new)
+            .entry(ty_args.to_vec())
+            .or_insert_with(StructInfo::new)
+            .struct_layout = Some(struct_layout.clone());
+
+        Ok(struct_layout)
+    }
+
+    pub(crate) fn type_to_type_layout(&self, ty: &Type) -> VMResult<MoveTypeLayout> {
+        Ok(match ty {
+            Type::Bool => MoveTypeLayout::Bool,
+            Type::U8 => MoveTypeLayout::U8,
+            Type::U64 => MoveTypeLayout::U64,
+            Type::U128 => MoveTypeLayout::U128,
+            Type::Address => MoveTypeLayout::Address,
+            Type::Signer => MoveTypeLayout::Signer,
+            Type::Vector(ty) => MoveTypeLayout::Vector(Box::new(self.type_to_type_layout(ty)?)),
+            Type::Struct(gidx) => {
+                MoveTypeLayout::Struct(self.struct_gidx_to_type_layout(*gidx, &[])?)
+            }
+            Type::StructInstantiation(gidx, ty_args) => {
+                MoveTypeLayout::Struct(self.struct_gidx_to_type_layout(*gidx, ty_args)?)
+            }
+            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("no type layout for {:?}", ty)))
+            }
+        })
+    }
+
+    fn struct_gidx_to_kind_info(
+        &self,
+        gidx: usize,
+        ty_args: &[Type],
+    ) -> VMResult<(MoveKind, Vec<MoveKindInfo>)> {
+        if let Some(struct_map) = self.type_cache.lock().unwrap().structs.get(&gidx) {
+            if let Some(struct_info) = struct_map.get(ty_args) {
+                if let Some(kind_info) = &struct_info.kind_info {
+                    return Ok(kind_info.clone());
+                }
+            }
+        }
+
+        let struct_type = self.module_cache.lock().unwrap().struct_at(gidx);
+
+        let mut is_resource = struct_type.is_resource;
+        if !is_resource {
+            for ty in ty_args {
+                if self.is_resource(ty)? {
+                    is_resource = true;
+                }
+            }
+        }
+        let field_tys = struct_type
+            .fields
+            .iter()
+            .map(|ty| ty.subst(ty_args))
+            .collect::<VMResult<Vec<_>>>()?;
+        let field_kind_info = field_tys
+            .iter()
+            .map(|ty| self.type_to_kind_info(ty))
+            .collect::<VMResult<Vec<_>>>()?;
+        let kind_info = (MoveKind::from_bool(is_resource), field_kind_info);
+
+        self.type_cache
+            .lock()
+            .unwrap()
+            .structs
+            .entry(gidx)
+            .or_insert_with(HashMap::new)
+            .entry(ty_args.to_vec())
+            .or_insert_with(StructInfo::new)
+            .kind_info = Some(kind_info.clone());
+
+        Ok(kind_info)
+    }
+
+    pub(crate) fn type_to_kind_info(&self, ty: &Type) -> VMResult<MoveKindInfo> {
+        Ok(match ty {
+            Type::Bool | Type::U8 | Type::U64 | Type::U128 | Type::Address => {
+                MoveKindInfo::Base(MoveKind::Copyable)
+            }
+            Type::Signer => MoveKindInfo::Base(MoveKind::Resource),
+            Type::Vector(ty) => {
+                let kind_info = self.type_to_kind_info(ty)?;
+                MoveKindInfo::Vector(kind_info.kind(), Box::new(kind_info))
+            }
+            Type::Struct(gidx) => {
+                let (is_resource, field_kind_info) = self.struct_gidx_to_kind_info(*gidx, &[])?;
+                MoveKindInfo::Struct(is_resource, field_kind_info)
+            }
+            Type::StructInstantiation(gidx, ty_args) => {
+                let (is_resource, field_kind_info) =
+                    self.struct_gidx_to_kind_info(*gidx, ty_args)?;
+                MoveKindInfo::Struct(is_resource, field_kind_info)
+            }
+            Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
+                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("no kind info for {:?}", ty)))
+            }
+        })
+    }
+
     fn struct_to_fat_struct(&self, idx: usize, ty_args: Vec<FatType>) -> VMResult<FatStructType> {
         let struct_type = self.module_cache.lock().unwrap().struct_at(idx);
         let address = *struct_type.module.address();
@@ -1464,35 +1587,5 @@ impl Loader {
             ty_args,
             layout,
         })
-    }
-
-    fn get_libra_type_info(
-        &self,
-        module_id: &ModuleId,
-        name: &IdentStr,
-        type_params: &[Type],
-    ) -> VMResult<Arc<LibraType>> {
-        if let Some(libra_cache) = self.libra_cache.lock().unwrap().get(module_id) {
-            if let Some(libra_type) = libra_cache.get_libra_type_info(name, type_params) {
-                return Ok(Arc::clone(libra_type));
-            }
-        }
-
-        let (idx, _) = self
-            .module_cache
-            .lock()
-            .unwrap()
-            .find_struct_by_name(name, module_id)?;
-        let mut ty_args = vec![];
-        for inst in type_params {
-            ty_args.push(self.type_to_fat_type(inst)?);
-        }
-        let fat_struct = self.struct_to_fat_struct(idx, ty_args)?;
-        let libra_type = LibraType::make(fat_struct)?;
-        let mut libra_module_cache = self.libra_cache.lock().unwrap();
-        let libra_cache = libra_module_cache
-            .entry(module_id.clone())
-            .or_insert_with(LibraCache::new);
-        Ok(libra_cache.set_libra_type_info(name.to_owned(), type_params.to_vec(), libra_type))
     }
 }
