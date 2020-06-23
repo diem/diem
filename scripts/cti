@@ -13,7 +13,6 @@ REPORT=""
 DEPLOY=yes
 EXIT_CODE=0
 
-K8S=""
 K8S_CONTEXT_PATTERN='arn:aws:eks:us-west-2:853397791086:cluster/CLUSTERNAME-k8s-testnet'
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
@@ -132,10 +131,6 @@ kube_wait_pod () {
 
 while (( "$#" )); do
   case "$1" in
-    --k8s)
-      K8S=1
-      shift 1
-      ;;
     -R|--report)
       REPORT=$2
       shift 2
