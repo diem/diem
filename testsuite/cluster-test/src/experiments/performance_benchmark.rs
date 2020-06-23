@@ -12,6 +12,7 @@ use crate::{
 };
 use anyhow::Result;
 use async_trait::async_trait;
+use debug_interface::trace::LibraTraceClient;
 use futures::{future::try_join_all, join};
 use libra_logger::{info, warn};
 use serde_json::Value;
@@ -33,6 +34,11 @@ pub struct PerformanceBenchmarkParams {
     #[structopt(long, help = "Whether benchmark should perform trace")]
     pub trace: bool,
     #[structopt(
+        long,
+        help = "Whether benchmark should perform trace from elastic search logs"
+    )]
+    pub use_logs_for_trace: bool,
+    #[structopt(
     long,
     default_value = Box::leak(format!("{}", DEFAULT_BENCH_DURATION).into_boxed_str()),
     help = "Duration of an experiment in seconds"
@@ -50,6 +56,7 @@ pub struct PerformanceBenchmark {
     duration: Duration,
     trace: bool,
     tps: Option<u64>,
+    use_logs_for_trace: bool,
 }
 
 pub const DEFAULT_BENCH_DURATION: u64 = 120;
@@ -61,6 +68,7 @@ impl PerformanceBenchmarkParams {
             duration: DEFAULT_BENCH_DURATION,
             trace: false,
             tps: None,
+            use_logs_for_trace: false,
         }
     }
 
@@ -70,6 +78,7 @@ impl PerformanceBenchmarkParams {
             duration: DEFAULT_BENCH_DURATION,
             trace: false,
             tps: Some(fixed_tps),
+            use_logs_for_trace: false,
         }
     }
 }
@@ -99,6 +108,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
             duration: Duration::from_secs(self.duration),
             trace: self.trace,
             tps: self.tps,
+            use_logs_for_trace: self.use_logs_for_trace,
         }
     }
 }
@@ -124,6 +134,7 @@ impl Experiment for PerformanceBenchmark {
             None => EmitJobRequest::for_instances(instances, context.global_emit_job_request),
         };
         let emit_txn = context.tx_emitter.emit_txn_for(window, emit_job_request);
+        let start = chrono::Utc::now();
         let trace_tail = &context.trace_tail;
         let trace_delay = buffer;
         let trace = self.trace;
@@ -135,7 +146,23 @@ impl Experiment for PerformanceBenchmark {
                 None
             }
         };
-        let (stats, trace) = join!(emit_txn, capture_trace);
+        let (stats, mut trace) = join!(emit_txn, capture_trace);
+        let trace_log = self.use_logs_for_trace;
+        if trace_log {
+            let start = start + chrono::Duration::seconds(60);
+            let libra_trace_client = LibraTraceClient::new("elasticsearch-master", 9200);
+            trace = match libra_trace_client
+                .get_libra_trace(start, chrono::Duration::seconds(5))
+                .await
+            {
+                Ok(trace) => Some(trace),
+                Err(err) => {
+                    info!("Failed to capture traces from elastic search {}", err);
+                    None
+                }
+            };
+        }
+
         let stats = stats?;
         if let Some(trace) = trace {
             info!("Traced {} events", trace.len());

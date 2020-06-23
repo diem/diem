@@ -683,6 +683,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "async-trait 0.1.36 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chrono 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "config-builder 0.1.0",
  "debug-interface 0.1.0",
  "flate2 1.0.16 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1140,6 +1141,7 @@ name = "debug-interface"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chrono 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-logger 0.1.0",
  "libra-metrics 0.1.0",
  "libra-workspace-hack 0.1.0",

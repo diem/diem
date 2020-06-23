@@ -9,6 +9,7 @@ use std::collections::HashMap;
 pub mod json_log;
 pub mod libra_trace;
 pub mod node_debug_service;
+pub mod trace;
 
 pub mod prelude {
     pub use crate::{
