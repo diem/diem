@@ -23,7 +23,9 @@ script {
     // test alice can rotate bob's consensus public key
     fun main(account: &signer) {
         assert(ValidatorConfig::get_operator({{bob}}) == {{alice}}, 44);
-        ValidatorConfig::set_config(account, {{bob}}, x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c", x"", x"", x"", x"");
+        ValidatorConfig::set_config(account, {{bob}},
+                                    x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+                                    x"", x"", x"", x"");
 
         // check new key is "20"
         let config = ValidatorConfig::get_config({{bob}});
@@ -60,7 +62,6 @@ script {
 //! expiration-time: 3
 script {
     use 0x1::ValidatorConfig;
-    // test alice can invoke reconfiguration upon successful rotation of bob's consensus public key
     fun main(account: &signer) {
         ValidatorConfig::set_config(account, {{bob}}, x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", x"", x"", x"", x"");
     }
@@ -74,7 +75,6 @@ script {
     use 0x1::LibraSystem;
     use 0x1::Roles::{Self, LibraRootRole};
     use 0x1::ValidatorConfig;
-    // test alice can invoke reconfiguration upon successful rotation of bob's consensus public key
     fun main(account: &signer) {
         let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         // call update to reconfigure
