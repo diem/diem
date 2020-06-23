@@ -57,7 +57,7 @@ mod test;
 
 /// The ConnectivityManager actor.
 pub struct ConnectivityManager<TTicker, TBackoff> {
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     /// Nodes which are eligible to join the network.
     eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
     /// PeerId and address of remote peers to which this peer is connected.
@@ -142,7 +142,7 @@ where
 {
     /// Creates a new instance of the [`ConnectivityManager`] actor.
     pub fn new(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
         seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
         ticker: TTicker,
@@ -528,7 +528,7 @@ where
 }
 
 fn log_dial_result(
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     peer_id: PeerId,
     addr: NetworkAddress,
     dial_result: DialResult,

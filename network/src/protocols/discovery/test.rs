@@ -58,7 +58,11 @@ fn setup_discovery(
     let (ticker_tx, ticker_rx) = channel::new_test(0);
     let discovery = {
         Discovery::new(
-            NetworkContext::new(NetworkId::Validator, RoleType::Validator, peer_id),
+            Arc::new(NetworkContext::new(
+                NetworkId::Validator,
+                RoleType::Validator,
+                peer_id,
+            )),
             addrs,
             ticker_rx,
             DiscoveryNetworkSender::new(

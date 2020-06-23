@@ -32,7 +32,8 @@ use futures::{
     sink::SinkExt,
     stream::{Fuse, FuturesUnordered, StreamExt},
 };
-use libra_logger::prelude::*;
+use libra_config::network_id::NetworkContext;
+use libra_logger::{prelude::*, StructuredLogEntry};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use netcore::transport::{ConnectionOrigin, Transport};
@@ -41,6 +42,7 @@ use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::Debug,
     marker::PhantomData,
+    sync::Arc,
     time::Duration,
 };
 use tokio::runtime::Handle;
@@ -51,8 +53,6 @@ mod error;
 mod tests;
 
 pub use self::error::PeerManagerError;
-use libra_config::network_id::NetworkContext;
-use libra_logger::StructuredLogEntry;
 
 /// Request received by PeerManager from upstream actors.
 #[derive(Debug, Serialize)]
@@ -216,7 +216,7 @@ where
     TTransport: Transport,
     TSocket: AsyncRead + AsyncWrite,
 {
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     /// A handle to a tokio executor.
     executor: Handle,
     /// Address to listen on for incoming connections.
@@ -270,7 +270,7 @@ where
     pub fn new(
         executor: Handle,
         transport: TTransport,
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         listen_addr: NetworkAddress,
         requests_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
         connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
@@ -698,7 +698,7 @@ where
     }
 
     fn handle_inbound_event(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         inbound_event: NetworkNotification,
         peer_id: PeerId,
         upstream_handlers: &mut HashMap<
@@ -778,7 +778,7 @@ where
     TTransport: Transport,
     TSocket: AsyncRead + AsyncWrite,
 {
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     /// [`Transport`] that is used to establish connections
     transport: TTransport,
     listener: Fuse<TTransport::Listener>,
@@ -795,7 +795,7 @@ where
     TSocket: AsyncRead + AsyncWrite + 'static,
 {
     fn new(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         transport: TTransport,
         listen_addr: NetworkAddress,
         transport_reqs_rx: channel::Receiver<TransportRequest>,

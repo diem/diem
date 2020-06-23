@@ -30,7 +30,7 @@ impl OnchainDiscoveryBuilder {
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         network_tx: OnchainDiscoveryNetworkSender,
         discovery_events: OnchainDiscoveryNetworkEvents,
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         libra_db: Arc<dyn DbReader>,
         waypoint: Waypoint,
         executor: &Handle,

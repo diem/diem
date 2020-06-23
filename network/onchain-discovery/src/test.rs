@@ -222,7 +222,7 @@ fn setup_onchain_discovery(
     let max_concurrent_inbound_rpcs = 8;
     let network_context = NetworkContext::new(NetworkId::Validator, role, peer_id);
     let onchain_discovery = OnchainDiscovery::new(
-        network_context,
+        Arc::new(network_context),
         waypoint,
         network_reqs_tx,
         conn_mgr_reqs_tx,

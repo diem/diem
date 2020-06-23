@@ -47,7 +47,7 @@ fn setup_conn_mgr(
 
     let conn_mgr = {
         ConnectivityManager::new(
-            network_context,
+            Arc::new(network_context),
             Arc::new(RwLock::new(eligible_peers)),
             seed_peers,
             ticker_rx,

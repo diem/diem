@@ -90,7 +90,7 @@ impl AuthenticationMode {
 pub struct NetworkBuilder {
     executor: Handle,
     chain_id: ChainId,
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     // TODO(philiphayes): better support multiple listening addrs
     listen_address: NetworkAddress,
     advertised_address: Option<NetworkAddress>,
@@ -143,7 +143,7 @@ impl NetworkBuilder {
         NetworkBuilder {
             executor,
             chain_id,
-            network_context: NetworkContext::new(network_id, role, peer_id),
+            network_context: Arc::new(NetworkContext::new(network_id, role, peer_id)),
             listen_address,
             advertised_address: None,
             seed_peers: HashMap::new(),
@@ -170,8 +170,8 @@ impl NetworkBuilder {
         }
     }
 
-    pub fn network_context(&self) -> &NetworkContext {
-        &self.network_context
+    pub fn network_context(&self) -> Arc<NetworkContext> {
+        self.network_context.clone()
     }
 
     pub fn peer_id(&self) -> PeerId {
@@ -596,7 +596,7 @@ pub fn setup_network(
                     .expect("ConnectivityManager must be installed"),
                 network_tx,
                 discovery_events,
-                network_builder.network_context().clone(),
+                network_builder.network_context(),
                 libra_db,
                 waypoint,
                 runtime.handle(),
