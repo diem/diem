@@ -78,7 +78,7 @@ impl<'txn> TransactionDataCache<'txn> {
         for (key, global_val) in data_map {
             match global_val {
                 Some((layout, global_val)) => {
-                    if !global_val.is_clean()? {
+                    if global_val.is_dirty()? {
                         // into_owned_struct will check if all references are properly released
                         // at the end of a transaction
                         let data = global_val.into_owned_struct()?;
