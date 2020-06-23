@@ -8,25 +8,21 @@ use crate::{
     trace,
 };
 use libra_logger::prelude::*;
-use libra_types::{
-    access_path::AccessPath,
+use move_core_types::{
     account_address::AccountAddress,
+    gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier},
     vm_status::{StatusCode, StatusType, VMStatus},
 };
-use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier};
 use move_vm_types::{
     data_store::DataStore,
     gas_schedule::CostStrategy,
-    loaded_data::{runtime_types::Type, types::FatStructType},
+    loaded_data::runtime_types::Type,
     values::{self, IntegerValue, Locals, Reference, Struct, StructRef, VMValueCast, Value},
 };
 use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
 use vm::{
     errors::*,
-    file_format::{
-        Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, Signature,
-        StructDefInstantiationIndex, StructDefinitionIndex,
-    },
+    file_format::{Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, Signature},
     file_format_common::Opcodes,
 };
 
@@ -262,78 +258,14 @@ impl Interpreter {
         self.binop(|lhs, rhs| Ok(Value::bool(f(lhs, rhs)?)))
     }
 
-    /// Entry point for all global store operations (effectively opcodes).
-    ///
-    /// This performs common operation on the data store and then executes the specific
-    /// opcode.
-    fn global_data_op<F>(
-        &mut self,
-        resolver: &Resolver,
-        data_store: &mut dyn DataStore,
-        address: AccountAddress,
-        idx: StructDefinitionIndex,
-        op: F,
-    ) -> VMResult<AbstractMemorySize<GasCarrier>>
-    where
-        F: FnOnce(
-            &mut Self,
-            &mut dyn DataStore,
-            AccessPath,
-            &FatStructType,
-        ) -> VMResult<AbstractMemorySize<GasCarrier>>,
-    {
-        let struct_type = resolver.struct_at(idx);
-        let libra_type = resolver.get_libra_type_info(
-            &struct_type.module,
-            struct_type.name.as_ident_str(),
-            &[],
-            data_store,
-        )?;
-        let ap = AccessPath::new(address, libra_type.resource_key().to_vec());
-        op(self, data_store, ap, libra_type.fat_type())
-    }
-
-    fn global_data_op_generic<F>(
-        &mut self,
-        resolver: &Resolver,
-        data_store: &mut dyn DataStore,
-        address: AccountAddress,
-        idx: StructDefInstantiationIndex,
-        frame: &Frame,
-        op: F,
-    ) -> VMResult<AbstractMemorySize<GasCarrier>>
-    where
-        F: FnOnce(
-            &mut Self,
-            &mut dyn DataStore,
-            AccessPath,
-            &FatStructType,
-        ) -> VMResult<AbstractMemorySize<GasCarrier>>,
-    {
-        let struct_inst = resolver.struct_instantiation_at(idx);
-        let mut instantiation = vec![];
-        for inst in struct_inst.get_instantiation() {
-            instantiation.push(inst.subst(frame.ty_args())?);
-        }
-        let struct_type = resolver.struct_type_at(struct_inst.get_def_idx());
-        let libra_type = resolver.get_libra_type_info(
-            &struct_type.module,
-            struct_type.name.as_ident_str(),
-            &instantiation,
-            data_store,
-        )?;
-        let ap = AccessPath::new(address, libra_type.resource_key().to_vec());
-        op(self, data_store, ap, libra_type.fat_type())
-    }
-
     /// BorrowGlobal (mutable and not) opcode.
     fn borrow_global(
         &mut self,
         data_store: &mut dyn DataStore,
-        ap: AccessPath,
-        struct_ty: &FatStructType,
+        addr: AccountAddress,
+        ty: &Type,
     ) -> VMResult<AbstractMemorySize<GasCarrier>> {
-        let g = borrow_global(data_store, &ap, struct_ty)?;
+        let g = borrow_global(data_store, addr, ty)?;
         let size = g.size();
         self.operand_stack.push(g.borrow_global()?)?;
         Ok(size)
@@ -343,10 +275,10 @@ impl Interpreter {
     fn exists(
         &mut self,
         data_store: &mut dyn DataStore,
-        ap: AccessPath,
-        struct_ty: &FatStructType,
+        addr: AccountAddress,
+        ty: &Type,
     ) -> VMResult<AbstractMemorySize<GasCarrier>> {
-        let (exists, mem_size) = resource_exists(data_store, &ap, struct_ty)?;
+        let (exists, mem_size) = resource_exists(data_store, addr, ty)?;
         self.operand_stack.push(Value::bool(exists))?;
         Ok(mem_size)
     }
@@ -355,10 +287,10 @@ impl Interpreter {
     fn move_from(
         &mut self,
         data_store: &mut dyn DataStore,
-        ap: AccessPath,
-        struct_ty: &FatStructType,
+        addr: AccountAddress,
+        ty: &Type,
     ) -> VMResult<AbstractMemorySize<GasCarrier>> {
-        let resource = move_resource_from(data_store, &ap, struct_ty)?;
+        let resource = move_resource_from(data_store, addr, ty)?;
         let size = resource.size();
         self.operand_stack.push(resource)?;
         Ok(size)
@@ -370,12 +302,12 @@ impl Interpreter {
     ) -> impl FnOnce(
         &mut Interpreter,
         &mut dyn DataStore,
-        AccessPath,
-        &FatStructType,
+        AccountAddress,
+        Type,
     ) -> VMResult<AbstractMemorySize<GasCarrier>> {
-        |_interpreter, data_store, ap, struct_ty| {
+        |_interpreter, data_store, addr, ty| {
             let size = resource.size();
-            move_resource_to(data_store, &ap, struct_ty, resource)?;
+            move_resource_to(data_store, addr, ty, resource)?;
             Ok(size)
         }
     }
@@ -992,75 +924,42 @@ impl Frame {
                     }
                     Bytecode::MutBorrowGlobal(sd_idx) | Bytecode::ImmBorrowGlobal(sd_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
-                        let size = interpreter.global_data_op(
-                            resolver,
-                            data_store,
-                            addr,
-                            *sd_idx,
-                            Interpreter::borrow_global,
-                        )?;
+                        let ty = resolver.get_struct_type(*sd_idx);
+                        let size = interpreter.borrow_global(data_store, addr, &ty)?;
                         cost_strategy.charge_instr_with_size(Opcodes::MUT_BORROW_GLOBAL, size)?;
                     }
                     Bytecode::MutBorrowGlobalGeneric(si_idx)
                     | Bytecode::ImmBorrowGlobalGeneric(si_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
-                        let size = interpreter.global_data_op_generic(
-                            resolver,
-                            data_store,
-                            addr,
-                            *si_idx,
-                            self,
-                            Interpreter::borrow_global,
-                        )?;
+                        let ty = resolver.get_struct_instantiation_type(*si_idx, self.ty_args())?;
+                        let size = interpreter.borrow_global(data_store, addr, &ty)?;
                         cost_strategy
                             .charge_instr_with_size(Opcodes::MUT_BORROW_GLOBAL_GENERIC, size)?;
                     }
                     Bytecode::Exists(sd_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
-                        let size = interpreter.global_data_op(
-                            resolver,
-                            data_store,
-                            addr,
-                            *sd_idx,
-                            Interpreter::exists,
-                        )?;
+                        let ty = resolver.get_struct_type(*sd_idx);
+                        let size = interpreter.exists(data_store, addr, &ty)?;
                         cost_strategy.charge_instr_with_size(Opcodes::EXISTS, size)?;
                     }
                     Bytecode::ExistsGeneric(si_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
-                        let size = interpreter.global_data_op_generic(
-                            resolver,
-                            data_store,
-                            addr,
-                            *si_idx,
-                            self,
-                            Interpreter::exists,
-                        )?;
+                        let ty = resolver.get_struct_instantiation_type(*si_idx, self.ty_args())?;
+                        let size = interpreter.exists(data_store, addr, &ty)?;
                         cost_strategy.charge_instr_with_size(Opcodes::EXISTS_GENERIC, size)?;
                     }
                     Bytecode::MoveFrom(sd_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
-                        let size = interpreter.global_data_op(
-                            resolver,
-                            data_store,
-                            addr,
-                            *sd_idx,
-                            Interpreter::move_from,
-                        )?;
+                        let ty = resolver.get_struct_type(*sd_idx);
+                        let size = interpreter.move_from(data_store, addr, &ty)?;
                         // TODO: Have this calculate before pulling in the data based upon
                         // the size of the data that we are about to read in.
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_FROM, size)?;
                     }
                     Bytecode::MoveFromGeneric(si_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
-                        let size = interpreter.global_data_op_generic(
-                            resolver,
-                            data_store,
-                            addr,
-                            *si_idx,
-                            self,
-                            Interpreter::move_from,
-                        )?;
+                        let ty = resolver.get_struct_instantiation_type(*si_idx, self.ty_args())?;
+                        let size = interpreter.move_from(data_store, addr, &ty)?;
                         // TODO: Have this calculate before pulling in the data based upon
                         // the size of the data that we are about to read in.
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_FROM_GENERIC, size)?;
@@ -1073,13 +972,10 @@ impl Frame {
                             .value_as::<Reference>()?
                             .read_ref()?
                             .value_as::<AccountAddress>()?;
-                        let size = interpreter.global_data_op(
-                            resolver,
-                            data_store,
-                            addr,
-                            *sd_idx,
-                            Interpreter::move_to(resource),
-                        )?;
+                        let ty = resolver.get_struct_type(*sd_idx);
+                        // REVIEW: Can we simplify Interpreter::move_to?
+                        let size =
+                            Interpreter::move_to(resource)(interpreter, data_store, addr, ty)?;
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_TO, size)?;
                     }
                     Bytecode::MoveToGeneric(si_idx) => {
@@ -1090,14 +986,9 @@ impl Frame {
                             .value_as::<Reference>()?
                             .read_ref()?
                             .value_as::<AccountAddress>()?;
-                        let size = interpreter.global_data_op_generic(
-                            resolver,
-                            data_store,
-                            addr,
-                            *si_idx,
-                            self,
-                            Interpreter::move_to(resource),
-                        )?;
+                        let ty = resolver.get_struct_instantiation_type(*si_idx, self.ty_args())?;
+                        let size =
+                            Interpreter::move_to(resource)(interpreter, data_store, addr, ty)?;
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_TO_GENERIC, size)?;
                     }
                     Bytecode::FreezeRef => {

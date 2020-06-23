@@ -9,7 +9,7 @@ use libra_types::{
 use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
-    value::{MoveStructLayout, MoveTypeLayout},
+    value::{MoveKind, MoveKindInfo, MoveStructLayout, MoveTypeLayout},
 };
 use std::{convert::TryInto, fmt::Write};
 use vm::errors::VMResult;
@@ -104,6 +104,33 @@ impl FatStructType {
         }
         Ok(())
     }
+
+    pub fn layout_and_kind_info(
+        &self,
+    ) -> VMResult<((MoveKind, Vec<MoveKindInfo>), MoveStructLayout)> {
+        let res = self
+            .layout
+            .iter()
+            .map(FatType::layout_and_kind_info)
+            .collect::<VMResult<Vec<_>>>()?;
+        let mut field_kinds = vec![];
+        let mut field_layouts = vec![];
+        for (k, l) in res {
+            field_kinds.push(k);
+            field_layouts.push(l);
+        }
+        Ok((
+            (
+                if self.is_resource {
+                    MoveKind::Resource
+                } else {
+                    MoveKind::Copyable
+                },
+                field_kinds,
+            ),
+            MoveStructLayout::new(field_layouts),
+        ))
+    }
 }
 
 impl FatType {
@@ -152,13 +179,46 @@ impl FatType {
             Vector(ty) => TypeTag::Vector(Box::new(ty.type_tag()?)),
             Struct(struct_ty) => TypeTag::Struct(struct_ty.struct_tag()?),
 
-            ty @ Reference(_) | ty @ MutableReference(_) | ty @ TyParam(_) => {
+            Reference(_) | MutableReference(_) | TyParam(_) => {
                 return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("cannot derive type tag for {:?}", ty)))
+                    .with_message(format!("cannot derive type tag for {:?}", self)))
             }
         };
 
         Ok(res)
+    }
+
+    pub fn layout_and_kind_info(&self) -> VMResult<(MoveKindInfo, MoveTypeLayout)> {
+        use FatType as F;
+        use MoveKindInfo as K;
+        use MoveTypeLayout as L;
+
+        Ok(match self {
+            F::Bool => (K::Base(MoveKind::Copyable), L::Bool),
+            F::U8 => (K::Base(MoveKind::Copyable), L::U8),
+            F::U64 => (K::Base(MoveKind::Copyable), L::U64),
+            F::U128 => (K::Base(MoveKind::Copyable), L::U128),
+            F::Address => (K::Base(MoveKind::Copyable), L::Address),
+            F::Signer => (K::Base(MoveKind::Resource), L::Signer),
+
+            F::Vector(ty) => {
+                let (k, l) = ty.layout_and_kind_info()?;
+                (
+                    MoveKindInfo::Vector(k.kind(), Box::new(k)),
+                    MoveTypeLayout::Vector(Box::new(l)),
+                )
+            }
+
+            F::Struct(struct_ty) => {
+                let ((k, field_kinds), field_layouts) = struct_ty.layout_and_kind_info()?;
+                (K::Struct(k, field_kinds), L::Struct(field_layouts))
+            }
+
+            F::Reference(_) | F::MutableReference(_) | F::TyParam(_) => {
+                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("cannot derive type layout for {:?}", self)))
+            }
+        })
     }
 
     pub fn is_resource(&self) -> VMResult<bool> {

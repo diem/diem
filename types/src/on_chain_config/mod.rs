@@ -122,7 +122,7 @@ pub trait OnChainConfig: Send + Sync + DeserializeOwned {
         Self::deserialize_default_impl(bytes)
     }
 
-    fn fetch_config<T>(storage: T) -> Option<Self>
+    fn fetch_config<T>(storage: &T) -> Option<Self>
     where
         T: ConfigStorage,
     {

@@ -22,14 +22,16 @@ use libra_types::{
     vm_status::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
-use libra_vm::{data_cache::RemoteStorage, LibraVM, VMExecutor, VMValidator};
+use libra_vm::{
+    data_cache::RemoteStorage, txn_effects_to_writeset_and_events, LibraVM, VMExecutor, VMValidator,
+};
 use move_core_types::{
     account_address::AccountAddress,
     gas_schedule::{GasAlgebra, GasUnits},
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
 };
-use move_vm_runtime::{data_cache::TransactionDataCache, move_vm::MoveVM};
+use move_vm_runtime::move_vm::MoveVM;
 use move_vm_types::{
     gas_schedule::{zero_cost_schedule, CostStrategy},
     values::Value,
@@ -295,18 +297,23 @@ impl FakeExecutor {
             let mut cost_strategy = CostStrategy::system(&cost_table, GasUnits::new(100_000_000));
             let vm = MoveVM::new();
             let remote_view = RemoteStorage::new(&self.data_store);
-            let mut cache = TransactionDataCache::new(&remote_view);
-            vm.execute_function(
-                &Self::module(module_name),
-                &Self::name(function_name),
-                type_params,
-                args,
-                *sender,
-                &mut cache,
-                &mut cost_strategy,
-            )
-            .unwrap_or_else(|e| panic!("Error calling {}.{}: {}", module_name, function_name, e));
-            cache.make_write_set().expect("Failed to generate writeset")
+            let mut session = vm.new_session(&remote_view);
+            session
+                .execute_function(
+                    &Self::module(module_name),
+                    &Self::name(function_name),
+                    type_params,
+                    args,
+                    *sender,
+                    &mut cost_strategy,
+                )
+                .unwrap_or_else(|e| {
+                    panic!("Error calling {}.{}: {}", module_name, function_name, e)
+                });
+            let effects = session.finish().expect("Failed to generate txn effects");
+            let (writeset, _events) =
+                txn_effects_to_writeset_and_events(effects).expect("Failed to generate writeset");
+            writeset
         };
         self.data_store.add_write_set(&write_set);
     }

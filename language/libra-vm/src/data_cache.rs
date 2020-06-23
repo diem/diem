@@ -2,12 +2,18 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Scratchpad for on chain values during the execution.
 
+use crate::create_access_path;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
+    on_chain_config::ConfigStorage,
     vm_status::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet},
+};
+use move_core_types::{
+    account_address::AccountAddress,
+    language_storage::{ModuleId, TypeTag},
 };
 use move_vm_runtime::data_cache::RemoteCache;
 use std::collections::btree_map::BTreeMap;
@@ -41,21 +47,6 @@ impl<'a> StateViewCache<'a> {
         }
     }
 
-    // Get some data either through the cache or the `StateView` on a cache miss.
-    pub(crate) fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
-        match self.data_map.get(access_path) {
-            Some(opt_data) => Ok(opt_data.clone()),
-            None => match self.data_view.get(&access_path) {
-                Ok(remote_data) => Ok(remote_data),
-                // TODO: should we forward some error info?
-                Err(_) => {
-                    crit!("[VM] Error getting data from storage for {:?}", access_path);
-                    Err(VMStatus::new(StatusCode::STORAGE_ERROR))
-                }
-            },
-        }
-    }
-
     // Publishes a `WriteSet` computed at the end of a transaction.
     // The effect is to build a layer in front of the `StateView` which keeps
     // track of the data as if the changes were applied immediately.
@@ -74,25 +65,81 @@ impl<'a> StateViewCache<'a> {
     }
 }
 
+impl<'block> StateView for StateViewCache<'block> {
+    // Get some data either through the cache or the `StateView` on a cache miss.
+    fn get(&self, access_path: &AccessPath) -> anyhow::Result<Option<Vec<u8>>> {
+        match self.data_map.get(access_path) {
+            Some(opt_data) => Ok(opt_data.clone()),
+            None => match self.data_view.get(&access_path) {
+                Ok(remote_data) => Ok(remote_data),
+                // TODO: should we forward some error info?
+                Err(e) => {
+                    crit!("[VM] Error getting data from storage for {:?}", access_path);
+                    Err(e)
+                }
+            },
+        }
+    }
+
+    fn multi_get(&self, _access_paths: &[AccessPath]) -> anyhow::Result<Vec<Option<Vec<u8>>>> {
+        unimplemented!()
+    }
+
+    fn is_genesis(&self) -> bool {
+        self.data_view.is_genesis()
+    }
+}
+
 impl<'block> RemoteCache for StateViewCache<'block> {
-    fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
-        StateViewCache::get(self, access_path)
+    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+        RemoteStorage::new(self).get_module(module_id)
+    }
+
+    fn get_resource(&self, address: &AccountAddress, tag: &TypeTag) -> VMResult<Option<Vec<u8>>> {
+        RemoteStorage::new(self).get_resource(address, tag)
+    }
+}
+
+impl<'block> ConfigStorage for StateViewCache<'block> {
+    fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
+        self.get(&access_path).ok()?
     }
 }
 
 // Adapter to convert a `StateView` into a `RemoteCache`.
-pub struct RemoteStorage<'a>(&'a dyn StateView);
+pub struct RemoteStorage<'a, S>(&'a S);
 
-impl<'a> RemoteStorage<'a> {
-    pub fn new(state_store: &'a dyn StateView) -> Self {
+impl<'a, S: StateView> RemoteStorage<'a, S> {
+    pub fn new(state_store: &'a S) -> Self {
         Self(state_store)
     }
-}
 
-impl<'a> RemoteCache for RemoteStorage<'a> {
-    fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
+    pub fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
         self.0
             .get(access_path)
             .map_err(|_| VMStatus::new(StatusCode::STORAGE_ERROR))
+    }
+}
+
+impl<'a, S: StateView> RemoteCache for RemoteStorage<'a, S> {
+    fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
+        // REVIEW: cache this?
+        let ap = AccessPath::from(module_id);
+        self.get(&ap)
+    }
+
+    fn get_resource(&self, address: &AccountAddress, tag: &TypeTag) -> VMResult<Option<Vec<u8>>> {
+        let struct_tag = match tag {
+            TypeTag::Struct(struct_tag) => struct_tag.clone(),
+            _ => return Err(VMStatus::new(StatusCode::VALUE_DESERIALIZATION_ERROR)),
+        };
+        let ap = create_access_path(*address, struct_tag);
+        self.get(&ap)
+    }
+}
+
+impl<'a, S: StateView> ConfigStorage for RemoteStorage<'a, S> {
+    fn fetch_config(&self, access_path: AccessPath) -> Option<Vec<u8>> {
+        self.get(&access_path).ok()?
     }
 }

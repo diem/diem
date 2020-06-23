@@ -117,12 +117,17 @@ mod unit_tests;
 
 pub mod system_module_names;
 
-pub use crate::libra_vm::LibraVM;
+pub use crate::libra_vm::{txn_effects_to_writeset_and_events, LibraVM};
 
 use libra_state_view::StateView;
 use libra_types::{
+    access_path::AccessPath,
     transaction::{SignedTransaction, Transaction, TransactionOutput, VMValidatorResult},
     vm_status::VMStatus,
+};
+use move_core_types::{
+    account_address::AccountAddress,
+    language_storage::{ResourceKey, StructTag},
 };
 
 /// This trait describes the VM's validation interfaces.
@@ -149,4 +154,10 @@ pub trait VMExecutor: Send {
         transactions: Vec<Transaction>,
         state_view: &dyn StateView,
     ) -> Result<Vec<TransactionOutput>, VMStatus>;
+}
+
+/// Get the AccessPath to a resource stored under `address` with type name `tag`
+fn create_access_path(address: AccountAddress, tag: StructTag) -> AccessPath {
+    let resource_tag = ResourceKey::new(address, tag);
+    AccessPath::resource_access_path(&resource_tag)
 }

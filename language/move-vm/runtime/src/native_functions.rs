@@ -1,19 +1,16 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{data_operations::move_resource_to, interpreter::Interpreter, loader::Resolver};
-use libra_types::{
-    access_path::AccessPath, account_address::AccountAddress, account_config::CORE_CODE_ADDRESS,
-    contract_event::ContractEvent,
-};
-use move_core_types::{gas_schedule::CostTable, identifier::IdentStr, language_storage::ModuleId};
+use crate::{interpreter::Interpreter, loader::Resolver};
+use libra_types::account_config::CORE_CODE_ADDRESS;
+use move_core_types::{account_address::AccountAddress, gas_schedule::CostTable};
 use move_vm_natives::{account, debug, event, hash, lcs, signature, signer, vector};
 use move_vm_types::{
     data_store::DataStore,
     gas_schedule::CostStrategy,
     loaded_data::{runtime_types::Type, types::FatType},
     natives::function::{NativeContext, NativeResult},
-    values::{Struct, Value},
+    values::Value,
 };
 use std::{collections::VecDeque, fmt::Write};
 use vm::errors::VMResult;
@@ -145,28 +142,8 @@ impl<'a> NativeContext for FunctionContext<'a> {
         self.cost_strategy.cost_table()
     }
 
-    fn save_under_address(
-        &mut self,
-        ty_args: &[Type],
-        module_id: &ModuleId,
-        struct_name: &IdentStr,
-        resource_to_save: Struct,
-        account_address: AccountAddress,
-    ) -> VMResult<()> {
-        let libra_type =
-            self.resolver
-                .get_libra_type_info(module_id, struct_name, ty_args, self.data_store)?;
-        let ap = AccessPath::new(account_address, libra_type.resource_key().to_vec());
-        move_resource_to(
-            self.data_store,
-            &ap,
-            libra_type.fat_type(),
-            resource_to_save,
-        )
-    }
-
-    fn save_event(&mut self, event: ContractEvent) -> VMResult<()> {
-        Ok(self.data_store.emit_event(event))
+    fn save_event(&mut self, guid: Vec<u8>, seq_num: u64, ty: Type, val: Value) -> VMResult<()> {
+        Ok(self.data_store.emit_event(guid, seq_num, ty, val))
     }
 
     fn convert_to_fat_types(&self, types: Vec<Type>) -> VMResult<Vec<FatType>> {

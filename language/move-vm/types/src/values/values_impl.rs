@@ -9,9 +9,12 @@ use libra_types::{
     account_address::AccountAddress,
     vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode, VMStatus},
 };
-use move_core_types::gas_schedule::{
-    words_in, AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits, CONST_SIZE, REFERENCE_SIZE,
-    STRUCT_SIZE,
+use move_core_types::{
+    gas_schedule::{
+        words_in, AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits, CONST_SIZE, REFERENCE_SIZE,
+        STRUCT_SIZE,
+    },
+    value::{MoveKind, MoveKindInfo, MoveStructLayout, MoveTypeLayout},
 };
 use std::{
     cell::{Ref, RefCell, RefMut},
@@ -2392,29 +2395,83 @@ use serde::{
 };
 
 impl Value {
-    pub fn simple_deserialize(blob: &[u8], ty: &FatType) -> VMResult<Value> {
-        lcs::from_bytes_seed(ty, blob)
+    pub fn simple_deserialize_fat(blob: &[u8], ty: &FatType) -> VMResult<Value> {
+        let (kind_info, layout) = ty.layout_and_kind_info()?;
+        Self::simple_deserialize(blob, &kind_info, &layout)
+    }
+
+    pub fn simple_serialize_fat(&self, ty: &FatType) -> Option<Vec<u8>> {
+        let (_, layout) = ty.layout_and_kind_info().ok()?;
+        self.simple_serialize(&layout)
+    }
+
+    pub fn simple_deserialize(
+        blob: &[u8],
+        kind_info: &MoveKindInfo,
+        layout: &MoveTypeLayout,
+    ) -> VMResult<Value> {
+        lcs::from_bytes_seed(SeedWrapper { kind_info, layout }, blob)
             .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
     }
 
-    pub fn simple_serialize(&self, ty: &FatType) -> Option<Vec<u8>> {
-        lcs::to_bytes(&AnnotatedValue { ty, val: &self.0 }).ok()
+    pub fn simple_serialize(&self, layout: &MoveTypeLayout) -> Option<Vec<u8>> {
+        lcs::to_bytes(&AnnotatedValue {
+            layout,
+            val: &self.0,
+        })
+        .ok()
     }
 }
 
 impl Struct {
-    pub fn simple_deserialize(blob: &[u8], ty: &FatStructType) -> VMResult<Struct> {
-        lcs::from_bytes_seed(ty, blob)
-            .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
+    pub fn simple_deserialize_fat(blob: &[u8], ty: &FatStructType) -> VMResult<Struct> {
+        let ((is_resource, field_kinds), struct_layout) = ty.layout_and_kind_info()?;
+        lcs::from_bytes_seed(
+            SeedWrapper {
+                kind_info: (is_resource, field_kinds.as_slice()),
+                layout: &struct_layout,
+            },
+            blob,
+        )
+        .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
     }
 
-    pub fn simple_serialize(&self, ty: &FatStructType) -> Option<Vec<u8>> {
-        lcs::to_bytes(&AnnotatedValue { ty, val: &self.0 }).ok()
+    pub fn simple_serialize_fat(&self, ty: &FatStructType) -> Option<Vec<u8>> {
+        let (_, struct_layout) = ty.layout_and_kind_info().ok()?;
+        lcs::to_bytes(&AnnotatedValue {
+            layout: &struct_layout,
+            val: &self.0,
+        })
+        .ok()
+    }
+
+    pub fn simple_deserialize(
+        blob: &[u8],
+        is_resource: bool,
+        field_kinds: &[MoveKindInfo],
+        layout: &MoveStructLayout,
+    ) -> VMResult<Struct> {
+        lcs::from_bytes_seed(
+            SeedWrapper {
+                kind_info: (MoveKind::from_bool(is_resource), field_kinds),
+                layout,
+            },
+            blob,
+        )
+        .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
+    }
+
+    pub fn simple_serialize(&self, layout: &MoveStructLayout) -> Option<Vec<u8>> {
+        lcs::to_bytes(&AnnotatedValue {
+            layout,
+            val: &self.0,
+        })
+        .ok()
     }
 }
 
 struct AnnotatedValue<'a, 'b, T1, T2> {
-    ty: &'a T1,
+    layout: &'a T1,
     val: &'b T2,
 }
 
@@ -2424,51 +2481,51 @@ fn invariant_violation<S: serde::Serializer>(message: String) -> S::Error {
     )
 }
 
-impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatType, ValueImpl> {
+impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, MoveTypeLayout, ValueImpl> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match (self.ty, self.val) {
-            (FatType::U8, ValueImpl::U8(x)) => serializer.serialize_u8(*x),
-            (FatType::U64, ValueImpl::U64(x)) => serializer.serialize_u64(*x),
-            (FatType::U128, ValueImpl::U128(x)) => serializer.serialize_u128(*x),
-            (FatType::Bool, ValueImpl::Bool(x)) => serializer.serialize_bool(*x),
-            (FatType::Address, ValueImpl::Address(x)) => x.serialize(serializer),
+        match (self.layout, self.val) {
+            (MoveTypeLayout::U8, ValueImpl::U8(x)) => serializer.serialize_u8(*x),
+            (MoveTypeLayout::U64, ValueImpl::U64(x)) => serializer.serialize_u64(*x),
+            (MoveTypeLayout::U128, ValueImpl::U128(x)) => serializer.serialize_u128(*x),
+            (MoveTypeLayout::Bool, ValueImpl::Bool(x)) => serializer.serialize_bool(*x),
+            (MoveTypeLayout::Address, ValueImpl::Address(x)) => x.serialize(serializer),
 
-            (FatType::Struct(ty), ValueImpl::Container(r)) => {
+            (MoveTypeLayout::Struct(struct_layout), ValueImpl::Container(r)) => {
                 let r = r.borrow();
                 (AnnotatedValue {
-                    ty: &**ty,
+                    layout: struct_layout,
                     val: &*r,
                 })
                 .serialize(serializer)
             }
 
-            (FatType::Vector(ty), ValueImpl::Container(r)) => {
-                let ty = &**ty;
-                match (ty, &*r.borrow()) {
-                    (FatType::U8, Container::U8(v)) => v.serialize(serializer),
-                    (FatType::U64, Container::U64(v)) => v.serialize(serializer),
-                    (FatType::U128, Container::U128(v)) => v.serialize(serializer),
-                    (FatType::Bool, Container::Bool(v)) => v.serialize(serializer),
-                    (FatType::Address, Container::Address(v)) => v.serialize(serializer),
+            (MoveTypeLayout::Vector(layout), ValueImpl::Container(r)) => {
+                let layout = &**layout;
+                match (layout, &*r.borrow()) {
+                    (MoveTypeLayout::U8, Container::U8(v)) => v.serialize(serializer),
+                    (MoveTypeLayout::U64, Container::U64(v)) => v.serialize(serializer),
+                    (MoveTypeLayout::U128, Container::U128(v)) => v.serialize(serializer),
+                    (MoveTypeLayout::Bool, Container::Bool(v)) => v.serialize(serializer),
+                    (MoveTypeLayout::Address, Container::Address(v)) => v.serialize(serializer),
 
                     (_, Container::Resource(v)) | (_, Container::General(v)) => {
                         let mut t = serializer.serialize_seq(Some(v.len()))?;
                         for val in v {
-                            t.serialize_element(&AnnotatedValue { ty, val })?;
+                            t.serialize_element(&AnnotatedValue { layout, val })?;
                         }
                         t.end()
                     }
 
-                    (ty, container) => Err(invariant_violation::<S>(format!(
+                    (layout, container) => Err(invariant_violation::<S>(format!(
                         "cannot serialize container {:?} as {:?}",
-                        container, ty
+                        container, layout
                     ))),
                 }
             }
 
-            (FatType::Signer, ValueImpl::Container(r)) => match &*r.borrow() {
+            (MoveTypeLayout::Signer, ValueImpl::Container(r)) => match &*r.borrow() {
                 Container::Resource(v) if v.len() == 1 => (AnnotatedValue {
-                    ty: &FatType::Address,
+                    layout: &MoveTypeLayout::Address,
                     val: &v[0],
                 })
                 .serialize(serializer),
@@ -2487,7 +2544,7 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatType, ValueImpl> {
     }
 }
 
-impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatStructType, Container> {
+impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, MoveStructLayout, Container> {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let values = match &self.val {
             Container::Resource(v) | Container::General(v) => v,
@@ -2499,52 +2556,82 @@ impl<'a, 'b> serde::Serialize for AnnotatedValue<'a, 'b, FatStructType, Containe
             | Container::Address(_) => {
                 return Err(invariant_violation::<S>(format!(
                     "cannot serialize container value {:?} as {:?}",
-                    self.val, self.ty
+                    self.val, self.layout
                 )));
             }
         };
-        let fields = &self.ty.layout;
+        let fields = self.layout.fields();
         if fields.len() != values.len() {
             return Err(invariant_violation::<S>(format!(
                 "cannot serialize struct value {:?} as {:?} -- number of fields mismatch",
-                self.val, self.ty
+                self.val, self.layout
             )));
         }
         let mut t = serializer.serialize_tuple(values.len())?;
-        for (ty, val) in fields.iter().zip(values.iter()) {
-            t.serialize_element(&AnnotatedValue { ty, val })?;
+        for (field_layout, val) in fields.iter().zip(values.iter()) {
+            t.serialize_element(&AnnotatedValue {
+                layout: field_layout,
+                val,
+            })?;
         }
         t.end()
     }
 }
 
-impl<'d> serde::de::DeserializeSeed<'d> for &FatType {
+#[derive(Clone)]
+struct SeedWrapper<K, L> {
+    kind_info: K,
+    layout: L,
+}
+
+impl<'d> serde::de::DeserializeSeed<'d> for SeedWrapper<&MoveKindInfo, &MoveTypeLayout> {
     type Value = Value;
 
     fn deserialize<D: serde::de::Deserializer<'d>>(
         self,
         deserializer: D,
     ) -> Result<Self::Value, D::Error> {
-        match self {
-            FatType::Bool => bool::deserialize(deserializer).map(Value::bool),
-            FatType::U8 => u8::deserialize(deserializer).map(Value::u8),
-            FatType::U64 => u64::deserialize(deserializer).map(Value::u64),
-            FatType::U128 => u128::deserialize(deserializer).map(Value::u128),
-            FatType::Address => AccountAddress::deserialize(deserializer).map(Value::address),
-            FatType::Signer => AccountAddress::deserialize(deserializer).map(Value::signer),
+        use MoveKindInfo as K;
+        use MoveTypeLayout as L;
 
-            FatType::Struct(ty) => Ok(Value::struct_(ty.deserialize(deserializer)?)),
+        match (self.kind_info, self.layout) {
+            (K::Base(MoveKind::Copyable), L::Bool) => {
+                bool::deserialize(deserializer).map(Value::bool)
+            }
+            (K::Base(MoveKind::Copyable), L::U8) => u8::deserialize(deserializer).map(Value::u8),
+            (K::Base(MoveKind::Copyable), L::U64) => u64::deserialize(deserializer).map(Value::u64),
+            (K::Base(MoveKind::Copyable), L::U128) => {
+                u128::deserialize(deserializer).map(Value::u128)
+            }
+            (K::Base(MoveKind::Copyable), L::Address) => {
+                AccountAddress::deserialize(deserializer).map(Value::address)
+            }
+            (K::Base(MoveKind::Resource), L::Signer) => {
+                AccountAddress::deserialize(deserializer).map(Value::signer)
+            }
 
-            FatType::Vector(layout) => {
+            (K::Struct(k, field_kinds), L::Struct(struct_layout)) => Ok(Value::struct_(
+                SeedWrapper {
+                    kind_info: (*k, field_kinds.as_slice()),
+                    layout: struct_layout,
+                }
+                .deserialize(deserializer)?,
+            )),
+
+            (K::Vector(k, elem_k), L::Vector(layout)) => {
                 let container = match &**layout {
-                    FatType::U8 => Container::U8(Vec::deserialize(deserializer)?),
-                    FatType::U64 => Container::U64(Vec::deserialize(deserializer)?),
-                    FatType::U128 => Container::U128(Vec::deserialize(deserializer)?),
-                    FatType::Bool => Container::Bool(Vec::deserialize(deserializer)?),
-                    FatType::Address => Container::Address(Vec::deserialize(deserializer)?),
+                    L::U8 => Container::U8(Vec::deserialize(deserializer)?),
+                    L::U64 => Container::U64(Vec::deserialize(deserializer)?),
+                    L::U128 => Container::U128(Vec::deserialize(deserializer)?),
+                    L::Bool => Container::Bool(Vec::deserialize(deserializer)?),
+                    L::Address => Container::Address(Vec::deserialize(deserializer)?),
                     layout => {
-                        let v = deserializer.deserialize_seq(VectorElementVisitor(layout))?;
-                        if layout.is_resource().unwrap() {
+                        let v =
+                            deserializer.deserialize_seq(VectorElementVisitor(SeedWrapper {
+                                kind_info: elem_k,
+                                layout,
+                            }))?;
+                        if k.is_resource() {
                             Container::Resource(v)
                         } else {
                             Container::General(v)
@@ -2556,30 +2643,36 @@ impl<'d> serde::de::DeserializeSeed<'d> for &FatType {
                 )))))
             }
 
-            FatType::Reference(_) | FatType::MutableReference(_) | FatType::TyParam(_) => {
-                Err(D::Error::custom(
-                    VMStatus::new(StatusCode::INVALID_DATA)
-                        .with_message(format!("Value type {:?} is not possible", self)),
-                ))
-            }
+            _ => Err(D::Error::custom(
+                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(format!(
+                    "cannot deserialize as ({:?}, {:?})",
+                    self.kind_info, self.layout
+                )),
+            )),
         }
     }
 }
 
-impl<'d> serde::de::DeserializeSeed<'d> for &FatStructType {
+impl<'d> serde::de::DeserializeSeed<'d>
+    for SeedWrapper<(MoveKind, &[MoveKindInfo]), &MoveStructLayout>
+{
     type Value = Struct;
 
     fn deserialize<D: serde::de::Deserializer<'d>>(
         self,
         deserializer: D,
     ) -> Result<Self::Value, D::Error> {
-        let layout = &self.layout;
-        let fields = deserializer.deserialize_tuple(layout.len(), StructFieldVisitor(layout))?;
-        Ok(Struct::pack(fields, self.is_resource))
+        let (k, field_kinds) = self.kind_info;
+        let field_layouts = self.layout.fields();
+        let fields = deserializer.deserialize_tuple(
+            field_layouts.len(),
+            StructFieldVisitor(field_kinds, field_layouts),
+        )?;
+        Ok(Struct::pack(fields, k.is_resource()))
     }
 }
 
-struct VectorElementVisitor<'a>(&'a FatType);
+struct VectorElementVisitor<'a>(SeedWrapper<&'a MoveKindInfo, &'a MoveTypeLayout>);
 
 impl<'d, 'a> serde::de::Visitor<'d> for VectorElementVisitor<'a> {
     type Value = Vec<ValueImpl>;
@@ -2593,14 +2686,14 @@ impl<'d, 'a> serde::de::Visitor<'d> for VectorElementVisitor<'a> {
         A: serde::de::SeqAccess<'d>,
     {
         let mut vals = Vec::new();
-        while let Some(elem) = seq.next_element_seed(self.0)? {
+        while let Some(elem) = seq.next_element_seed(self.0.clone())? {
             vals.push(elem.0)
         }
         Ok(vals)
     }
 }
 
-struct StructFieldVisitor<'a>(&'a [FatType]);
+struct StructFieldVisitor<'a>(&'a [MoveKindInfo], &'a [MoveTypeLayout]);
 
 impl<'d, 'a> serde::de::Visitor<'d> for StructFieldVisitor<'a> {
     type Value = Vec<Value>;
@@ -2614,8 +2707,11 @@ impl<'d, 'a> serde::de::Visitor<'d> for StructFieldVisitor<'a> {
         A: serde::de::SeqAccess<'d>,
     {
         let mut val = Vec::new();
-        for (i, field_type) in self.0.iter().enumerate() {
-            if let Some(elem) = seq.next_element_seed(field_type)? {
+        for (i, (field_kind, field_layout)) in self.0.iter().zip(self.1.iter()).enumerate() {
+            if let Some(elem) = seq.next_element_seed(SeedWrapper {
+                kind_info: field_kind,
+                layout: field_layout,
+            })? {
                 val.push(elem)
             } else {
                 return Err(A::Error::invalid_length(i, &self));
@@ -2634,17 +2730,27 @@ impl<'d, 'a> serde::de::Visitor<'d> for StructFieldVisitor<'a> {
 **************************************************************************************/
 
 impl Value {
-    fn constant_sig_token_to_type(constant_signature: &SignatureToken) -> Option<FatType> {
-        use FatType as T;
+    fn constant_sig_token_to_layout(
+        constant_signature: &SignatureToken,
+    ) -> Option<(MoveKindInfo, MoveTypeLayout)> {
+        use MoveKindInfo as K;
+        use MoveTypeLayout as L;
         use SignatureToken as S;
+
         Some(match constant_signature {
-            S::Bool => T::Bool,
-            S::U8 => T::U8,
-            S::U64 => T::U64,
-            S::U128 => T::U128,
-            S::Address => T::Address,
-            S::Signer => T::Signer,
-            S::Vector(inner) => T::Vector(Box::new(Self::constant_sig_token_to_type(inner)?)),
+            S::Bool => (K::Base(MoveKind::Copyable), L::Bool),
+            S::U8 => (K::Base(MoveKind::Copyable), L::U8),
+            S::U64 => (K::Base(MoveKind::Copyable), L::U64),
+            S::U128 => (K::Base(MoveKind::Copyable), L::U128),
+            S::Address => (K::Base(MoveKind::Copyable), L::Address),
+            S::Signer => return None,
+            S::Vector(inner) => {
+                let (k, l) = Self::constant_sig_token_to_layout(inner)?;
+                (
+                    MoveKindInfo::Vector(k.kind(), Box::new(k)),
+                    L::Vector(Box::new(l)),
+                )
+            }
             // Not yet supported
             S::Struct(_) | S::StructInstantiation(_, _) => return None,
             // Not allowed/Not meaningful
@@ -2653,8 +2759,8 @@ impl Value {
     }
 
     pub fn deserialize_constant(constant: &Constant) -> Option<Value> {
-        let ty = Self::constant_sig_token_to_type(&constant.type_)?;
-        Value::simple_deserialize(&constant.data, &ty).ok()
+        let (kind_info, layout) = Self::constant_sig_token_to_layout(&constant.type_)?;
+        Value::simple_deserialize(&constant.data, &kind_info, &layout).ok()
     }
 }
 

@@ -25,10 +25,10 @@ pub enum MoveValue {
     Signer(AccountAddress),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MoveStructLayout(Vec<MoveTypeLayout>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MoveTypeLayout {
     Bool,
     U8,
@@ -38,6 +38,59 @@ pub enum MoveTypeLayout {
     Vector(Box<MoveTypeLayout>),
     Struct(MoveStructLayout),
     Signer,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum MoveKind {
+    Copyable,
+    Resource,
+}
+
+#[derive(Debug, Clone)]
+pub enum MoveKindInfo {
+    Base(MoveKind),
+    Vector(MoveKind, Box<MoveKindInfo>),
+    Struct(MoveKind, Vec<MoveKindInfo>),
+}
+
+impl MoveKind {
+    pub fn is_resource(&self) -> bool {
+        match self {
+            Self::Resource => true,
+            Self::Copyable => false,
+        }
+    }
+
+    pub fn is_copyable(&self) -> bool {
+        match self {
+            Self::Resource => false,
+            Self::Copyable => true,
+        }
+    }
+
+    pub fn from_bool(is_resource: bool) -> Self {
+        if is_resource {
+            Self::Resource
+        } else {
+            Self::Copyable
+        }
+    }
+}
+
+impl MoveKindInfo {
+    pub fn is_resource(&self) -> bool {
+        self.kind().is_resource()
+    }
+
+    pub fn is_copyable(&self) -> bool {
+        self.kind().is_copyable()
+    }
+
+    pub fn kind(&self) -> MoveKind {
+        match self {
+            Self::Base(k) | Self::Vector(k, _) | Self::Struct(k, _) => *k,
+        }
+    }
 }
 
 impl MoveValue {

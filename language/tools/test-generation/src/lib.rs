@@ -88,12 +88,12 @@ fn run_vm(module: CompiledModule) -> VMResult<()> {
 }
 
 /// Execute the first function in a module
-fn execute_function_in_module(
+fn execute_function_in_module<S: StateView>(
     module: CompiledModule,
     idx: FunctionDefinitionIndex,
     ty_args: Vec<TypeTag>,
     args: Vec<Value>,
-    state_view: &dyn StateView,
+    state_view: &S,
 ) -> VMResult<()> {
     let module_id = module.self_id();
     let entry_name = {
@@ -106,7 +106,6 @@ fn execute_function_in_module(
         libra_vm.load_configs(state_view);
 
         let internals = libra_vm.internals();
-        let move_vm = internals.move_vm();
 
         let gas_schedule = internals.gas_schedule()?;
         internals.with_txn_data_cache(state_view, |mut txn_context| {
@@ -116,14 +115,13 @@ fn execute_function_in_module(
                 .serialize(&mut mod_blob)
                 .expect("Module serialization error");
             let mut cost_strategy = CostStrategy::system(gas_schedule, GasUnits::new(0));
-            move_vm.publish_module(mod_blob, sender, &mut txn_context, &mut cost_strategy)?;
-            move_vm.execute_function(
+            txn_context.publish_module(mod_blob, sender, &mut cost_strategy)?;
+            txn_context.execute_function(
                 &module_id,
                 &entry_name,
                 ty_args,
                 args,
                 sender,
-                &mut txn_context,
                 &mut cost_strategy,
             )
         })

@@ -1,13 +1,18 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{interpreter::Interpreter, loader::Loader};
+use crate::{
+    data_cache::{RemoteCache, TransactionDataCache},
+    interpreter::Interpreter,
+    loader::Loader,
+    session::Session,
+};
 use libra_logger::prelude::*;
-use libra_types::vm_status::{StatusCode, VMStatus};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
+    vm_status::{StatusCode, VMStatus},
 };
 use move_vm_types::{data_store::DataStore, gas_schedule::CostStrategy, values::Value};
 use vm::{
@@ -26,6 +31,13 @@ impl VMRuntime {
     pub(crate) fn new() -> Self {
         VMRuntime {
             loader: Loader::new(),
+        }
+    }
+
+    pub fn new_session<'r, R: RemoteCache>(&self, remote: &'r R) -> Session<'r, '_, R> {
+        Session {
+            runtime: self,
+            data_cache: TransactionDataCache::new(remote, &self.loader),
         }
     }
 
@@ -70,7 +82,7 @@ impl VMRuntime {
         // perform bytecode and loading verification
         self.loader.verify_module(&compiled_module)?;
 
-        data_store.publish_module(module_id, module)
+        data_store.publish_module(module, compiled_module)
     }
 
     pub(crate) fn execute_script(

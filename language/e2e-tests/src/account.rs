@@ -11,8 +11,7 @@ use libra_types::{
     account_address::AccountAddress,
     account_config::{
         self, from_currency_code_string, type_tag_for_currency_code, AccountResource,
-        BalanceResource, KeyRotationCapabilityResource, ReceivedPaymentEvent, RoleId,
-        SentPaymentEvent, WithdrawCapabilityResource, COIN1_NAME, COIN2_NAME, LBR_NAME,
+        BalanceResource, RoleId, COIN1_NAME, COIN2_NAME, LBR_NAME,
     },
     event::EventHandle,
     transaction::{
@@ -25,11 +24,9 @@ use move_core_types::{
     identifier::{IdentStr, Identifier},
     language_storage::{ResourceKey, StructTag, TypeTag},
     move_resource::MoveResource,
+    value::{MoveStructLayout, MoveTypeLayout},
 };
-use move_vm_types::{
-    loaded_data::types::{FatStructType, FatType},
-    values::{Struct, Value},
-};
+use move_vm_types::values::{Struct, Value};
 use std::{collections::BTreeMap, str::FromStr, time::Duration};
 use vm_genesis::GENESIS_KEYPAIR;
 
@@ -499,15 +496,8 @@ impl Balance {
     }
 
     /// Returns the value layout for the account balance
-    pub fn type_() -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: AccountResource::module_identifier(),
-            name: BalanceResource::struct_identifier(),
-            is_resource: true,
-            ty_args: vec![],
-            layout: vec![FatType::U64],
-        }
+    pub fn layout() -> MoveStructLayout {
+        MoveStructLayout::new(vec![MoveTypeLayout::U64])
     }
 }
 
@@ -541,15 +531,8 @@ impl AccountRoleSpecifier {
         }
     }
 
-    pub fn type_() -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: RoleId::module_identifier(),
-            name: RoleId::struct_identifier(),
-            is_resource: true,
-            ty_args: vec![],
-            layout: vec![FatType::U64],
-        }
+    pub fn layout() -> MoveStructLayout {
+        MoveStructLayout::new(vec![MoveTypeLayout::U64])
     }
 
     pub fn to_value(&self) -> Value {
@@ -640,16 +623,8 @@ impl EventHandleGenerator {
             true,
         ))
     }
-
-    pub fn type_() -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: account_config::event_module_name().to_owned(),
-            name: account_config::event_handle_generator_struct_name().to_owned(),
-            is_resource: true,
-            ty_args: vec![],
-            layout: vec![FatType::U64, FatType::Address],
-        }
+    pub fn layout() -> MoveStructLayout {
+        MoveStructLayout::new(vec![MoveTypeLayout::U64, MoveTypeLayout::Address])
     }
 }
 
@@ -781,72 +756,42 @@ impl AccountData {
         self.account.rotate_key(privkey, pubkey)
     }
 
-    pub fn sent_payment_event_type() -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: AccountResource::module_identifier(),
-            name: SentPaymentEvent::struct_identifier(),
-            is_resource: false,
-            ty_args: vec![],
-            layout: vec![
-                FatType::U64,
-                FatType::Address,
-                FatType::Vector(Box::new(FatType::U8)),
-            ],
-        }
+    pub fn sent_payment_event_layout() -> MoveStructLayout {
+        MoveStructLayout::new(vec![
+            MoveTypeLayout::U64,
+            MoveTypeLayout::Address,
+            MoveTypeLayout::Vector(Box::new(MoveTypeLayout::U8)),
+        ])
     }
 
-    pub fn received_payment_event_type() -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: AccountResource::module_identifier(),
-            name: ReceivedPaymentEvent::struct_identifier(),
-            is_resource: false,
-            ty_args: vec![],
-            layout: vec![
-                FatType::U64,
-                FatType::Address,
-                FatType::Vector(Box::new(FatType::U8)),
-            ],
-        }
+    pub fn received_payment_event_type() -> MoveStructLayout {
+        MoveStructLayout::new(vec![
+            MoveTypeLayout::U64,
+            MoveTypeLayout::Address,
+            MoveTypeLayout::Vector(Box::new(MoveTypeLayout::U8)),
+        ])
     }
 
-    pub fn event_handle_type(ty: FatType) -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: account_config::event_module_name().to_owned(),
-            name: account_config::event_handle_struct_name().to_owned(),
-            is_resource: true,
-            ty_args: vec![ty],
-            layout: vec![FatType::U64, FatType::Vector(Box::new(FatType::U8))],
-        }
+    pub fn event_handle_layout() -> MoveStructLayout {
+        MoveStructLayout::new(vec![
+            MoveTypeLayout::U64,
+            MoveTypeLayout::Vector(Box::new(MoveTypeLayout::U8)),
+        ])
     }
 
     /// Returns the (Move value) layout of the LibraAccount::LibraAccount struct
-    pub fn type_() -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: AccountResource::module_identifier(),
-            name: AccountResource::struct_identifier(),
-            is_resource: true,
-            ty_args: vec![],
-            layout: vec![
-                FatType::Vector(Box::new(FatType::U8)),
-                FatType::Vector(Box::new(FatType::Struct(Box::new(
-                    WithdrawCapability::type_(),
-                )))),
-                FatType::Vector(Box::new(FatType::Struct(Box::new(
-                    KeyRotationCapability::type_(),
-                )))),
-                FatType::Struct(Box::new(Self::event_handle_type(FatType::Struct(
-                    Box::new(Self::sent_payment_event_type()),
-                )))),
-                FatType::Struct(Box::new(Self::event_handle_type(FatType::Struct(
-                    Box::new(Self::received_payment_event_type()),
-                )))),
-                FatType::U64,
-            ],
-        }
+    pub fn layout() -> MoveStructLayout {
+        use MoveStructLayout as S;
+        use MoveTypeLayout as T;
+
+        S::new(vec![
+            T::Vector(Box::new(T::U8)),
+            T::Vector(Box::new(T::Struct(WithdrawCapability::layout()))),
+            T::Vector(Box::new(T::Struct(KeyRotationCapability::layout()))),
+            T::Struct(Self::event_handle_layout()),
+            T::Struct(Self::event_handle_layout()),
+            T::U64,
+        ])
     }
 
     /// Returns whether the underlying account is an an empty account type or not.
@@ -920,14 +865,14 @@ impl AccountData {
         let account = account_blob
             .value_as::<Struct>()
             .unwrap()
-            .simple_serialize(&AccountData::type_())
+            .simple_serialize(&AccountData::layout())
             .unwrap();
         write_set.push((self.make_account_access_path(), WriteOp::Value(account)));
         for (code, balance_blob) in balance_blobs.into_iter() {
             let balance = balance_blob
                 .value_as::<Struct>()
                 .unwrap()
-                .simple_serialize(&Balance::type_())
+                .simple_serialize(&Balance::layout())
                 .unwrap();
             write_set.push((self.make_balance_access_path(code), WriteOp::Value(balance)));
         }
@@ -935,7 +880,7 @@ impl AccountData {
         let freezing_bit = FreezingBit::value()
             .value_as::<Struct>()
             .unwrap()
-            .simple_serialize(&FreezingBit::type_())
+            .simple_serialize(&FreezingBit::layout())
             .unwrap();
         write_set.push((
             self.account
@@ -946,7 +891,7 @@ impl AccountData {
         let role_id = role_id_blob
             .value_as::<Struct>()
             .unwrap()
-            .simple_serialize(&AccountRoleSpecifier::type_())
+            .simple_serialize(&AccountRoleSpecifier::layout())
             .unwrap();
         write_set.push((
             self.account
@@ -957,7 +902,7 @@ impl AccountData {
         let event_generator = event_generator_blob
             .value_as::<Struct>()
             .unwrap()
-            .simple_serialize(&EventHandleGenerator::type_())
+            .simple_serialize(&EventHandleGenerator::layout())
             .unwrap();
         write_set.push((
             self.make_event_generator_access_path(),
@@ -1024,15 +969,8 @@ impl WithdrawCapability {
         Self { account_address }
     }
 
-    pub fn type_() -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: WithdrawCapabilityResource::module_identifier(),
-            name: WithdrawCapabilityResource::struct_identifier(),
-            is_resource: true,
-            ty_args: vec![],
-            layout: vec![FatType::Address],
-        }
+    pub fn layout() -> MoveStructLayout {
+        MoveStructLayout::new(vec![MoveTypeLayout::Address])
     }
 
     pub fn value(&self) -> Value {
@@ -1052,15 +990,8 @@ impl KeyRotationCapability {
         Self { account_address }
     }
 
-    pub fn type_() -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: KeyRotationCapabilityResource::module_identifier(),
-            name: KeyRotationCapabilityResource::struct_identifier(),
-            is_resource: true,
-            ty_args: vec![],
-            layout: vec![FatType::Address],
-        }
+    pub fn layout() -> MoveStructLayout {
+        MoveStructLayout::new(vec![MoveTypeLayout::Address])
     }
 
     pub fn value(&self) -> Value {
@@ -1077,15 +1008,8 @@ pub struct FreezingBit {
 }
 
 impl FreezingBit {
-    pub fn type_() -> FatStructType {
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: account_config::FreezingBit::module_identifier(),
-            name: account_config::FreezingBit::struct_identifier(),
-            is_resource: true,
-            ty_args: vec![],
-            layout: vec![FatType::Bool],
-        }
+    pub fn layout() -> MoveStructLayout {
+        MoveStructLayout::new(vec![MoveTypeLayout::Bool])
     }
 
     pub fn value() -> Value {

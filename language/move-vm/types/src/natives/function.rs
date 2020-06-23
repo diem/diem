@@ -19,15 +19,11 @@
 use crate::{
     gas_schedule::NativeCostIndex,
     loaded_data::{runtime_types::Type, types::FatType},
-    values::{Struct, Value},
-};
-use libra_types::{
-    account_address::AccountAddress, contract_event::ContractEvent, vm_status::VMStatus,
+    values::Value,
 };
 use move_core_types::{
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
-    identifier::IdentStr,
-    language_storage::ModuleId,
+    vm_status::VMStatus,
 };
 use std::fmt::Write;
 use vm::errors::VMResult;
@@ -43,17 +39,8 @@ pub trait NativeContext {
     fn print_stack_trace<B: Write>(&self, buf: &mut B) -> VMResult<()>;
     /// Gets cost table ref.
     fn cost_table(&self) -> &CostTable;
-    // Save a resource under the address specified by `account_address`
-    fn save_under_address(
-        &mut self,
-        ty_args: &[Type],
-        module_id: &ModuleId,
-        struct_name: &IdentStr,
-        resource_to_save: Struct,
-        account_address: AccountAddress,
-    ) -> VMResult<()>;
     /// Saves contract event.
-    fn save_event(&mut self, event: ContractEvent) -> VMResult<()>;
+    fn save_event(&mut self, guid: Vec<u8>, count: u64, ty: Type, val: Value) -> VMResult<()>;
     /// Converts types to fet types.
     fn convert_to_fat_types(&self, types: Vec<Type>) -> VMResult<Vec<FatType>>;
     /// Whether a type is a resource or not.

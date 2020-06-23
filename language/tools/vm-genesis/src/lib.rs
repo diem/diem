@@ -6,10 +6,7 @@
 mod genesis_context;
 mod genesis_gas_schedule;
 
-use crate::{
-    genesis_context::{GenesisContext, GenesisStateView},
-    genesis_gas_schedule::INITIAL_GAS_SCHEDULE,
-};
+use crate::{genesis_context::GenesisStateView, genesis_gas_schedule::INITIAL_GAS_SCHEDULE};
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use libra_config::config::{NodeConfig, HANDSHAKE_VERSION};
 use libra_crypto::{
@@ -21,11 +18,22 @@ use libra_types::{
     account_config,
     contract_event::ContractEvent,
     on_chain_config::{new_epoch_event_key, VMPublishingOption},
-    transaction::{authenticator::AuthenticationKey, ChangeSet, Script, Transaction},
+    transaction::{
+        authenticator::AuthenticationKey, ChangeSet, Script, Transaction, TransactionArgument,
+    },
 };
-use libra_vm::data_cache::StateViewCache;
-use move_core_types::language_storage::{StructTag, TypeTag};
-use move_vm_types::{data_store::DataStore, loaded_data::types::FatStructType, values::Value};
+use libra_vm::{data_cache::StateViewCache, txn_effects_to_writeset_and_events};
+use move_core_types::{
+    account_address::AccountAddress,
+    gas_schedule::{CostTable, GasAlgebra, GasUnits},
+    identifier::Identifier,
+    language_storage::{ModuleId, StructTag, TypeTag},
+};
+use move_vm_runtime::{data_cache::TransactionEffects, move_vm::MoveVM, session::Session};
+use move_vm_types::{
+    gas_schedule::{zero_cost_schedule, CostStrategy},
+    values::Value,
+};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use std::{collections::btree_map::BTreeMap, convert::TryFrom};
@@ -44,6 +52,8 @@ pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::
     (private_key, public_key)
 });
 
+pub static ZERO_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(zero_cost_schedule);
+
 pub type ValidatorRegistration = (Ed25519PublicKey, Script);
 
 pub fn encode_genesis_transaction_with_validator(
@@ -60,12 +70,22 @@ pub fn encode_genesis_transaction_with_validator(
     )
 }
 
+fn merge_txn_effects(
+    mut effects_1: TransactionEffects,
+    effects_2: TransactionEffects,
+) -> TransactionEffects {
+    effects_1.resources.extend(effects_2.resources);
+    effects_1.modules.extend(effects_2.modules);
+    effects_1.events.extend(effects_2.events);
+    effects_1
+}
+
 pub fn encode_genesis_change_set(
     public_key: &Ed25519PublicKey,
     validators: &[ValidatorRegistration],
     stdlib_modules: &[CompiledModule],
     vm_publishing_option: VMPublishingOption,
-) -> (ChangeSet, BTreeMap<Vec<u8>, FatStructType>) {
+) -> (ChangeSet, BTreeMap<Vec<u8>, StructTag>) {
     // create a data view for move_vm
     let mut state_view = GenesisStateView::new();
     for module in stdlib_modules {
@@ -74,7 +94,8 @@ pub fn encode_genesis_change_set(
     }
     let data_cache = StateViewCache::new(&state_view);
 
-    let mut genesis_context = GenesisContext::new(&data_cache, stdlib_modules);
+    let move_vm = MoveVM::new();
+    let mut session = move_vm.new_session(&data_cache);
 
     let lbr_ty = TypeTag::Struct(StructTag {
         address: *account_config::LBR_MODULE.address(),
@@ -84,31 +105,38 @@ pub fn encode_genesis_change_set(
     });
 
     // generate the genesis WriteSet
-    create_and_initialize_main_accounts(
-        &mut genesis_context,
-        &public_key,
-        vm_publishing_option,
-        &lbr_ty,
-    );
-    create_and_initialize_validators(&mut genesis_context, &validators);
-    reconfigure(&mut genesis_context);
+    create_and_initialize_main_accounts(&mut session, &public_key, vm_publishing_option, &lbr_ty);
+    create_and_initialize_validators(&mut session, &validators);
+    reconfigure(&mut session);
 
     // XXX/TODO: for testnet only
-    create_and_initialize_testnet_minting(&mut genesis_context, &public_key);
+    create_and_initialize_testnet_minting(&mut session, &public_key);
 
-    let mut interpreter_context = genesis_context.into_data_store();
-    publish_stdlib(&mut interpreter_context, stdlib_modules);
+    let effects_1 = session.finish().unwrap();
 
-    verify_genesis_write_set(interpreter_context.events());
-    (
-        ChangeSet::new(
-            interpreter_context
-                .make_write_set()
-                .expect("Genesis WriteSet failure"),
-            interpreter_context.events().to_vec(),
-        ),
-        interpreter_context.get_type_map(),
-    )
+    let state_view = GenesisStateView::new();
+    let data_cache = StateViewCache::new(&state_view);
+    let mut session = move_vm.new_session(&data_cache);
+    publish_stdlib(&mut session, stdlib_modules);
+    let effects_2 = session.finish().unwrap();
+
+    let effects = merge_txn_effects(effects_1, effects_2);
+
+    // REVIEW: Performance & caching.
+    let type_mapping = effects
+        .resources
+        .iter()
+        .flat_map(|(_adddr, resources)| {
+            resources.iter().map(|(ty_tag, _)| match ty_tag {
+                TypeTag::Struct(struct_tag) => (struct_tag.access_vector(), struct_tag.clone()),
+                _ => panic!("not a struct"),
+            })
+        })
+        .collect();
+    let (write_set, events) = txn_effects_to_writeset_and_events(effects).unwrap();
+
+    verify_genesis_write_set(&events);
+    (ChangeSet::new(write_set, events), type_mapping)
 }
 
 pub fn encode_genesis_transaction(
@@ -128,9 +156,58 @@ pub fn encode_genesis_transaction(
     )
 }
 
+/// Convert the transaction arguments into move values.
+fn convert_txn_args(args: &[TransactionArgument]) -> Vec<Value> {
+    args.iter()
+        .map(|arg| match arg {
+            TransactionArgument::U8(i) => Value::u8(*i),
+            TransactionArgument::U64(i) => Value::u64(*i),
+            TransactionArgument::U128(i) => Value::u128(*i),
+            TransactionArgument::Address(a) => Value::address(*a),
+            TransactionArgument::Bool(b) => Value::bool(*b),
+            TransactionArgument::U8Vector(v) => Value::vector_u8(v.clone()),
+        })
+        .collect()
+}
+
+fn exec_function(
+    session: &mut Session<StateViewCache>,
+    sender: AccountAddress,
+    module_name: &str,
+    function_name: &str,
+    ty_args: Vec<TypeTag>,
+    args: Vec<Value>,
+) {
+    session
+        .execute_function(
+            &ModuleId::new(
+                account_config::CORE_CODE_ADDRESS,
+                Identifier::new(module_name).unwrap(),
+            ),
+            &Identifier::new(function_name).unwrap(),
+            ty_args,
+            args,
+            sender,
+            &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+        )
+        .unwrap_or_else(|e| panic!("Error calling {}.{}: {}", module_name, function_name, e))
+}
+
+fn exec_script(session: &mut Session<StateViewCache>, sender: AccountAddress, script: &Script) {
+    session
+        .execute_script(
+            script.code().to_vec(),
+            script.ty_args().to_vec(),
+            convert_txn_args(script.args()),
+            sender,
+            &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+        )
+        .unwrap()
+}
+
 /// Create an initialize Association and Core Code accounts.
 fn create_and_initialize_main_accounts(
-    context: &mut GenesisContext,
+    session: &mut Session<StateViewCache>,
     public_key: &Ed25519PublicKey,
     publishing_option: VMPublishingOption,
     lbr_ty: &TypeTag,
@@ -143,8 +220,9 @@ fn create_and_initialize_main_accounts(
     let option_bytes =
         lcs::to_bytes(&publishing_option).expect("Cannot serialize publishing option");
 
-    context.set_sender(root_libra_root_address);
-    context.exec(
+    exec_function(
+        session,
+        root_libra_root_address,
         GENESIS_MODULE_NAME,
         "initialize",
         vec![],
@@ -159,12 +237,13 @@ fn create_and_initialize_main_accounts(
         ],
     );
 
-    context.set_sender(root_libra_root_address);
     // Bump the sequence number for the Association account. If we don't do this and a
     // subsequent transaction (e.g., minting) is sent from the Assocation account, a problem
     // arises: both the genesis transaction and the subsequent transaction have sequence
     // number 0
-    context.exec(
+    exec_function(
+        session,
+        root_libra_root_address,
         "LibraAccount",
         "success_epilogue",
         vec![lbr_ty.clone()],
@@ -179,7 +258,7 @@ fn create_and_initialize_main_accounts(
 }
 
 fn create_and_initialize_testnet_minting(
-    context: &mut GenesisContext,
+    session: &mut Session<StateViewCache>,
     public_key: &Ed25519PublicKey,
 ) {
     let genesis_auth_key = AuthenticationKey::ed25519(public_key);
@@ -214,45 +293,61 @@ fn create_and_initialize_testnet_minting(
     );
 
     // Create the DD account
-    context.set_sender(account_config::treasury_compliance_account_address());
-    context.exec_script(&create_dd_script);
+    exec_script(
+        session,
+        account_config::treasury_compliance_account_address(),
+        &create_dd_script,
+    );
 
     // mint the coins, and mint LBR
-    context.set_sender(account_config::treasury_compliance_account_address());
-    context.exec_script(&mint_max_coin1);
-    context.exec_script(&mint_max_coin2);
-    context.set_sender(account_config::testnet_dd_account_address());
-    context.exec_script(&transaction_builder::encode_mint_lbr_script(
-        std::u64::MAX / 2,
-    ));
-    context.exec_script(
+    let treasury_compliance_account_address = account_config::treasury_compliance_account_address();
+    exec_script(
+        session,
+        treasury_compliance_account_address,
+        &mint_max_coin1,
+    );
+    exec_script(
+        session,
+        treasury_compliance_account_address,
+        &mint_max_coin2,
+    );
+
+    let testnet_dd_account_address = account_config::testnet_dd_account_address();
+    exec_script(
+        session,
+        testnet_dd_account_address,
+        &transaction_builder::encode_mint_lbr_script(std::u64::MAX / 2),
+    );
+    exec_script(
+        session,
+        testnet_dd_account_address,
         &transaction_builder::encode_rotate_authentication_key_script(genesis_auth_key.to_vec()),
     );
 }
 
 /// Initialize each validator.
 fn create_and_initialize_validators(
-    context: &mut GenesisContext,
+    session: &mut Session<StateViewCache>,
     validators: &[ValidatorRegistration],
 ) {
+    let libra_root_address = account_config::libra_root_address();
     for (account_key, registration) in validators {
-        context.set_sender(account_config::libra_root_address());
-
         let auth_key = AuthenticationKey::ed25519(&account_key);
         let account = auth_key.derived_address();
         let create_script = transaction_builder::encode_create_validator_account_script(
             account,
             auth_key.prefix().to_vec(),
         );
-        context.exec_script(&create_script);
+
+        exec_script(session, libra_root_address, &create_script);
 
         // Set config for the validator
-        context.set_sender(account);
-        context.exec_script(registration);
+        exec_script(session, account, registration);
 
         // Add validator to the set
-        context.set_sender(account_config::libra_root_address());
-        context.exec(
+        exec_function(
+            session,
+            libra_root_address,
             "LibraSystem",
             "add_validator",
             vec![],
@@ -271,21 +366,33 @@ fn remove_genesis(stdlib_modules: &[CompiledModule]) -> impl Iterator<Item = &Co
 }
 
 /// Publish the standard library.
-fn publish_stdlib(interpreter_context: &mut dyn DataStore, stdlib: &[CompiledModule]) {
+fn publish_stdlib(session: &mut Session<StateViewCache>, stdlib: &[CompiledModule]) {
     for module in remove_genesis(stdlib) {
         assert!(module.self_id().name().as_str() != GENESIS_MODULE_NAME);
         let mut module_vec = vec![];
         module.serialize(&mut module_vec).unwrap();
-        interpreter_context
-            .publish_module(module.self_id(), module_vec)
-            .unwrap_or_else(|_| panic!("Failure publishing module {:?}", module.self_id()));
+        session
+            .publish_module(
+                module_vec,
+                *module.self_id().address(),
+                &mut CostStrategy::system(&ZERO_COST_SCHEDULE, GasUnits::new(100_000_000)),
+            )
+            .unwrap_or_else(|e| {
+                panic!("Failure publishing module {:?}, {:?}", module.self_id(), e)
+            });
     }
 }
 
 /// Trigger a reconfiguration. This emits an event that will be passed along to the storage layer.
-fn reconfigure(context: &mut GenesisContext) {
-    context.set_sender(account_config::libra_root_address());
-    context.exec("LibraConfig", "emit_reconfiguration_event", vec![], vec![]);
+fn reconfigure(session: &mut Session<StateViewCache>) {
+    exec_function(
+        session,
+        account_config::libra_root_address(),
+        "LibraConfig",
+        "emit_reconfiguration_event",
+        vec![],
+        vec![],
+    );
 }
 
 /// Verify the consistency of the genesis `WriteSet`
@@ -336,7 +443,7 @@ pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) ->
 }
 
 /// Generate an artificial genesis `ChangeSet` for testing
-pub fn generate_genesis_type_mapping() -> BTreeMap<Vec<u8>, FatStructType> {
+pub fn generate_genesis_type_mapping() -> BTreeMap<Vec<u8>, StructTag> {
     let stdlib_modules = stdlib_modules(StdLibOptions::Compiled);
     let swarm = libra_config::generator::validator_swarm_for_testing(10);
 

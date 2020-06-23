@@ -29,7 +29,7 @@ impl FuzzTargetImpl for ValueTarget {
         // Values as currently serialized are not self-describing, so store a serialized form of the
         // type along with the value as well.
         let layout_blob = lcs::to_bytes(&layout).unwrap();
-        let value_blob = value.simple_serialize(&layout).expect("must serialize");
+        let value_blob = value.simple_serialize_fat(&layout).expect("must serialize");
 
         let mut blob = vec![];
         // Prefix the layout blob with its length.
@@ -85,6 +85,6 @@ fn deserialize(data: &[u8]) -> Result<()> {
     if !is_valid_type(&ty) {
         bail!("invalid layout");
     }
-    let _ = Value::simple_deserialize(value_data, &ty);
+    let _ = Value::simple_deserialize_fat(value_data, &ty);
     Ok(())
 }

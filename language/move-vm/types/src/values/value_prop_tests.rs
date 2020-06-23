@@ -9,8 +9,8 @@ use std::convert::TryInto;
 proptest! {
     #[test]
     fn serializer_round_trip((layout, value) in layout_and_value_strategy()) {
-        let blob = value.simple_serialize(&layout).expect("must serialize");
-        let value_deserialized = Value::simple_deserialize(&blob, &layout).expect("must deserialize");
+        let blob = value.simple_serialize_fat(&layout).expect("must serialize");
+        let value_deserialized = Value::simple_deserialize_fat(&blob, &layout).expect("must deserialize");
         assert!(value.equals(&value_deserialized).unwrap());
 
         let ty = (&layout).try_into().unwrap();

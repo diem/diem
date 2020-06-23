@@ -9,7 +9,6 @@ use crate::{
 use libra_types::vm_status::{StatusCode, VMStatus};
 use libra_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, LibraVM};
 use move_core_types::gas_schedule::{GasAlgebra, GasPrice, GasUnits};
-use move_vm_types::gas_schedule::zero_cost_schedule;
 
 #[test]
 fn failed_transaction_cleanup_test() {
@@ -26,13 +25,11 @@ fn failed_transaction_cleanup_test() {
     txn_data.max_gas_amount = GasUnits::new(100_000);
     txn_data.gas_unit_price = GasPrice::new(0);
 
-    let gas_schedule = zero_cost_schedule();
     let gas_left = GasUnits::new(10_000);
 
     // TYPE_MISMATCH should be kept and charged.
     let out1 = libra_vm.failed_transaction_cleanup(
         VMStatus::new(StatusCode::TYPE_MISMATCH),
-        &gas_schedule,
         gas_left,
         &txn_data,
         &mut data_cache,
@@ -49,7 +46,6 @@ fn failed_transaction_cleanup_test() {
     // OUT_OF_BOUNDS_INDEX should be discarded and not charged.
     let out2 = libra_vm.failed_transaction_cleanup(
         VMStatus::new(StatusCode::OUT_OF_BOUNDS_INDEX),
-        &gas_schedule,
         gas_left,
         &txn_data,
         &mut data_cache,
