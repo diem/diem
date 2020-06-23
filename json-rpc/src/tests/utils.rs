@@ -40,11 +40,11 @@ pub fn test_bootstrap(
 #[derive(Clone)]
 pub(crate) struct MockLibraDB {
     pub version: u64,
-    pub timestamp: u64,
     pub all_accounts: BTreeMap<AccountAddress, AccountStateBlob>,
     pub all_txns: Vec<(Transaction, StatusCode)>,
     pub events: Vec<(u64, ContractEvent)>,
     pub account_state_with_proof: Vec<AccountStateWithProof>,
+    pub timestamps: Vec<u64>,
 }
 
 impl DbReader for MockLibraDB {
@@ -68,7 +68,7 @@ impl DbReader for MockLibraDB {
                     HashValue::zero(),
                     HashValue::zero(),
                     self.version,
-                    self.timestamp,
+                    *self.timestamps.last().expect("must have"),
                     None,
                 ),
                 HashValue::zero(),
@@ -262,5 +262,9 @@ impl DbReader for MockLibraDB {
 
     fn get_epoch_ending_ledger_info(&self, _: u64) -> Result<LedgerInfoWithSignatures> {
         unimplemented!()
+    }
+
+    fn get_block_timestamp(&self, version: u64) -> Result<u64> {
+        Ok(self.timestamps[version as usize])
     }
 }

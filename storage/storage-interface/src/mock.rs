@@ -54,6 +54,10 @@ impl DbReader for MockDbReader {
         unimplemented!()
     }
 
+    fn get_block_timestamp(&self, _version: u64) -> Result<u64> {
+        unimplemented!()
+    }
+
     fn get_latest_account_state(
         &self,
         _address: AccountAddress,
