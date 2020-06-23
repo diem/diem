@@ -183,6 +183,7 @@ async fn send_new_peer_notification(
             peer_manager::ConnectionNotification::NewPeer(
                 peer_id,
                 NetworkAddress::from_str("/ip6/::1/tcp/8081").unwrap(),
+                NetworkContext::mock(),
             ),
             Some(delivered_tx),
         )

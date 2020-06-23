@@ -501,7 +501,7 @@ where
 
     fn handle_control_notification(&mut self, notif: peer_manager::ConnectionNotification) {
         match notif {
-            peer_manager::ConnectionNotification::NewPeer(peer_id, addr) => {
+            peer_manager::ConnectionNotification::NewPeer(peer_id, addr, _context) => {
                 self.connected.insert(peer_id, addr);
                 // Cancel possible queued dial to this peer.
                 self.dial_states.remove(&peer_id);

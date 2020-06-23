@@ -102,7 +102,7 @@ impl MockOnchainDiscoveryNetworkSender {
 
     async fn new_peer(&mut self, peer_id: PeerId) {
         let addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
-        let notif = ConnectionNotification::NewPeer(peer_id, addr);
+        let notif = ConnectionNotification::NewPeer(peer_id, addr, NetworkContext::mock());
         self.send_connection_notif(peer_id, notif).await;
     }
 
