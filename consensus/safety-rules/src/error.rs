@@ -41,7 +41,7 @@ pub enum Error {
         "Proposal's round is lower than round of preferred block at round {:?}",
         preferred_round
     )]
-    ProposalRoundLowerThenPreferredBlock { preferred_round: Round },
+    ProposalRoundLowerThanPreferredBlock { preferred_round: Round },
 
     /// This proposal is too old - return last_voted_round
     #[error(

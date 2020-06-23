@@ -77,7 +77,7 @@ impl ProposalMsg {
 
     pub fn verify(&self, validator: &ValidatorVerifier) -> Result<()> {
         self.proposal
-            .validate_signatures(validator)
+            .validate_signature(validator)
             .map_err(|e| format_err!("{:?}", e))?;
         // if there is a timeout certificate, verify its signatures
         if let Some(tc) = self.sync_info.highest_timeout_certificate() {

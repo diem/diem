@@ -80,7 +80,7 @@ impl SafetyRules {
                 "QC round does not match preferred round {} < {}",
                 one_chain_round, preferred_round
             );
-            return Err(Error::ProposalRoundLowerThenPreferredBlock { preferred_round });
+            return Err(Error::ProposalRoundLowerThanPreferredBlock { preferred_round });
         }
 
         // Update the preferred round
@@ -263,12 +263,12 @@ impl TSafetyRules for SafetyRules {
         self.start_new_epoch(last_li.ledger_info())
     }
 
-    /// @TODO verify signature on vote proposal
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error> {
         debug!("Incoming vote proposal to sign.");
         let proposed_block = vote_proposal.block();
         self.verify_epoch(proposed_block.epoch())?;
         self.verify_qc(proposed_block.quorum_cert())?;
+        proposed_block.validate_signature(&self.epoch_state()?.verifier)?;
 
         self.check_and_update_preferred_round(proposed_block.quorum_cert())?;
         self.check_last_vote_round(proposed_block.block_data())?;

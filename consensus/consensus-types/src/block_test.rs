@@ -38,7 +38,7 @@ fn test_nil_block() {
 
     let dummy_verifier = Arc::new(ValidatorVerifier::new(BTreeMap::new()));
     assert!(nil_block
-        .validate_signatures(dummy_verifier.as_ref())
+        .validate_signature(dummy_verifier.as_ref())
         .is_ok());
     assert!(nil_block.verify_well_formed().is_ok());
 
