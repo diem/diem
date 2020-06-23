@@ -1,10 +1,10 @@
-// dep: ../tests/sources/stdlib/modules/transaction.move
+// dep: ../tests/sources/stdlib/modules/Signer.move
 // dep: ../tests/sources/stdlib/modules/vector.move
 
 address 0x1 {
 
 module Libra {
-    use 0x1::Transaction;
+    use 0x1::Signer;
     use 0x1::Vector;
 
     // A resource representing a fungible token
@@ -40,11 +40,11 @@ module Libra {
         is_approved: bool,
     }
 
-    public fun register<Token>() {
+    public fun register<Token>(association: &signer) {
         // Only callable by the Association address
-        assert(Transaction::sender() == 0xA550C18, 1);
-        move_to_sender(MintCapability<Token>{ });
-        move_to_sender(Info<Token> { total_value: 0u128, preburn_value: 0 });
+        assert(Signer::address_of(association) == 0xA550C18, 1);
+        move_to(association, MintCapability<Token>{ });
+        move_to(association, Info<Token> { total_value: 0u128, preburn_value: 0 });
     }
 
     fun assert_is_registered<Token>() {
@@ -53,29 +53,31 @@ module Libra {
 
     // Return `amount` coins.
     // Fails if the sender does not have a published MintCapability.
-    public fun mint<Token>(amount: u64): T<Token> acquires Info, MintCapability {
-        mint_with_capability(amount, borrow_global<MintCapability<Token>>(Transaction::sender()))
+    public fun mint<Token>(account: &signer, amount: u64): T<Token> acquires Info, MintCapability {
+        mint_with_capability(amount, borrow_global<MintCapability<Token>>(Signer::address_of(account)))
     }
 
     // Burn the coins currently held in the preburn holding area under `preburn_address`.
     // Fails if the sender does not have a published MintCapability.
     public fun burn<Token>(
+        account: &signer,
         preburn_address: address
     ) acquires Info, MintCapability, Preburn {
         burn_with_capability(
             preburn_address,
-            borrow_global<MintCapability<Token>>(Transaction::sender())
+            borrow_global<MintCapability<Token>>(Signer::address_of(account))
         )
     }
 
     // Cancel the oldest burn request from `preburn_address`
     // Fails if the sender does not have a published MintCapability.
     public fun cancel_burn<Token>(
+        account: &signer,
         preburn_address: address
     ): T<Token> acquires Info, MintCapability, Preburn {
         cancel_burn_with_capability(
             preburn_address,
-            borrow_global<MintCapability<Token>>(Transaction::sender())
+            borrow_global<MintCapability<Token>>(Signer::address_of(account))
         )
     }
 
@@ -124,8 +126,9 @@ module Libra {
 
     // Send coin to the preburn holding area, where it will wait to be burned.
     // Fails if the sender does not have a published Preburn resource
-    public fun preburn_to_sender<Token>(coin: T<Token>) acquires Info, Preburn {
-        preburn(borrow_global_mut<Preburn<Token>>(Transaction::sender()), coin)
+    public fun preburn_to<Token>(account: &signer, coin: T<Token>) acquires Info, Preburn {
+        let sender = Signer::address_of(account);
+        preburn(borrow_global_mut<Preburn<Token>>(sender), coin)
     }
 
     // Permanently remove the coins held in the `Preburn` resource stored at `preburn_address` and
@@ -166,13 +169,13 @@ module Libra {
     }
 
     // Publish `preburn` under the sender's account
-    public fun publish_preburn<Token>(preburn: Preburn<Token>) {
-        move_to_sender(preburn)
+    public fun publish_preburn<Token>(account: &signer, preburn: Preburn<Token>) {
+        move_to(account, preburn)
     }
 
     // Remove and return the `Preburn` resource under the sender's account
-    public fun remove_preburn<Token>(): Preburn<Token> acquires Preburn {
-        move_from<Preburn<Token>>(Transaction::sender())
+    public fun remove_preburn<Token>(account: &signer): Preburn<Token> acquires Preburn {
+        move_from<Preburn<Token>>(Signer::address_of(account))
     }
 
     // Destroys the given preburn resource.
@@ -183,14 +186,14 @@ module Libra {
     }
 
     // Publish `capability` under the sender's account
-    public fun publish_mint_capability<Token>(capability: MintCapability<Token>) {
-        move_to_sender(capability)
+    public fun publish_mint_capability<Token>(account: &signer, capability: MintCapability<Token>) {
+        move_to(account, capability)
     }
 
     // Remove and return the MintCapability from the sender's account. Fails if the sender does
     // not have a published MintCapability
-    public fun remove_mint_capability<Token>(): MintCapability<Token> acquires MintCapability {
-        move_from<MintCapability<Token>>(Transaction::sender())
+    public fun remove_mint_capability<Token>(account: &signer): MintCapability<Token> acquires MintCapability {
+        move_from<MintCapability<Token>>(Signer::address_of(account))
     }
 
     // Return the total value of all Libra in the system

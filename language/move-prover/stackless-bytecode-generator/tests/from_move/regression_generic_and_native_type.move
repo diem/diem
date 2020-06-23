@@ -1,4 +1,4 @@
-// dep: ../tests/sources/stdlib/modules/transaction.move
+// dep: ../tests/sources/stdlib/modules/Signer.move
 // dep: ../tests/sources/stdlib/modules/vector.move
 
 // Regression test for a bug in handling generic mutual borrow, as well as parameter types of native functions.
@@ -6,7 +6,7 @@
 address 0x1 {
 
 module Libra {
-    use 0x1::Transaction;
+    use 0x1::Signer;
     use 0x1::Vector;
 
     // A resource representing a fungible token
@@ -41,8 +41,8 @@ module Libra {
         market_cap.preburn_value = market_cap.preburn_value + coin_value
     }
 
-    public fun preburn_to_sender<Token>(coin: T<Token>) acquires Info, Preburn {
-        preburn(borrow_global_mut<Preburn<Token>>(Transaction::sender()), coin)
+    public fun preburn_to<Token>(account: &signer, coin: T<Token>) acquires Info, Preburn {
+        preburn(borrow_global_mut<Preburn<Token>>(Signer::address_of(account)), coin)
     }
 
     public fun market_cap<Token>(): u128 acquires Info {

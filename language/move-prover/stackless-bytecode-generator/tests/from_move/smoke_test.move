@@ -1,10 +1,10 @@
 // This module contains just some arbitrary code to smoke test the basic functionality of translation from Move
 // to stackless bytecode. Coverage for byte code translation is achieved by many more tests in the prover.
 
-// dep: ../tests/sources/stdlib/modules/transaction.move
+// dep: ../tests/sources/stdlib/modules/Signer.move
 
 module SmokeTest {
-    use 0x1::Transaction;
+    use 0x1::Signer;
 
     // -----------------
     // Basic Ops
@@ -34,12 +34,12 @@ module SmokeTest {
         x: u64
     }
 
-    fun create_resource() {
-        move_to_sender<R>(R{x:1});
+    fun create_resource(sender: &signer) {
+        move_to<R>(sender, R{x:1});
     }
 
-    fun exists_resource(): bool {
-        exists<R>(Transaction::sender())
+    fun exists_resource(sender: &signer): bool {
+        exists<R>(Signer::address_of(sender))
     }
 
     fun move_from_addr(a: address) acquires R {
@@ -47,10 +47,10 @@ module SmokeTest {
         let R{x: _} = r;
     }
 
-    fun move_from_addr_to_sender(a: address) acquires R {
+    fun move_from_addr_to_sender(sender: &signer, a: address) acquires R {
         let r = move_from<R>(a);
         let R{x: x} = r;
-        move_to_sender<R>(R{x: x});
+        move_to<R>(sender, R{x: x});
     }
 
     fun borrow_global_mut_test(a: address) acquires R {
@@ -64,8 +64,8 @@ module SmokeTest {
         x: X
     }
 
-    fun create_resoure_generic() {
-        move_to_sender<G<u64>>(G{x:1});
+    fun create_resoure_generic(sender: &signer) {
+        move_to<G<u64>>(sender, G{x:1});
     }
 
 

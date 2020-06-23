@@ -331,6 +331,21 @@ pub fun Vector::swap_remove<$tv0>(v: &mut vector<#0>, i: u64): #0 {
 }
 
 
+pub fun Signer::address_of(s: &signer): address {
+    var $t1: &signer
+    var $t2: &address
+    var $t3: address
+    $t1 := move(s)
+    $t2 := Signer::borrow_address($t1)
+    $t3 := read_ref($t2)
+    return $t3
+}
+
+
+pub fun Signer::borrow_address(s: &signer): &address {
+}
+
+
 fun Libra::assert_is_registered<$tv0>() {
     var $t0: bool
     var $t1: u64
@@ -353,14 +368,16 @@ fun Libra::assert_is_registered<$tv0>() {
 }
 
 
-pub fun Libra::burn<$tv0>(preburn_address: address) {
-    var $t1: address
+pub fun Libra::burn<$tv0>(account: &signer, preburn_address: address) {
     var $t2: address
-    var $t3: &Libra::MintCapability<#0>
-    $t1 := copy(preburn_address)
-    $t2 := txn_sender
-    $t3 := borrow_global<Libra::MintCapability<#0>>($t2)
-    Libra::burn_with_capability<#0>($t1, $t3)
+    var $t3: &signer
+    var $t4: address
+    var $t5: &Libra::MintCapability<#0>
+    $t2 := copy(preburn_address)
+    $t3 := move(account)
+    $t4 := Signer::address_of($t3)
+    $t5 := borrow_global<Libra::MintCapability<#0>>($t4)
+    Libra::burn_with_capability<#0>($t2, $t5)
     return ()
 }
 
@@ -426,16 +443,18 @@ pub fun Libra::burn_with_capability<$tv0>(preburn_address: address, _capability:
 }
 
 
-pub fun Libra::cancel_burn<$tv0>(preburn_address: address): Libra::T<#0> {
-    var $t1: address
+pub fun Libra::cancel_burn<$tv0>(account: &signer, preburn_address: address): Libra::T<#0> {
     var $t2: address
-    var $t3: &Libra::MintCapability<#0>
-    var $t4: Libra::T<#0>
-    $t1 := copy(preburn_address)
-    $t2 := txn_sender
-    $t3 := borrow_global<Libra::MintCapability<#0>>($t2)
-    $t4 := Libra::cancel_burn_with_capability<#0>($t1, $t3)
-    return $t4
+    var $t3: &signer
+    var $t4: address
+    var $t5: &Libra::MintCapability<#0>
+    var $t6: Libra::T<#0>
+    $t2 := copy(preburn_address)
+    $t3 := move(account)
+    $t4 := Signer::address_of($t3)
+    $t5 := borrow_global<Libra::MintCapability<#0>>($t4)
+    $t6 := Libra::cancel_burn_with_capability<#0>($t2, $t5)
+    return $t6
 }
 
 
@@ -621,16 +640,18 @@ pub fun Libra::market_cap<$tv0>(): u128 {
 }
 
 
-pub fun Libra::mint<$tv0>(amount: u64): Libra::T<#0> {
-    var $t1: u64
-    var $t2: address
-    var $t3: &Libra::MintCapability<#0>
-    var $t4: Libra::T<#0>
-    $t1 := copy(amount)
-    $t2 := txn_sender
-    $t3 := borrow_global<Libra::MintCapability<#0>>($t2)
-    $t4 := Libra::mint_with_capability<#0>($t1, $t3)
-    return $t4
+pub fun Libra::mint<$tv0>(account: &signer, amount: u64): Libra::T<#0> {
+    var $t2: u64
+    var $t3: &signer
+    var $t4: address
+    var $t5: &Libra::MintCapability<#0>
+    var $t6: Libra::T<#0>
+    $t2 := copy(amount)
+    $t3 := move(account)
+    $t4 := Signer::address_of($t3)
+    $t5 := borrow_global<Libra::MintCapability<#0>>($t4)
+    $t6 := Libra::mint_with_capability<#0>($t2, $t5)
+    return $t6
 }
 
 
@@ -709,14 +730,20 @@ pub fun Libra::new_preburn<$tv0>(): Libra::Preburn<#0> {
 }
 
 
-pub fun Libra::preburn_to_sender<$tv0>(coin: Libra::T<#0>) {
-    var $t1: address
-    var $t2: &mut Libra::Preburn<#0>
-    var $t3: Libra::T<#0>
-    $t1 := txn_sender
-    $t2 := borrow_global<Libra::Preburn<#0>>($t1)
-    $t3 := move(coin)
-    Libra::preburn<#0>($t2, $t3)
+pub fun Libra::preburn_to<$tv0>(account: &signer, coin: Libra::T<#0>) {
+    var sender: address
+    var $t3: &signer
+    var $t4: address
+    var $t5: address
+    var $t6: &mut Libra::Preburn<#0>
+    var $t7: Libra::T<#0>
+    $t3 := move(account)
+    $t4 := Signer::address_of($t3)
+    sender := $t4
+    $t5 := copy(sender)
+    $t6 := borrow_global<Libra::Preburn<#0>>($t5)
+    $t7 := move(coin)
+    Libra::preburn<#0>($t6, $t7)
     return ()
 }
 
@@ -734,70 +761,90 @@ pub fun Libra::preburn_value<$tv0>(): u64 {
 }
 
 
-pub fun Libra::publish_mint_capability<$tv0>(capability: Libra::MintCapability<#0>) {
-    var $t1: Libra::MintCapability<#0>
-    $t1 := move(capability)
-    move_to_sender<Libra::MintCapability<#0>>($t1)
+pub fun Libra::publish_mint_capability<$tv0>(account: &signer, capability: Libra::MintCapability<#0>) {
+    var $t2: &signer
+    var $t3: Libra::MintCapability<#0>
+    $t2 := move(account)
+    $t3 := move(capability)
+    move_to<Libra::MintCapability<#0>>($t3, $t2)
     return ()
 }
 
 
-pub fun Libra::publish_preburn<$tv0>(preburn: Libra::Preburn<#0>) {
-    var $t1: Libra::Preburn<#0>
-    $t1 := move(preburn)
-    move_to_sender<Libra::Preburn<#0>>($t1)
+pub fun Libra::publish_preburn<$tv0>(account: &signer, preburn: Libra::Preburn<#0>) {
+    var $t2: &signer
+    var $t3: Libra::Preburn<#0>
+    $t2 := move(account)
+    $t3 := move(preburn)
+    move_to<Libra::Preburn<#0>>($t3, $t2)
     return ()
 }
 
 
-pub fun Libra::register<$tv0>() {
-    var $t0: bool
-    var $t1: u64
-    var $t2: address
-    var $t3: address
-    var $t4: bool
-    var $t5: bool
-    var $t6: Libra::MintCapability<#0>
-    var $t7: u128
-    var $t8: u64
-    var $t9: Libra::Info<#0>
-    var $t10: u64
-    $t2 := txn_sender
-    $t3 := 0xa550c18
-    $t4 := ==($t2, $t3)
-    if ($t4) goto L0 else goto L1
+pub fun Libra::register<$tv0>(association: &signer) {
+    var $t1: bool
+    var $t2: u64
+    var $t3: &signer
+    var $t4: address
+    var $t5: address
+    var $t6: bool
+    var $t7: bool
+    var $t8: &signer
+    var $t9: bool
+    var $t10: Libra::MintCapability<#0>
+    var $t11: &signer
+    var $t12: u128
+    var $t13: u64
+    var $t14: Libra::Info<#0>
+    var $t15: &signer
+    var $t16: u64
+    $t3 := copy(association)
+    $t4 := Signer::address_of($t3)
+    $t5 := 0xa550c18
+    $t6 := ==($t4, $t5)
+    $t1 := $t6
+    $t7 := move($t1)
+    if ($t7) goto L0 else goto L1
     L1:
     goto L2
     L0:
-    $t5 := false
-    $t6 := pack Libra::MintCapability<#0>($t5)
-    move_to_sender<Libra::MintCapability<#0>>($t6)
-    $t7 := 0
-    $t8 := 0
-    $t9 := pack Libra::Info<#0>($t7, $t8)
-    move_to_sender<Libra::Info<#0>>($t9)
+    $t8 := copy(association)
+    $t9 := false
+    $t10 := pack Libra::MintCapability<#0>($t9)
+    move_to<Libra::MintCapability<#0>>($t10, $t8)
+    $t11 := move(association)
+    $t12 := 0
+    $t13 := 0
+    $t14 := pack Libra::Info<#0>($t12, $t13)
+    move_to<Libra::Info<#0>>($t14, $t11)
     return ()
     L2:
-    $t10 := 1
-    abort($t10)
+    $t15 := move(association)
+    destroy($t15)
+    $t16 := 1
+    abort($t16)
 }
 
 
-pub fun Libra::remove_mint_capability<$tv0>(): Libra::MintCapability<#0> {
-    var $t0: address
-    var $t1: Libra::MintCapability<#0>
-    $t0 := txn_sender
-    $t1 := move_from<Libra::MintCapability<#0>>($t0)
-    return $t1
+pub fun Libra::remove_mint_capability<$tv0>(account: &signer): Libra::MintCapability<#0> {
+    var $t1: &signer
+    var $t2: address
+    var $t3: Libra::MintCapability<#0>
+    $t1 := move(account)
+    $t2 := Signer::address_of($t1)
+    $t3 := move_from<Libra::MintCapability<#0>>($t2)
+    return $t3
 }
 
 
-pub fun Libra::remove_preburn<$tv0>(): Libra::Preburn<#0> {
-    var $t0: address
-    var $t1: Libra::Preburn<#0>
-    $t0 := txn_sender
-    $t1 := move_from<Libra::Preburn<#0>>($t0)
-    return $t1
+pub fun Libra::remove_preburn<$tv0>(account: &signer): Libra::Preburn<#0> {
+    var $t1: &signer
+    var $t2: address
+    var $t3: Libra::Preburn<#0>
+    $t1 := move(account)
+    $t2 := Signer::address_of($t1)
+    $t3 := move_from<Libra::Preburn<#0>>($t2)
+    return $t3
 }
 
 
@@ -1210,6 +1257,21 @@ pub fun Vector::swap_remove<$tv0>(v: &mut vector<#0>, i: u64): #0 {
 }
 
 
+pub fun Signer::address_of(s: signer): address {
+    var $t1: signer
+    var $t2: address
+    var $t3: address
+    $t1 := move(s)
+    $t2 := Signer::borrow_address($t1)
+    $t3 := move($t2)
+    return $t3
+}
+
+
+pub fun Signer::borrow_address(s: signer): address {
+}
+
+
 fun Libra::assert_is_registered<$tv0>() {
     var $t0: bool
     var $t1: u64
@@ -1232,14 +1294,16 @@ fun Libra::assert_is_registered<$tv0>() {
 }
 
 
-pub fun Libra::burn<$tv0>(preburn_address: address) {
-    var $t1: address
+pub fun Libra::burn<$tv0>(account: signer, preburn_address: address) {
     var $t2: address
-    var $t3: Libra::MintCapability<#0>
-    $t1 := copy(preburn_address)
-    $t2 := txn_sender
-    $t3 := get_global<Libra::MintCapability<#0>>($t2)
-    Libra::burn_with_capability<#0>($t1, $t3)
+    var $t3: signer
+    var $t4: address
+    var $t5: Libra::MintCapability<#0>
+    $t2 := copy(preburn_address)
+    $t3 := move(account)
+    $t4 := Signer::address_of($t3)
+    $t5 := get_global<Libra::MintCapability<#0>>($t4)
+    Libra::burn_with_capability<#0>($t2, $t5)
     return ()
 }
 
@@ -1336,16 +1400,18 @@ pub fun Libra::burn_with_capability<$tv0>(preburn_address: address, _capability:
 }
 
 
-pub fun Libra::cancel_burn<$tv0>(preburn_address: address): Libra::T<#0> {
-    var $t1: address
+pub fun Libra::cancel_burn<$tv0>(account: signer, preburn_address: address): Libra::T<#0> {
     var $t2: address
-    var $t3: Libra::MintCapability<#0>
-    var $t4: Libra::T<#0>
-    $t1 := copy(preburn_address)
-    $t2 := txn_sender
-    $t3 := get_global<Libra::MintCapability<#0>>($t2)
-    $t4 := Libra::cancel_burn_with_capability<#0>($t1, $t3)
-    return $t4
+    var $t3: signer
+    var $t4: address
+    var $t5: Libra::MintCapability<#0>
+    var $t6: Libra::T<#0>
+    $t2 := copy(preburn_address)
+    $t3 := move(account)
+    $t4 := Signer::address_of($t3)
+    $t5 := get_global<Libra::MintCapability<#0>>($t4)
+    $t6 := Libra::cancel_burn_with_capability<#0>($t2, $t5)
+    return $t6
 }
 
 
@@ -1589,16 +1655,18 @@ pub fun Libra::market_cap<$tv0>(): u128 {
 }
 
 
-pub fun Libra::mint<$tv0>(amount: u64): Libra::T<#0> {
-    var $t1: u64
-    var $t2: address
-    var $t3: Libra::MintCapability<#0>
-    var $t4: Libra::T<#0>
-    $t1 := copy(amount)
-    $t2 := txn_sender
-    $t3 := get_global<Libra::MintCapability<#0>>($t2)
-    $t4 := Libra::mint_with_capability<#0>($t1, $t3)
-    return $t4
+pub fun Libra::mint<$tv0>(account: signer, amount: u64): Libra::T<#0> {
+    var $t2: u64
+    var $t3: signer
+    var $t4: address
+    var $t5: Libra::MintCapability<#0>
+    var $t6: Libra::T<#0>
+    $t2 := copy(amount)
+    $t3 := move(account)
+    $t4 := Signer::address_of($t3)
+    $t5 := get_global<Libra::MintCapability<#0>>($t4)
+    $t6 := Libra::mint_with_capability<#0>($t2, $t5)
+    return $t6
 }
 
 
@@ -1690,17 +1758,23 @@ pub fun Libra::new_preburn<$tv0>(): Libra::Preburn<#0> {
 }
 
 
-pub fun Libra::preburn_to_sender<$tv0>(coin: Libra::T<#0>) {
-    var $t1: address
-    var $t2: &mut Libra::Preburn<#0>
-    var $t3: Libra::T<#0>
-    $t1 := txn_sender
-    $t2 := borrow_global<Libra::Preburn<#0>>($t1)
-    // live_refs: $t2 borrowed_by: Libra::Preburn -> {Reference($t2)} borrows_from: Reference($t2) -> {Libra::Preburn}
-    $t3 := move(coin)
-    // live_refs: $t2 borrowed_by: Libra::Preburn -> {Reference($t2)} borrows_from: Reference($t2) -> {Libra::Preburn}
-    // Libra::Preburn <- $t2
-    Libra::preburn<#0>($t2, $t3)
+pub fun Libra::preburn_to<$tv0>(account: signer, coin: Libra::T<#0>) {
+    var sender: address
+    var $t3: signer
+    var $t4: address
+    var $t5: address
+    var $t6: &mut Libra::Preburn<#0>
+    var $t7: Libra::T<#0>
+    $t3 := move(account)
+    $t4 := Signer::address_of($t3)
+    sender := $t4
+    $t5 := copy(sender)
+    $t6 := borrow_global<Libra::Preburn<#0>>($t5)
+    // live_refs: $t6 borrowed_by: Libra::Preburn -> {Reference($t6)} borrows_from: Reference($t6) -> {Libra::Preburn}
+    $t7 := move(coin)
+    // live_refs: $t6 borrowed_by: Libra::Preburn -> {Reference($t6)} borrows_from: Reference($t6) -> {Libra::Preburn}
+    // Libra::Preburn <- $t6
+    Libra::preburn<#0>($t6, $t7)
     return ()
 }
 
@@ -1718,70 +1792,90 @@ pub fun Libra::preburn_value<$tv0>(): u64 {
 }
 
 
-pub fun Libra::publish_mint_capability<$tv0>(capability: Libra::MintCapability<#0>) {
-    var $t1: Libra::MintCapability<#0>
-    $t1 := move(capability)
-    move_to_sender<Libra::MintCapability<#0>>($t1)
+pub fun Libra::publish_mint_capability<$tv0>(account: signer, capability: Libra::MintCapability<#0>) {
+    var $t2: signer
+    var $t3: Libra::MintCapability<#0>
+    $t2 := move(account)
+    $t3 := move(capability)
+    move_to<Libra::MintCapability<#0>>($t3, $t2)
     return ()
 }
 
 
-pub fun Libra::publish_preburn<$tv0>(preburn: Libra::Preburn<#0>) {
-    var $t1: Libra::Preburn<#0>
-    $t1 := move(preburn)
-    move_to_sender<Libra::Preburn<#0>>($t1)
+pub fun Libra::publish_preburn<$tv0>(account: signer, preburn: Libra::Preburn<#0>) {
+    var $t2: signer
+    var $t3: Libra::Preburn<#0>
+    $t2 := move(account)
+    $t3 := move(preburn)
+    move_to<Libra::Preburn<#0>>($t3, $t2)
     return ()
 }
 
 
-pub fun Libra::register<$tv0>() {
-    var $t0: bool
-    var $t1: u64
-    var $t2: address
-    var $t3: address
-    var $t4: bool
-    var $t5: bool
-    var $t6: Libra::MintCapability<#0>
-    var $t7: u128
-    var $t8: u64
-    var $t9: Libra::Info<#0>
-    var $t10: u64
-    $t2 := txn_sender
-    $t3 := 0xa550c18
-    $t4 := ==($t2, $t3)
-    if ($t4) goto L0 else goto L1
+pub fun Libra::register<$tv0>(association: signer) {
+    var $t1: bool
+    var $t2: u64
+    var $t3: signer
+    var $t4: address
+    var $t5: address
+    var $t6: bool
+    var $t7: bool
+    var $t8: signer
+    var $t9: bool
+    var $t10: Libra::MintCapability<#0>
+    var $t11: signer
+    var $t12: u128
+    var $t13: u64
+    var $t14: Libra::Info<#0>
+    var $t15: signer
+    var $t16: u64
+    $t3 := copy(association)
+    $t4 := Signer::address_of($t3)
+    $t5 := 0xa550c18
+    $t6 := ==($t4, $t5)
+    $t1 := $t6
+    $t7 := move($t1)
+    if ($t7) goto L0 else goto L1
     L1:
     goto L2
     L0:
-    $t5 := false
-    $t6 := pack Libra::MintCapability<#0>($t5)
-    move_to_sender<Libra::MintCapability<#0>>($t6)
-    $t7 := 0
-    $t8 := 0
-    $t9 := pack Libra::Info<#0>($t7, $t8)
-    move_to_sender<Libra::Info<#0>>($t9)
+    $t8 := copy(association)
+    $t9 := false
+    $t10 := pack Libra::MintCapability<#0>($t9)
+    move_to<Libra::MintCapability<#0>>($t10, $t8)
+    $t11 := move(association)
+    $t12 := 0
+    $t13 := 0
+    $t14 := pack Libra::Info<#0>($t12, $t13)
+    move_to<Libra::Info<#0>>($t14, $t11)
     return ()
     L2:
-    $t10 := 1
-    abort($t10)
+    $t15 := move(association)
+    destroy($t15)
+    $t16 := 1
+    abort($t16)
 }
 
 
-pub fun Libra::remove_mint_capability<$tv0>(): Libra::MintCapability<#0> {
-    var $t0: address
-    var $t1: Libra::MintCapability<#0>
-    $t0 := txn_sender
-    $t1 := move_from<Libra::MintCapability<#0>>($t0)
-    return $t1
+pub fun Libra::remove_mint_capability<$tv0>(account: signer): Libra::MintCapability<#0> {
+    var $t1: signer
+    var $t2: address
+    var $t3: Libra::MintCapability<#0>
+    $t1 := move(account)
+    $t2 := Signer::address_of($t1)
+    $t3 := move_from<Libra::MintCapability<#0>>($t2)
+    return $t3
 }
 
 
-pub fun Libra::remove_preburn<$tv0>(): Libra::Preburn<#0> {
-    var $t0: address
-    var $t1: Libra::Preburn<#0>
-    $t0 := txn_sender
-    $t1 := move_from<Libra::Preburn<#0>>($t0)
-    return $t1
+pub fun Libra::remove_preburn<$tv0>(account: signer): Libra::Preburn<#0> {
+    var $t1: signer
+    var $t2: address
+    var $t3: Libra::Preburn<#0>
+    $t1 := move(account)
+    $t2 := Signer::address_of($t1)
+    $t3 := move_from<Libra::Preburn<#0>>($t2)
+    return $t3
 }
 
 
