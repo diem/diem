@@ -153,7 +153,7 @@ async fn expect_dial_request(
         send_notification_await_delivery(
             connection_notifs_tx,
             peer_id,
-            peer_manager::ConnectionNotification::NewPeer(peer_id, address),
+            peer_manager::ConnectionNotification::NewPeer(peer_id, address, NetworkContext::mock()),
         )
         .await;
     }
@@ -702,7 +702,11 @@ fn no_op_requests() {
         send_notification_await_delivery(
             &mut connection_notifs_tx,
             other_peer_id,
-            peer_manager::ConnectionNotification::NewPeer(other_peer_id, other_address.clone()),
+            peer_manager::ConnectionNotification::NewPeer(
+                other_peer_id,
+                other_address.clone(),
+                NetworkContext::mock(),
+            ),
         )
         .await;
 
@@ -809,7 +813,11 @@ fn backoff_on_failure() {
         send_notification_await_delivery(
             &mut connection_notifs_tx,
             peer_b,
-            peer_manager::ConnectionNotification::NewPeer(peer_b, peer_b_address.clone()),
+            peer_manager::ConnectionNotification::NewPeer(
+                peer_b,
+                peer_b_address.clone(),
+                NetworkContext::mock(),
+            ),
         )
         .await;
 

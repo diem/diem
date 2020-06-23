@@ -149,7 +149,7 @@ fn control_msg_to_event<TMessage>(
     notif: ConnectionNotification,
 ) -> Result<Event<TMessage>, NetworkError> {
     match notif {
-        ConnectionNotification::NewPeer(peer_id, _addr) => Ok(Event::NewPeer(peer_id)),
+        ConnectionNotification::NewPeer(peer_id, _addr, _context) => Ok(Event::NewPeer(peer_id)),
         ConnectionNotification::LostPeer(peer_id, _addr, _reason) => Ok(Event::LostPeer(peer_id)),
     }
 }

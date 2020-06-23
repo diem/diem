@@ -88,7 +88,7 @@ pub enum ConnectionRequest {
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub enum ConnectionNotification {
     /// Connection with a new peer has been established.
-    NewPeer(PeerId, NetworkAddress),
+    NewPeer(PeerId, NetworkAddress, Arc<NetworkContext>),
     /// Connection to a peer has been terminated. This could have been triggered from either end.
     LostPeer(PeerId, NetworkAddress, DisconnectReason),
 }
@@ -637,7 +637,11 @@ where
                 handler
                     .push(
                         peer_id,
-                        ConnectionNotification::NewPeer(peer_id, conn_meta.addr().clone()),
+                        ConnectionNotification::NewPeer(
+                            peer_id,
+                            conn_meta.addr().clone(),
+                            self.network_context.clone(),
+                        ),
                     )
                     .unwrap();
             }

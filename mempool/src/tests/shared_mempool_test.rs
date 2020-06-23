@@ -22,7 +22,7 @@ use futures::{
 };
 use libra_config::{
     config::{NetworkConfig, NodeConfig, PeerNetworkId, RoleType, UpstreamConfig},
-    network_id::NetworkId,
+    network_id::{NetworkContext, NetworkId},
 };
 use libra_network_address::NetworkAddress;
 use libra_types::{transaction::SignedTransaction, PeerId};
@@ -407,7 +407,7 @@ fn test_basic_flow() {
     // A discovers new peer B
     smp.send_connection_event(
         &peer_a,
-        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock(), NetworkContext::mock()),
     );
 
     for seq in 0..3 {
@@ -439,7 +439,7 @@ fn test_metric_cache_ignore_shared_txns() {
     // Let peer_a discover new peer_b.
     smp.send_connection_event(
         &peer_a,
-        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock(), NetworkContext::mock()),
     );
     for txn in txns.iter().take(3) {
         // Let peer_a share txns with peer_b
@@ -462,7 +462,7 @@ fn test_interruption_in_sync() {
     // A discovers first peer
     smp.send_connection_event(
         &peer_a,
-        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock(), NetworkContext::mock()),
     );
     // make sure first txn delivered to first peer
     assert_eq!(*peer_b, smp.deliver_message(&peer_a, 1, true).1);
@@ -470,7 +470,7 @@ fn test_interruption_in_sync() {
     // A discovers second peer
     smp.send_connection_event(
         &peer_a,
-        ConnectionNotification::NewPeer(*peer_c, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_c, NetworkAddress::mock(), NetworkContext::mock()),
     );
     // make sure first txn delivered to second peer
     assert_eq!(*peer_c, smp.deliver_message(&peer_a, 1, true).1);
@@ -499,7 +499,7 @@ fn test_interruption_in_sync() {
     // A reconnects to B
     smp.send_connection_event(
         &peer_a,
-        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock(), NetworkContext::mock()),
     );
 
     // B should receive transaction 2
@@ -519,7 +519,7 @@ fn test_ready_transactions() {
     // first message delivery
     smp.send_connection_event(
         &peer_a,
-        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock(), NetworkContext::mock()),
     );
     smp.deliver_message(&peer_a, 1, true);
 
@@ -541,11 +541,11 @@ fn test_broadcast_self_transactions() {
     // A and B discover each other
     smp.send_connection_event(
         &peer_a,
-        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock(), NetworkContext::mock()),
     );
     smp.send_connection_event(
         &peer_b,
-        ConnectionNotification::NewPeer(*peer_a, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_a, NetworkAddress::mock(), NetworkContext::mock()),
     );
 
     // A sends txn to B
@@ -577,11 +577,11 @@ fn test_broadcast_dependencies() {
     // A and B discover each other
     smp.send_connection_event(
         &peer_a,
-        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock(), NetworkContext::mock()),
     );
     smp.send_connection_event(
         &peer_b,
-        ConnectionNotification::NewPeer(*peer_a, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_a, NetworkAddress::mock(), NetworkContext::mock()),
     );
 
     // B receives 0
@@ -605,11 +605,11 @@ fn test_broadcast_updated_transaction() {
     // A and B discover each other
     smp.send_connection_event(
         &peer_a,
-        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_b, NetworkAddress::mock(), NetworkContext::mock()),
     );
     smp.send_connection_event(
         &peer_b,
-        ConnectionNotification::NewPeer(*peer_a, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(*peer_a, NetworkAddress::mock(), NetworkContext::mock()),
     );
 
     // B receives 0
@@ -774,11 +774,11 @@ fn test_k_policy_broadcast_no_fallback() {
     // fn_0 discovers primary and fallback upstream peers
     smp.send_connection_event(
         &fn_0,
-        ConnectionNotification::NewPeer(v_0, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(v_0, NetworkAddress::mock(), NetworkContext::mock()),
     );
     smp.send_connection_event(
         &fn_0_fallback_network_id,
-        ConnectionNotification::NewPeer(fn_1, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(fn_1, NetworkAddress::mock(), NetworkContext::mock()),
     );
 
     // add txn to fn_0
@@ -822,7 +822,7 @@ fn test_k_policy_broadcast_not_enough_fallbacks() {
     // fn_0 discovers primary peer but no fallback peers available
     smp.send_connection_event(
         &fn_0,
-        ConnectionNotification::NewPeer(v_0, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(v_0, NetworkAddress::mock(), NetworkContext::mock()),
     );
 
     // add txn to fn_0
@@ -847,7 +847,7 @@ fn test_rebroadcast_mempool_is_full() {
     // FN discovers new peer V
     smp.send_connection_event(
         &full_node,
-        ConnectionNotification::NewPeer(val, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(val, NetworkAddress::mock(), NetworkContext::mock()),
     );
 
     let (txns, _recipient) = smp.deliver_message(&full_node, 1, true);
@@ -907,7 +907,7 @@ fn test_rebroadcast_too_many_txns() {
     // FN discovers new peer V
     smp.send_connection_event(
         &full_node,
-        ConnectionNotification::NewPeer(val, NetworkAddress::mock()),
+        ConnectionNotification::NewPeer(val, NetworkAddress::mock(), NetworkContext::mock()),
     );
 
     let (txns, _recipient) = smp.deliver_message(&full_node, 1, true);

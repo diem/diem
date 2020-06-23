@@ -186,7 +186,7 @@ where
 
     fn handle_connection_notif(&mut self, notif: ConnectionNotification) {
         match notif {
-            ConnectionNotification::NewPeer(peer_id, _addr) => {
+            ConnectionNotification::NewPeer(peer_id, _addr, _network_context) => {
                 trace!(
                     "{} connected to new peer: {}",
                     self.network_context,

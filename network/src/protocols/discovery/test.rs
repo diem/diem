@@ -234,7 +234,11 @@ fn outbound() {
         connection_notifs_tx
             .push_with_feedback(
                 other_peer_id,
-                peer_manager::ConnectionNotification::NewPeer(other_peer_id, other_peer_addr),
+                peer_manager::ConnectionNotification::NewPeer(
+                    other_peer_id,
+                    other_peer_addr,
+                    NetworkContext::mock(),
+                ),
                 Some(delivered_tx),
             )
             .unwrap();
@@ -290,6 +294,7 @@ fn old_note_higher_epoch() {
                 peer_manager::ConnectionNotification::NewPeer(
                     other_peer_id,
                     other_peer_addrs[0].clone(),
+                    NetworkContext::mock(),
                 ),
                 Some(delivered_tx),
             )
@@ -364,6 +369,7 @@ fn old_note_max_epoch() {
                 peer_manager::ConnectionNotification::NewPeer(
                     other_peer_id,
                     other_peer_addrs[0].clone(),
+                    NetworkContext::mock(),
                 ),
                 Some(delivered_tx),
             )
