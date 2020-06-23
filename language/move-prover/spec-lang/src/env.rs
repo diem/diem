@@ -328,10 +328,14 @@ pub struct GlobalEnv {
 }
 
 /// Information about a verification condition stored in the environment.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ConditionInfo {
     /// The message to print when the condition fails.
     pub message: String,
+    /// An alternative message to print if this condition fails in the context of a pre-condition.
+    /// This is used to distinguishes the case where the same condition is being used as pre and
+    /// post condition.
+    pub message_if_requires: Option<String>,
     /// Whether execution traces shall be printed if this condition fails.
     pub omit_trace: bool,
     /// Whether passing this condition is actually a failure.
@@ -339,9 +343,10 @@ pub struct ConditionInfo {
 }
 
 impl ConditionInfo {
-    pub fn for_message(message: String) -> Self {
+    pub fn for_message(message: String, message_if_requires: Option<String>) -> Self {
         Self {
             message,
+            message_if_requires,
             omit_trace: false,
             negative_cond: false,
         }

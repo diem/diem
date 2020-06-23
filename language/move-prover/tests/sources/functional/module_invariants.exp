@@ -1,5 +1,5 @@
 Move prover returns: exiting with boogie verification errors
-error: precondition does not hold at this call
+error: post-condition does not hold
 
     ┌── tests/sources/functional/module_invariants.move:29:9 ───
     │
@@ -10,7 +10,7 @@ error: precondition does not hold at this call
     =     at tests/sources/functional/module_invariants.move:51:5: delete_S_incorrect (exit)
     =         x = <redacted>
 
-error: precondition does not hold at this call
+error: post-condition does not hold
 
     ┌── tests/sources/functional/module_invariants.move:29:9 ───
     │
