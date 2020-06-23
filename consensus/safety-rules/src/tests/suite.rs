@@ -401,7 +401,7 @@ fn test_voting(func: Callback) {
 
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b4),
-        Err(Error::ProposalRoundLowerThenPreferredBlock { preferred_round: 4 })
+        Err(Error::ProposalRoundLowerThanPreferredBlock { preferred_round: 4 })
     );
 }
 
@@ -586,7 +586,7 @@ fn test_sign_proposal_with_early_preferred_round(func: Callback) {
         .unwrap_err();
     assert_eq!(
         err,
-        Error::ProposalRoundLowerThenPreferredBlock { preferred_round: 2 }
+        Error::ProposalRoundLowerThanPreferredBlock { preferred_round: 2 }
     );
 }
 
