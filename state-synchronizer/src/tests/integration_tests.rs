@@ -253,6 +253,7 @@ impl SynchronizerEnv {
             AuthenticationMode::Mutual(self.network_keys[new_peer_idx].clone());
         let public_key = authentication_mode.public_key();
         let executor = self.runtime.handle().clone();
+        // TODO:  use a NetworkConfig and ::create
         let mut network_builder = NetworkBuilder::new(
             ChainId::default(),
             self.network_id.clone(),

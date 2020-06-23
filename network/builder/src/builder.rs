@@ -67,6 +67,7 @@ pub struct NetworkBuilder {
 
 impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
+    // TODO:  remove pub
     pub fn new(
         chain_id: ChainId,
         network_id: NetworkId,
@@ -224,6 +225,7 @@ impl NetworkBuilder {
         self.network_context.clone()
     }
 
+    // TODO: remove this function.
     pub fn peer_id(&self) -> PeerId {
         self.network_context.peer_id()
     }
@@ -240,6 +242,7 @@ impl NetworkBuilder {
     }
 
     /// Set trusted peers.
+    // TODO:  remove this function
     pub fn trusted_peers(
         &mut self,
         trusted_peers: HashMap<PeerId, x25519::PublicKey>,
@@ -248,14 +251,14 @@ impl NetworkBuilder {
         self
     }
 
-    pub fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
+    fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
         match self.connectivity_manager_builder {
             Some(ref conn_mgr) => Some(conn_mgr.conn_mgr_reqs_tx()),
             None => None,
         }
     }
 
-    pub fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {
+    fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {
         match &mut self.peer_manager_builder {
             Some(builder) => builder.add_connection_event_listener(),
             None => panic!(
@@ -273,6 +276,7 @@ impl NetworkBuilder {
     ///
     /// Note: a connectivity manager should only be added if the network is
     /// permissioned.
+    // TODO: remove pub
     pub fn add_connectivity_manager(
         &mut self,
         seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
@@ -359,6 +363,7 @@ impl NetworkBuilder {
     /// peers as a network protocol.
     ///
     /// This is for testing purposes only and should not be used in production networks.
+    // TODO:  remove pub
     pub fn add_gossip_discovery(
         &mut self,
         advertised_address: NetworkAddress,
@@ -456,6 +461,7 @@ impl NetworkBuilder {
         }
         self
     }
+
     pub fn add_connection_monitoring(
         &mut self,
         ping_interval_ms: u64,

@@ -128,6 +128,7 @@ pub fn setup_network() -> DummyNetwork {
 
     // Set up the listener network
     let listener_executor = runtime.handle().clone();
+    // TODO:  use a NetworkConfig and ::create
     let mut network_builder = NetworkBuilder::new(
         chain_id.clone(),
         network_id.clone(),
