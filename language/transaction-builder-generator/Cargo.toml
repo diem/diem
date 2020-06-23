@@ -28,6 +28,6 @@ tempfile = "3.1"
 default = []
 
 [[bin]]
-name = "serdegen"
+name = "transaction-builder-generator"
 path = "src/generate.rs"
 test = false
