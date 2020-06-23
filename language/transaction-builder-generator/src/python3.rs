@@ -72,7 +72,9 @@ fn output_builder(out: &mut dyn Write, abi: &ScriptABI) -> Result<()> {
     writeln!(
         out,
         r#"    return libra.Script(
+        # fmt: off
         code={},
+        # fmt: on
         ty_args=[{}],
         args=[{}],
     )"#,
@@ -114,7 +116,7 @@ fn quote_parameters(args: &[ArgumentABI]) -> Vec<String> {
 
 fn quote_code(code: &[u8]) -> String {
     format!(
-        "bytes([{}])",
+        "[{}]",
         code.iter()
             .map(|x| format!("{}", x))
             .collect::<Vec<_>>()
@@ -146,7 +148,7 @@ fn quote_type(type_tag: &TypeTag) -> String {
         U128 => "st.uint128".into(),
         Address => "libra.AccountAddress".into(),
         Vector(type_tag) => match type_tag.as_ref() {
-            U8 => "bytes".into(),
+            U8 => "typing.Sequence[st.uint8]".into(),
             _ => type_not_allowed(type_tag),
         },
 
