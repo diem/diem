@@ -5,6 +5,7 @@
 use log::{debug, info, warn};
 
 use anyhow::bail;
+use heck::SnakeCase;
 use libra_types::transaction::{ArgumentABI, ScriptABI, TypeArgumentABI};
 use move_core_types::language_storage::TypeTag;
 use serde::{Deserialize, Serialize};
@@ -105,7 +106,7 @@ impl<'env> Abigen<'env> {
             .get_named_type_parameters()
             .iter()
             .map(|ty_param| {
-                TypeArgumentABI::new(symbol_pool.string(ty_param.0).to_string().to_lowercase())
+                TypeArgumentABI::new(symbol_pool.string(ty_param.0).to_string().to_snake_case())
             })
             .collect();
         let args = func
