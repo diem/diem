@@ -173,6 +173,10 @@ impl DbReader for StorageClient {
     fn get_epoch_ending_ledger_info(&self, _: u64) -> Result<LedgerInfoWithSignatures> {
         unimplemented!()
     }
+
+    fn get_block_timestamp(&self, _version: u64) -> Result<u64> {
+        unimplemented!()
+    }
 }
 
 impl DbWriter for StorageClient {

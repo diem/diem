@@ -37,7 +37,6 @@ use std::{
     convert::TryFrom,
     str::FromStr,
     sync::Arc,
-    time::{SystemTime, UNIX_EPOCH},
 };
 use storage_interface::DbReader;
 use tokio::runtime::Runtime;
@@ -53,22 +52,15 @@ fn mock_db() -> MockLibraDB {
     let blocks = gen.generate(arb_blocks_to_commit());
     let mut account_state_with_proof = gen.generate(any::<AccountStateWithProof>());
 
-    let mut version = 0;
+    let mut version = 1;
     let mut all_accounts = BTreeMap::new();
     let mut all_txns = vec![];
     let mut events = vec![];
-    let mut timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_micros() as u64;
+    let mut timestamps = vec![0 as u64];
 
-    for (txns_to_commit, _ledger_info_with_sigs) in &blocks {
-        timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_micros() as u64;
-
+    for (txns_to_commit, ledger_info_with_sigs) in &blocks {
         for (idx, txn) in txns_to_commit.iter().enumerate() {
+            timestamps.push(ledger_info_with_sigs.ledger_info().timestamp_usecs());
             events.extend(
                 txn.events()
                     .iter()
@@ -114,12 +106,12 @@ fn mock_db() -> MockLibraDB {
     }
 
     MockLibraDB {
-        timestamp,
         version: version as u64,
         all_accounts,
         all_txns,
         events,
         account_state_with_proof,
+        timestamps,
     }
 }
 
@@ -306,7 +298,7 @@ fn test_transaction_submission() {
 //}
 
 #[test]
-fn test_get_metadata() {
+fn test_get_metadata_latest() {
     let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
 
     let (actual_version, actual_timestamp) = mock_db.get_latest_commit_metadata().unwrap();
@@ -318,6 +310,20 @@ fn test_get_metadata() {
     let result_view = BlockMetadata::from_response(result).unwrap();
     assert_eq!(result_view.version, actual_version);
     assert_eq!(result_view.timestamp, actual_timestamp);
+}
+
+#[test]
+fn test_get_metadata() {
+    let (mock_db, client, mut runtime) = create_database_client_and_runtime(1);
+
+    let mut batch = JsonRpcBatch::default();
+    batch.add_get_metadata_request(Some(1));
+
+    let result = execute_batch_and_get_first_response(&client, &mut runtime, batch);
+
+    let result_view = BlockMetadata::from_response(result).unwrap();
+    assert_eq!(result_view.version, 1);
+    assert_eq!(result_view.timestamp, mock_db.timestamps[1]);
 }
 
 #[test]

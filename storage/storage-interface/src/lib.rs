@@ -158,6 +158,12 @@ pub trait DbReader: Send + Sync {
         limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>>;
 
+    /// See [`LibraDB::get_block_timestamp`].
+    ///
+    /// [`LibraDB::get_block_timestamp`]:
+    /// ../libradb/struct.LibraDB.html#method.get_block_timestamp
+    fn get_block_timestamp(&self, version: u64) -> Result<u64>;
+
     /// See [`LibraDB::get_latest_account_state`].
     ///
     /// [`LibraDB::get_latest_account_state`]:
