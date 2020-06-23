@@ -28,7 +28,8 @@ pub mod ty;
 
 use crate::env::SCRIPT_MODULE_NAME;
 #[allow(unused_imports)]
-use log::{info, warn};
+use itertools::Itertools;
+use log::warn;
 use move_ir_types::location::Spanned;
 use move_lang::{
     expansion::ast::ModuleDefinition,
@@ -56,8 +57,9 @@ pub fn run_spec_lang_compiler(
     // First pass: compile move code.
     let (files, units_or_errors) = move_compile_no_report(&all_sources, &[], address_opt)?;
     // Enter sources into env, remember file ids as
-    for (fname, fsrc) in files {
-        env.add_source(fname, &fsrc, deps.contains(&fname.to_string()));
+    for fname in files.keys().sorted() {
+        let fsrc = &files[fname];
+        env.add_source(fname, fsrc, deps.contains(&fname.to_string()));
     }
     match units_or_errors {
         Err(errors) => {
