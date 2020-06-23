@@ -14,7 +14,7 @@ use rusoto_sts::WebIdentityProvider;
 /// set_asg_size sets the size of the given autoscaling group
 #[allow(clippy::collapsible_if)]
 pub async fn set_asg_size(
-    min_desired_capacity: i64,
+    desired_capacity: i64,
     buffer_percent: f64,
     asg_name: &str,
     wait_for_completion: bool,
@@ -23,15 +23,15 @@ pub async fn set_asg_size(
     let buffer = if scaling_down {
         0
     } else {
-        ((min_desired_capacity as f64 * buffer_percent) / 100_f64).ceil() as i64
+        ((desired_capacity as f64 * buffer_percent) / 100_f64).ceil() as i64
     };
     info!(
-        "Scaling to min_desired_capacity : {}, buffer: {}, asg_name: {}",
-        min_desired_capacity, buffer, asg_name
+        "Scaling to desired_capacity : {}, buffer: {}, asg_name: {}",
+        desired_capacity, buffer, asg_name
     );
     let set_desired_capacity_type = SetDesiredCapacityType {
         auto_scaling_group_name: asg_name.to_string(),
-        desired_capacity: min_desired_capacity + buffer,
+        desired_capacity: desired_capacity + buffer,
         honor_cooldown: Some(false),
     };
     let credentials_provider = WebIdentityProvider::from_k8s_env();
@@ -87,25 +87,25 @@ pub async fn set_asg_size(
             }
             info!(
                 "Waiting for scaling to complete. Current size: {}, Min Desired Size: {}",
-                total, min_desired_capacity
+                total, desired_capacity
             );
             if scaling_down {
-                if total > min_desired_capacity {
+                if total > desired_capacity {
                     bail!(
                     "Waiting for scale-down to complete. Current size: {}, Min Desired Size: {}",
                     total,
-                    min_desired_capacity
+                    desired_capacity
                 );
                 } else {
                     info!("Scale down completed");
                     Ok(())
                 }
             } else {
-                if total < min_desired_capacity {
+                if total < desired_capacity {
                     bail!(
                         "Waiting for scale-up to complete. Current size: {}, Min Desired Size: {}",
                         total,
-                        min_desired_capacity
+                        desired_capacity
                     );
                 } else {
                     info!("Scale up completed");

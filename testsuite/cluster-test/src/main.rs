@@ -446,9 +446,15 @@ impl ClusterUtil {
                 instance_count += args.num_validators;
             }
         }
+        // First scale down to zero instances and wait for it to complete so that we don't schedule pods on
+        // instances which are going into termination state
+        aws::set_asg_size(0, 0.0, &asg_name, true, true)
+            .await
+            .unwrap_or_else(|err| panic!("{} scale down failed: {}", asg_name, err));
+        // Then scale up and bring up new instances
         aws::set_asg_size(instance_count as i64, 5.0, &asg_name, true, false)
             .await
-            .unwrap_or_else(|err| panic!("{} scaling failed: {}", asg_name, err));
+            .unwrap_or_else(|err| panic!("{} scale up failed: {}", asg_name, err));
         let (validators, fullnodes) = cluster_swarm
             .spawn_validator_and_fullnode_set(
                 args.num_validators,
@@ -498,7 +504,7 @@ impl ClusterTestRunner {
             .await
             .expect("Failed to get workspace");
         let asg_name = format!("{}-k8s-testnet-validators", workspace);
-        aws::set_asg_size(0, 0.0, &asg_name, true, true)
+        aws::set_asg_size(0, 0.0, &asg_name, false, true)
             .await
             .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
     }
