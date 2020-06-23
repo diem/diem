@@ -131,13 +131,16 @@
 <span id="131">131</span>
 <span id="132">132</span>
 <span id="133">133</span>
-<span id="134">134</span>
-<span id="135">135</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">constants</span>, <span class="ident">error</span>::<span class="ident">Error</span>, <span class="ident">SecureBackends</span>};
+<span class="kw">use</span> <span class="kw">crate</span>::{
+    <span class="ident">constants</span>,
+    <span class="ident">error</span>::<span class="ident">Error</span>,
+    <span class="ident">secure_backend</span>::<span class="ident">StorageLocation</span>::{<span class="ident">LocalStorage</span>, <span class="ident">RemoteStorage</span>},
+    <span class="ident">SecureBackends</span>,
+};
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">HANDSHAKE_VERSION</span>;
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">ed25519</span>::<span class="ident">Ed25519PublicKey</span>, <span class="ident">hash</span>::<span class="ident">CryptoHash</span>, <span class="ident">x25519</span>, <span class="ident">ValidCryptoMaterial</span>};
 <span class="kw">use</span> <span class="ident">libra_global_constants</span>::{
@@ -150,10 +153,7 @@
     <span class="ident">account_address</span>::{<span class="self">self</span>, <span class="ident">AccountAddress</span>},
     <span class="ident">transaction</span>::{<span class="ident">RawTransaction</span>, <span class="ident">SignedTransaction</span>, <span class="ident">Transaction</span>},
 };
-<span class="kw">use</span> <span class="ident">std</span>::{
-    <span class="ident">convert</span>::{<span class="ident">TryFrom</span>, <span class="ident">TryInto</span>},
-    <span class="ident">time</span>::<span class="ident">Duration</span>,
-};
+<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">convert</span>::<span class="ident">TryFrom</span>, <span class="ident">time</span>::<span class="ident">Duration</span>};
 <span class="kw">use</span> <span class="ident">structopt</span>::<span class="ident">StructOpt</span>;
 
 <span class="comment">// TODO(davidiw) add operator_address, since that will eventually be the identity producing this.</span>
@@ -171,16 +171,13 @@
 
 <span class="kw">impl</span> <span class="ident">ValidatorConfig</span> {
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">execute</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Transaction</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">local</span>: <span class="ident">Storage</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">backends</span>.<span class="ident">local</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>;
-        <span class="ident">local</span>
-            .<span class="ident">available</span>()
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">LocalStorageUnavailable</span>(<span class="ident">e</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">local_storage</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">backends</span>.<span class="ident">local</span>.<span class="ident">create_storage</span>(<span class="ident">LocalStorage</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// Step 1) Retrieve keys from local storage</span>
-        <span class="kw">let</span> <span class="ident">consensus_key</span> <span class="op">=</span> <span class="ident">ed25519_from_storage</span>(<span class="ident">CONSENSUS_KEY</span>, <span class="kw-2">&amp;</span><span class="ident">local</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">fullnode_network_key</span> <span class="op">=</span> <span class="ident">x25519_from_storage</span>(<span class="ident">FULLNODE_NETWORK_KEY</span>, <span class="kw-2">&amp;</span><span class="ident">local</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">validator_network_key</span> <span class="op">=</span> <span class="ident">x25519_from_storage</span>(<span class="ident">VALIDATOR_NETWORK_KEY</span>, <span class="kw-2">&amp;</span><span class="ident">local</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">operator_key</span> <span class="op">=</span> <span class="ident">ed25519_from_storage</span>(<span class="ident">OPERATOR_KEY</span>, <span class="kw-2">&amp;</span><span class="ident">local</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">consensus_key</span> <span class="op">=</span> <span class="ident">ed25519_from_storage</span>(<span class="ident">CONSENSUS_KEY</span>, <span class="kw-2">&amp;</span><span class="ident">local_storage</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">fullnode_network_key</span> <span class="op">=</span> <span class="ident">x25519_from_storage</span>(<span class="ident">FULLNODE_NETWORK_KEY</span>, <span class="kw-2">&amp;</span><span class="ident">local_storage</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">validator_network_key</span> <span class="op">=</span> <span class="ident">x25519_from_storage</span>(<span class="ident">VALIDATOR_NETWORK_KEY</span>, <span class="kw-2">&amp;</span><span class="ident">local_storage</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">operator_key</span> <span class="op">=</span> <span class="ident">ed25519_from_storage</span>(<span class="ident">OPERATOR_KEY</span>, <span class="kw-2">&amp;</span><span class="ident">local_storage</span>)<span class="question-mark">?</span>;
 
         <span class="comment">// append ln-noise-ik and ln-handshake protocols to base network addresses</span>
 
@@ -226,7 +223,7 @@
             <span class="ident">constants</span>::<span class="ident">GAS_CURRENCY_CODE</span>.<span class="ident">to_owned</span>(),
             <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">expiration_time</span>),
         );
-        <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">local</span>
+        <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">local_storage</span>
             .<span class="ident">sign_message</span>(<span class="ident">OPERATOR_KEY</span>, <span class="kw-2">&amp;</span><span class="ident">raw_transaction</span>.<span class="ident">hash</span>())
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
                 <span class="ident">Error</span>::<span class="ident">LocalStorageSigningError</span>(<span class="string">&quot;validator-config&quot;</span>, <span class="ident">OPERATOR_KEY</span>, <span class="ident">e</span>.<span class="ident">to_string</span>())
@@ -236,15 +233,14 @@
 
         <span class="comment">// Step 3) Submit to remote storage</span>
 
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">remote</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">backends</span>.<span class="ident">remote</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">remote</span>: <span class="ident">Storage</span> <span class="op">=</span> <span class="ident">remote</span>.<span class="ident">try_into</span>()<span class="question-mark">?</span>;
-            <span class="ident">remote</span>
-                .<span class="ident">available</span>()
-                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">Error</span>::<span class="ident">RemoteStorageUnavailable</span>(<span class="ident">e</span>.<span class="ident">to_string</span>()))<span class="question-mark">?</span>;
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">remote_config</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">backends</span>.<span class="ident">remote</span> {
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">remote_storage</span> <span class="op">=</span> <span class="ident">remote_config</span>.<span class="ident">create_storage</span>(<span class="ident">RemoteStorage</span>)<span class="question-mark">?</span>;
             <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="ident">Value</span>::<span class="ident">Transaction</span>(<span class="ident">txn</span>.<span class="ident">clone</span>());
-            <span class="ident">remote</span>.<span class="ident">set</span>(<span class="ident">constants</span>::<span class="ident">VALIDATOR_CONFIG</span>, <span class="ident">txn</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
-                <span class="ident">Error</span>::<span class="ident">RemoteStorageWriteError</span>(<span class="ident">constants</span>::<span class="ident">VALIDATOR_CONFIG</span>, <span class="ident">e</span>.<span class="ident">to_string</span>())
-            })<span class="question-mark">?</span>;
+            <span class="ident">remote_storage</span>
+                .<span class="ident">set</span>(<span class="ident">constants</span>::<span class="ident">VALIDATOR_CONFIG</span>, <span class="ident">txn</span>)
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+                    <span class="ident">Error</span>::<span class="ident">RemoteStorageWriteError</span>(<span class="ident">constants</span>::<span class="ident">VALIDATOR_CONFIG</span>, <span class="ident">e</span>.<span class="ident">to_string</span>())
+                })<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(<span class="ident">txn</span>)
