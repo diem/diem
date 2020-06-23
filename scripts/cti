@@ -6,11 +6,11 @@ set -o pipefail
 
 TAG=""
 CLUSTER_TEST_TAG=""
+VALIDATOR_TAG=""
 PR=""
 WORKSPACE=""
 ENV=""
 REPORT=""
-DEPLOY=yes
 EXIT_CODE=0
 
 K8S_CONTEXT_PATTERN='arn:aws:eks:us-west-2:853397791086:cluster/CLUSTERNAME-k8s-testnet'
@@ -151,6 +151,10 @@ while (( "$#" )); do
       CLUSTER_TEST_TAG=$2
       shift 2
       ;;
+    --validator-tag)
+      VALIDATOR_TAG=$2
+      shift 2
+      ;;
     -W|--workspace)
       WORKSPACE=$2
       shift 2
@@ -199,6 +203,7 @@ if [ -z "$TAG" ]; then
 fi
 
 CLUSTER_TEST_TAG=${CLUSTER_TEST_TAG:-${TAG}}
+VALIDATOR_TAG=${VALIDATOR_TAG:-${TAG}}
 
 OUTPUT_TEE=${CTI_OUTPUT_LOG:-$(mktemp)}
 
@@ -217,7 +222,7 @@ ENV="$ENV AWS_ROLE_SESSION_NAME=AWS_ROLE_SESSION_NAME"
 join_env_vars $ENV
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 sed -e "s/{pod_name}/${pod_name}/g" \
-    -e "s/{image_tag}/${TAG}/g" \
+    -e "s/{image_tag}/${VALIDATOR_TAG}/g" \
     -e "s/{cluster_test_image_tag}/${CLUSTER_TEST_TAG}/g" \
     -e "s^{env_variables}^${retval_join_env_vars}^g" \
     -e "s+{extra_args}+${retval_join_args}+g" \
