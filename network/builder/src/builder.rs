@@ -23,7 +23,7 @@ use libra_types::{waypoint::Waypoint, PeerId};
 use network::{
     connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
     constants,
-    peer_manager::{builder::PeerManagerBuilder, conn_notifs_channel, ConnectionRequestSender},
+    peer_manager::{builder::PeerManagerBuilder, ConnectionRequestSender},
     protocols::{
         discovery::{self, builder::DiscoveryBuilder},
         health_checker::{self, builder::HealthCheckerBuilder},
@@ -40,7 +40,7 @@ use std::{
 };
 use storage_interface::DbReader;
 use subscription_service::ReconfigSubscription;
-use tokio::runtime::{Builder, Handle, Runtime};
+use tokio::runtime::Handle;
 
 pub use network::peer_manager::builder::AuthenticationMode;
 
@@ -55,12 +55,17 @@ pub struct NetworkBuilder {
     network_context: Arc<NetworkContext>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
 
+    built: bool,
+    started: bool,
+
     connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
     configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
     discovery_builder: Option<DiscoveryBuilder>,
     health_checker_builder: Option<HealthCheckerBuilder>,
     onchain_discovery_builder: Option<OnchainDiscoveryBuilder>,
     peer_manager_builder: Option<PeerManagerBuilder>,
+
+    executor: Option<Handle>,
 
     reconfig_subscriptions: Vec<ReconfigSubscription>,
 }
@@ -92,12 +97,15 @@ impl NetworkBuilder {
         NetworkBuilder {
             network_context,
             trusted_peers,
+            built: false,
+            started: false,
             peer_manager_builder: Some(peer_manager_builder),
             connectivity_manager_builder: None,
             configuration_change_listener_builder: None,
             discovery_builder: None,
             health_checker_builder: None,
             onchain_discovery_builder: None,
+            executor: None,
             reconfig_subscriptions: Vec::new(),
         }
     }
@@ -108,14 +116,7 @@ impl NetworkBuilder {
         config: &mut NetworkConfig,
         libra_db: Arc<dyn DbReader>,
         waypoint: Waypoint,
-    ) -> (Runtime, NetworkBuilder) {
-        let runtime = Builder::new()
-            .thread_name("network-")
-            .threaded_scheduler()
-            .enable_all()
-            .build()
-            .expect("Failed to start runtime. Won't be able to start networking.");
-
+    ) -> NetworkBuilder {
         let peer_id = config.peer_id();
         let identity_key = config.identity_key();
         let public_key = identity_key.public_key();
@@ -199,24 +200,35 @@ impl NetworkBuilder {
             DiscoveryMethod::None => {}
         }
 
-        (runtime, network_builder)
+        network_builder
     }
 
-    pub fn build(&mut self, executor: &Handle) -> &mut Self {
+    pub fn build(&mut self, executor: Handle) -> &mut Self {
+        // Can only build once.
+        assert!(!self.built);
+        self.built = true;
         self.build_connection_monitoring(&executor)
             .build_connectivity_manager(&executor)
             .build_gossip_discovery(&executor)
             .build_onchain_discovery(&executor)
             .build_peer_manager(&executor);
+        self.executor = Some(executor);
         self
     }
 
-    pub fn start(&mut self, executor: &Handle) -> &mut Self {
-        self.start_connection_monitoring(executor)
-            .start_connectivity_manager(executor)
-            .start_gossip_discovery(executor)
-            .start_onchain_discovery(executor)
-            .start_peer_manager(executor);
+    pub fn start(&mut self) -> &mut Self {
+        // Can only start once;  must build before starting.
+        assert!(self.built && !self.started);
+        self.started = true;
+        let executor = self
+            .executor
+            .take()
+            .expect("Cannot start a Network that has not been built");
+        self.start_connection_monitoring(&executor)
+            .start_connectivity_manager(&executor)
+            .start_gossip_discovery(&executor)
+            .start_onchain_discovery(&executor)
+            .start_peer_manager(&executor);
 
         self
     }
@@ -253,15 +265,6 @@ impl NetworkBuilder {
         }
     }
 
-    fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {
-        match &mut self.peer_manager_builder {
-            Some(builder) => builder.add_connection_event_listener(),
-            None => panic!(
-                "Cannot add a conneciton event listener if PeerManagerBuilder does not exist"
-            ),
-        }
-    }
-
     /// Add a [`ConnectivityManager`] to the network.
     ///
     /// [`ConnectivityManager`] is responsible for ensuring that we are connected
@@ -279,13 +282,12 @@ impl NetworkBuilder {
         max_fullnode_connections: usize,
         channel_size: usize,
     ) -> &mut Self {
-        let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
-        let connection_reqs_tx = match &self.peer_manager_builder {
-            Some(builder) => builder.connection_reqs_tx(),
-            None => {
-                panic!("Cannot add a ConnectivityManager if the PeerManagerBuilder is not present")
-            }
-        };
+        let pm = self
+            .peer_manager_builder
+            .as_mut()
+            .expect("Cannot add ConnectivityManager if no PeerManager");
+        let pm_conn_mgr_notifs_rx = pm.add_connection_event_listener();
+        let connection_reqs_tx = pm.connection_reqs_tx();
 
         let connection_limit = if let RoleType::FullNode = self.network_context.role() {
             Some(max_fullnode_connections)
@@ -298,7 +300,7 @@ impl NetworkBuilder {
             seed_peers,
             connectivity_check_interval_ms,
             // TODO:  Move this value to NetworkConfig
-            2, // Hard-coded constant
+            2, // Hard-coded constant for the exponential backoff base value.
             // TODO:  Move this value to NetworkConfig
             constants::MAX_CONNECTION_DELAY_MS,
             channel_size,

@@ -22,7 +22,7 @@ use state_synchronizer::StateSynchronizer;
 use std::{boxed::Box, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_interface::DbReaderWriter;
 use storage_service::start_storage_service_with_db;
-use tokio::runtime::Runtime;
+use tokio::runtime::{Builder, Runtime};
 
 use debug_interface::libra_trace;
 
@@ -98,6 +98,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         instant.elapsed().as_millis()
     );
     let mut network_runtimes = vec![];
+    let mut network_builders = vec![];
     let mut state_sync_network_handles = vec![];
     let mut mempool_network_handles = vec![];
     let mut consensus_network_handles = None;
@@ -127,7 +128,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (role, network_config) in network_configs {
         // Perform common instantiation steps
-        let (runtime, mut network_builder) = NetworkBuilder::create(
+        let mut network_builder = NetworkBuilder::create(
             &node_config.base.chain_id,
             role,
             network_config,
@@ -168,13 +169,32 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         }
         reconfig_subscriptions.append(network_builder.reconfig_subscriptions());
 
+        network_builders.push(network_builder);
+    }
+
+    // Create the network_runtimes and build the networks.
+    for network_builder in &mut network_builders {
         // Start the network and cache the runtime so it does not go out of scope.
-        // TODO:  move all 'start' commands to a second phase at the end of setup_environment.  Target is to have one pass to wire the pieces together and a second pass to start processing in an appropriate order.
-        network_builder.build(&runtime.handle());
-        network_builder.start(&runtime.handle());
+        let runtime = Builder::new()
+            .thread_name("network-")
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .expect("Failed to start runtime. Won't be able to start networking.");
+
+        // Note that due to idiosyncracies of internal networking components, the runtime handle
+        // must be provided before they can be built.
+        network_builder.build(runtime.handle().clone());
+
         network_runtimes.push(runtime);
+    }
+
+    // Start the networks.
+    // TODO: offset this with the starting of other components.
+    for mut network_builder in network_builders {
+        network_builder.start();
         debug!(
-            "Network started for peer_id: {}",
+            "Network started for network: {}",
             network_builder.network_context()
         );
     }

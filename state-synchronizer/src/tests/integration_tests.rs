@@ -274,7 +274,8 @@ impl SynchronizerEnv {
 
         let (sender, events) =
             network_builder.add_protocol_handler(crate::network::network_endpoint_config());
-        network_builder.build(&executor);
+        network_builder.build(executor);
+        network_builder.start();
         let peer_addr = network_builder.listen_address();
         let mut config = config_builder::test_config().0;
         config.base.role = role;

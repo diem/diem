@@ -33,6 +33,7 @@ use std::{
 };
 use tokio::runtime::Handle;
 
+// TODO:  This is the wrong logical location for this code to exist.  Determine the better location.
 #[derive(Debug)]
 pub enum AuthenticationMode {
     /// Inbound and outbound connections are secured with NoiseIK; however, only
