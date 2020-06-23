@@ -765,6 +765,8 @@ Aborts if the
     <b>let</b> above_threshold = approx_lbr_microlibra_value &gt;= travel_rule_limit_microlibra;
     // travel rule only applies <b>if</b> the sender and recipient are both VASPs
     <b>let</b> both_vasps = <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(sender) && <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee);
+    // If a <a href="VASP.md#0x1_VASP">VASP</a> is sending/receiving and <b>if</b> they're expired, <b>abort</b>
+    <b>assert</b>(!<a href="VASP.md#0x1_VASP_is_expired">VASP::is_expired</a>(sender) && !<a href="VASP.md#0x1_VASP_is_expired">VASP::is_expired</a>(payee), 9000); // TODO: proper error code
     // Don't check the travel rule <b>if</b> we're on testnet and sender
     // doesn't specify a metadata signature
     <b>let</b> is_testnet_transfer = <a href="Testnet.md#0x1_Testnet_is_testnet">Testnet::is_testnet</a>() && <a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(&metadata_signature);

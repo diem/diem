@@ -25,7 +25,7 @@ module LibraTransactionTimeout {
 
   public fun is_valid_transaction_timestamp(timestamp: u64): bool acquires TTL {
     // Reject timestamp greater than u64::MAX / 1_000_000;
-    if(timestamp > 9223372036854) {
+    if(timestamp > 18446744073709) {
       return false
     };
 

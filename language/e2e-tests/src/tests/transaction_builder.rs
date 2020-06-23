@@ -350,11 +350,7 @@ fn dual_attestation_payment() {
         let ref_id = lcs::to_bytes(&7777u64).unwrap();
         // choose an amount above the dual attestation threshold
         let payment_amount = 1_000_000u64;
-        // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
-        let mut domain_separator = vec![
-            0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
-            0x53, 0x54, 0x24, 0x24, 0x40, 0x40,
-        ];
+        let mut domain_separator = b"@@$$LIBRA_ATTEST$$@@".to_vec();
         let message = {
             let mut msg = ref_id.clone();
             msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
@@ -406,11 +402,7 @@ fn dual_attestation_payment() {
         // transaction >= 1_000_000 threshold goes through signature verification with invalid signature, aborts
         let ref_id = lcs::to_bytes(&9999u64).unwrap();
         let payment_amount = 1_000_000u64;
-        // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
-        let mut domain_separator = vec![
-            0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
-            0x53, 0x54, 0x24, 0x24, 0x40, 0x40,
-        ];
+        let mut domain_separator = b"@@$$LIBRA_ATTEST$$@@".to_vec();
         let message = {
             let mut msg = ref_id.clone();
             msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
@@ -444,11 +436,7 @@ fn dual_attestation_payment() {
         // similar, but with empty payment ID (make sure signature is still invalid!)
         let ref_id = vec![];
         let payment_amount = 1_000_000u64;
-        // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
-        let mut domain_separator = vec![
-            0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
-            0x53, 0x54, 0x24, 0x24, 0x40, 0x40,
-        ];
+        let mut domain_separator = b"@@$$LIBRA_ATTEST$$@@".to_vec();
         let message = {
             let mut msg = ref_id.clone();
             msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
@@ -574,16 +562,17 @@ fn dual_attestation_payment() {
             2,
         ));
     }
-    {
+    let new_privkey = {
         // Rotate the parent VASP's compliance key
-        let (_, new_compliance_public_key) = keygen.generate_keypair();
+        let (new_privkey, new_compliance_public_key) = keygen.generate_keypair();
         executor.execute_and_apply(payment_receiver.signed_script_txn(
             encode_rotate_compliance_public_key_script(
                 new_compliance_public_key.to_bytes().to_vec(),
             ),
             0,
         ));
-    }
+        new_privkey
+    };
     {
         // This previously succeeded, but should now fail since their public key has changed
         // in transaction from sender's account. This tests to make sure their public key was
@@ -591,11 +580,7 @@ fn dual_attestation_payment() {
         let ref_id = lcs::to_bytes(&9999u64).unwrap();
         // choose an amount above the dual attestation threshold
         let payment_amount = 1_000_000u64;
-        // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
-        let mut domain_separator = vec![
-            0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
-            0x53, 0x54, 0x24, 0x24, 0x40, 0x40,
-        ];
+        let mut domain_separator = b"@@$$LIBRA_ATTEST$$@@".to_vec();
         let message = {
             let mut msg = ref_id.clone();
             msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
@@ -622,6 +607,59 @@ fn dual_attestation_payment() {
             StatusCode::ABORTED
         );
         assert_eq!(output.status().vm_status().sub_status, Some(9002));
+    }
+
+    {
+        // expire the VASP
+        executor.execute_and_apply(
+            association
+                .transaction()
+                .script(encode_set_vasp_expiration_script(
+                    *payment_sender.address(),
+                    0,
+                ))
+                .sequence_number(3)
+                .sign(),
+        );
+    }
+
+    {
+        // Transaction >= 1_000_000 threshold goes through signature verification with valid signature, passes
+        // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
+        // in transaction from sender's account
+        let ref_id = lcs::to_bytes(&9999u64).unwrap();
+        // choose an amount above the dual attestation threshold
+        let payment_amount = 1_000_000u64;
+        let mut domain_separator = b"@@$$LIBRA_ATTEST$$@@".to_vec();
+        let message = {
+            let mut msg = ref_id.clone();
+            msg.append(&mut lcs::to_bytes(&payment_sender.address()).unwrap());
+            msg.append(&mut lcs::to_bytes(&payment_amount).unwrap());
+            msg.append(&mut domain_separator);
+            msg
+        };
+        let signature =
+            <Ed25519PrivateKey as SigningKey>::sign_arbitrary_message(&new_privkey, &message);
+        executor.set_block_time(1);
+        executor.new_block();
+        let output = executor.execute_transaction(
+            payment_sender
+                .transaction()
+                .script(encode_transfer_with_metadata_script(
+                    account_config::lbr_type_tag(),
+                    *payment_receiver.address(),
+                    payment_amount,
+                    ref_id,
+                    signature.to_bytes().to_vec(),
+                ))
+                .sequence_number(4)
+                .sign(),
+        );
+        assert_eq!(
+            output.status().vm_status().major_status,
+            StatusCode::ABORTED,
+        );
+        assert_eq!(output.status().vm_status().sub_status, Some(9000),);
     }
 }
 

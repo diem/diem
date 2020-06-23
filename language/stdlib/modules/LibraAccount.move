@@ -209,6 +209,8 @@ module LibraAccount {
         let above_threshold = approx_lbr_microlibra_value >= travel_rule_limit_microlibra;
         // travel rule only applies if the sender and recipient are both VASPs
         let both_vasps = VASP::is_vasp(sender) && VASP::is_vasp(payee);
+        // If a VASP is sending/receiving and if they're expired, abort
+        assert(!VASP::is_expired(sender) && !VASP::is_expired(payee), 9000); // TODO: proper error code
         // Don't check the travel rule if we're on testnet and sender
         // doesn't specify a metadata signature
         let is_testnet_transfer = Testnet::is_testnet() && Vector::is_empty(&metadata_signature);

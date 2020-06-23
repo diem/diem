@@ -41,21 +41,16 @@ module VASP {
     // Association called functions for parent VASP accounts
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Renew's `parent_vasp`'s certification
-    public fun recertify_vasp(parent_vasp: &mut ParentVASP) {
-        parent_vasp.expiration_date = LibraTimestamp::now_microseconds() + cert_lifetime();
-    }
-
-    /// Non-destructively decertify `parent_vasp`. Can be
-    /// recertified later on via `recertify_vasp`.
-    public fun decertify_vasp(parent_vasp: &mut ParentVASP) {
-        // Expire the parent credential.
-        parent_vasp.expiration_date = 0;
-    }
-
-    // A year in microseconds
-    fun cert_lifetime(): u64 {
-        31540000000000
+    /// Updates the expiration time of a `ParentVASP` resource held at `parent_vasp_address`.
+    /// This can either be used to recertify a VASP (if `new_expiration_date >= now_microseconds()`)
+    /// or decertify a VASP if `new_expiration_date < now_microseconds()`.
+    public fun set_vasp_expiration(
+        _: &Capability<LibraRootRole>,
+        parent_vasp_address: address,
+        new_expiration_date: u64,
+    ) acquires ParentVASP {
+        let parent_vasp_info = borrow_global_mut<ParentVASP>(parent_vasp_address);
+        parent_vasp_info.expiration_date = new_expiration_date;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -78,8 +73,8 @@ module VASP {
         move_to(
             vasp,
             ParentVASP {
-                // For testnet and V1, so it should never expire. So set to u64::MAX
-                expiration_date: 18446744073709551615,
+                // For V1 it should never expire. So set to ~500K years
+                expiration_date: 15778476000000000000,
                 human_name,
                 base_url,
                 compliance_public_key,
@@ -164,6 +159,19 @@ module VASP {
         *&borrow_global<ParentVASP>(parent_address(addr)).num_children
     }
 
+    /// Return whether the VASP at `addr` is expired based upon the parent
+    /// VASP's `expiration_date` field.
+    public fun is_expired(account_address: address): bool
+    acquires ParentVASP, ChildVASP {
+        if (is_vasp(account_address)) {
+            let parent_addr = parent_address(account_address);
+            let expiration_date = borrow_global<ParentVASP>(parent_addr).expiration_date;
+            expiration_date < LibraTimestamp::now_microseconds()
+        } else {
+            false
+        }
+    }
+
     /// Rotate the base URL for the `parent_vasp` account to `new_url`
     public fun rotate_base_url(parent_vasp: &signer, new_url: vector<u8>) acquires ParentVASP {
         let parent_addr = Signer::address_of(parent_vasp);
@@ -209,6 +217,10 @@ module VASP {
         /// Returns the number of children under `parent`.
         define spec_get_num_children(parent: address): u64 {
             global<ParentVASP>(parent).num_children
+        }
+
+        define spec_get_expiration_date(parent: address): u64 {
+            global<ParentVASP>(parent).expiration_date
         }
 
         /// Returns the parent address of a VASP.
@@ -271,16 +283,9 @@ module VASP {
             compliance_public_key, expiration_date, num_children;
     }
 
-    spec fun recertify_vasp {
-        aborts_if !exists<LibraTimestamp::CurrentTimeMicroseconds>(spec_root_address());
-        aborts_if LibraTimestamp::assoc_unix_time() + spec_cert_lifetime() > max_u64();
-        ensures parent_vasp.expiration_date
-             == LibraTimestamp::assoc_unix_time() + spec_cert_lifetime();
-    }
-
-    spec fun decertify_vasp {
-        aborts_if false;
-        ensures parent_vasp.expiration_date == 0;
+    spec fun set_vasp_expiration {
+        aborts_if !spec_is_parent_vasp(parent_vasp_address);
+        ensures spec_get_expiration_date(parent_vasp_address) == new_expiration_date;
     }
 
     spec fun publish_parent_vasp_credential {

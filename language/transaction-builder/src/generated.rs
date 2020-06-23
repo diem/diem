@@ -763,6 +763,36 @@ pub fn encode_set_validator_operator_script(operator_account: AccountAddress) ->
     )
 }
 
+/// Set the expiration time of the parent vasp account at `parent_vasp_address` to expire
+/// at `new_expiration_date` specified in microseconds according to blockchain time. This
+/// can only be invoked by the Libra root account.
+pub fn encode_set_vasp_expiration_script(
+    parent_vasp_address: AccountAddress,
+    new_expiration_date: u64,
+) -> Script {
+    Script::new(
+        vec![
+            161, 28, 235, 11, 1, 0, 7, 1, 0, 4, 2, 4, 9, 3, 13, 17, 4, 30, 4, 5, 34, 41, 7, 75,
+            120, 8, 195, 1, 16, 0, 0, 0, 1, 0, 2, 1, 1, 3, 0, 3, 1, 0, 0, 4, 0, 1, 1, 3, 0, 5, 2,
+            3, 1, 3, 1, 6, 4, 3, 0, 0, 7, 1, 7, 1, 6, 12, 1, 11, 0, 1, 9, 0, 2, 6, 12, 11, 0, 1, 9,
+            0, 0, 3, 6, 11, 0, 1, 8, 1, 5, 3, 3, 6, 12, 5, 3, 1, 11, 0, 1, 8, 1, 1, 8, 1, 5, 82,
+            111, 108, 101, 115, 4, 86, 65, 83, 80, 10, 67, 97, 112, 97, 98, 105, 108, 105, 116,
+            121, 13, 76, 105, 98, 114, 97, 82, 111, 111, 116, 82, 111, 108, 101, 31, 101, 120, 116,
+            114, 97, 99, 116, 95, 112, 114, 105, 118, 105, 108, 101, 103, 101, 95, 116, 111, 95,
+            99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 31, 114, 101, 115, 116, 111, 114, 101,
+            95, 99, 97, 112, 97, 98, 105, 108, 105, 116, 121, 95, 116, 111, 95, 112, 114, 105, 118,
+            105, 108, 101, 103, 101, 19, 115, 101, 116, 95, 118, 97, 115, 112, 95, 101, 120, 112,
+            105, 114, 97, 116, 105, 111, 110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 5,
+            6, 11, 10, 0, 56, 0, 12, 3, 14, 3, 10, 1, 10, 2, 17, 2, 11, 0, 11, 3, 56, 1, 2,
+        ],
+        vec![],
+        vec![
+            TransactionArgument::Address(parent_vasp_address),
+            TransactionArgument::U64(new_expiration_date),
+        ],
+    )
+}
+
 /// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier. Max valid
 /// tier index is 3 since there are max 4 tiers per DD. Sender should be treasury
 /// compliance account and receiver authorized DD. `sliding_nonce` is a unique nonce for

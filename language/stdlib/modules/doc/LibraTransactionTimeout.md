@@ -109,7 +109,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_is_valid_transaction_timestamp">is_valid_transaction_timestamp</a>(timestamp: u64): bool <b>acquires</b> <a href="#0x1_LibraTransactionTimeout_TTL">TTL</a> {
   // Reject timestamp greater than u64::MAX / 1_000_000;
-  <b>if</b>(timestamp &gt; 9223372036854) {
+  <b>if</b>(timestamp &gt; 18446744073709) {
     <b>return</b> <b>false</b>
   };
 

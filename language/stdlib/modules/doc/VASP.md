@@ -7,9 +7,7 @@
 
 -  [Resource `ParentVASP`](#0x1_VASP_ParentVASP)
 -  [Resource `ChildVASP`](#0x1_VASP_ChildVASP)
--  [Function `recertify_vasp`](#0x1_VASP_recertify_vasp)
--  [Function `decertify_vasp`](#0x1_VASP_decertify_vasp)
--  [Function `cert_lifetime`](#0x1_VASP_cert_lifetime)
+-  [Function `set_vasp_expiration`](#0x1_VASP_set_vasp_expiration)
 -  [Function `publish_parent_vasp_credential`](#0x1_VASP_publish_parent_vasp_credential)
 -  [Function `publish_child_vasp_credential`](#0x1_VASP_publish_child_vasp_credential)
 -  [Function `parent_address`](#0x1_VASP_parent_address)
@@ -21,6 +19,7 @@
 -  [Function `compliance_public_key`](#0x1_VASP_compliance_public_key)
 -  [Function `expiration_date`](#0x1_VASP_expiration_date)
 -  [Function `num_children`](#0x1_VASP_num_children)
+-  [Function `is_expired`](#0x1_VASP_is_expired)
 -  [Function `rotate_base_url`](#0x1_VASP_rotate_base_url)
 -  [Function `rotate_compliance_public_key`](#0x1_VASP_rotate_compliance_public_key)
 -  [Specification](#0x1_VASP_Specification)
@@ -28,8 +27,7 @@
         -  [Number of children is consistent](#0x1_VASP_@Number_of_children_is_consistent)
         -  [Number of children does not change](#0x1_VASP_@Number_of_children_does_not_change)
         -  [Specifications for individual functions](#0x1_VASP_@Specifications_for_individual_functions)
-    -  [Function `recertify_vasp`](#0x1_VASP_Specification_recertify_vasp)
-    -  [Function `decertify_vasp`](#0x1_VASP_Specification_decertify_vasp)
+    -  [Function `set_vasp_expiration`](#0x1_VASP_Specification_set_vasp_expiration)
     -  [Function `publish_parent_vasp_credential`](#0x1_VASP_Specification_publish_parent_vasp_credential)
     -  [Function `publish_child_vasp_credential`](#0x1_VASP_Specification_publish_child_vasp_credential)
     -  [Function `rotate_base_url`](#0x1_VASP_Specification_rotate_base_url)
@@ -134,15 +132,20 @@ A resource that represents a child account of the parent VASP account at
 
 </details>
 
-<a name="0x1_VASP_recertify_vasp"></a>
+<a name="0x1_VASP_set_vasp_expiration"></a>
 
-## Function `recertify_vasp`
+## Function `set_vasp_expiration`
 
-Renew's
-<code>parent_vasp</code>'s certification
+Updates the expiration time of a
+<code><a href="#0x1_VASP_ParentVASP">ParentVASP</a></code> resource held at
+<code>parent_vasp_address</code>.
+This can either be used to recertify a VASP (if
+<code>new_expiration_date &gt;= now_microseconds()</code>)
+or decertify a VASP if
+<code>new_expiration_date &lt; now_microseconds()</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_recertify_vasp">recertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">VASP::ParentVASP</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_set_vasp_expiration">set_vasp_expiration</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;, parent_vasp_address: address, new_expiration_date: u64)
 </code></pre>
 
 
@@ -151,61 +154,13 @@ Renew's
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_recertify_vasp">recertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a>) {
-    parent_vasp.expiration_date = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>() + <a href="#0x1_VASP_cert_lifetime">cert_lifetime</a>();
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_VASP_decertify_vasp"></a>
-
-## Function `decertify_vasp`
-
-Non-destructively decertify
-<code>parent_vasp</code>. Can be
-recertified later on via
-<code>recertify_vasp</code>.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_decertify_vasp">decertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">VASP::ParentVASP</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_decertify_vasp">decertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a>) {
-    // Expire the parent credential.
-    parent_vasp.expiration_date = 0;
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_VASP_cert_lifetime"></a>
-
-## Function `cert_lifetime`
-
-
-
-<pre><code><b>fun</b> <a href="#0x1_VASP_cert_lifetime">cert_lifetime</a>(): u64
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_VASP_cert_lifetime">cert_lifetime</a>(): u64 {
-    31540000000000
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_set_vasp_expiration">set_vasp_expiration</a>(
+    _: &Capability&lt;LibraRootRole&gt;,
+    parent_vasp_address: address,
+    new_expiration_date: u64,
+) <b>acquires</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
+    <b>let</b> parent_vasp_info = borrow_global_mut&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent_vasp_address);
+    parent_vasp_info.expiration_date = new_expiration_date;
 }
 </code></pre>
 
@@ -247,8 +202,8 @@ Aborts if
     move_to(
         vasp,
         <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
-            // For testnet and V1, so it should never expire. So set <b>to</b> u64::MAX
-            expiration_date: 18446744073709551615,
+            // For V1 it should never expire. So set <b>to</b> ~500K years
+            expiration_date: 15778476000000000000,
             human_name,
             base_url,
             compliance_public_key,
@@ -545,6 +500,41 @@ Aborts if
 
 </details>
 
+<a name="0x1_VASP_is_expired"></a>
+
+## Function `is_expired`
+
+Return whether the VASP at
+<code>addr</code> is expired based upon the parent
+VASP's
+<code>expiration_date</code> field.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_is_expired">is_expired</a>(account_address: address): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_is_expired">is_expired</a>(account_address: address): bool
+<b>acquires</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a>, <a href="#0x1_VASP_ChildVASP">ChildVASP</a> {
+    <b>if</b> (<a href="#0x1_VASP_is_vasp">is_vasp</a>(account_address)) {
+        <b>let</b> parent_addr = <a href="#0x1_VASP_parent_address">parent_address</a>(account_address);
+        <b>let</b> expiration_date = borrow_global&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent_addr).expiration_date;
+        <a href="#0x1_VASP_expiration_date">expiration_date</a> &lt; <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>()
+    } <b>else</b> {
+        <b>false</b>
+    }
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_VASP_rotate_base_url"></a>
 
 ## Function `rotate_base_url`
@@ -674,6 +664,10 @@ Returns the number of children under
 <pre><code><b>define</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent: address): u64 {
     <b>global</b>&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent).num_children
 }
+<a name="0x1_VASP_spec_get_expiration_date"></a>
+<b>define</b> <a href="#0x1_VASP_spec_get_expiration_date">spec_get_expiration_date</a>(parent: address): u64 {
+    <b>global</b>&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent).expiration_date
+}
 </code></pre>
 
 
@@ -779,38 +773,19 @@ Returns the parent address of a VASP.
 
 
 
-<a name="0x1_VASP_Specification_recertify_vasp"></a>
+<a name="0x1_VASP_Specification_set_vasp_expiration"></a>
 
-### Function `recertify_vasp`
+### Function `set_vasp_expiration`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_recertify_vasp">recertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">VASP::ParentVASP</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_set_vasp_expiration">set_vasp_expiration</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;, parent_vasp_address: address, new_expiration_date: u64)
 </code></pre>
 
 
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="LibraTimestamp.md#0x1_LibraTimestamp_CurrentTimeMicroseconds">LibraTimestamp::CurrentTimeMicroseconds</a>&gt;(<a href="#0x1_VASP_spec_root_address">spec_root_address</a>());
-<b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_assoc_unix_time">LibraTimestamp::assoc_unix_time</a>() + <a href="#0x1_VASP_spec_cert_lifetime">spec_cert_lifetime</a>() &gt; max_u64();
-<b>ensures</b> parent_vasp.expiration_date
-     == <a href="LibraTimestamp.md#0x1_LibraTimestamp_assoc_unix_time">LibraTimestamp::assoc_unix_time</a>() + <a href="#0x1_VASP_spec_cert_lifetime">spec_cert_lifetime</a>();
-</code></pre>
-
-
-
-<a name="0x1_VASP_Specification_decertify_vasp"></a>
-
-### Function `decertify_vasp`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_decertify_vasp">decertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">VASP::ParentVASP</a>)
-</code></pre>
-
-
-
-
-<pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> parent_vasp.expiration_date == 0;
+<pre><code><b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(parent_vasp_address);
+<b>ensures</b> <a href="#0x1_VASP_spec_get_expiration_date">spec_get_expiration_date</a>(parent_vasp_address) == new_expiration_date;
 </code></pre>
 
 
