@@ -311,6 +311,37 @@ pub fn encode_create_validator_account_script(
     )
 }
 
+/// Create a validator operator account at `new_validator_address` with `auth_key_prefix`.
+pub fn encode_create_validator_operator_account_script(
+    token: TypeTag,
+    new_account_address: AccountAddress,
+    auth_key_prefix: Vec<u8>,
+) -> Script {
+    Script::new(
+        vec![
+            161, 28, 235, 11, 1, 0, 7, 1, 0, 4, 2, 4, 9, 3, 13, 17, 4, 30, 4, 5, 34, 45, 7, 79,
+            142, 1, 8, 221, 1, 16, 0, 0, 0, 1, 1, 2, 1, 1, 3, 1, 3, 1, 0, 1, 4, 0, 1, 1, 3, 1, 5,
+            2, 3, 1, 3, 0, 6, 4, 3, 0, 0, 7, 1, 7, 1, 6, 12, 1, 11, 0, 1, 9, 0, 2, 6, 12, 11, 0, 1,
+            9, 0, 0, 4, 6, 12, 6, 11, 0, 1, 8, 1, 5, 10, 2, 3, 6, 12, 5, 10, 2, 1, 11, 0, 1, 8, 1,
+            1, 8, 1, 12, 76, 105, 98, 114, 97, 65, 99, 99, 111, 117, 110, 116, 5, 82, 111, 108,
+            101, 115, 10, 67, 97, 112, 97, 98, 105, 108, 105, 116, 121, 13, 76, 105, 98, 114, 97,
+            82, 111, 111, 116, 82, 111, 108, 101, 31, 101, 120, 116, 114, 97, 99, 116, 95, 112,
+            114, 105, 118, 105, 108, 101, 103, 101, 95, 116, 111, 95, 99, 97, 112, 97, 98, 105,
+            108, 105, 116, 121, 31, 114, 101, 115, 116, 111, 114, 101, 95, 99, 97, 112, 97, 98,
+            105, 108, 105, 116, 121, 95, 116, 111, 95, 112, 114, 105, 118, 105, 108, 101, 103, 101,
+            33, 99, 114, 101, 97, 116, 101, 95, 118, 97, 108, 105, 100, 97, 116, 111, 114, 95, 111,
+            112, 101, 114, 97, 116, 111, 114, 95, 97, 99, 99, 111, 117, 110, 116, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 5, 6, 12, 10, 0, 56, 0, 12, 3, 10, 0, 14, 3, 10, 1,
+            11, 2, 17, 2, 11, 0, 11, 3, 56, 1, 2,
+        ],
+        vec![token],
+        vec![
+            TransactionArgument::Address(new_account_address),
+            TransactionArgument::U8Vector(auth_key_prefix),
+        ],
+    )
+}
+
 /// Used for testing.
 pub fn encode_empty_script_script() -> Script {
     Script::new(
@@ -715,6 +746,20 @@ pub fn encode_set_validator_config_script(
             TransactionArgument::U8Vector(fullnodes_network_identity_pubkey),
             TransactionArgument::U8Vector(fullnodes_network_address),
         ],
+    )
+}
+
+/// Set validator's operator
+pub fn encode_set_validator_operator_script(operator_account: AccountAddress) -> Script {
+    Script::new(
+        vec![
+            161, 28, 235, 11, 1, 0, 5, 1, 0, 2, 3, 2, 5, 5, 7, 5, 7, 12, 29, 8, 41, 16, 0, 0, 0, 1,
+            0, 1, 0, 2, 6, 12, 5, 0, 15, 86, 97, 108, 105, 100, 97, 116, 111, 114, 67, 111, 110,
+            102, 105, 103, 12, 115, 101, 116, 95, 111, 112, 101, 114, 97, 116, 111, 114, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 4, 11, 0, 10, 1, 17, 0, 2,
+        ],
+        vec![],
+        vec![TransactionArgument::Address(operator_account)],
     )
 }
 

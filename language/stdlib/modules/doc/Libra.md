@@ -58,7 +58,7 @@
 -  [Function `update_minting_ability`](#0x1_Libra_update_minting_ability)
 -  [Function `assert_is_coin`](#0x1_Libra_assert_is_coin)
 -  [Specification](#0x1_Libra_Specification)
-    -  [Module specifications](#0x1_Libra_@Module_specifications)
+    -  [Module Specification](#0x1_Libra_@Module_Specification)
         -  [Management of capabilities](#0x1_Libra_@Management_of_capabilities)
         -  [Conservation of currency](#0x1_Libra_@Conservation_of_currency)
     -  [Resource `Libra`](#0x1_Libra_Specification_Libra)
@@ -1596,7 +1596,7 @@ zero. Does not abort.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_withdraw_all">withdraw_all</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;): <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt; {
-    <b>let</b> val = <a href="#0x1_Libra_value">value</a>(coin);
+    <b>let</b> val = coin.value;
     <a href="#0x1_Libra_withdraw">withdraw</a>(coin, val)
 }
 </code></pre>
@@ -2149,26 +2149,19 @@ Asserts that
 
 ## Specification
 
-**************** SPECIFICATIONS ****************
-Only a few of the specifications appear at this time. More to come.
+**************** MODULE SPECIFICATION ****************
 
-<a name="0x1_Libra_@Module_specifications"></a>
+<a name="0x1_Libra_@Module_Specification"></a>
 
-### Module specifications
-
+### Module Specification
 
 
-<pre><code>pragma verify = <b>false</b>;
+Verify all functions in this module.
+
+
+<pre><code>pragma verify = <b>true</b>;
 </code></pre>
 
-
-
-
-<a name="0x1_Libra_spec_currency_addr"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_Libra_spec_currency_addr">spec_currency_addr</a>(): address { 0xA550C18 }
-</code></pre>
 
 
 Checks whether currency is registered.
@@ -2180,7 +2173,7 @@ Mirrors
 
 
 <pre><code><b>define</b> <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;(): bool {
-    exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x1_Libra_spec_currency_addr">spec_currency_addr</a>())
+    exists&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>())
 }
 </code></pre>
 
@@ -2271,7 +2264,7 @@ the total_value CurrencyInfo keeps track of.
     <b>invariant</b> <b>module</b> !<a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;() ==&gt; <a href="#0x1_Libra_sum_of_coin_values">sum_of_coin_values</a>&lt;CoinType&gt; == 0;
     <b>invariant</b> <b>module</b> <a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;()
                 ==&gt; <a href="#0x1_Libra_sum_of_coin_values">sum_of_coin_values</a>&lt;CoinType&gt;
-                    == <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="#0x1_Libra_spec_currency_addr">spec_currency_addr</a>()).total_value;
+                    == <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>()).total_value;
 }
 </code></pre>
 
