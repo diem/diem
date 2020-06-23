@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(association: &signer, config_account: &signer, fee_account: &signer, tc_account: &signer, tc_addr: address, genesis_auth_key: vector&lt;u8&gt;, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(association: &signer, config_account: &signer, tc_account: &signer, tc_addr: address, genesis_auth_key: vector&lt;u8&gt;, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -27,7 +27,6 @@
 <pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(
     association: &signer,
     config_account: &signer,
-    fee_account: &signer,
     tc_account: &signer,
     tc_addr: address,
     genesis_auth_key: vector&lt;u8&gt;,
@@ -87,13 +86,10 @@
         <b>copy</b> dummy_auth_key_prefix,
     );
 
-    // Register transaction fee accounts
+    // Register transaction fee <b>resource</b>
     <a href="TransactionFee.md#0x1_TransactionFee_initialize">TransactionFee::initialize</a>(
         association,
-        fee_account,
-        &assoc_root_capability,
         &tc_capability,
-        <b>copy</b> dummy_auth_key_prefix
     );
 
     // Create the treasury compliance account
@@ -146,10 +142,6 @@
     <b>let</b> config_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(config_account);
     <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&config_rotate_key_cap, <b>copy</b> genesis_auth_key);
     <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(config_rotate_key_cap);
-
-    <b>let</b> fee_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(fee_account);
-    <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&fee_rotate_key_cap, <b>copy</b> genesis_auth_key);
-    <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(fee_rotate_key_cap);
 
     <b>let</b> tc_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(tc_account);
     <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&tc_rotate_key_cap, <b>copy</b> genesis_auth_key);

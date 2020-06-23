@@ -125,7 +125,7 @@ pub fn encode_genesis_transaction(
     )
 }
 
-/// Create an initialize Association, Transaction Fee and Core Code accounts.
+/// Create an initialize Association and Core Code accounts.
 fn create_and_initialize_main_accounts(
     context: &mut GenesisContext,
     public_key: &Ed25519PublicKey,
@@ -136,7 +136,6 @@ fn create_and_initialize_main_accounts(
 
     let root_association_address = account_config::association_address();
     let tc_account_address = account_config::treasury_compliance_account_address();
-    let fee_account_address = account_config::transaction_fee_address();
 
     let option_bytes =
         lcs::to_bytes(&publishing_option).expect("Cannot serialize publishing option");
@@ -149,7 +148,6 @@ fn create_and_initialize_main_accounts(
         vec![
             Value::transaction_argument_signer_reference(root_association_address),
             Value::transaction_argument_signer_reference(config_address()),
-            Value::transaction_argument_signer_reference(fee_account_address),
             Value::transaction_argument_signer_reference(tc_account_address),
             Value::address(tc_account_address),
             Value::vector_u8(genesis_auth_key.to_vec()),

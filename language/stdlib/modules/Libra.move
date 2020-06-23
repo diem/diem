@@ -516,6 +516,13 @@ module Libra {
         Libra { value: amount }
     }
 
+    /// Return a `Libra<CoinType>` worth `coin.value` and reduces the `value` of the input `coin` to
+    /// zero. Does not abort.
+    public fun withdraw_all<CoinType>(coin: &mut Libra<CoinType>): Libra<CoinType> {
+        let val = value(coin);
+        withdraw(coin, val)
+    }
+
     /// Combines the two coins of the same currency `CoinType` passed-in,
     /// and returns a new coin whose value is equal to the sum of the two inputs.
     public fun join<CoinType>(coin1: Libra<CoinType>, coin2: Libra<CoinType>): Libra<CoinType>  {
