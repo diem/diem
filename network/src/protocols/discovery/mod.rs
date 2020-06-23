@@ -61,6 +61,7 @@ use std::{
     cmp::max,
     collections::{HashMap, HashSet},
     convert::TryInto,
+    sync::Arc,
     time::SystemTime,
 };
 
@@ -129,7 +130,7 @@ pub struct Discovery<TTicker> {
     /// Note for self, which is prefixed with an underscore as this is not used but is in
     /// preparation for logic that changes the advertised Note while the validator is running.
     note: Note,
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     /// The DNS domain name other public full nodes should query to get this
     /// validator's list of full nodes.
     dns_seed_addr: Bytes,
@@ -155,7 +156,7 @@ where
     TTicker: Stream + FusedStream + Unpin,
 {
     pub fn new(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         self_addrs: Vec<NetworkAddress>,
         ticker: TTicker,
         network_reqs_tx: DiscoveryNetworkSender,

@@ -41,7 +41,7 @@ use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
 use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 #[cfg(test)]
 mod test;
@@ -132,7 +132,7 @@ pub struct Pong(u32);
 
 /// The actor performing health checks by running the Ping protocol
 pub struct HealthChecker<TTicker> {
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     /// Ticker to trigger ping to a random peer. In production, the ticker is likely to be
     /// fixed duration interval timer.
     ticker: TTicker,
@@ -161,7 +161,7 @@ where
 {
     /// Create new instance of the [`HealthChecker`] actor.
     pub fn new(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         ticker: TTicker,
         network_tx: HealthCheckerNetworkSender,
         network_rx: HealthCheckerNetworkEvents,
@@ -360,7 +360,7 @@ where
     }
 
     async fn ping_peer(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         mut network_tx: HealthCheckerNetworkSender,
         peer_id: PeerId,
         round: u64,

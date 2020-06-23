@@ -49,7 +49,7 @@ fn setup_permissive_health_checker(
     let network_context =
         NetworkContext::new(NetworkId::Validator, RoleType::Validator, PeerId::ZERO);
     let health_checker = HealthChecker::new(
-        network_context,
+        Arc::new(network_context),
         ticker_rx,
         hc_network_tx,
         hc_network_rx,

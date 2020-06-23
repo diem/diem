@@ -28,7 +28,7 @@ use netcore::{
     compat::IoCompat,
     transport::{boxed::BoxedTransport, memory::MemoryTransport, ConnectionOrigin, TransportExt},
 };
-use std::{collections::HashMap, iter::FromIterator, num::NonZeroUsize};
+use std::{collections::HashMap, iter::FromIterator, num::NonZeroUsize, sync::Arc};
 use tokio::runtime::Handle;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 
@@ -95,7 +95,11 @@ fn build_test_peer_manager(
     let peer_manager = PeerManager::new(
         executor,
         build_test_transport(),
-        NetworkContext::new(NetworkId::Validator, RoleType::Validator, peer_id),
+        Arc::new(NetworkContext::new(
+            NetworkId::Validator,
+            RoleType::Validator,
+            peer_id,
+        )),
         "/memory/0".parse().unwrap(),
         peer_manager_request_rx,
         connection_reqs_rx,

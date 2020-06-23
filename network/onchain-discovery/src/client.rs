@@ -37,7 +37,7 @@ use storage_interface::DbReader;
 /// latest discovery set and notifying the `ConnectivityManager` of updates.
 pub struct OnchainDiscovery<TTicker> {
     /// Network Context, includes all information about this node in it's network
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     /// The current trusted state, which keeps track of the latest verified
     /// ledger version and validator set. This version can be ahead of other
     /// components (e.g., state sync) since we only rely on syncing epoch change
@@ -78,7 +78,7 @@ where
     TTicker: Stream + FusedStream + Unpin,
 {
     pub fn new(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         waypoint: Waypoint,
         network_tx: OnchainDiscoveryNetworkSender,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
@@ -398,7 +398,7 @@ where
 /// Query a remote peer for their latest discovery set and a epoch change
 /// proof.
 async fn peer_query_discovery_set(
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     peer_id: PeerId,
     req_msg: QueryDiscoverySetRequest,
     outbound_rpc_timeout: Duration,
