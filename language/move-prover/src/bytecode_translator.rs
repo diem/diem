@@ -10,6 +10,7 @@ use itertools::Itertools;
 use log::{debug, info, log, warn, Level};
 
 use spec_lang::{
+    ast::ConditionKind,
     code_writer::CodeWriter,
     emit, emitln,
     env::{GlobalEnv, Loc, ModuleEnv, StructEnv, TypeParameter},
@@ -25,6 +26,7 @@ use stackless_bytecode_generator::{
         Constant, Label, Operation, SpecBlockId,
     },
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
+    test_instrumenter::SpecCheck,
 };
 use vm::file_format::CodeOffset;
 
@@ -516,15 +518,17 @@ impl<'env> ModuleTranslator<'env> {
             return;
         }
 
-        // generate definition entry
-        self.generate_function_sig(func_target, Definition);
-        self.generate_inline_function_body(func_target);
+        // generate definition with function body
+        self.generate_function_sig(func_target, FunctionEntryPoint::Definition);
+        self.generate_inline_function_body(func_target, &None);
         emitln!(self.writer);
 
         // generate direct and indirect application entries.
         let opaque = func_target.is_pragma_true(OPAQUE_PRAGMA, || false);
         let entries = if func_target.is_public() {
             vec![DirectInterModule, DirectIntraModule, Indirect]
+        } else if func_target.func_env.is_pragma_spec_check() {
+            vec![Indirect]
         } else {
             vec![DirectIntraModule, Indirect]
         };
@@ -539,6 +543,30 @@ impl<'env> ModuleTranslator<'env> {
                 self.generate_function_stub(&st, entry_point, Definition, distribution);
             }
             emitln!(self.writer);
+        }
+
+        // If the function has been annotated with rewritten specifications
+        // (or code), then generate the corresponding specification check functions
+        if func_target.data.rewritten_spec.len() > 0 {
+            // generate the _smoke_test version of the function which creates a new procedure
+            // for the `Ensures` condition so that ALL the errors will be reported
+            for spec_check in &func_target.data.rewritten_spec {
+                // generate the mutated program for this spec if one exists
+                if spec_check.code.is_some() {
+                    self.generate_function_sig(
+                        func_target,
+                        FunctionEntryPoint::Mutated(spec_check.id),
+                    );
+                    self.generate_inline_function_body(func_target, &spec_check.code);
+                }
+
+                self.writer.set_location(&spec_check.loc);
+                self.generate_spec_check_function_sig(func_target, spec_check);
+                self.generate_function_spec_check_body(func_target, spec_check);
+            }
+
+            // Do not do any verification in specification check mode
+            return;
         }
 
         // If the function is not verified, or the timeout is less than the estimated time,
@@ -572,7 +600,7 @@ impl<'env> ModuleTranslator<'env> {
         // generate the verify functions with full pre/post conditions.
         self.generate_function_sig(func_target, FunctionEntryPoint::VerificationDefinition);
         self.set_top_level_verify(true); // Ensure that DirectCall is used from this definition
-        self.generate_inline_function_body(func_target);
+        self.generate_inline_function_body(func_target, &None);
         self.set_top_level_verify(false);
         emitln!(self.writer);
         self.generate_function_sig(func_target, FunctionEntryPoint::Verification);
@@ -585,6 +613,23 @@ impl<'env> ModuleTranslator<'env> {
             distribution,
         );
         emitln!(self.writer);
+    }
+
+    /// Return a string for a boogie procedure smoke test header.
+    fn generate_spec_check_function_sig(
+        &self,
+        func_target: &FunctionTarget<'_>,
+        spec_check: &SpecCheck,
+    ) {
+        let (args, rets) = self.generate_function_args_and_returns(func_target);
+        emit!(
+            self.writer,
+            "procedure {}_smoke_test_{} ({}) returns ({})\n",
+            boogie_function_name(func_target.func_env),
+            spec_check.id,
+            args,
+            rets
+        )
     }
 
     /// Return a string for a boogie procedure header. Use inline attribute and name
@@ -600,7 +645,8 @@ impl<'env> ModuleTranslator<'env> {
             | FunctionEntryPoint::VerificationDefinition
             | FunctionEntryPoint::DirectIntraModule
             | FunctionEntryPoint::Indirect
-            | FunctionEntryPoint::DirectInterModule => "{:inline 1} ".to_string(),
+            | FunctionEntryPoint::DirectInterModule
+            | FunctionEntryPoint::Mutated(_) => "{:inline 1} ".to_string(),
             FunctionEntryPoint::Verification => {
                 let timeout = self.options.adjust_timeout(
                     func_target
@@ -759,6 +805,115 @@ impl<'env> ModuleTranslator<'env> {
                 args
             )
         }
+
+        self.writer.unindent();
+        emitln!(self.writer, "}");
+        emitln!(self.writer);
+    }
+
+    /// Spec check body
+    fn generate_function_spec_check_body(
+        &self,
+        func_target: &FunctionTarget<'_>,
+        spec_check: &SpecCheck,
+    ) {
+        let SpecCheck {
+            id,
+            spec,
+            code,
+            loc: _,
+        } = &spec_check;
+        let conds = &spec.conditions;
+
+        // Find the specification check assertion
+        // Only one is allowed at a time because Boogie is not
+        // gauranteed to return all errors in a procedure
+        let spec_check_opt = conds.iter().find(|cond| match cond.kind {
+            ConditionKind::RequiresSpecCheckAssert | ConditionKind::Ensures => true,
+            _ => false,
+        });
+        let spec_check = spec_check_opt
+            .expect("There should be at least one assertion for the specification check.");
+
+        let spec_translator = self.new_spec_translator(func_target.clone(), false);
+
+        spec_translator.ensure_postcondition(spec_check);
+
+        emitln!(self.writer, "{");
+        self.writer.indent();
+
+        self.generate_function_args_well_formed(func_target);
+
+        // Generate assumes for top-level verification entry
+        // (a) init prelude specific stuff.
+        emitln!(self.writer, "call $InitVerification();");
+
+        // (b) assume implicit preconditions.
+        spec_translator.assume_preconditions();
+
+        if spec_check.kind != ConditionKind::RequiresSpecCheckAssert {
+            // (c) assume reference parameters to be based on the Param(i) Location, ensuring
+            // they are disjoint from all other references. This prevents aliasing and is justified as
+            // follows:
+            // - for mutual references, by their exclusive access in Move.
+            // - for immutable references, by that mutation is not possible, and they are equivalent
+            //   to some given but arbitrary value.
+            for i in 0..func_target.get_parameter_count() {
+                let ty = func_target.get_local_type(i);
+                if ty.is_reference() {
+                    let name = func_target
+                        .symbol_pool()
+                        .string(func_target.get_local_name(i));
+                    emitln!(
+                        self.writer,
+                        "assume l#$Reference({}) == $Param({});",
+                        name,
+                        i
+                    );
+                    emitln!(
+                        self.writer,
+                        "assume size#Path(p#$Reference({})) == 0;",
+                        name
+                    );
+                }
+            }
+
+            // Generate call to inlined function.
+            let fun_entry_point = if code.is_some() {
+                FunctionEntryPoint::Mutated(*id)
+            } else {
+                FunctionEntryPoint::Definition
+            };
+            let args = func_target
+                .get_type_parameters()
+                .iter()
+                .map(|TypeParameter(s, _)| format!("{}", s.display(func_target.symbol_pool())))
+                .chain((0..func_target.get_parameter_count()).map(|i| {
+                    format!(
+                        "{}",
+                        func_target
+                            .get_local_name(i)
+                            .display(func_target.symbol_pool())
+                    )
+                }))
+                .join(", ");
+            let rets = (0..func_target.get_return_count())
+                .map(|i| format!("$ret{}", i))
+                .join(", ");
+            emitln!(
+                self.writer,
+                "call{} {}{}({});",
+                if rets.is_empty() {
+                    "".to_string()
+                } else {
+                    format!(" {} := ", rets)
+                },
+                boogie_function_name(func_target.func_env),
+                fun_entry_point.suffix(),
+                args
+            )
+        }
+
         self.writer.unindent();
         emitln!(self.writer, "}");
         emitln!(self.writer);
@@ -767,7 +922,11 @@ impl<'env> ModuleTranslator<'env> {
     /// This generates boogie code for everything after the function signature
     /// The function body is only generated for the `FunctionEntryPoint::Definition`
     /// version of the function.
-    fn generate_inline_function_body(&self, func_target: &FunctionTarget<'_>) {
+    fn generate_inline_function_body(
+        &self,
+        func_target: &FunctionTarget<'_>,
+        rewritten_bytecode: &Option<Vec<Bytecode>>,
+    ) {
         // Construct context for bytecode translation.
         let context = BytecodeContext::new(func_target);
 
@@ -810,7 +969,11 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "\n// bytecode translation starts here");
 
         // Generate bytecode
-        let code = func_target.get_bytecode();
+        let code = if let Some(bytecode) = rewritten_bytecode {
+            &bytecode
+        } else {
+            func_target.get_bytecode()
+        };
         for (offset, bytecode) in code.iter().enumerate() {
             self.translate_bytecode(func_target, &context, offset as CodeOffset, bytecode);
         }

@@ -1329,3 +1329,10 @@ procedure {:inline 1} $Event_publish_generator(account: $Value) {
 procedure {:inline 1} $Event_emit_event(t: $TypeValue, handler: $Value, msg: $Value) returns (res: $Value) {
     res := handler;
 }
+
+// ==================================================================================
+// Specification checking constants
+
+// An address used for the constant expression specification check
+const $sc_addr: $Value;
+axiom (is#$Address($sc_addr));

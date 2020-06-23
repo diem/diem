@@ -58,6 +58,10 @@ impl FunctionTargetsHolder {
         FunctionTarget::new(func_env, data)
     }
 
+    pub fn has_target<'env>(&'env self, func_env: &'env FunctionEnv<'env>) -> bool {
+        self.targets.get(&(func_env.module_env.get_id(), func_env.get_id())).is_some()
+    }
+
     /// Processes the function target data for given function.
     fn process(&mut self, func_env: &FunctionEnv<'_>, processor: &dyn FunctionTargetProcessor) {
         let key = (func_env.module_env.get_id(), func_env.get_id());

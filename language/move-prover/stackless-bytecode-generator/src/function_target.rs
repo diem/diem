@@ -6,6 +6,7 @@ use crate::{
     borrow_analysis, lifetime_analysis, livevar_analysis, packref_analysis, reaching_def_analysis,
     stackless_bytecode::{AttrId, Bytecode, SpecBlockId},
     writeback_analysis,
+    test_instrumenter::SpecCheck,
 };
 use itertools::Itertools;
 use spec_lang::{
@@ -56,7 +57,7 @@ pub struct FunctionTargetData {
     pub acquires_global_resources: Vec<StructId>,
     pub locations: BTreeMap<AttrId, Loc>,
     pub annotations: Annotations,
-    pub rewritten_spec: Option<Spec>,
+    pub rewritten_spec: Vec<SpecCheck>,
 
     /// Map of spec block ids as given by the source, to the code offset in the original
     /// bytecode. Those spec block's content is found at
@@ -192,10 +193,7 @@ impl<'env> FunctionTarget<'env> {
 
     /// Returns specification associated with this function.
     pub fn get_spec(&'env self) -> &'env Spec {
-        self.data
-            .rewritten_spec
-            .as_ref()
-            .unwrap_or_else(|| self.func_env.get_spec())
+        self.func_env.get_spec()
     }
 
     /// Returns specification conditions associated with this function at spec block id.
@@ -219,6 +217,10 @@ impl<'env> FunctionTarget<'env> {
     /// property
     pub fn is_pragma_true(&self, name: &str, default: impl FnOnce() -> bool) -> bool {
         self.func_env.is_pragma_true(name, default)
+    }
+
+    pub fn is_pragma_spec_check(&self) -> bool {
+        self.func_env.is_pragma_spec_check()
     }
 
     /// Gets the bytecode.
@@ -283,7 +285,7 @@ impl FunctionTargetData {
             acquires_global_resources,
             locations,
             annotations: Default::default(),
-            rewritten_spec: None,
+            rewritten_spec: vec![],
             given_spec_blocks_on_impl: given_spec_blocks,
             generated_spec_blocks_on_impl: Default::default(),
             next_free_spec_block_id,
@@ -296,6 +298,17 @@ impl FunctionTargetData {
         self.next_free_spec_block_id += 1;
         self.generated_spec_blocks_on_impl.insert(id, spec);
         id
+    }
+
+    /// Adds a specification check and the corresponding mutated code to the list
+    /// of specification checks.
+    pub fn add_spec_check(&mut self, spec: Spec, code: Option<Vec<Bytecode>>, loc: Loc) {
+        // Initialize id with the number of specification checks for this function so far.
+        let id = self.rewritten_spec.len();
+        let spec_check = SpecCheck {
+            id, spec, code, loc,
+        };
+        self.rewritten_spec.push(spec_check);
     }
 }
 

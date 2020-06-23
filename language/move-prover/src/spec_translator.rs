@@ -98,18 +98,23 @@ pub enum FunctionEntryPoint {
     Indirect,
     /// Variant used for verification.
     Verification,
+    /// Mutated inlined variant without pre/post conditions. Used by
+    /// specification checks. Holds `rewritten_code_index` from `Spec`.
+    /// To distinguish between different mutated functions.
+    Mutated(usize),
 }
 
 impl FunctionEntryPoint {
-    pub fn suffix(self) -> &'static str {
+    pub fn suffix(self) -> String {
         use FunctionEntryPoint::*;
         match self {
-            Definition => "_$def",
-            VerificationDefinition => "_$def_verify",
-            DirectInterModule => "_$direct_inter",
-            DirectIntraModule => "_$direct_intra",
-            Indirect => "",
-            Verification => "_$verify",
+            Definition => "_$def".to_string(),
+            VerificationDefinition => "_$def_verify".to_string(),
+            DirectInterModule => "_$direct_inter".to_string(),
+            DirectIntraModule => "_$direct_intra".to_string(),
+            Indirect => "".to_string(),
+            Verification => "_$verify".to_string(),
+            Mutated(index) => format!("_mutated_{}", index),
         }
     }
 }
@@ -972,6 +977,51 @@ impl<'env> SpecTranslator<'env> {
         self.global_env()
             .set_condition_info(loc.clone(), tag, ConditionInfo::for_message(message));
     }
+
+    /// Assumes preconditions for function. This is used for the top-level verification
+    /// entry point of a function.
+    pub fn assume_preconditions(&self) {
+        let func_target = self.function_target();
+        // Assume requires.
+        let requires = func_target
+            .get_spec()
+            .filter(|c| match c.kind {
+                ConditionKind::Requires
+                | ConditionKind::RequiresModule
+                | ConditionKind::RequiresSpecCheck => true,
+                _ => false,
+            })
+            .collect_vec();
+        if !requires.is_empty() {
+            self.translate_seq(requires.iter(), "\n", |cond| {
+                self.writer.set_location(&cond.loc);
+                emit!(self.writer, "assume b#$Boolean(");
+                self.translate_exp(&cond.exp);
+                emit!(self.writer, ");")
+            });
+            emitln!(self.writer);
+        }
+    }
+
+  //pub fn assume_cond(&self, cond: &Condition) {
+  //    self.writer.set_location(&cond.loc);
+  //    emit!(self.writer, "assume b#$Boolean(");
+  //    self.translate_exp(&cond.exp);
+  //    emit!(self.writer, ");");
+  //    emitln!(self.writer);
+  //}
+
+    /// Assert the given postcondition. This is used for the top-level
+    /// `_smoke_test` function.
+    pub fn ensure_postcondition(&self, cond: &Condition) {
+        *self.in_ensures.borrow_mut() = true;
+        self.writer.set_location(&cond.loc);
+        emit!(self.writer, "ensures b#$Boolean(");
+        self.translate_exp(&cond.exp);
+        emit!(self.writer, ");");
+        emitln!(self.writer);
+        *self.in_ensures.borrow_mut() = false;
+    }
 }
 
 /// Invariants
@@ -1389,7 +1439,7 @@ impl<'env> SpecTranslator<'env> {
 // ===========
 
 impl<'env> SpecTranslator<'env> {
-    fn translate_exp(&self, exp: &Exp) {
+    pub fn translate_exp(&self, exp: &Exp) {
         match exp {
             Exp::Value(node_id, val) => {
                 self.set_writer_location(*node_id);
@@ -1951,6 +2001,9 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, "$Boolean(i#$Integer(");
         self.translate_exp(&args[0]);
         emit!(self.writer, ") {} i#$Integer(", boogie_op);
+        if args.len() == 1 {
+            panic!("fialed at");
+        }
         self.translate_exp(&args[1]);
         emit!(self.writer, "))");
     }

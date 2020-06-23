@@ -87,7 +87,7 @@ pub const ABORTS_IF_IS_STRICT_PRAGMA: &str = "aborts_if_is_strict";
 /// Pragma indicating that requires are also enforced if the aborts condition is true.
 pub const REQUIRES_IF_ABORTS: &str = "requires_if_aborts";
 
-/// Pragma indicating that the function will run smoke tests
+/// Pragma indicating that the function will run the `aborts_if true` smoke test
 pub const ALWAYS_ABORTS_TEST_PRAGMA: &str = "always_aborts_test";
 
 /// Pragma indicating that adding u64 or u128 values should not be checked
@@ -132,6 +132,19 @@ pub const CONDITION_ABORT_ASSERT_PROP: &str = "assert";
 /// to the verification context even if the implementation of the function is inlined.
 pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
 
+/// Pragma indicating that the function will run the specification check for constant global states
+pub const CONST_FIELD_TEST_PRAGMA: &str = "const_field_test";
+
+/// Pragma listing the addresses that the constant field check will check against
+pub const CONST_SC_ADDR: &str = "const_sc_addr";
+
+/// Pragma indicating that the function will run the constant subexpression specification check
+pub const CONST_SUBEXP_TEST_PRAGMA: &str = "const_sub_exp";
+
+/// Pragma indicating that the function will run the specification writeref coverage check
+pub const WRITEREF_TEST_PRAGMA: &str = "writeref_test";
+pub const MUTATED_ARGS_TEST_PRAGMA: &str = "mutated_args_test";
+
 // =================================================================================================
 /// # Locations
 
@@ -140,11 +153,16 @@ pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
 pub struct Loc {
     file_id: FileId,
     span: Span,
+    annotation: Option<String>
 }
 
 impl Loc {
     pub fn new(file_id: FileId, span: Span) -> Loc {
-        Loc { file_id, span }
+        Loc { file_id, span, annotation: None }
+    }
+
+    pub fn annotated(file_id: FileId, span: Span, label: String) -> Loc {
+        Loc { file_id, span, annotation: Some(label) }
     }
 
     pub fn span(&self) -> Span {
@@ -574,6 +592,7 @@ impl GlobalEnv {
         Loc {
             file_id: self.get_file_id(loc.file()).expect("file name undefined"),
             span: loc.span(),
+            annotation: None,
         }
     }
 
@@ -767,7 +786,7 @@ impl GlobalEnv {
             next_free_node_id: RefCell::new(next_free_node_id),
             loc_map: RefCell::new(loc_map),
             type_map: RefCell::new(type_map),
-            instantiation_map,
+            instantiation_map: RefCell::new(instantiation_map),
             spec_block_infos,
         });
     }
@@ -1069,7 +1088,7 @@ pub struct ModuleData {
     pub next_free_node_id: RefCell<usize>,
 
     /// A map from node id to associated instantiation of type parameters.
-    pub instantiation_map: BTreeMap<NodeId, Vec<Type>>,
+    pub instantiation_map: RefCell<BTreeMap<NodeId, Vec<Type>>>,
 
     /// A list of spec block infos, for documentation generation.
     pub spec_block_infos: Vec<SpecBlockInfo>,
@@ -1432,9 +1451,11 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Allocates a new node id and assigns location and type to it.
-    pub fn new_node(&self, loc: Loc, ty: Type) -> NodeId {
+    pub fn new_node(&self, loc_opt: Option<Loc>, ty: Type) -> NodeId {
         let id = self.new_node_id();
-        self.data.loc_map.borrow_mut().insert(id, loc);
+        if let Some(loc) = loc_opt {
+            self.data.loc_map.borrow_mut().insert(id, loc);
+        }
         self.data.type_map.borrow_mut().insert(id, ty);
         id
     }
@@ -1443,9 +1464,26 @@ impl<'env> ModuleEnv<'env> {
     pub fn get_node_instantiation(&self, node_id: NodeId) -> Vec<Type> {
         self.data
             .instantiation_map
+            .borrow()
             .get(&node_id)
             .cloned()
             .unwrap_or_else(Vec::new)
+    }
+
+    /// Add type parameter associated with the given node.
+    pub fn set_node_instantiation(&self, node_id: &NodeId, typ: Type) {
+        let new_types = match self.data.instantiation_map.borrow().get(node_id) {
+            Some(types) => {
+                let mut new_types = types.to_vec();
+                new_types.push(typ);
+                new_types
+            },
+            None => vec![typ],
+        };
+        self.data
+            .instantiation_map
+            .borrow_mut()
+            .insert(node_id.clone(), new_types);
     }
 }
 
@@ -1648,6 +1686,15 @@ impl<'env> StructEnv<'env> {
     /// Returns the data invariants associated with this struct.
     pub fn get_spec(&'env self) -> &'env Spec {
         &self.data.spec
+    }
+
+    /// Returns the type of the struct
+    pub fn get_type(&self) -> Type {
+        let mut params = vec![];
+        for i in 0..self.get_type_parameters().len() {
+            params.push(Type::TypeParameter(i as u16));
+        }
+        Type::Struct(self.module_env.get_id(), self.get_id(), params)
     }
 }
 
@@ -1884,6 +1931,27 @@ impl<'env> FunctionEnv<'env> {
         default()
     }
 
+    /// Returns true iff there is a specification check pragma turned on
+    pub fn is_pragma_spec_check(&self) -> bool {
+        let env = self.module_env.env;
+        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, ALWAYS_ABORTS_TEST_PRAGMA) {
+            if b { return true }
+        }
+        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, CONST_FIELD_TEST_PRAGMA) {
+            if b { return true }
+        }
+        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, CONST_SUBEXP_TEST_PRAGMA) {
+            if b { return true }
+        }
+        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, WRITEREF_TEST_PRAGMA) {
+            if b { return true }
+        }
+        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, MUTATED_ARGS_TEST_PRAGMA) {
+            if b { return true }
+        }
+        false
+    }
+
     /// Returns true if this function is native. The function is also marked as native
     /// if it has the pragma intrinsic set to true.
     pub fn is_native(&self) -> bool {
@@ -1904,6 +1972,37 @@ impl<'env> FunctionEnv<'env> {
         self.get_parameters()
             .iter()
             .any(|Parameter(_, ty)| ty.is_mutable_reference())
+    }
+
+    /// Returns the types of mutable reference function arugments
+    pub fn get_mut_ref_types(&self) -> Vec<Type> {
+        self.get_parameters()
+            .into_iter()
+            .filter(|Parameter(_, ty)| ty.is_mutable_reference())
+            .map(|Parameter(_, ty)| ty.clone())
+            .collect_vec()
+    }
+
+    /// Returns the number of mutable references
+    pub fn get_mut_ref_count(&self) -> usize {
+        self.get_mut_ref_types().len()
+    }
+
+    /// Returns the types of the return values of the procedure.
+    /// This includes the values returned by the function and the
+    /// mutable reference arguments.
+    pub fn get_proc_return_types(&self) -> Vec<Type> {
+        let mut types = vec![];
+        types.append(&mut self.get_return_types());
+        types.append(&mut self.get_mut_ref_types());
+        types
+    }
+
+    /// Returns the number of return values for the procedure.
+    /// This includes the return count of the function and number of
+    /// mutable references.
+    pub fn get_proc_return_count(&self) -> usize {
+        self.get_return_count() + self.get_mut_ref_count()
     }
 
     /// Returns the type parameters associated with this function.

@@ -1,0 +1,40 @@
+Move prover returns: exiting with boogie verification errors
+error: function always aborts
+
+    ┌── tests/sources/functional/aborts_if_true_spec_check.move:14:5 ───
+    │
+ 14 │ ╭     public fun aborts_if_true_smoke_test_fails() {
+ 15 │ │         abort 1
+ 16 │ │     }
+    │ ╰─────^
+    │
+
+error: function always aborts
+
+    ┌── tests/sources/functional/aborts_if_true_spec_check.move:21:5 ───
+    │
+ 21 │ ╭     public fun aborts_if_true_smoke_test_fails_2(): u64 {
+ 22 │ │         let x: u64;
+ 23 │ │         x = 1;
+ 24 │ │         if (x > 0) {
+ 25 │ │             abort 1
+ 26 │ │         };
+ 27 │ │         x
+ 28 │ │     }
+    │ ╰─────^
+    │
+
+error: function always aborts
+
+    ┌── tests/sources/functional/aborts_if_true_spec_check.move:41:5 ───
+    │
+ 41 │ ╭     public fun aborts_when_strong_inv_holds_incorrect(): u64
+ 42 │ │     acquires S {
+ 43 │ │         let x = borrow_global_mut<S>(0x0).x;
+ 44 │ │         if (x < 100) {
+ 45 │ │             abort 1
+ 46 │ │         };
+ 47 │ │         x
+ 48 │ │     }
+    │ ╰─────^
+    │
