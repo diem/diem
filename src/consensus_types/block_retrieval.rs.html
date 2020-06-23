@@ -210,7 +210,7 @@
         <span class="self">self</span>.<span class="ident">blocks</span>
             .<span class="ident">iter</span>()
             .<span class="ident">try_fold</span>(<span class="ident">block_id</span>, <span class="op">|</span><span class="ident">expected_id</span>, <span class="ident">block</span><span class="op">|</span> {
-                <span class="ident">block</span>.<span class="ident">validate_signatures</span>(<span class="ident">sig_verifier</span>)<span class="question-mark">?</span>;
+                <span class="ident">block</span>.<span class="ident">validate_signature</span>(<span class="ident">sig_verifier</span>)<span class="question-mark">?</span>;
                 <span class="ident">block</span>.<span class="ident">verify_well_formed</span>()<span class="question-mark">?</span>;
                 <span class="macro">ensure</span><span class="macro">!</span>(
                     <span class="ident">block</span>.<span class="ident">id</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">expected_id</span>,
