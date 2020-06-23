@@ -1,8 +1,8 @@
 script {
     use 0x1::ValidatorConfig;
 
-    /// Rotate validator's config.
-    fun rotate_validator_config(
+    /// Set validator's config.
+    fun set_validator_config(
         account: &signer,
         validator_account: address,
         consensus_pubkey: vector<u8>,
