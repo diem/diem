@@ -298,8 +298,7 @@ fn exp_dotted(context: &mut Context, sp!(_, ed_): &N::ExpDotted) {
 fn builtin_function(context: &mut Context, sp!(_, bf_): &N::BuiltinFunction) {
     use N::BuiltinFunction_ as B;
     match bf_ {
-        B::MoveToSender(bt_opt)
-        | B::MoveTo(bt_opt)
+        B::MoveTo(bt_opt)
         | B::MoveFrom(bt_opt)
         | B::BorrowGlobal(_, bt_opt)
         | B::Exists(bt_opt)

@@ -11,7 +11,6 @@ use std::{
 };
 
 pub mod ast_debug;
-pub mod fake_natives;
 pub mod remembering_unique_map;
 pub mod unique_map;
 

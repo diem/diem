@@ -1454,11 +1454,6 @@ fn compile_call(
     Ok(match call.value {
         FunctionCall_::Builtin(function) => {
             match function {
-                Builtin::GetTxnSender => {
-                    push_instr!(call.loc, Bytecode::GetTxnSenderAddress);
-                    function_frame.push()?;
-                    vec_deque![InferredType::Address]
-                }
                 Builtin::Exists(name, tys) => {
                     let tokens = Signature(compile_types(
                         context,
@@ -1544,24 +1539,6 @@ fn compile_call(
                     };
                     let sh_idx = context.struct_handle_index(ident)?;
                     vec_deque![InferredType::Struct(sh_idx, tys)]
-                }
-                Builtin::MoveToSender(name, tys) => {
-                    let tokens = Signature(compile_types(
-                        context,
-                        function_frame.type_parameters(),
-                        &tys,
-                    )?);
-                    let type_actuals_id = context.signature_index(tokens)?;
-                    let def_idx = context.struct_definition_index(&name)?;
-                    if tys.is_empty() {
-                        push_instr!(call.loc, Bytecode::MoveToSender(def_idx));
-                    } else {
-                        let si_idx =
-                            context.struct_instantiation_index(def_idx, type_actuals_id)?;
-                        push_instr!(call.loc, Bytecode::MoveToSenderGeneric(si_idx));
-                    }
-                    function_frame.push()?;
-                    vec_deque![]
                 }
                 Builtin::MoveTo(name, tys) => {
                     let tokens = Signature(compile_types(
@@ -1915,7 +1892,6 @@ fn compile_bytecode(
         IRBytecode_::Le => Bytecode::Le,
         IRBytecode_::Ge => Bytecode::Ge,
         IRBytecode_::Abort => Bytecode::Abort,
-        IRBytecode_::GetTxnSenderAddress => Bytecode::GetTxnSenderAddress,
         IRBytecode_::Exists(n, tys) => {
             let tokens = Signature(compile_types(
                 context,
@@ -1944,21 +1920,6 @@ fn compile_bytecode(
             } else {
                 let si_idx = context.struct_instantiation_index(def_idx, type_actuals_id)?;
                 Bytecode::MoveFromGeneric(si_idx)
-            }
-        }
-        IRBytecode_::MoveToSender(n, tys) => {
-            let tokens = Signature(compile_types(
-                context,
-                function_frame.type_parameters(),
-                &tys,
-            )?);
-            let type_actuals_id = context.signature_index(tokens)?;
-            let def_idx = context.struct_definition_index(&n)?;
-            if tys.is_empty() {
-                Bytecode::MoveToSender(def_idx)
-            } else {
-                let si_idx = context.struct_instantiation_index(def_idx, type_actuals_id)?;
-                Bytecode::MoveToSenderGeneric(si_idx)
             }
         }
         IRBytecode_::MoveTo(n, tys) => {

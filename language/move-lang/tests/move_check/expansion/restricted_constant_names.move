@@ -7,7 +7,6 @@ module M {
     const u64: u64 = 0;
     const u128: u64 = 0;
     const vector: u64 = 0;
-    const move_to_sender: u64 = 0;
     const move_to: u64 = 0;
     const move_from: u64 = 0;
     const borrow_global: u64 = 0;

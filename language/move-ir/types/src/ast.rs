@@ -376,13 +376,9 @@ pub enum Builtin {
     /// Get a reference to the resource(`StructName` resolved by current module) associated
     /// with the given address
     BorrowGlobal(bool, StructName, Vec<Type>),
-    /// Returns the address of the current transaction's sender
-    GetTxnSender,
 
     /// Remove a resource of the given type from the account with the given address
     MoveFrom(StructName, Vec<Type>),
-    /// Publish an instantiated struct object into sender's account.
-    MoveToSender(StructName, Vec<Type>),
     /// Publish an instantiated struct object into signer's (signer is the first arg) account.
     MoveTo(StructName, Vec<Type>),
 
@@ -686,10 +682,8 @@ pub enum Bytecode_ {
     Le,
     Ge,
     Abort,
-    GetTxnSenderAddress,
     Exists(StructName, Vec<Type>),
     MoveFrom(StructName, Vec<Type>),
-    MoveToSender(StructName, Vec<Type>),
     MoveTo(StructName, Vec<Type>),
     Shl,
     Shr,
@@ -1605,11 +1599,7 @@ impl fmt::Display for Builtin {
                     format_type_actuals(tys)
                 )
             }
-            Builtin::GetTxnSender => write!(f, "get_txn_sender"),
             Builtin::MoveFrom(t, tys) => write!(f, "move_from<{}{}>", t, format_type_actuals(tys)),
-            Builtin::MoveToSender(t, tys) => {
-                write!(f, "move_to_sender<{}{}>", t, format_type_actuals(tys))
-            }
             Builtin::MoveTo(t, tys) => write!(f, "move_to<{}{}>", t, format_type_actuals(tys)),
             Builtin::Freeze => write!(f, "freeze"),
             Builtin::ToU8 => write!(f, "to_u8"),
@@ -1912,12 +1902,8 @@ impl fmt::Display for Bytecode_ {
             Bytecode_::Le => write!(f, "Le"),
             Bytecode_::Ge => write!(f, "Ge"),
             Bytecode_::Abort => write!(f, "Abort"),
-            Bytecode_::GetTxnSenderAddress => write!(f, "GetTxnSenderAddress"),
             Bytecode_::Exists(n, tys) => write!(f, "Exists {}{}", n, format_type_actuals(tys)),
             Bytecode_::MoveFrom(n, tys) => write!(f, "MoveFrom {}{}", n, format_type_actuals(tys)),
-            Bytecode_::MoveToSender(n, tys) => {
-                write!(f, "MoveToSender {}{}", n, format_type_actuals(tys))
-            }
             Bytecode_::MoveTo(n, tys) => write!(f, "MoveTo {}{}", n, format_type_actuals(tys)),
             Bytecode_::Shl => write!(f, "Shl"),
             Bytecode_::Shr => write!(f, "Shr"),

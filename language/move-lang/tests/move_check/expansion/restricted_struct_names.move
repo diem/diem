@@ -6,7 +6,6 @@ module M {
     struct u128 {}
     struct vector<T> {}
 
-    struct move_to_sender {}
     struct move_to {}
     struct move_from {}
     struct borrow_global {}

@@ -1333,11 +1333,6 @@ fn builtin(
             let ty = base_type(context, bt);
             E::Builtin(Box::new(sp(loc, HB::MoveTo(ty))), arg)
         }
-        TB::MoveToSender(bt) => {
-            let ty = base_type(context, bt);
-            let arg = exp(context, result, None, *targ);
-            E::Builtin(Box::new(sp(loc, HB::MoveToSender(ty))), arg)
-        }
         TB::MoveFrom(bt) => {
             let ty = base_type(context, bt);
             let arg = exp(context, result, None, *targ);

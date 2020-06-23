@@ -188,7 +188,6 @@ pub type ExpDotted = Spanned<ExpDotted_>;
 #[derive(Debug, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub enum BuiltinFunction_ {
-    MoveToSender(Option<Type>),
     MoveTo(Option<Type>),
     MoveFrom(Option<Type>),
     BorrowGlobal(bool, Option<Type>),
@@ -345,7 +344,6 @@ impl TVar {
 }
 
 impl BuiltinFunction_ {
-    pub const MOVE_TO_SENDER: &'static str = "move_to_sender";
     pub const MOVE_TO: &'static str = "move_to";
     pub const MOVE_FROM: &'static str = "move_from";
     pub const BORROW_GLOBAL: &'static str = "borrow_global";
@@ -356,7 +354,6 @@ impl BuiltinFunction_ {
 
     pub fn all_names() -> BTreeSet<&'static str> {
         let mut s = BTreeSet::new();
-        s.insert(Self::MOVE_TO_SENDER);
         s.insert(Self::MOVE_TO);
         s.insert(Self::MOVE_FROM);
         s.insert(Self::BORROW_GLOBAL);
@@ -370,7 +367,6 @@ impl BuiltinFunction_ {
     pub fn resolve(name_str: &str, arg: Option<Type>) -> Option<Self> {
         use BuiltinFunction_ as BF;
         match name_str {
-            BF::MOVE_TO_SENDER => Some(BF::MoveToSender(arg)),
             BF::MOVE_TO => Some(BF::MoveTo(arg)),
             BF::MOVE_FROM => Some(BF::MoveFrom(arg)),
             BF::BORROW_GLOBAL => Some(BF::BorrowGlobal(false, arg)),
@@ -385,7 +381,6 @@ impl BuiltinFunction_ {
     pub fn display_name(&self) -> &'static str {
         use BuiltinFunction_ as BF;
         match self {
-            BF::MoveToSender(_) => BF::MOVE_TO_SENDER,
             BF::MoveTo(_) => BF::MOVE_TO,
             BF::MoveFrom(_) => BF::MOVE_FROM,
             BF::BorrowGlobal(false, _) => BF::BORROW_GLOBAL,
@@ -951,7 +946,6 @@ impl AstDebug for BuiltinFunction_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         use BuiltinFunction_ as F;
         let (n, bt) = match self {
-            F::MoveToSender(bt) => (F::MOVE_TO_SENDER, bt),
             F::MoveTo(bt) => (F::MOVE_TO, bt),
             F::MoveFrom(bt) => (F::MOVE_FROM, bt),
             F::BorrowGlobal(true, bt) => (F::BORROW_GLOBAL_MUT, bt),

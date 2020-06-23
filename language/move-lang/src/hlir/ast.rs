@@ -228,7 +228,6 @@ pub struct ModuleCall {
 
 #[derive(Debug, PartialEq)]
 pub enum BuiltinFunction_ {
-    MoveToSender(BaseType),
     MoveTo(BaseType),
     MoveFrom(BaseType),
     BorrowGlobal(bool, BaseType),
@@ -1038,7 +1037,6 @@ impl AstDebug for BuiltinFunction_ {
         use crate::naming::ast::BuiltinFunction_ as NF;
         use BuiltinFunction_ as F;
         let (n, bt) = match self {
-            F::MoveToSender(bt) => (NF::MOVE_TO_SENDER, bt),
             F::MoveTo(bt) => (NF::MOVE_TO, bt),
             F::MoveFrom(bt) => (NF::MOVE_FROM, bt),
             F::BorrowGlobal(true, bt) => (NF::BORROW_GLOBAL_MUT, bt),
