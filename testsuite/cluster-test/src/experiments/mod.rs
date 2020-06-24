@@ -29,7 +29,10 @@ use crate::{
     tx_emitter::{EmitJobRequest, TxEmitter},
 };
 
-use crate::{cluster_swarm::cluster_swarm_kube::ClusterSwarmKube, health::TraceTail};
+use crate::{
+    cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
+    health::TraceTail,
+};
 use async_trait::async_trait;
 pub use cpu_flamegraph::{CpuFlamegraph, CpuFlamegraphParams};
 use std::collections::HashMap;
@@ -57,7 +60,7 @@ pub struct Context<'a> {
     pub report: &'a mut SuiteReport,
     pub global_emit_job_request: &'a mut Option<EmitJobRequest>,
     pub emit_to_validator: bool,
-    pub cluster_swarm: &'a ClusterSwarmKube,
+    pub cluster_swarm: &'a dyn ClusterSwarm,
     /// Current docker image tag used by this run
     pub current_tag: &'a str,
 }
