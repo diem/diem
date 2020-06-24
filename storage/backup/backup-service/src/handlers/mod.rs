@@ -41,9 +41,26 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
         .recover(handle_rejection);
 
     // GET state_root_proof/<version>
-    let bh = backup_handler;
+    let bh = backup_handler.clone();
     let state_root_proof = warp::path!(Version)
         .map(move |version| reply_with_lcs_bytes(&bh.get_state_root_proof(version)?))
+        .map(unwrap_or_500)
+        .recover(handle_rejection);
+
+    // GET epoch_ending_ledger_infos/<start_epoch>/<end_epoch>/
+    let bh = backup_handler;
+    let epoch_ending_ledger_infos = warp::path!(u64 / u64)
+        .map(move |start_epoch, end_epoch| {
+            // use async move block to group `bh` and the iterator into the same lifetime, since the
+            // latter references the former.
+            reply_with_async_channel_writer(&bh, |bh, sender| async move {
+                send_size_prefixed_lcs_bytes(
+                    bh.get_epoch_ending_ledger_info_iter(start_epoch, end_epoch),
+                    sender,
+                )
+                .await
+            })
+        })
         .map(unwrap_or_500)
         .recover(handle_rejection);
 
@@ -52,7 +69,8 @@ pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Rep
         .and(warp::path("latest_state_root").and(latest_state_root))
         .or(warp::path("state_range_proof").and(state_range_proof))
         .or(warp::path("state_snapshot").and(state_snapshot))
-        .or(warp::path("state_root_proof").and(state_root_proof));
+        .or(warp::path("state_root_proof").and(state_root_proof))
+        .or(warp::path("epoch_ending_ledger_infos").and(epoch_ending_ledger_infos));
 
     // Serve all routes for GET only.
     warp::get().and(routes).boxed()

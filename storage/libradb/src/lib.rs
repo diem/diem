@@ -293,6 +293,7 @@ impl LibraDB {
     /// Gets an instance of `RestoreHandler` for data restore purpose.
     pub fn get_restore_handler(&self) -> RestoreHandler {
         RestoreHandler::new(
+            Arc::clone(&self.db),
             Arc::clone(&self.ledger_store),
             Arc::clone(&self.transaction_store),
             Arc::clone(&self.state_store),
