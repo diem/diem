@@ -240,11 +240,17 @@ impl TxEmitter {
         })
     }
 
-    pub async fn mint_accounts(&mut self, req: &EmitJobRequest, num_accounts: usize) -> Result<()> {
-        if self.accounts.len() >= num_accounts {
+    pub async fn mint_accounts(
+        &mut self,
+        req: &EmitJobRequest,
+        requested_accounts: usize,
+    ) -> Result<()> {
+        if self.accounts.len() >= requested_accounts {
             info!("Not minting accounts");
             return Ok(()); // Early return to skip printing 'Minting ...' logs
         }
+        let num_accounts = requested_accounts - self.accounts.len(); // Only minting extra accounts
+        info!("Minting additional {} accounts", num_accounts);
         let mut faucet_account = self
             .load_faucet_account(self.pick_mint_instance(&req.instances))
             .await?;
@@ -279,7 +285,8 @@ impl TxEmitter {
             .map(|(i, seed_account)| {
                 // Spawn new threads
                 let instance = req.instances[i].clone();
-                let num_new_accounts = num_accounts / req.instances.len();
+                let num_new_accounts =
+                    (num_accounts + req.instances.len() - 1) / req.instances.len();
                 let client = instance.json_rpc_client();
                 create_new_accounts(
                     seed_account,
@@ -289,12 +296,19 @@ impl TxEmitter {
                     client,
                 )
             });
-        self.accounts = try_join_all(account_futures)
+        let mut minted_accounts = try_join_all(account_futures)
             .await
             .map_err(|e| format_err!("Failed to mint accounts {}", e))?
             .into_iter()
             .flatten()
             .collect();
+        self.accounts.append(&mut minted_accounts);
+        assert!(
+            self.accounts.len() >= num_accounts,
+            "Something wrong in mint_account, wanted to mint {}, only have {}",
+            requested_accounts,
+            self.accounts.len()
+        );
         info!("Mint is done");
         Ok(())
     }
