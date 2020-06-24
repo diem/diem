@@ -27,7 +27,8 @@ fn test_that_python_code_parses() {
     let abis = get_stdlib_script_abis();
     let dir = tempdir().unwrap();
 
-    let installer = serdegen::python3::Installer::new(dir.path().to_path_buf());
+    let installer =
+        serdegen::python3::Installer::new(dir.path().to_path_buf(), /* package */ None);
     installer.install_module("libra_types", &registry).unwrap();
     installer.install_serde_runtime().unwrap();
 
