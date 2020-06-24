@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{errors::*, file_format::*, file_format_common::*};
-use byteorder::{LittleEndian, ReadBytesExt};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
@@ -69,15 +68,19 @@ impl Table {
 }
 
 fn read_u64_internal(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u64> {
+    let mut u64_bytes = [0; 8];
     cursor
-        .read_u64::<LittleEndian>()
-        .map_err(|_| VMStatus::new(StatusCode::BAD_U64))
+        .read_exact(&mut u64_bytes)
+        .map_err(|_| VMStatus::new(StatusCode::BAD_U64))?;
+    Ok(u64::from_le_bytes(u64_bytes))
 }
 
 fn read_u128_internal(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<u128> {
+    let mut u128_bytes = [0; 16];
     cursor
-        .read_u128::<LittleEndian>()
-        .map_err(|_| VMStatus::new(StatusCode::BAD_U128))
+        .read_exact(&mut u128_bytes)
+        .map_err(|_| VMStatus::new(StatusCode::BAD_U128))?;
+    Ok(u128::from_le_bytes(u128_bytes))
 }
 
 //
@@ -306,7 +309,7 @@ fn check_binary(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<()> {
     }
     let major_ver = 1u8;
     let minor_ver = 0u8;
-    if let Ok(ver) = cursor.read_u8() {
+    if let Ok(ver) = read_u8(cursor) {
         if ver != major_ver {
             return Err(VMStatus::new(StatusCode::UNKNOWN_VERSION));
         }
@@ -315,7 +318,7 @@ fn check_binary(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<()> {
             VMStatus::new(StatusCode::MALFORMED).with_message("Bad binary header".to_string())
         );
     }
-    if let Ok(ver) = cursor.read_u8() {
+    if let Ok(ver) = read_u8(cursor) {
         if ver != minor_ver {
             return Err(VMStatus::new(StatusCode::UNKNOWN_VERSION));
         }
@@ -344,7 +347,7 @@ fn read_tables(
 /// Reads a table from a slice at a given offset.
 /// If a table is not recognized an error is returned.
 fn read_table(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Table> {
-    let kind = match cursor.read_u8() {
+    let kind = match read_u8(cursor) {
         Ok(kind) => kind,
         Err(_) => {
             return Err(VMStatus::new(StatusCode::MALFORMED)
@@ -360,7 +363,7 @@ fn read_table_contents(cursor: &mut Cursor<&[u8]>, n: usize) -> BinaryLoaderResu
     let mut bytes = vec![];
     // TODO: can we rewrite this in a better way?
     for _ in 0..n {
-        match cursor.read_u8() {
+        match read_u8(cursor) {
             Ok(b) => bytes.push(b),
             Err(_) => {
                 return Err(VMStatus::new(StatusCode::MALFORMED)
@@ -913,7 +916,7 @@ fn load_signature_token(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Signat
     use TypeBuilder as T;
 
     let mut read_next = || {
-        if let Ok(byte) = cursor.read_u8() {
+        if let Ok(byte) = read_u8(cursor) {
             Ok(match S::from_u8(byte)? {
                 S::BOOL => T::Saturated(SignatureToken::Bool),
                 S::U8 => T::Saturated(SignatureToken::U8),
@@ -966,7 +969,7 @@ fn load_signature_token(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Signat
 }
 
 fn load_nominal_resource_flag(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<bool> {
-    if let Ok(byte) = cursor.read_u8() {
+    if let Ok(byte) = read_u8(cursor) {
         Ok(match SerializedNominalResourceFlag::from_u8(byte)? {
             SerializedNominalResourceFlag::NOMINAL_RESOURCE => true,
             SerializedNominalResourceFlag::NORMAL_STRUCT => false,
@@ -977,7 +980,7 @@ fn load_nominal_resource_flag(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<
 }
 
 fn load_kind(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Kind> {
-    if let Ok(byte) = cursor.read_u8() {
+    if let Ok(byte) = read_u8(cursor) {
         Ok(match SerializedKind::from_u8(byte)? {
             SerializedKind::ALL => Kind::All,
             SerializedKind::COPYABLE => Kind::Copyable,
@@ -1008,7 +1011,7 @@ fn load_struct_defs(
     let mut cursor = Cursor::new(&binary[start..end]);
     while cursor.position() < u64::from(table.count) {
         let struct_handle = load_struct_handle_index(&mut cursor)?;
-        let field_information_flag = match cursor.read_u8() {
+        let field_information_flag = match read_u8(&mut cursor) {
             Ok(byte) => SerializedNativeStructFlag::from_u8(byte)?,
             Err(_) => {
                 return Err(VMStatus::new(StatusCode::MALFORMED)
@@ -1112,7 +1115,7 @@ fn load_field_instantiations(
 fn load_function_def(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<FunctionDefinition> {
     let function = load_function_handle_index(cursor)?;
 
-    let flags = cursor.read_u8().map_err(|_| {
+    let flags = read_u8(cursor).map_err(|_| {
         VMStatus::new(StatusCode::MALFORMED).with_message("Unexpected EOF".to_string())
     })?;
     let is_public = (flags & FunctionDefinition::PUBLIC) != 0;
@@ -1160,7 +1163,7 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
     let bytecode_count = load_bytecode_count(cursor)?;
 
     while code.len() < bytecode_count {
-        let byte = cursor.read_u8().map_err(|_| {
+        let byte = read_u8(cursor).map_err(|_| {
             VMStatus::new(StatusCode::MALFORMED).with_message("Unexpected EOF".to_string())
         })?;
         let bytecode = match Opcodes::from_u8(byte)? {
@@ -1170,7 +1173,7 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
             Opcodes::BR_FALSE => Bytecode::BrFalse(load_bytecode_index(cursor)?),
             Opcodes::BRANCH => Bytecode::Branch(load_bytecode_index(cursor)?),
             Opcodes::LD_U8 => {
-                let value = cursor.read_u8().map_err(|_| {
+                let value = read_u8(cursor).map_err(|_| {
                     VMStatus::new(StatusCode::MALFORMED).with_message("Unexpected EOF".to_string())
                 })?;
                 Bytecode::LdU8(value)

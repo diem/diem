@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::file_format_common::*;
-use byteorder::{LittleEndian, ReadBytesExt};
 use proptest::prelude::*;
-use std::io::Cursor;
+use std::io::{Cursor, Read};
 
 // verify all bytes in the vector have the high bit set except the last one
 fn check_vector(buf: &[u8]) {
@@ -86,7 +85,9 @@ proptest! {
         write_u16(&mut serialized, input).expect("serialization should work");
         let serialized = serialized.into_inner();
         let mut cursor = Cursor::new(&serialized[..]);
-        let output = cursor.read_u16::<LittleEndian>().expect("deserialization should work");
+        let mut u16_bytes = [0; 2];
+        cursor.read_exact(&mut u16_bytes).expect("deserialization should work");
+        let output = u16::from_le_bytes(u16_bytes);
         prop_assert_eq!(input, output);
     }
 
@@ -96,7 +97,9 @@ proptest! {
         write_u32(&mut serialized, input).expect("serialization should work");
         let serialized = serialized.into_inner();
         let mut cursor = Cursor::new(&serialized[..]);
-        let output = cursor.read_u32::<LittleEndian>().expect("deserialization should work");
+        let mut u32_bytes = [0; 4];
+        cursor.read_exact(&mut u32_bytes).expect("deserialization should work");
+        let output = u32::from_le_bytes(u32_bytes);
         prop_assert_eq!(input, output);
     }
 
@@ -106,7 +109,9 @@ proptest! {
         write_u64(&mut serialized, input).expect("serialization should work");
         let serialized = serialized.into_inner();
         let mut cursor = Cursor::new(&serialized[..]);
-        let output = cursor.read_u64::<LittleEndian>().expect("deserialization should work");
+        let mut u64_bytes = [0; 8];
+        cursor.read_exact(&mut u64_bytes).expect("deserialization should work");
+        let output = u64::from_le_bytes(u64_bytes);
         prop_assert_eq!(input, output);
     }
 }
