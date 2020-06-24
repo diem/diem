@@ -72,6 +72,11 @@ impl Cluster {
         &self.validator_instances
     }
 
+    pub fn random_full_node_instance(&self) -> Instance {
+        let mut rnd = rand::thread_rng();
+        self.fullnode_instances.choose(&mut rnd).unwrap().clone()
+    }
+
     pub fn fullnode_instances(&self) -> &[Instance] {
         &self.fullnode_instances
     }

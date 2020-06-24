@@ -9,6 +9,7 @@ mod performance_benchmark;
 mod performance_benchmark_three_region_simulation;
 mod reboot_random_validator;
 mod recovery_time;
+mod versioning_test;
 
 use std::{collections::HashSet, fmt::Display, time::Duration};
 
@@ -21,6 +22,7 @@ pub use performance_benchmark_three_region_simulation::{
 };
 pub use reboot_random_validator::{RebootRandomValidators, RebootRandomValidatorsParams};
 pub use recovery_time::{RecoveryTime, RecoveryTimeParams};
+pub use versioning_test::{ValidatorVersioning, ValidatorVersioningParams};
 
 use crate::{
     cluster::Cluster,
@@ -128,6 +130,7 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
         f::<RebootRandomValidatorsParams>(),
     );
     known_experiments.insert("generate_cpu_flamegraph", f::<CpuFlamegraphParams>());
+    known_experiments.insert("versioning_testing", f::<ValidatorVersioningParams>());
 
     let builder = known_experiments.get(name).expect("Experiment not found");
     builder(args, cluster)
