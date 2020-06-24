@@ -156,6 +156,10 @@ impl TxEmitter {
         }
     }
 
+    pub fn take_account(&mut self) -> AccountData {
+        self.accounts.remove(0)
+    }
+
     pub fn clear(&mut self) {
         self.accounts.clear();
     }
@@ -747,7 +751,7 @@ fn gen_mint_txn_requests(
         .collect()
 }
 
-async fn execute_and_wait_transactions(
+pub async fn execute_and_wait_transactions(
     client: &mut JsonRpcAsyncClient,
     account: &mut AccountData,
     txn: Vec<SignedTransaction>,
