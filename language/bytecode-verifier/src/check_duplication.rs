@@ -22,13 +22,10 @@ pub struct DuplicationChecker<'a> {
 }
 
 impl<'a> DuplicationChecker<'a> {
-    pub fn new(module: &'a CompiledModule) -> Self {
-        Self { module }
-    }
-
-    pub fn verify(self) -> VMResult<()> {
+    pub fn verify(module: &'a CompiledModule) -> VMResult<()> {
+        let checker = Self { module };
         // Identifiers
-        if let Some(idx) = Self::first_duplicate_element(self.module.identifiers()) {
+        if let Some(idx) = Self::first_duplicate_element(checker.module.identifiers()) {
             return Err(verification_error(
                 IndexKind::Identifier,
                 idx,
@@ -36,7 +33,7 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // Constants
-        if let Some(idx) = Self::first_duplicate_element(self.module.constant_pool()) {
+        if let Some(idx) = Self::first_duplicate_element(checker.module.constant_pool()) {
             return Err(verification_error(
                 IndexKind::ConstantPool,
                 idx,
@@ -44,7 +41,7 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // Signatures
-        if let Some(idx) = Self::first_duplicate_element(self.module.signatures()) {
+        if let Some(idx) = Self::first_duplicate_element(checker.module.signatures()) {
             return Err(verification_error(
                 IndexKind::Signature,
                 idx,
@@ -52,7 +49,7 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // ModuleHandles
-        if let Some(idx) = Self::first_duplicate_element(self.module.module_handles()) {
+        if let Some(idx) = Self::first_duplicate_element(checker.module.module_handles()) {
             return Err(verification_error(
                 IndexKind::ModuleHandle,
                 idx,
@@ -61,7 +58,8 @@ impl<'a> DuplicationChecker<'a> {
         }
         // StructHandles - module and name define uniqueness
         if let Some(idx) = Self::first_duplicate_element(
-            self.module
+            checker
+                .module
                 .struct_handles()
                 .iter()
                 .map(|x| (x.module, x.name)),
@@ -74,7 +72,8 @@ impl<'a> DuplicationChecker<'a> {
         }
         // FunctionHandles - module and name define uniqueness
         if let Some(idx) = Self::first_duplicate_element(
-            self.module
+            checker
+                .module
                 .function_handles()
                 .iter()
                 .map(|x| (x.module, x.name)),
@@ -86,7 +85,7 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // FieldHandles
-        if let Some(idx) = Self::first_duplicate_element(self.module.field_handles()) {
+        if let Some(idx) = Self::first_duplicate_element(checker.module.field_handles()) {
             return Err(verification_error(
                 IndexKind::FieldHandle,
                 idx,
@@ -94,7 +93,7 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // StructInstantiations
-        if let Some(idx) = Self::first_duplicate_element(self.module.struct_instantiations()) {
+        if let Some(idx) = Self::first_duplicate_element(checker.module.struct_instantiations()) {
             return Err(verification_error(
                 IndexKind::StructDefInstantiation,
                 idx,
@@ -102,7 +101,7 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // FunctionInstantiations
-        if let Some(idx) = Self::first_duplicate_element(self.module.function_instantiations()) {
+        if let Some(idx) = Self::first_duplicate_element(checker.module.function_instantiations()) {
             return Err(verification_error(
                 IndexKind::FunctionInstantiation,
                 idx,
@@ -110,7 +109,7 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // FieldInstantiations
-        if let Some(idx) = Self::first_duplicate_element(self.module.field_instantiations()) {
+        if let Some(idx) = Self::first_duplicate_element(checker.module.field_instantiations()) {
             return Err(verification_error(
                 IndexKind::FieldInstantiation,
                 idx,
@@ -118,9 +117,9 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // StructDefinition - contained StructHandle defines uniqueness
-        if let Some(idx) =
-            Self::first_duplicate_element(self.module.struct_defs().iter().map(|x| x.struct_handle))
-        {
+        if let Some(idx) = Self::first_duplicate_element(
+            checker.module.struct_defs().iter().map(|x| x.struct_handle),
+        ) {
             return Err(verification_error(
                 IndexKind::StructDefinition,
                 idx,
@@ -129,7 +128,7 @@ impl<'a> DuplicationChecker<'a> {
         }
         // FunctionDefinition - contained FunctionHandle defines uniqueness
         if let Some(idx) =
-            Self::first_duplicate_element(self.module.function_defs().iter().map(|x| x.function))
+            Self::first_duplicate_element(checker.module.function_defs().iter().map(|x| x.function))
         {
             return Err(verification_error(
                 IndexKind::FunctionDefinition,
@@ -138,7 +137,7 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // Acquires in function declarations contain unique struct definitions
-        for (idx, function_def) in self.module.function_defs().iter().enumerate() {
+        for (idx, function_def) in checker.module.function_defs().iter().enumerate() {
             let acquires = function_def.acquires_global_resources.iter();
             if Self::first_duplicate_element(acquires).is_some() {
                 return Err(verification_error(
@@ -149,7 +148,7 @@ impl<'a> DuplicationChecker<'a> {
             }
         }
         // Field names in structs must be unique
-        for (struct_idx, struct_def) in self.module.struct_defs().iter().enumerate() {
+        for (struct_idx, struct_def) in checker.module.struct_defs().iter().enumerate() {
             let fields = match &struct_def.field_information {
                 StructFieldInformation::Native => continue,
                 StructFieldInformation::Declared(fields) => fields,
@@ -170,8 +169,9 @@ impl<'a> DuplicationChecker<'a> {
             }
         }
         // Check that each struct definition is pointing to the self module
-        if let Some(idx) = self.module.struct_defs().iter().position(|x| {
-            self.module.struct_handle_at(x.struct_handle).module != self.module.self_handle_idx()
+        if let Some(idx) = checker.module.struct_defs().iter().position(|x| {
+            checker.module.struct_handle_at(x.struct_handle).module
+                != checker.module.self_handle_idx()
         }) {
             return Err(verification_error(
                 IndexKind::StructDefinition,
@@ -180,8 +180,8 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // Check that each function definition is pointing to the self module
-        if let Some(idx) = self.module.function_defs().iter().position(|x| {
-            self.module.function_handle_at(x.function).module != self.module.self_handle_idx()
+        if let Some(idx) = checker.module.function_defs().iter().position(|x| {
+            checker.module.function_handle_at(x.function).module != checker.module.self_handle_idx()
         }) {
             return Err(verification_error(
                 IndexKind::FunctionDefinition,
@@ -190,15 +190,15 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // Check that each struct handle in self module is implemented (has a declaration)
-        let implemented_struct_handles: HashSet<StructHandleIndex> = self
+        let implemented_struct_handles: HashSet<StructHandleIndex> = checker
             .module
             .struct_defs()
             .iter()
             .map(|x| x.struct_handle)
             .collect();
-        if let Some(idx) = (0..self.module.struct_handles().len()).position(|x| {
+        if let Some(idx) = (0..checker.module.struct_handles().len()).position(|x| {
             let y = StructHandleIndex::new(x as u16);
-            self.module.struct_handle_at(y).module == self.module.self_handle_idx()
+            checker.module.struct_handle_at(y).module == checker.module.self_handle_idx()
                 && !implemented_struct_handles.contains(&y)
         }) {
             return Err(verification_error(
@@ -208,15 +208,15 @@ impl<'a> DuplicationChecker<'a> {
             ));
         }
         // Check that each function handle in self module is implemented (has a declaration)
-        let implemented_function_handles: HashSet<FunctionHandleIndex> = self
+        let implemented_function_handles: HashSet<FunctionHandleIndex> = checker
             .module
             .function_defs()
             .iter()
             .map(|x| x.function)
             .collect();
-        if let Some(idx) = (0..self.module.function_handles().len()).position(|x| {
+        if let Some(idx) = (0..checker.module.function_handles().len()).position(|x| {
             let y = FunctionHandleIndex::new(x as u16);
-            self.module.function_handle_at(y).module == self.module.self_handle_idx()
+            checker.module.function_handle_at(y).module == checker.module.self_handle_idx()
                 && !implemented_function_handles.contains(&y)
         }) {
             return Err(verification_error(

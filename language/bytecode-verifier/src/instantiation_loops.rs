@@ -70,7 +70,7 @@ pub struct InstantiationLoopChecker<'a> {
 }
 
 impl<'a> InstantiationLoopChecker<'a> {
-    pub fn new(module: &'a CompiledModule) -> Self {
+    fn new(module: &'a CompiledModule) -> Self {
         Self {
             module,
             graph: Graph::new(),
@@ -81,6 +81,38 @@ impl<'a> InstantiationLoopChecker<'a> {
                 .enumerate()
                 .map(|(def_idx, def)| (def.function, FunctionDefinitionIndex::new(def_idx as u16)))
                 .collect(),
+        }
+    }
+
+    pub fn verify(module: &'a CompiledModule) -> VMResult<()> {
+        let mut checker = Self::new(module);
+        checker.build_graph();
+        let mut components = checker.find_non_trivial_components();
+
+        match components.pop() {
+            None => Ok(()),
+            Some((nodes, edges)) => {
+                let msg_edges = edges
+                    .into_iter()
+                    .filter_map(
+                        |edge_idx| match checker.graph.edge_weight(edge_idx).unwrap() {
+                            Edge::TyConApp(_) => Some(checker.format_edge(edge_idx)),
+                            _ => None,
+                        },
+                    )
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let msg_nodes = nodes
+                    .into_iter()
+                    .map(|node_idx| checker.format_node(node_idx))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let msg = format!(
+                    "edges with constructors: [{}], nodes: [{}]",
+                    msg_edges, msg_nodes
+                );
+                Err(VMStatus::new(StatusCode::LOOP_IN_INSTANTIATION_GRAPH).with_message(msg))
+            }
         }
     }
 
@@ -253,35 +285,6 @@ impl<'a> InstantiationLoopChecker<'a> {
         match self.graph.edge_weight(edge_idx).unwrap() {
             Edge::TyConApp(ty) => format!("{} --{:?}--> {}", node_1, ty, node_2,),
             Edge::Identity => format!("{} ----> {}", node_1, node_2),
-        }
-    }
-
-    pub fn verify(mut self) -> VMResult<()> {
-        self.build_graph();
-        let mut components = self.find_non_trivial_components();
-
-        match components.pop() {
-            None => Ok(()),
-            Some((nodes, edges)) => {
-                let msg_edges = edges
-                    .into_iter()
-                    .filter_map(|edge_idx| match self.graph.edge_weight(edge_idx).unwrap() {
-                        Edge::TyConApp(_) => Some(self.format_edge(edge_idx)),
-                        _ => None,
-                    })
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                let msg_nodes = nodes
-                    .into_iter()
-                    .map(|node_idx| self.format_node(node_idx))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                let msg = format!(
-                    "edges with constructors: [{}], nodes: [{}]",
-                    msg_edges, msg_nodes
-                );
-                Err(VMStatus::new(StatusCode::LOOP_IN_INSTANTIATION_GRAPH).with_message(msg))
-            }
         }
     }
 }

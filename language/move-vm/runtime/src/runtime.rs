@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{interpreter::Interpreter, loader::Loader};
-use bytecode_verifier::VerifiedModule;
 use libra_logger::prelude::*;
 use libra_types::vm_error::{StatusCode, VMStatus};
 use move_core_types::{
@@ -14,7 +13,7 @@ use move_vm_types::{data_store::DataStore, gas_schedule::CostStrategy, values::V
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, vm_error, Location, VMResult},
-    file_format::{Signature, SignatureToken},
+    file_format::SignatureToken,
     CompiledModule, IndexKind,
 };
 
@@ -37,6 +36,8 @@ impl VMRuntime {
         data_store: &mut dyn DataStore,
         _cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
+        // deserialize the module. Perform bounds check. After this indexes can be
+        // used with the `[]` operator
         let compiled_module = match CompiledModule::deserialize(&module) {
             Ok(module) => module,
             Err(err) => {
@@ -66,8 +67,9 @@ impl VMRuntime {
             ));
         };
 
-        let verified_module = VerifiedModule::new(compiled_module).map_err(|(_, e)| e)?;
-        Loader::check_natives(&verified_module)?;
+        // perform bytecode and loading verification
+        self.loader.verify_module(&compiled_module)?;
+
         data_store.publish_module(module_id, module)
     }
 
@@ -80,6 +82,7 @@ impl VMRuntime {
         data_store: &mut dyn DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
+        // signer helper closure
         fn is_signer_reference(s: &SignatureToken) -> bool {
             use SignatureToken as S;
             match s {
@@ -88,20 +91,17 @@ impl VMRuntime {
             }
         }
 
-        let mut type_params = vec![];
-        for ty in &ty_args {
-            type_params.push(self.loader.load_type(ty, data_store)?);
-        }
-        let main = self.loader.load_script(&script, data_store)?;
+        // load the script, perform verification
+        let (main, type_params) = self.loader.load_script(&script, &ty_args, data_store)?;
 
-        self.loader
-            .verify_ty_args(main.type_parameters(), &type_params)?;
+        // build the arguments list for the main and check the arguments are of restricted types
         let first_param_opt = main.parameters().0.get(0);
         if first_param_opt.map_or(false, |sig| is_signer_reference(sig)) {
             args.insert(0, Value::transaction_argument_signer_reference(sender))
         }
-        verify_args(main.parameters(), &args)?;
+        check_args(&args)?;
 
+        // run the script
         Interpreter::entrypoint(
             main,
             type_params,
@@ -121,19 +121,16 @@ impl VMRuntime {
         data_store: &mut dyn DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
-        let mut type_params = vec![];
-        for ty in &ty_args {
-            type_params.push(self.loader.load_type(ty, data_store)?);
-        }
-        let func = self
-            .loader
-            .load_function(function_name, module, data_store)?;
+        // load the function in the given module, perform verification of the module and
+        // its dependencies if the module was not loaded
+        let (func, type_params) =
+            self.loader
+                .load_function(function_name, module, &ty_args, data_store)?;
 
-        self.loader
-            .verify_ty_args(func.type_parameters(), &type_params)?;
-        // REVIEW: argument verification should happen in the interpreter
-        //verify_args(func.parameters(), &args)?;
+        // check the arguments provided are of restricted types
+        check_args(&args)?;
 
+        // run the function
         Interpreter::entrypoint(
             func,
             type_params,
@@ -145,21 +142,13 @@ impl VMRuntime {
     }
 }
 
-/// Verify if the transaction arguments match the type signature of the main function.
-fn verify_args(signature: &Signature, args: &[Value]) -> VMResult<()> {
-    if signature.len() != args.len() {
-        return Err(
-            VMStatus::new(StatusCode::TYPE_MISMATCH).with_message(format!(
-                "argument length mismatch: expected {} got {}",
-                signature.len(),
-                args.len()
-            )),
-        );
-    }
-    for (tok, val) in signature.0.iter().zip(args) {
-        if !val.is_valid_script_arg(tok) {
+/// Check that the transaction arguments are acceptable by the VM.
+/// Constants are the only arguments allowed.
+fn check_args(args: &[Value]) -> VMResult<()> {
+    for val in args {
+        if !val.is_constant_or_signer_ref() {
             return Err(VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("argument type mismatch".to_string()));
+                .with_message("VM argument types are restricted".to_string()));
         }
     }
     Ok(())

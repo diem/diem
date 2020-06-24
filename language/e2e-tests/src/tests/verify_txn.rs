@@ -8,7 +8,6 @@ use crate::{
     executor::FakeExecutor,
     transaction_status_eq,
 };
-use bytecode_verifier::VerifiedModule;
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use compiler::Compiler;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
@@ -624,9 +623,7 @@ fn test_dependency_fails_verification() {
     let compiler = Compiler {
         address: *sender.address(),
         // This is OK because we *know* the module is unverified.
-        extra_deps: vec![VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(
-            module,
-        )],
+        extra_deps: vec![module],
         ..Compiler::default()
     };
     let script = compiler

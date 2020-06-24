@@ -43,16 +43,6 @@ impl VerifiedModule {
         }
     }
 
-    /// Returns a new `VerifiedModule` that **does not do any verification.**
-    ///
-    /// THIS IS INCREDIBLY DANGEROUS BECAUSE IT BREAKS CORE ASSUMPTIONS. DO NOT USE THIS OUTSIDE OF
-    /// TESTS.
-    #[allow(non_snake_case)]
-    #[doc(hidden)]
-    pub fn bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(module: CompiledModule) -> VerifiedModule {
-        VerifiedModule(module)
-    }
-
     /// Serializes this module into the provided buffer.
     ///
     /// This is merely a convenience wrapper around `module.as_inner().serialize(buf)`.
@@ -76,13 +66,13 @@ impl VerifiedModule {
 }
 
 fn verify_module(module: &CompiledModule) -> VMResult<()> {
-    DuplicationChecker::new(&module).verify()?;
-    SignatureChecker::new(&module).verify()?;
-    InstructionConsistency::new(&module).verify()?;
-    ResourceTransitiveChecker::new(&module).verify()?;
-    ConstantsChecker::new(&module).verify()?;
-    RecursiveStructDefChecker::new(&module).verify()?;
-    InstantiationLoopChecker::new(&module).verify()?;
+    DuplicationChecker::verify(&module)?;
+    SignatureChecker::verify(&module)?;
+    InstructionConsistency::verify(&module)?;
+    ResourceTransitiveChecker::verify(&module)?;
+    ConstantsChecker::verify(&module)?;
+    RecursiveStructDefChecker::verify(&module)?;
+    InstantiationLoopChecker::verify(&module)?;
     CodeUnitVerifier::verify(&module)
 }
 
@@ -207,7 +197,7 @@ pub fn verify_main_signature(script: &CompiledScript) -> VMResult<()> {
     Ok(())
 }
 
-/// Verification of a module in isolation (using `VerifiedModule::new`) trusts that struct and
+/// Verification of a module in isolation trusts that struct and
 /// function handles not implemented in the module are declared correctly. The following procedure
 /// justifies this trust by checking that these declarations match the definitions in the module
 /// dependencies. Each dependency of 'module' is looked up in 'dependencies'.  If not found, an
@@ -215,8 +205,8 @@ pub fn verify_main_signature(script: &CompiledScript) -> VMResult<()> {
 /// dependency in 'module' is checked against the declarations in the found module and mismatch
 /// errors are returned.
 pub fn verify_module_dependencies<'a>(
-    module: &VerifiedModule,
-    dependencies: impl IntoIterator<Item = &'a VerifiedModule>,
+    module: &CompiledModule,
+    dependencies: impl IntoIterator<Item = &'a CompiledModule>,
 ) -> VMResult<()> {
     let module_id = module.self_id();
     let mut dependency_map = BTreeMap::new();
@@ -229,9 +219,24 @@ pub fn verify_module_dependencies<'a>(
     verify_dependencies(module, &dependency_map)
 }
 
+pub fn verify_vmodule_dependencies<'a>(
+    module: &CompiledModule,
+    dependencies: impl IntoIterator<Item = &'a VerifiedModule>,
+) -> VMResult<()> {
+    let module_id = module.self_id();
+    let mut dependency_map = BTreeMap::new();
+    for dependency in dependencies {
+        let dependency_id = dependency.self_id();
+        if module_id != dependency_id {
+            dependency_map.insert(dependency_id, dependency.as_inner());
+        }
+    }
+    verify_dependencies(module, &dependency_map)
+}
+
 pub fn verify_dependencies(
-    module: &VerifiedModule,
-    dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
+    module: &CompiledModule,
+    dependency_map: &BTreeMap<ModuleId, &CompiledModule>,
 ) -> VMResult<()> {
     let module_view = ModuleView::new(module);
     verify_struct_kind(&module_view, &dependency_map)?;
@@ -245,8 +250,8 @@ pub fn verify_dependencies(
 /// If found, usage of types and functions of the dependency in 'script' is checked against the
 /// declarations in the found module and mismatch errors are returned.
 pub fn verify_script_dependencies<'a>(
-    script: &VerifiedScript,
-    dependencies: impl IntoIterator<Item = &'a VerifiedModule>,
+    script: &CompiledScript,
+    dependencies: impl IntoIterator<Item = &'a CompiledModule>,
 ) -> VMResult<()> {
     let (_, fake_module) = script.clone().into_module();
     verify_module_dependencies(&fake_module, dependencies)
@@ -254,15 +259,15 @@ pub fn verify_script_dependencies<'a>(
 
 pub fn verify_script_dependency_map(
     script: &VerifiedScript,
-    dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
+    dependency_map: &BTreeMap<ModuleId, &CompiledModule>,
 ) -> VMResult<()> {
     let (_, fake_module) = script.clone().into_module();
-    verify_dependencies(&fake_module, dependency_map)
+    verify_dependencies(fake_module.as_inner(), dependency_map)
 }
 
 fn verify_all_dependencies_provided(
-    module_view: &ModuleView<VerifiedModule>,
-    dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
+    module_view: &ModuleView<CompiledModule>,
+    dependency_map: &BTreeMap<ModuleId, &CompiledModule>,
 ) -> VMResult<()> {
     for (idx, module_handle_view) in module_view.module_handles().enumerate() {
         let module_id = module_handle_view.module_id();
@@ -280,8 +285,8 @@ fn verify_all_dependencies_provided(
 }
 
 fn verify_struct_kind(
-    module_view: &ModuleView<VerifiedModule>,
-    dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
+    module_view: &ModuleView<CompiledModule>,
+    dependency_map: &BTreeMap<ModuleId, &CompiledModule>,
 ) -> VMResult<()> {
     for (idx, struct_handle_view) in module_view.struct_handles().enumerate() {
         let owner_module_id = struct_handle_view.module_id();
@@ -315,8 +320,8 @@ fn verify_struct_kind(
 }
 
 fn verify_function_visibility_and_type(
-    module_view: &ModuleView<VerifiedModule>,
-    dependency_map: &BTreeMap<ModuleId, &VerifiedModule>,
+    module_view: &ModuleView<CompiledModule>,
+    dependency_map: &BTreeMap<ModuleId, &CompiledModule>,
 ) -> VMResult<()> {
     let resolver = Resolver::new(module_view.as_inner());
     for (idx, function_handle_view) in module_view.function_handles().enumerate() {
@@ -375,7 +380,7 @@ pub fn batch_verify_modules(modules: Vec<CompiledModule>) -> Vec<VerifiedModule>
     let mut verified_modules = vec![];
     for module in modules.into_iter() {
         let verified_module = VerifiedModule::new(module).expect("stdlib module failed to verify");
-        if let Err(e) = verify_module_dependencies(&verified_module, &verified_modules) {
+        if let Err(e) = verify_vmodule_dependencies(verified_module.as_inner(), &verified_modules) {
             panic!("{:?} at {:?}", e, verified_module.self_id())
         }
         verified_modules.push(verified_module);

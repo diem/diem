@@ -23,12 +23,9 @@ pub struct RecursiveStructDefChecker<'a> {
 }
 
 impl<'a> RecursiveStructDefChecker<'a> {
-    pub fn new(module: &'a CompiledModule) -> Self {
-        Self { module }
-    }
-
-    pub fn verify(self) -> VMResult<()> {
-        let graph = StructDefGraphBuilder::new(self.module).build()?;
+    pub fn verify(module: &'a CompiledModule) -> VMResult<()> {
+        let checker = Self { module };
+        let graph = StructDefGraphBuilder::new(checker.module).build()?;
 
         // toposort is iterative while petgraph::algo::is_cyclic_directed is recursive. Prefer
         // the iterative solution here as this code may be dealing with untrusted data.
@@ -45,14 +42,14 @@ impl<'a> RecursiveStructDefChecker<'a> {
 
 /// Given a module, build a graph of struct definitions. This is useful when figuring out whether
 /// the struct definitions in module form a cycle.
-pub struct StructDefGraphBuilder<'a> {
+struct StructDefGraphBuilder<'a> {
     module: &'a CompiledModule,
     /// Used to follow field definitions' signatures' struct handles to their struct definitions.
     handle_to_def: BTreeMap<StructHandleIndex, StructDefinitionIndex>,
 }
 
 impl<'a> StructDefGraphBuilder<'a> {
-    pub fn new(module: &'a CompiledModule) -> Self {
+    fn new(module: &'a CompiledModule) -> Self {
         let mut handle_to_def = BTreeMap::new();
         // the mapping from struct definitions to struct handles is already checked to be 1-1 by
         // DuplicationChecker
@@ -67,7 +64,7 @@ impl<'a> StructDefGraphBuilder<'a> {
         }
     }
 
-    pub fn build(self) -> VMResult<DiGraphMap<StructDefinitionIndex, ()>> {
+    fn build(self) -> VMResult<DiGraphMap<StructDefinitionIndex, ()>> {
         let mut neighbors = BTreeMap::new();
         for idx in 0..self.module.struct_defs().len() {
             let sd_idx = StructDefinitionIndex::new(idx as TableIndex);

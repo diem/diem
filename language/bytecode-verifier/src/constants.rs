@@ -17,23 +17,20 @@ pub struct ConstantsChecker<'a> {
 }
 
 impl<'a> ConstantsChecker<'a> {
-    pub fn new(module: &'a CompiledModule) -> Self {
-        Self { module }
-    }
-
-    pub fn verify(self) -> VMResult<()> {
-        for (idx, constant) in self.module.constant_pool().iter().enumerate() {
-            self.verify_constant(idx, constant)?
+    pub fn verify(module: &'a CompiledModule) -> VMResult<()> {
+        let checker = Self { module };
+        for (idx, constant) in checker.module.constant_pool().iter().enumerate() {
+            checker.verify_constant(idx, constant)?
         }
         Ok(())
     }
 
-    pub fn verify_constant(&self, idx: usize, constant: &Constant) -> VMResult<()> {
+    fn verify_constant(&self, idx: usize, constant: &Constant) -> VMResult<()> {
         self.verify_constant_type(idx, &constant.type_)?;
         self.verify_constant_data(idx, constant)
     }
 
-    pub fn verify_constant_type(&self, idx: usize, type_: &SignatureToken) -> VMResult<()> {
+    fn verify_constant_type(&self, idx: usize, type_: &SignatureToken) -> VMResult<()> {
         use SignatureToken as S;
         match type_ {
             S::Bool | S::U8 | S::U64 | S::U128 | S::Address => Ok(()),
@@ -51,7 +48,7 @@ impl<'a> ConstantsChecker<'a> {
         }
     }
 
-    pub fn verify_constant_data(&self, idx: usize, constant: &Constant) -> VMResult<()> {
+    fn verify_constant_data(&self, idx: usize, constant: &Constant) -> VMResult<()> {
         match constant.deserialize_constant() {
             Some(_) => Ok(()),
             None => Err(verification_error(

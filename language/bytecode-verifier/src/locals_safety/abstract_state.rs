@@ -5,7 +5,7 @@
 
 use crate::{
     absint::{AbstractDomain, JoinResult},
-    signature::kind,
+    kind,
 };
 use mirai_annotations::{checked_precondition, checked_verify};
 use vm::{

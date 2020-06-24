@@ -24,8 +24,8 @@ use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
 use vm::{
     errors::*,
     file_format::{
-        Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
-        StructDefinitionIndex,
+        Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, Signature,
+        StructDefInstantiationIndex, StructDefinitionIndex,
     },
     file_format_common::Opcodes,
 };
@@ -117,11 +117,12 @@ impl Interpreter {
         ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<()> {
+        verify_args(function.parameters(), &ty_args, &args)?;
         let mut locals = Locals::new(function.local_count());
-        // TODO: assert consistency of args and function formals
         for (i, value) in args.into_iter().enumerate() {
             locals.store_loc(i, value)?;
         }
+
         let mut current_frame = Frame::new(function, ty_args, locals);
         loop {
             let resolver = current_frame.resolver(loader);
@@ -1155,4 +1156,27 @@ impl Frame {
     fn resolver<'a>(&self, loader: &'a Loader) -> Resolver<'a> {
         self.function.get_resolver(loader)
     }
+}
+
+// Verify the the type of the arguments in input from the outside is restricted (`is_valid_arg()`)
+// TODO: we need to check the instantiation
+// TODO: specify the values allowed, we could try to match everything, this function should have
+// minimal or non existent policy (besides any type/value match) but it's tricky
+fn verify_args(signature: &Signature, _ty_args: &[Type], args: &[Value]) -> VMResult<()> {
+    if signature.len() != args.len() {
+        return Err(
+            VMStatus::new(StatusCode::TYPE_MISMATCH).with_message(format!(
+                "argument length mismatch: expected {} got {}",
+                signature.len(),
+                args.len()
+            )),
+        );
+    }
+    for (tok, val) in signature.0.iter().zip(args) {
+        if !val.is_valid_arg(tok) {
+            return Err(VMStatus::new(StatusCode::TYPE_MISMATCH)
+                .with_message(format!("unexpected type: {:?}, arg: {:?}", tok, val)));
+        }
+    }
+    Ok(())
 }

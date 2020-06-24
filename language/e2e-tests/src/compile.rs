@@ -35,8 +35,12 @@ pub fn compile_script_with_address(
     address: &AccountAddress,
     file_name: &str,
     code: &str,
-    extra_deps: Vec<VerifiedModule>,
+    deps: Vec<VerifiedModule>,
 ) -> TransactionPayload {
+    let extra_deps = deps
+        .into_iter()
+        .map(|verified_module| verified_module.into_inner())
+        .collect();
     let compiler = Compiler {
         address: *address,
         extra_deps,

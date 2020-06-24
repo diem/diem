@@ -10,7 +10,6 @@ mod unit_tests;
 
 use anyhow::Result;
 use bytecode_source_map::source_map::SourceMap;
-use bytecode_verifier::VerifiedModule;
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
@@ -29,7 +28,7 @@ pub struct Compiler {
     /// Skip stdlib dependencies if true.
     pub skip_stdlib_deps: bool,
     /// Extra dependencies to compile with.
-    pub extra_deps: Vec<VerifiedModule>,
+    pub extra_deps: Vec<CompiledModule>,
 
     // The typical way this should be used is with functional record update syntax:
     //
@@ -92,7 +91,7 @@ impl Compiler {
         &mut self,
         file_name: &str,
         code: &str,
-    ) -> Result<(CompiledScript, SourceMap<Loc>, Vec<VerifiedModule>)> {
+    ) -> Result<(CompiledScript, SourceMap<Loc>, Vec<CompiledModule>)> {
         let parsed_script = parse_script(file_name, code)?;
         let deps = self.deps();
         let (compiled_script, source_map) = compile_script(None, parsed_script, &deps)?;
@@ -103,19 +102,22 @@ impl Compiler {
         &mut self,
         file_name: &str,
         code: &str,
-    ) -> Result<(CompiledModule, SourceMap<Loc>, Vec<VerifiedModule>)> {
+    ) -> Result<(CompiledModule, SourceMap<Loc>, Vec<CompiledModule>)> {
         let parsed_module = parse_module(file_name, code)?;
         let deps = self.deps();
         let (compiled_module, source_map) = compile_module(self.address, parsed_module, &deps)?;
         Ok((compiled_module, source_map, deps))
     }
 
-    fn deps(&mut self) -> Vec<VerifiedModule> {
+    fn deps(&mut self) -> Vec<CompiledModule> {
         let extra_deps = mem::replace(&mut self.extra_deps, vec![]);
         if self.skip_stdlib_deps {
             extra_deps
         } else {
-            let mut deps = stdlib_modules(StdLibOptions::Compiled).to_vec();
+            let mut deps: Vec<_> = stdlib_modules(StdLibOptions::Compiled)
+                .iter()
+                .map(|verified_module| verified_module.as_inner().clone())
+                .collect();
             deps.extend(extra_deps);
             deps
         }
