@@ -6,8 +6,8 @@ set -e
 # Parse parameters and execute config builder
 declare -a params
 if [ -n "${CFG_BASE_CONFIG}" ]; then # Path to base config
-	    echo "${CFG_BASE_CONFIG}" > /opt/libra/etc/base.config.toml
-	    params+="-t /opt/libra/etc/base.config.toml "
+	    echo "${CFG_BASE_CONFIG}" > /opt/libra/etc/base.yaml
+	    params+="-t /opt/libra/etc/base.yaml "
 fi
 if [ -n "${CFG_NODE_INDEX}" ]; then
 	    params+="-i ${CFG_NODE_INDEX} "
@@ -50,4 +50,4 @@ if [ -n "${STRUCT_LOGGER}" ]; then
     fi
 fi
 
-exec ${logger} /opt/libra/bin/safety-rules /opt/libra/etc/node.config.toml
+exec ${logger} /opt/libra/bin/safety-rules /opt/libra/etc/node.yaml

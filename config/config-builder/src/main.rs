@@ -9,8 +9,8 @@ use libra_network_address::NetworkAddress;
 use std::{convert::TryInto, fs, fs::File, io::Write, net::SocketAddr, path::PathBuf};
 use structopt::StructOpt;
 
-const KEY_MANAGER_CONFIG: &str = "key_manager.config.toml";
-const NODE_CONFIG: &str = "node.config.toml";
+const KEY_MANAGER_CONFIG: &str = "key_manager.yaml";
+const NODE_CONFIG: &str = "node.yaml";
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, StructOpt)]

@@ -27,7 +27,7 @@ impl SwarmConfig {
             let node_dir = output_dir.join(index.to_string());
             std::fs::create_dir_all(&node_dir)?;
 
-            let node_path = node_dir.join("node.config.toml");
+            let node_path = node_dir.join("node.yaml");
             config.set_data_dir(node_dir);
             config.save(&node_path)?;
             config_files.push(node_path);

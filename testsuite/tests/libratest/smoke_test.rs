@@ -1252,7 +1252,7 @@ fn test_key_manager_consensus_rotation() {
     key_manager_config.secure_backend = SecureBackend::OnDiskStorage(on_disk_storage_config);
 
     // Save the key manager config to disk
-    let key_manager_config_path = node_config_path.with_file_name("key_manager.config.toml");
+    let key_manager_config_path = node_config_path.with_file_name("key_manager.yaml");
     key_manager_config.save(&key_manager_config_path).unwrap();
 
     // Bootstrap secure storage by initializing the keys required by the key manager.
