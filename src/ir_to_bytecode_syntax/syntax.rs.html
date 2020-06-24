@@ -2122,6 +2122,7 @@
 <span id="2122">2122</span>
 <span id="2123">2123</span>
 <span id="2124">2124</span>
+<span id="2125">2125</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -3988,7 +3989,7 @@
         <span class="ident">FunctionBody</span>::<span class="ident">Move</span> { <span class="ident">locals</span>, <span class="ident">code</span>: <span class="ident">body</span> },
     );
     <span class="kw">let</span> <span class="ident">main</span> <span class="op">=</span> <span class="ident">spanned</span>(<span class="ident">tokens</span>.<span class="ident">file_name</span>(), <span class="ident">start_loc</span>, <span class="ident">end_loc</span>, <span class="ident">main</span>);
-    <span class="prelude-val">Ok</span>(<span class="ident">Script</span>::<span class="ident">new</span>(<span class="ident">imports</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="ident">main</span>))
+    <span class="prelude-val">Ok</span>(<span class="ident">Script</span>::<span class="ident">new</span>(<span class="ident">imports</span>, <span class="macro">vec</span><span class="macro">!</span>[], <span class="macro">vec</span><span class="macro">!</span>[], <span class="ident">main</span>))
 }
 
 <span class="comment">// StructKind: bool = {</span>
@@ -4190,6 +4191,7 @@
         <span class="ident">imports</span>,
         <span class="macro">vec</span><span class="macro">!</span>[],
         <span class="ident">structs</span>,
+        <span class="macro">vec</span><span class="macro">!</span>[],
         <span class="ident">functions</span>,
         <span class="ident">synthetics</span>,
     )<span class="question-mark">?</span>)

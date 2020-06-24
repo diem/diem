@@ -305,6 +305,8 @@
 <span id="305">305</span>
 <span id="306">306</span>
 <span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -537,10 +539,12 @@
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Spec</span>(<span class="kw">_</span>, <span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">InferredNum</span>(<span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Value</span>(<span class="kw">_</span>)
+        <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Constant</span>(<span class="prelude-val">None</span>, <span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Move</span>(<span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Copy</span>(<span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Use</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
 
+        <span class="ident">E</span>::<span class="ident">Constant</span>(<span class="prelude-val">Some</span>(<span class="ident">m</span>), <span class="ident">_c</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">context</span>.<span class="ident">add_usage</span>(<span class="ident">m</span>, <span class="kw-2">*</span><span class="ident">loc</span>),
         <span class="ident">E</span>::<span class="ident">ModuleCall</span>(<span class="ident">m</span>, <span class="kw">_</span>, <span class="ident">bs_opt</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">es_</span>)) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">context</span>.<span class="ident">add_usage</span>(<span class="ident">m</span>, <span class="kw-2">*</span><span class="ident">loc</span>);
             <span class="ident">types_opt</span>(<span class="ident">context</span>, <span class="ident">bs_opt</span>);

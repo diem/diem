@@ -1840,6 +1840,90 @@
 <span id="1840">1840</span>
 <span id="1841">1841</span>
 <span id="1842">1842</span>
+<span id="1843">1843</span>
+<span id="1844">1844</span>
+<span id="1845">1845</span>
+<span id="1846">1846</span>
+<span id="1847">1847</span>
+<span id="1848">1848</span>
+<span id="1849">1849</span>
+<span id="1850">1850</span>
+<span id="1851">1851</span>
+<span id="1852">1852</span>
+<span id="1853">1853</span>
+<span id="1854">1854</span>
+<span id="1855">1855</span>
+<span id="1856">1856</span>
+<span id="1857">1857</span>
+<span id="1858">1858</span>
+<span id="1859">1859</span>
+<span id="1860">1860</span>
+<span id="1861">1861</span>
+<span id="1862">1862</span>
+<span id="1863">1863</span>
+<span id="1864">1864</span>
+<span id="1865">1865</span>
+<span id="1866">1866</span>
+<span id="1867">1867</span>
+<span id="1868">1868</span>
+<span id="1869">1869</span>
+<span id="1870">1870</span>
+<span id="1871">1871</span>
+<span id="1872">1872</span>
+<span id="1873">1873</span>
+<span id="1874">1874</span>
+<span id="1875">1875</span>
+<span id="1876">1876</span>
+<span id="1877">1877</span>
+<span id="1878">1878</span>
+<span id="1879">1879</span>
+<span id="1880">1880</span>
+<span id="1881">1881</span>
+<span id="1882">1882</span>
+<span id="1883">1883</span>
+<span id="1884">1884</span>
+<span id="1885">1885</span>
+<span id="1886">1886</span>
+<span id="1887">1887</span>
+<span id="1888">1888</span>
+<span id="1889">1889</span>
+<span id="1890">1890</span>
+<span id="1891">1891</span>
+<span id="1892">1892</span>
+<span id="1893">1893</span>
+<span id="1894">1894</span>
+<span id="1895">1895</span>
+<span id="1896">1896</span>
+<span id="1897">1897</span>
+<span id="1898">1898</span>
+<span id="1899">1899</span>
+<span id="1900">1900</span>
+<span id="1901">1901</span>
+<span id="1902">1902</span>
+<span id="1903">1903</span>
+<span id="1904">1904</span>
+<span id="1905">1905</span>
+<span id="1906">1906</span>
+<span id="1907">1907</span>
+<span id="1908">1908</span>
+<span id="1909">1909</span>
+<span id="1910">1910</span>
+<span id="1911">1911</span>
+<span id="1912">1912</span>
+<span id="1913">1913</span>
+<span id="1914">1914</span>
+<span id="1915">1915</span>
+<span id="1916">1916</span>
+<span id="1917">1917</span>
+<span id="1918">1918</span>
+<span id="1919">1919</span>
+<span id="1920">1920</span>
+<span id="1921">1921</span>
+<span id="1922">1922</span>
+<span id="1923">1923</span>
+<span id="1924">1924</span>
+<span id="1925">1925</span>
+<span id="1926">1926</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1850,7 +1934,7 @@
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
-<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">identifier</span>::<span class="ident">Identifier</span>, <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>};
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">identifier</span>::<span class="ident">Identifier</span>, <span class="ident">language_storage</span>::<span class="ident">ModuleId</span>, <span class="ident">value</span>::<span class="ident">MoveValue</span>};
 <span class="kw">use</span> <span class="ident">once_cell</span>::<span class="ident">sync</span>::<span class="ident">Lazy</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -1896,6 +1980,9 @@
     <span class="doccomment">/// Explicit declaration of dependencies. If not provided, will be inferred based on given</span>
     <span class="doccomment">/// dependencies to the IR compiler</span>
     <span class="kw">pub</span> <span class="ident">explicit_dependency_declarations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ModuleDependency</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// the constants that the module defines. Only a utility, the identifiers are not carried into</span>
+    <span class="doccomment">/// the Move bytecode</span>
+    <span class="kw">pub</span> <span class="ident">constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Constant</span><span class="op">&gt;</span>,
     <span class="doccomment">/// The transaction script&#39;s `main` procedure</span>
     <span class="kw">pub</span> <span class="ident">main</span>: <span class="ident">Function</span>,
 }
@@ -1930,6 +2017,9 @@
     <span class="kw">pub</span> <span class="ident">explicit_dependency_declarations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ModuleDependency</span><span class="op">&gt;</span>,
     <span class="doccomment">/// the structs (including resources) that the module defines</span>
     <span class="kw">pub</span> <span class="ident">structs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">StructDefinition</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// the constants that the script defines. Only a utility, the identifiers are not carried into</span>
+    <span class="doccomment">/// the Move bytecode</span>
+    <span class="kw">pub</span> <span class="ident">constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Constant</span><span class="op">&gt;</span>,
     <span class="doccomment">/// the procedure that the module defines</span>
     <span class="kw">pub</span> <span class="ident">functions</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">FunctionName</span>, <span class="ident">Function</span>)<span class="op">&gt;</span>,
     <span class="doccomment">/// the synthetic, specification variables the module defines.</span>
@@ -2100,6 +2190,25 @@
     <span class="ident">Move</span> { <span class="ident">fields</span>: <span class="ident">Fields</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span> },
     <span class="doccomment">/// The struct is a type provided by the VM</span>
     <span class="ident">Native</span>,
+}
+
+<span class="comment">//**************************************************************************************************</span>
+<span class="comment">// Structs</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="doccomment">/// Newtype for the name of a constant</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">Ord</span>, <span class="ident">PartialEq</span>, <span class="ident">PartialOrd</span>, <span class="ident">Clone</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConstantName</span>(<span class="ident">String</span>);
+
+<span class="doccomment">/// A constant declaration in a module or script</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">PartialEq</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Constant</span> {
+    <span class="doccomment">/// The constant&#39;s name. Not carried through to the Move bytecode</span>
+    <span class="kw">pub</span> <span class="ident">name</span>: <span class="ident">ConstantName</span>,
+    <span class="doccomment">/// The type of the constant&#39;s value</span>
+    <span class="kw">pub</span> <span class="ident">signature</span>: <span class="ident">Type</span>,
+    <span class="doccomment">/// The constant&#39;s value</span>
+    <span class="kw">pub</span> <span class="ident">value</span>: <span class="ident">MoveValue</span>,
 }
 
 <span class="comment">//**************************************************************************************************</span>
@@ -2470,6 +2579,7 @@
     <span class="ident">LdAddr</span>(<span class="ident">AccountAddress</span>),
     <span class="ident">LdTrue</span>,
     <span class="ident">LdFalse</span>,
+    <span class="ident">LdConst</span>(<span class="ident">ConstantName</span>),
     <span class="ident">CopyLoc</span>(<span class="ident">Var</span>),
     <span class="ident">MoveLoc</span>(<span class="ident">Var</span>),
     <span class="ident">StLoc</span>(<span class="ident">Var</span>),
@@ -2540,11 +2650,13 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">imports</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ImportDefinition</span><span class="op">&gt;</span>,
         <span class="ident">explicit_dependency_declarations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ModuleDependency</span><span class="op">&gt;</span>,
+        <span class="ident">constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Constant</span><span class="op">&gt;</span>,
         <span class="ident">main</span>: <span class="ident">Function</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="ident">Script</span> {
             <span class="ident">imports</span>,
             <span class="ident">explicit_dependency_declarations</span>,
+            <span class="ident">constants</span>,
             <span class="ident">main</span>,
         }
     }
@@ -2630,6 +2742,7 @@
         <span class="ident">imports</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ImportDefinition</span><span class="op">&gt;</span>,
         <span class="ident">explicit_dependency_declarations</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ModuleDependency</span><span class="op">&gt;</span>,
         <span class="ident">structs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">StructDefinition</span><span class="op">&gt;</span>,
+        <span class="ident">constants</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Constant</span><span class="op">&gt;</span>,
         <span class="ident">functions</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">FunctionName</span>, <span class="ident">Function</span>)<span class="op">&gt;</span>,
         <span class="ident">synthetics</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SyntheticDefinition</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
@@ -2638,6 +2751,7 @@
             <span class="ident">imports</span>,
             <span class="ident">explicit_dependency_declarations</span>,
             <span class="ident">structs</span>,
+            <span class="ident">constants</span>,
             <span class="ident">functions</span>,
             <span class="ident">synthetics</span>,
         })
@@ -2776,6 +2890,23 @@
             <span class="ident">fields</span>: <span class="ident">StructDefinitionFields</span>::<span class="ident">Native</span>,
             <span class="ident">invariants</span>: <span class="macro">vec</span><span class="macro">!</span>[],
         })
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">ConstantName</span> {
+    <span class="doccomment">/// Create a new `ConstantName` from a string</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">name</span>: <span class="ident">String</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="ident">ConstantName</span>(<span class="ident">name</span>)
+    }
+
+    <span class="doccomment">/// Converts self into a string.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">into_inner</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+        <span class="self">self</span>.<span class="number">0</span>
+    }
+
+    <span class="doccomment">/// Accessor for the name of the function</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">as_inner</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">str</span> {
+        <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="number">0</span>
     }
 }
 
@@ -3098,9 +3229,23 @@
 <span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">Script</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
         <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Script(&quot;</span>)<span class="question-mark">?</span>;
+
         <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Imports(&quot;</span>)<span class="question-mark">?</span>;
         <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">intersperse</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">imports</span>, <span class="string">&quot;, &quot;</span>))<span class="question-mark">?</span>;
         <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;)&quot;</span>)<span class="question-mark">?</span>;
+
+        <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Dependency(&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">for</span> <span class="ident">dependency</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">explicit_dependency_declarations</span> {
+            <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{},&quot;</span>, <span class="ident">dependency</span>)<span class="question-mark">?</span>;
+        }
+        <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;)&quot;</span>)<span class="question-mark">?</span>;
+
+        <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Constants(&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">for</span> <span class="ident">constant</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">constants</span> {
+            <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{};&quot;</span>, <span class="ident">constant</span>)<span class="question-mark">?</span>;
+        }
+        <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;)&quot;</span>)<span class="question-mark">?</span>;
+
         <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Main(&quot;</span>)<span class="question-mark">?</span>;
         <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="ident">main</span>)<span class="question-mark">?</span>;
         <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;)&quot;</span>)<span class="question-mark">?</span>;
@@ -3149,6 +3294,12 @@
         <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Structs(&quot;</span>)<span class="question-mark">?</span>;
         <span class="kw">for</span> <span class="ident">struct_def</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">structs</span> {
             <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}, &quot;</span>, <span class="ident">struct_def</span>)<span class="question-mark">?</span>;
+        }
+        <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;)&quot;</span>)<span class="question-mark">?</span>;
+
+        <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;Constants(&quot;</span>)<span class="question-mark">?</span>;
+        <span class="kw">for</span> <span class="ident">constant</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">constants</span> {
+            <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{};&quot;</span>, <span class="ident">constant</span>)<span class="question-mark">?</span>;
         }
         <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;)&quot;</span>)<span class="question-mark">?</span>;
 
@@ -3219,6 +3370,16 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">Constant</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
+        <span class="macro">write</span><span class="macro">!</span>(
+            <span class="ident">f</span>,
+            <span class="string">&quot;const {}: {} = {:?}&quot;</span>,
+            <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">name</span>.<span class="number">0</span>, <span class="self">self</span>.<span class="ident">signature</span>, <span class="self">self</span>.<span class="ident">value</span>
+        )
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">Function_</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
         <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{} ({})&quot;</span>, <span class="self">self</span>.<span class="ident">signature</span>, <span class="self">self</span>.<span class="ident">body</span>)
@@ -3238,6 +3399,12 @@
 }
 
 <span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">FunctionName</span> {
+    <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
+        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">ConstantName</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span><span class="op">&lt;</span><span class="lifetime">&#39;_</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
         <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="number">0</span>)
     }
@@ -3622,6 +3789,7 @@
             <span class="ident">Bytecode_</span>::<span class="ident">LdAddr</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;LdAddr {}&quot;</span>, <span class="ident">a</span>),
             <span class="ident">Bytecode_</span>::<span class="ident">LdTrue</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;LdTrue&quot;</span>),
             <span class="ident">Bytecode_</span>::<span class="ident">LdFalse</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;LdFalse&quot;</span>),
+            <span class="ident">Bytecode_</span>::<span class="ident">LdConst</span>(<span class="ident">n</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;LdConst({})&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">n</span>.<span class="number">0</span>),
             <span class="ident">Bytecode_</span>::<span class="ident">CopyLoc</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;CopyLoc {}&quot;</span>, <span class="ident">v</span>),
             <span class="ident">Bytecode_</span>::<span class="ident">MoveLoc</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;MoveLoc {}&quot;</span>, <span class="ident">v</span>),
             <span class="ident">Bytecode_</span>::<span class="ident">StLoc</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;StLoc {}&quot;</span>, <span class="ident">v</span>),

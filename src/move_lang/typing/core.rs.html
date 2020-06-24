@@ -1388,6 +1388,74 @@
 <span id="1388">1388</span>
 <span id="1389">1389</span>
 <span id="1390">1390</span>
+<span id="1391">1391</span>
+<span id="1392">1392</span>
+<span id="1393">1393</span>
+<span id="1394">1394</span>
+<span id="1395">1395</span>
+<span id="1396">1396</span>
+<span id="1397">1397</span>
+<span id="1398">1398</span>
+<span id="1399">1399</span>
+<span id="1400">1400</span>
+<span id="1401">1401</span>
+<span id="1402">1402</span>
+<span id="1403">1403</span>
+<span id="1404">1404</span>
+<span id="1405">1405</span>
+<span id="1406">1406</span>
+<span id="1407">1407</span>
+<span id="1408">1408</span>
+<span id="1409">1409</span>
+<span id="1410">1410</span>
+<span id="1411">1411</span>
+<span id="1412">1412</span>
+<span id="1413">1413</span>
+<span id="1414">1414</span>
+<span id="1415">1415</span>
+<span id="1416">1416</span>
+<span id="1417">1417</span>
+<span id="1418">1418</span>
+<span id="1419">1419</span>
+<span id="1420">1420</span>
+<span id="1421">1421</span>
+<span id="1422">1422</span>
+<span id="1423">1423</span>
+<span id="1424">1424</span>
+<span id="1425">1425</span>
+<span id="1426">1426</span>
+<span id="1427">1427</span>
+<span id="1428">1428</span>
+<span id="1429">1429</span>
+<span id="1430">1430</span>
+<span id="1431">1431</span>
+<span id="1432">1432</span>
+<span id="1433">1433</span>
+<span id="1434">1434</span>
+<span id="1435">1435</span>
+<span id="1436">1436</span>
+<span id="1437">1437</span>
+<span id="1438">1438</span>
+<span id="1439">1439</span>
+<span id="1440">1440</span>
+<span id="1441">1441</span>
+<span id="1442">1442</span>
+<span id="1443">1443</span>
+<span id="1444">1444</span>
+<span id="1445">1445</span>
+<span id="1446">1446</span>
+<span id="1447">1447</span>
+<span id="1448">1448</span>
+<span id="1449">1449</span>
+<span id="1450">1450</span>
+<span id="1451">1451</span>
+<span id="1452">1452</span>
+<span id="1453">1453</span>
+<span id="1454">1454</span>
+<span id="1455">1455</span>
+<span id="1456">1456</span>
+<span id="1457">1457</span>
+<span id="1458">1458</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1399,8 +1467,8 @@
         <span class="ident">Type</span>, <span class="ident">TypeName</span>, <span class="ident">TypeName_</span>, <span class="ident">Type_</span>,
     },
     <span class="ident">parser</span>::<span class="ident">ast</span>::{
-        <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">Kind</span>, <span class="ident">Kind_</span>, <span class="ident">ModuleIdent</span>, <span class="ident">ResourceLoc</span>, <span class="ident">StructName</span>,
-        <span class="ident">Var</span>,
+        <span class="ident">ConstantName</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">Kind</span>, <span class="ident">Kind_</span>, <span class="ident">ModuleIdent</span>,
+        <span class="ident">ResourceLoc</span>, <span class="ident">StructName</span>, <span class="ident">Var</span>,
     },
     <span class="ident">shared</span>::{<span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>, <span class="kw-2">*</span>},
 };
@@ -1436,9 +1504,15 @@
     <span class="kw">pub</span> <span class="ident">acquires</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
 }
 
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ConstantInfo</span> {
+    <span class="kw">pub</span> <span class="ident">defined_loc</span>: <span class="ident">Loc</span>,
+    <span class="kw">pub</span> <span class="ident">signature</span>: <span class="ident">Type</span>,
+}
+
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">ModuleInfo</span> {
     <span class="kw">pub</span> <span class="ident">structs</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">StructDefinition</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">functions</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">FunctionName</span>, <span class="ident">FunctionInfo</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">constants</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ConstantName</span>, <span class="ident">ConstantInfo</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Context</span> {
@@ -1446,6 +1520,7 @@
 
     <span class="kw">pub</span> <span class="ident">current_module</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">current_function</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">FunctionName</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">current_script_constants</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ConstantName</span>, <span class="ident">ConstantInfo</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">return_type</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>,
     <span class="ident">locals</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">Var</span>, <span class="ident">Type</span><span class="op">&gt;</span>,
 
@@ -1468,12 +1543,21 @@
                 <span class="ident">signature</span>: <span class="ident">fdef</span>.<span class="ident">signature</span>.<span class="ident">clone</span>(),
                 <span class="ident">acquires</span>: <span class="ident">fdef</span>.<span class="ident">acquires</span>.<span class="ident">clone</span>(),
             });
-            <span class="ident">ModuleInfo</span> { <span class="ident">structs</span>, <span class="ident">functions</span> }
+            <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">mdef</span>.<span class="ident">constants</span>.<span class="ident">ref_map</span>(<span class="op">|</span><span class="ident">cname</span>, <span class="ident">cdef</span><span class="op">|</span> <span class="ident">ConstantInfo</span> {
+                <span class="ident">defined_loc</span>: <span class="ident">cname</span>.<span class="ident">loc</span>(),
+                <span class="ident">signature</span>: <span class="ident">cdef</span>.<span class="ident">signature</span>.<span class="ident">clone</span>(),
+            });
+            <span class="ident">ModuleInfo</span> {
+                <span class="ident">structs</span>,
+                <span class="ident">functions</span>,
+                <span class="ident">constants</span>,
+            }
         });
         <span class="ident">Context</span> {
             <span class="ident">subst</span>: <span class="ident">Subst</span>::<span class="ident">empty</span>(),
             <span class="ident">current_module</span>: <span class="prelude-val">None</span>,
             <span class="ident">current_function</span>: <span class="prelude-val">None</span>,
+            <span class="ident">current_script_constants</span>: <span class="prelude-val">None</span>,
             <span class="ident">return_type</span>: <span class="prelude-val">None</span>,
             <span class="ident">constraints</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">errors</span>,
@@ -1486,10 +1570,23 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reset_for_module_item</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
         <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="self">self</span>.<span class="ident">in_loop</span>, <span class="string">&quot;ICE in_loop should be reset after the loop&quot;</span>);
+        <span class="macro">assert</span><span class="macro">!</span>(
+            <span class="self">self</span>.<span class="ident">break_type</span>.<span class="ident">is_none</span>(),
+            <span class="string">&quot;ICE in_loop should be reset after the loop&quot;</span>
+        );
         <span class="self">self</span>.<span class="ident">return_type</span> <span class="op">=</span> <span class="prelude-val">None</span>;
         <span class="self">self</span>.<span class="ident">locals</span> <span class="op">=</span> <span class="ident">UniqueMap</span>::<span class="ident">new</span>();
         <span class="self">self</span>.<span class="ident">subst</span> <span class="op">=</span> <span class="ident">Subst</span>::<span class="ident">empty</span>();
         <span class="self">self</span>.<span class="ident">constraints</span> <span class="op">=</span> <span class="ident">Constraints</span>::<span class="ident">new</span>();
+        <span class="self">self</span>.<span class="ident">current_function</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">bind_script_constants</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">constants</span>: <span class="kw-2">&amp;</span><span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ConstantName</span>, <span class="ident">N</span>::<span class="ident">Constant</span><span class="op">&gt;</span>) {
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="self">self</span>.<span class="ident">current_script_constants</span>.<span class="ident">is_none</span>());
+        <span class="self">self</span>.<span class="ident">current_script_constants</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">constants</span>.<span class="ident">ref_map</span>(<span class="op">|</span><span class="ident">cname</span>, <span class="ident">cdef</span><span class="op">|</span> <span class="ident">ConstantInfo</span> {
+            <span class="ident">defined_loc</span>: <span class="ident">cname</span>.<span class="ident">loc</span>(),
+            <span class="ident">signature</span>: <span class="ident">cdef</span>.<span class="ident">signature</span>.<span class="ident">clone</span>(),
+        }));
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">error</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">e</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Loc</span>, <span class="kw">impl</span> <span class="ident">Into</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>)<span class="op">&gt;</span>) {
@@ -1656,6 +1753,14 @@
             .<span class="ident">functions</span>
             .<span class="ident">get</span>(<span class="ident">n</span>)
             .<span class="ident">expect</span>(<span class="string">&quot;ICE should have failed in naming&quot;</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">constant_info</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">m_opt</span>: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span><span class="op">&gt;</span>, <span class="ident">n</span>: <span class="kw-2">&amp;</span><span class="ident">ConstantName</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">ConstantInfo</span> {
+        <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">m_opt</span> {
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">current_script_constants</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>(),
+            <span class="prelude-val">Some</span>(<span class="ident">m</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module_info</span>(<span class="ident">m</span>).<span class="ident">constants</span>,
+        };
+        <span class="ident">constants</span>.<span class="ident">get</span>(<span class="ident">n</span>).<span class="ident">expect</span>(<span class="string">&quot;ICE should have failed in naming&quot;</span>)
     }
 }
 
@@ -1983,6 +2088,37 @@
             <span class="ident">subst_tparams</span>(<span class="ident">tparam_subst</span>, <span class="ident">field_ty</span>)
         }
     }
+}
+
+<span class="comment">//**************************************************************************************************</span>
+<span class="comment">// Constants</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_constant_type</span>(
+    <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
+    <span class="ident">loc</span>: <span class="ident">Loc</span>,
+    <span class="ident">m</span>: <span class="kw-2">&amp;</span><span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span><span class="op">&gt;</span>,
+    <span class="ident">c</span>: <span class="kw-2">&amp;</span><span class="ident">ConstantName</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Type</span> {
+    <span class="kw">let</span> <span class="ident">in_current_module</span> <span class="op">=</span> <span class="ident">m</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">current_module</span>;
+    <span class="kw">let</span> (<span class="ident">defined_loc</span>, <span class="ident">signature</span>) <span class="op">=</span> {
+        <span class="kw">let</span> <span class="ident">ConstantInfo</span> {
+            <span class="ident">defined_loc</span>,
+            <span class="ident">signature</span>,
+        } <span class="op">=</span> <span class="ident">context</span>.<span class="ident">constant_info</span>(<span class="ident">m</span>, <span class="ident">c</span>);
+        (<span class="kw-2">*</span><span class="ident">defined_loc</span>, <span class="ident">signature</span>.<span class="ident">clone</span>())
+    };
+    <span class="kw">if</span> <span class="op">!</span><span class="ident">in_current_module</span> {
+        <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">m</span> {
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid access of &#39;{}&#39;&quot;</span>, <span class="ident">c</span>),
+            <span class="prelude-val">Some</span>(<span class="ident">mident</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid access of &#39;{}::{}&#39;&quot;</span>, <span class="ident">mident</span>, <span class="ident">c</span>),
+        };
+        <span class="kw">let</span> <span class="ident">internal_msg</span> <span class="op">=</span> <span class="string">&quot;Constants are internal to their module, and cannot can be accessed \
+                            outside of their module&quot;</span>;
+        <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">loc</span>, <span class="ident">msg</span>), (<span class="ident">defined_loc</span>, <span class="ident">internal_msg</span>.<span class="ident">into</span>())]);
+    }
+
+    <span class="ident">signature</span>
 }
 
 <span class="comment">//**************************************************************************************************</span>

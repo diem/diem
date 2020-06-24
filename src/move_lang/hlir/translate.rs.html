@@ -1638,6 +1638,59 @@
 <span id="1638">1638</span>
 <span id="1639">1639</span>
 <span id="1640">1640</span>
+<span id="1641">1641</span>
+<span id="1642">1642</span>
+<span id="1643">1643</span>
+<span id="1644">1644</span>
+<span id="1645">1645</span>
+<span id="1646">1646</span>
+<span id="1647">1647</span>
+<span id="1648">1648</span>
+<span id="1649">1649</span>
+<span id="1650">1650</span>
+<span id="1651">1651</span>
+<span id="1652">1652</span>
+<span id="1653">1653</span>
+<span id="1654">1654</span>
+<span id="1655">1655</span>
+<span id="1656">1656</span>
+<span id="1657">1657</span>
+<span id="1658">1658</span>
+<span id="1659">1659</span>
+<span id="1660">1660</span>
+<span id="1661">1661</span>
+<span id="1662">1662</span>
+<span id="1663">1663</span>
+<span id="1664">1664</span>
+<span id="1665">1665</span>
+<span id="1666">1666</span>
+<span id="1667">1667</span>
+<span id="1668">1668</span>
+<span id="1669">1669</span>
+<span id="1670">1670</span>
+<span id="1671">1671</span>
+<span id="1672">1672</span>
+<span id="1673">1673</span>
+<span id="1674">1674</span>
+<span id="1675">1675</span>
+<span id="1676">1676</span>
+<span id="1677">1677</span>
+<span id="1678">1678</span>
+<span id="1679">1679</span>
+<span id="1680">1680</span>
+<span id="1681">1681</span>
+<span id="1682">1682</span>
+<span id="1683">1683</span>
+<span id="1684">1684</span>
+<span id="1685">1685</span>
+<span id="1686">1686</span>
+<span id="1687">1687</span>
+<span id="1688">1688</span>
+<span id="1689">1689</span>
+<span id="1690">1690</span>
+<span id="1691">1691</span>
+<span id="1692">1692</span>
+<span id="1693">1693</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1647,7 +1700,7 @@
     <span class="ident">expansion</span>::<span class="ident">ast</span>::{<span class="ident">Fields</span>, <span class="ident">Value_</span>},
     <span class="ident">hlir</span>::<span class="ident">ast</span>::{<span class="self">self</span> <span class="kw">as</span> <span class="ident">H</span>, <span class="ident">Block</span>},
     <span class="ident">naming</span>::<span class="ident">ast</span> <span class="kw">as</span> <span class="ident">N</span>,
-    <span class="ident">parser</span>::<span class="ident">ast</span>::{<span class="ident">BinOp_</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">Kind_</span>, <span class="ident">ModuleIdent</span>, <span class="ident">StructName</span>, <span class="ident">Var</span>},
+    <span class="ident">parser</span>::<span class="ident">ast</span>::{<span class="ident">BinOp_</span>, <span class="ident">ConstantName</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">Kind_</span>, <span class="ident">ModuleIdent</span>, <span class="ident">StructName</span>, <span class="ident">Var</span>},
     <span class="ident">shared</span>::{<span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>, <span class="kw-2">*</span>},
     <span class="ident">typing</span>::<span class="ident">ast</span> <span class="kw">as</span> <span class="ident">T</span>,
 };
@@ -1819,17 +1872,19 @@
     <span class="kw">let</span> <span class="ident">dependency_order</span> <span class="op">=</span> <span class="ident">mdef</span>.<span class="ident">dependency_order</span>;
 
     <span class="kw">let</span> <span class="ident">structs</span> <span class="op">=</span> <span class="ident">mdef</span>.<span class="ident">structs</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">name</span>, <span class="ident">s</span><span class="op">|</span> <span class="ident">struct_def</span>(<span class="ident">context</span>, <span class="ident">name</span>, <span class="ident">s</span>));
-
     <span class="ident">context</span>.<span class="ident">add_struct_fields</span>(<span class="kw-2">&amp;</span><span class="ident">structs</span>);
-    <span class="kw">let</span> <span class="ident">functions</span> <span class="op">=</span> <span class="ident">mdef</span>.<span class="ident">functions</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">name</span>, <span class="ident">f</span><span class="op">|</span> <span class="ident">function</span>(<span class="ident">context</span>, <span class="ident">name</span>, <span class="ident">f</span>));
-    <span class="ident">context</span>.<span class="ident">structs</span> <span class="op">=</span> <span class="ident">UniqueMap</span>::<span class="ident">new</span>();
 
+    <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">mdef</span>.<span class="ident">constants</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">name</span>, <span class="ident">c</span><span class="op">|</span> <span class="ident">constant</span>(<span class="ident">context</span>, <span class="ident">name</span>, <span class="ident">c</span>));
+    <span class="kw">let</span> <span class="ident">functions</span> <span class="op">=</span> <span class="ident">mdef</span>.<span class="ident">functions</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">name</span>, <span class="ident">f</span><span class="op">|</span> <span class="ident">function</span>(<span class="ident">context</span>, <span class="ident">name</span>, <span class="ident">f</span>));
+
+    <span class="ident">context</span>.<span class="ident">structs</span> <span class="op">=</span> <span class="ident">UniqueMap</span>::<span class="ident">new</span>();
     (
         <span class="ident">module_ident</span>,
         <span class="ident">H</span>::<span class="ident">ModuleDefinition</span> {
             <span class="ident">is_source_module</span>,
             <span class="ident">dependency_order</span>,
             <span class="ident">structs</span>,
+            <span class="ident">constants</span>,
             <span class="ident">functions</span>,
         },
     )
@@ -1848,12 +1903,15 @@
 <span class="kw">fn</span> <span class="ident">script</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">tscript</span>: <span class="ident">T</span>::<span class="ident">Script</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">H</span>::<span class="ident">Script</span> {
     <span class="kw">let</span> <span class="ident">T</span>::<span class="ident">Script</span> {
         <span class="ident">loc</span>,
+        <span class="ident">constants</span>: <span class="ident">tconstants</span>,
         <span class="ident">function_name</span>,
         <span class="ident">function</span>: <span class="ident">tfunction</span>,
     } <span class="op">=</span> <span class="ident">tscript</span>;
+    <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">tconstants</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">name</span>, <span class="ident">c</span><span class="op">|</span> <span class="ident">constant</span>(<span class="ident">context</span>, <span class="ident">name</span>, <span class="ident">c</span>));
     <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="ident">function</span>(<span class="ident">context</span>, <span class="ident">function_name</span>.<span class="ident">clone</span>(), <span class="ident">tfunction</span>);
     <span class="ident">H</span>::<span class="ident">Script</span> {
         <span class="ident">loc</span>,
+        <span class="ident">constants</span>,
         <span class="ident">function_name</span>,
         <span class="ident">function</span>,
     }
@@ -1909,29 +1967,69 @@
             <span class="ident">HB</span>::<span class="ident">Native</span>
         }
         <span class="ident">TB</span>::<span class="ident">Defined</span>(<span class="ident">seq</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">VecDeque</span>::<span class="ident">new</span>();
-            <span class="ident">context</span>.<span class="ident">signature</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">sig</span>.<span class="ident">clone</span>());
-            <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">context</span>.<span class="ident">has_return_abort</span>);
-            <span class="kw">let</span> <span class="ident">final_exp</span> <span class="op">=</span> <span class="ident">block</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">body</span>, <span class="ident">loc</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">sig</span>.<span class="ident">return_type</span>), <span class="ident">seq</span>);
-            <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">final_exp</span>.<span class="ident">exp</span>.<span class="ident">value</span> {
-                <span class="ident">H</span>::<span class="ident">UnannotatedExp_</span>::<span class="ident">Unreachable</span> <span class="op">=</span><span class="op">&gt;</span> (),
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">use</span> <span class="ident">H</span>::{<span class="ident">Command_</span> <span class="kw">as</span> <span class="ident">C</span>, <span class="ident">Statement_</span> <span class="kw">as</span> <span class="ident">S</span>};
-                    <span class="kw">let</span> <span class="ident">eloc</span> <span class="op">=</span> <span class="ident">final_exp</span>.<span class="ident">exp</span>.<span class="ident">loc</span>;
-                    <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">C</span>::<span class="ident">Return</span>(<span class="ident">final_exp</span>));
-                    <span class="ident">body</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">S</span>::<span class="ident">Command</span>(<span class="ident">ret</span>)))
-                }
-            }
-            <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">locals</span>, <span class="ident">used</span>) <span class="op">=</span> <span class="ident">context</span>.<span class="ident">extract_function_locals</span>();
-            <span class="kw">let</span> <span class="ident">unused</span> <span class="op">=</span> <span class="ident">check_unused_locals</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">locals</span>, <span class="ident">used</span>);
-            <span class="ident">check_trailing_unit</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">body</span>);
-            <span class="ident">remove_unused_bindings</span>(<span class="kw-2">&amp;</span><span class="ident">unused</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">body</span>);
-            <span class="ident">context</span>.<span class="ident">signature</span> <span class="op">=</span> <span class="prelude-val">None</span>;
-            <span class="ident">context</span>.<span class="ident">has_return_abort</span> <span class="op">=</span> <span class="bool-val">false</span>;
+            <span class="kw">let</span> (<span class="ident">locals</span>, <span class="ident">body</span>) <span class="op">=</span> <span class="ident">function_body_defined</span>(<span class="ident">context</span>, <span class="ident">sig</span>, <span class="ident">loc</span>, <span class="ident">seq</span>);
             <span class="ident">HB</span>::<span class="ident">Defined</span> { <span class="ident">locals</span>, <span class="ident">body</span> }
         }
     };
     <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">b_</span>)
+}
+
+<span class="kw">fn</span> <span class="ident">function_body_defined</span>(
+    <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
+    <span class="ident">signature</span>: <span class="kw-2">&amp;</span><span class="ident">H</span>::<span class="ident">FunctionSignature</span>,
+    <span class="ident">loc</span>: <span class="ident">Loc</span>,
+    <span class="ident">seq</span>: <span class="ident">T</span>::<span class="ident">Sequence</span>,
+) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">Var</span>, <span class="ident">H</span>::<span class="ident">SingleType</span><span class="op">&gt;</span>, <span class="ident">Block</span>) {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">body</span> <span class="op">=</span> <span class="ident">VecDeque</span>::<span class="ident">new</span>();
+    <span class="ident">context</span>.<span class="ident">signature</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">signature</span>.<span class="ident">clone</span>());
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="op">!</span><span class="ident">context</span>.<span class="ident">has_return_abort</span>);
+    <span class="kw">let</span> <span class="ident">final_exp</span> <span class="op">=</span> <span class="ident">block</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">body</span>, <span class="ident">loc</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">signature</span>.<span class="ident">return_type</span>), <span class="ident">seq</span>);
+    <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">final_exp</span>.<span class="ident">exp</span>.<span class="ident">value</span> {
+        <span class="ident">H</span>::<span class="ident">UnannotatedExp_</span>::<span class="ident">Unreachable</span> <span class="op">=</span><span class="op">&gt;</span> (),
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">use</span> <span class="ident">H</span>::{<span class="ident">Command_</span> <span class="kw">as</span> <span class="ident">C</span>, <span class="ident">Statement_</span> <span class="kw">as</span> <span class="ident">S</span>};
+            <span class="kw">let</span> <span class="ident">eloc</span> <span class="op">=</span> <span class="ident">final_exp</span>.<span class="ident">exp</span>.<span class="ident">loc</span>;
+            <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">C</span>::<span class="ident">Return</span>(<span class="ident">final_exp</span>));
+            <span class="ident">body</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">S</span>::<span class="ident">Command</span>(<span class="ident">ret</span>)))
+        }
+    }
+    <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">locals</span>, <span class="ident">used</span>) <span class="op">=</span> <span class="ident">context</span>.<span class="ident">extract_function_locals</span>();
+    <span class="kw">let</span> <span class="ident">unused</span> <span class="op">=</span> <span class="ident">check_unused_locals</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">locals</span>, <span class="ident">used</span>);
+    <span class="ident">check_trailing_unit</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">body</span>);
+    <span class="ident">remove_unused_bindings</span>(<span class="kw-2">&amp;</span><span class="ident">unused</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">body</span>);
+    <span class="ident">context</span>.<span class="ident">signature</span> <span class="op">=</span> <span class="prelude-val">None</span>;
+    <span class="ident">context</span>.<span class="ident">has_return_abort</span> <span class="op">=</span> <span class="bool-val">false</span>;
+    (<span class="ident">locals</span>, <span class="ident">body</span>)
+}
+
+<span class="comment">//**************************************************************************************************</span>
+<span class="comment">// Constants</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="kw">fn</span> <span class="ident">constant</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">_name</span>: <span class="ident">ConstantName</span>, <span class="ident">cdef</span>: <span class="ident">T</span>::<span class="ident">Constant</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">H</span>::<span class="ident">Constant</span> {
+    <span class="kw">let</span> <span class="ident">T</span>::<span class="ident">Constant</span> {
+        <span class="ident">loc</span>,
+        <span class="ident">signature</span>: <span class="ident">tsignature</span>,
+        <span class="ident">value</span>: <span class="ident">tvalue</span>,
+    } <span class="op">=</span> <span class="ident">cdef</span>;
+    <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">base_type</span>(<span class="ident">context</span>, <span class="ident">tsignature</span>);
+    <span class="kw">let</span> <span class="ident">eloc</span> <span class="op">=</span> <span class="ident">tvalue</span>.<span class="ident">exp</span>.<span class="ident">loc</span>;
+    <span class="kw">let</span> <span class="ident">tseq</span> <span class="op">=</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">v</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">Sequence</span>::<span class="ident">new</span>();
+        <span class="ident">v</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">T</span>::<span class="ident">SequenceItem_</span>::<span class="ident">Seq</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">tvalue</span>))));
+        <span class="ident">v</span>
+    };
+    <span class="kw">let</span> <span class="ident">function_signature</span> <span class="op">=</span> <span class="ident">H</span>::<span class="ident">FunctionSignature</span> {
+        <span class="ident">type_parameters</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+        <span class="ident">parameters</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+        <span class="ident">return_type</span>: <span class="ident">H</span>::<span class="ident">Type_</span>::<span class="ident">base</span>(<span class="ident">signature</span>.<span class="ident">clone</span>()),
+    };
+    <span class="kw">let</span> (<span class="ident">locals</span>, <span class="ident">body</span>) <span class="op">=</span> <span class="ident">function_body_defined</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="ident">function_signature</span>, <span class="ident">eloc</span>, <span class="ident">tseq</span>);
+    <span class="ident">H</span>::<span class="ident">Constant</span> {
+        <span class="ident">loc</span>,
+        <span class="ident">signature</span>,
+        <span class="ident">value</span>: (<span class="ident">locals</span>, <span class="ident">body</span>),
+    }
 }
 
 <span class="comment">//**************************************************************************************************</span>
@@ -2456,6 +2554,10 @@
         <span class="comment">// All other expressiosn</span>
         <span class="ident">TE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">HE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span> },
         <span class="ident">TE</span>::<span class="ident">Value</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">HE</span>::<span class="ident">Value</span>(<span class="ident">v</span>),
+        <span class="ident">TE</span>::<span class="ident">Constant</span>(<span class="ident">_m</span>, <span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="comment">// Currently only private constants exist</span>
+            <span class="ident">HE</span>::<span class="ident">Constant</span>(<span class="ident">c</span>)
+        }
         <span class="ident">TE</span>::<span class="ident">InferredNum</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;ICE unexpanded inferred num&quot;</span>),
         <span class="ident">TE</span>::<span class="ident">Move</span> { <span class="ident">from_user</span>, <span class="ident">var</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">HE</span>::<span class="ident">Move</span> {
             <span class="ident">from_user</span>,
@@ -3013,7 +3115,11 @@
     <span class="kw">use</span> <span class="ident">T</span>::<span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">TE</span>;
     <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">e</span>.<span class="ident">exp</span>.<span class="ident">value</span> {
         <span class="ident">TE</span>::<span class="ident">Use</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">InferredNum</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;ICE should have been expanded&quot;</span>),
-        <span class="ident">TE</span>::<span class="ident">Value</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">Move</span> { .. } <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">Copy</span> { .. } <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">UnresolvedError</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
+        <span class="ident">TE</span>::<span class="ident">Value</span>(<span class="kw">_</span>)
+        <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">Constant</span>(<span class="kw">_</span>, <span class="kw">_</span>)
+        <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">Move</span> { .. }
+        <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">Copy</span> { .. }
+        <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">UnresolvedError</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
 
         <span class="comment">// TODO might want to case ModuleCall for fake natives</span>
         <span class="ident">TE</span>::<span class="ident">ModuleCall</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,

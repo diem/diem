@@ -2151,6 +2151,39 @@
 <span id="2151">2151</span>
 <span id="2152">2152</span>
 <span id="2153">2153</span>
+<span id="2154">2154</span>
+<span id="2155">2155</span>
+<span id="2156">2156</span>
+<span id="2157">2157</span>
+<span id="2158">2158</span>
+<span id="2159">2159</span>
+<span id="2160">2160</span>
+<span id="2161">2161</span>
+<span id="2162">2162</span>
+<span id="2163">2163</span>
+<span id="2164">2164</span>
+<span id="2165">2165</span>
+<span id="2166">2166</span>
+<span id="2167">2167</span>
+<span id="2168">2168</span>
+<span id="2169">2169</span>
+<span id="2170">2170</span>
+<span id="2171">2171</span>
+<span id="2172">2172</span>
+<span id="2173">2173</span>
+<span id="2174">2174</span>
+<span id="2175">2175</span>
+<span id="2176">2176</span>
+<span id="2177">2177</span>
+<span id="2178">2178</span>
+<span id="2179">2179</span>
+<span id="2180">2180</span>
+<span id="2181">2181</span>
+<span id="2182">2182</span>
+<span id="2183">2183</span>
+<span id="2184">2184</span>
+<span id="2185">2185</span>
+<span id="2186">2186</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -3627,6 +3660,32 @@
 }
 
 <span class="comment">//**************************************************************************************************</span>
+<span class="comment">// Constants</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="comment">// Parse a constant:</span>
+<span class="comment">//      ConstantDecl = &quot;const&quot; &lt;Identifier&gt; &quot;:&quot; &lt;Type&gt; &quot;=&quot; &lt;Exp&gt; &quot;;&quot;</span>
+<span class="kw">fn</span> <span class="ident">parse_constant</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>(<span class="ident">tokens</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Constant</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
+    <span class="ident">tokens</span>.<span class="ident">match_doc_comments</span>();
+    <span class="kw">let</span> <span class="ident">start_loc</span> <span class="op">=</span> <span class="ident">tokens</span>.<span class="ident">start_loc</span>();
+
+    <span class="ident">consume_token</span>(<span class="ident">tokens</span>, <span class="ident">Tok</span>::<span class="ident">Const</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">ConstantName</span>(<span class="ident">parse_identifier</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>);
+    <span class="ident">consume_token</span>(<span class="ident">tokens</span>, <span class="ident">Tok</span>::<span class="ident">Colon</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">parse_type</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>;
+    <span class="ident">consume_token</span>(<span class="ident">tokens</span>, <span class="ident">Tok</span>::<span class="ident">Equal</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">parse_exp</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>;
+    <span class="ident">consume_token</span>(<span class="ident">tokens</span>, <span class="ident">Tok</span>::<span class="ident">Semicolon</span>)<span class="question-mark">?</span>;
+    <span class="kw">let</span> <span class="ident">loc</span> <span class="op">=</span> <span class="ident">make_loc</span>(<span class="ident">tokens</span>.<span class="ident">file_name</span>(), <span class="ident">start_loc</span>, <span class="ident">tokens</span>.<span class="ident">previous_end_loc</span>());
+    <span class="prelude-val">Ok</span>(<span class="ident">Constant</span> {
+        <span class="ident">loc</span>,
+        <span class="ident">name</span>,
+        <span class="ident">signature</span>,
+        <span class="ident">value</span>,
+    })
+}
+
+<span class="comment">//**************************************************************************************************</span>
 <span class="comment">// AddressBlock</span>
 <span class="comment">//**************************************************************************************************</span>
 
@@ -3738,7 +3797,7 @@
 <span class="comment">//      Module =</span>
 <span class="comment">//          &lt;DocComments&gt; &quot;module&quot; &lt;ModuleName&gt; &quot;{&quot;</span>
 <span class="comment">//              &lt;UseDecl&gt;*</span>
-<span class="comment">//              ( &lt;StructDefinition&gt; | &lt;FunctionDecl&gt; | &lt;Spec&gt; )*</span>
+<span class="comment">//              ( &lt;ConstantDecl&gt; | &lt;StructDefinition&gt; | &lt;FunctionDecl&gt; | &lt;Spec&gt; )*</span>
 <span class="comment">//          &quot;}&quot;</span>
 <span class="kw">fn</span> <span class="ident">parse_module</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>(<span class="ident">tokens</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">ModuleDefinition</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
     <span class="ident">tokens</span>.<span class="ident">match_doc_comments</span>();
@@ -3753,6 +3812,7 @@
         <span class="ident">members</span>.<span class="ident">push</span>(<span class="kw">match</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() {
             <span class="ident">Tok</span>::<span class="ident">Spec</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ModuleMember</span>::<span class="ident">Spec</span>(<span class="ident">parse_spec_block</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>),
             <span class="ident">Tok</span>::<span class="ident">Use</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ModuleMember</span>::<span class="ident">Use</span>(<span class="ident">parse_use_decl</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>),
+            <span class="ident">Tok</span>::<span class="ident">Const</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">ModuleMember</span>::<span class="ident">Constant</span>(<span class="ident">parse_constant</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>),
             <span class="comment">// TODO rework parsing modifiers</span>
             <span class="kw">_</span> <span class="kw">if</span> <span class="ident">is_struct_definition</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">ModuleMember</span>::<span class="ident">Struct</span>(<span class="ident">parse_struct_definition</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>)
@@ -3774,6 +3834,7 @@
 <span class="comment">//      Script =</span>
 <span class="comment">//          &quot;script&quot; &quot;{&quot;</span>
 <span class="comment">//              &lt;UseDecl&gt;*</span>
+<span class="comment">//              &lt;ConstantDecl&gt;*</span>
 <span class="comment">//              &lt;MoveFunctionDecl&gt;</span>
 <span class="comment">//          &quot;}&quot;</span>
 <span class="kw">fn</span> <span class="ident">parse_script</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>(<span class="ident">tokens</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Lexer</span><span class="op">&lt;</span><span class="lifetime">&#39;input</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Script</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
@@ -3785,6 +3846,10 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">uses</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
     <span class="kw">while</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">Use</span> {
         <span class="ident">uses</span>.<span class="ident">push</span>(<span class="ident">parse_use_decl</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>);
+    }
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">constants</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="kw">while</span> <span class="ident">tokens</span>.<span class="ident">peek</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">Tok</span>::<span class="ident">Const</span> {
+        <span class="ident">constants</span>.<span class="ident">push</span>(<span class="ident">parse_constant</span>(<span class="ident">tokens</span>)<span class="question-mark">?</span>);
     }
     <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="ident">parse_function_decl</span>(<span class="ident">tokens</span>, <span class="comment">/* allow_native */</span> <span class="bool-val">false</span>)<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">specs</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
@@ -3805,6 +3870,7 @@
     <span class="prelude-val">Ok</span>(<span class="ident">Script</span> {
         <span class="ident">loc</span>,
         <span class="ident">uses</span>,
+        <span class="ident">constants</span>,
         <span class="ident">function</span>,
         <span class="ident">specs</span>,
     })

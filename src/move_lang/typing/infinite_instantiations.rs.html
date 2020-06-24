@@ -410,6 +410,7 @@
 <span id="410">410</span>
 <span id="411">411</span>
 <span id="412">412</span>
+<span id="413">413</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -622,6 +623,7 @@
 
         <span class="ident">E</span>::<span class="ident">Unit</span> { .. }
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Value</span>(<span class="kw">_</span>)
+        <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Constant</span>(<span class="kw">_</span>, <span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Move</span> { .. }
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Copy</span> { .. }
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">BorrowLocal</span>(<span class="kw">_</span>, <span class="kw">_</span>)

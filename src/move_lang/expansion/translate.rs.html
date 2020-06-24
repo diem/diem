@@ -1676,6 +1676,35 @@
 <span id="1676">1676</span>
 <span id="1677">1677</span>
 <span id="1678">1678</span>
+<span id="1679">1679</span>
+<span id="1680">1680</span>
+<span id="1681">1681</span>
+<span id="1682">1682</span>
+<span id="1683">1683</span>
+<span id="1684">1684</span>
+<span id="1685">1685</span>
+<span id="1686">1686</span>
+<span id="1687">1687</span>
+<span id="1688">1688</span>
+<span id="1689">1689</span>
+<span id="1690">1690</span>
+<span id="1691">1691</span>
+<span id="1692">1692</span>
+<span id="1693">1693</span>
+<span id="1694">1694</span>
+<span id="1695">1695</span>
+<span id="1696">1696</span>
+<span id="1697">1697</span>
+<span id="1698">1698</span>
+<span id="1699">1699</span>
+<span id="1700">1700</span>
+<span id="1701">1701</span>
+<span id="1702">1702</span>
+<span id="1703">1703</span>
+<span id="1704">1704</span>
+<span id="1705">1705</span>
+<span id="1706">1706</span>
+<span id="1707">1707</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1688,8 +1717,8 @@
         <span class="ident">byte_string</span>, <span class="ident">hex_string</span>,
     },
     <span class="ident">parser</span>::<span class="ident">ast</span>::{
-        <span class="self">self</span> <span class="kw">as</span> <span class="ident">P</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">Kind</span>, <span class="ident">ModuleIdent</span>, <span class="ident">ModuleIdent_</span>,
-        <span class="ident">ModuleName</span>, <span class="ident">StructName</span>, <span class="ident">Var</span>,
+        <span class="self">self</span> <span class="kw">as</span> <span class="ident">P</span>, <span class="ident">ConstantName</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">Kind</span>, <span class="ident">ModuleIdent</span>,
+        <span class="ident">ModuleIdent_</span>, <span class="ident">ModuleName</span>, <span class="ident">StructName</span>, <span class="ident">Var</span>,
     },
     <span class="ident">shared</span>::{<span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>, <span class="kw-2">*</span>},
 };
@@ -1703,26 +1732,9 @@
 <span class="comment">// Context</span>
 <span class="comment">//**************************************************************************************************</span>
 
-<span class="kw">struct</span> <span class="ident">ModuleMembers</span> {
-    <span class="ident">loc</span>: <span class="ident">Loc</span>,
-    <span class="ident">members</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Name</span>, <span class="ident">ModuleMemberKind</span><span class="op">&gt;</span>,
-}
-
-<span class="kw">impl</span> <span class="ident">ModuleMembers</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">loc</span>: <span class="ident">Loc</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">ModuleMembers</span> {
-            <span class="ident">loc</span>,
-            <span class="ident">members</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
-        }
-    }
-
-    <span class="kw">fn</span> <span class="ident">member_kind</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">Name</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModuleMemberKind</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">members</span>.<span class="ident">get</span>(<span class="ident">name</span>).<span class="ident">cloned</span>()
-    }
-}
-
+<span class="kw">type</span> <span class="ident">ModuleMembers</span> <span class="op">=</span> <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Name</span>, <span class="ident">ModuleMemberKind</span><span class="op">&gt;</span>;
 <span class="kw">struct</span> <span class="ident">Context</span> {
-    <span class="ident">module_members</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span>, <span class="ident">ModuleMembers</span><span class="op">&gt;</span>,
+    <span class="ident">module_members</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span>, <span class="ident">ModuleMembers</span><span class="op">&gt;</span>,
     <span class="ident">errors</span>: <span class="ident">Errors</span>,
     <span class="ident">address</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Address</span><span class="op">&gt;</span>,
     <span class="ident">aliases</span>: <span class="ident">AliasMap</span>,
@@ -1731,7 +1743,7 @@
     <span class="ident">exp_specs</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">SpecId</span>, <span class="ident">E</span>::<span class="ident">SpecBlock</span><span class="op">&gt;</span>,
 }
 <span class="kw">impl</span> <span class="ident">Context</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module_members</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span>, <span class="ident">ModuleMembers</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module_members</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span>, <span class="ident">ModuleMembers</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">module_members</span>,
             <span class="ident">errors</span>: <span class="macro">vec</span><span class="macro">!</span>[],
@@ -1812,7 +1824,7 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">program</span>(<span class="ident">prog</span>: <span class="ident">P</span>::<span class="ident">Program</span>, <span class="ident">sender</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Address</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">E</span>::<span class="ident">Program</span>, <span class="ident">Errors</span>) {
     <span class="kw">let</span> <span class="ident">module_members</span> <span class="op">=</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">members</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">members</span> <span class="op">=</span> <span class="ident">UniqueMap</span>::<span class="ident">new</span>();
         <span class="ident">all_module_members</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">members</span>, <span class="ident">sender</span>, <span class="kw-2">&amp;</span><span class="ident">prog</span>.<span class="ident">lib_definitions</span>);
         <span class="ident">all_module_members</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">members</span>, <span class="ident">sender</span>, <span class="kw-2">&amp;</span><span class="ident">prog</span>.<span class="ident">source_definitions</span>);
         <span class="ident">members</span>
@@ -1942,6 +1954,7 @@
     );
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">functions</span> <span class="op">=</span> <span class="ident">UniqueMap</span>::<span class="ident">new</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">UniqueMap</span>::<span class="ident">new</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">structs</span> <span class="op">=</span> <span class="ident">UniqueMap</span>::<span class="ident">new</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">specs</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
     <span class="kw">for</span> <span class="ident">member</span> <span class="kw">in</span> <span class="ident">members</span> {
@@ -1953,6 +1966,7 @@
                 }
                 <span class="ident">function</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">functions</span>, <span class="ident">f</span>)
             }
+            <span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Constant</span>(<span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">constant</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">constants</span>, <span class="ident">c</span>),
             <span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Struct</span>(<span class="kw-2">mut</span> <span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">is_source_module</span> {
                     <span class="ident">s</span>.<span class="ident">fields</span> <span class="op">=</span> <span class="ident">P</span>::<span class="ident">StructFields</span>::<span class="ident">Native</span>(<span class="ident">s</span>.<span class="ident">loc</span>)
@@ -1968,6 +1982,7 @@
         <span class="ident">loc</span>,
         <span class="ident">is_source_module</span>: <span class="ident">context</span>.<span class="ident">is_source_module</span>,
         <span class="ident">structs</span>,
+        <span class="ident">constants</span>,
         <span class="ident">functions</span>,
         <span class="ident">specs</span>,
     };
@@ -1985,6 +2000,7 @@
     <span class="kw">let</span> <span class="ident">P</span>::<span class="ident">Script</span> {
         <span class="ident">loc</span>,
         <span class="ident">uses</span>,
+        <span class="ident">constants</span>: <span class="ident">pconstants</span>,
         <span class="ident">function</span>: <span class="ident">pfunction</span>,
         <span class="ident">specs</span>: <span class="ident">pspecs</span>,
     } <span class="op">=</span> <span class="ident">pscript</span>;
@@ -1998,6 +2014,11 @@
         <span class="ident">old_aliases</span>.<span class="ident">is_empty</span>(),
         <span class="string">&quot;ICE there should be no aliases entering a script&quot;</span>
     );
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">UniqueMap</span>::<span class="ident">new</span>();
+    <span class="kw">for</span> <span class="ident">c</span> <span class="kw">in</span> <span class="ident">pconstants</span> {
+        <span class="ident">constant</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">constants</span>, <span class="ident">c</span>);
+    }
 
     <span class="kw">let</span> (<span class="ident">function_name</span>, <span class="ident">function</span>) <span class="op">=</span> <span class="ident">function_</span>(<span class="ident">context</span>, <span class="ident">pfunction</span>);
     <span class="kw">if</span> <span class="kw">let</span> <span class="ident">FunctionVisibility</span>::<span class="ident">Public</span>(<span class="ident">loc</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">function</span>.<span class="ident">visibility</span> {
@@ -2016,6 +2037,7 @@
 
     <span class="ident">E</span>::<span class="ident">Script</span> {
         <span class="ident">loc</span>,
+        <span class="ident">constants</span>,
         <span class="ident">function_name</span>,
         <span class="ident">function</span>,
         <span class="ident">specs</span>,
@@ -2027,7 +2049,7 @@
 <span class="comment">//**************************************************************************************************</span>
 
 <span class="kw">fn</span> <span class="ident">all_module_members</span>(
-    <span class="ident">members</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span>, <span class="ident">ModuleMembers</span><span class="op">&gt;</span>,
+    <span class="ident">members</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span>, <span class="ident">ModuleMembers</span><span class="op">&gt;</span>,
     <span class="ident">sender</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Address</span><span class="op">&gt;</span>,
     <span class="ident">defs</span>: <span class="kw-2">&amp;</span>[<span class="ident">P</span>::<span class="ident">Definition</span>],
 ) {
@@ -2045,7 +2067,7 @@
 }
 
 <span class="kw">fn</span> <span class="ident">module_members</span>(
-    <span class="ident">members</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span>, <span class="ident">ModuleMembers</span><span class="op">&gt;</span>,
+    <span class="ident">members</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span>, <span class="ident">ModuleMembers</span><span class="op">&gt;</span>,
     <span class="ident">address</span>: <span class="ident">Address</span>,
     <span class="ident">m</span>: <span class="kw-2">&amp;</span><span class="ident">P</span>::<span class="ident">ModuleDefinition</span>,
 ) {
@@ -2054,34 +2076,27 @@
         <span class="ident">name</span>: <span class="ident">m</span>.<span class="ident">name</span>.<span class="ident">clone</span>(),
     };
     <span class="kw">let</span> <span class="ident">mident</span> <span class="op">=</span> <span class="ident">ModuleIdent</span>(<span class="ident">sp</span>(<span class="ident">m</span>.<span class="ident">name</span>.<span class="ident">loc</span>(), <span class="ident">mident_</span>));
-    <span class="kw">let</span> <span class="ident">cur_members</span> <span class="op">=</span> <span class="ident">members</span>
-        .<span class="ident">entry</span>(<span class="ident">mident</span>)
-        .<span class="ident">or_insert_with</span>(<span class="op">|</span><span class="op">|</span> <span class="ident">ModuleMembers</span>::<span class="ident">new</span>(<span class="ident">m</span>.<span class="ident">name</span>.<span class="ident">loc</span>()));
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cur_members</span> <span class="op">=</span> <span class="ident">members</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">mident</span>).<span class="ident">unwrap_or_else</span>(<span class="ident">ModuleMembers</span>::<span class="ident">new</span>);
     <span class="kw">for</span> <span class="ident">mem</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">m</span>.<span class="ident">members</span> {
         <span class="kw">use</span> <span class="ident">P</span>::{<span class="ident">SpecBlockMember_</span> <span class="kw">as</span> <span class="ident">SBM</span>, <span class="ident">SpecBlockTarget_</span> <span class="kw">as</span> <span class="ident">SBT</span>, <span class="ident">SpecBlock_</span> <span class="kw">as</span> <span class="ident">SB</span>};
         <span class="kw">match</span> <span class="ident">mem</span> {
             <span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Function</span>(<span class="ident">f</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">cur_members</span>
-                    .<span class="ident">members</span>
-                    .<span class="ident">insert</span>(<span class="ident">f</span>.<span class="ident">name</span>.<span class="number">0</span>.<span class="ident">clone</span>(), <span class="ident">ModuleMemberKind</span>::<span class="ident">Function</span>);
+                <span class="ident">cur_members</span>.<span class="ident">insert</span>(<span class="ident">f</span>.<span class="ident">name</span>.<span class="number">0</span>.<span class="ident">clone</span>(), <span class="ident">ModuleMemberKind</span>::<span class="ident">Function</span>);
+            }
+            <span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Constant</span>(<span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">cur_members</span>.<span class="ident">insert</span>(<span class="ident">c</span>.<span class="ident">name</span>.<span class="number">0</span>.<span class="ident">clone</span>(), <span class="ident">ModuleMemberKind</span>::<span class="ident">Constant</span>);
             }
             <span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Struct</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="ident">cur_members</span>
-                    .<span class="ident">members</span>
-                    .<span class="ident">insert</span>(<span class="ident">s</span>.<span class="ident">name</span>.<span class="number">0</span>.<span class="ident">clone</span>(), <span class="ident">ModuleMemberKind</span>::<span class="ident">Struct</span>);
+                <span class="ident">cur_members</span>.<span class="ident">insert</span>(<span class="ident">s</span>.<span class="ident">name</span>.<span class="number">0</span>.<span class="ident">clone</span>(), <span class="ident">ModuleMemberKind</span>::<span class="ident">Struct</span>);
             }
             <span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Spec</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">SB</span> { <span class="ident">target</span>, <span class="ident">members</span>, .. })) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">target</span>.<span class="ident">value</span> {
                 <span class="ident">SBT</span>::<span class="ident">Schema</span>(<span class="ident">n</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="ident">cur_members</span>
-                        .<span class="ident">members</span>
-                        .<span class="ident">insert</span>(<span class="ident">n</span>.<span class="ident">clone</span>(), <span class="ident">ModuleMemberKind</span>::<span class="ident">Schema</span>);
+                    <span class="ident">cur_members</span>.<span class="ident">insert</span>(<span class="ident">n</span>.<span class="ident">clone</span>(), <span class="ident">ModuleMemberKind</span>::<span class="ident">Schema</span>);
                 }
                 <span class="ident">SBT</span>::<span class="ident">Module</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">for</span> <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">smember_</span>) <span class="kw">in</span> <span class="ident">members</span> {
                         <span class="kw">if</span> <span class="kw">let</span> <span class="ident">SBM</span>::<span class="ident">Function</span> { <span class="ident">name</span>, .. } <span class="op">=</span> <span class="ident">smember_</span> {
-                            <span class="ident">cur_members</span>
-                                .<span class="ident">members</span>
-                                .<span class="ident">insert</span>(<span class="ident">name</span>.<span class="number">0</span>.<span class="ident">clone</span>(), <span class="ident">ModuleMemberKind</span>::<span class="ident">Function</span>);
+                            <span class="ident">cur_members</span>.<span class="ident">insert</span>(<span class="ident">name</span>.<span class="number">0</span>.<span class="ident">clone</span>(), <span class="ident">ModuleMemberKind</span>::<span class="ident">Function</span>);
                         }
                     }
                 }
@@ -2090,6 +2105,7 @@
             <span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Use</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
         };
     }
+    <span class="ident">members</span>.<span class="ident">add</span>(<span class="ident">mident</span>, <span class="ident">cur_members</span>).<span class="ident">unwrap</span>();
 }
 
 <span class="kw">fn</span> <span class="ident">module_self_aliases</span>(<span class="ident">acc</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AliasMap</span>, <span class="ident">current_module</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleIdent</span>) {
@@ -2105,6 +2121,18 @@
     <span class="ident">member</span>: <span class="ident">P</span>::<span class="ident">ModuleMember</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">P</span>::<span class="ident">ModuleMember</span><span class="op">&gt;</span> {
     <span class="kw">use</span> <span class="ident">P</span>::{<span class="ident">SpecBlockMember_</span> <span class="kw">as</span> <span class="ident">SBM</span>, <span class="ident">SpecBlockTarget_</span> <span class="kw">as</span> <span class="ident">SBT</span>, <span class="ident">SpecBlock_</span> <span class="kw">as</span> <span class="ident">SB</span>};
+    <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">check_name_and_add_implicit_alias</span> {
+        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">kind</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {{
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">n</span>) <span class="op">=</span> <span class="ident">check_valid_module_member_name</span>(<span class="ident">context</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">kind</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">name</span>) {
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">loc</span>) <span class="op">=</span>
+                    <span class="ident">acc</span>.<span class="ident">add_implicit_member_alias</span>(<span class="ident">n</span>.<span class="ident">clone</span>(), <span class="ident">current_module</span>.<span class="ident">clone</span>(), <span class="ident">n</span>.<span class="ident">clone</span>())
+                {
+                    <span class="ident">duplicate_module_member</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">n</span>)
+                }
+            }
+        }};
+    }
+
     <span class="kw">match</span> <span class="ident">member</span> {
         <span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Use</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="ident">use_</span>(<span class="ident">context</span>, <span class="ident">acc</span>, <span class="ident">u</span>);
@@ -2112,43 +2140,30 @@
         }
         <span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Function</span>(<span class="ident">f</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">f</span>.<span class="ident">name</span>.<span class="number">0</span>.<span class="ident">clone</span>();
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">loc</span>) <span class="op">=</span>
-                <span class="ident">acc</span>.<span class="ident">add_implicit_member_alias</span>(<span class="ident">n</span>.<span class="ident">clone</span>(), <span class="ident">current_module</span>.<span class="ident">clone</span>(), <span class="ident">n</span>.<span class="ident">clone</span>())
-            {
-                <span class="ident">duplicate_module_member</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">n</span>)
-            }
+            <span class="macro">check_name_and_add_implicit_alias</span><span class="macro">!</span>(<span class="ident">ModuleMemberKind</span>::<span class="ident">Function</span>, <span class="ident">n</span>);
             <span class="prelude-val">Some</span>(<span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Function</span>(<span class="ident">f</span>))
+        }
+        <span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Constant</span>(<span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">c</span>.<span class="ident">name</span>.<span class="number">0</span>.<span class="ident">clone</span>();
+            <span class="macro">check_name_and_add_implicit_alias</span><span class="macro">!</span>(<span class="ident">ModuleMemberKind</span>::<span class="ident">Constant</span>, <span class="ident">n</span>);
+            <span class="prelude-val">Some</span>(<span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Constant</span>(<span class="ident">c</span>))
         }
         <span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Struct</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">s</span>.<span class="ident">name</span>.<span class="number">0</span>.<span class="ident">clone</span>();
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">loc</span>) <span class="op">=</span>
-                <span class="ident">acc</span>.<span class="ident">add_implicit_member_alias</span>(<span class="ident">n</span>.<span class="ident">clone</span>(), <span class="ident">current_module</span>.<span class="ident">clone</span>(), <span class="ident">n</span>.<span class="ident">clone</span>())
-            {
-                <span class="ident">duplicate_module_member</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">n</span>)
-            }
+            <span class="macro">check_name_and_add_implicit_alias</span><span class="macro">!</span>(<span class="ident">ModuleMemberKind</span>::<span class="ident">Struct</span>, <span class="ident">n</span>);
             <span class="prelude-val">Some</span>(<span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Struct</span>(<span class="ident">s</span>))
         }
         <span class="ident">P</span>::<span class="ident">ModuleMember</span>::<span class="ident">Spec</span>(<span class="ident">s</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">SB</span> { <span class="ident">target</span>, <span class="ident">members</span>, .. }) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">s</span>;
             <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">target</span>.<span class="ident">value</span> {
                 <span class="ident">SBT</span>::<span class="ident">Schema</span>(<span class="ident">n</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">loc</span>) <span class="op">=</span>
-                        <span class="ident">acc</span>.<span class="ident">add_implicit_member_alias</span>(<span class="ident">n</span>.<span class="ident">clone</span>(), <span class="ident">current_module</span>.<span class="ident">clone</span>(), <span class="ident">n</span>.<span class="ident">clone</span>())
-                    {
-                        <span class="ident">duplicate_module_member</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">n</span>.<span class="ident">clone</span>())
-                    }
+                    <span class="macro">check_name_and_add_implicit_alias</span><span class="macro">!</span>(<span class="ident">ModuleMemberKind</span>::<span class="ident">Schema</span>, <span class="ident">n</span>.<span class="ident">clone</span>());
                 }
                 <span class="ident">SBT</span>::<span class="ident">Module</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">for</span> <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">smember_</span>) <span class="kw">in</span> <span class="ident">members</span> {
                         <span class="kw">if</span> <span class="kw">let</span> <span class="ident">SBM</span>::<span class="ident">Function</span> { <span class="ident">name</span>, .. } <span class="op">=</span> <span class="ident">smember_</span> {
                             <span class="kw">let</span> <span class="ident">n</span> <span class="op">=</span> <span class="ident">name</span>.<span class="number">0</span>.<span class="ident">clone</span>();
-                            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">loc</span>) <span class="op">=</span> <span class="ident">acc</span>.<span class="ident">add_implicit_member_alias</span>(
-                                <span class="ident">n</span>.<span class="ident">clone</span>(),
-                                <span class="ident">current_module</span>.<span class="ident">clone</span>(),
-                                <span class="ident">n</span>.<span class="ident">clone</span>(),
-                            ) {
-                                <span class="ident">duplicate_module_member</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">n</span>)
-                            }
+                            <span class="macro">check_name_and_add_implicit_alias</span><span class="macro">!</span>(<span class="ident">ModuleMemberKind</span>::<span class="ident">Function</span>, <span class="ident">n</span>);
                         }
                     }
                 }
@@ -2187,21 +2202,31 @@
             <span class="macro">add_module_alias</span><span class="macro">!</span>(<span class="ident">mident</span>, <span class="ident">alias_opt</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">m</span><span class="op">|</span> <span class="ident">m</span>.<span class="number">0</span>))
         }
         <span class="ident">P</span>::<span class="ident">Use</span>::<span class="ident">Members</span>(<span class="ident">mident</span>, <span class="ident">sub_uses</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">module_members</span>.<span class="ident">contains_key</span>(<span class="kw-2">&amp;</span><span class="ident">mident</span>) {
-                <span class="ident">context</span>.<span class="ident">error</span>(<span class="ident">unbound_module</span>(<span class="kw-2">&amp;</span><span class="ident">mident</span>));
-                <span class="kw">return</span>;
+            <span class="kw">let</span> <span class="ident">members</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">context</span>.<span class="ident">module_members</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">mident</span>) {
+                <span class="prelude-val">Some</span>(<span class="ident">members</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">members</span>,
+                <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                    <span class="ident">context</span>.<span class="ident">error</span>(<span class="ident">unbound_module</span>(<span class="kw-2">&amp;</span><span class="ident">mident</span>));
+                    <span class="kw">return</span>;
+                }
             };
+            <span class="kw">let</span> <span class="ident">mloc</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">module_members</span>.<span class="ident">get_loc</span>(<span class="kw-2">&amp;</span><span class="ident">mident</span>).<span class="ident">unwrap</span>().<span class="number">0</span>;
+            <span class="kw">let</span> <span class="ident">sub_uses_kinds</span> <span class="op">=</span> <span class="ident">sub_uses</span>
+                .<span class="ident">into_iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">member</span>, <span class="ident">alia_opt</span>)<span class="op">|</span> {
+                    <span class="kw">let</span> <span class="ident">kind</span> <span class="op">=</span> <span class="ident">members</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">member</span>).<span class="ident">cloned</span>();
+                    (<span class="ident">member</span>, <span class="ident">alia_opt</span>, <span class="ident">kind</span>)
+                })
+                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
 
-            <span class="kw">for</span> (<span class="ident">member</span>, <span class="ident">alias_opt</span>) <span class="kw">in</span> <span class="ident">sub_uses</span> {
+            <span class="kw">for</span> (<span class="ident">member</span>, <span class="ident">alias_opt</span>, <span class="ident">member_kind_opt</span>) <span class="kw">in</span> <span class="ident">sub_uses_kinds</span> {
                 <span class="kw">if</span> <span class="ident">member</span>.<span class="ident">value</span> <span class="op">=</span><span class="op">=</span> <span class="ident">ModuleName</span>::<span class="ident">SELF_NAME</span> {
                     <span class="macro">add_module_alias</span><span class="macro">!</span>(<span class="ident">mident</span>.<span class="ident">clone</span>(), <span class="ident">alias_opt</span>);
                     <span class="kw">continue</span>;
                 }
 
                 <span class="comment">// check is member</span>
-                <span class="kw">let</span> <span class="ident">members</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">module_members</span>[<span class="kw-2">&amp;</span><span class="ident">mident</span>];
-                <span class="kw">let</span> <span class="ident">mloc</span> <span class="op">=</span> <span class="ident">members</span>.<span class="ident">loc</span>;
-                <span class="kw">let</span> <span class="ident">member_kind</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">members</span>.<span class="ident">member_kind</span>(<span class="kw-2">&amp;</span><span class="ident">member</span>) {
+
+                <span class="kw">let</span> <span class="ident">member_kind</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">member_kind_opt</span> {
                     <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
                         <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
                             <span class="string">&quot;Invalid &#39;use&#39;. Unbound member &#39;{}&#39; in module &#39;{}&#39;&quot;</span>,
@@ -2298,7 +2323,6 @@
         <span class="ident">type_parameters</span>,
         <span class="ident">fields</span>,
     };
-    <span class="ident">check_valid_module_member_name</span>(<span class="ident">context</span>, <span class="ident">ModuleMemberKind</span>::<span class="ident">Struct</span>, <span class="kw-2">&amp;</span><span class="ident">name</span>.<span class="number">0</span>);
     <span class="ident">context</span>.<span class="ident">set_to_outer_scope</span>(<span class="ident">old_aliases</span>);
     (<span class="ident">name</span>, <span class="ident">sdef</span>)
 }
@@ -2332,6 +2356,40 @@
 }
 
 <span class="comment">//**************************************************************************************************</span>
+<span class="comment">// Constants</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="kw">fn</span> <span class="ident">constant</span>(
+    <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
+    <span class="ident">constants</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ConstantName</span>, <span class="ident">E</span>::<span class="ident">Constant</span><span class="op">&gt;</span>,
+    <span class="ident">pconstant</span>: <span class="ident">P</span>::<span class="ident">Constant</span>,
+) {
+    <span class="kw">let</span> (<span class="ident">name</span>, <span class="ident">constant</span>) <span class="op">=</span> <span class="ident">constant_</span>(<span class="ident">context</span>, <span class="ident">pconstant</span>);
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">_old_loc</span>) <span class="op">=</span> <span class="ident">constants</span>.<span class="ident">add</span>(<span class="ident">name</span>, <span class="ident">constant</span>) {
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">context</span>.<span class="ident">has_errors</span>())
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">constant_</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">pconstant</span>: <span class="ident">P</span>::<span class="ident">Constant</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">ConstantName</span>, <span class="ident">E</span>::<span class="ident">Constant</span>) {
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">context</span>.<span class="ident">exp_specs</span>.<span class="ident">is_empty</span>());
+    <span class="kw">let</span> <span class="ident">P</span>::<span class="ident">Constant</span> {
+        <span class="ident">loc</span>,
+        <span class="ident">name</span>,
+        <span class="ident">signature</span>: <span class="ident">psignature</span>,
+        <span class="ident">value</span>: <span class="ident">pvalue</span>,
+    } <span class="op">=</span> <span class="ident">pconstant</span>;
+    <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">type_</span>(<span class="ident">context</span>, <span class="ident">psignature</span>);
+    <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">exp_</span>(<span class="ident">context</span>, <span class="ident">pvalue</span>);
+    <span class="kw">let</span> <span class="ident">_specs</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">extract_exp_specs</span>();
+    <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="ident">E</span>::<span class="ident">Constant</span> {
+        <span class="ident">loc</span>,
+        <span class="ident">signature</span>,
+        <span class="ident">value</span>,
+    };
+    (<span class="ident">name</span>, <span class="ident">constant</span>)
+}
+
+<span class="comment">//**************************************************************************************************</span>
 <span class="comment">// Functions</span>
 <span class="comment">//**************************************************************************************************</span>
 
@@ -2356,7 +2414,6 @@
         <span class="ident">acquires</span>,
     } <span class="op">=</span> <span class="ident">pfunction</span>;
     <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">context</span>.<span class="ident">exp_specs</span>.<span class="ident">is_empty</span>());
-    <span class="ident">check_valid_module_member_name</span>(<span class="ident">context</span>, <span class="ident">ModuleMemberKind</span>::<span class="ident">Function</span>, <span class="kw-2">&amp;</span><span class="ident">name</span>.<span class="number">0</span>);
     <span class="kw">let</span> <span class="ident">old_aliases</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">new_alias_scope</span>(<span class="ident">AliasMap</span>::<span class="ident">new</span>());
     <span class="kw">let</span> <span class="ident">signature</span> <span class="op">=</span> <span class="ident">function_signature</span>(<span class="ident">context</span>, <span class="ident">psignature</span>);
     <span class="kw">let</span> <span class="ident">acquires</span> <span class="op">=</span> <span class="ident">acquires</span>
@@ -2427,10 +2484,6 @@
         <span class="ident">uses</span>,
         <span class="ident">members</span>: <span class="ident">pmembers</span>,
     } <span class="op">=</span> <span class="ident">pspec</span>;
-
-    <span class="kw">if</span> <span class="kw">let</span> <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">P</span>::<span class="ident">SpecBlockTarget_</span>::<span class="ident">Schema</span>(<span class="ident">n</span>, <span class="kw">_</span>)) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">target</span> {
-        <span class="ident">check_valid_module_member_name</span>(<span class="ident">context</span>, <span class="ident">ModuleMemberKind</span>::<span class="ident">Schema</span>, <span class="ident">n</span>)
-    }
 
     <span class="ident">context</span>.<span class="ident">in_spec_context</span> <span class="op">=</span> <span class="bool-val">true</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">new_scope</span> <span class="op">=</span> <span class="ident">AliasMap</span>::<span class="ident">new</span>();
@@ -2729,9 +2782,7 @@
         <span class="ident">PE</span>::<span class="ident">InferredNum</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">InferredNum</span>(<span class="ident">u</span>),
         <span class="ident">PE</span>::<span class="ident">Move</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Move</span>(<span class="ident">v</span>),
         <span class="ident">PE</span>::<span class="ident">Copy</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">EE</span>::<span class="ident">Copy</span>(<span class="ident">v</span>),
-        <span class="ident">PE</span>::<span class="ident">Name</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">P</span>::<span class="ident">ModuleAccess_</span>::<span class="ident">ModuleAccess</span>(..)), <span class="kw">_</span>)
-        <span class="op">|</span> <span class="ident">PE</span>::<span class="ident">Name</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">P</span>::<span class="ident">ModuleAccess_</span>::<span class="ident">QualifiedModuleAccess</span>(..)), <span class="kw">_</span>)
-        <span class="op">|</span> <span class="ident">PE</span>::<span class="ident">Name</span>(<span class="kw">_</span>, <span class="prelude-val">Some</span>(<span class="kw">_</span>))
+        <span class="ident">PE</span>::<span class="ident">Name</span>(<span class="kw">_</span>, <span class="prelude-val">Some</span>(<span class="kw">_</span>))
             <span class="kw">if</span> <span class="op">!</span><span class="ident">context</span>.<span class="ident">require_spec_context</span>(
                 <span class="ident">loc</span>,
                 <span class="string">&quot;Expected name to be followed by a brace-enclosed list of field expressions or a \
@@ -3247,6 +3298,7 @@
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>)]</span>
 <span class="kw">enum</span> <span class="ident">ModuleMemberKind</span> {
+    <span class="ident">Constant</span>,
     <span class="ident">Function</span>,
     <span class="ident">Struct</span>,
     <span class="ident">Schema</span>,
@@ -3256,15 +3308,22 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">case</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
         <span class="kw">match</span> <span class="self">self</span> {
             <span class="ident">ModuleMemberKind</span>::<span class="ident">Function</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;function&quot;</span>,
-            <span class="comment">// ModuleMember::Constant =&gt; &quot;constant&quot;,</span>
+            <span class="ident">ModuleMemberKind</span>::<span class="ident">Constant</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;constant&quot;</span>,
             <span class="ident">ModuleMemberKind</span>::<span class="ident">Struct</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;struct&quot;</span>,
             <span class="ident">ModuleMemberKind</span>::<span class="ident">Schema</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;schema&quot;</span>,
         }
     }
 }
 
-<span class="kw">fn</span> <span class="ident">check_valid_module_member_name</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">member</span>: <span class="ident">ModuleMemberKind</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">Name</span>) {
-    <span class="kw">let</span> <span class="kw">_</span> <span class="op">=</span> <span class="ident">check_valid_module_member_name_impl</span>(<span class="ident">context</span>, <span class="ident">member</span>, <span class="kw-2">&amp;</span><span class="ident">name</span>, <span class="ident">member</span>.<span class="ident">case</span>());
+<span class="kw">fn</span> <span class="ident">check_valid_module_member_name</span>(
+    <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
+    <span class="ident">member</span>: <span class="ident">ModuleMemberKind</span>,
+    <span class="ident">name</span>: <span class="ident">Name</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Name</span><span class="op">&gt;</span> {
+    <span class="kw">match</span> <span class="ident">check_valid_module_member_name_impl</span>(<span class="ident">context</span>, <span class="ident">member</span>, <span class="kw-2">&amp;</span><span class="ident">name</span>, <span class="ident">member</span>.<span class="ident">case</span>()) {
+        <span class="prelude-val">Err</span>(()) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+        <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">name</span>),
+    }
 }
 
 <span class="kw">fn</span> <span class="ident">check_valid_module_member_alias</span>(
@@ -3301,8 +3360,7 @@
     <span class="kw">let</span> <span class="ident">ucase</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">upper_first_letter</span>(<span class="ident">case</span>);
     <span class="kw">match</span> <span class="ident">member</span> {
         <span class="ident">M</span>::<span class="ident">Function</span> <span class="op">=</span><span class="op">&gt;</span> (),
-        <span class="comment">// M::Constant |</span>
-        <span class="ident">M</span>::<span class="ident">Struct</span> <span class="op">|</span> <span class="ident">M</span>::<span class="ident">Schema</span> <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="ident">M</span>::<span class="ident">Constant</span> <span class="op">|</span> <span class="ident">M</span>::<span class="ident">Struct</span> <span class="op">|</span> <span class="ident">M</span>::<span class="ident">Schema</span> <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">if</span> <span class="op">!</span><span class="ident">is_valid_struct_constant_or_schema_name</span>(<span class="kw-2">&amp;</span><span class="ident">n</span>.<span class="ident">value</span>) {
                 <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
                     <span class="string">&quot;Invalid {} name &#39;{}&#39;. {} names must start with &#39;A&#39;..&#39;Z&#39;&quot;</span>,
@@ -3329,7 +3387,7 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="kw">fn</span> <span class="ident">is_valid_struct_constant_or_schema_name</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_valid_struct_constant_or_schema_name</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
     <span class="ident">s</span>.<span class="ident">starts_with</span>(<span class="op">|</span><span class="ident">c</span><span class="op">|</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="ident">c</span>, <span class="string">&#39;A&#39;</span>..<span class="op">=</span><span class="string">&#39;Z&#39;</span>))
 }
 

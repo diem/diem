@@ -1043,6 +1043,65 @@
 <span id="1043">1043</span>
 <span id="1044">1044</span>
 <span id="1045">1045</span>
+<span id="1046">1046</span>
+<span id="1047">1047</span>
+<span id="1048">1048</span>
+<span id="1049">1049</span>
+<span id="1050">1050</span>
+<span id="1051">1051</span>
+<span id="1052">1052</span>
+<span id="1053">1053</span>
+<span id="1054">1054</span>
+<span id="1055">1055</span>
+<span id="1056">1056</span>
+<span id="1057">1057</span>
+<span id="1058">1058</span>
+<span id="1059">1059</span>
+<span id="1060">1060</span>
+<span id="1061">1061</span>
+<span id="1062">1062</span>
+<span id="1063">1063</span>
+<span id="1064">1064</span>
+<span id="1065">1065</span>
+<span id="1066">1066</span>
+<span id="1067">1067</span>
+<span id="1068">1068</span>
+<span id="1069">1069</span>
+<span id="1070">1070</span>
+<span id="1071">1071</span>
+<span id="1072">1072</span>
+<span id="1073">1073</span>
+<span id="1074">1074</span>
+<span id="1075">1075</span>
+<span id="1076">1076</span>
+<span id="1077">1077</span>
+<span id="1078">1078</span>
+<span id="1079">1079</span>
+<span id="1080">1080</span>
+<span id="1081">1081</span>
+<span id="1082">1082</span>
+<span id="1083">1083</span>
+<span id="1084">1084</span>
+<span id="1085">1085</span>
+<span id="1086">1086</span>
+<span id="1087">1087</span>
+<span id="1088">1088</span>
+<span id="1089">1089</span>
+<span id="1090">1090</span>
+<span id="1091">1091</span>
+<span id="1092">1092</span>
+<span id="1093">1093</span>
+<span id="1094">1094</span>
+<span id="1095">1095</span>
+<span id="1096">1096</span>
+<span id="1097">1097</span>
+<span id="1098">1098</span>
+<span id="1099">1099</span>
+<span id="1100">1100</span>
+<span id="1101">1101</span>
+<span id="1102">1102</span>
+<span id="1103">1103</span>
+<span id="1104">1104</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1051,8 +1110,8 @@
     <span class="ident">expansion</span>::<span class="ident">ast</span>::{<span class="ident">SpecId</span>, <span class="ident">Value</span>},
     <span class="ident">naming</span>::<span class="ident">ast</span>::{<span class="ident">BuiltinTypeName</span>, <span class="ident">BuiltinTypeName_</span>, <span class="ident">TParam</span>},
     <span class="ident">parser</span>::<span class="ident">ast</span>::{
-        <span class="ident">BinOp</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">Kind</span>, <span class="ident">Kind_</span>, <span class="ident">ModuleIdent</span>, <span class="ident">ResourceLoc</span>,
-        <span class="ident">StructName</span>, <span class="ident">UnaryOp</span>, <span class="ident">Var</span>,
+        <span class="ident">BinOp</span>, <span class="ident">ConstantName</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">Kind</span>, <span class="ident">Kind_</span>, <span class="ident">ModuleIdent</span>,
+        <span class="ident">ResourceLoc</span>, <span class="ident">StructName</span>, <span class="ident">UnaryOp</span>, <span class="ident">Var</span>,
     },
     <span class="ident">shared</span>::{<span class="ident">ast_debug</span>::<span class="kw-2">*</span>, <span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>},
 };
@@ -1078,6 +1137,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Script</span> {
     <span class="kw">pub</span> <span class="ident">loc</span>: <span class="ident">Loc</span>,
+    <span class="kw">pub</span> <span class="ident">constants</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ConstantName</span>, <span class="ident">Constant</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">function_name</span>: <span class="ident">FunctionName</span>,
     <span class="kw">pub</span> <span class="ident">function</span>: <span class="ident">Function</span>,
 }
@@ -1092,6 +1152,7 @@
     <span class="doccomment">/// `dependency_order` is the topological order/rank in the dependency graph.</span>
     <span class="kw">pub</span> <span class="ident">dependency_order</span>: <span class="ident">usize</span>,
     <span class="kw">pub</span> <span class="ident">structs</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">StructDefinition</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">constants</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ConstantName</span>, <span class="ident">Constant</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">functions</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">FunctionName</span>, <span class="ident">Function</span><span class="op">&gt;</span>,
 }
 
@@ -1110,6 +1171,17 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">StructFields</span> {
     <span class="ident">Defined</span>(<span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Field</span>, <span class="ident">BaseType</span>)<span class="op">&gt;</span>),
     <span class="ident">Native</span>(<span class="ident">Loc</span>),
+}
+
+<span class="comment">//**************************************************************************************************</span>
+<span class="comment">// Constants</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>, <span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Constant</span> {
+    <span class="kw">pub</span> <span class="ident">loc</span>: <span class="ident">Loc</span>,
+    <span class="kw">pub</span> <span class="ident">signature</span>: <span class="ident">BaseType</span>,
+    <span class="kw">pub</span> <span class="ident">value</span>: (<span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">Var</span>, <span class="ident">SingleType</span><span class="op">&gt;</span>, <span class="ident">Block</span>),
 }
 
 <span class="comment">//**************************************************************************************************</span>
@@ -1275,6 +1347,7 @@
     <span class="ident">Value</span>(<span class="ident">Value</span>),
     <span class="ident">Move</span> { <span class="ident">from_user</span>: <span class="ident">bool</span>, <span class="ident">var</span>: <span class="ident">Var</span> },
     <span class="ident">Copy</span> { <span class="ident">from_user</span>: <span class="ident">bool</span>, <span class="ident">var</span>: <span class="ident">Var</span> },
+    <span class="ident">Constant</span>(<span class="ident">ConstantName</span>),
 
     <span class="ident">ModuleCall</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">ModuleCall</span><span class="op">&gt;</span>),
     <span class="ident">Builtin</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">BuiltinFunction</span><span class="op">&gt;</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span>),
@@ -1579,9 +1652,14 @@
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
         <span class="kw">let</span> <span class="ident">Script</span> {
             <span class="ident">loc</span>: <span class="ident">_loc</span>,
+            <span class="ident">constants</span>,
             <span class="ident">function_name</span>,
             <span class="ident">function</span>,
         } <span class="op">=</span> <span class="self">self</span>;
+        <span class="kw">for</span> <span class="ident">cdef</span> <span class="kw">in</span> <span class="ident">constants</span> {
+            <span class="ident">cdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+            <span class="ident">w</span>.<span class="ident">new_line</span>();
+        }
         (<span class="ident">function_name</span>.<span class="ident">clone</span>(), <span class="ident">function</span>).<span class="ident">ast_debug</span>(<span class="ident">w</span>);
     }
 }
@@ -1592,6 +1670,7 @@
             <span class="ident">is_source_module</span>,
             <span class="ident">dependency_order</span>,
             <span class="ident">structs</span>,
+            <span class="ident">constants</span>,
             <span class="ident">functions</span>,
         } <span class="op">=</span> <span class="self">self</span>;
         <span class="kw">if</span> <span class="kw-2">*</span><span class="ident">is_source_module</span> {
@@ -1602,6 +1681,10 @@
         <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;dependency order #{}&quot;</span>, <span class="ident">dependency_order</span>));
         <span class="kw">for</span> <span class="ident">sdef</span> <span class="kw">in</span> <span class="ident">structs</span> {
             <span class="ident">sdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+            <span class="ident">w</span>.<span class="ident">new_line</span>();
+        }
+        <span class="kw">for</span> <span class="ident">cdef</span> <span class="kw">in</span> <span class="ident">constants</span> {
+            <span class="ident">cdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
             <span class="ident">w</span>.<span class="ident">new_line</span>();
         }
         <span class="kw">for</span> <span class="ident">fdef</span> <span class="kw">in</span> <span class="ident">functions</span> {
@@ -1656,7 +1739,7 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="ident">FunctionBody_</span>::<span class="ident">Native</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">body</span>.<span class="ident">value</span> {
             <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;native &quot;</span>);
         }
-        <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">name</span>));
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;fun {}&quot;</span>, <span class="ident">name</span>));
         <span class="ident">signature</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
         <span class="kw">if</span> <span class="op">!</span><span class="ident">acquires</span>.<span class="ident">is_empty</span>() {
             <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot; acquires &quot;</span>);
@@ -1664,20 +1747,32 @@
             <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot; &quot;</span>);
         }
         <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">body</span>.<span class="ident">value</span> {
-            <span class="ident">FunctionBody_</span>::<span class="ident">Defined</span> { <span class="ident">locals</span>, <span class="ident">body</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> {
-                <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;locals:&quot;</span>);
-                <span class="ident">w</span>.<span class="ident">indent</span>(<span class="number">4</span>, <span class="op">|</span><span class="ident">w</span><span class="op">|</span> {
-                    <span class="ident">w</span>.<span class="ident">list</span>(<span class="ident">locals</span>, <span class="string">&quot;,&quot;</span>, <span class="op">|</span><span class="ident">w</span>, (<span class="ident">v</span>, <span class="ident">st</span>)<span class="op">|</span> {
-                        <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}: &quot;</span>, <span class="ident">v</span>));
-                        <span class="ident">st</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
-                        <span class="bool-val">true</span>
-                    })
-                });
-                <span class="ident">w</span>.<span class="ident">new_line</span>();
-                <span class="ident">body</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
-            }),
+            <span class="ident">FunctionBody_</span>::<span class="ident">Defined</span> { <span class="ident">locals</span>, <span class="ident">body</span> } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> (<span class="ident">locals</span>, <span class="ident">body</span>).<span class="ident">ast_debug</span>(<span class="ident">w</span>)),
             <span class="ident">FunctionBody_</span>::<span class="ident">Native</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="string">&quot;;&quot;</span>),
         }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> (<span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">Var</span>, <span class="ident">SingleType</span><span class="op">&gt;</span>, <span class="ident">Block</span>) {
+    <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
+        <span class="kw">let</span> (<span class="ident">locals</span>, <span class="ident">body</span>) <span class="op">=</span> <span class="self">self</span>;
+        (<span class="ident">locals</span>, <span class="ident">body</span>).<span class="ident">ast_debug</span>(<span class="ident">w</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> (<span class="kw-2">&amp;</span><span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">Var</span>, <span class="ident">SingleType</span><span class="op">&gt;</span>, <span class="kw-2">&amp;</span><span class="ident">Block</span>) {
+    <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
+        <span class="kw">let</span> (<span class="ident">locals</span>, <span class="ident">body</span>) <span class="op">=</span> <span class="self">self</span>;
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;locals:&quot;</span>);
+        <span class="ident">w</span>.<span class="ident">indent</span>(<span class="number">4</span>, <span class="op">|</span><span class="ident">w</span><span class="op">|</span> {
+            <span class="ident">w</span>.<span class="ident">list</span>(<span class="kw-2">*</span><span class="ident">locals</span>, <span class="string">&quot;,&quot;</span>, <span class="op">|</span><span class="ident">w</span>, (<span class="ident">v</span>, <span class="ident">st</span>)<span class="op">|</span> {
+                <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}: &quot;</span>, <span class="ident">v</span>));
+                <span class="ident">st</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+                <span class="bool-val">true</span>
+            })
+        });
+        <span class="ident">w</span>.<span class="ident">new_line</span>();
+        <span class="ident">body</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
     }
 }
 
@@ -1696,6 +1791,24 @@
         });
         <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;): &quot;</span>);
         <span class="ident">return_type</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> (<span class="ident">ConstantName</span>, <span class="kw-2">&amp;</span><span class="ident">Constant</span>) {
+    <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
+        <span class="kw">let</span> (
+            <span class="ident">name</span>,
+            <span class="ident">Constant</span> {
+                <span class="ident">loc</span>: <span class="ident">_loc</span>,
+                <span class="ident">signature</span>,
+                <span class="ident">value</span>,
+            },
+        ) <span class="op">=</span> <span class="self">self</span>;
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;const {}:&quot;</span>, <span class="ident">name</span>));
+        <span class="ident">signature</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot; = &quot;</span>);
+        <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">value</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>));
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;;&quot;</span>);
     }
 }
 
@@ -1778,6 +1891,21 @@
     }
 }
 
+<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> (<span class="ident">Block</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span>) {
+    <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
+        <span class="kw">let</span> (<span class="ident">block</span>, <span class="ident">exp</span>) <span class="op">=</span> <span class="self">self</span>;
+        <span class="kw">if</span> <span class="ident">block</span>.<span class="ident">is_empty</span>() {
+            <span class="ident">exp</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+        } <span class="kw">else</span> {
+            <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> {
+                <span class="ident">block</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+                <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="string">&quot;;&quot;</span>);
+                <span class="ident">exp</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+            })
+        }
+    }
+}
+
 <span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> <span class="ident">Statement_</span> {
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
         <span class="kw">use</span> <span class="ident">Statement_</span> <span class="kw">as</span> <span class="ident">S</span>;
@@ -1795,20 +1923,9 @@
                 <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot; else &quot;</span>);
                 <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">else_block</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>));
             }
-            <span class="ident">S</span>::<span class="ident">While</span> {
-                <span class="ident">cond</span>: (<span class="ident">cond_block</span>, <span class="ident">cond_exp</span>),
-                <span class="ident">block</span>,
-            } <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="ident">S</span>::<span class="ident">While</span> { <span class="ident">cond</span>, <span class="ident">block</span> } <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;while (&quot;</span>);
-                <span class="kw">if</span> <span class="ident">cond_block</span>.<span class="ident">is_empty</span>() {
-                    <span class="ident">cond_exp</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
-                } <span class="kw">else</span> {
-                    <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> {
-                        <span class="ident">cond_block</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
-                        <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="string">&quot;;&quot;</span>);
-                        <span class="ident">cond_exp</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
-                    })
-                }
+                <span class="ident">cond</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
                 <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;)&quot;</span>);
                 <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">block</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>))
             }
@@ -1908,6 +2025,7 @@
                 <span class="ident">from_user</span>: <span class="bool-val">true</span>,
                 <span class="ident">var</span>: <span class="ident">v</span>,
             } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;copy@{}&quot;</span>, <span class="ident">v</span>)),
+            <span class="ident">E</span>::<span class="ident">Constant</span>(<span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">c</span>)),
             <span class="ident">E</span>::<span class="ident">ModuleCall</span>(<span class="ident">mcall</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">mcall</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
             }

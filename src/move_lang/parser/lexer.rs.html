@@ -512,6 +512,9 @@
 <span id="512">512</span>
 <span id="513">513</span>
 <span id="514">514</span>
+<span id="515">515</span>
+<span id="516">516</span>
+<span id="517">517</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -592,6 +595,7 @@
     <span class="ident">RBrace</span>,
     <span class="ident">Fun</span>,
     <span class="ident">Script</span>,
+    <span class="ident">Const</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">Tok</span> {
@@ -667,6 +671,7 @@
             <span class="ident">RBrace</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;}&quot;</span>,
             <span class="ident">Fun</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;fun&quot;</span>,
             <span class="ident">Script</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;script&quot;</span>,
+            <span class="ident">Const</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;const&quot;</span>,
         };
         <span class="ident">fmt</span>::<span class="ident">Display</span>::<span class="ident">fmt</span>(<span class="ident">s</span>, <span class="ident">formatter</span>)
     }
@@ -1001,6 +1006,7 @@
         <span class="string">&quot;acquires&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">Acquires</span>,
         <span class="string">&quot;as&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">As</span>,
         <span class="string">&quot;break&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">Break</span>,
+        <span class="string">&quot;const&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">Const</span>,
         <span class="string">&quot;continue&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">Continue</span>,
         <span class="string">&quot;copy&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">Copy</span>,
         <span class="string">&quot;copyable&quot;</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Tok</span>::<span class="ident">Copyable</span>,

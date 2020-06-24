@@ -1968,6 +1968,31 @@
 <span id="1968">1968</span>
 <span id="1969">1969</span>
 <span id="1970">1970</span>
+<span id="1971">1971</span>
+<span id="1972">1972</span>
+<span id="1973">1973</span>
+<span id="1974">1974</span>
+<span id="1975">1975</span>
+<span id="1976">1976</span>
+<span id="1977">1977</span>
+<span id="1978">1978</span>
+<span id="1979">1979</span>
+<span id="1980">1980</span>
+<span id="1981">1981</span>
+<span id="1982">1982</span>
+<span id="1983">1983</span>
+<span id="1984">1984</span>
+<span id="1985">1985</span>
+<span id="1986">1986</span>
+<span id="1987">1987</span>
+<span id="1988">1988</span>
+<span id="1989">1989</span>
+<span id="1990">1990</span>
+<span id="1991">1991</span>
+<span id="1992">1992</span>
+<span id="1993">1993</span>
+<span id="1994">1994</span>
+<span id="1995">1995</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2385,6 +2410,11 @@
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>,
         <span class="ident">script</span>.<span class="ident">explicit_dependency_declarations</span>,
     )<span class="question-mark">?</span>;
+    <span class="kw">for</span> <span class="ident">ir_constant</span> <span class="kw">in</span> <span class="ident">script</span>.<span class="ident">constants</span> {
+        <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="ident">compile_constant</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="ident">ir_constant</span>.<span class="ident">signature</span>, <span class="ident">ir_constant</span>.<span class="ident">value</span>)<span class="question-mark">?</span>;
+        <span class="ident">context</span>.<span class="ident">declare_constant</span>(<span class="ident">ir_constant</span>.<span class="ident">name</span>, <span class="ident">constant</span>)<span class="question-mark">?</span>
+    }
+
     <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="ident">script</span>.<span class="ident">main</span>;
 
     <span class="kw">let</span> <span class="ident">sig</span> <span class="op">=</span> <span class="ident">function_signature</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="ident">function</span>.<span class="ident">value</span>.<span class="ident">signature</span>)<span class="question-mark">?</span>;
@@ -2463,6 +2493,11 @@
         <span class="ident">module</span>.<span class="ident">explicit_dependency_declarations</span>,
     )<span class="question-mark">?</span>;
 
+    <span class="kw">for</span> <span class="ident">ir_constant</span> <span class="kw">in</span> <span class="ident">module</span>.<span class="ident">constants</span> {
+        <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="ident">compile_constant</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="ident">ir_constant</span>.<span class="ident">signature</span>, <span class="ident">ir_constant</span>.<span class="ident">value</span>)<span class="question-mark">?</span>;
+        <span class="ident">context</span>.<span class="ident">declare_constant</span>(<span class="ident">ir_constant</span>.<span class="ident">name</span>, <span class="ident">constant</span>)<span class="question-mark">?</span>
+    }
+
     <span class="kw">for</span> (<span class="ident">name</span>, <span class="ident">function</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">module</span>.<span class="ident">functions</span> {
         <span class="kw">let</span> <span class="ident">sig</span> <span class="op">=</span> <span class="ident">function_signature</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="ident">function</span>.<span class="ident">value</span>.<span class="ident">signature</span>)<span class="question-mark">?</span>;
         <span class="ident">context</span>.<span class="ident">declare_function</span>(<span class="ident">self_name</span>.<span class="ident">clone</span>(), <span class="ident">name</span>.<span class="ident">clone</span>(), <span class="ident">sig</span>)<span class="question-mark">?</span>;
@@ -2471,7 +2506,6 @@
     <span class="comment">// Current module</span>
 
     <span class="kw">let</span> <span class="ident">struct_defs</span> <span class="op">=</span> <span class="ident">compile_structs</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="ident">self_name</span>, <span class="ident">module</span>.<span class="ident">structs</span>)<span class="question-mark">?</span>;
-
     <span class="kw">let</span> <span class="ident">function_defs</span> <span class="op">=</span> <span class="ident">compile_functions</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="ident">self_name</span>, <span class="ident">module</span>.<span class="ident">functions</span>)<span class="question-mark">?</span>;
 
     <span class="kw">let</span> (
@@ -3165,7 +3199,7 @@
         <span class="ident">Exp_</span>::<span class="ident">Value</span>(<span class="ident">cv</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">cv</span>.<span class="ident">value</span> {
             <span class="ident">CopyableVal_</span>::<span class="ident">Address</span>(<span class="ident">address</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">address_value</span> <span class="op">=</span> <span class="ident">MoveValue</span>::<span class="ident">Address</span>(<span class="ident">address</span>);
-                <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="ident">compile_constant</span>(<span class="ident">context</span>, <span class="ident">MoveTypeLayout</span>::<span class="ident">Address</span>, <span class="ident">address_value</span>)<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="ident">compile_constant</span>(<span class="ident">context</span>, <span class="ident">Type</span>::<span class="ident">Address</span>, <span class="ident">address_value</span>)<span class="question-mark">?</span>;
                 <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">constant_index</span>(<span class="ident">constant</span>)<span class="question-mark">?</span>;
                 <span class="macro">push_instr</span><span class="macro">!</span>(<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">Bytecode</span>::<span class="ident">LdConst</span>(<span class="ident">idx</span>));
                 <span class="ident">function_frame</span>.<span class="ident">push</span>()<span class="question-mark">?</span>;
@@ -3188,8 +3222,8 @@
             }
             <span class="ident">CopyableVal_</span>::<span class="ident">ByteArray</span>(<span class="ident">buf</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">vec_value</span> <span class="op">=</span> <span class="ident">MoveValue</span>::<span class="ident">vector_u8</span>(<span class="ident">buf</span>);
-                <span class="kw">let</span> <span class="ident">type_</span> <span class="op">=</span> <span class="ident">MoveTypeLayout</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">MoveTypeLayout</span>::<span class="ident">U8</span>));
-                <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="ident">compile_constant</span>(<span class="ident">context</span>, <span class="ident">type_</span>, <span class="ident">vec_value</span>)<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">Type</span>::<span class="ident">U8</span>));
+                <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="ident">compile_constant</span>(<span class="ident">context</span>, <span class="ident">ty</span>, <span class="ident">vec_value</span>)<span class="question-mark">?</span>;
                 <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">constant_index</span>(<span class="ident">constant</span>)<span class="question-mark">?</span>;
                 <span class="macro">push_instr</span><span class="macro">!</span>(<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">Bytecode</span>::<span class="ident">LdConst</span>(<span class="ident">idx</span>));
                 <span class="ident">function_frame</span>.<span class="ident">push</span>()<span class="question-mark">?</span>;
@@ -3612,12 +3646,27 @@
     })
 }
 
-<span class="kw">fn</span> <span class="ident">compile_constant</span>(
-    <span class="ident">_context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
-    <span class="ident">type_</span>: <span class="ident">MoveTypeLayout</span>,
-    <span class="ident">value</span>: <span class="ident">MoveValue</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Constant</span><span class="op">&gt;</span> {
-    <span class="ident">Constant</span>::<span class="ident">serialize_constant</span>(<span class="kw-2">&amp;</span><span class="ident">type_</span>, <span class="kw-2">&amp;</span><span class="ident">value</span>)
+<span class="kw">fn</span> <span class="ident">compile_constant</span>(<span class="ident">_context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">ty</span>: <span class="ident">Type</span>, <span class="ident">value</span>: <span class="ident">MoveValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Constant</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">type_layout</span>(<span class="ident">ty</span>: <span class="ident">Type</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">MoveTypeLayout</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">ty</span> {
+            <span class="ident">Type</span>::<span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveTypeLayout</span>::<span class="ident">Address</span>,
+            <span class="ident">Type</span>::<span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveTypeLayout</span>::<span class="ident">Signer</span>,
+            <span class="ident">Type</span>::<span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveTypeLayout</span>::<span class="ident">U8</span>,
+            <span class="ident">Type</span>::<span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveTypeLayout</span>::<span class="ident">U64</span>,
+            <span class="ident">Type</span>::<span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveTypeLayout</span>::<span class="ident">U128</span>,
+            <span class="ident">Type</span>::<span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveTypeLayout</span>::<span class="ident">Bool</span>,
+            <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">inner_type</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MoveTypeLayout</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">type_layout</span>(<span class="kw-2">*</span><span class="ident">inner_type</span>)<span class="question-mark">?</span>)),
+            <span class="ident">Type</span>::<span class="ident">Reference</span>(<span class="kw">_</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;References are not supported in constant type layouts&quot;</span>),
+            <span class="ident">Type</span>::<span class="ident">TypeParameter</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;Type parameters are not supported in constant type layouts&quot;</span>)
+            }
+            <span class="ident">Type</span>::<span class="ident">Struct</span>(<span class="ident">_ident</span>, <span class="ident">_tys</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;TODO Structs are not *yet* supported in constant type layouts&quot;</span>)
+            }
+        })
+    }
+
+    <span class="ident">Constant</span>::<span class="ident">serialize_constant</span>(<span class="kw-2">&amp;</span><span class="ident">type_layout</span>(<span class="ident">ty</span>)<span class="question-mark">?</span>, <span class="kw-2">&amp;</span><span class="ident">value</span>)
         .<span class="ident">ok_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Could not serialize constant&quot;</span>))
 }
 
@@ -3701,17 +3750,18 @@
         <span class="ident">IRBytecode_</span>::<span class="ident">CastU128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">CastU128</span>,
         <span class="ident">IRBytecode_</span>::<span class="ident">LdByteArray</span>(<span class="ident">b</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">vec_value</span> <span class="op">=</span> <span class="ident">MoveValue</span>::<span class="ident">vector_u8</span>(<span class="ident">b</span>);
-            <span class="kw">let</span> <span class="ident">type_</span> <span class="op">=</span> <span class="ident">MoveTypeLayout</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">MoveTypeLayout</span>::<span class="ident">U8</span>));
-            <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="ident">compile_constant</span>(<span class="ident">context</span>, <span class="ident">type_</span>, <span class="ident">vec_value</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">Type</span>::<span class="ident">Vector</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">Type</span>::<span class="ident">U8</span>));
+            <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="ident">compile_constant</span>(<span class="ident">context</span>, <span class="ident">ty</span>, <span class="ident">vec_value</span>)<span class="question-mark">?</span>;
             <span class="ident">Bytecode</span>::<span class="ident">LdConst</span>(<span class="ident">context</span>.<span class="ident">constant_index</span>(<span class="ident">constant</span>)<span class="question-mark">?</span>)
         }
         <span class="ident">IRBytecode_</span>::<span class="ident">LdAddr</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">address_value</span> <span class="op">=</span> <span class="ident">MoveValue</span>::<span class="ident">Address</span>(<span class="ident">a</span>);
-            <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="ident">compile_constant</span>(<span class="ident">context</span>, <span class="ident">MoveTypeLayout</span>::<span class="ident">Address</span>, <span class="ident">address_value</span>)<span class="question-mark">?</span>;
+            <span class="kw">let</span> <span class="ident">constant</span> <span class="op">=</span> <span class="ident">compile_constant</span>(<span class="ident">context</span>, <span class="ident">Type</span>::<span class="ident">Address</span>, <span class="ident">address_value</span>)<span class="question-mark">?</span>;
             <span class="ident">Bytecode</span>::<span class="ident">LdConst</span>(<span class="ident">context</span>.<span class="ident">constant_index</span>(<span class="ident">constant</span>)<span class="question-mark">?</span>)
         }
         <span class="ident">IRBytecode_</span>::<span class="ident">LdTrue</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">LdTrue</span>,
         <span class="ident">IRBytecode_</span>::<span class="ident">LdFalse</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">LdFalse</span>,
+        <span class="ident">IRBytecode_</span>::<span class="ident">LdConst</span>(<span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">LdConst</span>(<span class="ident">context</span>.<span class="ident">named_constant_index</span>(<span class="kw-2">&amp;</span><span class="ident">c</span>)<span class="question-mark">?</span>),
         <span class="ident">IRBytecode_</span>::<span class="ident">CopyLoc</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">v_</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">CopyLoc</span>(<span class="ident">function_frame</span>.<span class="ident">get_local</span>(<span class="kw-2">&amp;</span><span class="ident">v_</span>)<span class="question-mark">?</span>),
         <span class="ident">IRBytecode_</span>::<span class="ident">MoveLoc</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">v_</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">MoveLoc</span>(<span class="ident">function_frame</span>.<span class="ident">get_local</span>(<span class="kw-2">&amp;</span><span class="ident">v_</span>)<span class="question-mark">?</span>),
         <span class="ident">IRBytecode_</span>::<span class="ident">StLoc</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">v_</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">StLoc</span>(<span class="ident">function_frame</span>.<span class="ident">get_local</span>(<span class="kw-2">&amp;</span><span class="ident">v_</span>)<span class="question-mark">?</span>),

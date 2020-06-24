@@ -398,6 +398,7 @@
 <span id="398">398</span>
 <span id="399">399</span>
 <span id="400">400</span>
+<span id="401">401</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -592,6 +593,7 @@
         <span class="ident">E</span>::<span class="ident">Unreachable</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">parent_e</span>.<span class="ident">exp</span>.<span class="ident">loc</span>),
         <span class="ident">E</span>::<span class="ident">Unit</span> { .. }
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Value</span>(<span class="kw">_</span>)
+        <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Constant</span>(<span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">Spec</span>(<span class="kw">_</span>, <span class="kw">_</span>)
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">UnresolvedError</span>
         <span class="op">|</span> <span class="ident">E</span>::<span class="ident">BorrowLocal</span>(<span class="kw">_</span>, <span class="kw">_</span>)

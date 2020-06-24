@@ -383,6 +383,128 @@
 <span id="383">383</span>
 <span id="384">384</span>
 <span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
+<span id="390">390</span>
+<span id="391">391</span>
+<span id="392">392</span>
+<span id="393">393</span>
+<span id="394">394</span>
+<span id="395">395</span>
+<span id="396">396</span>
+<span id="397">397</span>
+<span id="398">398</span>
+<span id="399">399</span>
+<span id="400">400</span>
+<span id="401">401</span>
+<span id="402">402</span>
+<span id="403">403</span>
+<span id="404">404</span>
+<span id="405">405</span>
+<span id="406">406</span>
+<span id="407">407</span>
+<span id="408">408</span>
+<span id="409">409</span>
+<span id="410">410</span>
+<span id="411">411</span>
+<span id="412">412</span>
+<span id="413">413</span>
+<span id="414">414</span>
+<span id="415">415</span>
+<span id="416">416</span>
+<span id="417">417</span>
+<span id="418">418</span>
+<span id="419">419</span>
+<span id="420">420</span>
+<span id="421">421</span>
+<span id="422">422</span>
+<span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
+<span id="432">432</span>
+<span id="433">433</span>
+<span id="434">434</span>
+<span id="435">435</span>
+<span id="436">436</span>
+<span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
+<span id="454">454</span>
+<span id="455">455</span>
+<span id="456">456</span>
+<span id="457">457</span>
+<span id="458">458</span>
+<span id="459">459</span>
+<span id="460">460</span>
+<span id="461">461</span>
+<span id="462">462</span>
+<span id="463">463</span>
+<span id="464">464</span>
+<span id="465">465</span>
+<span id="466">466</span>
+<span id="467">467</span>
+<span id="468">468</span>
+<span id="469">469</span>
+<span id="470">470</span>
+<span id="471">471</span>
+<span id="472">472</span>
+<span id="473">473</span>
+<span id="474">474</span>
+<span id="475">475</span>
+<span id="476">476</span>
+<span id="477">477</span>
+<span id="478">478</span>
+<span id="479">479</span>
+<span id="480">480</span>
+<span id="481">481</span>
+<span id="482">482</span>
+<span id="483">483</span>
+<span id="484">484</span>
+<span id="485">485</span>
+<span id="486">486</span>
+<span id="487">487</span>
+<span id="488">488</span>
+<span id="489">489</span>
+<span id="490">490</span>
+<span id="491">491</span>
+<span id="492">492</span>
+<span id="493">493</span>
+<span id="494">494</span>
+<span id="495">495</span>
+<span id="496">496</span>
+<span id="497">497</span>
+<span id="498">498</span>
+<span id="499">499</span>
+<span id="500">500</span>
+<span id="501">501</span>
+<span id="502">502</span>
+<span id="503">503</span>
+<span id="504">504</span>
+<span id="505">505</span>
+<span id="506">506</span>
+<span id="507">507</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -394,10 +516,13 @@
         <span class="ident">cfg</span>::<span class="ident">BlockCFG</span>,
     },
     <span class="ident">errors</span>::<span class="ident">Errors</span>,
+    <span class="ident">expansion</span>::<span class="ident">ast</span>::{<span class="ident">Value</span>, <span class="ident">Value_</span>},
     <span class="ident">hlir</span>::<span class="ident">ast</span>::{<span class="self">self</span> <span class="kw">as</span> <span class="ident">H</span>, <span class="ident">Label</span>},
-    <span class="ident">parser</span>::<span class="ident">ast</span>::{<span class="ident">FunctionName</span>, <span class="ident">ModuleIdent</span>, <span class="ident">StructName</span>},
+    <span class="ident">parser</span>::<span class="ident">ast</span>::{<span class="ident">ConstantName</span>, <span class="ident">FunctionName</span>, <span class="ident">ModuleIdent</span>, <span class="ident">StructName</span>, <span class="ident">Var</span>},
     <span class="ident">shared</span>::<span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>,
 };
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span> <span class="kw">as</span> <span class="ident">LibraAddress</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">value</span>::<span class="ident">MoveValue</span>;
 <span class="kw">use</span> <span class="ident">move_ir_types</span>::<span class="ident">location</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::{<span class="ident">BTreeMap</span>, <span class="ident">BTreeSet</span>},
@@ -510,6 +635,7 @@
     <span class="kw">let</span> <span class="ident">is_source_module</span> <span class="op">=</span> <span class="ident">mdef</span>.<span class="ident">is_source_module</span>;
     <span class="kw">let</span> <span class="ident">dependency_order</span> <span class="op">=</span> <span class="ident">mdef</span>.<span class="ident">dependency_order</span>;
     <span class="kw">let</span> <span class="ident">structs</span> <span class="op">=</span> <span class="ident">mdef</span>.<span class="ident">structs</span>;
+    <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">mdef</span>.<span class="ident">constants</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">name</span>, <span class="ident">c</span><span class="op">|</span> <span class="ident">constant</span>(<span class="ident">context</span>, <span class="ident">name</span>, <span class="ident">c</span>));
     <span class="kw">let</span> <span class="ident">functions</span> <span class="op">=</span> <span class="ident">mdef</span>.<span class="ident">functions</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">name</span>, <span class="ident">f</span><span class="op">|</span> <span class="ident">function</span>(<span class="ident">context</span>, <span class="ident">name</span>, <span class="ident">f</span>));
     (
         <span class="ident">module_ident</span>,
@@ -517,6 +643,7 @@
             <span class="ident">is_source_module</span>,
             <span class="ident">dependency_order</span>,
             <span class="ident">structs</span>,
+            <span class="ident">constants</span>,
             <span class="ident">functions</span>,
         },
     )
@@ -535,14 +662,131 @@
 <span class="kw">fn</span> <span class="ident">script</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">hscript</span>: <span class="ident">H</span>::<span class="ident">Script</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">G</span>::<span class="ident">Script</span> {
     <span class="kw">let</span> <span class="ident">H</span>::<span class="ident">Script</span> {
         <span class="ident">loc</span>,
+        <span class="ident">constants</span>: <span class="ident">hconstants</span>,
         <span class="ident">function_name</span>,
         <span class="ident">function</span>: <span class="ident">hfunction</span>,
     } <span class="op">=</span> <span class="ident">hscript</span>;
+    <span class="kw">let</span> <span class="ident">constants</span> <span class="op">=</span> <span class="ident">hconstants</span>.<span class="ident">map</span>(<span class="op">|</span><span class="ident">name</span>, <span class="ident">c</span><span class="op">|</span> <span class="ident">constant</span>(<span class="ident">context</span>, <span class="ident">name</span>, <span class="ident">c</span>));
     <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="ident">function</span>(<span class="ident">context</span>, <span class="ident">function_name</span>.<span class="ident">clone</span>(), <span class="ident">hfunction</span>);
     <span class="ident">G</span>::<span class="ident">Script</span> {
         <span class="ident">loc</span>,
+        <span class="ident">constants</span>,
         <span class="ident">function_name</span>,
         <span class="ident">function</span>,
+    }
+}
+
+<span class="comment">//**************************************************************************************************</span>
+<span class="comment">// Functions</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="kw">fn</span> <span class="ident">constant</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">_name</span>: <span class="ident">ConstantName</span>, <span class="ident">c</span>: <span class="ident">H</span>::<span class="ident">Constant</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">G</span>::<span class="ident">Constant</span> {
+    <span class="kw">let</span> <span class="ident">H</span>::<span class="ident">Constant</span> {
+        <span class="ident">loc</span>,
+        <span class="ident">signature</span>,
+        <span class="ident">value</span>: (<span class="ident">locals</span>, <span class="ident">block</span>),
+    } <span class="op">=</span> <span class="ident">c</span>;
+
+    <span class="kw">let</span> <span class="ident">final_value</span> <span class="op">=</span> <span class="ident">constant_</span>(<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">signature</span>.<span class="ident">clone</span>(), <span class="ident">locals</span>, <span class="ident">block</span>);
+    <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">final_value</span>.<span class="ident">and_then</span>(<span class="ident">move_value_from_exp</span>);
+
+    <span class="ident">G</span>::<span class="ident">Constant</span> {
+        <span class="ident">loc</span>,
+        <span class="ident">signature</span>,
+        <span class="ident">value</span>,
+    }
+}
+
+<span class="kw">const</span> <span class="ident">CANNOT_FOLD</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span>
+    <span class="string">&quot;Invalid expression in &#39;const&#39;. This expression could not be evaluated to a value&quot;</span>;
+
+<span class="kw">fn</span> <span class="ident">constant_</span>(
+    <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
+    <span class="ident">full_loc</span>: <span class="ident">Loc</span>,
+    <span class="ident">signature</span>: <span class="ident">H</span>::<span class="ident">BaseType</span>,
+    <span class="ident">locals</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">Var</span>, <span class="ident">H</span>::<span class="ident">SingleType</span><span class="op">&gt;</span>,
+    <span class="ident">block</span>: <span class="ident">H</span>::<span class="ident">Block</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">H</span>::<span class="ident">Exp</span><span class="op">&gt;</span> {
+    <span class="kw">use</span> <span class="ident">H</span>::<span class="ident">Command_</span> <span class="kw">as</span> <span class="ident">C</span>;
+    <span class="kw">const</span> <span class="ident">ICE_MSG</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="string">&quot;ICE invalid constant should have been blocked in typing&quot;</span>;
+
+    <span class="ident">initial_block</span>(<span class="ident">context</span>, <span class="ident">block</span>);
+    <span class="kw">let</span> (<span class="ident">start</span>, <span class="kw-2">mut</span> <span class="ident">blocks</span>, <span class="ident">infinite_loop_starts</span>) <span class="op">=</span> <span class="ident">context</span>.<span class="ident">finish_blocks</span>();
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">infinite_loop_starts</span>.<span class="ident">is_empty</span>(), <span class="ident">ICE_MSG</span>);
+
+    <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">cfg</span>, <span class="ident">errors</span>) <span class="op">=</span> <span class="ident">BlockCFG</span>::<span class="ident">new</span>(<span class="ident">start</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks</span>);
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">errors</span>.<span class="ident">is_empty</span>(), <span class="ident">ICE_MSG</span>);
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">fake_errors</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+    <span class="kw">let</span> <span class="ident">fake_signature</span> <span class="op">=</span> <span class="ident">H</span>::<span class="ident">FunctionSignature</span> {
+        <span class="ident">type_parameters</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+        <span class="ident">parameters</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+        <span class="ident">return_type</span>: <span class="ident">H</span>::<span class="ident">Type_</span>::<span class="ident">base</span>(<span class="ident">signature</span>),
+    };
+    <span class="kw">let</span> <span class="ident">fake_acquires</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
+    <span class="kw">let</span> <span class="ident">fake_infinite_loop_starts</span> <span class="op">=</span> <span class="ident">BTreeSet</span>::<span class="ident">new</span>();
+    <span class="ident">cfgir</span>::<span class="ident">refine_inference_and_verify</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fake_errors</span>,
+        <span class="kw-2">&amp;</span><span class="ident">fake_signature</span>,
+        <span class="kw-2">&amp;</span><span class="ident">fake_acquires</span>,
+        <span class="kw-2">&amp;</span><span class="ident">locals</span>,
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cfg</span>,
+        <span class="kw-2">&amp;</span><span class="ident">fake_infinite_loop_starts</span>,
+    );
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">fake_errors</span>.<span class="ident">is_empty</span>(), <span class="ident">ICE_MSG</span>);
+    <span class="ident">cfgir</span>::<span class="ident">optimize</span>(<span class="kw-2">&amp;</span><span class="ident">fake_signature</span>, <span class="kw-2">&amp;</span><span class="ident">locals</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cfg</span>);
+
+    <span class="kw">if</span> <span class="ident">blocks</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="number">1</span> {
+        <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">full_loc</span>, <span class="ident">CANNOT_FOLD</span>)]);
+        <span class="kw">return</span> <span class="prelude-val">None</span>;
+    }
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">optimized_block</span> <span class="op">=</span> <span class="ident">blocks</span>.<span class="ident">remove</span>(<span class="kw-2">&amp;</span><span class="ident">start</span>).<span class="ident">unwrap</span>();
+    <span class="kw">let</span> <span class="ident">return_cmd</span> <span class="op">=</span> <span class="ident">optimized_block</span>.<span class="ident">pop_back</span>().<span class="ident">unwrap</span>();
+    <span class="kw">for</span> <span class="macro">sp</span><span class="macro">!</span>(<span class="ident">cloc</span>, <span class="ident">cmd_</span>) <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">optimized_block</span> {
+        <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">cmd_</span> {
+            <span class="ident">C</span>::<span class="ident">IgnoreAndPop</span> { <span class="ident">exp</span>, .. } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">exp</span>,
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="kw-2">*</span><span class="ident">cloc</span>, <span class="ident">CANNOT_FOLD</span>)]);
+                <span class="kw">continue</span>;
+            }
+        };
+        <span class="ident">check_constant_value</span>(<span class="ident">context</span>, <span class="ident">e</span>)
+    }
+
+    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">return_cmd</span>.<span class="ident">value</span> {
+        <span class="ident">C</span>::<span class="ident">Return</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>,
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
+    };
+    <span class="ident">check_constant_value</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="ident">result</span>);
+    <span class="prelude-val">Some</span>(<span class="ident">result</span>)
+}
+
+<span class="kw">fn</span> <span class="ident">check_constant_value</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">e</span>: <span class="kw-2">&amp;</span><span class="ident">H</span>::<span class="ident">Exp</span>) {
+    <span class="kw">use</span> <span class="ident">H</span>::<span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">E</span>;
+    <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">e</span>.<span class="ident">exp</span>.<span class="ident">value</span> {
+        <span class="ident">E</span>::<span class="ident">Value</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> (),
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">context</span>.<span class="ident">error</span>(<span class="macro">vec</span><span class="macro">!</span>[(<span class="ident">e</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">CANNOT_FOLD</span>)]),
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">move_value_from_exp</span>(<span class="ident">e</span>: <span class="ident">H</span>::<span class="ident">Exp</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">MoveValue</span><span class="op">&gt;</span> {
+    <span class="kw">use</span> <span class="ident">H</span>::<span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">E</span>;
+    <span class="kw">match</span> <span class="ident">e</span>.<span class="ident">exp</span>.<span class="ident">value</span> {
+        <span class="ident">E</span>::<span class="ident">Value</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">move_value_from_value</span>(<span class="ident">v</span>)),
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+    }
+}
+
+<span class="kw">fn</span> <span class="ident">move_value_from_value</span>(<span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">v_</span>): <span class="ident">Value</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">MoveValue</span> {
+    <span class="kw">use</span> <span class="ident">MoveValue</span> <span class="kw">as</span> <span class="ident">MV</span>;
+    <span class="kw">use</span> <span class="ident">Value_</span> <span class="kw">as</span> <span class="ident">V</span>;
+    <span class="kw">match</span> <span class="ident">v_</span> {
+        <span class="ident">V</span>::<span class="ident">Address</span>(<span class="ident">a</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MV</span>::<span class="ident">Address</span>(<span class="ident">LibraAddress</span>::<span class="ident">new</span>(<span class="ident">a</span>.<span class="ident">to_u8</span>())),
+        <span class="ident">V</span>::<span class="ident">U8</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MV</span>::<span class="ident">U8</span>(<span class="ident">u</span>),
+        <span class="ident">V</span>::<span class="ident">U64</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MV</span>::<span class="ident">U64</span>(<span class="ident">u</span>),
+        <span class="ident">V</span>::<span class="ident">U128</span>(<span class="ident">u</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MV</span>::<span class="ident">U128</span>(<span class="ident">u</span>),
+        <span class="ident">V</span>::<span class="ident">Bool</span>(<span class="ident">b</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MV</span>::<span class="ident">Bool</span>(<span class="ident">b</span>),
+        <span class="ident">V</span>::<span class="ident">Bytearray</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">MV</span>::<span class="ident">Vector</span>(<span class="ident">v</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="ident">MV</span>::<span class="ident">U8</span>).<span class="ident">collect</span>()),
     }
 }
 
@@ -581,7 +825,7 @@
     <span class="kw">let</span> <span class="ident">b_</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">tb_</span> {
         <span class="ident">HB</span>::<span class="ident">Native</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">GB</span>::<span class="ident">Native</span>,
         <span class="ident">HB</span>::<span class="ident">Defined</span> { <span class="ident">locals</span>, <span class="ident">body</span> } <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="ident">function_block</span>(<span class="ident">context</span>, <span class="ident">body</span>);
+            <span class="ident">initial_block</span>(<span class="ident">context</span>, <span class="ident">body</span>);
             <span class="kw">let</span> (<span class="ident">start</span>, <span class="kw-2">mut</span> <span class="ident">blocks</span>, <span class="ident">infinite_loop_starts</span>) <span class="op">=</span> <span class="ident">context</span>.<span class="ident">finish_blocks</span>();
 
             <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">cfg</span>, <span class="ident">errors</span>) <span class="op">=</span> <span class="ident">BlockCFG</span>::<span class="ident">new</span>(<span class="ident">start</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blocks</span>);
@@ -615,7 +859,7 @@
 <span class="comment">// Statements</span>
 <span class="comment">//**************************************************************************************************</span>
 
-<span class="kw">fn</span> <span class="ident">function_block</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">blocks</span>: <span class="ident">H</span>::<span class="ident">Block</span>) {
+<span class="kw">fn</span> <span class="ident">initial_block</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">blocks</span>: <span class="ident">H</span>::<span class="ident">Block</span>) {
     <span class="kw">let</span> <span class="ident">start</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">new_label</span>();
     <span class="ident">context</span>.<span class="ident">start</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">start</span>);
     <span class="ident">block</span>(<span class="ident">context</span>, <span class="ident">start</span>, <span class="ident">blocks</span>)

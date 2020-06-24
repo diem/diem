@@ -644,6 +644,60 @@
 <span id="644">644</span>
 <span id="645">645</span>
 <span id="646">646</span>
+<span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
+<span id="650">650</span>
+<span id="651">651</span>
+<span id="652">652</span>
+<span id="653">653</span>
+<span id="654">654</span>
+<span id="655">655</span>
+<span id="656">656</span>
+<span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
+<span id="664">664</span>
+<span id="665">665</span>
+<span id="666">666</span>
+<span id="667">667</span>
+<span id="668">668</span>
+<span id="669">669</span>
+<span id="670">670</span>
+<span id="671">671</span>
+<span id="672">672</span>
+<span id="673">673</span>
+<span id="674">674</span>
+<span id="675">675</span>
+<span id="676">676</span>
+<span id="677">677</span>
+<span id="678">678</span>
+<span id="679">679</span>
+<span id="680">680</span>
+<span id="681">681</span>
+<span id="682">682</span>
+<span id="683">683</span>
+<span id="684">684</span>
+<span id="685">685</span>
+<span id="686">686</span>
+<span id="687">687</span>
+<span id="688">688</span>
+<span id="689">689</span>
+<span id="690">690</span>
+<span id="691">691</span>
+<span id="692">692</span>
+<span id="693">693</span>
+<span id="694">694</span>
+<span id="695">695</span>
+<span id="696">696</span>
+<span id="697">697</span>
+<span id="698">698</span>
+<span id="699">699</span>
+<span id="700">700</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -652,7 +706,8 @@
     <span class="ident">expansion</span>::<span class="ident">ast</span>::{<span class="ident">Fields</span>, <span class="ident">SpecId</span>, <span class="ident">Value</span>},
     <span class="ident">naming</span>::<span class="ident">ast</span>::{<span class="ident">FunctionSignature</span>, <span class="ident">StructDefinition</span>, <span class="ident">Type</span>, <span class="ident">TypeName_</span>, <span class="ident">Type_</span>},
     <span class="ident">parser</span>::<span class="ident">ast</span>::{
-        <span class="ident">BinOp</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">ModuleIdent</span>, <span class="ident">StructName</span>, <span class="ident">UnaryOp</span>, <span class="ident">Var</span>,
+        <span class="ident">BinOp</span>, <span class="ident">ConstantName</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">ModuleIdent</span>, <span class="ident">StructName</span>,
+        <span class="ident">UnaryOp</span>, <span class="ident">Var</span>,
     },
     <span class="ident">shared</span>::{<span class="ident">ast_debug</span>::<span class="kw-2">*</span>, <span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>},
 };
@@ -679,6 +734,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Script</span> {
     <span class="kw">pub</span> <span class="ident">loc</span>: <span class="ident">Loc</span>,
+    <span class="kw">pub</span> <span class="ident">constants</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ConstantName</span>, <span class="ident">Constant</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">function_name</span>: <span class="ident">FunctionName</span>,
     <span class="kw">pub</span> <span class="ident">function</span>: <span class="ident">Function</span>,
 }
@@ -693,6 +749,7 @@
     <span class="doccomment">/// `dependency_order` is the topological order/rank in the dependency graph.</span>
     <span class="kw">pub</span> <span class="ident">dependency_order</span>: <span class="ident">usize</span>,
     <span class="kw">pub</span> <span class="ident">structs</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">StructDefinition</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">constants</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ConstantName</span>, <span class="ident">Constant</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">functions</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">FunctionName</span>, <span class="ident">Function</span><span class="op">&gt;</span>,
 }
 
@@ -713,6 +770,17 @@
     <span class="kw">pub</span> <span class="ident">signature</span>: <span class="ident">FunctionSignature</span>,
     <span class="kw">pub</span> <span class="ident">acquires</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">Loc</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">FunctionBody</span>,
+}
+
+<span class="comment">//**************************************************************************************************</span>
+<span class="comment">// Constants</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>, <span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Constant</span> {
+    <span class="kw">pub</span> <span class="ident">loc</span>: <span class="ident">Loc</span>,
+    <span class="kw">pub</span> <span class="ident">signature</span>: <span class="ident">Type</span>,
+    <span class="kw">pub</span> <span class="ident">value</span>: <span class="ident">Exp</span>,
 }
 
 <span class="comment">//**************************************************************************************************</span>
@@ -768,6 +836,7 @@
     <span class="ident">Move</span> { <span class="ident">from_user</span>: <span class="ident">bool</span>, <span class="ident">var</span>: <span class="ident">Var</span> },
     <span class="ident">Copy</span> { <span class="ident">from_user</span>: <span class="ident">bool</span>, <span class="ident">var</span>: <span class="ident">Var</span> },
     <span class="ident">Use</span>(<span class="ident">Var</span>),
+    <span class="ident">Constant</span>(<span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">ModuleIdent</span><span class="op">&gt;</span>, <span class="ident">ConstantName</span>),
 
     <span class="ident">ModuleCall</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">ModuleCall</span><span class="op">&gt;</span>),
     <span class="ident">Builtin</span>(<span class="ident">Box</span><span class="op">&lt;</span><span class="ident">BuiltinFunction</span><span class="op">&gt;</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">Exp</span><span class="op">&gt;</span>),
@@ -841,24 +910,33 @@
 }
 
 <span class="comment">//**************************************************************************************************</span>
+<span class="comment">// impls</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="kw">impl</span> <span class="ident">BuiltinFunction_</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">display_name</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span> {
+        <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">naming</span>::<span class="ident">ast</span>::<span class="ident">BuiltinFunction_</span> <span class="kw">as</span> <span class="ident">NB</span>;
+        <span class="kw">use</span> <span class="ident">BuiltinFunction_</span> <span class="kw">as</span> <span class="ident">B</span>;
+        <span class="kw">match</span> <span class="self">self</span> {
+            <span class="ident">B</span>::<span class="ident">MoveToSender</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">MOVE_TO_SENDER</span>,
+            <span class="ident">B</span>::<span class="ident">MoveTo</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">MOVE_TO</span>,
+            <span class="ident">B</span>::<span class="ident">MoveFrom</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">MOVE_FROM</span>,
+            <span class="ident">B</span>::<span class="ident">BorrowGlobal</span>(<span class="bool-val">false</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">BORROW_GLOBAL</span>,
+            <span class="ident">B</span>::<span class="ident">BorrowGlobal</span>(<span class="bool-val">true</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">BORROW_GLOBAL_MUT</span>,
+            <span class="ident">B</span>::<span class="ident">Exists</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">EXISTS</span>,
+            <span class="ident">B</span>::<span class="ident">Freeze</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">FREEZE</span>,
+            <span class="ident">B</span>::<span class="ident">Assert</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">ASSERT</span>,
+        }
+    }
+}
+
+<span class="comment">//**************************************************************************************************</span>
 <span class="comment">// Display</span>
 <span class="comment">//**************************************************************************************************</span>
 
 <span class="kw">impl</span> <span class="ident">fmt</span>::<span class="ident">Display</span> <span class="kw">for</span> <span class="ident">BuiltinFunction_</span> {
     <span class="kw">fn</span> <span class="ident">fmt</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">f</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">fmt</span>::<span class="ident">Formatter</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">std</span>::<span class="ident">fmt</span>::<span class="prelude-ty">Result</span> {
-        <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">naming</span>::<span class="ident">ast</span>::<span class="ident">BuiltinFunction_</span> <span class="kw">as</span> <span class="ident">NB</span>;
-        <span class="kw">use</span> <span class="ident">BuiltinFunction_</span>::<span class="kw-2">*</span>;
-        <span class="kw">let</span> <span class="ident">s</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span> {
-            <span class="ident">MoveToSender</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">MOVE_TO_SENDER</span>,
-            <span class="ident">MoveTo</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">MOVE_TO</span>,
-            <span class="ident">MoveFrom</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">MOVE_FROM</span>,
-            <span class="ident">BorrowGlobal</span>(<span class="bool-val">false</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">BORROW_GLOBAL</span>,
-            <span class="ident">BorrowGlobal</span>(<span class="bool-val">true</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">BORROW_GLOBAL_MUT</span>,
-            <span class="ident">Exists</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">EXISTS</span>,
-            <span class="ident">Freeze</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">FREEZE</span>,
-            <span class="ident">Assert</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NB</span>::<span class="ident">ASSERT</span>,
-        };
-        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">s</span>)
+        <span class="macro">write</span><span class="macro">!</span>(<span class="ident">f</span>, <span class="string">&quot;{}&quot;</span>, <span class="self">self</span>.<span class="ident">display_name</span>())
     }
 }
 
@@ -887,9 +965,14 @@
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
         <span class="kw">let</span> <span class="ident">Script</span> {
             <span class="ident">loc</span>: <span class="ident">_loc</span>,
+            <span class="ident">constants</span>,
             <span class="ident">function_name</span>,
             <span class="ident">function</span>,
         } <span class="op">=</span> <span class="self">self</span>;
+        <span class="kw">for</span> <span class="ident">cdef</span> <span class="kw">in</span> <span class="ident">constants</span> {
+            <span class="ident">cdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+            <span class="ident">w</span>.<span class="ident">new_line</span>();
+        }
         (<span class="ident">function_name</span>.<span class="ident">clone</span>(), <span class="ident">function</span>).<span class="ident">ast_debug</span>(<span class="ident">w</span>);
     }
 }
@@ -900,6 +983,7 @@
             <span class="ident">is_source_module</span>,
             <span class="ident">dependency_order</span>,
             <span class="ident">structs</span>,
+            <span class="ident">constants</span>,
             <span class="ident">functions</span>,
         } <span class="op">=</span> <span class="self">self</span>;
         <span class="kw">if</span> <span class="kw-2">*</span><span class="ident">is_source_module</span> {
@@ -910,6 +994,10 @@
         <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;dependency order #{}&quot;</span>, <span class="ident">dependency_order</span>));
         <span class="kw">for</span> <span class="ident">sdef</span> <span class="kw">in</span> <span class="ident">structs</span> {
             <span class="ident">sdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+            <span class="ident">w</span>.<span class="ident">new_line</span>();
+        }
+        <span class="kw">for</span> <span class="ident">cdef</span> <span class="kw">in</span> <span class="ident">constants</span> {
+            <span class="ident">cdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
             <span class="ident">w</span>.<span class="ident">new_line</span>();
         }
         <span class="kw">for</span> <span class="ident">fdef</span> <span class="kw">in</span> <span class="ident">functions</span> {
@@ -934,7 +1022,7 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="ident">FunctionBody_</span>::<span class="ident">Native</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">body</span>.<span class="ident">value</span> {
             <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;native &quot;</span>);
         }
-        <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">name</span>));
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;fun {}&quot;</span>, <span class="ident">name</span>));
         <span class="ident">signature</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
         <span class="kw">if</span> <span class="op">!</span><span class="ident">acquires</span>.<span class="ident">is_empty</span>() {
             <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot; acquires &quot;</span>);
@@ -945,6 +1033,24 @@
             <span class="ident">FunctionBody_</span>::<span class="ident">Defined</span>(<span class="ident">body</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">body</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>)),
             <span class="ident">FunctionBody_</span>::<span class="ident">Native</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="string">&quot;;&quot;</span>),
         }
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> (<span class="ident">ConstantName</span>, <span class="kw-2">&amp;</span><span class="ident">Constant</span>) {
+    <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
+        <span class="kw">let</span> (
+            <span class="ident">name</span>,
+            <span class="ident">Constant</span> {
+                <span class="ident">loc</span>: <span class="ident">_loc</span>,
+                <span class="ident">signature</span>,
+                <span class="ident">value</span>,
+            },
+        ) <span class="op">=</span> <span class="self">self</span>;
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;const {}:&quot;</span>, <span class="ident">name</span>));
+        <span class="ident">signature</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot; = &quot;</span>);
+        <span class="ident">value</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;;&quot;</span>);
     }
 }
 
@@ -1003,6 +1109,8 @@
                 <span class="ident">var</span>: <span class="ident">v</span>,
             } <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;copy@{}&quot;</span>, <span class="ident">v</span>)),
             <span class="ident">E</span>::<span class="ident">Use</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;use@{}&quot;</span>, <span class="ident">v</span>)),
+            <span class="ident">E</span>::<span class="ident">Constant</span>(<span class="prelude-val">None</span>, <span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">c</span>)),
+            <span class="ident">E</span>::<span class="ident">Constant</span>(<span class="prelude-val">Some</span>(<span class="ident">m</span>), <span class="ident">c</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}::{}&quot;</span>, <span class="ident">m</span>, <span class="ident">c</span>)),
             <span class="ident">E</span>::<span class="ident">ModuleCall</span>(<span class="ident">mcall</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="ident">mcall</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
             }

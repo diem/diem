@@ -878,14 +878,56 @@
 <span id="878">878</span>
 <span id="879">879</span>
 <span id="880">880</span>
+<span id="881">881</span>
+<span id="882">882</span>
+<span id="883">883</span>
+<span id="884">884</span>
+<span id="885">885</span>
+<span id="886">886</span>
+<span id="887">887</span>
+<span id="888">888</span>
+<span id="889">889</span>
+<span id="890">890</span>
+<span id="891">891</span>
+<span id="892">892</span>
+<span id="893">893</span>
+<span id="894">894</span>
+<span id="895">895</span>
+<span id="896">896</span>
+<span id="897">897</span>
+<span id="898">898</span>
+<span id="899">899</span>
+<span id="900">900</span>
+<span id="901">901</span>
+<span id="902">902</span>
+<span id="903">903</span>
+<span id="904">904</span>
+<span id="905">905</span>
+<span id="906">906</span>
+<span id="907">907</span>
+<span id="908">908</span>
+<span id="909">909</span>
+<span id="910">910</span>
+<span id="911">911</span>
+<span id="912">912</span>
+<span id="913">913</span>
+<span id="914">914</span>
+<span id="915">915</span>
+<span id="916">916</span>
+<span id="917">917</span>
+<span id="918">918</span>
+<span id="919">919</span>
+<span id="920">920</span>
+<span id="921">921</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{
     <span class="ident">parser</span>::<span class="ident">ast</span>::{
-        <span class="ident">BinOp</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">Kind</span>, <span class="ident">ModuleIdent</span>, <span class="ident">ResourceLoc</span>,
-        <span class="ident">SpecApplyPattern</span>, <span class="ident">SpecBlockTarget</span>, <span class="ident">SpecConditionKind</span>, <span class="ident">StructName</span>, <span class="ident">UnaryOp</span>, <span class="ident">Var</span>,
+        <span class="ident">BinOp</span>, <span class="ident">ConstantName</span>, <span class="ident">Field</span>, <span class="ident">FunctionName</span>, <span class="ident">FunctionVisibility</span>, <span class="ident">Kind</span>, <span class="ident">ModuleIdent</span>,
+        <span class="ident">ResourceLoc</span>, <span class="ident">SpecApplyPattern</span>, <span class="ident">SpecBlockTarget</span>, <span class="ident">SpecConditionKind</span>, <span class="ident">StructName</span>, <span class="ident">UnaryOp</span>,
+        <span class="ident">Var</span>,
     },
     <span class="ident">shared</span>::{<span class="ident">ast_debug</span>::<span class="kw-2">*</span>, <span class="ident">unique_map</span>::<span class="ident">UniqueMap</span>, <span class="kw-2">*</span>},
 };
@@ -912,6 +954,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Script</span> {
     <span class="kw">pub</span> <span class="ident">loc</span>: <span class="ident">Loc</span>,
+    <span class="kw">pub</span> <span class="ident">constants</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ConstantName</span>, <span class="ident">Constant</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">function_name</span>: <span class="ident">FunctionName</span>,
     <span class="kw">pub</span> <span class="ident">function</span>: <span class="ident">Function</span>,
     <span class="kw">pub</span> <span class="ident">specs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SpecBlock</span><span class="op">&gt;</span>,
@@ -927,6 +970,7 @@
     <span class="kw">pub</span> <span class="ident">is_source_module</span>: <span class="ident">bool</span>,
     <span class="kw">pub</span> <span class="ident">structs</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">StructName</span>, <span class="ident">StructDefinition</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">functions</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">FunctionName</span>, <span class="ident">Function</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">constants</span>: <span class="ident">UniqueMap</span><span class="op">&lt;</span><span class="ident">ConstantName</span>, <span class="ident">Constant</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">specs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SpecBlock</span><span class="op">&gt;</span>,
 }
 
@@ -980,6 +1024,17 @@
     <span class="kw">pub</span> <span class="ident">acquires</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ModuleAccess</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">body</span>: <span class="ident">FunctionBody</span>,
     <span class="kw">pub</span> <span class="ident">specs</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">SpecId</span>, <span class="ident">SpecBlock</span><span class="op">&gt;</span>,
+}
+
+<span class="comment">//**************************************************************************************************</span>
+<span class="comment">// Constants</span>
+<span class="comment">//**************************************************************************************************</span>
+
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">PartialEq</span>, <span class="ident">Debug</span>)]</span>
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Constant</span> {
+    <span class="kw">pub</span> <span class="ident">loc</span>: <span class="ident">Loc</span>,
+    <span class="kw">pub</span> <span class="ident">signature</span>: <span class="ident">Type</span>,
+    <span class="kw">pub</span> <span class="ident">value</span>: <span class="ident">Exp</span>,
 }
 
 <span class="comment">//**************************************************************************************************</span>
@@ -1234,10 +1289,15 @@
     <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
         <span class="kw">let</span> <span class="ident">Script</span> {
             <span class="ident">loc</span>: <span class="ident">_loc</span>,
+            <span class="ident">constants</span>,
             <span class="ident">function_name</span>,
             <span class="ident">function</span>,
             <span class="ident">specs</span>,
         } <span class="op">=</span> <span class="self">self</span>;
+        <span class="kw">for</span> <span class="ident">cdef</span> <span class="kw">in</span> <span class="ident">constants</span> {
+            <span class="ident">cdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+            <span class="ident">w</span>.<span class="ident">new_line</span>();
+        }
         (<span class="ident">function_name</span>.<span class="ident">clone</span>(), <span class="ident">function</span>).<span class="ident">ast_debug</span>(<span class="ident">w</span>);
         <span class="kw">for</span> <span class="ident">spec</span> <span class="kw">in</span> <span class="ident">specs</span> {
             <span class="ident">spec</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
@@ -1253,6 +1313,7 @@
             <span class="ident">is_source_module</span>,
             <span class="ident">structs</span>,
             <span class="ident">functions</span>,
+            <span class="ident">constants</span>,
             <span class="ident">specs</span>,
         } <span class="op">=</span> <span class="self">self</span>;
         <span class="ident">w</span>.<span class="ident">writeln</span>(<span class="kw">if</span> <span class="kw-2">*</span><span class="ident">is_source_module</span> {
@@ -1262,6 +1323,10 @@
         });
         <span class="kw">for</span> <span class="ident">sdef</span> <span class="kw">in</span> <span class="ident">structs</span> {
             <span class="ident">sdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+            <span class="ident">w</span>.<span class="ident">new_line</span>();
+        }
+        <span class="kw">for</span> <span class="ident">cdef</span> <span class="kw">in</span> <span class="ident">constants</span> {
+            <span class="ident">cdef</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
             <span class="ident">w</span>.<span class="ident">new_line</span>();
         }
         <span class="kw">for</span> <span class="ident">fdef</span> <span class="kw">in</span> <span class="ident">functions</span> {
@@ -1332,8 +1397,7 @@
                 <span class="kw">if</span> <span class="kw">let</span> <span class="ident">FunctionBody_</span>::<span class="ident">Native</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">body</span>.<span class="ident">value</span> {
                     <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;native &quot;</span>);
                 }
-                <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;define &quot;</span>);
-                <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">name</span>));
+                <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;define {}&quot;</span>, <span class="ident">name</span>));
                 <span class="ident">signature</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
                 <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">body</span>.<span class="ident">value</span> {
                     <span class="ident">FunctionBody_</span>::<span class="ident">Defined</span>(<span class="ident">body</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">w</span>.<span class="ident">block</span>(<span class="op">|</span><span class="ident">w</span><span class="op">|</span> <span class="ident">body</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>)),
@@ -1418,7 +1482,7 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="ident">FunctionBody_</span>::<span class="ident">Native</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">body</span>.<span class="ident">value</span> {
             <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;native &quot;</span>);
         }
-        <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">name</span>));
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;fun {}&quot;</span>, <span class="ident">name</span>));
         <span class="ident">signature</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
         <span class="kw">if</span> <span class="op">!</span><span class="ident">acquires</span>.<span class="ident">is_empty</span>() {
             <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot; acquires &quot;</span>);
@@ -1447,6 +1511,24 @@
         });
         <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;): &quot;</span>);
         <span class="ident">return_type</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>)
+    }
+}
+
+<span class="kw">impl</span> <span class="ident">AstDebug</span> <span class="kw">for</span> (<span class="ident">ConstantName</span>, <span class="kw-2">&amp;</span><span class="ident">Constant</span>) {
+    <span class="kw">fn</span> <span class="ident">ast_debug</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">w</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AstWriter</span>) {
+        <span class="kw">let</span> (
+            <span class="ident">name</span>,
+            <span class="ident">Constant</span> {
+                <span class="ident">loc</span>: <span class="ident">_loc</span>,
+                <span class="ident">signature</span>,
+                <span class="ident">value</span>,
+            },
+        ) <span class="op">=</span> <span class="self">self</span>;
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;const {}:&quot;</span>, <span class="ident">name</span>));
+        <span class="ident">signature</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot; = &quot;</span>);
+        <span class="ident">value</span>.<span class="ident">ast_debug</span>(<span class="ident">w</span>);
+        <span class="ident">w</span>.<span class="ident">write</span>(<span class="string">&quot;;&quot;</span>);
     }
 }
 
