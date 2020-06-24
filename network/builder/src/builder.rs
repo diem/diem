@@ -49,8 +49,6 @@ pub use network::peer_manager::builder::AuthenticationMode;
 /// MempoolNetworkHandler and ConsensusNetworkHandler are constructed by calling
 /// [`NetworkBuilder::build`].  New instances of `NetworkBuilder` are obtained
 /// via [`NetworkBuilder::new`].
-// TODO(philiphayes): refactor NetworkBuilder and libra-node; current config is
-// pretty tangled.
 pub struct NetworkBuilder {
     network_context: Arc<NetworkContext>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
@@ -110,6 +108,7 @@ impl NetworkBuilder {
         }
     }
 
+    /// Create a new NetworkBuilder object.  Instantiate internal components based on the provided `NetworkConfig`.
     pub fn create(
         chain_id: &ChainId,
         role: RoleType,
@@ -203,12 +202,15 @@ impl NetworkBuilder {
         network_builder
     }
 
+    /// Build the Network and all enabled sub-components.  Note that some sub-components must be built within the context of an executor.
+    /// `build` may only be invoked once.
     pub fn build(&mut self, executor: Handle) -> &mut Self {
         // Can only build once.
         assert!(!self.built);
         self.built = true;
         self.build_connection_monitoring(&executor)
             .build_connectivity_manager(&executor)
+            .build_configuration_change_listener()
             .build_gossip_discovery(&executor)
             .build_onchain_discovery(&executor)
             .build_peer_manager(&executor);
@@ -216,6 +218,7 @@ impl NetworkBuilder {
         self
     }
 
+    /// Start the built network and all built sub-components.  `start` may be invoked at most once and only if `build` has been invoked previously.
     pub fn start(&mut self) -> &mut Self {
         // Can only start once;  must build before starting.
         assert!(self.built && !self.started);
@@ -226,6 +229,7 @@ impl NetworkBuilder {
             .expect("Cannot start a Network that has not been built");
         self.start_connection_monitoring(&executor)
             .start_connectivity_manager(&executor)
+            .start_configuration_change_listener(&executor)
             .start_gossip_discovery(&executor)
             .start_onchain_discovery(&executor)
             .start_peer_manager(&executor);
@@ -237,10 +241,16 @@ impl NetworkBuilder {
         self.network_context.clone()
     }
 
+    /// Return the set of `ReconfigSubscription`s required by this network.
+    // TODO:  convert this to a trait defined by StateSync
     pub fn reconfig_subscriptions(&mut self) -> &mut Vec<ReconfigSubscription> {
         &mut self.reconfig_subscriptions
     }
 
+    /// Return the `NetworkAddress` that the network is using to listen to incoming connections.
+    /// Note that the values returned before and after invoking `build` are not the same.
+    /// This function is used only as part of the state_synchronization initialization test and should be removed.
+    // TODO:  Remove this function.
     pub fn listen_address(&self) -> NetworkAddress {
         self.peer_manager_builder
             .as_ref()
@@ -249,7 +259,6 @@ impl NetworkBuilder {
     }
 
     /// Set trusted peers.
-    // TODO:  remove this function
     pub fn trusted_peers(
         &mut self,
         trusted_peers: HashMap<PeerId, x25519::PublicKey>,
@@ -258,11 +267,13 @@ impl NetworkBuilder {
         self
     }
 
-    fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
-        match self.connectivity_manager_builder {
-            Some(ref conn_mgr) => Some(conn_mgr.conn_mgr_reqs_tx()),
-            None => None,
-        }
+    /// Return the `conn_mgr_reqs_tx` from the contained `ConnectivityManager`.  This
+    /// function may only be invoked once a `ConnectivityManager` has been added to the network.
+    fn conn_mgr_reqs_tx(&self) -> channel::Sender<ConnectivityRequest> {
+        self.connectivity_manager_builder
+            .as_ref()
+            .expect("ConnectivityManager must be a part of the network")
+            .conn_mgr_reqs_tx()
     }
 
     /// Add a [`ConnectivityManager`] to the network.
@@ -282,6 +293,7 @@ impl NetworkBuilder {
         max_fullnode_connections: usize,
         channel_size: usize,
     ) -> &mut Self {
+        assert!(!self.built);
         let pm = self
             .peer_manager_builder
             .as_mut()
@@ -311,17 +323,7 @@ impl NetworkBuilder {
         self.connectivity_manager_builder = Some(builder);
 
         if self.network_context.role() == RoleType::Validator {
-            // Set up to listen for network configuration changes
-            let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
-                network_simple_onchain_discovery::gen_simple_discovery_reconfig_subscription();
-            self.reconfig_subscriptions
-                .push(simple_discovery_reconfig_subscription);
-            self.configuration_change_listener_builder =
-                Some(ConfigurationChangeListenerBuilder::create(
-                    self.network_context.role(),
-                    self.conn_mgr_reqs_tx().expect("We just set this value"),
-                    simple_discovery_reconfig_rx,
-                ));
+            self.add_configuration_change_listener();
         }
         self
     }
@@ -330,25 +332,56 @@ impl NetworkBuilder {
     fn build_connectivity_manager(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut connectivity_builder) = self.connectivity_manager_builder {
             connectivity_builder.build(executor);
-            if let Some(ref mut change_listener_builder) =
-                self.configuration_change_listener_builder
-            {
-                change_listener_builder.build();
-            }
+            debug!("{} Built ConnectivityManager", self.network_context());
         }
-        self.start_connectivity_manager(executor)
+        self
     }
 
     /// Start the ConnectivityManager
     fn start_connectivity_manager(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut connectivity_builder) = self.connectivity_manager_builder {
             connectivity_builder.start(executor);
-            debug!("Started ConnectivityManager");
-            if let Some(ref mut change_listener_builder) =
-                self.configuration_change_listener_builder
-            {
-                change_listener_builder.start(executor);
-            }
+            debug!("{} Started ConnectivityManager", self.network_context());
+        }
+        self
+    }
+
+    /// Adds a ConfiguratinoChangeListener to the network.  The ConfigurationChangeListener listens for updates from StateSync and applies them to ConnectivityManager.
+    fn add_configuration_change_listener(&mut self) -> &mut Self {
+        // Set up to listen for network configuration changes
+        let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
+            network_simple_onchain_discovery::gen_simple_discovery_reconfig_subscription();
+        self.reconfig_subscriptions
+            .push(simple_discovery_reconfig_subscription);
+        self.configuration_change_listener_builder =
+            Some(ConfigurationChangeListenerBuilder::create(
+                self.network_context.role(),
+                self.conn_mgr_reqs_tx(),
+                simple_discovery_reconfig_rx,
+            ));
+        self
+    }
+
+    /// Builds the configured ConfigurationChangeListener, if present.
+    fn build_configuration_change_listener(&mut self) -> &mut Self {
+        if let Some(ref mut change_listener_builder) = self.configuration_change_listener_builder {
+            change_listener_builder.build();
+            debug!(
+                "{} Built ConfigurationChangeListener",
+                self.network_context()
+            );
+        }
+        self
+    }
+
+    /// Start the ConfigurationChangeListener.
+    fn start_configuration_change_listener(&mut self, executor: &Handle) -> &mut Self {
+        if let Some(ref mut change_listener_builder) = self.configuration_change_listener_builder {
+            change_listener_builder.start(executor);
+            debug!(
+                "{} Started configuration_change_listener",
+                self.network_context()
+            )
         }
         self
     }
@@ -367,9 +400,8 @@ impl NetworkBuilder {
         discovery_interval_ms: u64,
         pubkey: x25519::PublicKey,
     ) -> &mut Self {
-        let conn_mgr_reqs_tx = self
-            .conn_mgr_reqs_tx()
-            .expect("connectivityManager msut be enabled");
+        assert!(!self.built);
+        let conn_mgr_reqs_tx = self.conn_mgr_reqs_tx();
         // Get handles for network events and sender.
         let (discovery_network_tx, discovery_network_rx) =
             self.add_protocol_handler(discovery::network_endpoint_config());
@@ -405,8 +437,9 @@ impl NetworkBuilder {
     fn build_gossip_discovery(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut discovery_builder) = self.discovery_builder {
             discovery_builder.build(executor);
+            debug!("{} Built Gossip Discovery", self.network_context());
         }
-        self.start_gossip_discovery(executor)
+        self
     }
 
     fn start_gossip_discovery(&mut self, executor: &Handle) -> &mut Self {
@@ -422,12 +455,12 @@ impl NetworkBuilder {
         libra_db: Arc<dyn DbReader>,
         waypoint: Waypoint,
     ) -> &mut Self {
+        assert!(!self.built);
         let (network_tx, discovery_events) = self
             .add_protocol_handler(onchain_discovery::network_interface::network_endpoint_config());
 
         let onchain_discovery_builder = OnchainDiscoveryBuilder::create(
-            self.conn_mgr_reqs_tx()
-                .expect("ConnectivityManager must be installed"),
+            self.conn_mgr_reqs_tx(),
             network_tx,
             discovery_events,
             self.network_context(),
@@ -447,14 +480,15 @@ impl NetworkBuilder {
     fn build_onchain_discovery(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut onchain_discovery_builder) = self.onchain_discovery_builder {
             onchain_discovery_builder.build(executor);
+            debug!("{} Built OnchainDiscovery", self.network_context());
         }
-        self.start_onchain_discovery(executor)
+        self
     }
 
     fn start_onchain_discovery(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut onchain_discovery_builder) = self.onchain_discovery_builder {
             onchain_discovery_builder.start(executor);
-            debug!("Started Onchain Discovery");
+            debug!("{} Started Onchain Discovery", self.network_context());
         }
         self
     }
@@ -465,6 +499,7 @@ impl NetworkBuilder {
         ping_timeout_ms: u64,
         ping_failures_tolerated: u64,
     ) -> &mut Self {
+        assert!(!self.built);
         // Initialize and start HealthChecker.
         let (hc_network_tx, hc_network_rx) =
             self.add_protocol_handler(health_checker::network_endpoint_config());
@@ -485,8 +520,9 @@ impl NetworkBuilder {
     fn build_connection_monitoring(&mut self, executor: &Handle) -> &mut Self {
         if let Some(ref mut health_checker_builder) = self.health_checker_builder {
             health_checker_builder.build(executor);
+            debug!("{} Built ConnectionMonitoring", self.network_context());
         }
-        self.start_connection_monitoring(executor)
+        self
     }
 
     fn start_connection_monitoring(&mut self, executor: &Handle) -> &mut Self {
@@ -535,6 +571,7 @@ impl NetworkBuilder {
         EventT: NewNetworkEvents,
         SenderT: NewNetworkSender,
     {
+        assert!(!self.built);
         let (peer_mgr_reqs_tx, peer_mgr_reqs_rx, connection_reqs_tx, connection_notifs_rx) =
             match &mut self.peer_manager_builder {
                 Some(builder) => builder.add_protocol_handler(
