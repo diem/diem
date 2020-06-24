@@ -14,14 +14,16 @@ use futures::{
     future::Future,
     task::{Context, Poll},
 };
-use libra_config::config::{MempoolConfig, PeerNetworkId};
+use libra_config::{
+    config::{MempoolConfig, PeerNetworkId},
+    network_id::NetworkId,
+};
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::MempoolStatus,
     on_chain_config::{ConfigID, LibraVersion, OnChainConfig, OnChainConfigPayload, VMConfig},
     transaction::SignedTransaction,
     vm_error::VMStatus,
-    PeerId,
 };
 use std::{
     collections::HashMap,
@@ -45,7 +47,7 @@ where
 {
     pub mempool: Arc<Mutex<CoreMempool>>,
     pub config: MempoolConfig,
-    pub network_senders: HashMap<PeerId, MempoolNetworkSender>,
+    pub network_senders: HashMap<NetworkId, MempoolNetworkSender>,
     pub db: Arc<dyn DbReader>,
     pub validator: Arc<RwLock<V>>,
     pub peer_manager: Arc<PeerManager>,
@@ -117,7 +119,7 @@ impl Future for ScheduledBroadcast {
 
             Poll::Pending
         } else {
-            Poll::Ready((self.peer, self.backoff))
+            Poll::Ready((self.peer.clone(), self.backoff))
         }
     }
 }

@@ -51,4 +51,4 @@ subscription-service = { path = "../common/subscription-service", version = "0.1
 
 [features]
 default = []
-fuzzing = ["libra-mempool/fuzzing", "libra-types/fuzzing", "libradb/fuzzing"]
+fuzzing = ["libra-config/fuzzing", "libra-mempool/fuzzing", "libra-types/fuzzing", "libradb/fuzzing"]

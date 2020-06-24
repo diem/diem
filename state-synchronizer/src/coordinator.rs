@@ -8,7 +8,7 @@ use crate::{
     executor_proxy::ExecutorProxyTrait,
     network::{StateSynchronizerEvents, StateSynchronizerMsg, StateSynchronizerSender},
     peer_manager::{PeerManager, PeerScoreUpdateType},
-    PeerId, SynchronizerState,
+    SynchronizerState,
 };
 use anyhow::{bail, ensure, format_err, Result};
 use futures::{
@@ -16,8 +16,9 @@ use futures::{
     stream::select_all,
     StreamExt,
 };
-use libra_config::config::{
-    PeerNetworkId, RoleType, StateSyncConfig, UpstreamConfig, UpstreamNetworkId,
+use libra_config::{
+    config::{PeerNetworkId, RoleType, StateSyncConfig, UpstreamConfig},
+    network_id::NetworkId,
 };
 use libra_logger::prelude::*;
 use libra_mempool::{CommitNotification, CommitResponse, CommittedTransaction};
@@ -96,7 +97,7 @@ pub(crate) struct SyncCoordinator<T> {
     // waypoint a node is not going to be abl
     waypoint: Option<Waypoint>,
     // network senders - (k, v) = (network ID, network sender)
-    network_senders: HashMap<UpstreamNetworkId, StateSynchronizerSender>,
+    network_senders: HashMap<NetworkId, StateSynchronizerSender>,
     // peers used for synchronization
     peer_manager: PeerManager,
     // Optional sync request to be called when the target sync is reached
@@ -114,7 +115,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     pub fn new(
         client_events: mpsc::UnboundedReceiver<CoordinatorMessage>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
-        network_senders: HashMap<UpstreamNetworkId, StateSynchronizerSender>,
+        network_senders: HashMap<NetworkId, StateSynchronizerSender>,
         role: RoleType,
         waypoint: Option<Waypoint>,
         config: StateSyncConfig,
@@ -147,13 +148,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     /// main routine. starts sync coordinator that listens for CoordinatorMsg
     pub async fn start(
         mut self,
-        network_handles: Vec<(PeerId, StateSynchronizerSender, StateSynchronizerEvents)>,
+        network_handles: Vec<(NetworkId, StateSynchronizerSender, StateSynchronizerEvents)>,
     ) {
         let mut interval = interval(Duration::from_millis(self.config.tick_interval_ms)).fuse();
 
         let events: Vec<_> = network_handles
             .into_iter()
-            .map(|(network_id, _sender, events)| events.map(move |e| (network_id, e)))
+            .map(|(network_id, _sender, events)| events.map(move |e| (network_id.clone(), e)))
             .collect();
         let mut network_events = select_all(events).fuse();
 
@@ -197,7 +198,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                                     debug!("[state sync] lost peer {:?}", peer);
                                     self.peer_manager.disable_peer(&peer);
                                 }
-                                Event::Message((peer_id, mut message)) => self.process_one_message(PeerNetworkId(network_id, peer_id), message).await,
+                                Event::Message((peer_id, mut message)) => self.process_one_message(PeerNetworkId(network_id.clone(), peer_id), message).await,
                                 _ => warn!("[state sync] unexpected event: {:?}", event),
                             }
                         },
@@ -214,12 +215,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
     async fn process_one_message(&mut self, peer: PeerNetworkId, msg: StateSynchronizerMsg) {
         match msg {
             StateSynchronizerMsg::GetChunkRequest(request) => {
-                if let Err(err) = self.process_chunk_request(peer, *request) {
+                if let Err(err) = self.process_chunk_request(peer.clone(), *request) {
                     error!("[state sync] failed to serve chunk request from {:?}, local LI version {}: {}", peer, self.local_state.highest_local_li.ledger_info().version(), err);
                 }
             }
             StateSynchronizerMsg::GetChunkResponse(response) => {
-                if let Err(err) = self.process_chunk_response(&peer, *response).await {
+                if let Err(err) = self.process_chunk_response(&peer.clone(), *response).await {
                     error!(
                         "[state sync] failed to process chunk response from {:?}: {}",
                         peer, err
@@ -890,7 +891,8 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             peer, req,
         );
         let msg = StateSynchronizerMsg::GetChunkRequest(Box::new(req));
-        self.peer_manager.process_request(known_version + 1, peer);
+        self.peer_manager
+            .process_request(known_version + 1, peer.clone());
         let sender = self
             .network_senders
             .get_mut(&peer.network_id())
@@ -938,7 +940,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 return false;
             }
             if request_info.known_version < highest_li_version {
-                ready.push((*peer, request_info.clone()));
+                ready.push((peer.clone(), request_info.clone()));
                 false
             } else {
                 true

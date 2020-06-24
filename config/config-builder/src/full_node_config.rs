@@ -4,9 +4,7 @@
 use crate::{BuildSwarm, Error, ValidatorConfig};
 use anyhow::{ensure, Result};
 use libra_config::{
-    config::{
-        DiscoveryMethod, NetworkPeersConfig, NodeConfig, PeerNetworkId, RoleType, UpstreamConfig,
-    },
+    config::{DiscoveryMethod, NetworkPeersConfig, NodeConfig, RoleType},
     generator,
     network_id::NetworkId,
     utils,
@@ -15,7 +13,7 @@ use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_network_address::NetworkAddress;
 use libra_types::transaction::Transaction;
 use rand::{rngs::StdRng, SeedableRng};
-use std::{collections::HashSet, str::FromStr};
+use std::str::FromStr;
 
 pub struct FullNodeConfig {
     pub advertised_address: NetworkAddress,
@@ -195,8 +193,7 @@ impl FullNodeConfig {
             .ok_or(Error::MissingFullNodeNetwork)?;
         let seed_peers =
             generator::build_seed_peers(&validator_full_node_network, self.bootstrap.clone());
-        let upstream_peer_id = validator_full_node_network.peer_id();
-        for config in configs.iter_mut() {
+        for (idx, config) in configs.iter_mut().enumerate() {
             let network = config
                 .full_node_networks
                 .last_mut()
@@ -204,12 +201,9 @@ impl FullNodeConfig {
             network.network_id = NetworkId::Public;
             network.network_peers = network_peers.clone();
             network.seed_peers = seed_peers.clone();
-            let mut upstream = UpstreamConfig::default();
-            let peer_id = network.peer_id();
-            upstream.upstream_peers = vec![PeerNetworkId(peer_id, upstream_peer_id)]
-                .into_iter()
-                .collect::<HashSet<_>>();
-            config.upstream = upstream;
+            if idx < actual_nodes - 1 {
+                config.upstream.networks.push(network.network_id.clone());
+            }
         }
 
         Ok((configs, faucet_key))
@@ -262,14 +256,10 @@ mod test {
         FullNodeConfig::new()
             .extend_validator(&mut validator_config)
             .unwrap();
-        let val_fn = &validator_config.full_node_networks[0];
 
         let fnc = FullNodeConfig::new().build().unwrap();
-        let fn_network_id = fnc.full_node_networks[0].peer_id();
-        assert!(fnc
-            .upstream
-            .upstream_peers
-            .contains(&PeerNetworkId(fn_network_id, val_fn.peer_id())));
+        let fn_network_id = &fnc.full_node_networks[0].network_id;
+        assert!(fnc.upstream.networks.contains(fn_network_id));
     }
 
     #[test]

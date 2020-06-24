@@ -54,7 +54,6 @@ impl MockSharedMempool {
 
         let mut config = NodeConfig::random();
         config.validator_network = Some(NetworkConfig::network_with_id(NetworkId::Validator));
-        let peer_id = config.validator_network.as_ref().unwrap().peer_id();
 
         let mempool = Arc::new(Mutex::new(CoreMempool::new(&config)));
         let (network_reqs_tx, _network_reqs_rx) =
@@ -80,7 +79,7 @@ impl MockSharedMempool {
         };
         let (_reconfig_event_publisher, reconfig_event_subscriber) =
             libra_channel::new(QueueStyle::LIFO, NonZeroUsize::new(1).unwrap(), None);
-        let network_handles = vec![(peer_id, network_sender, network_events)];
+        let network_handles = vec![(NetworkId::Validator, network_sender, network_events)];
 
         start_shared_mempool(
             runtime.handle(),

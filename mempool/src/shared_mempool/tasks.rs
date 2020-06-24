@@ -51,7 +51,7 @@ pub(crate) fn execute_broadcast<V>(
 ) where
     V: TransactionValidation,
 {
-    let next_broadcast_backoff = broadcast_single_peer(peer, backoff, smp);
+    let next_broadcast_backoff = broadcast_single_peer(peer.clone(), backoff, smp);
 
     let interval_ms = if next_broadcast_backoff {
         smp.config.shared_mempool_backoff_interval_ms
@@ -75,8 +75,8 @@ where
 {
     let peer_manager = &smp.peer_manager;
 
-    let (timeline_id, retry_txns_id, next_backoff) = if peer_manager.is_picked_peer(peer) {
-        let state = peer_manager.get_peer_state(peer);
+    let (timeline_id, retry_txns_id, next_backoff) = if peer_manager.is_picked_peer(&peer) {
+        let state = peer_manager.get_peer_state(&peer);
         let next_backoff = state.broadcast_info.backoff_mode;
         if state.is_alive {
             (

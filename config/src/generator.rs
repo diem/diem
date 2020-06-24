@@ -34,7 +34,6 @@ pub fn validator_swarm(
 
         // For a validator node, any of its validator peers are considered an upstream peer
         let network = node.validator_network.as_mut().unwrap();
-        node.upstream.primary_networks.push(network.peer_id());
         network.discovery_method = DiscoveryMethod::gossip(network.listen_address.clone());
         network.mutual_authentication = true;
         network.network_id = NetworkId::Validator;
