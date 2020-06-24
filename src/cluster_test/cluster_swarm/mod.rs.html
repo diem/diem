@@ -134,6 +134,26 @@
 <span id="134">134</span>
 <span id="135">135</span>
 <span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
+<span id="140">140</span>
+<span id="141">141</span>
+<span id="142">142</span>
+<span id="143">143</span>
+<span id="144">144</span>
+<span id="145">145</span>
+<span id="146">146</span>
+<span id="147">147</span>
+<span id="148">148</span>
+<span id="149">149</span>
+<span id="150">150</span>
+<span id="151">151</span>
+<span id="152">152</span>
+<span id="153">153</span>
+<span id="154">154</span>
+<span id="155">155</span>
+<span id="156">156</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -141,9 +161,8 @@
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">cluster_swarm_kube</span>;
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">instance</span>::{
-    <span class="ident">FullnodeConfig</span>, <span class="ident">Instance</span>, <span class="ident">InstanceConfig</span>,
-    <span class="ident">InstanceConfig</span>::{<span class="ident">Fullnode</span>, <span class="ident">Validator</span>, <span class="ident">Vault</span>, <span class="ident">LSR</span>},
-    <span class="ident">LSRConfig</span>, <span class="ident">ValidatorConfig</span>, <span class="ident">VaultConfig</span>,
+    <span class="ident">ApplicationConfig</span>::{<span class="ident">Fullnode</span>, <span class="ident">Validator</span>, <span class="ident">Vault</span>, <span class="ident">LSR</span>},
+    <span class="ident">FullnodeConfig</span>, <span class="ident">Instance</span>, <span class="ident">InstanceConfig</span>, <span class="ident">LSRConfig</span>, <span class="ident">ValidatorConfig</span>, <span class="ident">VaultConfig</span>,
 };
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">async_trait</span>::<span class="ident">async_trait</span>;
@@ -177,8 +196,14 @@
             <span class="kw">if</span> <span class="ident">lsr_backend</span> <span class="op">=</span><span class="op">=</span> <span class="string">&quot;vault&quot;</span> {
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vault_instances</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_validators</span>)
                     .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> {
-                        <span class="kw">let</span> <span class="ident">vault_config</span> <span class="op">=</span> <span class="ident">VaultConfig</span> { <span class="ident">index</span>: <span class="ident">i</span> };
-                        <span class="self">self</span>.<span class="ident">spawn_new_instance</span>(<span class="ident">Vault</span>(<span class="ident">vault_config</span>), <span class="ident">delete_data</span>)
+                        <span class="kw">let</span> <span class="ident">vault_config</span> <span class="op">=</span> <span class="ident">VaultConfig</span> {};
+                        <span class="self">self</span>.<span class="ident">spawn_new_instance</span>(
+                            <span class="ident">InstanceConfig</span> {
+                                <span class="ident">validator_group</span>: <span class="ident">i</span>,
+                                <span class="ident">application_config</span>: <span class="ident">Vault</span>(<span class="ident">vault_config</span>),
+                            },
+                            <span class="ident">delete_data</span>,
+                        )
                     })
                     .<span class="ident">collect</span>();
                 <span class="ident">lsrs</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">vault_instances</span>);
@@ -186,26 +211,36 @@
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">lsr_instances</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_validators</span>)
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> {
                     <span class="kw">let</span> <span class="ident">lsr_config</span> <span class="op">=</span> <span class="ident">LSRConfig</span> {
-                        <span class="ident">index</span>: <span class="ident">i</span>,
                         <span class="ident">num_validators</span>,
                         <span class="ident">image_tag</span>: <span class="ident">image_tag</span>.<span class="ident">to_string</span>(),
                         <span class="ident">lsr_backend</span>: <span class="ident">lsr_backend</span>.<span class="ident">to_string</span>(),
                     };
-                    <span class="self">self</span>.<span class="ident">spawn_new_instance</span>(<span class="ident">LSR</span>(<span class="ident">lsr_config</span>), <span class="ident">delete_data</span>)
+                    <span class="self">self</span>.<span class="ident">spawn_new_instance</span>(
+                        <span class="ident">InstanceConfig</span> {
+                            <span class="ident">validator_group</span>: <span class="ident">i</span>,
+                            <span class="ident">application_config</span>: <span class="ident">LSR</span>(<span class="ident">lsr_config</span>),
+                        },
+                        <span class="ident">delete_data</span>,
+                    )
                 })
                 .<span class="ident">collect</span>();
             <span class="ident">lsrs</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">lsr_instances</span>);
         }
         <span class="kw">let</span> <span class="ident">validators</span> <span class="op">=</span> (<span class="number">0</span>..<span class="ident">num_validators</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">i</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">validator_config</span> <span class="op">=</span> <span class="ident">ValidatorConfig</span> {
-                <span class="ident">index</span>: <span class="ident">i</span>,
                 <span class="ident">num_validators</span>,
                 <span class="ident">num_fullnodes</span>: <span class="ident">num_fullnodes_per_validator</span>,
                 <span class="ident">enable_lsr</span>,
                 <span class="ident">image_tag</span>: <span class="ident">image_tag</span>.<span class="ident">to_string</span>(),
                 <span class="ident">config_overrides</span>: <span class="ident">config_overrides</span>.<span class="ident">to_vec</span>(),
             };
-            <span class="self">self</span>.<span class="ident">spawn_new_instance</span>(<span class="ident">Validator</span>(<span class="ident">validator_config</span>), <span class="ident">delete_data</span>)
+            <span class="self">self</span>.<span class="ident">spawn_new_instance</span>(
+                <span class="ident">InstanceConfig</span> {
+                    <span class="ident">validator_group</span>: <span class="ident">i</span>,
+                    <span class="ident">application_config</span>: <span class="ident">Validator</span>(<span class="ident">validator_config</span>),
+                },
+                <span class="ident">delete_data</span>,
+            )
         });
         <span class="kw">let</span> (<span class="ident">lsrs</span>, <span class="ident">validators</span>) <span class="op">=</span> <span class="ident">join</span>(<span class="ident">try_join_all</span>(<span class="ident">lsrs</span>), <span class="ident">try_join_all</span>(<span class="ident">validators</span>)).<span class="kw">await</span>;
         <span class="ident">lsrs</span><span class="question-mark">?</span>;
@@ -226,12 +261,17 @@
                 <span class="kw">let</span> <span class="ident">fullnode_config</span> <span class="op">=</span> <span class="ident">FullnodeConfig</span> {
                     <span class="ident">fullnode_index</span>,
                     <span class="ident">num_fullnodes_per_validator</span>,
-                    <span class="ident">validator_index</span>,
                     <span class="ident">num_validators</span>,
                     <span class="ident">image_tag</span>: <span class="ident">image_tag</span>.<span class="ident">to_string</span>(),
                     <span class="ident">config_overrides</span>: <span class="ident">config_overrides</span>.<span class="ident">to_vec</span>(),
                 };
-                <span class="self">self</span>.<span class="ident">spawn_new_instance</span>(<span class="ident">Fullnode</span>(<span class="ident">fullnode_config</span>), <span class="ident">delete_data</span>)
+                <span class="self">self</span>.<span class="ident">spawn_new_instance</span>(
+                    <span class="ident">InstanceConfig</span> {
+                        <span class="ident">validator_group</span>: <span class="ident">validator_index</span>,
+                        <span class="ident">application_config</span>: <span class="ident">Fullnode</span>(<span class="ident">fullnode_config</span>),
+                    },
+                    <span class="ident">delete_data</span>,
+                )
             })
         });
         <span class="kw">let</span> <span class="ident">fullnodes</span> <span class="op">=</span> <span class="ident">try_join_all</span>(<span class="ident">fullnodes</span>).<span class="kw">await</span><span class="question-mark">?</span>;

@@ -136,16 +136,16 @@
 
         <span class="kw">let</span> <span class="ident">futures</span> <span class="op">=</span> <span class="ident">validators</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="ident">get_version</span>);
         <span class="kw">let</span> <span class="ident">val_latest_versions</span> <span class="op">=</span> <span class="ident">join_all</span>(<span class="ident">futures</span>).<span class="kw">await</span>;
-        <span class="kw">let</span> <span class="ident">val_latest_versions</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">i64</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">val_latest_versions</span>
+        <span class="kw">let</span> <span class="ident">val_latest_versions</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">val_latest_versions</span>
             .<span class="ident">into_iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">instance</span>, <span class="ident">version</span>)<span class="op">|</span> (<span class="ident">instance</span>.<span class="ident">validator_index</span>(), <span class="ident">version</span>))
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">instance</span>, <span class="ident">version</span>)<span class="op">|</span> (<span class="ident">instance</span>.<span class="ident">validator_group</span>(), <span class="ident">version</span>))
             .<span class="ident">collect</span>();
 
         <span class="kw">let</span> <span class="ident">futures</span> <span class="op">=</span> <span class="ident">fullnodes</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="ident">get_version</span>);
         <span class="kw">let</span> <span class="ident">fullnode_latest_versions</span> <span class="op">=</span> <span class="ident">join_all</span>(<span class="ident">futures</span>).<span class="kw">await</span>;
 
         <span class="kw">for</span> (<span class="ident">fullnode</span>, <span class="ident">fullnode_version</span>) <span class="kw">in</span> <span class="ident">fullnode_latest_versions</span> {
-            <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="ident">fullnode</span>.<span class="ident">validator_index</span>();
+            <span class="kw">let</span> <span class="ident">index</span> <span class="op">=</span> <span class="ident">fullnode</span>.<span class="ident">validator_group</span>();
             <span class="kw">let</span> <span class="ident">val_version</span> <span class="op">=</span> <span class="ident">val_latest_versions</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">index</span>).<span class="ident">unwrap</span>();
             <span class="kw">if</span> <span class="ident">val_version</span> <span class="op">-</span> <span class="ident">fullnode_version</span> <span class="op">&gt;</span> <span class="kw-2">*</span><span class="ident">THRESHOLD</span> {
                 <span class="ident">ctx</span>.<span class="ident">report_failure</span>(

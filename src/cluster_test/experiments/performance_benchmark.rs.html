@@ -292,7 +292,7 @@
             .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">val</span><span class="op">|</span> {
                 <span class="ident">all_fullnode_instances</span>
                     .<span class="ident">iter</span>()
-                    .<span class="ident">find</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">val</span>.<span class="ident">validator_index</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">x</span>.<span class="ident">validator_index</span>())
+                    .<span class="ident">find</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">val</span>.<span class="ident">validator_group</span>() <span class="op">=</span><span class="op">=</span> <span class="ident">x</span>.<span class="ident">validator_group</span>())
                     .<span class="ident">cloned</span>()
             })
             .<span class="ident">collect</span>();

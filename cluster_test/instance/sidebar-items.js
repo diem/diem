@@ -1,1 +1,1 @@
-initSidebarItems({"enum":[["InstanceConfig",""]],"fn":[["instancelist_to_set",""]],"struct":[["FullnodeConfig",""],["Instance",""],["LSRConfig",""],["ValidatorConfig",""],["VaultConfig",""]]});
+initSidebarItems({"enum":[["ApplicationConfig",""]],"fn":[["instancelist_to_set",""]],"struct":[["FullnodeConfig",""],["Instance",""],["InstanceConfig",""],["LSRConfig",""],["ValidatorConfig",""],["VaultConfig",""]]});
