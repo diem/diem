@@ -3,11 +3,12 @@
 
 use libra_types::transaction::ScriptABI;
 use serde_generate as serdegen;
-use serde_generate::SourceInstaller;
+use serde_generate::SourceInstaller as _;
 use serde_reflection::Registry;
 use std::{io::Write, process::Command};
 use tempfile::tempdir;
 use transaction_builder_generator as buildgen;
+use transaction_builder_generator::SourceInstaller as _;
 
 fn get_libra_registry() -> Registry {
     let path = "../../testsuite/generate-format/tests/staged/libra.yaml";
@@ -124,6 +125,34 @@ libra-types = {{ path = "../libra-types", version = "0.1.0" }}
         .arg("build")
         .arg("--target-dir")
         .arg(target_dir)
+        .status()
+        .unwrap();
+    assert!(status.success());
+}
+
+#[test]
+#[ignore]
+fn test_that_cpp_code_compiles() {
+    let registry = get_libra_registry();
+    let abis = get_stdlib_script_abis();
+    let dir = tempdir().unwrap();
+
+    let lcs_installer = serdegen::cpp::Installer::new(dir.path().to_path_buf());
+    lcs_installer
+        .install_module("libra_types", &registry)
+        .unwrap();
+    lcs_installer.install_serde_runtime().unwrap();
+
+    let abi_installer = buildgen::cpp::Installer::new(dir.path().to_path_buf());
+    abi_installer
+        .install_transaction_builders("libra_builder", &abis)
+        .unwrap();
+
+    let status = Command::new("clang++")
+        .arg("--std=c++17")
+        .arg("-g")
+        .arg("-c")
+        .arg(dir.path().join("libra_builder.cpp"))
         .status()
         .unwrap();
     assert!(status.success());
