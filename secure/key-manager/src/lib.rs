@@ -198,27 +198,28 @@ where
     }
 
     pub fn resubmit_consensus_key_transaction(&mut self) -> Result<(), Error> {
-        let storage_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
+        let consensus_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
         COUNTERS.consensus_rotation_tx_resubmissions.inc();
-        self.submit_key_rotation_transaction(storage_key)
+        self.submit_key_rotation_transaction(consensus_key)
             .map(|_| ())
     }
 
     pub fn rotate_consensus_key(&mut self) -> Result<Ed25519PublicKey, Error> {
-        let new_key = self.storage.rotate_key(CONSENSUS_KEY)?;
+        let consensus_key = self.storage.rotate_key(CONSENSUS_KEY)?;
         info!("Successfully rotated the consensus key in secure storage.");
         COUNTERS.completed_consensus_key_rotations.inc();
-        self.submit_key_rotation_transaction(new_key)
+        self.submit_key_rotation_transaction(consensus_key)
     }
 
     pub fn submit_key_rotation_transaction(
         &mut self,
-        new_key: Ed25519PublicKey,
+        consensus_key: Ed25519PublicKey,
     ) -> Result<Ed25519PublicKey, Error> {
         let operator_account = self.get_operator_account()?;
         let seq_id = self.libra.retrieve_sequence_number(operator_account)?;
         let expiration = Duration::from_secs(self.time_service.now() + self.txn_expiration_secs);
-        // retrieve existing network information from storage
+
+        // Retrieve existing network information as registered on-chain
         let validator_config = self.libra.retrieve_validator_config(operator_account)?;
         let network_key = validator_config.validator_network_identity_public_key;
         let network_address = validator_config.validator_network_address;
@@ -228,7 +229,7 @@ where
         let txn = build_rotation_transaction(
             operator_account,
             seq_id,
-            &new_key,
+            &consensus_key,
             &network_key,
             &network_address,
             &fullnode_network_key,
@@ -244,7 +245,7 @@ where
             .submit_transaction(Transaction::UserTransaction(signed_txn))?;
         info!("Submitted the rotation transaction to the blockchain.");
 
-        Ok(new_key)
+        Ok(consensus_key)
     }
 
     /// Ensures that the libra_timestamp() value registered on-chain is strictly monotonically
@@ -330,7 +331,7 @@ where
 pub fn build_rotation_transaction(
     sender: AccountAddress,
     seq_id: u64,
-    new_key: &Ed25519PublicKey,
+    consensus_key: &Ed25519PublicKey,
     network_key: &x25519::PublicKey,
     network_address: &RawNetworkAddress,
     fullnode_network_key: &x25519::PublicKey,
@@ -342,7 +343,7 @@ pub fn build_rotation_transaction(
         vec![],
         vec![
             TransactionArgument::Address(sender),
-            TransactionArgument::U8Vector(new_key.to_bytes().to_vec()),
+            TransactionArgument::U8Vector(consensus_key.to_bytes().to_vec()),
             TransactionArgument::U8Vector(network_key.as_slice().to_vec()),
             TransactionArgument::U8Vector(network_address.as_ref().to_vec()),
             TransactionArgument::U8Vector(fullnode_network_key.as_slice().to_vec()),
