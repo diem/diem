@@ -139,6 +139,11 @@ LedgerInfoWithV0:
             TYPENAME: AccountAddress
           VALUE:
             TYPENAME: Ed25519Signature
+    - markers:
+        MAP:
+          KEY:
+            TYPENAME: AccountAddress
+          VALUE: U64
 Payload: UNITSTRUCT
 ProposalMsg:
   STRUCT:
@@ -175,6 +180,11 @@ TimeoutCertificate:
             TYPENAME: AccountAddress
           VALUE:
             TYPENAME: Ed25519Signature
+    - markers:
+        MAP:
+          KEY:
+            TYPENAME: AccountAddress
+          VALUE: U64
 ValidatorConsensusInfo:
   STRUCT:
     - public_key:
@@ -203,6 +213,7 @@ Vote:
     - timeout_signature:
         OPTION:
           TYPENAME: Ed25519Signature
+    - marker: U64
 VoteData:
   STRUCT:
     - proposed:

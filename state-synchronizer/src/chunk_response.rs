@@ -19,7 +19,7 @@ pub enum ResponseLedgerInfo {
     /// using the local waypoint.
     LedgerInfoForWaypoint {
         // LedgerInfo corresponding to the waypoint version.
-        waypoint_li: LedgerInfoWithSignatures,
+        waypoint_li: Box<LedgerInfoWithSignatures>,
         // In case a chunk terminates an epoch, the LedgerInfo corresponding to the epoch boundary.
         end_of_epoch_li: Option<LedgerInfoWithSignatures>,
     },

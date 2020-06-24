@@ -10,7 +10,7 @@ use std::fmt;
 /// available on the requesting side.
 pub enum TargetType {
     /// The response is built relative to the target (or end of epoch).
-    TargetLedgerInfo(LedgerInfoWithSignatures),
+    TargetLedgerInfo(Box<LedgerInfoWithSignatures>),
     /// The response is built relative to the highest available LedgerInfo (or end of epoch).
     /// The value specifies the timeout in ms to wait for an available response.
     /// This "long poll" approach allows an upstream node to add the request to the list of its

@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::block_info::Round;
 use crate::{
     account_address::AccountAddress,
     block_info::BlockInfo,
@@ -219,7 +220,7 @@ fn arb_update_proof(
                 let signatures = sign_ledger_info(&last_vset[..], &latest_ledger_info);
                 let markers = marker_info(&last_vset[..]);
                 let latest_ledger_info_with_sigs =
-                    LedgerInfoWithSignatures::new(latest_ledger_info, signatures, 0);
+                    LedgerInfoWithSignatures::new(latest_ledger_info, signatures, markers);
                 (vsets, ledger_infos_with_sigs, latest_ledger_info_with_sigs)
             })
     })

@@ -406,9 +406,9 @@ impl<T: Payload> BlockStore<T> {
         self.inner.read().unwrap().compute_marker(block_id)
     }
 
-    pub fn print_voted(&self) {
-        self.inner.read().unwrap().print_voted();
-    }
+    // pub fn print_voted(&self) {
+    //     self.inner.read().unwrap().print_voted();
+    // }
 }
 
 impl<T: Payload> BlockReader for BlockStore<T> {

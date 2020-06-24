@@ -447,7 +447,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         );
 
         match request.target().clone() {
-            TargetType::TargetLedgerInfo(li) => self.process_request_target_li(peer, request, li),
+            TargetType::TargetLedgerInfo(li) => self.process_request_target_li(peer, request, *li),
             TargetType::HighestAvailable { timeout_ms } => {
                 self.process_request_highest_available(peer, request, timeout_ms)
             }
@@ -542,7 +542,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         );
 
         // Retrieve the waypoint LI.
-        let waypoint_li = self.executor_proxy.get_ledger_info(waypoint_version)?;
+        let waypoint_li = Box::new(self.executor_proxy.get_ledger_info(waypoint_version)?);
 
         // Txns are up to the end of request epoch with the proofs relative to the waypoint LI.
         let end_of_epoch_li = if waypoint_li.ledger_info().epoch() > request.current_epoch {
@@ -657,7 +657,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 end_of_epoch_li,
             } => self.process_response_with_waypoint_li(
                 txn_list_with_proof,
-                waypoint_li,
+                *waypoint_li,
                 end_of_epoch_li,
             ),
         }
@@ -872,7 +872,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                         );
                         return Ok(());
                     }
-                    TargetType::TargetLedgerInfo(sync_req.target.clone())
+                    TargetType::TargetLedgerInfo(Box::new(sync_req.target.clone()))
                 }
             }
         };

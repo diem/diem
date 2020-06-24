@@ -127,7 +127,7 @@ where
 
         let voted_blocks = Vec::new();
         let id_to_endorsers = HashMap::new();
-        let genesis_id = root_id.clone();
+        let genesis_id = root_id;
 
         BlockTree {
             id_to_block,
@@ -162,7 +162,7 @@ where
     }
 
     // Daniel: in order to compute strong commit, for now we don't remove any block or QC from the storage, even the blocks are committed
-    fn remove_block(&mut self, block_id: HashValue) {
+    fn remove_block(&mut self, _block_id: HashValue) {
         // Remove the block from the store
         // self.id_to_block.remove(&block_id);
         // self.id_to_quorum_cert.remove(&block_id);
@@ -221,7 +221,7 @@ where
     pub(super) fn add_endorser(&mut self, block_id: HashValue, account: AccountAddress) {
         let endorser = self.id_to_endorsers
             .entry(block_id)
-            .or_insert(HashSet::new());
+            .or_insert_with(HashSet::new);
         endorser.insert(account);
     }
 
@@ -477,39 +477,39 @@ where
                 }
             }
         }
-        return Ok(result);
+        Ok(result)
     }
 
-    // print voted blocks
-    pub fn print_voted(&self) {
-        for ind in 0..self.voted_blocks.len() {
-            let mut res = vec![];
-            let mut cur_block_id = self.voted_blocks[ind];
-            loop {
-                match self.get_block(&cur_block_id) {
-                    Some(ref block) if block.round() <= self.root().round() => {
-                        res.push(cur_block_id);
-                        break;
-                    }
-                    Some(block) => {
-                        res.push(cur_block_id);
-                        cur_block_id = block.parent_id();
-                    }
-                    None => break,
-                }
-            }
-            res.reverse();
-            for block_id in res {
-                if let Some(existing_block) = self.get_block(&block_id) {
-                    let round_number = existing_block.block_info().round();
-                    info!("daniel block round {}, id {:?}", round_number, block_id);
-                } else {
-                    warn!("Block {} not found", block_id);
-                }
-            }
-            info!("****************************************");
-        }
-    }
+    // // print voted blocks
+    // pub fn print_voted(&self) {
+    //     for ind in 0..self.voted_blocks.len() {
+    //         let mut res = vec![];
+    //         let mut cur_block_id = self.voted_blocks[ind];
+    //         loop {
+    //             match self.get_block(&cur_block_id) {
+    //                 Some(ref block) if block.round() <= self.root().round() => {
+    //                     res.push(cur_block_id);
+    //                     break;
+    //                 }
+    //                 Some(block) => {
+    //                     res.push(cur_block_id);
+    //                     cur_block_id = block.parent_id();
+    //                 }
+    //                 None => break,
+    //             }
+    //         }
+    //         res.reverse();
+    //         for block_id in res {
+    //             if let Some(existing_block) = self.get_block(&block_id) {
+    //                 let round_number = existing_block.block_info().round();
+    //                 info!("daniel block round {}, id {:?}", round_number, block_id);
+    //             } else {
+    //                 warn!("Block {} not found", block_id);
+    //             }
+    //         }
+    //         info!("****************************************");
+    //     }
+    // }
 
     // Returns the blocks from the genesis to the current block id
     // include the current block but exclude the genesis
@@ -573,7 +573,7 @@ where
             .path_from_genesis(self.highest_certified_block_id)
             .unwrap_or_else(Vec::new);
         // info!("daniel signatures {:?}, markers {:?}", signatures, markers);
-        for (account_address, _) in signatures {
+        for account_address in signatures.keys() {
             let marker = markers.get(account_address).unwrap();
             for block in &blocks_from_genesis_to_highest_certified {
                 // vote endorse a block if marker<block.round
