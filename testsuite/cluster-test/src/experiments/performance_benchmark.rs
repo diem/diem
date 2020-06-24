@@ -74,7 +74,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
             .filter_map(|val| {
                 all_fullnode_instances
                     .iter()
-                    .find(|x| val.validator_index() == x.validator_index())
+                    .find(|x| val.validator_group() == x.validator_group())
                     .cloned()
             })
             .collect();

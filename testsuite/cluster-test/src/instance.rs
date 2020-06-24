@@ -8,18 +8,19 @@ use anyhow::{format_err, Result};
 use debug_interface::AsyncNodeDebugClient;
 use libra_config::config::NodeConfig;
 use libra_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch};
-use once_cell::sync::Lazy;
-use regex::Regex;
 use reqwest::{Client, Url};
 use serde_json::Value;
 use std::{collections::HashSet, fmt, str::FromStr};
 use tokio::process::Command;
 
-static VAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"val-(\d+)").unwrap());
-static FULLNODE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"fn-(\d+)").unwrap());
+#[derive(Debug, Clone)]
+pub struct InstanceConfig {
+    pub validator_group: u32,
+    pub application_config: ApplicationConfig,
+}
 
 #[derive(Debug, Clone)]
-pub enum InstanceConfig {
+pub enum ApplicationConfig {
     Validator(ValidatorConfig),
     Fullnode(FullnodeConfig),
     LSR(LSRConfig),
@@ -27,13 +28,10 @@ pub enum InstanceConfig {
 }
 
 #[derive(Debug, Clone)]
-pub struct VaultConfig {
-    pub index: u32,
-}
+pub struct VaultConfig {}
 
 #[derive(Debug, Clone)]
 pub struct LSRConfig {
-    pub index: u32,
     pub num_validators: u32,
     pub image_tag: String,
     pub lsr_backend: String,
@@ -41,7 +39,6 @@ pub struct LSRConfig {
 
 #[derive(Debug, Clone)]
 pub struct ValidatorConfig {
-    pub index: u32,
     pub num_validators: u32,
     pub num_fullnodes: u32,
     pub enable_lsr: bool,
@@ -53,7 +50,6 @@ pub struct ValidatorConfig {
 pub struct FullnodeConfig {
     pub fullnode_index: u32,
     pub num_fullnodes_per_validator: u32,
-    pub validator_index: u32,
     pub num_validators: u32,
     pub image_tag: String,
     pub config_overrides: Vec<String>,
@@ -84,17 +80,17 @@ struct K8sInstanceInfo {
 
 impl InstanceConfig {
     pub fn replace_tag(&mut self, new_tag: String) -> Result<()> {
-        match self {
-            InstanceConfig::Validator(c) => {
+        match &mut self.application_config {
+            ApplicationConfig::Validator(c) => {
                 c.image_tag = new_tag;
             }
-            InstanceConfig::Fullnode(c) => {
+            ApplicationConfig::Fullnode(c) => {
                 c.image_tag = new_tag;
             }
-            InstanceConfig::LSR(c) => {
+            ApplicationConfig::LSR(c) => {
                 c.image_tag = new_tag;
             }
-            InstanceConfig::Vault(..) => {
+            ApplicationConfig::Vault(..) => {
                 return Err(format_err!(
                     "InstanceConfig::Vault does not support custom tags"
                 ));
@@ -104,16 +100,14 @@ impl InstanceConfig {
     }
 
     pub fn pod_name(&self) -> String {
-        match self {
-            InstanceConfig::Validator(validator_config) => {
-                format!("val-{}", validator_config.index)
-            }
-            InstanceConfig::Fullnode(fullnode_config) => format!(
+        match &self.application_config {
+            ApplicationConfig::Validator(_) => format!("val-{}", self.validator_group),
+            ApplicationConfig::Fullnode(fullnode_config) => format!(
                 "fn-{}-{}",
-                fullnode_config.validator_index, fullnode_config.fullnode_index
+                self.validator_group, fullnode_config.fullnode_index
             ),
-            InstanceConfig::LSR(lsr_config) => format!("lsr-{}", lsr_config.index),
-            InstanceConfig::Vault(vault_config) => format!("vault-{}", vault_config.index),
+            ApplicationConfig::LSR(_) => format!("lsr-{}", self.validator_group),
+            ApplicationConfig::Vault(_) => format!("vault-{}", self.validator_group),
         }
     }
 }
@@ -196,21 +190,9 @@ impl Instance {
         &self.peer_name
     }
 
-    pub fn validator_index(&self) -> String {
-        if let Some(cap) = VAL_REGEX.captures(&self.peer_name) {
-            if let Some(cap) = cap.get(1) {
-                return cap.as_str().to_string();
-            }
-        }
-        if let Some(cap) = FULLNODE_REGEX.captures(&self.peer_name) {
-            if let Some(cap) = cap.get(1) {
-                return cap.as_str().to_string();
-            }
-        }
-        panic!(
-            "Failed to parse peer name {} into validator_index",
-            self.peer_name
-        )
+    pub fn validator_group(&self) -> u32 {
+        let backend = self.k8s_backend();
+        backend.instance_config.validator_group
     }
 
     pub fn ip(&self) -> &String {

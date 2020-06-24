@@ -52,16 +52,16 @@ impl HealthCheck for FullNodeHealthCheck {
 
         let futures = validators.iter().map(get_version);
         let val_latest_versions = join_all(futures).await;
-        let val_latest_versions: HashMap<String, i64> = val_latest_versions
+        let val_latest_versions: HashMap<_, _> = val_latest_versions
             .into_iter()
-            .map(|(instance, version)| (instance.validator_index(), version))
+            .map(|(instance, version)| (instance.validator_group(), version))
             .collect();
 
         let futures = fullnodes.iter().map(get_version);
         let fullnode_latest_versions = join_all(futures).await;
 
         for (fullnode, fullnode_version) in fullnode_latest_versions {
-            let index = fullnode.validator_index();
+            let index = fullnode.validator_group();
             let val_version = val_latest_versions.get(&index).unwrap();
             if val_version - fullnode_version > *THRESHOLD {
                 ctx.report_failure(
