@@ -1,1 +1,1 @@
-initSidebarItems({"fn":[["output",""]]});
+initSidebarItems({"fn":[["output","Output transaction builders in Rust for the given ABIs. If `local_types` is true, we generate a file suitable for the Libra codebase itself rather than using serde-generated, standalone definitions."]],"struct":[["Installer",""]]});

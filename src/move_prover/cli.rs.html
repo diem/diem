@@ -435,6 +435,22 @@
 <span id="435">435</span>
 <span id="436">436</span>
 <span id="437">437</span>
+<span id="438">438</span>
+<span id="439">439</span>
+<span id="440">440</span>
+<span id="441">441</span>
+<span id="442">442</span>
+<span id="443">443</span>
+<span id="444">444</span>
+<span id="445">445</span>
+<span id="446">446</span>
+<span id="447">447</span>
+<span id="448">448</span>
+<span id="449">449</span>
+<span id="450">450</span>
+<span id="451">451</span>
+<span id="452">452</span>
+<span id="453">453</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -443,9 +459,10 @@
 
 <span class="doccomment">//! Functionality related to the command line interface of the Move prover.</span>
 
+<span class="kw">use</span> <span class="ident">abigen</span>::<span class="ident">AbigenOptions</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">anyhow</span>;
 <span class="kw">use</span> <span class="ident">clap</span>::{<span class="ident">App</span>, <span class="ident">Arg</span>};
-<span class="kw">use</span> <span class="ident">docgen</span>::<span class="ident">docgen</span>::<span class="ident">DocgenOptions</span>;
+<span class="kw">use</span> <span class="ident">docgen</span>::<span class="ident">DocgenOptions</span>;
 <span class="kw">use</span> <span class="ident">log</span>::<span class="ident">LevelFilter</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">simplelog</span>::{
@@ -488,6 +505,8 @@
     <span class="kw">pub</span> <span class="ident">verbosity_level</span>: <span class="ident">LevelFilter</span>,
     <span class="doccomment">/// Whether to run the documentation generator instead of the prover.</span>
     <span class="kw">pub</span> <span class="ident">run_docgen</span>: <span class="ident">bool</span>,
+    <span class="doccomment">/// Whether to run the ABI generator instead of the prover.</span>
+    <span class="kw">pub</span> <span class="ident">run_abigen</span>: <span class="ident">bool</span>,
     <span class="doccomment">/// An account address to use if none is specified in the source.</span>
     <span class="kw">pub</span> <span class="ident">account_address</span>: <span class="ident">String</span>,
     <span class="doccomment">/// The paths to the Move sources.</span>
@@ -501,6 +520,8 @@
     <span class="kw">pub</span> <span class="ident">backend</span>: <span class="ident">BackendOptions</span>,
     <span class="doccomment">/// Options for the documentation generator.</span>
     <span class="kw">pub</span> <span class="ident">docgen</span>: <span class="ident">DocgenOptions</span>,
+    <span class="doccomment">/// Options for the ABI generator.</span>
+    <span class="kw">pub</span> <span class="ident">abigen</span>: <span class="ident">AbigenOptions</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">Default</span> <span class="kw">for</span> <span class="ident">Options</span> {
@@ -509,13 +530,15 @@
             <span class="ident">prelude_path</span>: <span class="ident">INLINE_PRELUDE</span>.<span class="ident">to_string</span>(),
             <span class="ident">output_path</span>: <span class="string">&quot;output.bpl&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">run_docgen</span>: <span class="bool-val">false</span>,
+            <span class="ident">run_abigen</span>: <span class="bool-val">false</span>,
             <span class="ident">account_address</span>: <span class="string">&quot;0x234567&quot;</span>.<span class="ident">to_string</span>(),
             <span class="ident">verbosity_level</span>: <span class="ident">LevelFilter</span>::<span class="ident">Info</span>,
             <span class="ident">move_sources</span>: <span class="macro">vec</span><span class="macro">!</span>[],
             <span class="ident">move_deps</span>: <span class="macro">vec</span><span class="macro">!</span>[],
-            <span class="ident">docgen</span>: <span class="ident">DocgenOptions</span>::<span class="ident">default</span>(),
             <span class="ident">prover</span>: <span class="ident">ProverOptions</span>::<span class="ident">default</span>(),
             <span class="ident">backend</span>: <span class="ident">BackendOptions</span>::<span class="ident">default</span>(),
+            <span class="ident">docgen</span>: <span class="ident">DocgenOptions</span>::<span class="ident">default</span>(),
+            <span class="ident">abigen</span>: <span class="ident">AbigenOptions</span>::<span class="ident">default</span>(),
         }
     }
 }
@@ -705,6 +728,12 @@
                     Generated docs will be written into the directory `./doc` unless configured otherwise via toml&quot;</span>),
             )
             .<span class="ident">arg</span>(
+                <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;abigen&quot;</span>)
+                    .<span class="ident">long</span>(<span class="string">&quot;abigen&quot;</span>)
+                    .<span class="ident">help</span>(<span class="string">&quot;run the ABI generator instead of the prover. \
+                    Generated ABIs will be written into the directory `./abi` unless configured otherwise via toml&quot;</span>),
+            )
+            .<span class="ident">arg</span>(
                 <span class="ident">Arg</span>::<span class="ident">with_name</span>(<span class="string">&quot;verify&quot;</span>)
                     .<span class="ident">long</span>(<span class="string">&quot;verify&quot;</span>)
                     .<span class="ident">takes_value</span>(<span class="bool-val">true</span>)
@@ -799,6 +828,9 @@
         }
         <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;docgen&quot;</span>) {
             <span class="ident">options</span>.<span class="ident">run_docgen</span> <span class="op">=</span> <span class="bool-val">true</span>;
+        }
+        <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;abigen&quot;</span>) {
+            <span class="ident">options</span>.<span class="ident">run_abigen</span> <span class="op">=</span> <span class="bool-val">true</span>;
         }
         <span class="kw">if</span> <span class="ident">matches</span>.<span class="ident">is_present</span>(<span class="string">&quot;trace&quot;</span>) {
             <span class="ident">options</span>.<span class="ident">prover</span>.<span class="ident">debug_trace</span> <span class="op">=</span> <span class="bool-val">true</span>;

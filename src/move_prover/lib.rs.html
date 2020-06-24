@@ -289,6 +289,30 @@
 <span id="289">289</span>
 <span id="290">290</span>
 <span id="291">291</span>
+<span id="292">292</span>
+<span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
+<span id="303">303</span>
+<span id="304">304</span>
+<span id="305">305</span>
+<span id="306">306</span>
+<span id="307">307</span>
+<span id="308">308</span>
+<span id="309">309</span>
+<span id="310">310</span>
+<span id="311">311</span>
+<span id="312">312</span>
+<span id="313">313</span>
+<span id="314">314</span>
+<span id="315">315</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -301,9 +325,10 @@
     <span class="ident">cli</span>::{<span class="ident">Options</span>, <span class="ident">INLINE_PRELUDE</span>},
     <span class="ident">prelude_template_helpers</span>::<span class="ident">StratificationHelper</span>,
 };
+<span class="kw">use</span> <span class="ident">abigen</span>::<span class="ident">Abigen</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="ident">anyhow</span>;
 <span class="kw">use</span> <span class="ident">codespan_reporting</span>::<span class="ident">term</span>::<span class="ident">termcolor</span>::{<span class="ident">ColorChoice</span>, <span class="ident">StandardStream</span>, <span class="ident">WriteColor</span>};
-<span class="kw">use</span> <span class="ident">docgen</span>::<span class="ident">docgen</span>::<span class="ident">Docgen</span>;
+<span class="kw">use</span> <span class="ident">docgen</span>::<span class="ident">Docgen</span>;
 <span class="kw">use</span> <span class="ident">handlebars</span>::<span class="ident">Handlebars</span>;
 <span class="kw">use</span> <span class="ident">itertools</span>::<span class="ident">Itertools</span>;
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">unused_imports</span>)]</span>
@@ -367,6 +392,10 @@
     <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">run_docgen</span> {
         <span class="kw">return</span> <span class="ident">run_docgen</span>(<span class="kw-2">&amp;</span><span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>, <span class="ident">now</span>);
     }
+    <span class="comment">// Same for ABI generator.</span>
+    <span class="kw">if</span> <span class="ident">options</span>.<span class="ident">run_abigen</span> {
+        <span class="kw">return</span> <span class="ident">run_abigen</span>(<span class="kw-2">&amp;</span><span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>, <span class="ident">now</span>);
+    }
     <span class="kw">let</span> <span class="ident">targets</span> <span class="op">=</span> <span class="ident">create_and_process_bytecode</span>(<span class="kw-2">&amp;</span><span class="ident">options</span>, <span class="kw-2">&amp;</span><span class="ident">env</span>);
     <span class="kw">if</span> <span class="ident">env</span>.<span class="ident">has_errors</span>() {
         <span class="ident">env</span>.<span class="ident">report_errors</span>(<span class="ident">error_writer</span>);
@@ -428,6 +457,25 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">generator</span> <span class="op">=</span> <span class="ident">Docgen</span>::<span class="ident">new</span>(<span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>.<span class="ident">docgen</span>);
     <span class="kw">let</span> <span class="ident">checking_elapsed</span> <span class="op">=</span> <span class="ident">now</span>.<span class="ident">elapsed</span>();
     <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;generating documentation&quot;</span>);
+    <span class="ident">generator</span>.<span class="ident">gen</span>();
+    <span class="kw">for</span> (<span class="ident">file</span>, <span class="ident">content</span>) <span class="kw">in</span> <span class="ident">generator</span>.<span class="ident">into_result</span>() {
+        <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="ident">file</span>);
+        <span class="ident">fs</span>::<span class="ident">create_dir_all</span>(<span class="ident">path</span>.<span class="ident">parent</span>().<span class="ident">unwrap</span>())<span class="question-mark">?</span>;
+        <span class="ident">fs</span>::<span class="ident">write</span>(<span class="ident">path</span>.<span class="ident">as_path</span>(), <span class="ident">content</span>)<span class="question-mark">?</span>;
+    }
+    <span class="kw">let</span> <span class="ident">generating_elapsed</span> <span class="op">=</span> <span class="ident">now</span>.<span class="ident">elapsed</span>();
+    <span class="macro">info</span><span class="macro">!</span>(
+        <span class="string">&quot;{:.3}s checking, {:.3}s generating&quot;</span>,
+        <span class="ident">checking_elapsed</span>.<span class="ident">as_secs_f64</span>(),
+        (<span class="ident">generating_elapsed</span> <span class="op">-</span> <span class="ident">checking_elapsed</span>).<span class="ident">as_secs_f64</span>()
+    );
+    <span class="prelude-val">Ok</span>(())
+}
+
+<span class="kw">fn</span> <span class="ident">run_abigen</span>(<span class="ident">env</span>: <span class="kw-2">&amp;</span><span class="ident">GlobalEnv</span>, <span class="ident">options</span>: <span class="kw-2">&amp;</span><span class="ident">Options</span>, <span class="ident">now</span>: <span class="ident">Instant</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">generator</span> <span class="op">=</span> <span class="ident">Abigen</span>::<span class="ident">new</span>(<span class="ident">env</span>, <span class="kw-2">&amp;</span><span class="ident">options</span>.<span class="ident">abigen</span>);
+    <span class="kw">let</span> <span class="ident">checking_elapsed</span> <span class="op">=</span> <span class="ident">now</span>.<span class="ident">elapsed</span>();
+    <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;generating ABI files&quot;</span>);
     <span class="ident">generator</span>.<span class="ident">gen</span>();
     <span class="kw">for</span> (<span class="ident">file</span>, <span class="ident">content</span>) <span class="kw">in</span> <span class="ident">generator</span>.<span class="ident">into_result</span>() {
         <span class="kw">let</span> <span class="ident">path</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="kw-2">&amp;</span><span class="ident">file</span>);

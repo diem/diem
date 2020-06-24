@@ -1,4 +1,5 @@
 var ALIASES = {};
+ALIASES["abigen"] = {};
 ALIASES["accumulator"] = {};
 ALIASES["backup_cli"] = {};
 ALIASES["backup_service"] = {};
