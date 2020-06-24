@@ -15,7 +15,14 @@ module Signer {
     }
 
     spec module {
+        /// Helper function that returns the address of the signer.
         native define get_address(account: signer): address;
     }
+
+    spec fun address_of {
+        aborts_if false;
+        ensures result == get_address(s);
+    }
+
 }
 }

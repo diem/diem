@@ -8,6 +8,7 @@
 -  [Function `borrow_address`](#0x1_Signer_borrow_address)
 -  [Function `address_of`](#0x1_Signer_address_of)
 -  [Specification](#0x1_Signer_Specification)
+    -  [Function `address_of`](#0x1_Signer_Specification_address_of)
 
 
 
@@ -62,9 +63,28 @@
 ## Specification
 
 
+Helper function that returns the address of the signer.
+
 
 <a name="0x1_Signer_get_address"></a>
 
 
 <pre><code><b>native</b> <b>define</b> <a href="#0x1_Signer_get_address">get_address</a>(account: signer): address;
+</code></pre>
+
+
+
+<a name="0x1_Signer_Specification_address_of"></a>
+
+### Function `address_of`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Signer_address_of">address_of</a>(s: &signer): address
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> <b>false</b>;
+<b>ensures</b> result == <a href="#0x1_Signer_get_address">get_address</a>(s);
 </code></pre>
