@@ -102,7 +102,7 @@ while read -r line; do
         fi
         # Don't fail out of the loop here. We just want to run the test binary
         # to collect its profile data.  Also note which crates fail under coverage.
-        ( cd "$dirline" && pwd && cargo xtest ) || FAILED_CRATES="${FAILED_CRATES}:${subdir}"
+        ( cd "$dirline" && pwd && RUST_BACKTRACE=1 cargo xtest ) || FAILED_CRATES="${FAILED_CRATES}:${subdir}"
 done < <(find "$TEST_DIR" -name 'Cargo.toml')
 
 # Make the coverage directory if it doesn't exist
