@@ -39,6 +39,13 @@ fn quote_from_package(package_name: Option<String>) -> String {
     }
 }
 
+fn quote_from_package_and_module(package_name: Option<String>, module_name: &str) -> String {
+    match package_name {
+        None => format!("from {} ", module_name),
+        Some(name) => format!("from {}.{} ", name, module_name),
+    }
+}
+
 fn output_preamble(
     out: &mut dyn Write,
     serde_package_name: Option<String>,
@@ -46,20 +53,19 @@ fn output_preamble(
 ) -> Result<()> {
     writeln!(
         out,
-        r#"# pyre-ignore-all-errors
-import typing
+        r#"import typing
 {}import serde_types as st
-{}import libra_types as libra
+{}import Script, TypeTag, AccountAddress, TransactionArgument__Bool, TransactionArgument__U8, TransactionArgument__U64, TransactionArgument__U128, TransactionArgument__Address, TransactionArgument__U8Vector
 "#,
         quote_from_package(serde_package_name),
-        quote_from_package(libra_package_name),
+        quote_from_package_and_module(libra_package_name, "libra_types"),
     )
 }
 
 fn output_builder(out: &mut dyn Write, abi: &ScriptABI) -> Result<()> {
     writeln!(
         out,
-        "\ndef encode_{}_script({}) -> libra.Script:",
+        "\ndef encode_{}_script({}) -> Script:",
         abi.name(),
         [
             quote_type_parameters(abi.ty_args()),
@@ -71,7 +77,7 @@ fn output_builder(out: &mut dyn Write, abi: &ScriptABI) -> Result<()> {
     writeln!(out, "{}", quote_doc(abi.doc()))?;
     writeln!(
         out,
-        r#"    return libra.Script(
+        r#"    return Script(
         # fmt: off
         code={},
         # fmt: on
@@ -104,7 +110,7 @@ fn quote_doc(doc: &str) -> String {
 fn quote_type_parameters(ty_args: &[TypeArgumentABI]) -> Vec<String> {
     ty_args
         .iter()
-        .map(|ty_arg| format!("{}: libra.TypeTag", ty_arg.name()))
+        .map(|ty_arg| format!("{}: TypeTag", ty_arg.name()))
         .collect()
 }
 
@@ -118,7 +124,7 @@ fn quote_code(code: &[u8]) -> String {
     format!(
         "[{}]",
         code.iter()
-            .map(|x| format!("{}", x))
+            .map(|x| format!("st.uint8({})", x))
             .collect::<Vec<_>>()
             .join(", ")
     )
@@ -146,7 +152,7 @@ fn quote_type(type_tag: &TypeTag) -> String {
         U8 => "st.uint8".into(),
         U64 => "st.uint64".into(),
         U128 => "st.uint128".into(),
-        Address => "libra.AccountAddress".into(),
+        Address => "AccountAddress".into(),
         Vector(type_tag) => match type_tag.as_ref() {
             U8 => "typing.Sequence[st.uint8]".into(),
             _ => type_not_allowed(type_tag),
@@ -159,13 +165,13 @@ fn quote_type(type_tag: &TypeTag) -> String {
 fn make_transaction_argument(type_tag: &TypeTag, name: &str) -> String {
     use TypeTag::*;
     match type_tag {
-        Bool => format!("libra.TransactionArgument.Bool({})", name),
-        U8 => format!("libra.TransactionArgument.U8({})", name),
-        U64 => format!("libra.TransactionArgument.U64({})", name),
-        U128 => format!("libra.TransactionArgument.U128({})", name),
-        Address => format!("libra.TransactionArgument.Address({})", name),
+        Bool => format!("TransactionArgument__Bool({})", name),
+        U8 => format!("TransactionArgument__U8({})", name),
+        U64 => format!("TransactionArgument__U64({})", name),
+        U128 => format!("TransactionArgument__U128({})", name),
+        Address => format!("TransactionArgument__Address({})", name),
         Vector(type_tag) => match type_tag.as_ref() {
-            U8 => format!("libra.TransactionArgument.U8Vector({})", name),
+            U8 => format!("TransactionArgument__U8Vector({})", name),
             _ => type_not_allowed(type_tag),
         },
 

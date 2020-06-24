@@ -20,21 +20,23 @@ fn get_stdlib_script_abis() -> Vec<ScriptABI> {
     buildgen::read_abis(path).expect("reading ABI files should not fail")
 }
 
+// Cannot run this test in the CI of Libra.
 #[test]
 #[ignore]
-fn test_that_python_code_parses() {
+fn test_that_python_code_parses_and_passes_pyre_check() {
     let registry = get_libra_registry();
     let abis = get_stdlib_script_abis();
     let dir = tempdir().unwrap();
 
+    let src_dir_path = dir.path().join("src");
     let installer =
-        serdegen::python3::Installer::new(dir.path().to_path_buf(), /* package */ None);
+        serdegen::python3::Installer::new(src_dir_path.clone(), /* package */ None);
     installer.install_module("libra_types", &registry).unwrap();
     installer.install_serde_runtime().unwrap();
 
-    let dir_path = dir.path().join("libra_builders");
-    std::fs::create_dir_all(dir_path.clone()).unwrap();
-    let source_path = dir_path.join("__init__.py");
+    let builder_dir_path = src_dir_path.join("libra_builders");
+    std::fs::create_dir_all(builder_dir_path.clone()).unwrap();
+    let source_path = builder_dir_path.join("__init__.py");
 
     let mut source = std::fs::File::create(&source_path).unwrap();
     buildgen::python3::output(&mut source, &abis).unwrap();
@@ -42,16 +44,47 @@ fn test_that_python_code_parses() {
     let python_path = format!(
         "{}:{}",
         std::env::var("PYTHONPATH").unwrap_or_default(),
-        dir.path().to_string_lossy(),
+        src_dir_path.to_string_lossy(),
     );
-    let output = Command::new("python3")
+    let status = Command::new("python3")
         .arg("-c")
         .arg("import serde_types; import libra_types; import libra_builders")
         .env("PYTHONPATH", python_path)
-        .output()
+        .status()
         .unwrap();
-    assert_eq!(String::new(), String::from_utf8_lossy(&output.stderr));
-    assert!(output.status.success());
+    assert!(status.success());
+
+    // This temporarily requires a checkout of serde-reflection.git next to libra.git
+    // Hopefully, numpy's next release will include typeshed (.pyi) files and we will only
+    // require a local install of numpy (on top of python3 and pyre).
+    let status = Command::new("cp")
+        .arg("-r")
+        .arg("../../../serde-reflection/serde-generate/runtime/python/typeshed")
+        .arg(dir.path())
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let mut pyre_config = std::fs::File::create(dir.path().join(".pyre_configuration")).unwrap();
+    writeln!(
+        &mut pyre_config,
+        r#"{{
+  "source_directories": [
+    "src"
+  ],
+  "search_path": [
+    "typeshed"
+  ]
+}}"#,
+    )
+    .unwrap();
+
+    let status = Command::new("pyre")
+        .current_dir(dir.path())
+        .arg("check")
+        .status()
+        .unwrap();
+    assert!(status.success());
 }
 
 #[test]
@@ -63,10 +96,10 @@ fn test_that_rust_code_compiles() {
     let installer = serdegen::rust::Installer::new(dir.path().to_path_buf());
     installer.install_module("libra-types", &registry).unwrap();
 
-    let dir_path = dir.path().join("libra-builders");
-    std::fs::create_dir_all(dir_path.clone()).unwrap();
+    let builder_dir_path = dir.path().join("libra-builders");
+    std::fs::create_dir_all(builder_dir_path.clone()).unwrap();
 
-    let mut cargo = std::fs::File::create(&dir_path.join("Cargo.toml")).unwrap();
+    let mut cargo = std::fs::File::create(&builder_dir_path.join("Cargo.toml")).unwrap();
     write!(
         cargo,
         r#"[package]
@@ -79,8 +112,8 @@ libra-types = {{ path = "../libra-types", version = "0.1.0" }}
 "#,
     )
     .unwrap();
-    std::fs::create_dir(dir_path.join("src")).unwrap();
-    let source_path = dir_path.join("src/lib.rs");
+    std::fs::create_dir(builder_dir_path.join("src")).unwrap();
+    let source_path = builder_dir_path.join("src/lib.rs");
     let mut source = std::fs::File::create(&source_path).unwrap();
     buildgen::rust::output(&mut source, &abis, /* local types */ false).unwrap();
 
