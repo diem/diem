@@ -12,7 +12,10 @@ use libra_config::{
 };
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519Signature};
 use libra_types::{epoch_change::EpochChangeProof, validator_signer::ValidatorSigner};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::{
+    marker::{Send, Sync},
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+};
 
 /// This container exists only so that we can kill the spawned process after testing is complete.
 /// Otherwise the process will be killed at the end of the safety_rules function and the test will
@@ -20,7 +23,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 pub struct ProcessClientWrapper {
     signer: ValidatorSigner,
     _safety_rules_manager: SafetyRulesManager,
-    safety_rules: Box<dyn TSafetyRules>,
+    safety_rules: Box<dyn TSafetyRules + Send + Sync>,
     execution_private_key: Option<Ed25519PrivateKey>,
 }
 
