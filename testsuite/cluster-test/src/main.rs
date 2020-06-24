@@ -221,7 +221,6 @@ struct ClusterTestRunner {
     trace_tail: TraceTail,
     cluster: Cluster,
     health_check_runner: HealthCheckRunner,
-    experiment_interval: Duration,
     slack: SlackClient,
     slack_changelog_url: Option<Url>,
     tx_emitter: TxEmitter,
@@ -442,11 +441,6 @@ impl ClusterTestRunner {
             log_tail_startup_time.as_millis()
         );
         let health_check_runner = HealthCheckRunner::new_all(cluster.clone());
-        let experiment_interval_sec = match env::var("EXPERIMENT_INTERVAL") {
-            Ok(s) => s.parse().expect("EXPERIMENT_INTERVAL env is not a number"),
-            Err(..) => 15,
-        };
-        let experiment_interval = Duration::from_secs(experiment_interval_sec);
         let slack = SlackClient::new();
         let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
@@ -474,7 +468,6 @@ impl ClusterTestRunner {
             trace_tail,
             cluster,
             health_check_runner,
-            experiment_interval,
             slack,
             slack_changelog_url,
             tx_emitter,
@@ -548,7 +541,6 @@ impl ClusterTestRunner {
                 .map_err(move |e| {
                     format_err!("Experiment `{}` failed: `{}`", experiment_name, e)
                 })?;
-            delay_for(self.experiment_interval).await;
         }
         info!(
             "Suite completed in {:?}",
