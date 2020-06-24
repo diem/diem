@@ -20,6 +20,7 @@ use libra_crypto::{
 use libra_secure_storage::{InMemoryStorage, Storage};
 use libra_types::{
     block_info::BlockInfo,
+    epoch_change::EpochChangeProof,
     epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     on_chain_config::ValidatorSet,
@@ -37,6 +38,18 @@ pub type Proof = AccumulatorExtensionProof<TransactionAccumulatorHasher>;
 
 pub fn empty_proof() -> Proof {
     Proof::new(vec![], 0, vec![])
+}
+
+pub fn make_genesis(signer: &ValidatorSigner) -> (EpochChangeProof, QuorumCert) {
+    let validator_info =
+        ValidatorInfo::new_with_test_network_keys(signer.author(), signer.public_key(), 1);
+    let validator_set = ValidatorSet::new(vec![validator_info]);
+    let li = LedgerInfo::mock_genesis(Some(validator_set));
+    let block = Block::make_genesis_block_from_ledger_info(&li);
+    let qc = QuorumCert::certificate_for_genesis_from_ledger_info(&li, block.id());
+    let lis = LedgerInfoWithSignatures::new(li, BTreeMap::new());
+    let proof = EpochChangeProof::new(vec![lis], false);
+    (proof, qc)
 }
 
 pub fn make_proposal_with_qc_and_proof(
