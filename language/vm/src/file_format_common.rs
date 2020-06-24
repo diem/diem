@@ -12,8 +12,10 @@
 //! It's used to compress mostly indexes into the main binary tables.
 use crate::file_format::Bytecode;
 use anyhow::{bail, Result};
-use byteorder::ReadBytesExt;
-use std::{io::Cursor, mem::size_of};
+use std::{
+    io::{Cursor, Read},
+    mem::size_of,
+};
 
 /// Constant values for the binary format header.
 ///
@@ -322,10 +324,16 @@ pub fn write_u128(binary: &mut BinaryData, value: u128) -> Result<()> {
     binary.extend(&value.to_le_bytes())
 }
 
+pub fn read_u8(cursor: &mut Cursor<&[u8]>) -> Result<u8> {
+    let mut buf = [0; 1];
+    cursor.read_exact(&mut buf)?;
+    Ok(buf[0])
+}
+
 pub fn read_uleb128_as_u64(cursor: &mut Cursor<&[u8]>) -> Result<u64> {
     let mut value: u64 = 0;
     let mut shift = 0;
-    while let Ok(byte) = cursor.read_u8() {
+    while let Ok(byte) = read_u8(cursor) {
         let cur = (byte & 0x7f) as u64;
         if (cur << shift) >> shift != cur {
             bail!("invalid ULEB128 repr for usize");
