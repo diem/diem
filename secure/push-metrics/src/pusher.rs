@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::counters::Metrics;
-use libra_logger::{debug, error, info};
+use libra_logger::{error, info};
 use std::{env, sync::Arc, thread, thread::JoinHandle, time::Duration};
 
 const DEFAULT_PUSH_FREQUENCY_SECS: u64 = 15;
@@ -25,7 +25,6 @@ impl MetricsPusher {
                 let metric_data = metric.get_push_metric_format();
                 data.push_str(&metric_data);
             }
-            debug!("Metrics sent to server:\n{}", data);
             let response = ureq::post(&push_metrics_endpoint)
                 .timeout_connect(10_000)
                 .send_string(&data);
