@@ -814,6 +814,9 @@
 <span id="814">814</span>
 <span id="815">815</span>
 <span id="816">816</span>
+<span id="817">817</span>
+<span id="818">818</span>
+<span id="819">819</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1271,10 +1274,13 @@
     <span class="kw">let</span> <span class="ident">addresses</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">accounts</span>.<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">d</span><span class="op">|</span> <span class="ident">d</span>.<span class="ident">address</span>).<span class="ident">collect</span>();
     <span class="kw">loop</span> {
         <span class="kw">match</span> <span class="ident">query_sequence_numbers</span>(<span class="ident">client</span>, <span class="kw-2">&amp;</span><span class="ident">addresses</span>).<span class="kw">await</span> {
-            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">info</span><span class="macro">!</span>(
-                <span class="string">&quot;Failed to query ledger info for instance {:?} : {:?}&quot;</span>,
-                <span class="ident">client</span>, <span class="ident">e</span>
-            ),
+            <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="macro">info</span><span class="macro">!</span>(
+                    <span class="string">&quot;Failed to query ledger info on accounts {:?} for instance {:?} : {:?}&quot;</span>,
+                    <span class="ident">addresses</span>, <span class="ident">client</span>, <span class="ident">e</span>
+                );
+                <span class="ident">time</span>::<span class="ident">delay_for</span>(<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">300</span>)).<span class="kw">await</span>;
+            }
             <span class="prelude-val">Ok</span>(<span class="ident">sequence_numbers</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">if</span> <span class="ident">is_sequence_equal</span>(<span class="ident">accounts</span>, <span class="kw-2">&amp;</span><span class="ident">sequence_numbers</span>) {
                     <span class="kw">break</span>;
