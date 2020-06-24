@@ -421,9 +421,8 @@ jobs:
           command: terraform validate
           working_directory: terraform/
   lint-docker:
-    machine:
-      image: ubuntu-1604:201903-01
-    resource_class: large
+    executor: audit-executor
+    description: Lint changed Dockerfiles
     steps:
       - checkout
       - run:
