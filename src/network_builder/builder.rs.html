@@ -608,6 +608,15 @@
 <span id="608">608</span>
 <span id="609">609</span>
 <span id="610">610</span>
+<span id="611">611</span>
+<span id="612">612</span>
+<span id="613">613</span>
+<span id="614">614</span>
+<span id="615">615</span>
+<span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -727,6 +736,8 @@
     <span class="ident">max_concurrent_network_reqs</span>: <span class="ident">usize</span>,
     <span class="ident">max_concurrent_network_notifs</span>: <span class="ident">usize</span>,
     <span class="ident">max_connection_delay_ms</span>: <span class="ident">u64</span>,
+    <span class="doccomment">/// For now full node connections are limited by</span>
+    <span class="ident">max_fullnode_connections</span>: <span class="ident">usize</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">NetworkBuilder</span> {
@@ -778,6 +789,7 @@
             <span class="ident">max_concurrent_network_reqs</span>: <span class="ident">constants</span>::<span class="ident">MAX_CONCURRENT_NETWORK_REQS</span>,
             <span class="ident">max_concurrent_network_notifs</span>: <span class="ident">constants</span>::<span class="ident">MAX_CONCURRENT_NETWORK_NOTIFS</span>,
             <span class="ident">max_connection_delay_ms</span>: <span class="ident">constants</span>::<span class="ident">MAX_CONNECTION_DELAY_MS</span>,
+            <span class="ident">max_fullnode_connections</span>: <span class="ident">constants</span>::<span class="ident">MAX_FULLNODE_CONNECTIONS</span>,
         }
     }
 
@@ -910,6 +922,11 @@
         <span class="kw">let</span> <span class="ident">connectivity_check_interval_ms</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">connectivity_check_interval_ms</span>;
         <span class="kw">let</span> <span class="ident">pm_conn_mgr_notifs_rx</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">add_connection_event_listener</span>();
         <span class="kw">let</span> <span class="ident">conn_mgr</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">executor</span>.<span class="ident">enter</span>(<span class="op">|</span><span class="op">|</span> {
+            <span class="kw">let</span> <span class="ident">connection_limit</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="ident">RoleType</span>::<span class="ident">FullNode</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">role</span>() {
+                <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">max_fullnode_connections</span>)
+            } <span class="kw">else</span> {
+                <span class="prelude-val">None</span>
+            };
             <span class="ident">ConnectivityManager</span>::<span class="ident">new</span>(
                 <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">clone</span>(),
                 <span class="ident">trusted_peers</span>,
@@ -920,6 +937,7 @@
                 <span class="ident">conn_mgr_reqs_rx</span>,
                 <span class="ident">ExponentialBackoff</span>::<span class="ident">from_millis</span>(<span class="number">2</span>).<span class="ident">factor</span>(<span class="number">1000</span>),
                 <span class="ident">max_connection_delay_ms</span>,
+                <span class="ident">connection_limit</span>,
             )
         });
         <span class="self">self</span>.<span class="ident">executor</span>.<span class="ident">spawn</span>(<span class="ident">conn_mgr</span>.<span class="ident">start</span>());

@@ -653,6 +653,31 @@
 <span id="653">653</span>
 <span id="654">654</span>
 <span id="655">655</span>
+<span id="656">656</span>
+<span id="657">657</span>
+<span id="658">658</span>
+<span id="659">659</span>
+<span id="660">660</span>
+<span id="661">661</span>
+<span id="662">662</span>
+<span id="663">663</span>
+<span id="664">664</span>
+<span id="665">665</span>
+<span id="666">666</span>
+<span id="667">667</span>
+<span id="668">668</span>
+<span id="669">669</span>
+<span id="670">670</span>
+<span id="671">671</span>
+<span id="672">672</span>
+<span id="673">673</span>
+<span id="674">674</span>
+<span id="675">675</span>
+<span id="676">676</span>
+<span id="677">677</span>
+<span id="678">678</span>
+<span id="679">679</span>
+<span id="680">680</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -698,6 +723,10 @@
 <span class="kw">use</span> <span class="ident">libra_network_address</span>::<span class="ident">NetworkAddress</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">num_variants</span>::<span class="ident">NumVariants</span>;
+<span class="kw">use</span> <span class="ident">rand</span>::{
+    <span class="ident">prelude</span>::{<span class="ident">SeedableRng</span>, <span class="ident">SmallRng</span>},
+    <span class="ident">seq</span>::<span class="ident">SliceRandom</span>,
+};
 <span class="kw">use</span> <span class="ident">serde</span>::<span class="ident">Serialize</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">cmp</span>::<span class="ident">min</span>,
@@ -741,6 +770,10 @@
     <span class="doccomment">/// A local counter incremented on receiving an incoming message. Printing this in debugging</span>
     <span class="doccomment">/// allows for easy debugging.</span>
     <span class="ident">event_id</span>: <span class="ident">u32</span>,
+    <span class="doccomment">/// A way to limit the number of connected peers by outgoing dials.</span>
+    <span class="ident">connection_limit</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Random for shuffling which peers will be dialed</span>
+    <span class="ident">rng</span>: <span class="ident">SmallRng</span>,
 }
 
 <span class="doccomment">/// Different sources for peer addresses, ordered by priority (Onchain=highest,</span>
@@ -766,11 +799,12 @@
 }
 
 <span class="doccomment">/// The set of `NetworkAddress`&#39;s for all peers.</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Serialize</span>)]</span>
 <span class="kw">struct</span> <span class="ident">PeerAddresses</span>(<span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">Addresses</span><span class="op">&gt;</span>);
 
 <span class="doccomment">/// A set of `NetworkAddress`&#39;s for a single peer, bucketed by DiscoverySource in</span>
 <span class="doccomment">/// priority order.</span>
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Serialize</span>)]</span>
 <span class="kw">struct</span> <span class="ident">Addresses</span>([<span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkAddress</span><span class="op">&gt;</span>; <span class="ident">DiscoverySource</span>::<span class="ident">NUM_VARIANTS</span>]);
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
@@ -807,6 +841,7 @@
         <span class="ident">requests_rx</span>: <span class="ident">channel</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">ConnectivityRequest</span><span class="op">&gt;</span>,
         <span class="ident">backoff_strategy</span>: <span class="ident">TBackoff</span>,
         <span class="ident">max_delay_ms</span>: <span class="ident">u64</span>,
+        <span class="ident">connection_limit</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         {
             <span class="comment">// Reconcile the keysets eligible is only used to allow us to dial the remote peer</span>
@@ -857,6 +892,8 @@
             <span class="ident">backoff_strategy</span>,
             <span class="ident">max_delay_ms</span>,
             <span class="ident">event_id</span>: <span class="number">0</span>,
+            <span class="ident">connection_limit</span>,
+            <span class="ident">rng</span>: <span class="ident">SmallRng</span>::<span class="ident">from_entropy</span>(),
         }
     }
 
@@ -994,13 +1031,26 @@
             })
             .<span class="ident">collect</span>();
 
+        <span class="comment">// Limit the number of dialed connections from a Full Node</span>
+        <span class="comment">// This does not limit the number of incoming connections</span>
+        <span class="comment">// It enforces that a full node cannot have more outgoing connections than `connection_limit`</span>
+        <span class="comment">// including in flight dials.</span>
+        <span class="kw">let</span> <span class="ident">to_connect_size</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">conn_limit</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">connection_limit</span> {
+            <span class="ident">min</span>(
+                <span class="ident">conn_limit</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">connected</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="self">self</span>.<span class="ident">dial_queue</span>.<span class="ident">len</span>(),
+                <span class="ident">to_connect</span>.<span class="ident">len</span>(),
+            )
+        } <span class="kw">else</span> {
+            <span class="ident">to_connect</span>.<span class="ident">len</span>()
+        };
+
         <span class="comment">// The initial dial state; it has zero dial delay and uses the first</span>
         <span class="comment">// address.</span>
         <span class="kw">let</span> <span class="ident">init_dial_state</span> <span class="op">=</span> <span class="ident">DialState</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">backoff_strategy</span>.<span class="ident">clone</span>());
 
-        <span class="kw">for</span> (<span class="ident">p</span>, <span class="ident">addrs</span>) <span class="kw">in</span> <span class="ident">to_connect</span>.<span class="ident">into_iter</span>() {
+        <span class="kw">for</span> (<span class="ident">p</span>, <span class="ident">addrs</span>) <span class="kw">in</span> <span class="ident">to_connect</span>.<span class="ident">choose_multiple</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">rng</span>, <span class="ident">to_connect_size</span>) {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">connction_reqs_tx</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">connection_reqs_tx</span>.<span class="ident">clone</span>();
-            <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="kw-2">*</span><span class="ident">p</span>;
+            <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="kw-2">*</span><span class="kw-2">*</span><span class="ident">p</span>;
             <span class="kw">let</span> <span class="ident">dial_state</span> <span class="op">=</span> <span class="self">self</span>
                 .<span class="ident">dial_states</span>
                 .<span class="ident">entry</span>(<span class="ident">peer_id</span>)
