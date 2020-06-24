@@ -581,86 +581,6 @@
 <span id="581">581</span>
 <span id="582">582</span>
 <span id="583">583</span>
-<span id="584">584</span>
-<span id="585">585</span>
-<span id="586">586</span>
-<span id="587">587</span>
-<span id="588">588</span>
-<span id="589">589</span>
-<span id="590">590</span>
-<span id="591">591</span>
-<span id="592">592</span>
-<span id="593">593</span>
-<span id="594">594</span>
-<span id="595">595</span>
-<span id="596">596</span>
-<span id="597">597</span>
-<span id="598">598</span>
-<span id="599">599</span>
-<span id="600">600</span>
-<span id="601">601</span>
-<span id="602">602</span>
-<span id="603">603</span>
-<span id="604">604</span>
-<span id="605">605</span>
-<span id="606">606</span>
-<span id="607">607</span>
-<span id="608">608</span>
-<span id="609">609</span>
-<span id="610">610</span>
-<span id="611">611</span>
-<span id="612">612</span>
-<span id="613">613</span>
-<span id="614">614</span>
-<span id="615">615</span>
-<span id="616">616</span>
-<span id="617">617</span>
-<span id="618">618</span>
-<span id="619">619</span>
-<span id="620">620</span>
-<span id="621">621</span>
-<span id="622">622</span>
-<span id="623">623</span>
-<span id="624">624</span>
-<span id="625">625</span>
-<span id="626">626</span>
-<span id="627">627</span>
-<span id="628">628</span>
-<span id="629">629</span>
-<span id="630">630</span>
-<span id="631">631</span>
-<span id="632">632</span>
-<span id="633">633</span>
-<span id="634">634</span>
-<span id="635">635</span>
-<span id="636">636</span>
-<span id="637">637</span>
-<span id="638">638</span>
-<span id="639">639</span>
-<span id="640">640</span>
-<span id="641">641</span>
-<span id="642">642</span>
-<span id="643">643</span>
-<span id="644">644</span>
-<span id="645">645</span>
-<span id="646">646</span>
-<span id="647">647</span>
-<span id="648">648</span>
-<span id="649">649</span>
-<span id="650">650</span>
-<span id="651">651</span>
-<span id="652">652</span>
-<span id="653">653</span>
-<span id="654">654</span>
-<span id="655">655</span>
-<span id="656">656</span>
-<span id="657">657</span>
-<span id="658">658</span>
-<span id="659">659</span>
-<span id="660">660</span>
-<span id="661">661</span>
-<span id="662">662</span>
-<span id="663">663</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -853,9 +773,48 @@
     }
 }
 
+<span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">derive_status_try_from_repr</span> {
+    (
+        <span class="attribute">#[<span class="ident">repr</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">repr_ty</span>:<span class="ident">ident</span>)]</span>
+        $( <span class="attribute">#[<span class="macro-nonterminal">$</span><span class="macro-nonterminal">metas</span>:<span class="ident">meta</span>]</span> )<span class="op">*</span>
+        <span class="macro-nonterminal">$</span><span class="macro-nonterminal">vis</span>:<span class="ident">vis</span> <span class="kw">enum</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">enum_name</span>:<span class="ident">ident</span> {
+            $(
+                <span class="macro-nonterminal">$</span><span class="macro-nonterminal">variant</span>:<span class="ident">ident</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">value</span>: <span class="ident">expr</span>
+            ),<span class="op">*</span>
+            $( , )<span class="question-mark">?</span>
+        }
+    ) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="attribute">#[<span class="ident">repr</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">repr_ty</span>)]</span>
+        $( <span class="attribute">#[<span class="macro-nonterminal">$</span><span class="macro-nonterminal">metas</span>]</span> )<span class="op">*</span>
+        <span class="macro-nonterminal">$</span><span class="macro-nonterminal">vis</span> <span class="kw">enum</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">enum_name</span> {
+            $(
+                <span class="macro-nonterminal">$</span><span class="macro-nonterminal">variant</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">value</span>
+            ),<span class="op">*</span>
+        }
+
+        <span class="kw">impl</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryFrom</span><span class="op">&lt;</span><span class="macro-nonterminal">$</span><span class="macro-nonterminal">repr_ty</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">enum_name</span> {
+            <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
+            <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">value</span>: <span class="macro-nonterminal">$</span><span class="macro-nonterminal">repr_ty</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
+                <span class="kw">match</span> <span class="ident">value</span> {
+                    $(
+                        <span class="macro-nonterminal">$</span><span class="macro-nonterminal">value</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">enum_name</span>::<span class="macro-nonterminal">$</span><span class="macro-nonterminal">variant</span>),
+                    )<span class="op">*</span>
+                    <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="string">&quot;invalid StatusCode&quot;</span>),
+                }
+            }
+        }
+
+        <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+        <span class="kw">const</span> <span class="ident">STATUS_CODE_VALUES</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> [<span class="macro-nonterminal">$</span><span class="macro-nonterminal">repr_ty</span>] <span class="op">=</span> <span class="kw-2">&amp;</span>[
+            $(<span class="macro-nonterminal">$</span><span class="macro-nonterminal">value</span>),<span class="op">*</span>
+        ];
+    };
+}
+
+<span class="macro">derive_status_try_from_repr</span><span class="macro">!</span> {
+<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u64</span>)]</span>
 <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_camel_case_types</span>)]</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Debug</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">PartialEq</span>, <span class="ident">PartialOrd</span>, <span class="ident">Ord</span>)]</span>
-<span class="attribute">#[<span class="ident">repr</span>(<span class="ident">u64</span>)]</span>
 <span class="doccomment">/// We don&#39;t derive Arbitrary on this enum because it is too large and breaks proptest. It is</span>
 <span class="doccomment">/// written for a subset of these in proptest_types. We test conversion between this and protobuf</span>
 <span class="doccomment">/// with a hand-written test.</span>
@@ -1001,7 +960,7 @@
     <span class="ident">LOOP_IN_INSTANTIATION_GRAPH</span> <span class="op">=</span> <span class="number">1077</span>,
     <span class="ident">UNUSED_LOCALS_SIGNATURE</span> <span class="op">=</span> <span class="number">1078</span>,
     <span class="ident">UNUSED_TYPE_SIGNATURE</span> <span class="op">=</span> <span class="number">1079</span>,
-    <span class="doccomment">/// Reported when a struct has zero fields</span>
+    <span class="comment">// Reported when a struct has zero fields</span>
     <span class="ident">ZERO_SIZED_STRUCT</span> <span class="op">=</span> <span class="number">1080</span>,
     <span class="ident">LINKER_ERROR</span> <span class="op">=</span> <span class="number">1081</span>,
     <span class="ident">INVALID_CONSTANT_TYPE</span> <span class="op">=</span> <span class="number">1082</span>,
@@ -1095,7 +1054,9 @@
     <span class="ident">GAS_SCHEDULE_ERROR</span> <span class="op">=</span> <span class="number">4023</span>,
 
     <span class="comment">// A reserved status to represent an unknown vm status.</span>
-    <span class="ident">UNKNOWN_STATUS</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">u64</span>::<span class="ident">MAX</span>,
+    <span class="comment">// this is std::u64::MAX, but we can&#39;t pattern match on that, so put the hardcoded value in</span>
+    <span class="ident">UNKNOWN_STATUS</span> <span class="op">=</span> <span class="number">18446744073709551615</span>,
+}
 }
 
 <span class="comment">// TODO(#1307)</span>
@@ -1133,166 +1094,6 @@
     }
 }
 
-<span class="kw">impl</span> <span class="ident">TryFrom</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">StatusCode</span> {
-    <span class="kw">type</span> <span class="ident">Error</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;static</span> <span class="ident">str</span>;
-
-    <span class="kw">fn</span> <span class="ident">try_from</span>(<span class="ident">value</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="self">Self</span>, <span class="self">Self</span>::<span class="ident">Error</span><span class="op">&gt;</span> {
-        <span class="kw">match</span> <span class="ident">value</span> {
-            <span class="number">0</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_VALIDATION_STATUS</span>),
-            <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_SIGNATURE</span>),
-            <span class="number">2</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_AUTH_KEY</span>),
-            <span class="number">3</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">SEQUENCE_NUMBER_TOO_OLD</span>),
-            <span class="number">4</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">SEQUENCE_NUMBER_TOO_NEW</span>),
-            <span class="number">5</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE</span>),
-            <span class="number">6</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">TRANSACTION_EXPIRED</span>),
-            <span class="number">7</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">SENDING_ACCOUNT_DOES_NOT_EXIST</span>),
-            <span class="number">8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">REJECTED_WRITE_SET</span>),
-            <span class="number">9</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_WRITE_SET</span>),
-            <span class="number">10</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">EXCEEDED_MAX_TRANSACTION_SIZE</span>),
-            <span class="number">11</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_SCRIPT</span>),
-            <span class="number">12</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_MODULE</span>),
-            <span class="number">13</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND</span>),
-            <span class="number">14</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS</span>),
-            <span class="number">15</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">GAS_UNIT_PRICE_BELOW_MIN_BOUND</span>),
-            <span class="number">16</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">GAS_UNIT_PRICE_ABOVE_MAX_BOUND</span>),
-            <span class="number">1000</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_VERIFICATION_ERROR</span>),
-            <span class="number">1001</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INDEX_OUT_OF_BOUNDS</span>),
-            <span class="number">1002</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">RANGE_OUT_OF_BOUNDS</span>),
-            <span class="number">1003</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_SIGNATURE_TOKEN</span>),
-            <span class="number">1004</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_FIELD_DEF</span>),
-            <span class="number">1005</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">RECURSIVE_STRUCT_DEFINITION</span>),
-            <span class="number">1006</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_RESOURCE_FIELD</span>),
-            <span class="number">1007</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_FALL_THROUGH</span>),
-            <span class="number">1008</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">JOIN_FAILURE</span>),
-            <span class="number">1009</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">NEGATIVE_STACK_SIZE_WITHIN_BLOCK</span>),
-            <span class="number">1010</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNBALANCED_STACK</span>),
-            <span class="number">1011</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_MAIN_FUNCTION_SIGNATURE</span>),
-            <span class="number">1012</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">DUPLICATE_ELEMENT</span>),
-            <span class="number">1013</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_MODULE_HANDLE</span>),
-            <span class="number">1014</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNIMPLEMENTED_HANDLE</span>),
-            <span class="number">1015</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INCONSISTENT_FIELDS</span>),
-            <span class="number">1016</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNUSED_FIELD</span>),
-            <span class="number">1017</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">LOOKUP_FAILED</span>),
-            <span class="number">1018</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">VISIBILITY_MISMATCH</span>),
-            <span class="number">1019</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">TYPE_RESOLUTION_FAILURE</span>),
-            <span class="number">1020</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">TYPE_MISMATCH</span>),
-            <span class="number">1021</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MISSING_DEPENDENCY</span>),
-            <span class="number">1022</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">POP_REFERENCE_ERROR</span>),
-            <span class="number">1023</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">POP_RESOURCE_ERROR</span>),
-            <span class="number">1024</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">RELEASEREF_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1025</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">BR_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1026</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">ABORT_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1027</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">STLOC_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1028</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">STLOC_UNSAFE_TO_DESTROY_ERROR</span>),
-            <span class="number">1029</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNSAFE_RET_LOCAL_OR_RESOURCE_STILL_BORROWED</span>),
-            <span class="number">1030</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">RET_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1031</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">RET_BORROWED_MUTABLE_REFERENCE_ERROR</span>),
-            <span class="number">1032</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">FREEZEREF_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1033</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">FREEZEREF_EXISTS_MUTABLE_BORROW_ERROR</span>),
-            <span class="number">1034</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">BORROWFIELD_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1035</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">BORROWFIELD_BAD_FIELD_ERROR</span>),
-            <span class="number">1036</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">BORROWFIELD_EXISTS_MUTABLE_BORROW_ERROR</span>),
-            <span class="number">1037</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">COPYLOC_UNAVAILABLE_ERROR</span>),
-            <span class="number">1038</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">COPYLOC_RESOURCE_ERROR</span>),
-            <span class="number">1039</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">COPYLOC_EXISTS_BORROW_ERROR</span>),
-            <span class="number">1040</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MOVELOC_UNAVAILABLE_ERROR</span>),
-            <span class="number">1041</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MOVELOC_EXISTS_BORROW_ERROR</span>),
-            <span class="number">1042</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">BORROWLOC_REFERENCE_ERROR</span>),
-            <span class="number">1043</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">BORROWLOC_UNAVAILABLE_ERROR</span>),
-            <span class="number">1044</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">BORROWLOC_EXISTS_BORROW_ERROR</span>),
-            <span class="number">1045</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">CALL_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1046</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">CALL_BORROWED_MUTABLE_REFERENCE_ERROR</span>),
-            <span class="number">1047</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">PACK_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1048</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNPACK_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1049</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">READREF_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1050</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">READREF_RESOURCE_ERROR</span>),
-            <span class="number">1051</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">READREF_EXISTS_MUTABLE_BORROW_ERROR</span>),
-            <span class="number">1052</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">WRITEREF_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1053</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">WRITEREF_RESOURCE_ERROR</span>),
-            <span class="number">1054</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">WRITEREF_EXISTS_BORROW_ERROR</span>),
-            <span class="number">1055</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">WRITEREF_NO_MUTABLE_REFERENCE_ERROR</span>),
-            <span class="number">1056</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INTEGER_OP_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1057</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">BOOLEAN_OP_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1058</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">EQUALITY_OP_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1059</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">EXISTS_RESOURCE_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1060</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">BORROWGLOBAL_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1061</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">BORROWGLOBAL_NO_RESOURCE_ERROR</span>),
-            <span class="number">1062</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MOVEFROM_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1063</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MOVEFROM_NO_RESOURCE_ERROR</span>),
-            <span class="number">1064</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MOVETOSENDER_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1065</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MOVETOSENDER_NO_RESOURCE_ERROR</span>),
-            <span class="number">1066</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">CREATEACCOUNT_TYPE_MISMATCH_ERROR</span>),
-            <span class="number">1067</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MODULE_ADDRESS_DOES_NOT_MATCH_SENDER</span>),
-            <span class="number">1068</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">NO_MODULE_HANDLES</span>),
-            <span class="number">1069</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">POSITIVE_STACK_SIZE_AT_BLOCK_END</span>),
-            <span class="number">1070</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MISSING_ACQUIRES_RESOURCE_ANNOTATION_ERROR</span>),
-            <span class="number">1071</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">EXTRANEOUS_ACQUIRES_RESOURCE_ANNOTATION_ERROR</span>),
-            <span class="number">1072</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">DUPLICATE_ACQUIRES_RESOURCE_ANNOTATION_ERROR</span>),
-            <span class="number">1073</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_ACQUIRES_RESOURCE_ANNOTATION_ERROR</span>),
-            <span class="number">1074</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">GLOBAL_REFERENCE_ERROR</span>),
-            <span class="number">1075</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">CONTRAINT_KIND_MISMATCH</span>),
-            <span class="number">1076</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">NUMBER_OF_TYPE_ARGUMENTS_MISMATCH</span>),
-            <span class="number">1077</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">LOOP_IN_INSTANTIATION_GRAPH</span>),
-            <span class="number">1078</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNUSED_LOCALS_SIGNATURE</span>),
-            <span class="number">1079</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNUSED_TYPE_SIGNATURE</span>),
-            <span class="number">1080</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">ZERO_SIZED_STRUCT</span>),
-            <span class="number">1081</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">LINKER_ERROR</span>),
-            <span class="number">2000</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_INVARIANT_VIOLATION_ERROR</span>),
-            <span class="number">2001</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">OUT_OF_BOUNDS_INDEX</span>),
-            <span class="number">2002</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">OUT_OF_BOUNDS_RANGE</span>),
-            <span class="number">2003</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">EMPTY_VALUE_STACK</span>),
-            <span class="number">2004</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">EMPTY_CALL_STACK</span>),
-            <span class="number">2005</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">PC_OVERFLOW</span>),
-            <span class="number">2006</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">VERIFICATION_ERROR</span>),
-            <span class="number">2007</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">LOCAL_REFERENCE_ERROR</span>),
-            <span class="number">2008</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">STORAGE_ERROR</span>),
-            <span class="number">2009</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INTERNAL_TYPE_ERROR</span>),
-            <span class="number">2010</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">EVENT_KEY_MISMATCH</span>),
-            <span class="number">2011</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNREACHABLE</span>),
-            <span class="number">2012</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">VM_STARTUP_FAILURE</span>),
-            <span class="number">2013</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">NATIVE_FUNCTION_INTERNAL_INCONSISTENCY</span>),
-            <span class="number">3000</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_BINARY_ERROR</span>),
-            <span class="number">3001</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>),
-            <span class="number">3002</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_MAGIC</span>),
-            <span class="number">3003</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_VERSION</span>),
-            <span class="number">3004</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_TABLE_TYPE</span>),
-            <span class="number">3005</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_SIGNATURE_TYPE</span>),
-            <span class="number">3006</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_SERIALIZED_TYPE</span>),
-            <span class="number">3007</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_OPCODE</span>),
-            <span class="number">3008</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_HEADER_TABLE</span>),
-            <span class="number">3009</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNEXPECTED_SIGNATURE_TYPE</span>),
-            <span class="number">3010</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">DUPLICATE_TABLE</span>),
-            <span class="number">3011</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">VERIFIER_INVARIANT_VIOLATION</span>),
-            <span class="number">4000</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_RUNTIME_STATUS</span>),
-            <span class="number">4001</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">EXECUTED</span>),
-            <span class="number">4002</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">OUT_OF_GAS</span>),
-            <span class="number">4003</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">RESOURCE_DOES_NOT_EXIST</span>),
-            <span class="number">4004</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">RESOURCE_ALREADY_EXISTS</span>),
-            <span class="number">4005</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">EVICTED_ACCOUNT_ACCESS</span>),
-            <span class="number">4006</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">ACCOUNT_ADDRESS_ALREADY_EXISTS</span>),
-            <span class="number">4007</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">TYPE_ERROR</span>),
-            <span class="number">4008</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">MISSING_DATA</span>),
-            <span class="number">4009</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">DATA_FORMAT_ERROR</span>),
-            <span class="number">4010</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_DATA</span>),
-            <span class="number">4011</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">REMOTE_DATA_ERROR</span>),
-            <span class="number">4012</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">CANNOT_WRITE_EXISTING_RESOURCE</span>),
-            <span class="number">4013</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">VALUE_SERIALIZATION_ERROR</span>),
-            <span class="number">4014</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">VALUE_DESERIALIZATION_ERROR</span>),
-            <span class="number">4015</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">DUPLICATE_MODULE_NAME</span>),
-            <span class="number">4016</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">ABORTED</span>),
-            <span class="number">4017</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">ARITHMETIC_ERROR</span>),
-            <span class="number">4018</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">DYNAMIC_REFERENCE_ERROR</span>),
-            <span class="number">4019</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">CODE_DESERIALIZATION_ERROR</span>),
-            <span class="number">4020</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">EXECUTION_STACK_OVERFLOW</span>),
-            <span class="number">4021</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">CALL_STACK_OVERFLOW</span>),
-            <span class="number">4022</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">NATIVE_FUNCTION_ERROR</span>),
-            <span class="number">4023</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">GAS_SCHEDULE_ERROR</span>),
-            <span class="ident">std</span>::<span class="ident">u64</span>::<span class="ident">MAX</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_STATUS</span>),
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="string">&quot;invalid StatusCode&quot;</span>),
-        }
-    }
-}
-
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">StatusCode</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">u64</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">status</span>: <span class="ident">StatusCode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">u64</span> {
         <span class="ident">status</span> <span class="kw">as</span> <span class="ident">u64</span>
@@ -1324,6 +1125,45 @@
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">GSE_UNABLE_TO_LOAD_MODULE</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0</span>;
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">GSE_UNABLE_TO_LOAD_RESOURCE</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1</span>;
     <span class="kw">pub</span> <span class="kw">const</span> <span class="ident">GSE_UNABLE_TO_DESERIALIZE</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">2</span>;
+}
+
+<span class="attribute">#[<span class="ident">test</span>]</span>
+<span class="kw">fn</span> <span class="ident">test_status_codes</span>() {
+    <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashSet</span>;
+    <span class="comment">// Make sure that within the 0-EXECUTION_STATUS_MAX_CODE that all of the status codes succeed</span>
+    <span class="comment">// when they should, and fail when they should.</span>
+    <span class="kw">for</span> <span class="ident">possible_major_status_code</span> <span class="kw">in</span> <span class="number">0</span>..<span class="op">=</span><span class="ident">EXECUTION_STATUS_MAX_CODE</span> {
+        <span class="kw">if</span> <span class="ident">STATUS_CODE_VALUES</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">possible_major_status_code</span>) {
+            <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">StatusCode</span>::<span class="ident">try_from</span>(<span class="ident">possible_major_status_code</span>);
+            <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">status</span>.<span class="ident">is_ok</span>());
+            <span class="kw">let</span> <span class="ident">to_major_status_code</span> <span class="op">=</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="ident">status</span>.<span class="ident">unwrap</span>());
+            <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">possible_major_status_code</span>, <span class="ident">to_major_status_code</span>);
+        } <span class="kw">else</span> {
+            <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">StatusCode</span>::<span class="ident">try_from</span>(<span class="ident">possible_major_status_code</span>).<span class="ident">is_err</span>())
+        }
+    }
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">seen_statuses</span> <span class="op">=</span> <span class="ident">HashSet</span>::<span class="ident">new</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">seen_codes</span> <span class="op">=</span> <span class="ident">HashSet</span>::<span class="ident">new</span>();
+    <span class="comment">// Now make sure that all of the error codes (including any that may be out-of-range) succeed.</span>
+    <span class="comment">// Make sure there aren&#39;t any duplicate mappings</span>
+    <span class="kw">for</span> <span class="ident">major_status_code</span> <span class="kw">in</span> <span class="ident">STATUS_CODE_VALUES</span>.<span class="ident">iter</span>() {
+        <span class="macro">assert</span><span class="macro">!</span>(
+            <span class="op">!</span><span class="ident">seen_codes</span>.<span class="ident">contains</span>(<span class="ident">major_status_code</span>),
+            <span class="string">&quot;Duplicate major_status_code found&quot;</span>
+        );
+        <span class="ident">seen_codes</span>.<span class="ident">insert</span>(<span class="kw-2">*</span><span class="ident">major_status_code</span>);
+        <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">StatusCode</span>::<span class="ident">try_from</span>(<span class="kw-2">*</span><span class="ident">major_status_code</span>);
+        <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">status</span>.<span class="ident">is_ok</span>());
+        <span class="kw">let</span> <span class="ident">unwrapped_status</span> <span class="op">=</span> <span class="ident">status</span>.<span class="ident">unwrap</span>();
+        <span class="macro">assert</span><span class="macro">!</span>(
+            <span class="op">!</span><span class="ident">seen_statuses</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">unwrapped_status</span>),
+            <span class="string">&quot;Found duplicate u64 -&gt; Status mapping&quot;</span>
+        );
+        <span class="ident">seen_statuses</span>.<span class="ident">insert</span>(<span class="ident">unwrapped_status</span>);
+        <span class="kw">let</span> <span class="ident">to_major_status_code</span> <span class="op">=</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="ident">unwrapped_status</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="kw-2">*</span><span class="ident">major_status_code</span>, <span class="ident">to_major_status_code</span>);
+    }
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "libra_types";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
