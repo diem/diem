@@ -202,6 +202,9 @@
 <span id="202">202</span>
 <span id="203">203</span>
 <span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
+<span id="207">207</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -219,11 +222,14 @@
     <span class="ident">future</span>::<span class="ident">Future</span>,
     <span class="ident">SinkExt</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">NodeConfig</span>, <span class="ident">RoleType</span>, <span class="ident">StateSyncConfig</span>, <span class="ident">UpstreamConfig</span>};
+<span class="kw">use</span> <span class="ident">libra_config</span>::{
+    <span class="ident">config</span>::{<span class="ident">NodeConfig</span>, <span class="ident">RoleType</span>, <span class="ident">StateSyncConfig</span>, <span class="ident">UpstreamConfig</span>},
+    <span class="ident">network_id</span>::<span class="ident">NetworkId</span>,
+};
 <span class="kw">use</span> <span class="ident">libra_mempool</span>::{<span class="ident">CommitNotification</span>, <span class="ident">CommitResponse</span>};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>, <span class="ident">ledger_info</span>::<span class="ident">LedgerInfoWithSignatures</span>, <span class="ident">transaction</span>::<span class="ident">Transaction</span>,
-    <span class="ident">waypoint</span>::<span class="ident">Waypoint</span>, <span class="ident">PeerId</span>,
+    <span class="ident">waypoint</span>::<span class="ident">Waypoint</span>,
 };
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">boxed</span>::<span class="ident">Box</span>,
@@ -246,7 +252,7 @@
 <span class="kw">impl</span> <span class="ident">StateSynchronizer</span> {
     <span class="doccomment">/// Setup state synchronizer. spawns coordinator and downloader routines on executor</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">bootstrap</span>(
-        <span class="ident">network</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">StateSynchronizerSender</span>, <span class="ident">StateSynchronizerEvents</span>)<span class="op">&gt;</span>,
+        <span class="ident">network</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">NetworkId</span>, <span class="ident">StateSynchronizerSender</span>, <span class="ident">StateSynchronizerEvents</span>)<span class="op">&gt;</span>,
         <span class="ident">state_sync_to_mempool_sender</span>: <span class="ident">mpsc</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">CommitNotification</span><span class="op">&gt;</span>,
         <span class="ident">storage</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">DbReader</span><span class="op">&gt;</span>,
         <span class="ident">executor</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">ChunkExecutor</span><span class="op">&gt;</span>,
@@ -276,7 +282,7 @@
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">bootstrap_with_executor_proxy</span><span class="op">&lt;</span><span class="ident">E</span>: <span class="ident">ExecutorProxyTrait</span> <span class="op">+</span> <span class="lifetime">&#39;static</span><span class="op">&gt;</span>(
         <span class="ident">runtime</span>: <span class="ident">Runtime</span>,
-        <span class="ident">network</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">StateSynchronizerSender</span>, <span class="ident">StateSynchronizerEvents</span>)<span class="op">&gt;</span>,
+        <span class="ident">network</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">NetworkId</span>, <span class="ident">StateSynchronizerSender</span>, <span class="ident">StateSynchronizerEvents</span>)<span class="op">&gt;</span>,
         <span class="ident">state_sync_to_mempool_sender</span>: <span class="ident">mpsc</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="ident">CommitNotification</span><span class="op">&gt;</span>,
         <span class="ident">role</span>: <span class="ident">RoleType</span>,
         <span class="ident">waypoint</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Waypoint</span><span class="op">&gt;</span>,
@@ -292,7 +298,7 @@
 
         <span class="kw">let</span> <span class="ident">network_senders</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="kw">_</span>, <span class="kw">_</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">network</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">network_id</span>, <span class="ident">sender</span>, <span class="ident">_events</span>)<span class="op">|</span> (<span class="kw-2">*</span><span class="ident">network_id</span>, <span class="ident">sender</span>.<span class="ident">clone</span>()))
+            .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">network_id</span>, <span class="ident">sender</span>, <span class="ident">_events</span>)<span class="op">|</span> (<span class="ident">network_id</span>.<span class="ident">clone</span>(), <span class="ident">sender</span>.<span class="ident">clone</span>()))
             .<span class="ident">collect</span>();
 
         <span class="kw">let</span> <span class="ident">coordinator</span> <span class="op">=</span> <span class="ident">SyncCoordinator</span>::<span class="ident">new</span>(

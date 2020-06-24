@@ -567,7 +567,7 @@
 ) <span class="kw">where</span>
     <span class="ident">V</span>: <span class="ident">TransactionValidation</span>,
 {
-    <span class="kw">let</span> <span class="ident">next_broadcast_backoff</span> <span class="op">=</span> <span class="ident">broadcast_single_peer</span>(<span class="ident">peer</span>, <span class="ident">backoff</span>, <span class="ident">smp</span>);
+    <span class="kw">let</span> <span class="ident">next_broadcast_backoff</span> <span class="op">=</span> <span class="ident">broadcast_single_peer</span>(<span class="ident">peer</span>.<span class="ident">clone</span>(), <span class="ident">backoff</span>, <span class="ident">smp</span>);
 
     <span class="kw">let</span> <span class="ident">interval_ms</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">next_broadcast_backoff</span> {
         <span class="ident">smp</span>.<span class="ident">config</span>.<span class="ident">shared_mempool_backoff_interval_ms</span>
@@ -591,8 +591,8 @@
 {
     <span class="kw">let</span> <span class="ident">peer_manager</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">smp</span>.<span class="ident">peer_manager</span>;
 
-    <span class="kw">let</span> (<span class="ident">timeline_id</span>, <span class="ident">retry_txns_id</span>, <span class="ident">next_backoff</span>) <span class="op">=</span> <span class="kw">if</span> <span class="ident">peer_manager</span>.<span class="ident">is_picked_peer</span>(<span class="ident">peer</span>) {
-        <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">peer_manager</span>.<span class="ident">get_peer_state</span>(<span class="ident">peer</span>);
+    <span class="kw">let</span> (<span class="ident">timeline_id</span>, <span class="ident">retry_txns_id</span>, <span class="ident">next_backoff</span>) <span class="op">=</span> <span class="kw">if</span> <span class="ident">peer_manager</span>.<span class="ident">is_picked_peer</span>(<span class="kw-2">&amp;</span><span class="ident">peer</span>) {
+        <span class="kw">let</span> <span class="ident">state</span> <span class="op">=</span> <span class="ident">peer_manager</span>.<span class="ident">get_peer_state</span>(<span class="kw-2">&amp;</span><span class="ident">peer</span>);
         <span class="kw">let</span> <span class="ident">next_backoff</span> <span class="op">=</span> <span class="ident">state</span>.<span class="ident">broadcast_info</span>.<span class="ident">backoff_mode</span>;
         <span class="kw">if</span> <span class="ident">state</span>.<span class="ident">is_alive</span> {
             (

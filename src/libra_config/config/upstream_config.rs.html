@@ -50,57 +50,75 @@
 <span id="50">50</span>
 <span id="51">51</span>
 <span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
+<span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">network_id</span>::<span class="ident">NetworkId</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">PeerId</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
-<span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::<span class="ident">HashSet</span>;
 
-<span class="doccomment">/// In general, a network ID is a PeerId that this node uses to uniquely identify a network it belongs to.</span>
-<span class="doccomment">/// This is equivalent to the `peer_id` field in the NetworkConfig of this NodeConfig</span>
-<span class="kw">pub</span> <span class="kw">type</span> <span class="ident">UpstreamNetworkId</span> <span class="op">=</span> <span class="ident">PeerId</span>;
-
+<span class="doccomment">/// If a node considers a network &#39;upstream&#39;, the node will broadcast transactions (via mempool) to and</span>
+<span class="doccomment">/// send sync requests (via state sync) to all its peers in this network.</span>
+<span class="doccomment">/// For validators, it is unnecessary to declare their validator network as their upstream network in this config</span>
+<span class="doccomment">/// Otherwise, any non-validator network not declared here will be treated as a downstream</span>
+<span class="doccomment">/// network (i.e. transactions will not be broadcast to and sync requests will not be sent to such networks)</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Default</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="attribute">#[<span class="ident">serde</span>(<span class="ident">default</span>, <span class="ident">deny_unknown_fields</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">UpstreamConfig</span> {
-    <span class="comment">// primary upstream network ids. All peers in such network are used as upstream for this node</span>
-    <span class="kw">pub</span> <span class="ident">primary_networks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">UpstreamNetworkId</span><span class="op">&gt;</span>,
-    <span class="comment">// All upstream peers of this node, across all the networks that are statically defined in this node&#39;s config</span>
-    <span class="comment">// this is mostly meaningful in VFN networks, where there is a strict hierarchy in a network</span>
-    <span class="kw">pub</span> <span class="ident">upstream_peers</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">PeerNetworkId</span><span class="op">&gt;</span>,
-    <span class="comment">// optional fallback network id. Used to as a failover if preferred upstream peers are not available</span>
-    <span class="comment">// TODO replace PeerId with `NetworkConfig` to contain actual info needed to build fallback_network</span>
-    <span class="kw">pub</span> <span class="ident">fallback_networks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">UpstreamNetworkId</span><span class="op">&gt;</span>,
+    <span class="comment">// list of upstream networks for this node, ordered by preference</span>
+    <span class="comment">// A validator&#39;s primary upstream network is their validator network, and for a FN,</span>
+    <span class="comment">// it is the first network defined here. If the primary upstream network goes down, the node will fall back to the networks</span>
+    <span class="comment">// specified here, in this order</span>
+    <span class="kw">pub</span> <span class="ident">networks</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">NetworkId</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">UpstreamConfig</span> {
-    <span class="doccomment">/// Determines whether a node `peer_id` in network `network_id` is an upstream peer of a node with this NodeConfig.</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_upstream_peer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">peer</span>: <span class="ident">PeerNetworkId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">is_primary_upstream_peer</span>(<span class="ident">peer</span>) <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">fallback_networks</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">peer</span>.<span class="ident">network_id</span>())
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">is_primary_upstream_peer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">peer</span>: <span class="ident">PeerNetworkId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">primary_networks</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">peer</span>.<span class="ident">network_id</span>()) <span class="op">|</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">upstream_peers</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">peer</span>)
+    <span class="doccomment">/// Returns the upstream network preference of a network according to this config</span>
+    <span class="doccomment">/// if network is not an upstream network, returns `None`</span>
+    <span class="doccomment">/// else, returns `Some&lt;ranking&gt;`, where `ranking` is zero-indexed and zero represents the highest preference</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_upstream_preference</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">network</span>: <span class="ident">NetworkId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="ident">network</span> <span class="op">=</span><span class="op">=</span> <span class="ident">NetworkId</span>::<span class="ident">Validator</span> {
+            <span class="comment">// validator network is always highest priority</span>
+            <span class="prelude-val">Some</span>(<span class="number">0</span>)
+        } <span class="kw">else</span> {
+            <span class="self">self</span>.<span class="ident">networks</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">position</span>(<span class="op">|</span><span class="ident">upstream_network</span><span class="op">|</span> <span class="ident">upstream_network</span> <span class="op">=</span><span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">network</span>)
+        }
     }
 }
 
-<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Copy</span>, <span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
+<span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Eq</span>, <span class="ident">Hash</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="doccomment">/// Identifier of a node, represented as (network_id, peer_id)</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PeerNetworkId</span>(<span class="kw">pub</span> <span class="ident">UpstreamNetworkId</span>, <span class="kw">pub</span> <span class="ident">PeerId</span>);
+<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">PeerNetworkId</span>(<span class="kw">pub</span> <span class="ident">NetworkId</span>, <span class="kw">pub</span> <span class="ident">PeerId</span>);
 
 <span class="kw">impl</span> <span class="ident">PeerNetworkId</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">network_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">UpstreamNetworkId</span> {
-        <span class="self">self</span>.<span class="number">0</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">network_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">NetworkId</span> {
+        <span class="self">self</span>.<span class="number">0</span>.<span class="ident">clone</span>()
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">peer_id</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">PeerId</span> {
         <span class="self">self</span>.<span class="number">1</span>
     }
 
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>(<span class="ident">UpstreamNetworkId</span>::<span class="ident">random</span>(), <span class="ident">PeerId</span>::<span class="ident">random</span>())
+        <span class="self">Self</span>(<span class="ident">NetworkId</span>::<span class="ident">default</span>(), <span class="ident">PeerId</span>::<span class="ident">random</span>())
+    }
+
+    <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">random_validator</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="self">Self</span>(<span class="ident">NetworkId</span>::<span class="ident">Validator</span>, <span class="ident">PeerId</span>::<span class="ident">random</span>())
     }
 }
 </pre></div>

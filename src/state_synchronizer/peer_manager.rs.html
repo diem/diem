@@ -219,6 +219,8 @@
 <span id="219">219</span>
 <span id="220">220</span>
 <span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -300,7 +302,7 @@
     }
 
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">enable_peer</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">peer</span>: <span class="ident">PeerNetworkId</span>) {
-        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">is_upstream_peer</span>(<span class="ident">peer</span>) {
+        <span class="kw">if</span> <span class="op">!</span><span class="self">self</span>.<span class="ident">is_upstream_peer</span>(<span class="kw-2">&amp;</span><span class="ident">peer</span>) {
             <span class="kw">return</span>;
         }
 
@@ -379,7 +381,7 @@
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">weighted_index</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">weighted_index</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">rng</span> <span class="op">=</span> <span class="ident">thread_rng</span>();
             <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">peer</span>) <span class="op">=</span> <span class="ident">active_peers</span>.<span class="ident">get</span>(<span class="ident">weighted_index</span>.<span class="ident">sample</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">rng</span>)) {
-                <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="kw-2">*</span><span class="ident">peer</span>.<span class="number">0</span>);
+                <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">peer</span>.<span class="number">0</span>.<span class="ident">clone</span>());
             }
         }
         <span class="prelude-val">None</span>
@@ -388,7 +390,7 @@
     <span class="kw">fn</span> <span class="ident">get_active_upstream_peers</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="kw-2">&amp;</span><span class="ident">PeerNetworkId</span>, <span class="kw-2">&amp;</span><span class="ident">PeerInfo</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">peers</span>
             .<span class="ident">iter</span>()
-            .<span class="ident">filter</span>(<span class="op">|</span><span class="kw-2">&amp;</span>(<span class="ident">peer</span>, <span class="ident">peer_info</span>)<span class="op">|</span> <span class="ident">peer_info</span>.<span class="ident">is_alive</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">is_upstream_peer</span>(<span class="kw-2">*</span><span class="ident">peer</span>))
+            .<span class="ident">filter</span>(<span class="op">|</span><span class="kw-2">&amp;</span>(<span class="ident">peer</span>, <span class="ident">peer_info</span>)<span class="op">|</span> <span class="ident">peer_info</span>.<span class="ident">is_alive</span> <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="self">self</span>.<span class="ident">is_upstream_peer</span>(<span class="ident">peer</span>))
             .<span class="ident">collect</span>()
     }
 
@@ -423,7 +425,7 @@
             <span class="kw">return</span>;
         }
         <span class="kw">let</span> <span class="ident">peer_to_penalize</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">requests</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">version</span>) {
-            <span class="prelude-val">Some</span>(<span class="ident">prev_request</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">prev_request</span>.<span class="ident">last_request_peer</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">prev_request</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">prev_request</span>.<span class="ident">last_request_peer</span>.<span class="ident">clone</span>(),
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">return</span>;
             }
@@ -432,8 +434,10 @@
         <span class="self">self</span>.<span class="ident">update_score</span>(<span class="kw-2">&amp;</span><span class="ident">peer_to_penalize</span>, <span class="ident">PeerScoreUpdateType</span>::<span class="ident">TimeOut</span>);
     }
 
-    <span class="kw">fn</span> <span class="ident">is_upstream_peer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">peer</span>: <span class="ident">PeerNetworkId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="self">self</span>.<span class="ident">upstream_config</span>.<span class="ident">is_upstream_peer</span>(<span class="ident">peer</span>)
+    <span class="kw">fn</span> <span class="ident">is_upstream_peer</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">peer</span>: <span class="kw-2">&amp;</span><span class="ident">PeerNetworkId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
+        <span class="self">self</span>.<span class="ident">upstream_config</span>
+            .<span class="ident">get_upstream_preference</span>(<span class="ident">peer</span>.<span class="ident">network_id</span>())
+            .<span class="ident">is_some</span>()
     }
 
     <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>

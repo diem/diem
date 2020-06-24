@@ -146,8 +146,8 @@
     <span class="ident">mpsc</span>::{<span class="self">self</span>, <span class="ident">Receiver</span>, <span class="ident">UnboundedSender</span>},
     <span class="ident">oneshot</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::<span class="ident">NodeConfig</span>;
-<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">on_chain_config</span>::<span class="ident">OnChainConfigPayload</span>, <span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>, <span class="ident">PeerId</span>};
+<span class="kw">use</span> <span class="ident">libra_config</span>::{<span class="ident">config</span>::<span class="ident">NodeConfig</span>, <span class="ident">network_id</span>::<span class="ident">NetworkId</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">on_chain_config</span>::<span class="ident">OnChainConfigPayload</span>, <span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
     <span class="ident">sync</span>::{<span class="ident">Arc</span>, <span class="ident">Mutex</span>, <span class="ident">RwLock</span>},
@@ -167,7 +167,7 @@
     <span class="ident">mempool</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">CoreMempool</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="comment">// First element in tuple is the network ID</span>
     <span class="comment">// See `NodeConfig::is_upstream_peer` for the definition of network ID</span>
-    <span class="ident">mempool_network_handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">MempoolNetworkSender</span>, <span class="ident">MempoolNetworkEvents</span>)<span class="op">&gt;</span>,
+    <span class="ident">mempool_network_handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">NetworkId</span>, <span class="ident">MempoolNetworkSender</span>, <span class="ident">MempoolNetworkEvents</span>)<span class="op">&gt;</span>,
     <span class="ident">client_events</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span>(<span class="ident">SignedTransaction</span>, <span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SubmissionStatus</span><span class="op">&gt;</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
     <span class="ident">consensus_requests</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">ConsensusRequest</span><span class="op">&gt;</span>,
     <span class="ident">state_sync_requests</span>: <span class="ident">mpsc</span>::<span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">CommitNotification</span><span class="op">&gt;</span>,
@@ -190,7 +190,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">all_network_events</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network_senders</span> <span class="op">=</span> <span class="ident">HashMap</span>::<span class="ident">new</span>();
     <span class="kw">for</span> (<span class="ident">network_id</span>, <span class="ident">network_sender</span>, <span class="ident">network_events</span>) <span class="kw">in</span> <span class="ident">mempool_network_handles</span>.<span class="ident">into_iter</span>() {
-        <span class="ident">all_network_events</span>.<span class="ident">push</span>((<span class="ident">network_id</span>, <span class="ident">network_events</span>));
+        <span class="ident">all_network_events</span>.<span class="ident">push</span>((<span class="ident">network_id</span>.<span class="ident">clone</span>(), <span class="ident">network_events</span>));
         <span class="ident">network_senders</span>.<span class="ident">insert</span>(<span class="ident">network_id</span>, <span class="ident">network_sender</span>);
     }
 
@@ -226,7 +226,7 @@
     <span class="ident">db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">DbReader</span><span class="op">&gt;</span>,
     <span class="comment">// The first element in the tuple is the ID of the network that this network is a handle to</span>
     <span class="comment">// See `NodeConfig::is_upstream_peer` for the definition of network ID</span>
-    <span class="ident">mempool_network_handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">MempoolNetworkSender</span>, <span class="ident">MempoolNetworkEvents</span>)<span class="op">&gt;</span>,
+    <span class="ident">mempool_network_handles</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">NetworkId</span>, <span class="ident">MempoolNetworkSender</span>, <span class="ident">MempoolNetworkEvents</span>)<span class="op">&gt;</span>,
     <span class="ident">client_events</span>: <span class="ident">Receiver</span><span class="op">&lt;</span>(<span class="ident">SignedTransaction</span>, <span class="ident">oneshot</span>::<span class="ident">Sender</span><span class="op">&lt;</span><span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">SubmissionStatus</span><span class="op">&gt;</span><span class="op">&gt;</span>)<span class="op">&gt;</span>,
     <span class="ident">consensus_requests</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">ConsensusRequest</span><span class="op">&gt;</span>,
     <span class="ident">state_sync_requests</span>: <span class="ident">Receiver</span><span class="op">&lt;</span><span class="ident">CommitNotification</span><span class="op">&gt;</span>,

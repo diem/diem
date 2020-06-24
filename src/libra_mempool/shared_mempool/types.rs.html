@@ -202,6 +202,8 @@
 <span id="202">202</span>
 <span id="203">203</span>
 <span id="204">204</span>
+<span id="205">205</span>
+<span id="206">206</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -219,14 +221,16 @@
     <span class="ident">future</span>::<span class="ident">Future</span>,
     <span class="ident">task</span>::{<span class="ident">Context</span>, <span class="ident">Poll</span>},
 };
-<span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">MempoolConfig</span>, <span class="ident">PeerNetworkId</span>};
+<span class="kw">use</span> <span class="ident">libra_config</span>::{
+    <span class="ident">config</span>::{<span class="ident">MempoolConfig</span>, <span class="ident">PeerNetworkId</span>},
+    <span class="ident">network_id</span>::<span class="ident">NetworkId</span>,
+};
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">mempool_status</span>::<span class="ident">MempoolStatus</span>,
     <span class="ident">on_chain_config</span>::{<span class="ident">ConfigID</span>, <span class="ident">LibraVersion</span>, <span class="ident">OnChainConfig</span>, <span class="ident">OnChainConfigPayload</span>, <span class="ident">VMConfig</span>},
     <span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>,
     <span class="ident">vm_error</span>::<span class="ident">VMStatus</span>,
-    <span class="ident">PeerId</span>,
 };
 <span class="kw">use</span> <span class="ident">std</span>::{
     <span class="ident">collections</span>::<span class="ident">HashMap</span>,
@@ -250,7 +254,7 @@
 {
     <span class="kw">pub</span> <span class="ident">mempool</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Mutex</span><span class="op">&lt;</span><span class="ident">CoreMempool</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">config</span>: <span class="ident">MempoolConfig</span>,
-    <span class="kw">pub</span> <span class="ident">network_senders</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">PeerId</span>, <span class="ident">MempoolNetworkSender</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">network_senders</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">NetworkId</span>, <span class="ident">MempoolNetworkSender</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">DbReader</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">validator</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">RwLock</span><span class="op">&lt;</span><span class="ident">V</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">peer_manager</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">PeerManager</span><span class="op">&gt;</span>,
@@ -322,7 +326,7 @@
 
             <span class="ident">Poll</span>::<span class="ident">Pending</span>
         } <span class="kw">else</span> {
-            <span class="ident">Poll</span>::<span class="ident">Ready</span>((<span class="self">self</span>.<span class="ident">peer</span>, <span class="self">self</span>.<span class="ident">backoff</span>))
+            <span class="ident">Poll</span>::<span class="ident">Ready</span>((<span class="self">self</span>.<span class="ident">peer</span>.<span class="ident">clone</span>(), <span class="self">self</span>.<span class="ident">backoff</span>))
         }
     }
 }

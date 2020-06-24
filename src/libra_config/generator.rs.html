@@ -76,7 +76,6 @@
 <span id="76">76</span>
 <span id="77">77</span>
 <span id="78">78</span>
-<span id="79">79</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -114,7 +113,6 @@
 
         <span class="comment">// For a validator node, any of its validator peers are considered an upstream peer</span>
         <span class="kw">let</span> <span class="ident">network</span> <span class="op">=</span> <span class="ident">node</span>.<span class="ident">validator_network</span>.<span class="ident">as_mut</span>().<span class="ident">unwrap</span>();
-        <span class="ident">node</span>.<span class="ident">upstream</span>.<span class="ident">primary_networks</span>.<span class="ident">push</span>(<span class="ident">network</span>.<span class="ident">peer_id</span>());
         <span class="ident">network</span>.<span class="ident">discovery_method</span> <span class="op">=</span> <span class="ident">DiscoveryMethod</span>::<span class="ident">gossip</span>(<span class="ident">network</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>());
         <span class="ident">network</span>.<span class="ident">mutual_authentication</span> <span class="op">=</span> <span class="bool-val">true</span>;
         <span class="ident">network</span>.<span class="ident">network_id</span> <span class="op">=</span> <span class="ident">NetworkId</span>::<span class="ident">Validator</span>;
