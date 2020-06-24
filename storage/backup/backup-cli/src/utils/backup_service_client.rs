@@ -81,4 +81,16 @@ impl BackupServiceClient {
             .await?;
         Ok(buf)
     }
+
+    pub async fn get_epoch_ending_ledger_infos(
+        &self,
+        start_epoch: u64,
+        end_epoch: u64,
+    ) -> Result<impl AsyncRead> {
+        self.get(&format!(
+            "epoch_ending_ledger_infos/{}/{}",
+            start_epoch, end_epoch
+        ))
+        .await
+    }
 }
