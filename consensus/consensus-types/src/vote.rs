@@ -28,7 +28,6 @@ pub struct Vote {
     signature: Ed25519Signature,
     /// The round signatures can be aggregated into a timeout certificate if present.
     timeout_signature: Option<Ed25519Signature>,
-    
     /// The marker equals the largest round number of any conflicting block that the validator voted for
     marker: Round,
 }
