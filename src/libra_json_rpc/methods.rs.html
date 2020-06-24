@@ -363,9 +363,6 @@
 <span id="363">363</span>
 <span id="364">364</span>
 <span id="365">365</span>
-<span id="366">366</span>
-<span id="367">367</span>
-<span id="368">368</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -498,19 +495,16 @@
 <span class="doccomment">/// returning the current blockchain metadata</span>
 <span class="doccomment">/// Can be used to verify that target Full Node is up-to-date</span>
 <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">get_metadata</span>(<span class="ident">service</span>: <span class="ident">JsonRpcService</span>, <span class="ident">request</span>: <span class="ident">JsonRpcRequest</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">BlockMetadata</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> (<span class="ident">version</span>, <span class="ident">timestamp</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">serde_json</span>::<span class="ident">from_value</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>(<span class="ident">request</span>.<span class="ident">get_param</span>(<span class="number">0</span>)) {
-        <span class="prelude-val">Ok</span>(<span class="ident">version</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="comment">// TODO: fix once we have a real way to get transaction timestamps</span>
-            <span class="kw">let</span> <span class="ident">li</span> <span class="op">=</span> <span class="ident">service</span>.<span class="ident">db</span>.<span class="ident">get_epoch_ending_ledger_info</span>(<span class="ident">version</span>)<span class="question-mark">?</span>;
-            (<span class="ident">version</span>, <span class="ident">li</span>.<span class="ident">ledger_info</span>().<span class="ident">timestamp_usecs</span>())
-        }
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> (
-            <span class="ident">request</span>.<span class="ident">version</span>(),
-            <span class="ident">request</span>.<span class="ident">ledger_info</span>.<span class="ident">ledger_info</span>().<span class="ident">timestamp_usecs</span>(),
-        ),
-    };
-
-    <span class="prelude-val">Ok</span>(<span class="ident">BlockMetadata</span> { <span class="ident">version</span>, <span class="ident">timestamp</span> })
+    <span class="kw">match</span> <span class="ident">serde_json</span>::<span class="ident">from_value</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>(<span class="ident">request</span>.<span class="ident">get_param</span>(<span class="number">0</span>)) {
+        <span class="prelude-val">Ok</span>(<span class="ident">version</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">BlockMetadata</span> {
+            <span class="ident">version</span>,
+            <span class="ident">timestamp</span>: <span class="ident">service</span>.<span class="ident">db</span>.<span class="ident">get_block_timestamp</span>(<span class="ident">version</span>)<span class="question-mark">?</span>,
+        }),
+        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">BlockMetadata</span> {
+            <span class="ident">version</span>: <span class="ident">request</span>.<span class="ident">version</span>(),
+            <span class="ident">timestamp</span>: <span class="ident">request</span>.<span class="ident">ledger_info</span>.<span class="ident">ledger_info</span>().<span class="ident">timestamp_usecs</span>(),
+        }),
+    }
 }
 
 <span class="doccomment">/// Returns transactions by range</span>

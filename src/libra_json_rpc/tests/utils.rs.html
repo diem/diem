@@ -264,6 +264,10 @@
 <span id="264">264</span>
 <span id="265">265</span>
 <span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -307,11 +311,11 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">struct</span> <span class="ident">MockLibraDB</span> {
     <span class="kw">pub</span> <span class="ident">version</span>: <span class="ident">u64</span>,
-    <span class="kw">pub</span> <span class="ident">timestamp</span>: <span class="ident">u64</span>,
     <span class="kw">pub</span> <span class="ident">all_accounts</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">AccountAddress</span>, <span class="ident">AccountStateBlob</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">all_txns</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Transaction</span>, <span class="ident">StatusCode</span>)<span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">events</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">u64</span>, <span class="ident">ContractEvent</span>)<span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">account_state_with_proof</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AccountStateWithProof</span><span class="op">&gt;</span>,
+    <span class="kw">pub</span> <span class="ident">timestamps</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">DbReader</span> <span class="kw">for</span> <span class="ident">MockLibraDB</span> {
@@ -335,7 +339,7 @@
                     <span class="ident">HashValue</span>::<span class="ident">zero</span>(),
                     <span class="ident">HashValue</span>::<span class="ident">zero</span>(),
                     <span class="self">self</span>.<span class="ident">version</span>,
-                    <span class="self">self</span>.<span class="ident">timestamp</span>,
+                    <span class="kw-2">*</span><span class="self">self</span>.<span class="ident">timestamps</span>.<span class="ident">last</span>().<span class="ident">expect</span>(<span class="string">&quot;must have&quot;</span>),
                     <span class="prelude-val">None</span>,
                 ),
                 <span class="ident">HashValue</span>::<span class="ident">zero</span>(),
@@ -529,6 +533,10 @@
 
     <span class="kw">fn</span> <span class="ident">get_epoch_ending_ledger_info</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="kw">_</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span> {
         <span class="macro">unimplemented</span><span class="macro">!</span>()
+    }
+
+    <span class="kw">fn</span> <span class="ident">get_block_timestamp</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">version</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
+        <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">timestamps</span>[<span class="ident">version</span> <span class="kw">as</span> <span class="ident">usize</span>])
     }
 }
 </pre></div>
