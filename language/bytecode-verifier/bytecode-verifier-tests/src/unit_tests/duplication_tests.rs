@@ -8,7 +8,6 @@ use vm::file_format::CompiledModule;
 proptest! {
     #[test]
     fn valid_duplication(module in CompiledModule::valid_strategy(20)) {
-        let duplication_checker = DuplicationChecker::new(&module);
-        prop_assert!(duplication_checker.verify().is_ok());
+        prop_assert!(DuplicationChecker::verify(&module).is_ok());
     }
 }

@@ -16,13 +16,10 @@ pub struct ResourceTransitiveChecker<'a> {
 }
 
 impl<'a> ResourceTransitiveChecker<'a> {
-    pub fn new(module: &'a CompiledModule) -> Self {
-        Self { module }
-    }
-
-    pub fn verify(self) -> VMResult<()> {
-        for (idx, struct_def) in self.module.struct_defs().iter().enumerate() {
-            let sh = self.module.struct_handle_at(struct_def.struct_handle);
+    pub fn verify(module: &'a CompiledModule) -> VMResult<()> {
+        let checker = Self { module };
+        for (idx, struct_def) in checker.module.struct_defs().iter().enumerate() {
+            let sh = checker.module.struct_handle_at(struct_def.struct_handle);
             if sh.is_nominal_resource {
                 continue;
             }
@@ -31,7 +28,7 @@ impl<'a> ResourceTransitiveChecker<'a> {
                 StructFieldInformation::Declared(fields) => fields,
             };
             for field in fields {
-                if self.contains_nominal_resource(&field.signature.0, &sh.type_parameters) {
+                if checker.contains_nominal_resource(&field.signature.0, &sh.type_parameters) {
                     return Err(verification_error(
                         IndexKind::StructDefinition,
                         idx,

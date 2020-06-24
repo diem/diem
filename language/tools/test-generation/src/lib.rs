@@ -43,16 +43,17 @@ use vm::{
 };
 
 /// This function calls the Bytecode verifier to test it
-fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
+fn run_verifier(module: CompiledModule) -> Result<CompiledModule, String> {
     let verifier_panic = panic::catch_unwind(|| {
-        VerifiedModule::new(module.clone())
+        VerifiedModule::new(module)
+            .map(|verified_module| verified_module.into_inner())
             .map_err(|err| format!("Module verification failed: {:#?}", err))
     });
     verifier_panic.unwrap_or_else(|err| Err(format!("Verifier panic: {:#?}", err)))
 }
 
 /// This function runs a verified module in the VM runtime
-fn run_vm(module: VerifiedModule) -> VMResult<()> {
+fn run_vm(module: CompiledModule) -> VMResult<()> {
     // By convention the 0'th index function definition is the entrypoint to the module (i.e. that
     // will contain only simply-typed arguments).
     let entry_idx = FunctionDefinitionIndex::new(0);
@@ -87,13 +88,13 @@ fn run_vm(module: VerifiedModule) -> VMResult<()> {
 
 /// Execute the first function in a module
 fn execute_function_in_module(
-    module: VerifiedModule,
+    module: CompiledModule,
     idx: FunctionDefinitionIndex,
     ty_args: Vec<TypeTag>,
     args: Vec<Value>,
     state_view: &dyn StateView,
 ) -> VMResult<()> {
-    let module_id = module.as_inner().self_id();
+    let module_id = module.self_id();
     let entry_name = {
         let entry_func_idx = module.function_def_at(idx).function;
         let entry_name_idx = module.function_handle_at(entry_func_idx).name;
@@ -268,9 +269,7 @@ pub fn bytecode_generation(
                 let uid = rng.gen::<u64>();
                 output_error_case(module.clone(), output_path.clone(), uid, tid);
                 if EXECUTE_UNVERIFIED_MODULE {
-                    Some(VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(
-                        module.clone(),
-                    ))
+                    Some(module.clone())
                 } else {
                     None
                 }

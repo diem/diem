@@ -4,6 +4,7 @@
 //! This module implements a checker for verifying signature tokens used in types of function
 //! parameters, locals, and fields of structs are well-formed. References can only occur at the
 //! top-level in all tokens.  Additionally, references cannot occur at all in field types.
+use crate::kind;
 use libra_types::vm_error::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
@@ -30,18 +31,15 @@ pub struct SignatureChecker<'a> {
 }
 
 impl<'a> SignatureChecker<'a> {
-    pub fn new(module: &'a CompiledModule) -> Self {
-        Self {
+    pub fn verify(module: &'a CompiledModule) -> VMResult<()> {
+        let mut sig_check = Self {
             module,
             signature_context: None,
-        }
-    }
-
-    pub fn verify(mut self) -> VMResult<()> {
-        self.verify_signature_pool()?;
-        self.verify_function_signatures()?;
-        self.verify_fields()?;
-        self.verify_code_units()
+        };
+        sig_check.verify_signature_pool()?;
+        sig_check.verify_function_signatures()?;
+        sig_check.verify_fields()?;
+        sig_check.verify_code_units()
     }
 
     fn verify_signature_pool(&mut self) -> VMResult<()> {
@@ -227,49 +225,5 @@ impl<'a> SignatureChecker<'a> {
             }
         }
         Ok(())
-    }
-}
-
-//
-// Helpers functions for signatures
-//
-
-pub(crate) fn kind(module: &CompiledModule, ty: &SignatureToken, constraints: &[Kind]) -> Kind {
-    use SignatureToken::*;
-
-    match ty {
-        // The primitive types & references have kind unrestricted.
-        Bool | U8 | U64 | U128 | Address | Reference(_) | MutableReference(_) => Kind::Copyable,
-        Signer => Kind::Resource,
-        TypeParameter(idx) => constraints[*idx as usize],
-        Vector(ty) => kind(module, ty, constraints),
-        Struct(idx) => {
-            let sh = module.struct_handle_at(*idx);
-            if sh.is_nominal_resource {
-                Kind::Resource
-            } else {
-                Kind::Copyable
-            }
-        }
-        StructInstantiation(idx, type_args) => {
-            let sh = module.struct_handle_at(*idx);
-            if sh.is_nominal_resource {
-                return Kind::Resource;
-            }
-            // Gather the kinds of the type actuals.
-            let kinds = type_args
-                .iter()
-                .map(|ty| kind(module, ty, constraints))
-                .collect::<Vec<_>>();
-            // Derive the kind of the struct.
-            //   - If any of the type actuals is `all`, then the struct is `all`.
-            //     - `all` means some part of the type can be either `resource` or
-            //       `unrestricted`.
-            //     - Therefore it is also impossible to determine the kind of the type as a
-            //       whole, and thus `all`.
-            //   - If none of the type actuals is `all`, then the struct is a resource if
-            //     and only if one of the type actuals is `resource`.
-            kinds.iter().cloned().fold(Kind::Copyable, Kind::join)
-        }
     }
 }

@@ -3,8 +3,11 @@
 
 use crate::native_functions::NativeFunction;
 use bytecode_verifier::{
+    constants::ConstantsChecker,
+    instantiation_loops::InstantiationLoopChecker,
     verifier::{verify_dependencies, verify_script_dependency_map},
-    VerifiedModule, VerifiedScript,
+    CodeUnitVerifier, DuplicationChecker, InstructionConsistency, RecursiveStructDefChecker,
+    ResourceTransitiveChecker, SignatureChecker, VerifiedScript,
 };
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -125,9 +128,9 @@ impl ModuleCache {
         self.modules.get(id).map(|module| Arc::clone(module))
     }
 
-    fn insert(&mut self, id: ModuleId, ver_module: VerifiedModule) -> VMResult<Arc<Module>> {
-        self.add_module(&ver_module)?;
-        let module = Module::new(ver_module, self)?;
+    fn insert(&mut self, id: ModuleId, module: CompiledModule) -> VMResult<Arc<Module>> {
+        self.add_module(&module)?;
+        let module = Module::new(module, self)?;
         match self.get(&id) {
             Some(module) => Ok(module),
             None => Ok(Arc::clone(self.modules.insert(id, module))),
@@ -142,7 +145,7 @@ impl ModuleCache {
         Arc::clone(&self.structs[idx])
     }
 
-    fn add_module(&mut self, module: &VerifiedModule) -> VMResult<()> {
+    fn add_module(&mut self, module: &CompiledModule) -> VMResult<()> {
         let starting_idx = self.structs.len();
         for (idx, struct_def) in module.struct_defs().iter().enumerate() {
             let st = self.load_type(module, struct_def, StructDefinitionIndex(idx as u16))?;
@@ -159,7 +162,7 @@ impl ModuleCache {
 
     fn load_type(
         &self,
-        module: &VerifiedModule,
+        module: &CompiledModule,
         struct_def: &StructDefinition,
         idx: StructDefinitionIndex,
     ) -> VMResult<StructType> {
@@ -178,7 +181,7 @@ impl ModuleCache {
         })
     }
 
-    fn load_fields(&mut self, module: &VerifiedModule, starting_idx: usize) -> VMResult<()> {
+    fn load_fields(&mut self, module: &CompiledModule, starting_idx: usize) -> VMResult<()> {
         let mut field_types = vec![];
         for struct_def in module.struct_defs() {
             let fields = match &struct_def.field_information {
@@ -188,7 +191,7 @@ impl ModuleCache {
 
             let mut field_tys = vec![];
             for field in fields {
-                let ty = self.make_type(module.as_inner(), &field.signature.0)?;
+                let ty = self.make_type(module, &field.signature.0)?;
                 assume!(field_tys.len() < usize::max_value());
                 field_tys.push(ty);
             }
@@ -271,10 +274,12 @@ impl ModuleCache {
                 return Ok((idx, Arc::clone(ty)));
             }
         }
-        Err(VMStatus::new(StatusCode::UNREACHABLE).with_message(format!(
-            "Cannot find {:?}::{:?} in cache",
-            module_id, struct_name
-        )))
+        Err(
+            VMStatus::new(StatusCode::TYPE_RESOLUTION_FAILURE).with_message(format!(
+                "Cannot find {:?}::{:?} in cache",
+                module_id, struct_name
+            )),
+        )
     }
 
     fn resolve_function_handle(
@@ -287,13 +292,17 @@ impl ModuleCache {
                 return Ok(idx);
             }
         }
-        Err(VMStatus::new(StatusCode::UNREACHABLE)
-            .with_message("Missing function in cache".to_string()))
+        Err(
+            VMStatus::new(StatusCode::FUNCTION_RESOLUTION_FAILURE).with_message(format!(
+                "Cannot find {:?}::{:?} in cache",
+                module_id, func_name
+            )),
+        )
     }
 
     fn load_function(
         &self,
-        module: &VerifiedModule,
+        module: &CompiledModule,
         func_def: &FunctionDefinition,
     ) -> VMResult<Function> {
         Ok(Function::new(func_def, module))
@@ -319,45 +328,83 @@ impl Loader {
         }
     }
 
-    pub(crate) fn function_at(&self, idx: usize) -> Arc<Function> {
-        self.module_cache.lock().unwrap().function_at(idx)
-    }
-
+    // Entry point for function execution (`MoveVM::execute_function`).
+    // Loading verifies the module if it was never loaded.
+    // Type parameters are checked as well after every type is loaded.
     pub(crate) fn load_function(
         &self,
         function_name: &IdentStr,
         module_id: &ModuleId,
+        ty_args: &[TypeTag],
         data_store: &mut dyn DataStore,
-    ) -> VMResult<Arc<Function>> {
+    ) -> VMResult<(Arc<Function>, Vec<Type>)> {
         self.load_module(module_id, data_store)?;
         let idx = self
             .module_cache
             .lock()
             .unwrap()
             .resolve_function_handle(function_name, module_id)?;
-        Ok(self.module_cache.lock().unwrap().function_at(idx))
+        let func = self.module_cache.lock().unwrap().function_at(idx);
+
+        // verify type arguments
+        let mut type_params = vec![];
+        for ty in ty_args {
+            type_params.push(self.load_type(ty, data_store)?);
+        }
+        self.verify_ty_args(func.type_parameters(), &type_params)?;
+
+        Ok((func, type_params))
     }
 
+    // Entry point for script execution (`MoveVM::execute_script`).
+    // Verifies the script if it is not in the cache of scripts loaded.
+    // Type parameters are checked as well after every type is loaded.
     pub(crate) fn load_script(
         &self,
         script_blob: &[u8],
+        ty_args: &[TypeTag],
         data_store: &mut dyn DataStore,
-    ) -> VMResult<Arc<Function>> {
+    ) -> VMResult<(Arc<Function>, Vec<Type>)> {
+        // retrieve or load the script
         let hash_value = HashValue::sha3_256_of(script_blob);
-        if let Some(main) = self.scripts.lock().unwrap().get(&hash_value) {
-            return Ok(main);
-        }
+        let opt_main = self.scripts.lock().unwrap().get(&hash_value);
+        let main = match opt_main {
+            Some(main) => main,
+            None => {
+                let ver_script = self.deserialize_and_verify_script(script_blob, data_store)?;
+                let script =
+                    Script::new(ver_script, &hash_value, &self.module_cache.lock().unwrap())?;
+                self.scripts.lock().unwrap().insert(hash_value, script)?
+            }
+        };
 
-        let ver_script = self.deserialize_and_verify_script(script_blob, data_store)?;
-        let script = Script::new(ver_script, &hash_value, &self.module_cache.lock().unwrap())?;
-        self.scripts.lock().unwrap().insert(hash_value, script)
+        // verify type arguments
+        let mut type_params = vec![];
+        for ty in ty_args {
+            type_params.push(self.load_type(ty, data_store)?);
+        }
+        self.verify_ty_args(main.type_parameters(), &type_params)?;
+
+        Ok((main, type_params))
     }
 
-    pub(crate) fn load_type(
-        &self,
-        type_tag: &TypeTag,
-        data_store: &mut dyn DataStore,
-    ) -> VMResult<Type> {
+    // Entry point for module publishing (`MoveVM::publish_module`).
+    // A module to be published must be loadable.
+    // This step performs all verification steps to load the module without loading it.
+    // The module is not added to the code cache. It is simply published to the data cache.
+    pub(crate) fn verify_module(&self, module: &CompiledModule) -> VMResult<()> {
+        DuplicationChecker::verify(&module)?;
+        SignatureChecker::verify(&module)?;
+        InstructionConsistency::verify(&module)?;
+        ResourceTransitiveChecker::verify(&module)?;
+        ConstantsChecker::verify(&module)?;
+        RecursiveStructDefChecker::verify(&module)?;
+        InstantiationLoopChecker::verify(&module)?;
+        CodeUnitVerifier::verify(&module)?;
+        Self::check_natives(&module)
+    }
+
+    fn load_type(&self, type_tag: &TypeTag, data_store: &mut dyn DataStore) -> VMResult<Type> {
         Ok(match type_tag {
             TypeTag::Bool => Type::Bool,
             TypeTag::U8 => Type::U8,
@@ -397,7 +444,7 @@ impl Loader {
         self.module_cache.lock().unwrap().insert(id.clone(), module)
     }
 
-    pub(crate) fn verify_ty_args(&self, constraints: &[Kind], ty_args: &[Type]) -> VMResult<()> {
+    fn verify_ty_args(&self, constraints: &[Kind], ty_args: &[Type]) -> VMResult<()> {
         if constraints.len() != ty_args.len() {
             return Err(VMStatus::new(StatusCode::NUMBER_OF_TYPE_ARGUMENTS_MISMATCH));
         }
@@ -414,7 +461,7 @@ impl Loader {
         Ok(())
     }
 
-    pub(crate) fn check_natives(module: &VerifiedModule) -> VMResult<()> {
+    fn check_natives(module: &CompiledModule) -> VMResult<()> {
         for (idx, native_function) in module
             .function_defs()
             .iter()
@@ -448,6 +495,10 @@ impl Loader {
             }
         }
         Ok(())
+    }
+
+    pub(crate) fn function_at(&self, idx: usize) -> Arc<Function> {
+        self.module_cache.lock().unwrap().function_at(idx)
     }
 
     fn get_module(&self, idx: &ModuleId) -> Arc<Module> {
@@ -511,7 +562,7 @@ impl Loader {
         &self,
         script: &[u8],
         data_store: &mut dyn DataStore,
-    ) -> VMResult<VerifiedScript> {
+    ) -> VMResult<CompiledScript> {
         let script = match CompiledScript::deserialize(script) {
             Ok(script) => script,
             Err(err) => {
@@ -535,7 +586,7 @@ impl Loader {
                     dependency_map.insert(dependency.module_id().clone(), dependency.module());
                 }
                 match verify_script_dependency_map(&script, &dependency_map) {
-                    Ok(()) => return Ok(script),
+                    Ok(()) => return Ok(script.into_inner()),
                     Err(e) => e,
                 }
             }
@@ -555,8 +606,8 @@ impl Loader {
         &self,
         id: &ModuleId,
         data_store: &mut dyn DataStore,
-    ) -> VMResult<VerifiedModule> {
-        let comp_module = match data_store.load_module(id) {
+    ) -> VMResult<CompiledModule> {
+        let module = match data_store.load_module(id) {
             Ok(blob) => match CompiledModule::deserialize(&blob) {
                 Ok(module) => module,
                 Err(err) => {
@@ -569,18 +620,18 @@ impl Loader {
                 return Err(err);
             }
         };
-        match VerifiedModule::new(comp_module) {
-            Ok(module) => {
+        match self.verify_module(&module) {
+            Ok(_) => {
                 self.check_dependencies(&module, data_store)?;
                 Ok(module)
             }
-            Err((_, err)) => Err(err),
+            Err(err) => Err(err),
         }
     }
 
     fn check_dependencies(
         &self,
-        module: &VerifiedModule,
+        module: &CompiledModule,
         data_store: &mut dyn DataStore,
     ) -> VMResult<()> {
         let deps = load_module_dependencies(module);
@@ -730,7 +781,7 @@ impl<'a> Resolver<'a> {
                     .module_cache
                     .lock()
                     .unwrap()
-                    .make_type(binary.as_inner(), token)?
+                    .make_type(binary, token)?
                     .subst(type_context)?;
                 self.loader.type_to_fat_type(&ty)
             }
@@ -755,7 +806,7 @@ impl<'a> TypeConverter for Resolver<'a> {
 pub struct Module {
     id: ModuleId,
     // primitive pools
-    module: VerifiedModule,
+    module: CompiledModule,
 
     // types as indexes into the Loader type list
     struct_refs: Vec<usize>,
@@ -774,14 +825,14 @@ pub struct Module {
 }
 
 impl Module {
-    fn new(module: VerifiedModule, cache: &ModuleCache) -> VMResult<Self> {
+    fn new(module: CompiledModule, cache: &ModuleCache) -> VMResult<Self> {
         let id = module.self_id();
 
         let mut struct_refs = vec![];
         for struct_handle in module.struct_handles() {
             let struct_name = module.identifier_at(struct_handle.name);
             let module_handle = module.module_handle_at(struct_handle.module);
-            let module_id = module.as_inner().module_id_for_handle(module_handle);
+            let module_id = module.module_id_for_handle(module_handle);
             struct_refs.push(cache.find_struct_by_name(struct_name, &module_id)?.0);
         }
 
@@ -799,7 +850,7 @@ impl Module {
             let field_count = struct_def.field_count;
             let mut instantiation = vec![];
             for ty in &module.signature_at(struct_inst.type_parameters).0 {
-                instantiation.push(cache.make_type(module.as_inner(), ty)?);
+                instantiation.push(cache.make_type(&module, ty)?);
             }
             struct_instantiations.push(StructInstantiation {
                 field_count,
@@ -812,7 +863,7 @@ impl Module {
         for func_handle in module.function_handles() {
             let func_name = module.identifier_at(func_handle.name);
             let module_handle = module.module_handle_at(func_handle.module);
-            let module_id = module.as_inner().module_id_for_handle(module_handle);
+            let module_id = module.module_id_for_handle(module_handle);
             let ref_idx = cache.resolve_function_handle(func_name, &module_id)?;
             function_refs.push(ref_idx);
         }
@@ -822,7 +873,7 @@ impl Module {
             let handle = function_refs[func_inst.handle.0 as usize];
             let mut instantiation = vec![];
             for ty in &module.signature_at(func_inst.type_parameters).0 {
-                instantiation.push(cache.make_type(module.as_inner(), ty)?);
+                instantiation.push(cache.make_type(&module, ty)?);
             }
             function_instantiations.push(FunctionInstantiation {
                 handle,
@@ -887,7 +938,7 @@ impl Module {
         self.struct_instantiations[idx as usize].field_count
     }
 
-    fn module(&self) -> &VerifiedModule {
+    fn module(&self) -> &CompiledModule {
         &self.module
     }
 
@@ -907,7 +958,7 @@ impl Module {
 #[derive(Debug)]
 struct Script {
     // primitive pools
-    script: VerifiedScript,
+    script: CompiledScript,
 
     // types as indexes into the Loader type list
     struct_refs: Vec<usize>,
@@ -922,7 +973,7 @@ struct Script {
 }
 
 impl Script {
-    fn new(script: VerifiedScript, script_hash: &HashValue, cache: &ModuleCache) -> VMResult<Self> {
+    fn new(script: CompiledScript, script_hash: &HashValue, cache: &ModuleCache) -> VMResult<Self> {
         let mut struct_refs = vec![];
         for struct_handle in script.struct_handles() {
             let struct_name = script.identifier_at(struct_handle.name);
@@ -962,7 +1013,7 @@ impl Script {
 
         let scope = Scope::Script(*script_hash);
 
-        let compiled_script = script.as_inner().as_inner();
+        let compiled_script = script.as_inner();
         let code: Vec<Bytecode> = compiled_script.code.code.clone();
         let parameters = script.signature_at(compiled_script.parameters).clone();
         let return_ = Signature(vec![]);
@@ -1032,7 +1083,7 @@ pub struct Function {
 }
 
 impl Function {
-    fn new(def: &FunctionDefinition, module: &VerifiedModule) -> Self {
+    fn new(def: &FunctionDefinition, module: &CompiledModule) -> Self {
         let handle = module.function_handle_at(def.function);
         let name = module.identifier_at(handle.name).to_owned();
         let module_id = module.self_id();

@@ -245,7 +245,11 @@ impl ValueImpl {
 }
 
 impl Value {
-    pub fn is_valid_script_arg(&self, sig: &SignatureToken) -> bool {
+    // REVIEW: this allows primitive (including `Signer`) and vectors of them. Vectors can only
+    // be one level (a different organization of `ValueImpl` could give us that property in an
+    // efficient way). Conceptually if we serialize the value and deserialize according to
+    // the argument type we would have accomplished a proper check (reference handling aside...)
+    pub fn is_valid_arg(&self, sig: &SignatureToken) -> bool {
         match (sig, &self.0) {
             (SignatureToken::U8, ValueImpl::U8(_)) => true,
             (SignatureToken::U64, ValueImpl::U64(_)) => true,
@@ -253,7 +257,11 @@ impl Value {
             (SignatureToken::Bool, ValueImpl::Bool(_)) => true,
             (SignatureToken::Address, ValueImpl::Address(_)) => true,
             (SignatureToken::Vector(ty), ValueImpl::Container(r)) => match (&**ty, &*r.borrow()) {
-                (SignatureToken::U8, Container::U8(_)) => true,
+                (SignatureToken::Bool, Container::Bool(_))
+                | (SignatureToken::U8, Container::U8(_))
+                | (SignatureToken::U64, Container::U64(_))
+                | (SignatureToken::U128, Container::U128(_))
+                | (SignatureToken::Address, Container::Address(_)) => true,
                 _ => false,
             },
             (
@@ -263,6 +271,33 @@ impl Value {
                 (SignatureToken::Signer, Container::Resource(v)) => {
                     v.len() == 1 && matches!(&v[0], ValueImpl::Address(_))
                 }
+                _ => true,
+            },
+            _ => false,
+        }
+    }
+
+    pub fn is_constant_or_signer_ref(&self) -> bool {
+        match &self.0 {
+            ValueImpl::Bool(_)
+            | ValueImpl::U8(_)
+            | ValueImpl::U64(_)
+            | ValueImpl::U128(_)
+            | ValueImpl::Address(_) => true,
+            ValueImpl::Container(r) => {
+                match &*r.borrow() {
+                    Container::Bool(_)
+                    | Container::U8(_)
+                    | Container::U64(_)
+                    | Container::U128(_)
+                    | Container::Address(_) => true,
+                    // TODO: we need to enable vector of vectors and move Value will change
+                    // to have a knowledge of vectors vs structs
+                    _ => false,
+                }
+            }
+            ValueImpl::ContainerRef(ContainerRef::Local(inner_ref)) => match &*inner_ref.borrow() {
+                Container::Resource(v) => v.len() == 1 && matches!(&v[0], ValueImpl::Address(_)),
                 _ => false,
             },
             _ => false,

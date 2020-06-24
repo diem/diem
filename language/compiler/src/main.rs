@@ -58,9 +58,10 @@ fn print_error_and_exit(verification_error: &VMStatus) -> ! {
     std::process::exit(1);
 }
 
-fn do_verify_module(module: CompiledModule, dependencies: &[VerifiedModule]) -> VerifiedModule {
-    let verified_module =
-        VerifiedModule::new(module).unwrap_or_else(|(_, err)| print_error_and_exit(&err));
+fn do_verify_module(module: CompiledModule, dependencies: &[CompiledModule]) -> CompiledModule {
+    let verified_module = VerifiedModule::new(module)
+        .unwrap_or_else(|(_, err)| print_error_and_exit(&err))
+        .into_inner();
     if let Err(err) = verify_module_dependencies(&verified_module, dependencies) {
         print_error_and_exit(&err);
     }
@@ -132,12 +133,16 @@ fn main() {
                             .expect("Downloaded module blob can't be deserialized"),
                     )
                     .expect("Downloaded module blob failed verifier")
+                    .into_inner()
                 })
                 .collect()
         } else if args.no_stdlib {
             vec![]
         } else {
-            stdlib_modules(StdLibOptions::Compiled).to_vec()
+            stdlib_modules(StdLibOptions::Compiled)
+                .iter()
+                .map(|verified_module| verified_module.as_inner().clone())
+                .collect()
         }
     };
 
@@ -179,8 +184,7 @@ fn main() {
         let (compiled_module, source_map) =
             util::do_compile_module(&args.source_path, address, &deps);
         let compiled_module = if !args.no_verify {
-            let verified_module = do_verify_module(compiled_module, &deps);
-            verified_module.into_inner()
+            do_verify_module(compiled_module, &deps)
         } else {
             compiled_module
         };

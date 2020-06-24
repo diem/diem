@@ -390,6 +390,7 @@ pub enum StatusCode {
     MOVETO_TYPE_MISMATCH_ERROR = 1090,
     MOVETO_NO_RESOURCE_ERROR = 1091,
     GENERIC_MEMBER_OPCODE_MISMATCH = 1092,
+    FUNCTION_RESOLUTION_FAILURE = 1093,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

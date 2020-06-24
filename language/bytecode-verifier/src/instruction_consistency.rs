@@ -19,15 +19,12 @@ pub struct InstructionConsistency<'a> {
 }
 
 impl<'a> InstructionConsistency<'a> {
-    pub fn new(module: &'a CompiledModule) -> Self {
-        Self { module }
-    }
-
-    pub fn verify(self) -> VMResult<()> {
-        for func_def in self.module.function_defs() {
+    pub fn verify(module: &'a CompiledModule) -> VMResult<()> {
+        let checker = Self { module };
+        for func_def in checker.module.function_defs() {
             match &func_def.code {
                 None => (),
-                Some(code) => self.check_instructions(code)?,
+                Some(code) => checker.check_instructions(code)?,
             }
         }
         Ok(())
