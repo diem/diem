@@ -50,24 +50,26 @@ module VectorExists {
         ensures forall e: u64: (old(e_in_v_vec(e, _v)) ==> e_in_v_vec(e, _v));
         ensures forall e: u64: (old(e_in_v_range(e, _v)) ==> e_in_v_range(e, _v));
         ensures forall e: u64: (old(e_in_v_u64(e, _v)) ==> e_in_v_u64(e, _v));
+
+        //ensures false;
     }
 
     public fun push_one(v: &mut vector<u64>) {
         Vector::push_back(v, 1);
     }
     spec fun push_one {
-        pragma verify=false;
+        pragma verify=true;
         aborts_if false;
-        ensures v[len(v)-1] == 1;
+        ensures v[len(v)-1] == 2;
 
         ensures e_in_v_vec(1, v);
         ensures e_in_v_range(1, v);
         ensures exists i in 0..len(v): v[i] == 1;
 
-        ensures exists i: u64 where (i == len(v)-1): v[i] == 1;
+        //ensures exists i: u64 where (i == len(v)-1): v[i] == 1;
 
-        ensures exists i: u64 : v[i] == 1; // FIXME: not verified, but should be.
-        ensures e_in_v_u64(1, v); // FIXME: not verified, but should be.
+        ensures exists i: u64 : v[i] == 1;
+        ensures e_in_v_u64(1, v);
 
         // TODO: The followings are things to do next once the FIXMEs above are fixed:
         // ensures old(e_in_v_vec(0, v)) ==> e_in_v_vec(0, v);
