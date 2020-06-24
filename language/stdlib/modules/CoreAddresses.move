@@ -30,12 +30,5 @@ module CoreAddresses {
     public fun VM_RESERVED_ADDRESS(): address {
         0x0
     }
-
-    /// The address under which all on-chain configs are stored, and where
-    /// off-chain APIs know to look for this information (e.g. VM version,
-    /// list of registered currencies).
-    public fun DEFAULT_CONFIG_ADDRESS(): address {
-        0xF1A95
-    }
 }
 }

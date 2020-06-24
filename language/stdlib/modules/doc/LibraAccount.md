@@ -40,7 +40,6 @@
 -  [Function `create_testnet_account`](#0x1_LibraAccount_create_testnet_account)
 -  [Function `add_currencies_for_account`](#0x1_LibraAccount_add_currencies_for_account)
 -  [Function `make_account`](#0x1_LibraAccount_make_account)
--  [Function `create_config_account`](#0x1_LibraAccount_create_config_account)
 -  [Function `create_root_association_account`](#0x1_LibraAccount_create_root_association_account)
 -  [Function `create_treasury_compliance_account`](#0x1_LibraAccount_create_treasury_compliance_account)
 -  [Function `create_designated_dealer`](#0x1_LibraAccount_create_designated_dealer)
@@ -1339,43 +1338,6 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
 
     // (2) TODO: publish account limits?
     <a href="#0x1_LibraAccount_destroy_signer">destroy_signer</a>(new_account);
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraAccount_create_config_account"></a>
-
-## Function `create_config_account`
-
-Create an account for the on-chain config account at
-<code><a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>()</code> with authentication key
-<code>auth_key_prefix</code> |
-<code>new_account_address</code>. Called in genesis.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_config_account">create_config_account</a>(creator_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="LibraConfig.md#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_config_account">create_config_account</a>(
-    creator_account: &signer,
-    _: &Capability&lt;CreateOnChainConfig&gt;,
-    new_account_address: address,
-    auth_key_prefix: vector&lt;u8&gt;
-) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
-    <b>assert</b>(new_account_address == <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(), 1);
-    <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
-    <a href="Roles.md#0x1_Roles_new_parent_vasp_role">Roles::new_parent_vasp_role</a>(creator_account, &new_account);
-    <a href="#0x1_LibraAccount_make_account">make_account</a>(new_account, auth_key_prefix)
 }
 </code></pre>
 

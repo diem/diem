@@ -21,7 +21,7 @@ use libra_network_address::RawNetworkAddress;
 use libra_types::{
     account_config,
     contract_event::ContractEvent,
-    on_chain_config::{config_address, new_epoch_event_key, VMPublishingOption},
+    on_chain_config::{new_epoch_event_key, VMPublishingOption},
     transaction::{authenticator::AuthenticationKey, ChangeSet, Script, Transaction},
 };
 use libra_vm::data_cache::StateViewCache;
@@ -147,7 +147,6 @@ fn create_and_initialize_main_accounts(
         vec![],
         vec![
             Value::transaction_argument_signer_reference(root_association_address),
-            Value::transaction_argument_signer_reference(config_address()),
             Value::transaction_argument_signer_reference(tc_account_address),
             Value::address(tc_account_address),
             Value::vector_u8(genesis_auth_key.to_vec()),

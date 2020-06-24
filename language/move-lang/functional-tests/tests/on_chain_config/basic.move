@@ -10,7 +10,7 @@ module ConfigHolder {
 
     public fun get<T>(): LibraConfig::ModifyConfigCapability<T>
     acquires Holder {
-        let Holder<T>{ cap } = move_from<Holder<T>>({{config}});
+        let Holder<T>{ cap } = move_from<Holder<T>>({{association}});
         cap
     }
 }
@@ -66,7 +66,7 @@ script {
 // check: 3
 
 //! new-transaction
-//! sender: config
+//! sender: association
 script {
     use 0x1::LibraConfig::{Self, CreateOnChainConfig};
     use {{default}}::ConfigHolder;
@@ -113,7 +113,7 @@ script {
     use 0x1::Roles;
     fun main(account: &signer) {
         let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
-        LibraConfig::publish_new_config_with_delegate(account, &r, 0, {{config}});
+        LibraConfig::publish_new_config_with_delegate(account, &r, 0, {{association}});
         Roles::restore_capability_to_privilege(account, r);
     }
 }

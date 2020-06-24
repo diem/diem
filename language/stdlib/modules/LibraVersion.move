@@ -14,7 +14,7 @@ module LibraVersion {
         account: &signer,
         create_config_capability: &Capability<CreateOnChainConfig>,
     ) {
-        assert(Signer::address_of(account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
+        assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
 
         LibraConfig::publish_new_config<LibraVersion>(
             account,

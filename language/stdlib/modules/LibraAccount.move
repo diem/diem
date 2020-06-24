@@ -26,7 +26,6 @@ module LibraAccount {
     use 0x1::DualAttestationLimit;
     use 0x1::Roles::{Self, Capability, AssociationRootRole, ParentVASPRole, TreasuryComplianceRole};
     use 0x1::SlidingNonce::CreateSlidingNonce;
-    use 0x1::LibraConfig::CreateOnChainConfig;
 
     resource struct AccountFreezing {}
     resource struct AccountUnfreezing {}
@@ -505,24 +504,6 @@ module LibraAccount {
 
         // (2) TODO: publish account limits?
         destroy_signer(new_account);
-    }
-
-    /// Create an account for the on-chain config account at
-    /// `CoreAddresses::DEFAULT_CONFIG_ADDRESS()` with authentication key
-    /// `auth_key_prefix` | `new_account_address`. Called in genesis.
-    // TODO: can we get rid of this? the main thing this does is create an account without an
-    // EventGenerator resource (which is just needed to avoid circular dep issues in gensis)
-    public fun create_config_account(
-        creator_account: &signer,
-        _: &Capability<CreateOnChainConfig>,
-        new_account_address: address,
-        auth_key_prefix: vector<u8>
-    ) {
-        assert(LibraTimestamp::is_genesis(), 0);
-        assert(new_account_address == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
-        let new_account = create_signer(new_account_address);
-        Roles::new_parent_vasp_role(creator_account, &new_account);
-        make_account(new_account, auth_key_prefix)
     }
 
     /// Creates the root association account in genesis.

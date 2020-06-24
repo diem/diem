@@ -69,7 +69,7 @@ impl BlockMetadata {
 }
 
 pub fn new_block_event_key() -> EventKey {
-    EventKey::new_from_address(&association_address(), 19)
+    EventKey::new_from_address(&association_address(), 20)
 }
 
 /// The path to the new block event handle under a LibraBlock::BlockMetadata resource.

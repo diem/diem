@@ -20,7 +20,7 @@ module FooConfig {
     public fun claim(account: &signer) {
         LibraConfig::claim_delegated_modify_config<T>(
             account,
-            CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
+            CoreAddresses::ASSOCIATION_ROOT_ADDRESS(),
         );
     }
 
@@ -37,7 +37,7 @@ module FooConfig {
 //! block-time: 2
 
 //! new-transaction
-//! sender: config
+//! sender: association
 // Publish a new config item.
 script {
 use {{alice}}::FooConfig;
@@ -70,7 +70,7 @@ fun main(account: &signer) {
 //! block-time: 4
 
 //! new-transaction
-//! sender: config
+//! sender: association
 script {
 use {{alice}}::FooConfig;
 fun main(account: &signer) {

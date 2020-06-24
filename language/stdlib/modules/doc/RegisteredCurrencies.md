@@ -96,7 +96,7 @@
 ): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> {
     // enforce that this is only going <b>to</b> one specific address,
     <b>assert</b>(
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(),
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(),
         0
     );
     <b>let</b> cap = <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>(
@@ -179,7 +179,7 @@
 
 <pre><code>pragma verify = <b>true</b>;
 <a name="0x1_RegisteredCurrencies_spec_singleton_address"></a>
-<b>define</b> <a href="#0x1_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>(): address { 0xF1A95 }
+<b>define</b> <a href="#0x1_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>(): address { 0xA550C18 }
 <a name="0x1_RegisteredCurrencies_spec_is_initialized"></a>
 <b>define</b> <a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>():bool {
     <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="#0x1_RegisteredCurrencies_spec_singleton_address">spec_singleton_address</a>())
