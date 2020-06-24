@@ -9,13 +9,14 @@
 
 use std::path::PathBuf;
 use structopt::{clap::arg_enum, StructOpt};
-use transaction_builder_generator::{python3, read_abis, rust, SourceInstaller};
+use transaction_builder_generator::{cpp, python3, read_abis, rust, SourceInstaller};
 
 arg_enum! {
 #[derive(Debug, StructOpt)]
 enum Language {
     Python3,
     Rust,
+    Cpp,
 }
 }
 
@@ -64,6 +65,9 @@ fn main() {
             match options.language {
                 Language::Python3 => python3::output(&mut out, &abis).unwrap(),
                 Language::Rust => rust::output(&mut out, &abis, /* local types */ false).unwrap(),
+                Language::Cpp => {
+                    cpp::output(&mut out, &abis, options.module_name.as_deref()).unwrap()
+                }
             }
         }
         Some(install_dir) => {
@@ -78,6 +82,7 @@ fn main() {
                         install_dir,
                         options.serde_version_number,
                     )),
+                    Language::Cpp => Box::new(cpp::Installer::new(install_dir)),
                 };
 
             if let Some(name) = options.module_name {

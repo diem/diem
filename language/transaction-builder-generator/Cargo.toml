@@ -20,7 +20,7 @@ lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical
 
 [dev-dependencies]
 serde_yaml = "0.8"
-serde-generate = "0.4"
+serde-generate = "0.5.1"
 serde-reflection = "0.3"
 tempfile = "3.1"
 

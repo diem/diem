@@ -4,6 +4,8 @@
 use libra_types::transaction::ScriptABI;
 use std::io::Read;
 
+/// Support for code-generation in C++17.
+pub mod cpp;
 /// Support for code-generation in Python 3.
 pub mod python3;
 /// Support for code-generation in Rust.
