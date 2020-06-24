@@ -164,22 +164,31 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
     }
 }
 
-pub struct ValidatorFullnodeBuilder {
+#[derive(Debug)]
+pub enum FullnodeType {
+    ValidatorFullnode,
+    PublicFullnode(usize),
+}
+
+pub struct FullnodeBuilder {
     validator_config_path: Vec<PathBuf>,
     faucet_key_path: PathBuf,
     template: NodeConfig,
+    build_type: FullnodeType,
 }
 
-impl ValidatorFullnodeBuilder {
+impl FullnodeBuilder {
     pub fn new(
         validator_config_path: Vec<PathBuf>,
         faucet_key_path: PathBuf,
         template: NodeConfig,
+        build_type: FullnodeType,
     ) -> Self {
         Self {
             validator_config_path,
             faucet_key_path,
             template,
+            build_type,
         }
     }
 
@@ -211,15 +220,17 @@ impl ValidatorFullnodeBuilder {
         let fn_vfn = &mut full_node_config.full_node_networks[1];
         fn_vfn.seed_peers = seed_peers;
 
-        full_node_config.base.waypoint = validator_config.base.waypoint.clone();
-        full_node_config.execution.genesis = validator_config.execution.genesis.clone();
-        full_node_config.execution.genesis_file_location = PathBuf::from("");
+        Self::insert_waypoint_and_genesis(&mut full_node_config, &validator_config);
         full_node_config
     }
-}
 
-impl BuildSwarm for ValidatorFullnodeBuilder {
-    fn build_swarm(&self) -> anyhow::Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+    fn insert_waypoint_and_genesis(config: &mut NodeConfig, upstream: &NodeConfig) {
+        config.base.waypoint = upstream.base.waypoint.clone();
+        config.execution.genesis = upstream.execution.genesis.clone();
+        config.execution.genesis_file_location = PathBuf::from("");
+    }
+
+    fn build_vfn(&self) -> anyhow::Result<Vec<NodeConfig>> {
         let mut configs = vec![];
         for path in &self.validator_config_path {
             let mut validator_config = NodeConfig::load(path)?;
@@ -227,6 +238,32 @@ impl BuildSwarm for ValidatorFullnodeBuilder {
             validator_config.save(path)?;
             configs.push(fullnode_config);
         }
+        Ok(configs)
+    }
+
+    fn build_public_fn(&self, num_nodes: usize) -> anyhow::Result<Vec<NodeConfig>> {
+        let mut configs = vec![];
+        let validator_config = NodeConfig::load(
+            self.validator_config_path
+                .first()
+                .ok_or_else(|| anyhow::format_err!("No validator config path"))?,
+        )?;
+        for _ in 0..num_nodes {
+            let mut fullnode_config = self.template.clone_for_template();
+            fullnode_config.randomize_ports();
+            Self::insert_waypoint_and_genesis(&mut fullnode_config, &validator_config);
+            configs.push(fullnode_config);
+        }
+        Ok(configs)
+    }
+}
+
+impl BuildSwarm for FullnodeBuilder {
+    fn build_swarm(&self) -> anyhow::Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+        let configs = match self.build_type {
+            FullnodeType::ValidatorFullnode => self.build_vfn(),
+            FullnodeType::PublicFullnode(num_nodes) => self.build_public_fn(num_nodes),
+        }?;
         let faucet_key = generate_key::load_key(&self.faucet_key_path);
         Ok((configs, faucet_key))
     }
