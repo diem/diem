@@ -102,6 +102,7 @@ module VerifyVector {
         /// TODO: by allowing old(.) to appear in assume/assert expressions,
         /// we can eliminate the need for old_v.
         global old_v<Element>: vector<Element>;
+        global old_other<Element>: vector<Element>;
     }
 
     // Reverses the order of the elements in the vector in place.
@@ -111,7 +112,7 @@ module VerifyVector {
 
         spec {
             /// Initialize the old vector `old_v` ghost variable
-            assume forall k in 0..vlen: old_v<Element>[k] == v[k];
+            assume old_v<Element> == v;
         };
 
         let front_index = 0;
@@ -145,16 +146,33 @@ module VerifyVector {
         ensures forall i in 0..len(v): old(v[i]) == v[len(v)-1-i];
     }
 
-    // Moves all of the elements of the `other` vector into the `lhs` vector.
-    fun verify_append<Element>(lhs: &mut vector<Element>, other: vector<Element>) {
+    // Moves all of the elements of the `other` vector into the `v` vector.
+    fun verify_append<Element>(v: &mut vector<Element>, other: vector<Element>) {
+        spec {
+            /// Initialize the old vector `old_v` and `old_other` ghost variables
+            assume old_v<Element> == v;
+            assume old_other<Element> == other;
+        };
         Vector::reverse(&mut other);
-        while (!Vector::is_empty(&other)) Vector::push_back(lhs, Vector::pop_back(&mut other));
+        while ({
+            spec {
+                assert len(v) >= len(old_v<Element>);
+                assert len(other) <= len(old_other<Element>);
+                assert len(v) + len(other) == len(old_v<Element>) + len(old_other<Element>);
+                assert forall k in 0..len(old_v<Element>): v[k] == old_v<Element>[k];
+                assert forall k in 0..len(other): other[k] == old_other<Element>[len(old_other<Element>)-1-k];
+                assert forall k in len(old_v<Element>)..len(v): v[k] == old_other<Element>[k-len(old_v<Element>)];
+            };
+            !Vector::is_empty(&other)
+        }) {
+            Vector::push_back(v, Vector::pop_back(&mut other))
+        };
         Vector::destroy_empty(other);
     }
-    spec fun verify_append { // TODO: cannot verify loop
-        //ensures len(lhs) == old(len(lhs) + len(other)); //! A postcondition might not hold on this return path.
-        //ensures lhs[0..len(old(lhs))] == old(lhs); //! A postcondition might not hold on this return path.
-        //ensures lhs[len(old(lhs))..len(lhs)] == old(other); //! A postcondition might not hold on this return path.
+    spec fun verify_append {
+        ensures len(v) == old(len(v) + len(other));
+        ensures v[0..len(old(v))] == old(v);
+        ensures v[len(old(v))..len(v)] == old(other);
     }
 
     // Moves all of the elements of the `other` vector into the `lhs` vector.
@@ -260,7 +278,7 @@ module VerifyVector {
 
         spec {
             /// Initialize the old vector `old_v` ghost variable
-            assume forall k in 0..vlen: old_v<Element>[k] == v[k];
+            assume old_v<Element> == v;
         };
 
         vlen = vlen - 1;
@@ -269,8 +287,8 @@ module VerifyVector {
                 assert j <= i && i <= vlen;
                 assert vlen + 1 == len(v);
                 assert v[0..j] == old_v<Element>[0..j];
-                assume v[j..i] == old_v<Element>[j+1..i+1];
-                assume v[i+1..len(v)] == old_v<Element>[i+1..len(v)];
+                assert forall k in j..i: v[k] == old_v<Element>[k+1];
+                assert forall k in i+1..len(v): v[k] == old_v<Element>[k];
                 assert v[i] == old_v<Element>[j];
             };
             i < vlen
@@ -280,12 +298,10 @@ module VerifyVector {
         Vector::pop_back(v)
     }
     spec fun verify_remove {
-        // TODO: cannot verify all loop invariants
-        // TODO: input parameter must not be modified to enable referring to its value at entry
-        aborts_if j >= len(v); //! A postcondition might not hold on this return path.
-        ensures len(v) == len(old(v)) - 1; //! A postcondition might not hold on this return path.
-        ensures v[0..j] == old(v[0..j]); //! A postcondition might not hold on this return path.
-        //ensures v[j..len(v)] == old(v[j+1..len(v)]); //! A postcondition might not hold on this return path.
+        aborts_if j >= len(v);
+        ensures len(v) == len(old(v)) - 1;
+        ensures v[0..j] == old(v[0..j]);
+        ensures v[j..len(v)] == old(v[j+1..len(v)]);
         ensures old(v[j]) == result;
     }
 
