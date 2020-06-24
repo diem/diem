@@ -111,6 +111,12 @@ impl TestDB {
             .iter(Default::default())
             .expect("Failed to create iterator.")
     }
+
+    fn rev_iter(&self) -> SchemaIterator<TestSchema> {
+        self.db
+            .rev_iter(Default::default())
+            .expect("Failed to create iterator.")
+    }
 }
 
 impl std::ops::Deref for TestDB {
@@ -124,82 +130,135 @@ impl std::ops::Deref for TestDB {
 #[test]
 fn test_seek_to_first() {
     let db = TestDB::new();
+
     let mut iter = db.iter();
     iter.seek_to_first();
     assert_eq!(
         collect_values(iter),
         [100, 102, 104, 110, 112, 114, 200, 202]
     );
+
+    let mut iter = db.rev_iter();
+    iter.seek_to_first();
+    assert_eq!(collect_values(iter), [100]);
 }
 
 #[test]
 fn test_seek_to_last() {
     let db = TestDB::new();
+
     let mut iter = db.iter();
     iter.seek_to_last();
     assert_eq!(collect_values(iter), [202]);
+
+    let mut iter = db.rev_iter();
+    iter.seek_to_last();
+    assert_eq!(
+        collect_values(iter),
+        [202, 200, 114, 112, 110, 104, 102, 100]
+    );
 }
 
 #[test]
 fn test_seek_by_existing_key() {
     let db = TestDB::new();
+
     let mut iter = db.iter();
     iter.seek(&TestKey(1, 1, 0)).unwrap();
     assert_eq!(collect_values(iter), [110, 112, 114, 200, 202]);
+
+    let mut iter = db.rev_iter();
+    iter.seek(&TestKey(1, 1, 0)).unwrap();
+    assert_eq!(collect_values(iter), [110, 104, 102, 100]);
 }
 
 #[test]
 fn test_seek_by_nonexistent_key() {
     let db = TestDB::new();
+
     let mut iter = db.iter();
     iter.seek(&TestKey(1, 1, 1)).unwrap();
     assert_eq!(collect_values(iter), [112, 114, 200, 202]);
+
+    let mut iter = db.rev_iter();
+    iter.seek(&TestKey(1, 1, 1)).unwrap();
+    assert_eq!(collect_values(iter), [112, 110, 104, 102, 100]);
 }
 
 #[test]
 fn test_seek_for_prev_by_existing_key() {
     let db = TestDB::new();
+
     let mut iter = db.iter();
     iter.seek_for_prev(&TestKey(1, 1, 0)).unwrap();
     assert_eq!(collect_values(iter), [110, 112, 114, 200, 202]);
+
+    let mut iter = db.rev_iter();
+    iter.seek_for_prev(&TestKey(1, 1, 0)).unwrap();
+    assert_eq!(collect_values(iter), [110, 104, 102, 100]);
 }
 
 #[test]
 fn test_seek_for_prev_by_nonexistent_key() {
     let db = TestDB::new();
+
     let mut iter = db.iter();
     iter.seek_for_prev(&TestKey(1, 1, 1)).unwrap();
     assert_eq!(collect_values(iter), [110, 112, 114, 200, 202]);
+
+    let mut iter = db.rev_iter();
+    iter.seek_for_prev(&TestKey(1, 1, 1)).unwrap();
+    assert_eq!(collect_values(iter), [110, 104, 102, 100]);
 }
 
 #[test]
 fn test_seek_by_1prefix() {
     let db = TestDB::new();
+
     let mut iter = db.iter();
     iter.seek(&KeyPrefix1(2)).unwrap();
     assert_eq!(collect_values(iter), [200, 202]);
+
+    let mut iter = db.rev_iter();
+    iter.seek(&KeyPrefix1(2)).unwrap();
+    assert_eq!(collect_values(iter), [200, 114, 112, 110, 104, 102, 100]);
 }
 
 #[test]
 fn test_seek_for_prev_by_1prefix() {
     let db = TestDB::new();
+
     let mut iter = db.iter();
     iter.seek_for_prev(&KeyPrefix1(2)).unwrap();
     assert_eq!(collect_values(iter), [114, 200, 202]);
+
+    let mut iter = db.rev_iter();
+    iter.seek_for_prev(&KeyPrefix1(2)).unwrap();
+    assert_eq!(collect_values(iter), [114, 112, 110, 104, 102, 100]);
 }
 
 #[test]
 fn test_seek_by_2prefix() {
     let db = TestDB::new();
+
     let mut iter = db.iter();
     iter.seek(&KeyPrefix2(2, 0)).unwrap();
     assert_eq!(collect_values(iter), [200, 202]);
+
+    let mut iter = db.rev_iter();
+    iter.seek(&KeyPrefix2(2, 0)).unwrap();
+    assert_eq!(collect_values(iter), [200, 114, 112, 110, 104, 102, 100]);
 }
 
 #[test]
 fn test_seek_for_prev_by_2prefix() {
     let db = TestDB::new();
+
     let mut iter = db.iter();
     iter.seek_for_prev(&KeyPrefix2(2, 0)).unwrap();
     assert_eq!(collect_values(iter), [114, 200, 202]);
+
+    let mut iter = db.rev_iter();
+    iter.seek_for_prev(&KeyPrefix2(2, 0)).unwrap();
+    assert_eq!(collect_values(iter), [114, 112, 110, 104, 102, 100]);
 }

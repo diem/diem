@@ -82,10 +82,16 @@ impl SchemaBatch {
     }
 }
 
+pub enum ScanDirection {
+    Forward,
+    Backward,
+}
+
 /// DB Iterator parameterized on [`Schema`] that seeks with [`Schema::Key`] and yields
 /// [`Schema::Key`] and [`Schema::Value`]
 pub struct SchemaIterator<'a, S> {
     db_iter: rocksdb::DBRawIterator<'a>,
+    direction: ScanDirection,
     phantom: PhantomData<S>,
 }
 
@@ -93,9 +99,10 @@ impl<'a, S> SchemaIterator<'a, S>
 where
     S: Schema,
 {
-    fn new(db_iter: rocksdb::DBRawIterator<'a>) -> Self {
+    fn new(db_iter: rocksdb::DBRawIterator<'a>, direction: ScanDirection) -> Self {
         SchemaIterator {
             db_iter,
+            direction,
             phantom: PhantomData,
         }
     }
@@ -144,7 +151,12 @@ where
         let raw_value = self.db_iter.value().expect("Iterator must be valid.");
         let key = <S::Key as KeyCodec<S>>::decode_key(raw_key)?;
         let value = <S::Value as ValueCodec<S>>::decode_value(raw_value)?;
-        self.db_iter.next();
+
+        match self.direction {
+            ScanDirection::Forward => self.db_iter.next(),
+            ScanDirection::Backward => self.db_iter.prev(),
+        }
+
         Ok(Some((key, value)))
     }
 }
@@ -294,12 +306,26 @@ impl DB {
         Ok(())
     }
 
-    /// Returns a [`SchemaIterator`] on a certain schema.
-    pub fn iter<S: Schema>(&self, opts: ReadOptions) -> Result<SchemaIterator<S>> {
+    fn iter_with_direction<S: Schema>(
+        &self,
+        opts: ReadOptions,
+        direction: ScanDirection,
+    ) -> Result<SchemaIterator<S>> {
         let cf_handle = self.get_cf_handle(S::COLUMN_FAMILY_NAME)?;
         Ok(SchemaIterator::new(
             self.inner.raw_iterator_cf_opt(cf_handle, opts),
+            direction,
         ))
+    }
+
+    /// Returns a forward [`SchemaIterator`] on a certain schema.
+    pub fn iter<S: Schema>(&self, opts: ReadOptions) -> Result<SchemaIterator<S>> {
+        self.iter_with_direction::<S>(opts, ScanDirection::Forward)
+    }
+
+    /// Returns a backward [`SchemaIterator`] on a certain schema.
+    pub fn rev_iter<S: Schema>(&self, opts: ReadOptions) -> Result<SchemaIterator<S>> {
+        self.iter_with_direction::<S>(opts, ScanDirection::Backward)
     }
 
     /// Writes a group of records wrapped in a [`SchemaBatch`].
