@@ -38,6 +38,8 @@ pub enum Type {
 
 pub const BOOL_TYPE: Type = Type::Primitive(PrimitiveType::Bool);
 pub const NUM_TYPE: Type = Type::Primitive(PrimitiveType::Num);
+pub const ADDRESS_TYPE: Type = Type::Primitive(PrimitiveType::Address);
+pub const RANGE_TYPE: Type = Type::Primitive(PrimitiveType::Range);
 
 /// Represents a primitive (builtin) type.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]

@@ -87,7 +87,7 @@ pub const ABORTS_IF_IS_STRICT_PRAGMA: &str = "aborts_if_is_strict";
 /// Pragma indicating that requires are also enforced if the aborts condition is true.
 pub const REQUIRES_IF_ABORTS: &str = "requires_if_aborts";
 
-/// Pragma indicating that the function will run smoke tests
+/// Pragma indicating that the function will run the `aborts_if true` smoke test
 pub const ALWAYS_ABORTS_TEST_PRAGMA: &str = "always_aborts_test";
 
 /// Pragma indicating that adding u64 or u128 values should not be checked
@@ -131,6 +131,9 @@ pub const CONDITION_ABORT_ASSERT_PROP: &str = "assert";
 /// Pragma which indicates that the functions aborts and ensure conditions shall be exported
 /// to the verification context even if the implementation of the function is inlined.
 pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
+
+/// Pragma indicating that the function will run the smoke test for constant global states
+pub const CONST_EXP_TEST_PRAGMA: &str = "const_exp_test";
 
 // =================================================================================================
 /// # Locations
@@ -767,7 +770,7 @@ impl GlobalEnv {
             next_free_node_id: RefCell::new(next_free_node_id),
             loc_map: RefCell::new(loc_map),
             type_map: RefCell::new(type_map),
-            instantiation_map,
+            instantiation_map: RefCell::new(instantiation_map),
             spec_block_infos,
         });
     }
@@ -1069,7 +1072,7 @@ pub struct ModuleData {
     pub next_free_node_id: RefCell<usize>,
 
     /// A map from node id to associated instantiation of type parameters.
-    pub instantiation_map: BTreeMap<NodeId, Vec<Type>>,
+    pub instantiation_map: RefCell<BTreeMap<NodeId, Vec<Type>>>,
 
     /// A list of spec block infos, for documentation generation.
     pub spec_block_infos: Vec<SpecBlockInfo>,
@@ -1443,9 +1446,26 @@ impl<'env> ModuleEnv<'env> {
     pub fn get_node_instantiation(&self, node_id: NodeId) -> Vec<Type> {
         self.data
             .instantiation_map
+            .borrow()
             .get(&node_id)
             .cloned()
             .unwrap_or_else(Vec::new)
+    }
+
+    /// Add type parameter associated with the given node.
+    pub fn set_node_instantiation(&self, node_id: &NodeId, typ: Type) {
+        let new_types = match self.data.instantiation_map.borrow().get(node_id) {
+            Some(types) => {
+                let mut new_types = types.to_vec();
+                new_types.push(typ);
+                new_types
+            },
+            None => vec![typ],
+        };
+        self.data
+            .instantiation_map
+            .borrow_mut()
+            .insert(node_id.clone(), new_types);
     }
 }
 
@@ -1648,6 +1668,15 @@ impl<'env> StructEnv<'env> {
     /// Returns the data invariants associated with this struct.
     pub fn get_spec(&'env self) -> &'env Spec {
         &self.data.spec
+    }
+
+    /// Returns the type of the struct
+    pub fn get_type(&self) -> Type {
+        let mut params = vec![];
+        for i in 0..self.get_type_parameters().len() {
+            params.push(Type::TypeParameter(i as u16));
+        }
+        Type::Struct(self.module_env.get_id(), self.get_id(), params)
     }
 }
 

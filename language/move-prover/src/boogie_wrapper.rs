@@ -161,7 +161,7 @@ impl<'env> BoogieWrapper<'env> {
         }
 
         // Add errors for functions with smoke tests
-        self.add_negative_errors(negative_cond_errors);
+        self.add_negative_errors(negative_cond_errors.clone());
 
         if !log_file_existed && !self.options.backend.keep_artifacts {
             std::fs::remove_file(boogie_log_file).unwrap_or_default();
@@ -171,7 +171,7 @@ impl<'env> BoogieWrapper<'env> {
     }
 
     /// Determine whether the boogie error represents the failure of a negative condition
-    /// and return its location of so.
+    /// and return its location if so.
     fn try_get_negative_error(&self, error: &BoogieError) -> Option<Loc> {
         // Find the source location of the error
         let (_, loc_opt) = self.get_locations(error.position);

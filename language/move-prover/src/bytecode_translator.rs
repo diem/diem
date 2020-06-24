@@ -14,6 +14,7 @@ use spec_lang::{
     emit, emitln,
     env::{GlobalEnv, Loc, ModuleEnv, StructEnv, TypeParameter},
     ty::{PrimitiveType, Type},
+    ast::{Condition, ConditionKind},
 };
 use stackless_bytecode_generator::{
     function_target::FunctionTarget,
@@ -585,6 +586,42 @@ impl<'env> ModuleTranslator<'env> {
             distribution,
         );
         emitln!(self.writer);
+
+        // generate the _smoke_test version of the function which creates a new procedure
+        // for condition `EnsuresSmokeTest` so that ALL the errors will be reported
+        if let Some(spec) = &func_target.data.rewritten_spec {
+            for (i, condition) in spec.conditions.iter().enumerate() {
+                if condition.kind != ConditionKind::EnsuresSmokeTest {
+                    continue;
+                }
+                self.generate_smoke_test_function_sig(i, func_target);
+                self.generate_function_args_well_formed(func_target);
+                self.generate_smoke_test_ensure(func_target, &condition);
+                let st = self.new_spec_translator(func_target.clone(), true);
+                let distribution = self.generate_function_spec(&st, FunctionEntryPoint::Verification);
+                self.generate_function_stub(&st, FunctionEntryPoint::Verification, FunctionEntryPoint::VerificationDefinition, distribution);
+                emitln!(self.writer);
+            }
+        }
+    }
+
+    fn generate_smoke_test_ensure(&self, func_target: &FunctionTarget<'_>, cond: &Condition) {
+        let spec_translator =
+            self.new_spec_translator(func_target.clone(), true);
+        spec_translator.ensure_smoke_test_postcondition(cond);
+    }
+
+    /// Return a string for a boogie procedure smoke test header.
+    fn generate_smoke_test_function_sig(&self, test_number: usize, func_target: &FunctionTarget<'_>) {
+        let (args, rets) = self.generate_function_args_and_returns(func_target);
+        emit!(
+            self.writer,
+            "procedure {}_smoke_test_{} ({}) returns ({})",
+            boogie_function_name(func_target.func_env),
+            test_number,
+            args,
+            rets
+        )
     }
 
     /// Return a string for a boogie procedure header. Use inline attribute and name

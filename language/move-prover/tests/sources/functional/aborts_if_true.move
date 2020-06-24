@@ -38,7 +38,7 @@ module TestEnsuresFalseSmokeTest {
     resource struct S {
         x: u64
     }
-    public fun aborts_when_incorrect_inv_holds(): u64
+    public fun aborts_when_strong_inv_holds_incorrect(): u64
     acquires S {
         let x = borrow_global_mut<S>(0x0).x;
         if (x < 100) {
@@ -50,10 +50,10 @@ module TestEnsuresFalseSmokeTest {
         invariant module global<S>(0x0).x < 100;
     }
     spec module {
-        apply S_x_always_gt_100 to aborts_when_incorrect_inv_holds;
+        apply S_x_always_gt_100 to aborts_when_strong_inv_holds_incorrect;
     }
     /// This function should flag that abort is always true
-    spec fun aborts_when_incorrect_inv_holds {
+    spec fun aborts_when_strong_inv_holds_incorrect {
         aborts_if !exists<S>(0x0);
         aborts_if global<S>(0x0).x < 100;
         ensures result == global<S>(0x0).x;

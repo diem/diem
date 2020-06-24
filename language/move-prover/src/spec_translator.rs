@@ -999,27 +999,14 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    /// Assert the postconditions for a function. This is used for the top-level verification
-    /// entry point of a function.
-    pub fn assert_postconditions(&self) {
-        let func_target = self.function_target();
-        // Assert ensures (only smoke test for now)
-        let ensures = func_target
-            .get_spec()
-            .filter(|c| match c.kind {
-                ConditionKind::EnsuresSmokeTest => true,
-                _ => false,
-            })
-            .collect_vec();
-        if !ensures.is_empty() {
-            self.translate_seq(ensures.iter(), "\n", |cond| {
-                self.writer.set_location(&cond.loc);
-                emit!(self.writer, "assert b#$Boolean(");
-                self.translate_exp(&cond.exp);
-                emit!(self.writer, ");")
-            });
-            emitln!(self.writer);
-        }
+    /// Assert the given postcondition. This is used for the top-level
+    /// `_smoke_test` function.
+    pub fn ensure_smoke_test_postcondition(&self, cond: &Condition) {
+        self.writer.set_location(&cond.loc);
+        emit!(self.writer, "ensures b#$Boolean(");
+        self.translate_exp(&cond.exp);
+        emit!(self.writer, ");");
+        emitln!(self.writer);
     }
 
     /// Assume module requires of a function. This is used when the function is called from
@@ -2021,6 +2008,9 @@ impl<'env> SpecTranslator<'env> {
         emit!(self.writer, "$Boolean(i#$Integer(");
         self.translate_exp(&args[0]);
         emit!(self.writer, ") {} i#$Integer(", boogie_op);
+        if args.len() == 1{
+            panic!("fialed at");
+        }
         self.translate_exp(&args[1]);
         emit!(self.writer, "))");
     }
