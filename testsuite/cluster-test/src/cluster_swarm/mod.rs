@@ -4,9 +4,8 @@
 pub mod cluster_swarm_kube;
 
 use crate::instance::{
-    FullnodeConfig, Instance, InstanceConfig,
-    InstanceConfig::{Fullnode, Validator, Vault, LSR},
-    LSRConfig, ValidatorConfig, VaultConfig,
+    ApplicationConfig::{Fullnode, Validator, Vault, LSR},
+    FullnodeConfig, Instance, InstanceConfig, LSRConfig, ValidatorConfig, VaultConfig,
 };
 use anyhow::Result;
 use async_trait::async_trait;
@@ -40,8 +39,14 @@ pub trait ClusterSwarm {
             if lsr_backend == "vault" {
                 let mut vault_instances: Vec<_> = (0..num_validators)
                     .map(|i| {
-                        let vault_config = VaultConfig { index: i };
-                        self.spawn_new_instance(Vault(vault_config), delete_data)
+                        let vault_config = VaultConfig {};
+                        self.spawn_new_instance(
+                            InstanceConfig {
+                                validator_group: i,
+                                application_config: Vault(vault_config),
+                            },
+                            delete_data,
+                        )
                     })
                     .collect();
                 lsrs.append(&mut vault_instances);
@@ -49,26 +54,36 @@ pub trait ClusterSwarm {
             let mut lsr_instances: Vec<_> = (0..num_validators)
                 .map(|i| {
                     let lsr_config = LSRConfig {
-                        index: i,
                         num_validators,
                         image_tag: image_tag.to_string(),
                         lsr_backend: lsr_backend.to_string(),
                     };
-                    self.spawn_new_instance(LSR(lsr_config), delete_data)
+                    self.spawn_new_instance(
+                        InstanceConfig {
+                            validator_group: i,
+                            application_config: LSR(lsr_config),
+                        },
+                        delete_data,
+                    )
                 })
                 .collect();
             lsrs.append(&mut lsr_instances);
         }
         let validators = (0..num_validators).map(|i| {
             let validator_config = ValidatorConfig {
-                index: i,
                 num_validators,
                 num_fullnodes: num_fullnodes_per_validator,
                 enable_lsr,
                 image_tag: image_tag.to_string(),
                 config_overrides: config_overrides.to_vec(),
             };
-            self.spawn_new_instance(Validator(validator_config), delete_data)
+            self.spawn_new_instance(
+                InstanceConfig {
+                    validator_group: i,
+                    application_config: Validator(validator_config),
+                },
+                delete_data,
+            )
         });
         let (lsrs, validators) = join(try_join_all(lsrs), try_join_all(validators)).await;
         lsrs?;
@@ -89,12 +104,17 @@ pub trait ClusterSwarm {
                 let fullnode_config = FullnodeConfig {
                     fullnode_index,
                     num_fullnodes_per_validator,
-                    validator_index,
                     num_validators,
                     image_tag: image_tag.to_string(),
                     config_overrides: config_overrides.to_vec(),
                 };
-                self.spawn_new_instance(Fullnode(fullnode_config), delete_data)
+                self.spawn_new_instance(
+                    InstanceConfig {
+                        validator_group: validator_index,
+                        application_config: Fullnode(fullnode_config),
+                    },
+                    delete_data,
+                )
             })
         });
         let fullnodes = try_join_all(fullnodes).await?;

@@ -21,8 +21,8 @@ use crate::{cluster_swarm::ClusterSwarm, instance::Instance};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use crate::instance::{
+    ApplicationConfig::{Fullnode, Validator, Vault, LSR},
     InstanceConfig,
-    InstanceConfig::{Fullnode, Validator, Vault, LSR},
 };
 use itertools::Itertools;
 use k8s_openapi::api::batch::v1::Job;
@@ -453,10 +453,10 @@ impl ClusterSwarmKube {
             .await
             .map_err(|e| format_err!("Failed to allocate node: {}", e))?;
         debug!("Creating pod {} on {:?}", pod_name, node);
-        let (p, s): (Pod, Service) = match &instance_config {
+        let (p, s): (Pod, Service) = match &instance_config.application_config {
             Validator(validator_config) => (
                 self.validator_spec(
-                    validator_config.index,
+                    instance_config.validator_group,
                     validator_config.num_validators,
                     validator_config.num_fullnodes,
                     validator_config.enable_lsr,
@@ -465,27 +465,24 @@ impl ClusterSwarmKube {
                     &validator_config.config_overrides.iter().join(","),
                     delete_data,
                 )?,
-                self.service_spec(format!("val-{}", validator_config.index)),
+                self.service_spec(instance_config.pod_name()),
             ),
             Fullnode(fullnode_config) => (
                 self.fullnode_spec(
                     fullnode_config.fullnode_index,
                     fullnode_config.num_fullnodes_per_validator,
-                    fullnode_config.validator_index,
+                    instance_config.validator_group,
                     fullnode_config.num_validators,
                     &node.name,
                     &fullnode_config.image_tag,
                     &fullnode_config.config_overrides.iter().join(","),
                     delete_data,
                 )?,
-                self.service_spec(format!(
-                    "fn-{}-{}",
-                    fullnode_config.validator_index, fullnode_config.fullnode_index
-                )),
+                self.service_spec(instance_config.pod_name()),
             ),
-            Vault(vault_config) => self.vault_spec(vault_config.index, &node.name)?,
+            Vault(_vault_config) => self.vault_spec(instance_config.validator_group, &node.name)?,
             LSR(lsr_config) => self.lsr_spec(
-                lsr_config.index,
+                instance_config.validator_group,
                 lsr_config.num_validators,
                 &node.name,
                 &lsr_config.image_tag,
