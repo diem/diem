@@ -15,7 +15,7 @@ use libra_config::{
     utils::get_genesis_txn,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, x25519, HashValue, PrivateKey, Uniform};
-use libra_global_constants::{ASSOCIATION_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
+use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_network_address::RawNetworkAddress;
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Value};
 use libra_secure_time::{MockTimeService, TimeService};
@@ -296,29 +296,29 @@ impl LibraInterface for MockLibraInterface {
 }
 
 // Creates and returns NodeConfig and KeyManagerConfig structs that are consistent for testing.
-fn create_test_configs() -> (NodeConfig, KeyManagerConfig, Ed25519PrivateKey) {
-    let (node_config, genesis_key) = config_builder::test_config();
+fn get_test_configs() -> (NodeConfig, KeyManagerConfig) {
+    let (node_config, _) = config_builder::test_config();
     let key_manager_config = KeyManagerConfig::default();
-    (node_config, key_manager_config, genesis_key)
+    (node_config, key_manager_config)
+}
+
+// Returns the association private key used for testing.
+fn get_test_association_key() -> Ed25519PrivateKey {
+    let (_, association_key) = config_builder::test_config();
+    association_key
 }
 
 // Creates and returns a test node that uses the JsonRpcLibraInterface.
 // This setup is useful for testing nodes as they operate in a production environment.
 fn setup_node_using_json_rpc() -> (Node<JsonRpcLibraInterface>, Runtime) {
-    let (node_config, key_manager_config, genesis_key) = create_test_configs();
+    let (node_config, key_manager_config) = get_test_configs();
 
     let (_storage, db_rw) = setup_libra_db(&node_config);
     let (libra, server) = setup_libra_interface_and_json_server(db_rw.clone());
     let executor = Executor::new(db_rw);
 
     (
-        setup_node(
-            &node_config,
-            &key_manager_config,
-            executor,
-            libra,
-            genesis_key,
-        ),
+        setup_node(&node_config, &key_manager_config, executor, libra),
         server,
     )
 }
@@ -326,19 +326,12 @@ fn setup_node_using_json_rpc() -> (Node<JsonRpcLibraInterface>, Runtime) {
 // Creates and returns a Node using the MockLibraInterface implementation.
 // This setup is useful for testing and verifying new development features quickly.
 fn setup_node_using_test_mocks() -> Node<MockLibraInterface> {
-    let (node_config, key_manager_config, genesis_key) = create_test_configs();
-
+    let (node_config, key_manager_config) = get_test_configs();
     let (storage, db_rw) = setup_libra_db(&node_config);
     let libra = MockLibraInterface { storage };
     let executor = Executor::new(db_rw);
 
-    setup_node(
-        &node_config,
-        &key_manager_config,
-        executor,
-        libra,
-        genesis_key,
-    )
+    setup_node(&node_config, &key_manager_config, executor, libra)
 }
 
 // Creates and returns a libra database and database reader/writer pair bootstrapped with genesis.
@@ -357,11 +350,10 @@ fn setup_node<T: LibraInterface + Clone>(
     key_manager_config: &KeyManagerConfig,
     executor: Executor<LibraVM>,
     libra: T,
-    genesis_key: Ed25519PrivateKey,
 ) -> Node<T> {
     let time = MockTimeService::new();
     let libra_test_harness = LibraInterfaceTestHarness::new(libra);
-    let storage = setup_secure_storage(&node_config, time.clone(), genesis_key);
+    let storage = setup_secure_storage(&node_config, time.clone());
     let account = AccountAddress::try_from(
         storage
             .get(OPERATOR_ACCOUNT)
@@ -389,7 +381,6 @@ fn setup_node<T: LibraInterface + Clone>(
 fn setup_secure_storage(
     config: &NodeConfig,
     time: MockTimeService,
-    genesis_key: Ed25519PrivateKey,
 ) -> InMemoryStorageInternal<MockTimeService> {
     let mut sec_storage = InMemoryStorageInternal::new_with_time_service(time);
     let test_config = config.clone().test.unwrap();
@@ -410,9 +401,6 @@ fn setup_secure_storage(
     let c_prikey = c_keypair.take_private().unwrap();
     sec_storage
         .set(crate::CONSENSUS_KEY, Value::Ed25519PrivateKey(c_prikey))
-        .unwrap();
-    sec_storage
-        .set(ASSOCIATION_KEY, Value::Ed25519PrivateKey(genesis_key))
         .unwrap();
 
     sec_storage
@@ -486,8 +474,9 @@ fn test_manual_rotation_on_chain() {
 }
 
 fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
-    let (node_config, _, genesis_key) = create_test_configs();
+    let (node_config, _) = get_test_configs();
     let test_config = node_config.test.unwrap();
+
     let account_prikey = test_config
         .operator_keypair
         .unwrap()
@@ -528,10 +517,11 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
         .unwrap();
     let txn1 = Transaction::UserTransaction(txn1.into_inner());
 
+    let association_prikey = get_test_association_key();
     let txn2 = build_reconfiguration_transaction(
         account_config::association_address(),
         1,
-        &genesis_key,
+        &association_prikey,
         Duration::from_secs(node.time.now() + TXN_EXPIRATION_SECS),
     );
 
@@ -559,8 +549,6 @@ fn test_key_manager_init_and_basic_rotation() {
 }
 
 fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
-    let (_, _, genesis_key) = create_test_configs();
-
     // Verify correct initialization (on-chain and in storage)
     node.key_manager.compare_storage_to_config().unwrap();
     node.key_manager.compare_info_to_config().unwrap();
@@ -580,7 +568,7 @@ fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
     assert_ne!(pre_exe_rotated_info.consensus_public_key(), &new_key);
 
     // Execute key rotation on-chain
-    submit_reconfiguration_transaction(genesis_key, &node);
+    submit_reconfiguration_transaction(&node);
     node.execute_and_commit(node.libra.take_all_transactions());
     let rotated_info = node.libra.retrieve_validator_info(node.account).unwrap();
     assert_ne!(
@@ -619,7 +607,7 @@ fn test_execute() {
 }
 
 fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
-    let (_, key_manager_config, genesis_key) = create_test_configs();
+    let (_, key_manager_config) = get_test_configs();
 
     // Verify correct initial state (i.e., nothing to be done by key manager)
     assert_eq!(0, node.time.now());
@@ -665,7 +653,7 @@ fn verify_execute<T: LibraInterface>(mut node: Node<T>) {
     // executed to re-sync everything up (on-chain).
     node.update_libra_timestamp();
     node.key_manager.execute_once().unwrap();
-    submit_reconfiguration_transaction(genesis_key, &node);
+    submit_reconfiguration_transaction(&node);
     node.execute_and_commit(node.libra.take_all_transactions());
     assert_eq!(
         Action::NoAction,
@@ -715,16 +703,15 @@ fn verify_execute_error<T: LibraInterface>(mut node: Node<T>) {
 }
 
 // Creates and submits a reconfiguration transaction to the given libra interface.
-fn submit_reconfiguration_transaction<T: LibraInterface>(
-    association_prikey: Ed25519PrivateKey,
-    node: &Node<T>,
-) {
+fn submit_reconfiguration_transaction<T: LibraInterface>(node: &Node<T>) {
+    let association_prikey = get_test_association_key();
     let association_account = association_address();
     let seq_id = node
         .libra
         .retrieve_sequence_number(association_account)
         .unwrap();
     let expiration = Duration::from_secs(node.time.now() + TXN_EXPIRATION_SECS);
+
     let txn = build_reconfiguration_transaction(
         association_account,
         seq_id,
