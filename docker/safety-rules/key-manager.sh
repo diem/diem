@@ -6,8 +6,8 @@ set -e
 # Parse parameters and execute config builder
 declare -a params
 if [ -n "${KEY_MANAGER_CONFIG}" ]; then # Path to key manager config
-    echo "${KEY_MANAGER_CONFIG}" > /opt/libra/etc/key_manager.config.toml
-    params+="--template /opt/libra/etc/key_manager.config.toml "
+    echo "${KEY_MANAGER_CONFIG}" > /opt/libra/etc/key_manager.yaml
+    params+="--template /opt/libra/etc/key_manager.yaml "
 fi
 if [ -n "${JSON_RPC_ENDPOINT}" ]; then
     params+="--json-rpc-endpoint ${JSON_RPC_ENDPOINT} "
@@ -47,4 +47,4 @@ if [ -n "${STRUCT_LOGGER}" ]; then
     fi
 fi
 
-exec ${logger} /opt/libra/bin/libra-key-manager /opt/libra/etc/key_manager.config.toml
+exec ${logger} /opt/libra/bin/libra-key-manager /opt/libra/etc/key_manager.yaml
