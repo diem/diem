@@ -454,10 +454,13 @@ async fn wait_for_accounts_sequence(
     let addresses: Vec<_> = accounts.iter().map(|d| d.address).collect();
     loop {
         match query_sequence_numbers(client, &addresses).await {
-            Err(e) => info!(
-                "Failed to query ledger info for instance {:?} : {:?}",
-                client, e
-            ),
+            Err(e) => {
+                info!(
+                    "Failed to query ledger info on accounts {:?} for instance {:?} : {:?}",
+                    addresses, client, e
+                );
+                time::delay_for(Duration::from_millis(300)).await;
+            }
             Ok(sequence_numbers) => {
                 if is_sequence_equal(accounts, &sequence_numbers) {
                     break;
