@@ -1200,6 +1200,19 @@
 <span id="1200">1200</span>
 <span id="1201">1201</span>
 <span id="1202">1202</span>
+<span id="1203">1203</span>
+<span id="1204">1204</span>
+<span id="1205">1205</span>
+<span id="1206">1206</span>
+<span id="1207">1207</span>
+<span id="1208">1208</span>
+<span id="1209">1209</span>
+<span id="1210">1210</span>
+<span id="1211">1211</span>
+<span id="1212">1212</span>
+<span id="1213">1213</span>
+<span id="1214">1214</span>
+<span id="1215">1215</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1550,13 +1563,19 @@
                     <span class="comment">// Module publishing is currently restricted to the Association, so we choose to</span>
                     <span class="comment">// publish all modules under the address 0x0...1 for convenience.</span>
                     <span class="comment">// This will change to the sender&#39;s address once module publishing becomes open.</span>
+                    <span class="comment">// REVIEW: should we check that the address of the Module is in fact</span>
+                    <span class="comment">// `CORE_CODE_ADDRESS`?</span>
                     <span class="kw">let</span> <span class="ident">module_address</span> <span class="op">=</span> <span class="kw">if</span> <span class="self">self</span>.<span class="ident">on_chain_config</span>()<span class="question-mark">?</span>.<span class="ident">publishing_option</span>.<span class="ident">is_open</span>() {
                         <span class="ident">txn_data</span>.<span class="ident">sender</span>()
                     } <span class="kw">else</span> {
                         <span class="ident">account_config</span>::<span class="ident">CORE_CODE_ADDRESS</span>
                     };
-                    <span class="self">self</span>.<span class="ident">move_vm</span>
-                        .<span class="ident">publish_module</span>(<span class="ident">m</span>, <span class="ident">module_address</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>)
+                    <span class="self">self</span>.<span class="ident">move_vm</span>.<span class="ident">publish_module</span>(
+                        <span class="ident">m</span>,
+                        <span class="ident">module_address</span>,
+                        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
+                        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
+                    )
                 }),
             <span class="ident">VerifiedTransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">s</span>, <span class="ident">ty_args</span>, <span class="ident">args</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">let</span> <span class="ident">ret</span> <span class="op">=</span> <span class="ident">cost_strategy</span>
@@ -1739,6 +1758,7 @@
                 <span class="kw-2">&amp;</span><span class="ident">BLOCK_PROLOGUE</span>,
                 <span class="macro">vec</span><span class="macro">!</span>[],
                 <span class="ident">args</span>,
+                <span class="ident">txn_data</span>.<span class="ident">sender</span>,
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
             )<span class="question-mark">?</span>
@@ -1798,6 +1818,7 @@
             <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(
                 <span class="ident">txn_data</span>.<span class="ident">sender</span>,
             )],
+            <span class="ident">txn_data</span>.<span class="ident">sender</span>,
             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>,
             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
         )<span class="question-mark">?</span>;
@@ -1900,6 +1921,7 @@
                     <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_max_gas_units</span>),
                     <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_expiration_time</span>),
                 ],
+                <span class="ident">txn_data</span>.<span class="ident">sender</span>,
                 <span class="ident">data_store</span>,
                 <span class="ident">cost_strategy</span>,
             )
@@ -1933,6 +1955,7 @@
                 <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_max_gas_units</span>),
                 <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">gas_remaining</span>),
             ],
+            <span class="ident">txn_data</span>.<span class="ident">sender</span>,
             <span class="ident">data_store</span>,
             <span class="ident">cost_strategy</span>,
         )
@@ -1965,6 +1988,7 @@
                 <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_max_gas_units</span>),
                 <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">gas_remaining</span>),
             ],
+            <span class="ident">txn_data</span>.<span class="ident">sender</span>,
             <span class="ident">data_store</span>,
             <span class="ident">cost_strategy</span>,
         )
@@ -1992,6 +2016,7 @@
                     <span class="ident">Value</span>::<span class="ident">u64</span>(<span class="ident">txn_sequence_number</span>),
                     <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">txn_public_key</span>),
                 ],
+                <span class="ident">txn_data</span>.<span class="ident">sender</span>,
                 <span class="ident">data_store</span>,
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
             )
@@ -2020,6 +2045,7 @@
                 <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">txn_data</span>.<span class="ident">sender</span>),
                 <span class="ident">Value</span>::<span class="ident">vector_u8</span>(<span class="ident">change_set_bytes</span>),
             ],
+            <span class="ident">txn_data</span>.<span class="ident">sender</span>,
             <span class="ident">data_store</span>,
             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
         )

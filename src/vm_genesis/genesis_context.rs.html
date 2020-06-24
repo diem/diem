@@ -234,6 +234,26 @@
 <span id="234">234</span>
 <span id="235">235</span>
 <span id="236">236</span>
+<span id="237">237</span>
+<span id="238">238</span>
+<span id="239">239</span>
+<span id="240">240</span>
+<span id="241">241</span>
+<span id="242">242</span>
+<span id="243">243</span>
+<span id="244">244</span>
+<span id="245">245</span>
+<span id="246">246</span>
+<span id="247">247</span>
+<span id="248">248</span>
+<span id="249">249</span>
+<span id="250">250</span>
+<span id="251">251</span>
+<span id="252">252</span>
+<span id="253">253</span>
+<span id="254">254</span>
+<span id="255">255</span>
+<span id="256">256</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -282,12 +302,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">data_cache</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">StateViewCache</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>, <span class="ident">stdlib_modules</span>: <span class="kw-2">&amp;</span>[<span class="ident">VerifiedModule</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">vm</span> <span class="op">=</span> <span class="ident">MoveVM</span>::<span class="ident">new</span>();
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">data_store</span> <span class="op">=</span> <span class="ident">GenesisDataCache</span>::<span class="ident">new</span>(<span class="ident">data_cache</span>);
-        <span class="kw">for</span> <span class="ident">module</span> <span class="kw">in</span> <span class="ident">stdlib_modules</span> {
-            <span class="ident">vm</span>.<span class="ident">cache_module</span>(<span class="ident">module</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">data_store</span>)
-                .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
-                    <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Failure loading stdlib module {}&quot;</span>, <span class="ident">module</span>.<span class="ident">as_inner</span>().<span class="ident">name</span>())
-                });
-        }
+        <span class="ident">data_store</span>.<span class="ident">initialize_code</span>(<span class="ident">stdlib_modules</span>);
 
         <span class="self">Self</span> {
             <span class="ident">vm</span>,
@@ -337,6 +352,7 @@
                 <span class="kw-2">&amp;</span><span class="self">Self</span>::<span class="ident">name</span>(<span class="ident">function_name</span>),
                 <span class="ident">type_params</span>,
                 <span class="ident">args</span>,
+                <span class="self">self</span>.<span class="ident">sender</span>,
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">data_store</span>,
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cost_strategy</span>,
             )
@@ -405,6 +421,7 @@
 
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">GenesisDataCache</span><span class="op">&lt;</span><span class="lifetime">&#39;txn</span><span class="op">&gt;</span> {
     <span class="ident">data_store</span>: <span class="ident">TransactionDataCache</span><span class="op">&lt;</span><span class="lifetime">&#39;txn</span><span class="op">&gt;</span>,
+    <span class="ident">code_map</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">ModuleId</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">type_map</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>, <span class="ident">FatStructType</span><span class="op">&gt;</span>,
 }
 
@@ -412,7 +429,23 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">cache</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;txn</span> <span class="kw">dyn</span> <span class="ident">RemoteCache</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">data_store</span>: <span class="ident">TransactionDataCache</span>::<span class="ident">new</span>(<span class="ident">cache</span>),
+            <span class="ident">code_map</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
             <span class="ident">type_map</span>: <span class="ident">BTreeMap</span>::<span class="ident">new</span>(),
+        }
+    }
+
+    <span class="comment">// Given a set of modules, initialize the data cache with those modules so</span>
+    <span class="comment">// that any code reference during execution can be resolved.</span>
+    <span class="comment">// The modules will not be published in the final `WriteSet`, and one</span>
+    <span class="comment">// could think of them as the startup code.</span>
+    <span class="kw">fn</span> <span class="ident">initialize_code</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">stdlib_modules</span>: <span class="kw-2">&amp;</span>[<span class="ident">VerifiedModule</span>]) {
+        <span class="kw">for</span> <span class="ident">module</span> <span class="kw">in</span> <span class="ident">stdlib_modules</span> {
+            <span class="kw">let</span> <span class="ident">module_id</span>: <span class="ident">ModuleId</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">self_id</span>();
+            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">blob</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+            <span class="ident">module</span>
+                .<span class="ident">serialize</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">blob</span>)
+                .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;{:?} did not serialize&quot;</span>, <span class="ident">module_id</span>));
+            <span class="self">self</span>.<span class="ident">code_map</span>.<span class="ident">insert</span>(<span class="ident">module_id</span>, <span class="ident">blob</span>);
         }
     }
 
@@ -455,7 +488,14 @@
         <span class="self">self</span>.<span class="ident">data_store</span>.<span class="ident">move_resource_from</span>(<span class="ident">ap</span>, <span class="ident">ty</span>)
     }
 
+    <span class="comment">// Check first if a module reference is in the modules provided at initialization,</span>
+    <span class="comment">// otherwise check in the &quot;live&quot; data store.</span>
+    <span class="comment">// Normally the only code requested is in the `code_map`, it was initialized</span>
+    <span class="comment">// at startup.</span>
     <span class="kw">fn</span> <span class="ident">load_module</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">binary</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">code_map</span>.<span class="ident">get</span>(<span class="ident">module</span>) {
+            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">binary</span>.<span class="ident">clone</span>());
+        }
         <span class="self">self</span>.<span class="ident">data_store</span>.<span class="ident">load_module</span>(<span class="ident">module</span>)
     }
 
