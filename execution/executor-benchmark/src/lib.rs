@@ -238,8 +238,11 @@ impl TransactionExecutor {
                 block_info,
                 HashValue::zero(), /* consensus_data_hash, doesn't matter */
             );
-            let ledger_info_with_sigs =
-                LedgerInfoWithSignatures::new(ledger_info, BTreeMap::new() /* signatures */, BTreeMap::new());
+            let ledger_info_with_sigs = LedgerInfoWithSignatures::new(
+                ledger_info,
+                BTreeMap::new(), /* signatures */
+                BTreeMap::new(),
+            );
 
             self.executor
                 .commit_blocks(vec![block_id], ledger_info_with_sigs)

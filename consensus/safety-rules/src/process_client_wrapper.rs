@@ -97,8 +97,13 @@ impl<T: Payload> TSafetyRules<T> for ProcessClientWrapper<T> {
         self.safety_rules.construct_and_sign_vote(vote_proposal)
     }
 
-    fn construct_and_sign_strong_vote(&mut self, vote_proposal: &VoteProposal<T>, marker: Round) -> Result<Vote, Error> {
-        self.safety_rules.construct_and_sign_strong_vote(vote_proposal, marker)
+    fn construct_and_sign_strong_vote(
+        &mut self,
+        vote_proposal: &VoteProposal<T>,
+        marker: Round,
+    ) -> Result<Vote, Error> {
+        self.safety_rules
+            .construct_and_sign_strong_vote(vote_proposal, marker)
     }
 
     fn sign_proposal(&mut self, block_data: BlockData<T>) -> Result<Block<T>, Error> {

@@ -531,9 +531,6 @@ impl<T: Payload> EventProcessor<T> {
         let proposal_round = proposal.round();
         let proposal_id = proposal.id();
 
-
-
-
         let vote = match self.execute_and_strong_vote(proposal).await {
             Err(e) => {
                 warn!("{:?}", e);
@@ -720,7 +717,7 @@ impl<T: Payload> EventProcessor<T> {
     /// This function assumes that it might be called from different tasks concurrently.
     async fn execute_and_strong_vote(&mut self, proposed_block: Block<T>) -> anyhow::Result<Vote> {
         let proposal_id = proposed_block.id();
-        let proposal_round = proposed_block.round();
+        // let proposal_round = proposed_block.round();
 
         trace_code_block!("event_processor::execute_and_strong_vote", {"block", proposed_block.id()});
         let executed_block = self
@@ -754,10 +751,8 @@ impl<T: Payload> EventProcessor<T> {
         self.wait_before_vote_if_needed(block.timestamp_usecs())
             .await?;
 
-
-
         // compute the marker
-        debug!("-------------------daniel execute_and_strong_vote round {} -----------------", proposal_round);
+        // debug!("-------------------daniel execute_and_strong_vote round {} -----------------", proposal_round);
         let marker = match self.block_store.compute_marker(proposal_id) {
             Err(e) => {
                 warn!("{:?}", e);
@@ -765,8 +760,7 @@ impl<T: Payload> EventProcessor<T> {
             }
             Ok(marker) => marker,
         };
-        debug!("daniel marker {}", marker);
-
+        // debug!("daniel marker {}", marker);
 
         let vote_proposal = VoteProposal::new(
             AccumulatorExtensionProof::<TransactionAccumulatorHasher>::new(
@@ -794,7 +788,6 @@ impl<T: Payload> EventProcessor<T> {
 
         Ok(vote)
     }
-
 
     /// Upon new vote:
     /// 1. Filter out votes for rounds that should not be processed by this validator (to avoid

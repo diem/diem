@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use consensus_types::common::Round;
 use crate::{
     consensus_state::ConsensusState, error::Error,
     persistent_safety_storage::PersistentSafetyStorage, t_safety_rules::TSafetyRules, COUNTERS,
@@ -9,7 +8,7 @@ use crate::{
 use consensus_types::{
     block::Block,
     block_data::BlockData,
-    common::{Author, Payload},
+    common::{Author, Payload, Round},
     quorum_cert::QuorumCert,
     timeout::Timeout,
     vote::Vote,
@@ -234,7 +233,11 @@ impl<T: Payload> TSafetyRules<T> for SafetyRules<T> {
     /// @TODO verify signature on vote proposal
     /// @TODO verify QC correctness
     /// construct a strong vote which contains a marker
-    fn construct_and_sign_strong_vote(&mut self, vote_proposal: &VoteProposal<T>, marker: Round) -> Result<Vote, Error> {
+    fn construct_and_sign_strong_vote(
+        &mut self,
+        vote_proposal: &VoteProposal<T>,
+        marker: Round,
+    ) -> Result<Vote, Error> {
         debug!("Incoming vote proposal to sign.");
         let proposed_block = vote_proposal.block();
 

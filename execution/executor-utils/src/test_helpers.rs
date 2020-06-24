@@ -44,10 +44,7 @@ pub fn gen_ledger_info_with_sigs(
         .iter()
         .map(|s| (s.author(), s.sign_message(ledger_info.hash())))
         .collect();
-    let markers = signer
-        .iter()
-        .map(|s| (s.author(), 0))
-        .collect();
+    let markers = signer.iter().map(|s| (s.author(), 0)).collect();
     LedgerInfoWithSignatures::new(ledger_info, signatures, markers)
 }
 

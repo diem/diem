@@ -1,9 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::account_address::AccountAddress;
-use std::cmp::max;
-use libra_types::block_info::Round;
 use crate::counters;
 use anyhow::bail;
 use consensus_types::{
@@ -11,9 +8,11 @@ use consensus_types::{
 };
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
+use libra_types::{account_address::AccountAddress, block_info::Round};
 use mirai_annotations::{checked_verify_eq, precondition};
 use serde::Serialize;
 use std::{
+    cmp::max,
     collections::{vec_deque::VecDeque, HashMap, HashSet},
     fmt::Debug,
     sync::Arc,
@@ -182,7 +181,8 @@ where
     }
 
     pub(super) fn genesis(&self) -> Arc<ExecutedBlock<T>> {
-        self.get_block(&self.genesis_id).expect("Genesis must exist")
+        self.get_block(&self.genesis_id)
+            .expect("Genesis must exist")
     }
 
     pub(super) fn highest_certified_block(&self) -> Arc<ExecutedBlock<T>> {
@@ -214,12 +214,16 @@ where
         self.id_to_quorum_cert.get(block_id).cloned()
     }
 
-    pub(super) fn get_endorsers_for_block(&self, block_id: &HashValue) -> Option<HashSet<AccountAddress>> {
+    pub(super) fn get_endorsers_for_block(
+        &self,
+        block_id: &HashValue,
+    ) -> Option<HashSet<AccountAddress>> {
         self.id_to_endorsers.get(block_id).cloned()
     }
 
     pub(super) fn add_endorser(&mut self, block_id: HashValue, account: AccountAddress) {
-        let endorser = self.id_to_endorsers
+        let endorser = self
+            .id_to_endorsers
             .entry(block_id)
             .or_insert_with(HashSet::new);
         endorser.insert(account);
@@ -287,7 +291,6 @@ where
 
         // update the endorsers of all previous blocks.
         self.update_endorsers(quorumcert)
-
     }
 
     /// Find the blocks to prune up to next_root_id (keep next_root_id's block). Any branches not
@@ -415,7 +418,9 @@ where
                             break;
                         }
                     }
-                    if done { break; }
+                    if done {
+                        break;
+                    }
                 }
                 None => {
                     info!("record_voted_block: Block {:?} not found", cur_block_id);
@@ -454,7 +459,11 @@ where
     }
 
     // check whether voted_block and voting_block are from different forks, voting_block always has larger round number due to the voting rule
-    pub fn conflict(&self, voted_block: HashValue, voting_block: HashValue) -> anyhow::Result<bool> {
+    pub fn conflict(
+        &self,
+        voted_block: HashValue,
+        voting_block: HashValue,
+    ) -> anyhow::Result<bool> {
         let mut cur_block_id = voting_block;
         let mut result = true;
         loop {
@@ -594,12 +603,18 @@ where
         // let blocks_from_genesis_to_highest_certified = self
         //     .path_from_genesis(self.highest_certified_block_id)
         //     .unwrap_or_else(Vec::new);
-        let last_k_blocks = self.last_k_blocks(self.highest_certified_block_id, 10).unwrap_or_else(Vec::new);
+        let last_k_blocks = self
+            .last_k_blocks(self.highest_certified_block_id, 10)
+            .unwrap_or_else(Vec::new);
         for block in last_k_blocks {
             let id = block.id();
             let round = block.round();
             let endorsers = self.get_endorsers_for_block(&id).unwrap();
-            info!("block round {}, number of endorsers {:?}", round, endorsers.len());
+            info!(
+                "block round {}, number of endorsers {:?}",
+                round,
+                endorsers.len()
+            );
         }
         info!("-------------------------print endorsers end-------------------------");
     }

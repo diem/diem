@@ -91,7 +91,11 @@ impl PendingVotes {
         // covering vote data hash (in its `consensus_data_hash` field).
         let li_digest = vote.ledger_info().hash();
         let li_with_sig = self.li_digest_to_votes.entry(li_digest).or_insert_with(|| {
-            LedgerInfoWithSignatures::new(vote.ledger_info().clone(), BTreeMap::new(), BTreeMap::new())
+            LedgerInfoWithSignatures::new(
+                vote.ledger_info().clone(),
+                BTreeMap::new(),
+                BTreeMap::new(),
+            )
         });
         li_with_sig.add_signature(vote.author(), vote.signature().clone());
         li_with_sig.add_marker(vote.author(), vote.marker());

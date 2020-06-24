@@ -1,11 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use consensus_types::common::Round;
 use crate::{ConsensusState, Error, SafetyRules, TSafetyRules};
 use consensus_types::{
-    block::Block, block_data::BlockData, common::Payload, quorum_cert::QuorumCert,
-    timeout::Timeout, vote::Vote, vote_proposal::VoteProposal,
+    block::Block,
+    block_data::BlockData,
+    common::{Payload, Round},
+    quorum_cert::QuorumCert,
+    timeout::Timeout,
+    vote::Vote,
+    vote_proposal::VoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
 use libra_types::epoch_change::EpochChangeProof;
@@ -44,7 +48,11 @@ impl<T: Payload> TSafetyRules<T> for LocalClient<T> {
             .construct_and_sign_vote(vote_proposal)
     }
 
-    fn construct_and_sign_strong_vote(&mut self, vote_proposal: &VoteProposal<T>, marker: Round) -> Result<Vote, Error> {
+    fn construct_and_sign_strong_vote(
+        &mut self,
+        vote_proposal: &VoteProposal<T>,
+        marker: Round,
+    ) -> Result<Vote, Error> {
         self.internal
             .write()
             .unwrap()

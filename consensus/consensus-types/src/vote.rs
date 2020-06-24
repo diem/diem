@@ -1,12 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::block_info::Round;
 use crate::{common::Author, timeout::Timeout, vote_data::VoteData};
 use anyhow::{ensure, Context};
 use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
 use libra_types::{
-    ledger_info::LedgerInfo, validator_signer::ValidatorSigner,
+    block_info::Round, ledger_info::LedgerInfo, validator_signer::ValidatorSigner,
     validator_verifier::ValidatorVerifier,
 };
 use serde::{Deserialize, Serialize};

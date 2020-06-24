@@ -1,10 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::block_info::Round;
 use crate::{
     account_address::AccountAddress,
-    block_info::BlockInfo,
+    block_info::{BlockInfo, Round},
     epoch_change::EpochChangeProof,
     epoch_info::EpochInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -86,13 +85,8 @@ fn sign_ledger_info(
         .collect()
 }
 
-fn marker_info(
-    signers: &[ValidatorSigner],
-) -> BTreeMap<AccountAddress, Round> {
-    signers
-        .iter()
-        .map(|s| (s.author(), 0))
-        .collect()
+fn marker_info(signers: &[ValidatorSigner]) -> BTreeMap<AccountAddress, Round> {
+    signers.iter().map(|s| (s.author(), 0)).collect()
 }
 
 fn new_mock_ledger_info(

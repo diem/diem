@@ -289,8 +289,11 @@ mod tests {
             author_to_marker_map.insert(validator.author(), 0);
         }
 
-        let ledger_info_with_signatures =
-            LedgerInfoWithV0::new(ledger_info.clone(), author_to_signature_map, author_to_marker_map.clone());
+        let ledger_info_with_signatures = LedgerInfoWithV0::new(
+            ledger_info.clone(),
+            author_to_signature_map,
+            author_to_marker_map.clone(),
+        );
 
         // Add the signatures in reverse order and ensure the serialization matches
         let mut author_to_signature_map = BTreeMap::new();

@@ -1,11 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use consensus_types::common::Round;
 use crate::{ConsensusState, Error};
 use consensus_types::{
-    block::Block, block_data::BlockData, quorum_cert::QuorumCert, timeout::Timeout, vote::Vote,
-    vote_proposal::VoteProposal,
+    block::Block, block_data::BlockData, common::Round, quorum_cert::QuorumCert, timeout::Timeout,
+    vote::Vote, vote_proposal::VoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
 use libra_types::epoch_change::EpochChangeProof;
@@ -30,7 +29,11 @@ pub trait TSafetyRules<T> {
     fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal<T>) -> Result<Vote, Error>;
 
     /// Attempts to strong vote with marker for a given proposal following the voting rules.
-    fn construct_and_sign_strong_vote(&mut self, vote_proposal: &VoteProposal<T>, marker: Round) -> Result<Vote, Error>;
+    fn construct_and_sign_strong_vote(
+        &mut self,
+        vote_proposal: &VoteProposal<T>,
+        marker: Round,
+    ) -> Result<Vote, Error>;
 
     /// As the holder of the private key, SafetyRules also signs proposals or blocks.
     /// A Block is a signed BlockData along with some additional metadata.

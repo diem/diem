@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::block_info::Round;
 use crate::{
     block_storage::{block_tree::BlockTree, BlockReader},
     counters,
@@ -22,7 +21,9 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_types::epoch_info::EpochInfo;
-use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus};
+use libra_types::{
+    block_info::Round, ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus,
+};
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
     sync::{Arc, RwLock},

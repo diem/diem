@@ -72,7 +72,8 @@ fn to_blocks_to_commit(
             );
             let ledger_info =
                 LedgerInfo::new(block_info, partial_ledger_info.consensus_data_hash());
-            let ledger_info_with_sigs = LedgerInfoWithSignatures::new(ledger_info, signatures, markers);
+            let ledger_info_with_sigs =
+                LedgerInfoWithSignatures::new(ledger_info, signatures, markers);
             Ok((txns_to_commit, ledger_info_with_sigs))
         })
         .collect::<Result<Vec<_>>>()?;
