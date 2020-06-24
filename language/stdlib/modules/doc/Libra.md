@@ -214,7 +214,7 @@ and the
 The
 <code><a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a></code> is a singleton resource
 published under the
-<code><a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>()</code> and grants
+<code><a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()</code> and grants
 the capability to the
 <code><a href="#0x1_Libra">0x1::Libra</a></code> module to add currencies to the
 <code><a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">0x1::RegisteredCurrencies</a></code> on-chain config.
@@ -714,7 +714,7 @@ registered currencies in the
 <code><a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">0x1::RegisteredCurrencies</a></code> on-chain
 config, and publishes the
 <code><a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a></code> under the
-<code><a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>()</code>.
+<code><a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_initialize">initialize</a>(config_account: &signer, create_config_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="LibraConfig.md#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;)
@@ -732,7 +732,7 @@ config, and publishes the
 ) {
     // Operational constraint
     <b>assert</b>(
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(),
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(),
         0
     );
     <b>let</b> cap = <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account, create_config_capability);
@@ -1757,7 +1757,7 @@ adds the currency to the set of
     });
     <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_add_currency_code">RegisteredCurrencies::add_currency_code</a>(
         currency_code,
-        &borrow_global&lt;<a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>()).cap
+        &borrow_global&lt;<a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()).cap
     );
     (<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;{}, <a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;{})
 }

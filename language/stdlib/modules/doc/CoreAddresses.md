@@ -9,7 +9,6 @@
 -  [Function `CURRENCY_INFO_ADDRESS`](#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS)
 -  [Function `TREASURY_COMPLIANCE_ADDRESS`](#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS)
 -  [Function `VM_RESERVED_ADDRESS`](#0x1_CoreAddresses_VM_RESERVED_ADDRESS)
--  [Function `DEFAULT_CONFIG_ADDRESS`](#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS)
 
 
 
@@ -119,33 +118,6 @@ is no signer for the transaction.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_CoreAddresses_VM_RESERVED_ADDRESS">VM_RESERVED_ADDRESS</a>(): address {
     0x0
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS"></a>
-
-## Function `DEFAULT_CONFIG_ADDRESS`
-
-The address under which all on-chain configs are stored, and where
-off-chain APIs know to look for this information (e.g. VM version,
-list of registered currencies).
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">DEFAULT_CONFIG_ADDRESS</a>(): address
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">DEFAULT_CONFIG_ADDRESS</a>(): address {
-    0xF1A95
 }
 </code></pre>
 

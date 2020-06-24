@@ -34,7 +34,7 @@ fn initial_libra_version() {
         StdlibScript::UpdateLibraVersion.compiled_bytes().into_vec(),
         vec![],
         vec![TransactionArgument::U64(2)],
-        0,
+        1,
         TXN_RESERVED,
         0,
         LBR_NAME.to_owned(),

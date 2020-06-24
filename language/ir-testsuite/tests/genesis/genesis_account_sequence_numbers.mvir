@@ -5,8 +5,6 @@ main() {
   // check that the sequence number of the Association account (which sent the genesis txn) has been
   // incremented...
   assert(LibraAccount.sequence_number(CoreAddresses.ASSOCIATION_ROOT_ADDRESS()) == 1, 66);
-  // ...nor the sequence number of the config account
-  assert(LibraAccount.sequence_number(CoreAddresses.DEFAULT_CONFIG_ADDRESS()) == 0, 68);
 
   return;
 }

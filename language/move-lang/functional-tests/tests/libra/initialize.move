@@ -1,5 +1,5 @@
 //! new-transaction
-//! sender: config
+//! sender: association
 script {
 use 0x1::Libra;
 use 0x1::LibraConfig::CreateOnChainConfig;

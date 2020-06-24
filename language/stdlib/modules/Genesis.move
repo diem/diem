@@ -5,7 +5,6 @@
 address 0x1 {
 module Genesis {
     use 0x1::AccountLimits;
-    use 0x1::CoreAddresses;
     use 0x1::Coin1;
     use 0x1::Coin2;
     use 0x1::DualAttestationLimit;
@@ -30,7 +29,6 @@ module Genesis {
 
     fun initialize(
         association: &signer,
-        config_account: &signer,
         tc_account: &signer,
         tc_addr: address,
         genesis_auth_key: vector<u8>,
@@ -55,21 +53,21 @@ module Genesis {
         let currency_registration_capability = Roles::extract_privilege_to_capability<RegisterNewCurrency>(tc_account);
         let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(tc_account);
 
-        // On-chain config setup
-        Event::publish_generator(config_account);
+        Event::publish_generator(association);
+
+        // Event and On-chain config setup
         LibraConfig::initialize(
-            config_account,
+            association,
             &create_config_capability,
         );
 
         // Currency setup
-        Libra::initialize(config_account, &create_config_capability);
+        Libra::initialize(association, &create_config_capability);
 
         // Set that this is testnet
         Testnet::initialize(association);
 
-        // Event and currency setup
-        Event::publish_generator(association);
+        // Currency setup
         let (coin1_mint_cap, coin1_burn_cap) = Coin1::initialize(
             association,
             &currency_registration_capability,
@@ -111,19 +109,11 @@ module Genesis {
         AccountLimits::publish_unrestricted_limits(tc_account);
         AccountLimits::certify_limits_definition(&tc_capability, tc_addr);
 
-        // Create the config account
-        LibraAccount::create_config_account(
-            association,
-            &create_config_capability,
-            CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
-            dummy_auth_key_prefix
-        );
-
         LibraTransactionTimeout::initialize(association);
-        LibraSystem::initialize_validator_set(config_account, &create_config_capability);
-        LibraVersion::initialize(config_account, &create_config_capability);
+        LibraSystem::initialize_validator_set(association, &create_config_capability);
+        LibraVersion::initialize(association, &create_config_capability);
 
-        DualAttestationLimit::initialize(config_account, tc_account, &create_config_capability);
+        DualAttestationLimit::initialize(association, tc_account, &create_config_capability);
         LibraBlock::initialize_block_metadata(association);
         LibraWriteSetManager::initialize(association);
         LibraTimestamp::initialize(association);
@@ -133,7 +123,7 @@ module Genesis {
         LibraAccount::restore_key_rotation_capability(assoc_rotate_key_cap);
 
         LibraVMConfig::initialize(
-            config_account,
+            association,
             association,
             &create_config_capability,
             publishing_option,
@@ -141,9 +131,7 @@ module Genesis {
             native_schedule,
         );
 
-        LibraConfig::grant_privileges_for_config_TESTNET_HACK_REMOVE(config_account);
-
-        let config_rotate_key_cap = LibraAccount::extract_key_rotation_capability(config_account);
+        let config_rotate_key_cap = LibraAccount::extract_key_rotation_capability(association);
         LibraAccount::rotate_authentication_key(&config_rotate_key_cap, copy genesis_auth_key);
         LibraAccount::restore_key_rotation_capability(config_rotate_key_cap);
 

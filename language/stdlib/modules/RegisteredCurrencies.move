@@ -25,7 +25,7 @@ module RegisteredCurrencies {
     ): RegistrationCapability {
         // enforce that this is only going to one specific address,
         assert(
-            Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
+            Signer::address_of(config_account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(),
             0
         );
         let cap = LibraConfig::publish_new_config_with_capability(
@@ -57,7 +57,7 @@ module RegisteredCurrencies {
     spec module {
         pragma verify = true;
 
-        define spec_singleton_address(): address { 0xF1A95 }
+        define spec_singleton_address(): address { 0xA550C18 }
 
         // spec_is_initialized() is true iff initialize has been called.
         define spec_is_initialized():bool {

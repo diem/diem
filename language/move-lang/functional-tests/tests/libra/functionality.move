@@ -115,8 +115,7 @@ script {
         Roles::restore_capability_to_privilege(account, r);
     }
 }
-// check: ABORTED
-// check: 0
+// check: CANNOT_WRITE_EXISTING_RESOURCE
 
 //! new-transaction
 //! sender: blessed

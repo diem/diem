@@ -41,7 +41,7 @@ module LibraSystem {
         create_config_capability: &Capability<CreateOnChainConfig>,
     ) {
         assert(
-            Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
+            Signer::address_of(config_account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(),
             1
         );
 
@@ -59,7 +59,7 @@ module LibraSystem {
     // This copies the vector of validators into the LibraConfig's resource
     // under ValidatorSet address
     fun set_validator_set(value: LibraSystem) acquires CapabilityHolder {
-        LibraConfig::set_with_capability<LibraSystem>(&borrow_global<CapabilityHolder>(CoreAddresses::DEFAULT_CONFIG_ADDRESS()).cap, value)
+        LibraConfig::set_with_capability<LibraSystem>(&borrow_global<CapabilityHolder>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).cap, value)
     }
 
     ///////////////////////////////////////////////////////////////////////////

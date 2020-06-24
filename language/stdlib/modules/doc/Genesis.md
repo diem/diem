@@ -15,7 +15,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(association: &signer, config_account: &signer, tc_account: &signer, tc_addr: address, genesis_auth_key: vector&lt;u8&gt;, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
+<pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(association: &signer, tc_account: &signer, tc_addr: address, genesis_auth_key: vector&lt;u8&gt;, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -26,7 +26,6 @@
 
 <pre><code><b>fun</b> <a href="#0x1_Genesis_initialize">initialize</a>(
     association: &signer,
-    config_account: &signer,
     tc_account: &signer,
     tc_addr: address,
     genesis_auth_key: vector&lt;u8&gt;,
@@ -51,21 +50,21 @@
     <b>let</b> currency_registration_capability = <a href="Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>&lt;RegisterNewCurrency&gt;(tc_account);
     <b>let</b> tc_capability = <a href="Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>&lt;TreasuryComplianceRole&gt;(tc_account);
 
-    // On-chain config setup
-    <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(config_account);
+    <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(association);
+
+    // <a href="Event.md#0x1_Event">Event</a> and On-chain config setup
     <a href="LibraConfig.md#0x1_LibraConfig_initialize">LibraConfig::initialize</a>(
-        config_account,
+        association,
         &create_config_capability,
     );
 
     // Currency setup
-    <a href="Libra.md#0x1_Libra_initialize">Libra::initialize</a>(config_account, &create_config_capability);
+    <a href="Libra.md#0x1_Libra_initialize">Libra::initialize</a>(association, &create_config_capability);
 
     // Set that this is testnet
     <a href="Testnet.md#0x1_Testnet_initialize">Testnet::initialize</a>(association);
 
-    // <a href="Event.md#0x1_Event">Event</a> and currency setup
-    <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(association);
+    // Currency setup
     <b>let</b> (coin1_mint_cap, coin1_burn_cap) = <a href="Coin1.md#0x1_Coin1_initialize">Coin1::initialize</a>(
         association,
         &currency_registration_capability,
@@ -107,19 +106,11 @@
     <a href="AccountLimits.md#0x1_AccountLimits_publish_unrestricted_limits">AccountLimits::publish_unrestricted_limits</a>(tc_account);
     <a href="AccountLimits.md#0x1_AccountLimits_certify_limits_definition">AccountLimits::certify_limits_definition</a>(&tc_capability, tc_addr);
 
-    // Create the config account
-    <a href="LibraAccount.md#0x1_LibraAccount_create_config_account">LibraAccount::create_config_account</a>(
-        association,
-        &create_config_capability,
-        <a href="CoreAddresses.md#0x1_CoreAddresses_DEFAULT_CONFIG_ADDRESS">CoreAddresses::DEFAULT_CONFIG_ADDRESS</a>(),
-        dummy_auth_key_prefix
-    );
-
     <a href="LibraTransactionTimeout.md#0x1_LibraTransactionTimeout_initialize">LibraTransactionTimeout::initialize</a>(association);
-    <a href="LibraSystem.md#0x1_LibraSystem_initialize_validator_set">LibraSystem::initialize_validator_set</a>(config_account, &create_config_capability);
-    <a href="LibraVersion.md#0x1_LibraVersion_initialize">LibraVersion::initialize</a>(config_account, &create_config_capability);
+    <a href="LibraSystem.md#0x1_LibraSystem_initialize_validator_set">LibraSystem::initialize_validator_set</a>(association, &create_config_capability);
+    <a href="LibraVersion.md#0x1_LibraVersion_initialize">LibraVersion::initialize</a>(association, &create_config_capability);
 
-    <a href="DualAttestationLimit.md#0x1_DualAttestationLimit_initialize">DualAttestationLimit::initialize</a>(config_account, tc_account, &create_config_capability);
+    <a href="DualAttestationLimit.md#0x1_DualAttestationLimit_initialize">DualAttestationLimit::initialize</a>(association, tc_account, &create_config_capability);
     <a href="LibraBlock.md#0x1_LibraBlock_initialize_block_metadata">LibraBlock::initialize_block_metadata</a>(association);
     <a href="LibraWriteSetManager.md#0x1_LibraWriteSetManager_initialize">LibraWriteSetManager::initialize</a>(association);
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_initialize">LibraTimestamp::initialize</a>(association);
@@ -129,7 +120,7 @@
     <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(assoc_rotate_key_cap);
 
     <a href="LibraVMConfig.md#0x1_LibraVMConfig_initialize">LibraVMConfig::initialize</a>(
-        config_account,
+        association,
         association,
         &create_config_capability,
         publishing_option,
@@ -137,9 +128,7 @@
         native_schedule,
     );
 
-    <a href="LibraConfig.md#0x1_LibraConfig_grant_privileges_for_config_TESTNET_HACK_REMOVE">LibraConfig::grant_privileges_for_config_TESTNET_HACK_REMOVE</a>(config_account);
-
-    <b>let</b> config_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(config_account);
+    <b>let</b> config_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(association);
     <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&config_rotate_key_cap, <b>copy</b> genesis_auth_key);
     <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(config_rotate_key_cap);
 

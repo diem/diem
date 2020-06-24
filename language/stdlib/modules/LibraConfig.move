@@ -30,11 +30,6 @@ module LibraConfig {
         Roles::add_privilege_to_account_association_root_role(account, CreateOnChainConfig{});
     }
 
-    /// > TODO(tzakian): This needs to be removed
-    public fun grant_privileges_for_config_TESTNET_HACK_REMOVE(account: &signer) {
-        Roles::add_privilege_to_account_parent_vasp_role(account, CreateOnChainConfig{});
-    }
-
     // This can only be invoked by the config address, and only a single time.
     // Currently, it is invoked in the genesis transaction
     public fun initialize(
@@ -42,7 +37,7 @@ module LibraConfig {
         _: &Capability<CreateOnChainConfig>,
     ) {
         // Operational constraint
-        assert(Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
+        assert(Signer::address_of(config_account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
         move_to<Configuration>(
             config_account,
             Configuration {
@@ -55,7 +50,7 @@ module LibraConfig {
 
     // Get a copy of `Config` value stored under `addr`.
     public fun get<Config: copyable>(): Config acquires LibraConfig {
-        let addr = CoreAddresses::DEFAULT_CONFIG_ADDRESS();
+        let addr = CoreAddresses::ASSOCIATION_ROOT_ADDRESS();
         assert(exists<LibraConfig<Config>>(addr), 24);
         *&borrow_global<LibraConfig<Config>>(addr).payload
     }
@@ -63,7 +58,7 @@ module LibraConfig {
     // Set a config item to a new value with the default capability stored under config address and trigger a
     // reconfiguration.
     public fun set<Config: copyable>(account: &signer, payload: Config) acquires LibraConfig, Configuration {
-        let addr = CoreAddresses::DEFAULT_CONFIG_ADDRESS();
+        let addr = CoreAddresses::ASSOCIATION_ROOT_ADDRESS();
         assert(exists<LibraConfig<Config>>(addr), 24);
         let signer_address = Signer::address_of(account);
         assert(exists<ModifyConfigCapability<Config>>(signer_address), 24);
@@ -79,7 +74,7 @@ module LibraConfig {
         _cap: &ModifyConfigCapability<Config>,
         payload: Config
     ) acquires LibraConfig, Configuration {
-        let addr = CoreAddresses::DEFAULT_CONFIG_ADDRESS();
+        let addr = CoreAddresses::ASSOCIATION_ROOT_ADDRESS();
         assert(exists<LibraConfig<Config>>(addr), 24);
         let config = borrow_global_mut<LibraConfig<Config>>(addr);
         config.payload = payload;
@@ -93,7 +88,7 @@ module LibraConfig {
         _: &Capability<CreateOnChainConfig>,
         payload: Config,
     ): ModifyConfigCapability<Config> {
-        assert(Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
+        assert(Signer::address_of(config_account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
         move_to(config_account, LibraConfig { payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the binary
         // to register this config into ON_CHAIN_CONFIG_REGISTRY then send another transaction to change
@@ -118,7 +113,7 @@ module LibraConfig {
         _: &Capability<CreateOnChainConfig>,
         payload: Config
     ) {
-        assert(Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
+        assert(Signer::address_of(config_account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
         move_to(config_account, ModifyConfigCapability<Config> {});
         move_to(config_account, LibraConfig{ payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the binary
@@ -133,7 +128,7 @@ module LibraConfig {
         payload: Config,
         delegate: address,
     ) {
-        assert(Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(), 1);
+        assert(Signer::address_of(config_account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
         Offer::create(config_account, ModifyConfigCapability<Config>{}, delegate);
         move_to(config_account, LibraConfig { payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the
@@ -159,7 +154,7 @@ module LibraConfig {
            return ()
        };
 
-       let config_ref = borrow_global_mut<Configuration>(CoreAddresses::DEFAULT_CONFIG_ADDRESS());
+       let config_ref = borrow_global_mut<Configuration>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
 
        // Ensure that there is at most one reconfiguration per transaction. This ensures that there is a 1-1
        // correspondence between system reconfigurations and emitted ReconfigurationEvents.
@@ -174,7 +169,7 @@ module LibraConfig {
     // Emit a reconfiguration event. This function will be invoked by the genesis directly to generate the very first
     // reconfiguration event.
     fun emit_reconfiguration_event() acquires Configuration {
-        let config_ref = borrow_global_mut<Configuration>(CoreAddresses::DEFAULT_CONFIG_ADDRESS());
+        let config_ref = borrow_global_mut<Configuration>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
         config_ref.epoch = config_ref.epoch + 1;
 
         Event::emit_event<NewEpochEvent>(
@@ -196,7 +191,7 @@ module LibraConfig {
 
         // spec_get is the spec version of get<Config>
         define spec_get<Config>(): Config {
-            global<LibraConfig<Config>>(0xF1A95).payload
+            global<LibraConfig<Config>>(0xA550C18).payload
         }
 
         define spec_is_published<Config>(addr: address): bool {

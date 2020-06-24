@@ -29,7 +29,7 @@ module FooConfig {
 //! block-time: 2
 
 //! new-transaction
-//! sender: config
+//! sender: association
 // Publish a new config item.
 script {
 use {{alice}}::FooConfig;
@@ -44,7 +44,7 @@ fun main(account: &signer) {
 //! block-time: 3
 
 //! new-transaction
-//! sender: config
+//! sender: association
 // Update the value.
 script {
 use {{alice}}::FooConfig;
