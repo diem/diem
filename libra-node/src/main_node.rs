@@ -136,12 +136,12 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             Arc::clone(&db_rw.reader),
             waypoint,
         );
-        let peer_id = network_builder.peer_id();
+        let network_id = network_config.network_id.clone();
 
         // Create the endpoints to connect the Network to StateSynchronizer.
         let (state_sync_sender, state_sync_events) = network_builder
             .add_protocol_handler(state_synchronizer::network::network_endpoint_config());
-        state_sync_network_handles.push((peer_id, state_sync_sender, state_sync_events));
+        state_sync_network_handles.push((network_id.clone(), state_sync_sender, state_sync_events));
 
         // Create the endpoints t connect the Network to MemPool.
         let (mempool_sender, mempool_events) =
@@ -149,7 +149,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 // TODO:  Make this configuration option more clear.
                 node_config.mempool.max_broadcasts_per_peer,
             ));
-        mempool_network_handles.push((peer_id, mempool_sender, mempool_events));
+        mempool_network_handles.push((network_id, mempool_sender, mempool_events));
 
         match role {
             // Perform steps relevant specifically to Validator networks.
@@ -184,6 +184,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
         // Start the network and cache the runtime so it does not go out of scope.
         // TODO:  move all 'start' commands to a second phase at the end of setup_environment.  Target is to have one pass to wire the pieces together and a second pass to start processing in an appropriate order.
+        let peer_id = network_builder.peer_id();
         let _listen_addr = network_builder.build();
         network_runtimes.push(runtime);
         debug!("Network started for peer_id: {}", peer_id);

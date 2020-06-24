@@ -62,7 +62,7 @@ impl PeerManager {
             .lock()
             .expect("failed to acquire peer_info lock");
         let is_new_peer = !peer_info.contains_key(&peer);
-        if self.is_upstream_peer(peer) {
+        if self.is_upstream_peer(&peer) {
             peer_info
                 .entry(peer)
                 .or_insert(PeerSyncState {
@@ -161,19 +161,23 @@ impl PeerManager {
         sync_state.broadcast_info.backoff_mode = backoff;
     }
 
-    pub fn is_upstream_peer(&self, peer: PeerNetworkId) -> bool {
-        self.upstream_config.is_upstream_peer(peer)
+    pub fn is_upstream_peer(&self, peer: &PeerNetworkId) -> bool {
+        self.upstream_config
+            .get_upstream_preference(peer.network_id())
+            .is_some()
     }
 
-    fn is_primary_upstream_peer(&self, peer: PeerNetworkId) -> bool {
-        self.upstream_config.is_primary_upstream_peer(peer)
+    fn is_primary_upstream_peer(&self, peer: &PeerNetworkId) -> bool {
+        self.upstream_config
+            .get_upstream_preference(peer.network_id())
+            == Some(0)
     }
 
-    pub fn get_peer_state(&self, peer: PeerNetworkId) -> PeerSyncState {
+    pub fn get_peer_state(&self, peer: &PeerNetworkId) -> PeerSyncState {
         self.peer_info
             .lock()
             .expect("failed to acquire peer info lock")
-            .get(&peer)
+            .get(peer)
             .expect("missing peer sync state")
             .clone()
     }
@@ -182,8 +186,8 @@ impl PeerManager {
     // - all primary peers
     // - fallback peers, if k-policy is enabled
     // this does NOT check for whether this peer is alive
-    pub fn is_picked_peer(&self, peer: PeerNetworkId) -> bool {
-        if self.is_primary_upstream_peer(peer) {
+    pub fn is_picked_peer(&self, peer: &PeerNetworkId) -> bool {
+        if self.is_primary_upstream_peer(&peer) {
             return true;
         }
 
@@ -192,7 +196,7 @@ impl PeerManager {
             .lock()
             .expect("failed to acquire peer info lock")
             .iter()
-            .find(|(peer, state)| self.is_primary_upstream_peer(**peer) && state.is_alive)
+            .find(|(peer, state)| self.is_primary_upstream_peer(*peer) && state.is_alive)
             .is_none();
 
         // for fallback peers, broadcast if k-policy is on

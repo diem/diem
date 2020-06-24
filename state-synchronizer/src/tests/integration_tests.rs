@@ -2,17 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    executor_proxy::ExecutorProxyTrait, tests::mock_storage::MockStorage, PeerId, StateSyncClient,
+    executor_proxy::ExecutorProxyTrait, tests::mock_storage::MockStorage, StateSyncClient,
     StateSynchronizer, SynchronizerState,
 };
 use anyhow::{bail, Result};
 use executor_types::ExecutedTrees;
 use futures::executor::block_on;
-use libra_config::{
-    chain_id::ChainId,
-    config::{PeerNetworkId, RoleType},
-    network_id::NetworkId,
-};
+use libra_config::{chain_id::ChainId, config::RoleType, network_id::NetworkId};
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
 use libra_mempool::mocks::MockSharedMempool;
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
@@ -21,7 +17,7 @@ use libra_types::{
     on_chain_config::ValidatorSet, proof::TransactionListProof,
     transaction::TransactionListWithProof, validator_config::ValidatorConfig,
     validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
-    validator_verifier::random_validator_verifier, waypoint::Waypoint,
+    validator_verifier::random_validator_verifier, waypoint::Waypoint, PeerId,
 };
 use network_builder::builder::{AuthenticationMode, NetworkBuilder};
 use rand::{rngs::StdRng, SeedableRng};
@@ -274,18 +270,24 @@ impl SynchronizerEnv {
         let peer_addr = network_builder.build();
 
         let mut config = config_builder::test_config().0;
+        config.base.role = role;
+        config.state_sync.sync_request_timeout_ms = timeout_ms;
+
         let network = config.validator_network.unwrap();
-        let network_id = network.peer_id();
+        let network_id = if role.is_validator() {
+            NetworkId::Validator
+        } else {
+            NetworkId::vfn_network()
+        };
         if !role.is_validator() {
             config.full_node_networks = vec![network];
             config.validator_network = None;
-        }
-        config.base.role = role;
-        config.state_sync.sync_request_timeout_ms = timeout_ms;
-        if new_peer_idx > 0 {
-            // set the upstream peer in the config
-            let upstream_peer = PeerNetworkId(network_id, self.peer_ids[new_peer_idx - 1]);
-            config.upstream.upstream_peers.insert(upstream_peer);
+            if new_peer_idx > 0 {
+                // setup upstream network for FN
+                // TODO for now the tests support creating V network and VFN networks - add more robust test setup
+                // to support FN-only networks
+                config.upstream.networks.push(network_id.clone());
+            }
         }
 
         let genesis_li = Self::genesis_li(&self.public_keys);

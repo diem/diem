@@ -78,7 +78,7 @@ impl PeerManager {
     }
 
     pub fn enable_peer(&mut self, peer: PeerNetworkId) {
-        if !self.is_upstream_peer(peer) {
+        if !self.is_upstream_peer(&peer) {
             return;
         }
 
@@ -157,7 +157,7 @@ impl PeerManager {
         if let Some(weighted_index) = &self.weighted_index {
             let mut rng = thread_rng();
             if let Some(peer) = active_peers.get(weighted_index.sample(&mut rng)) {
-                return Some(*peer.0);
+                return Some(peer.0.clone());
             }
         }
         None
@@ -166,7 +166,7 @@ impl PeerManager {
     fn get_active_upstream_peers(&self) -> Vec<(&PeerNetworkId, &PeerInfo)> {
         self.peers
             .iter()
-            .filter(|&(peer, peer_info)| peer_info.is_alive && self.is_upstream_peer(*peer))
+            .filter(|&(peer, peer_info)| peer_info.is_alive && self.is_upstream_peer(peer))
             .collect()
     }
 
@@ -201,7 +201,7 @@ impl PeerManager {
             return;
         }
         let peer_to_penalize = match self.requests.get(&version) {
-            Some(prev_request) => prev_request.last_request_peer,
+            Some(prev_request) => prev_request.last_request_peer.clone(),
             None => {
                 return;
             }
@@ -210,8 +210,10 @@ impl PeerManager {
         self.update_score(&peer_to_penalize, PeerScoreUpdateType::TimeOut);
     }
 
-    fn is_upstream_peer(&self, peer: PeerNetworkId) -> bool {
-        self.upstream_config.is_upstream_peer(peer)
+    fn is_upstream_peer(&self, peer: &PeerNetworkId) -> bool {
+        self.upstream_config
+            .get_upstream_preference(peer.network_id())
+            .is_some()
     }
 
     #[cfg(test)]
