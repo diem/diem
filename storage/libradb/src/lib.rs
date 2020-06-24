@@ -46,7 +46,7 @@ use crate::{
     system_store::SystemStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{ensure, format_err, Result};
+use anyhow::{ensure, Result};
 use itertools::{izip, zip_eq};
 use jellyfish_merkle::{restore::JellyfishMerkleRestore, TreeReader, TreeWriter};
 use libra_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
@@ -67,8 +67,8 @@ use libra_types::{
         SparseMerkleRangeProof, TransactionListProof,
     },
     transaction::{
-        Transaction, TransactionInfo, TransactionListWithProof, TransactionToCommit,
-        TransactionWithProof, Version, PRE_GENESIS_VERSION,
+        TransactionInfo, TransactionListWithProof, TransactionToCommit, TransactionWithProof,
+        Version, PRE_GENESIS_VERSION,
     },
 };
 use once_cell::sync::Lazy;
@@ -675,23 +675,12 @@ impl DbReader for LibraDB {
     }
 
     fn get_block_timestamp(&self, version: u64) -> Result<u64> {
-        // Maximum TPS from benchmark is around 1000.
-        const MAX_VERSIONS_TO_SEARCH: usize = 1000 * 3;
-
-        let lower_bound = std::cmp::max(0, version - MAX_VERSIONS_TO_SEARCH as u64);
-
-        // rely on the fact that blockmetadata txn always precedes user txn.
-        for i in (lower_bound..=version).rev() {
-            if let Transaction::BlockMetadata(t) = self.transaction_store.get_transaction(i)? {
-                return Ok(t.into_inner()?.1);
-            } else if i == 0 {
-                // genesis timestamp is 0
-                return Ok(0);
-            }
-        }
-        Err(format_err!(
-            "Unable to find preceding blockmetadata transaction"
-        ))
+        let ts = match self.transaction_store.get_block_metadata(version)? {
+            Some((_v, block_meta)) => block_meta.into_inner()?.1,
+            // genesis timestamp is 0
+            None => 0,
+        };
+        Ok(ts)
     }
 }
 
