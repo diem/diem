@@ -16,6 +16,7 @@ use anyhow::{bail, format_err, Result};
 use cluster_test::{
     aws,
     cluster::Cluster,
+    cluster_builder::{ClusterBuilder, ClusterBuilderParams},
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
     experiments::{get_experiment, Context, Experiment},
     github::GitHub,
@@ -41,7 +42,7 @@ const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 #[derive(StructOpt, Debug)]
 #[structopt(group = ArgGroup::with_name("action"))]
 struct Args {
-    #[structopt(short = "p", long, use_delimiter = true)]
+    #[structopt(short = "p", long, use_delimiter = true, requires = "swarm")]
     peers: Vec<String>,
 
     #[structopt(
@@ -97,20 +98,8 @@ struct Args {
     )]
     pub emit_to_validator: Option<bool>,
 
-    #[structopt(long, default_value = "1")]
-    pub fullnodes_per_validator: u32,
-    #[structopt(long, default_value = "")]
-    pub cfg: Vec<String>,
-    #[structopt(long, parse(try_from_str), default_value = "30")]
-    pub num_validators: u32,
-    #[structopt(long)]
-    pub enable_lsr: bool,
-    #[structopt(
-        long,
-        help = "Backend used by lsr. Possible Values are in-memory, on-disk, vault",
-        default_value = "vault"
-    )]
-    pub lsr_backend: String,
+    #[structopt(flatten)]
+    pub cluster_builder_params: ClusterBuilderParams,
 }
 
 #[tokio::main]
@@ -140,7 +129,9 @@ pub async fn main() {
         return;
     }
 
-    let mut runner = ClusterTestRunner::setup(&args).await;
+    let mut runner = ClusterTestRunner::setup(&args)
+        .await
+        .expect("Failed to setup cluster test runner");
 
     let result = handle_cluster_test_runner_commands(&args, &mut runner).await;
     runner.teardown().await;
@@ -223,13 +214,6 @@ fn setup_log() {
 
 struct BasicSwarmUtil {
     cluster: Cluster,
-}
-
-struct ClusterUtil {
-    cluster: Cluster,
-    prometheus: Prometheus,
-    cluster_swarm: ClusterSwarmKube,
-    current_tag: String,
 }
 
 struct ClusterTestRunner {
@@ -419,85 +403,6 @@ impl BasicSwarmUtil {
     }
 }
 
-impl ClusterUtil {
-    pub async fn setup(args: &Args) -> Self {
-        let cluster_swarm = ClusterSwarmKube::new()
-            .await
-            .expect("Failed to initialize ClusterSwarmKube");
-        cluster_swarm
-            .cleanup()
-            .await
-            .expect("cleanup on startup failed");
-        let current_tag = args.deploy.as_deref().unwrap_or("master");
-        info!(
-            "Deploying with {} tag for validators and fullnodes",
-            current_tag
-        );
-        let asg_name = format!(
-            "{}-k8s-testnet-validators",
-            cluster_swarm
-                .get_workspace()
-                .await
-                .expect("Failed to get workspace")
-        );
-        let mut instance_count =
-            args.num_validators + (args.fullnodes_per_validator * args.num_validators);
-        if args.enable_lsr {
-            if args.lsr_backend == "vault" {
-                instance_count += args.num_validators * 2;
-            } else {
-                instance_count += args.num_validators;
-            }
-        }
-        // First scale down to zero instances and wait for it to complete so that we don't schedule pods on
-        // instances which are going into termination state
-        aws::set_asg_size(0, 0.0, &asg_name, true, true)
-            .await
-            .unwrap_or_else(|err| panic!("{} scale down failed: {}", asg_name, err));
-        // Then scale up and bring up new instances
-        aws::set_asg_size(instance_count as i64, 5.0, &asg_name, true, false)
-            .await
-            .unwrap_or_else(|err| panic!("{} scale up failed: {}", asg_name, err));
-        let (validators, fullnodes) = cluster_swarm
-            .spawn_validator_and_fullnode_set(
-                args.num_validators,
-                args.fullnodes_per_validator,
-                args.enable_lsr,
-                &args.lsr_backend,
-                current_tag,
-                args.cfg.as_slice(),
-                true,
-            )
-            .await
-            .expect("Failed to spawn_validator_and_fullnode_set");
-        info!("Deployment complete");
-        let cluster = Cluster::new(validators, fullnodes);
-
-        let cluster = if args.peers.is_empty() {
-            cluster
-        } else {
-            cluster.validator_sub_cluster(args.peers.clone())
-        };
-        let prometheus_ip = "libra-testnet-prometheus-server.default.svc.cluster.local";
-        let grafana_base_url = cluster_swarm
-            .get_grafana_baseurl()
-            .await
-            .expect("Failed to discover grafana url in k8s");
-        let prometheus = Prometheus::new(prometheus_ip, grafana_base_url);
-        info!(
-            "Discovered {} validators and {} fns",
-            cluster.validator_instances().len(),
-            cluster.fullnode_instances().len(),
-        );
-        Self {
-            cluster,
-            prometheus,
-            cluster_swarm,
-            current_tag: current_tag.to_string(),
-        }
-    }
-}
-
 impl ClusterTestRunner {
     pub async fn teardown(&mut self) {
         self.cluster_swarm.cleanup().await.expect("Cleanup failed");
@@ -513,11 +418,22 @@ impl ClusterTestRunner {
     }
 
     /// Discovers cluster, setup log, etc
-    pub async fn setup(args: &Args) -> Self {
-        let util = ClusterUtil::setup(args).await;
-        let cluster = util.cluster;
-        let cluster_swarm = util.cluster_swarm;
-        let current_tag = util.current_tag;
+    pub async fn setup(args: &Args) -> Result<Self> {
+        let current_tag = args.deploy.as_deref().unwrap_or("master");
+        let cluster_swarm = ClusterSwarmKube::new()
+            .await
+            .map_err(|e| format_err!("Failed to initialize ClusterSwarmKube: {}", e))?;
+        let prometheus_ip = "libra-testnet-prometheus-server.default.svc.cluster.local";
+        let grafana_base_url = cluster_swarm
+            .get_grafana_baseurl()
+            .await
+            .expect("Failed to discover grafana url in k8s");
+        let prometheus = Prometheus::new(prometheus_ip, grafana_base_url);
+        let cluster_builder = ClusterBuilder::new(current_tag.to_string(), cluster_swarm.clone());
+        let cluster = cluster_builder
+            .setup_cluster(&args.cluster_builder_params)
+            .await
+            .map_err(|e| format_err!("Failed to setup cluster: {}", e))?;
         let log_tail_started = Instant::now();
         let (logs, trace_tail) = DebugPortLogWorker::spawn_new(&cluster);
         let log_tail_startup_time = Instant::now() - log_tail_started;
@@ -536,7 +452,6 @@ impl ClusterTestRunner {
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
             .ok();
         let tx_emitter = TxEmitter::new(&cluster);
-        let prometheus = util.prometheus;
         let github = GitHub::new();
         let report = SuiteReport::new();
         let global_emit_job_request = EmitJobRequest {
@@ -554,7 +469,7 @@ impl ClusterTestRunner {
             } else {
                 args.emit_to_validator.unwrap_or(false)
             };
-        Self {
+        Ok(Self {
             logs,
             trace_tail,
             cluster,
@@ -569,8 +484,8 @@ impl ClusterTestRunner {
             global_emit_job_request,
             emit_to_validator,
             cluster_swarm,
-            current_tag,
-        }
+            current_tag: current_tag.to_string(),
+        })
     }
 
     pub async fn run_ci_suite(&mut self) -> Result<String> {
