@@ -3,11 +3,12 @@
 
 use anyhow::{Context, Result};
 use backup_cli::{
-    backup::{
-        BackupServiceClient, BackupServiceClientOpt, GlobalBackupOpt,
-        StateSnapshotBackupController, StateSnapshotBackupOpt,
-    },
+    backup_types::state_snapshot::backup::{StateSnapshotBackupController, StateSnapshotBackupOpt},
     storage::StorageOpt,
+    utils::{
+        backup_service_client::{BackupServiceClient, BackupServiceClientOpt},
+        GlobalBackupOpt,
+    },
 };
 use std::sync::Arc;
 use structopt::StructOpt;

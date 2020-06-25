@@ -3,8 +3,11 @@
 
 use anyhow::{Context, Result};
 use backup_cli::{
-    restore::{GlobalRestoreOpt, StateSnapshotRestoreController, StateSnapshotRestoreOpt},
+    backup_types::state_snapshot::restore::{
+        StateSnapshotRestoreController, StateSnapshotRestoreOpt,
+    },
     storage::StorageOpt,
+    utils::GlobalRestoreOpt,
 };
 use libradb::LibraDB;
 use std::sync::Arc;
