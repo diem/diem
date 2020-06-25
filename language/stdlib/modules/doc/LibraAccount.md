@@ -36,7 +36,6 @@
 -  [Function `rotate_authentication_key`](#0x1_LibraAccount_rotate_authentication_key)
 -  [Function `extract_key_rotation_capability`](#0x1_LibraAccount_extract_key_rotation_capability)
 -  [Function `restore_key_rotation_capability`](#0x1_LibraAccount_restore_key_rotation_capability)
--  [Function `create_testnet_account`](#0x1_LibraAccount_create_testnet_account)
 -  [Function `add_currencies_for_account`](#0x1_LibraAccount_add_currencies_for_account)
 -  [Function `make_account`](#0x1_LibraAccount_make_account)
 -  [Function `create_root_association_account`](#0x1_LibraAccount_create_root_association_account)
@@ -1154,48 +1153,6 @@ Aborts if the
 <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a> {
     <b>let</b> account = borrow_global_mut&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(cap.account_address);
     <a href="Option.md#0x1_Option_fill">Option::fill</a>(&<b>mut</b> account.key_rotation_capability, cap)
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraAccount_create_testnet_account"></a>
-
-## Function `create_testnet_account`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_testnet_account">create_testnet_account</a>&lt;Token&gt;(creator_account: &signer, parent_vasp_creation_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_testnet_account">create_testnet_account</a>&lt;Token&gt;(
-    creator_account: &signer,
-    parent_vasp_creation_capability: &Capability&lt;LibraRootRole&gt;,
-    new_account_address: address,
-    auth_key_prefix: vector&lt;u8&gt;
-) {
-    // TODO: refactor so that every attempt <b>to</b> create an existing account hits this check
-    // cannot create an account at an address that already has one
-    <b>assert</b>(!<a href="#0x1_LibraAccount_exists_at">exists_at</a>(new_account_address), 777777);
-    <a href="#0x1_LibraAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(
-        creator_account,
-        parent_vasp_creation_capability,
-        new_account_address,
-        auth_key_prefix,
-        b"testnet",
-        b"https://libra.org",
-        // A bogus (but valid ed25519) compliance <b>public</b> key
-        x"b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde",
-        <b>false</b> // all_all_currencies
-    )
 }
 </code></pre>
 

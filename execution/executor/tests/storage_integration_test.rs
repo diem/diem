@@ -32,8 +32,8 @@ use rand::SeedableRng;
 use std::convert::TryFrom;
 use storage_interface::DbReaderWriter;
 use transaction_builder::{
-    encode_block_prologue_script, encode_mint_script, encode_publishing_option_script,
-    encode_reconfigure_script, encode_set_validator_config_script,
+    encode_block_prologue_script, encode_create_testing_account_script, encode_mint_script,
+    encode_publishing_option_script, encode_reconfigure_script, encode_set_validator_config_script,
     encode_transfer_with_metadata_script,
 };
 
@@ -569,6 +569,46 @@ fn test_execution_with_storage() {
     let account4_auth_key = AuthenticationKey::ed25519(&pubkey4); // non-existent account
     let account4 = account4_auth_key.derived_address();
     let genesis_account = treasury_compliance_account_address();
+    let root_account = association_address();
+
+    let tx1 = get_test_signed_transaction(
+        root_account,
+        /* sequence_number = */ 1,
+        genesis_key.clone(),
+        genesis_key.public_key(),
+        Some(encode_create_testing_account_script(
+            coin1_tag(),
+            account1,
+            account1_auth_key.prefix().to_vec(),
+            false, /* add all currencies */
+        )),
+    );
+
+    let tx2 = get_test_signed_transaction(
+        root_account,
+        /* sequence_number = */ 2,
+        genesis_key.clone(),
+        genesis_key.public_key(),
+        Some(encode_create_testing_account_script(
+            coin1_tag(),
+            account2,
+            account2_auth_key.prefix().to_vec(),
+            false, /* add all currencies */
+        )),
+    );
+
+    let tx3 = get_test_signed_transaction(
+        root_account,
+        /* sequence_number = */ 3,
+        genesis_key.clone(),
+        genesis_key.public_key(),
+        Some(encode_create_testing_account_script(
+            coin1_tag(),
+            account3,
+            account3_auth_key.prefix().to_vec(),
+            false, /* add all currencies */
+        )),
+    );
 
     // Create account1 with 2M coins.
     let txn1 = get_test_signed_transaction(
@@ -576,12 +616,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_mint_script(
-            coin1_tag(),
-            &account1,
-            account1_auth_key.prefix().to_vec(),
-            2_000_000,
-        )),
+        Some(encode_mint_script(coin1_tag(), &account1, 2_000_000)),
     );
 
     // Create account2 with 1.2M coins.
@@ -590,12 +625,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_mint_script(
-            coin1_tag(),
-            &account2,
-            account2_auth_key.prefix().to_vec(),
-            1_200_000,
-        )),
+        Some(encode_mint_script(coin1_tag(), &account2, 1_200_000)),
     );
 
     // Create account3 with 1M coins.
@@ -604,12 +634,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_mint_script(
-            coin1_tag(),
-            &account3,
-            account3_auth_key.prefix().to_vec(),
-            1_000_000,
-        )),
+        Some(encode_mint_script(coin1_tag(), &account3, 1_000_000)),
     );
 
     // Transfer 20k coins from account1 to account2.
@@ -660,7 +685,7 @@ fn test_execution_with_storage() {
         )),
     );
 
-    let block1 = vec![txn1, txn2, txn3, txn4, txn5, txn6];
+    let block1 = vec![tx1, tx2, tx3, txn1, txn2, txn3, txn4, txn5, txn6];
     let block1_id = gen_block_id(1);
 
     let mut block2 = vec![];
@@ -704,25 +729,25 @@ fn test_execution_with_storage() {
         _ => panic!("unexpected state change"),
     }
     let current_version = li.ledger_info().version();
-    assert_eq!(trusted_state.latest_version(), 6);
+    assert_eq!(trusted_state.latest_version(), 9);
 
     let t1 = db
         .reader
         .get_txn_by_account(genesis_account, 0, current_version, false)
         .unwrap();
-    verify_committed_txn_status(t1.as_ref(), &block1[0]).unwrap();
+    verify_committed_txn_status(t1.as_ref(), &block1[3]).unwrap();
 
     let t2 = db
         .reader
         .get_txn_by_account(genesis_account, 1, current_version, false)
         .unwrap();
-    verify_committed_txn_status(t2.as_ref(), &block1[1]).unwrap();
+    verify_committed_txn_status(t2.as_ref(), &block1[4]).unwrap();
 
     let t3 = db
         .reader
         .get_txn_by_account(genesis_account, 2, current_version, false)
         .unwrap();
-    verify_committed_txn_status(t3.as_ref(), &block1[2]).unwrap();
+    verify_committed_txn_status(t3.as_ref(), &block1[5]).unwrap();
 
     let tn = db
         .reader
@@ -734,7 +759,7 @@ fn test_execution_with_storage() {
         .reader
         .get_txn_by_account(account1, 0, current_version, true)
         .unwrap();
-    verify_committed_txn_status(t4.as_ref(), &block1[3]).unwrap();
+    verify_committed_txn_status(t4.as_ref(), &block1[6]).unwrap();
     // We requested the events to come back from this one, so verify that they did
     assert_eq!(t4.unwrap().events.unwrap().len(), 2);
 
@@ -742,13 +767,13 @@ fn test_execution_with_storage() {
         .reader
         .get_txn_by_account(account2, 0, current_version, false)
         .unwrap();
-    verify_committed_txn_status(t5.as_ref(), &block1[4]).unwrap();
+    verify_committed_txn_status(t5.as_ref(), &block1[7]).unwrap();
 
     let t6 = db
         .reader
         .get_txn_by_account(account1, 1, current_version, true)
         .unwrap();
-    verify_committed_txn_status(t6.as_ref(), &block1[5]).unwrap();
+    verify_committed_txn_status(t6.as_ref(), &block1[8]).unwrap();
 
     let account1_state_with_proof = db
         .reader
@@ -845,7 +870,7 @@ fn test_execution_with_storage() {
         .verify_and_ratchet(&li, &epoch_change_proof)
         .unwrap();
     let current_version = li.ledger_info().version();
-    assert_eq!(current_version, 20);
+    assert_eq!(current_version, 23);
 
     let t7 = db
         .reader
@@ -873,7 +898,7 @@ fn test_execution_with_storage() {
 
     let transaction_list_with_proof = db
         .reader
-        .get_transactions(7, 14, current_version, false)
+        .get_transactions(10, 17, current_version, false)
         .unwrap();
     verify_transactions(&transaction_list_with_proof, &block2[..]).unwrap();
 

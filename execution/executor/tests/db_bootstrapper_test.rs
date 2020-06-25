@@ -22,8 +22,8 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
-        coin1_tag, from_currency_code_string, treasury_compliance_account_address, BalanceResource,
-        COIN1_NAME,
+        association_address, coin1_tag, from_currency_code_string,
+        treasury_compliance_account_address, BalanceResource, COIN1_NAME,
     },
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
@@ -45,7 +45,9 @@ use move_core_types::move_resource::MoveResource;
 use rand::SeedableRng;
 use std::convert::TryFrom;
 use storage_interface::{DbReader, DbReaderWriter};
-use transaction_builder::{encode_mint_script, encode_transfer_with_metadata_script};
+use transaction_builder::{
+    encode_create_testing_account_script, encode_mint_script, encode_transfer_with_metadata_script,
+};
 
 #[test]
 fn test_empty_db() {
@@ -129,20 +131,34 @@ fn get_mint_transaction(
     association_key: &Ed25519PrivateKey,
     association_seq_num: u64,
     account: &AccountAddress,
-    account_key: &Ed25519PrivateKey,
     amount: u64,
 ) -> Transaction {
-    let account_auth_key = AuthenticationKey::ed25519(&account_key.public_key());
     get_test_signed_transaction(
         treasury_compliance_account_address(),
         /* sequence_number = */ association_seq_num,
         association_key.clone(),
         association_key.public_key(),
-        Some(encode_mint_script(
+        Some(encode_mint_script(coin1_tag(), &account, amount)),
+    )
+}
+
+fn get_account_transaction(
+    association_key: &Ed25519PrivateKey,
+    association_seq_num: u64,
+    account: &AccountAddress,
+    account_key: &Ed25519PrivateKey,
+) -> Transaction {
+    let account_auth_key = AuthenticationKey::ed25519(&account_key.public_key());
+    get_test_signed_transaction(
+        association_address(),
+        /* sequence_number = */ association_seq_num,
+        association_key.clone(),
+        association_key.public_key(),
+        Some(encode_create_testing_account_script(
             coin1_tag(),
-            &account,
+            *account,
             account_auth_key.prefix().to_vec(),
-            amount,
+            false,
         )),
     )
 }
@@ -203,7 +219,7 @@ fn get_state_backup(
 ) {
     let backup_handler = db.get_backup_handler();
     let accounts = backup_handler
-        .get_account_iter(2)
+        .get_account_iter(4)
         .unwrap()
         .collect::<Result<Vec<_>>>()
         .unwrap();
@@ -239,9 +255,11 @@ fn test_pre_genesis() {
 
     // Mint for 2 demo accounts.
     let (account1, account1_key, account2, account2_key) = get_demo_accounts();
-    let txn1 = get_mint_transaction(&genesis_key, 0, &account1, &account1_key, 2000);
-    let txn2 = get_mint_transaction(&genesis_key, 1, &account2, &account2_key, 2000);
-    execute_and_commit(vec![txn1, txn2], &db_rw, &signer);
+    let txn1 = get_account_transaction(&genesis_key, 1, &account1, &account1_key);
+    let txn2 = get_account_transaction(&genesis_key, 2, &account2, &account2_key);
+    let txn3 = get_mint_transaction(&genesis_key, 0, &account1, 2000);
+    let txn4 = get_mint_transaction(&genesis_key, 1, &account2, 2000);
+    execute_and_commit(vec![txn1, txn2, txn3, txn4], &db_rw, &signer);
     assert_eq!(get_balance(&account1, &db_rw), 2000);
     assert_eq!(get_balance(&account2, &db_rw), 2000);
 
@@ -314,9 +332,11 @@ fn test_new_genesis() {
 
     // Mint for 2 demo accounts.
     let (account1, account1_key, account2, account2_key) = get_demo_accounts();
-    let txn1 = get_mint_transaction(&genesis_key, 0, &account1, &account1_key, 2_000_000);
-    let txn2 = get_mint_transaction(&genesis_key, 1, &account2, &account2_key, 2_000_000);
-    execute_and_commit(vec![txn1, txn2], &db, &signer);
+    let txn1 = get_account_transaction(&genesis_key, 1, &account1, &account1_key);
+    let txn2 = get_account_transaction(&genesis_key, 2, &account2, &account2_key);
+    let txn3 = get_mint_transaction(&genesis_key, 0, &account1, 2_000_000);
+    let txn4 = get_mint_transaction(&genesis_key, 1, &account2, 2_000_000);
+    execute_and_commit(vec![txn1, txn2, txn3, txn4], &db, &signer);
     assert_eq!(get_balance(&account1, &db), 2_000_000);
     assert_eq!(get_balance(&account2, &db), 2_000_000);
     let (li, epoch_change_proof, _) = db.reader.get_state_proof(waypoint.version()).unwrap();
@@ -357,7 +377,7 @@ fn test_new_genesis() {
     let committer = calculate_genesis::<LibraVM>(&db, tree_state, &genesis_txn).unwrap();
     let waypoint = committer.waypoint();
     committer.commit().unwrap();
-    assert_eq!(waypoint.version(), 3);
+    assert_eq!(waypoint.version(), 5);
 
     // Client bootable from waypoint.
     let trusted_state = TrustedState::from(waypoint);
@@ -365,7 +385,7 @@ fn test_new_genesis() {
         .reader
         .get_state_proof(trusted_state.latest_version())
         .unwrap();
-    assert_eq!(li.ledger_info().version(), 3);
+    assert_eq!(li.ledger_info().version(), 5);
     assert!(accumulator_consistency_proof.subtrees().is_empty());
     trusted_state
         .verify_and_ratchet(&li, &epoch_change_proof)

@@ -21,9 +21,9 @@ const TXN_SCRIPTS_ABI_DIR: Dir = include_dir!("transaction_scripts/abi");
 /// All of the Move transaction scripts that can be executed on the Libra blockchain
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub enum StdlibScript {
-    AddValidator,
     AddCurrencyToAccount,
     AddRecoveryRotationCapability,
+    AddValidator,
     Burn,
     BurnTxnFees,
     CancelBurn,
@@ -31,6 +31,7 @@ pub enum StdlibScript {
     CreateDesignatedDealer,
     CreateParentVaspAccount,
     CreateRecoveryAddress,
+    CreateTestingAccount,
     CreateValidatorAccount,
     CreateValidatorOperatorAccount,
     EmptyScript,
@@ -52,13 +53,13 @@ pub enum StdlibScript {
     SetValidatorConfig,
     SetValidatorOperator,
     TieredMint,
-    UpdateTravelRuleLimit,
     UnfreezeAccount,
     UnmintLbr,
-    UpdateUnhostedWalletLimits,
-    UpdateLibraVersion,
     UpdateExchangeRate,
+    UpdateLibraVersion,
     UpdateMintingAbility,
+    UpdateTravelRuleLimit,
+    UpdateUnhostedWalletLimits,
     // ...add new scripts here
 }
 
@@ -78,6 +79,7 @@ impl StdlibScript {
             CreateDesignatedDealer,
             CreateParentVaspAccount,
             CreateRecoveryAddress,
+            CreateTestingAccount,
             CreateValidatorAccount,
             CreateValidatorOperatorAccount,
             EmptyScript,
@@ -204,6 +206,7 @@ impl fmt::Display for StdlibScript {
                 CreateDesignatedDealer => "create_designated_dealer",
                 CreateParentVaspAccount => "create_parent_vasp_account",
                 CreateRecoveryAddress => "create_recovery_address",
+                CreateTestingAccount => "create_testing_account",
                 CreateValidatorAccount => "create_validator_account",
                 CreateValidatorOperatorAccount => "create_validator_operator_account",
                 EmptyScript => "empty_script",

@@ -896,10 +896,6 @@ and roles.
     // Grant the TC role <b>to</b> the treasury_compliance_account
     move_to(treasury_compliance_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>() });
     move_to(treasury_compliance_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_TreasuryComplianceRole">TreasuryComplianceRole</a>&gt;{ witness: <a href="#0x1_Roles_TreasuryComplianceRole">TreasuryComplianceRole</a>{}, is_extracted: <b>false</b>});
-
-    // &gt; XXX/TODO/HACK/REMOVE (tzakian): This is a _HACK_ for right now
-    // so that we can allow minting <b>to</b> create an account. THIS NEEDS TO BE REMOVED.
-    move_to(treasury_compliance_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_LibraRootRole">LibraRootRole</a>&gt;{ witness: <a href="#0x1_Roles_LibraRootRole">LibraRootRole</a>{}, is_extracted: <b>false</b>})
 }
 </code></pre>
 
@@ -1069,15 +1065,9 @@ The
     <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
     // A role cannot have previously been assigned <b>to</b> `new_account`.
     <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
-    <b>assert</b>(
-            calling_role.role_id == <a href="#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>()
-            // XXX/HACK/REMOVE(tzakian): This is for testnet semantics
-            // only. THIS NEEDS TO BE REMOVED.
-            || calling_role.role_id == <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>(),
-            0
-        );
-        move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>() });
-        move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_ParentVASPRole">ParentVASPRole</a>&gt;{ witness: <a href="#0x1_Roles_ParentVASPRole">ParentVASPRole</a>{}, is_extracted: <b>false</b> })
+    <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>(), 0);
+    move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_PARENT_VASP_ROLE_ID">PARENT_VASP_ROLE_ID</a>() });
+    move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_ParentVASPRole">ParentVASPRole</a>&gt;{ witness: <a href="#0x1_Roles_ParentVASPRole">ParentVASPRole</a>{}, is_extracted: <b>false</b> })
 }
 </code></pre>
 

@@ -398,33 +398,6 @@ module LibraAccount {
         Option::fill(&mut account.key_rotation_capability, cap)
     }
 
-    // TODO: get rid of this and just use normal VASP creation
-    // Creates a new testnet account at `fresh_address` with a balance of
-    // zero `Token` type coins, and authentication key `auth_key_prefix` | `fresh_address`.
-    // Trying to create an account at address 0x0 will cause runtime failure as it is a
-    // reserved address for the MoveVM.
-    public fun create_testnet_account<Token>(
-        creator_account: &signer,
-        parent_vasp_creation_capability: &Capability<LibraRootRole>,
-        new_account_address: address,
-        auth_key_prefix: vector<u8>
-    ) {
-        // TODO: refactor so that every attempt to create an existing account hits this check
-        // cannot create an account at an address that already has one
-        assert(!exists_at(new_account_address), 777777);
-        create_parent_vasp_account<Token>(
-            creator_account,
-            parent_vasp_creation_capability,
-            new_account_address,
-            auth_key_prefix,
-            b"testnet",
-            b"https://libra.org",
-            // A bogus (but valid ed25519) compliance public key
-            x"b7a3c12dc0c8c748ab07525b701122b88bd78f600c76342d27f25e5f92444cde",
-            false // all_all_currencies
-        )
-    }
-
     fun add_currencies_for_account<Token>(
         new_account: &signer,
         add_all_currencies: bool,

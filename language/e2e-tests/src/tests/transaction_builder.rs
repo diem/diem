@@ -160,12 +160,7 @@ fn create_child_vasp_all_currencies() {
     let amount = 100;
     // mint to the parent VASP
     executor.execute_and_apply(blessed.signed_script_txn(
-        encode_mint_script(
-            account_config::coin1_tag(),
-            parent.address(),
-            vec![],
-            amount,
-        ),
+        encode_mint_script(account_config::coin1_tag(), parent.address(), amount),
         0,
     ));
 
@@ -231,12 +226,7 @@ fn create_child_vasp_with_balance() {
     let amount = 100;
     // mint to the parent VASP
     executor.execute_and_apply(blessed.signed_script_txn(
-        encode_mint_script(
-            account_config::coin1_tag(),
-            parent.address(),
-            vec![],
-            amount,
-        ),
+        encode_mint_script(account_config::coin1_tag(), parent.address(), amount),
         0,
     ));
 
@@ -321,7 +311,6 @@ fn dual_attestation_payment() {
         encode_mint_script(
             account_config::coin1_tag(),
             &payment_sender.address(),
-            vec![],
             mint_amount,
         ),
         0,
@@ -521,7 +510,6 @@ fn dual_attestation_payment() {
         encode_mint_script(
             account_config::coin1_tag(),
             &unhosted.address(),
-            vec![],
             mint_amount,
         ),
         1,
