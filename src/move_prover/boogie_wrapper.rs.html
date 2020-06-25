@@ -1416,6 +1416,22 @@
 <span id="1416">1416</span>
 <span id="1417">1417</span>
 <span id="1418">1418</span>
+<span id="1419">1419</span>
+<span id="1420">1420</span>
+<span id="1421">1421</span>
+<span id="1422">1422</span>
+<span id="1423">1423</span>
+<span id="1424">1424</span>
+<span id="1425">1425</span>
+<span id="1426">1426</span>
+<span id="1427">1427</span>
+<span id="1428">1428</span>
+<span id="1429">1429</span>
+<span id="1430">1430</span>
+<span id="1431">1431</span>
+<span id="1432">1432</span>
+<span id="1433">1433</span>
+<span id="1434">1434</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1496,6 +1512,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">BoogieError</span> {
     <span class="kw">pub</span> <span class="ident">kind</span>: <span class="ident">BoogieErrorKind</span>,
     <span class="kw">pub</span> <span class="ident">position</span>: <span class="ident">Location</span>,
+    <span class="kw">pub</span> <span class="ident">context_position</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Location</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">message</span>: <span class="ident">String</span>,
     <span class="kw">pub</span> <span class="ident">execution_trace</span>: <span class="ident">Vec</span><span class="op">&lt;</span>(<span class="ident">Location</span>, <span class="ident">TraceKind</span>, <span class="ident">String</span>)<span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">model</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">Model</span><span class="op">&gt;</span>,
@@ -1633,20 +1650,24 @@
         };
 
         <span class="comment">// Create the error</span>
-        <span class="kw">let</span> (<span class="ident">show_trace</span>, <span class="ident">message</span>) <span class="op">=</span> <span class="ident">loc_opt</span>
+        <span class="kw">let</span> (<span class="ident">show_trace</span>, <span class="ident">message</span>, <span class="ident">call_loc</span>) <span class="op">=</span> <span class="ident">loc_opt</span>
             .<span class="ident">as_ref</span>()
             .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">loc</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">env</span>.<span class="ident">get_condition_info</span>(<span class="ident">loc</span>))
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">info</span><span class="op">|</span> {
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">msg</span>) <span class="op">=</span> <span class="ident">info</span>.<span class="ident">message_if_requires</span>.<span class="ident">as_ref</span>() {
                     <span class="comment">// Check whether the Boogie error indicates a precondition, or if this is</span>
                     <span class="comment">// the only message we have.</span>
-                    <span class="kw">if</span> <span class="ident">error</span>.<span class="ident">message</span>.<span class="ident">contains</span>(<span class="string">&quot;Precondition&quot;</span>) <span class="op">|</span><span class="op">|</span> <span class="ident">info</span>.<span class="ident">message</span>.<span class="ident">is_empty</span>() {
-                        <span class="kw">return</span> (<span class="op">!</span><span class="ident">info</span>.<span class="ident">omit_trace</span>, <span class="ident">msg</span>.<span class="ident">clone</span>());
+                    <span class="kw">if</span> <span class="ident">error</span>.<span class="ident">message</span>.<span class="ident">contains</span>(<span class="string">&quot;precondition&quot;</span>) <span class="op">|</span><span class="op">|</span> <span class="ident">info</span>.<span class="ident">message</span>.<span class="ident">is_empty</span>() {
+                        <span class="comment">// Extract the location of the call side.</span>
+                        <span class="kw">let</span> <span class="ident">call_loc</span> <span class="op">=</span> <span class="ident">error</span>
+                            .<span class="ident">context_position</span>
+                            .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">to_proper_source_location</span>(<span class="self">self</span>.<span class="ident">get_locations</span>(<span class="ident">p</span>).<span class="number">1</span>));
+                        <span class="kw">return</span> (<span class="op">!</span><span class="ident">info</span>.<span class="ident">omit_trace</span>, <span class="ident">msg</span>.<span class="ident">clone</span>(), <span class="ident">call_loc</span>);
                     }
                 }
-                (<span class="op">!</span><span class="ident">info</span>.<span class="ident">omit_trace</span>, <span class="ident">info</span>.<span class="ident">message</span>)
+                (<span class="op">!</span><span class="ident">info</span>.<span class="ident">omit_trace</span>, <span class="ident">info</span>.<span class="ident">message</span>, <span class="prelude-val">None</span>)
             })
-            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> (<span class="bool-val">true</span>, <span class="ident">error</span>.<span class="ident">message</span>.<span class="ident">clone</span>()));
+            .<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> (<span class="bool-val">true</span>, <span class="ident">error</span>.<span class="ident">message</span>.<span class="ident">clone</span>(), <span class="prelude-val">None</span>));
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">diag</span> <span class="op">=</span> <span class="ident">Diagnostic</span>::<span class="ident">new</span>(
             <span class="kw">if</span> <span class="ident">on_source</span> {
                 <span class="ident">Severity</span>::<span class="ident">Error</span>
@@ -1657,6 +1678,10 @@
             <span class="ident">message</span>,
             <span class="ident">label</span>,
         );
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">loc</span>) <span class="op">=</span> <span class="ident">call_loc</span> {
+            <span class="kw">let</span> <span class="ident">label</span> <span class="op">=</span> <span class="ident">Label</span>::<span class="ident">new</span>(<span class="ident">loc</span>.<span class="ident">file_id</span>(), <span class="ident">loc</span>.<span class="ident">span</span>(), <span class="string">&quot;called function&quot;</span>);
+            <span class="ident">diag</span>.<span class="ident">secondary_labels</span>.<span class="ident">push</span>(<span class="ident">label</span>);
+        }
 
         <span class="comment">// Now add trace diagnostics.</span>
         <span class="kw">if</span> <span class="ident">error</span>.<span class="ident">kind</span>.<span class="ident">is_from_verification</span>()
@@ -1958,17 +1983,22 @@
                 <span class="ident">at</span> <span class="op">+</span><span class="op">=</span> <span class="ident">cap</span>.<span class="ident">get</span>(<span class="number">0</span>).<span class="ident">unwrap</span>().<span class="ident">end</span>();
                 <span class="comment">// Check whether there is a `Related` message which points to the pre/post condition.</span>
                 <span class="comment">// If so, this has the real position.</span>
-                <span class="kw">let</span> (<span class="ident">line</span>, <span class="ident">col</span>) <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">cap1</span>) <span class="op">=</span> <span class="ident">verification_diag_related</span>.<span class="ident">captures</span>(<span class="kw-2">&amp;</span><span class="ident">out</span>[<span class="ident">at</span>..])
-                {
-                    <span class="ident">at</span> <span class="op">+</span><span class="op">=</span> <span class="ident">cap1</span>.<span class="ident">get</span>(<span class="number">0</span>).<span class="ident">unwrap</span>().<span class="ident">end</span>();
-                    <span class="kw">let</span> <span class="ident">line</span> <span class="op">=</span> <span class="ident">cap1</span>.<span class="ident">name</span>(<span class="string">&quot;line&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>();
-                    <span class="kw">let</span> <span class="ident">col</span> <span class="op">=</span> <span class="ident">cap1</span>.<span class="ident">name</span>(<span class="string">&quot;col&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>();
-                    (<span class="ident">line</span>, <span class="ident">col</span>)
-                } <span class="kw">else</span> {
-                    <span class="kw">let</span> <span class="ident">line</span> <span class="op">=</span> <span class="ident">cap</span>.<span class="ident">name</span>(<span class="string">&quot;line&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>();
-                    <span class="kw">let</span> <span class="ident">col</span> <span class="op">=</span> <span class="ident">cap</span>.<span class="ident">name</span>(<span class="string">&quot;col&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>();
-                    (<span class="ident">line</span>, <span class="ident">col</span>)
-                };
+                <span class="kw">let</span> (<span class="ident">pos</span>, <span class="ident">context_pos</span>) <span class="op">=</span>
+                    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">cap1</span>) <span class="op">=</span> <span class="ident">verification_diag_related</span>.<span class="ident">captures</span>(<span class="kw-2">&amp;</span><span class="ident">out</span>[<span class="ident">at</span>..]) {
+                        <span class="kw">let</span> <span class="ident">call_line</span> <span class="op">=</span> <span class="ident">cap</span>.<span class="ident">name</span>(<span class="string">&quot;line&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>();
+                        <span class="kw">let</span> <span class="ident">call_col</span> <span class="op">=</span> <span class="ident">cap</span>.<span class="ident">name</span>(<span class="string">&quot;col&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>();
+                        <span class="ident">at</span> <span class="op">+</span><span class="op">=</span> <span class="ident">cap1</span>.<span class="ident">get</span>(<span class="number">0</span>).<span class="ident">unwrap</span>().<span class="ident">end</span>();
+                        <span class="kw">let</span> <span class="ident">line</span> <span class="op">=</span> <span class="ident">cap1</span>.<span class="ident">name</span>(<span class="string">&quot;line&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>();
+                        <span class="kw">let</span> <span class="ident">col</span> <span class="op">=</span> <span class="ident">cap1</span>.<span class="ident">name</span>(<span class="string">&quot;col&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>();
+                        (
+                            <span class="ident">make_position</span>(<span class="ident">line</span>, <span class="ident">col</span>),
+                            <span class="prelude-val">Some</span>(<span class="ident">make_position</span>(<span class="ident">call_line</span>, <span class="ident">call_col</span>)),
+                        )
+                    } <span class="kw">else</span> {
+                        <span class="kw">let</span> <span class="ident">line</span> <span class="op">=</span> <span class="ident">cap</span>.<span class="ident">name</span>(<span class="string">&quot;line&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>();
+                        <span class="kw">let</span> <span class="ident">col</span> <span class="op">=</span> <span class="ident">cap</span>.<span class="ident">name</span>(<span class="string">&quot;col&quot;</span>).<span class="ident">unwrap</span>().<span class="ident">as_str</span>();
+                        (<span class="ident">make_position</span>(<span class="ident">line</span>, <span class="ident">col</span>), <span class="prelude-val">None</span>)
+                    };
                 <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">trace</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">m</span>) <span class="op">=</span> <span class="ident">verification_diag_trace</span>.<span class="ident">find</span>(<span class="kw-2">&amp;</span><span class="ident">out</span>[<span class="ident">at</span>..]) {
                     <span class="ident">at</span> <span class="op">+</span><span class="op">=</span> <span class="ident">m</span>.<span class="ident">end</span>();
@@ -2003,7 +2033,8 @@
                     } <span class="kw">else</span> {
                         <span class="ident">BoogieErrorKind</span>::<span class="ident">Postcondition</span>
                     },
-                    <span class="ident">position</span>: <span class="ident">make_position</span>(<span class="ident">line</span>, <span class="ident">col</span>),
+                    <span class="ident">position</span>: <span class="ident">pos</span>,
+                    <span class="ident">context_position</span>: <span class="ident">context_pos</span>,
                     <span class="ident">message</span>: <span class="ident">msg</span>.<span class="ident">to_string</span>(),
                     <span class="ident">execution_trace</span>: <span class="ident">trace</span>,
                     <span class="ident">model</span>,
@@ -2029,6 +2060,7 @@
                 <span class="ident">BoogieError</span> {
                     <span class="ident">kind</span>: <span class="ident">BoogieErrorKind</span>::<span class="ident">Compilation</span>,
                     <span class="ident">position</span>: <span class="ident">make_position</span>(<span class="ident">line</span>, <span class="ident">col</span>),
+                    <span class="ident">context_position</span>: <span class="prelude-val">None</span>,
                     <span class="ident">message</span>: <span class="ident">msg</span>.<span class="ident">to_string</span>(),
                     <span class="ident">execution_trace</span>: <span class="macro">vec</span><span class="macro">!</span>[],
                     <span class="ident">model</span>: <span class="prelude-val">None</span>,
