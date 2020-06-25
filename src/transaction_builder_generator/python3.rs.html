@@ -217,6 +217,12 @@
 <span id="217">217</span>
 <span id="218">218</span>
 <span id="219">219</span>
+<span id="220">220</span>
+<span id="221">221</span>
+<span id="222">222</span>
+<span id="223">223</span>
+<span id="224">224</span>
+<span id="225">225</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -259,6 +265,13 @@
     }
 }
 
+<span class="kw">fn</span> <span class="ident">quote_from_package_and_module</span>(<span class="ident">package_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>, <span class="ident">module_name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
+    <span class="kw">match</span> <span class="ident">package_name</span> {
+        <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;from {} &quot;</span>, <span class="ident">module_name</span>),
+        <span class="prelude-val">Some</span>(<span class="ident">name</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;from {}.{} &quot;</span>, <span class="ident">name</span>, <span class="ident">module_name</span>),
+    }
+}
+
 <span class="kw">fn</span> <span class="ident">output_preamble</span>(
     <span class="ident">out</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">Write</span>,
     <span class="ident">serde_package_name</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -266,20 +279,19 @@
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="macro">writeln</span><span class="macro">!</span>(
         <span class="ident">out</span>,
-        <span class="string">r#&quot;# pyre-ignore-all-errors
-import typing
+        <span class="string">r#&quot;import typing
 {}import serde_types as st
-{}import libra_types as libra
+{}import Script, TypeTag, AccountAddress, TransactionArgument__Bool, TransactionArgument__U8, TransactionArgument__U64, TransactionArgument__U128, TransactionArgument__Address, TransactionArgument__U8Vector
 &quot;#</span>,
         <span class="ident">quote_from_package</span>(<span class="ident">serde_package_name</span>),
-        <span class="ident">quote_from_package</span>(<span class="ident">libra_package_name</span>),
+        <span class="ident">quote_from_package_and_module</span>(<span class="ident">libra_package_name</span>, <span class="string">&quot;libra_types&quot;</span>),
     )
 }
 
 <span class="kw">fn</span> <span class="ident">output_builder</span>(<span class="ident">out</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">Write</span>, <span class="ident">abi</span>: <span class="kw-2">&amp;</span><span class="ident">ScriptABI</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="macro">writeln</span><span class="macro">!</span>(
         <span class="ident">out</span>,
-        <span class="string">&quot;\ndef encode_{}_script({}) -&gt; libra.Script:&quot;</span>,
+        <span class="string">&quot;\ndef encode_{}_script({}) -&gt; Script:&quot;</span>,
         <span class="ident">abi</span>.<span class="ident">name</span>(),
         [
             <span class="ident">quote_type_parameters</span>(<span class="ident">abi</span>.<span class="ident">ty_args</span>()),
@@ -291,7 +303,7 @@ import typing
     <span class="macro">writeln</span><span class="macro">!</span>(<span class="ident">out</span>, <span class="string">&quot;{}&quot;</span>, <span class="ident">quote_doc</span>(<span class="ident">abi</span>.<span class="ident">doc</span>()))<span class="question-mark">?</span>;
     <span class="macro">writeln</span><span class="macro">!</span>(
         <span class="ident">out</span>,
-        <span class="string">r#&quot;    return libra.Script(
+        <span class="string">r#&quot;    return Script(
         # fmt: off
         code={},
         # fmt: on
@@ -324,7 +336,7 @@ import typing
 <span class="kw">fn</span> <span class="ident">quote_type_parameters</span>(<span class="ident">ty_args</span>: <span class="kw-2">&amp;</span>[<span class="ident">TypeArgumentABI</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span> {
     <span class="ident">ty_args</span>
         .<span class="ident">iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ty_arg</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}: libra.TypeTag&quot;</span>, <span class="ident">ty_arg</span>.<span class="ident">name</span>()))
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ty_arg</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}: TypeTag&quot;</span>, <span class="ident">ty_arg</span>.<span class="ident">name</span>()))
         .<span class="ident">collect</span>()
 }
 
@@ -338,7 +350,7 @@ import typing
     <span class="macro">format</span><span class="macro">!</span>(
         <span class="string">&quot;[{}]&quot;</span>,
         <span class="ident">code</span>.<span class="ident">iter</span>()
-            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">x</span>))
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;st.uint8({})&quot;</span>, <span class="ident">x</span>))
             .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
             .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>)
     )
@@ -366,7 +378,7 @@ import typing
         <span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;st.uint8&quot;</span>.<span class="ident">into</span>(),
         <span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;st.uint64&quot;</span>.<span class="ident">into</span>(),
         <span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;st.uint128&quot;</span>.<span class="ident">into</span>(),
-        <span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;libra.AccountAddress&quot;</span>.<span class="ident">into</span>(),
+        <span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;AccountAddress&quot;</span>.<span class="ident">into</span>(),
         <span class="ident">Vector</span>(<span class="ident">type_tag</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">type_tag</span>.<span class="ident">as_ref</span>() {
             <span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;typing.Sequence[st.uint8]&quot;</span>.<span class="ident">into</span>(),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">type_not_allowed</span>(<span class="ident">type_tag</span>),
@@ -379,13 +391,13 @@ import typing
 <span class="kw">fn</span> <span class="ident">make_transaction_argument</span>(<span class="ident">type_tag</span>: <span class="kw-2">&amp;</span><span class="ident">TypeTag</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">String</span> {
     <span class="kw">use</span> <span class="ident">TypeTag</span>::<span class="kw-2">*</span>;
     <span class="kw">match</span> <span class="ident">type_tag</span> {
-        <span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;libra.TransactionArgument.Bool({})&quot;</span>, <span class="ident">name</span>),
-        <span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;libra.TransactionArgument.U8({})&quot;</span>, <span class="ident">name</span>),
-        <span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;libra.TransactionArgument.U64({})&quot;</span>, <span class="ident">name</span>),
-        <span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;libra.TransactionArgument.U128({})&quot;</span>, <span class="ident">name</span>),
-        <span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;libra.TransactionArgument.Address({})&quot;</span>, <span class="ident">name</span>),
+        <span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;TransactionArgument__Bool({})&quot;</span>, <span class="ident">name</span>),
+        <span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;TransactionArgument__U8({})&quot;</span>, <span class="ident">name</span>),
+        <span class="ident">U64</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;TransactionArgument__U64({})&quot;</span>, <span class="ident">name</span>),
+        <span class="ident">U128</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;TransactionArgument__U128({})&quot;</span>, <span class="ident">name</span>),
+        <span class="ident">Address</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;TransactionArgument__Address({})&quot;</span>, <span class="ident">name</span>),
         <span class="ident">Vector</span>(<span class="ident">type_tag</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">type_tag</span>.<span class="ident">as_ref</span>() {
-            <span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;libra.TransactionArgument.U8Vector({})&quot;</span>, <span class="ident">name</span>),
+            <span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;TransactionArgument__U8Vector({})&quot;</span>, <span class="ident">name</span>),
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">type_not_allowed</span>(<span class="ident">type_tag</span>),
         },
 
