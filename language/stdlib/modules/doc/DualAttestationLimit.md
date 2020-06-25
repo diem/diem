@@ -150,7 +150,7 @@ Travel rule limit set during genesis
     <b>let</b> cap = <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>&lt;<a href="#0x1_DualAttestationLimit">DualAttestationLimit</a>&gt;(
         account,
         create_on_chain_config_capability,
-        <a href="#0x1_DualAttestationLimit">DualAttestationLimit</a> { micro_lbr_limit: 1000000 },
+        <a href="#0x1_DualAttestationLimit">DualAttestationLimit</a> { micro_lbr_limit: 1000 * <a href="Libra.md#0x1_Libra_scaling_factor">Libra::scaling_factor</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;() },
     );
     move_to(tc_account, <a href="#0x1_DualAttestationLimit_ModifyLimitCapability">ModifyLimitCapability</a> { cap })
 }

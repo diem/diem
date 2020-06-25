@@ -62,7 +62,6 @@ module AccountLimits {
         addr: address,
         _cap: &CallingCapability,
     ): bool acquires LimitsDefinition, Window {
-        assert(0x1::Testnet::is_testnet(), 10047);
         can_receive<CoinType>(
             amount,
             borrow_global_mut<Window>(addr),
@@ -78,7 +77,6 @@ module AccountLimits {
         addr: address,
         _cap: &CallingCapability,
     ): bool acquires LimitsDefinition, Window {
-        assert(0x1::Testnet::is_testnet(), 10048);
         can_withdraw<CoinType>(
             amount,
             borrow_global_mut<Window>(addr),

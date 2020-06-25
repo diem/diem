@@ -1,14 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::account_universe::{
-    create_account_strategy, default_num_accounts, default_num_transactions, log_balance_strategy,
-    run_and_assert_gas_cost_stability, run_and_assert_universe, AccountUniverseGen,
-    CreateAccountGen, CreateExistingAccountGen,
-};
-use proptest::{collection::vec, prelude::*};
-
-proptest! {
+// TODO: all of these tests rely on a symmetric account creation mechanism; that is, an account of
+// type T that can create another account of type T. This does not exist in the current system, but
+// will exist once we introduce unhosted wallets. Will bring these back once we enable unhosted
+// wallets
+/*proptest! {
     // These tests are pretty slow but quite comprehensive, so run a smaller number of them.
     #![proptest_config(ProptestConfig::with_cases(32))]
 
@@ -78,4 +75,4 @@ proptest! {
     ) {
         run_and_assert_universe(universe, transfers)?;
     }
-}
+}*/

@@ -198,7 +198,6 @@
     addr: address,
     _cap: &<a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>,
 ): bool <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="#0x1_AccountLimits_Window">Window</a> {
-    <b>assert</b>(<a href="Testnet.md#0x1_Testnet_is_testnet">0x1::Testnet::is_testnet</a>(), 10047);
     <a href="#0x1_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(
         amount,
         borrow_global_mut&lt;<a href="#0x1_AccountLimits_Window">Window</a>&gt;(addr),
@@ -230,7 +229,6 @@
     addr: address,
     _cap: &<a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>,
 ): bool <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="#0x1_AccountLimits_Window">Window</a> {
-    <b>assert</b>(<a href="Testnet.md#0x1_Testnet_is_testnet">0x1::Testnet::is_testnet</a>(), 10048);
     <a href="#0x1_AccountLimits_can_withdraw">can_withdraw</a>&lt;CoinType&gt;(
         amount,
         borrow_global_mut&lt;<a href="#0x1_AccountLimits_Window">Window</a>&gt;(addr),

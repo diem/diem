@@ -20,7 +20,6 @@ module Genesis {
     use 0x1::LibraVersion;
     use 0x1::LibraWriteSetManager;
     use 0x1::Signer;
-    use 0x1::Testnet;
     use 0x1::TransactionFee;
     use 0x1::Roles::{Self, LibraRootRole, TreasuryComplianceRole};
     use 0x1::SlidingNonce::{Self, CreateSlidingNonce};
@@ -63,9 +62,6 @@ module Genesis {
 
         // Currency setup
         Libra::initialize(association, &create_config_capability);
-
-        // Set that this is testnet
-        Testnet::initialize(association);
 
         // Currency setup
         let (coin1_mint_cap, coin1_burn_cap) = Coin1::initialize(

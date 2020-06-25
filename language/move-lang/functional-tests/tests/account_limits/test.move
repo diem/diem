@@ -4,17 +4,6 @@
 //! account: otherblessed, 0, 0, unhosted
 
 //! new-transaction
-//! sender: association
-script {
-    use 0x1::Testnet;
-    // Unset testnet
-    fun main(account: &signer) {
-        Testnet::remove_testnet(account)
-    }
-}
-// check: EXECUTED
-
-//! new-transaction
 //! sender: bob
 script {
     use 0x1::LibraAccount;
@@ -40,17 +29,6 @@ fun main(account: &signer) {
 // TODO: fix
 // chec: ABORTED
 // chec: 10047
-
-//! new-transaction
-//! sender: association
-script {
-    use 0x1::Testnet;
-    // Reset testnet
-    fun main(account: &signer) {
-        Testnet::initialize(account)
-    }
-}
-// check: EXECUTED
 
 //! new-transaction
 //! sender: bob

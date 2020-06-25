@@ -18,10 +18,16 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
     let code = "
     import 0x1.Libra;
     import 0x1.LibraAccount;
+    import 0x1.Roles;
 
     main<Token>(account: &signer, fresh_address: address, auth_key_prefix: vector<u8>, initial_amount: u64) {
+      let role_cap: Roles.Capability<Roles.LibraRootRole>;
       let with_cap: LibraAccount.WithdrawCapability;
-      LibraAccount.create_unhosted_account<Token>(copy(account), copy(fresh_address), move(auth_key_prefix), false);
+
+      role_cap = Roles.extract_privilege_to_capability<Roles.LibraRootRole>(copy(account));
+      LibraAccount.create_unhosted_account<Token>(
+        copy(account), &role_cap, copy(fresh_address), move(auth_key_prefix), false
+      );
       if (copy(initial_amount) > 0) {
          with_cap = LibraAccount.extract_withdraw_capability(copy(account));
          LibraAccount.deposit<Token>(
@@ -31,6 +37,7 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
          );
          LibraAccount.restore_withdraw_capability(move(with_cap));
       }
+      Roles.restore_capability_to_privilege<Roles.LibraRootRole>(copy(account), move(role_cap));
       return;
     }
 ";

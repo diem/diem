@@ -1,6 +1,8 @@
 address 0x1 {
 
 module DualAttestationLimit {
+    use 0x1::LBR::LBR;
+    use 0x1::Libra;
     use 0x1::LibraConfig::{Self, CreateOnChainConfig};
     use 0x1::Signer;
     use 0x1::CoreAddresses;
@@ -32,7 +34,7 @@ module DualAttestationLimit {
         let cap = LibraConfig::publish_new_config_with_capability<DualAttestationLimit>(
             account,
             create_on_chain_config_capability,
-            DualAttestationLimit { micro_lbr_limit: 1000000 },
+            DualAttestationLimit { micro_lbr_limit: 1000 * Libra::scaling_factor<LBR>() },
         );
         move_to(tc_account, ModifyLimitCapability { cap })
     }

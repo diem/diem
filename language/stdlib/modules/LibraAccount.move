@@ -15,7 +15,6 @@ module LibraAccount {
     use 0x1::Signature;
     use 0x1::Signer;
     use 0x1::SlidingNonce;
-    use 0x1::Testnet;
     use 0x1::TransactionFee;
     use 0x1::ValidatorConfig;
     use 0x1::VASP;
@@ -209,11 +208,7 @@ module LibraAccount {
         let above_threshold = approx_lbr_microlibra_value >= travel_rule_limit_microlibra;
         // travel rule only applies if the sender and recipient are both VASPs
         let both_vasps = VASP::is_vasp(sender) && VASP::is_vasp(payee);
-        // Don't check the travel rule if we're on testnet and sender
-        // doesn't specify a metadata signature
-        let is_testnet_transfer = Testnet::is_testnet() && Vector::is_empty(&metadata_signature);
-        if (!is_testnet_transfer &&
-            above_threshold &&
+        if (above_threshold &&
             both_vasps &&
             // travel rule does not apply for intra-VASP transactions
             VASP::parent_address(sender) != VASP::parent_address(payee)
@@ -426,7 +421,6 @@ module LibraAccount {
         new_account_address: address,
         auth_key_prefix: vector<u8>
     ) {
-        assert(Testnet::is_testnet(), 10042);
         // TODO: refactor so that every attempt to create an existing account hits this check
         // cannot create an account at an address that already has one
         assert(!exists_at(new_account_address), 777777);
@@ -618,21 +612,20 @@ module LibraAccount {
         make_account(new_account, auth_key_prefix)
     }
 
-    // TODO: who can create an unhosted account?
     ///////////////////////////////////////////////////////////////////////////
     // Unhosted methods
     ///////////////////////////////////////////////////////////////////////////
 
-    // For now, only the association root can
-    // > TODO(tzakian): For now we make it so that anyone can create an unhosted
-    // account. This needs to be updated
+    // For now, only the association root can create an unhosted account, and it will choose not to
+    // on mainnet
+    // > TODO(tzakian): eventually, anyone will be able to create an unhosted wallet accunt
     public fun create_unhosted_account<Token>(
         creator_account: &signer,
+        _: &Capability<LibraRootRole>,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         add_all_currencies: bool
     ) {
-        assert(Testnet::is_testnet(), 10042);
         assert(!exists_at(new_account_address), 777777);
         let new_account = create_signer(new_account_address);
         Roles::new_unhosted_role(creator_account, &new_account);
@@ -640,7 +633,6 @@ module LibraAccount {
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
     }
-
 
     ///////////////////////////////////////////////////////////////////////////
     // General purpose methods

@@ -328,7 +328,8 @@ pub fn all_transactions_strategy(
     prop_oneof![
         // Most transactions should be p2p payments.
         8 => p2p_strategy(min, max),
-        1 => create_account_strategy(min, max),
+        // TODO: resurrecte once we have unhosted wallets
+        //1 => create_account_strategy(min, max),
         1 => any::<RotateKeyGen>().prop_map(RotateKeyGen::arced),
         1 => bad_txn_strategy(),
     ]
