@@ -19,7 +19,6 @@ pub struct StorageHelper {
     temppath: libra_temppath::TempPath,
 }
 
-#[allow(dead_code)]
 impl StorageHelper {
     pub fn new() -> Self {
         let temppath = libra_temppath::TempPath::new();
@@ -166,6 +165,7 @@ impl StorageHelper {
         command.operator_key()
     }
 
+    #[cfg(test)]
     pub fn owner_key(&self, local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
@@ -188,6 +188,7 @@ impl StorageHelper {
         command.owner_key()
     }
 
+    #[cfg(test)]
     pub fn set_layout(&self, path: &str, namespace: &str) -> Result<crate::layout::Layout, Error> {
         let args = format!(
             "
@@ -243,6 +244,7 @@ impl StorageHelper {
         command.validator_config()
     }
 
+    #[cfg(test)]
     pub fn verify(&self, namespace: &str) -> Result<String, Error> {
         let args = format!(
             "
