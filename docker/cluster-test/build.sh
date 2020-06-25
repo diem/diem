@@ -5,4 +5,4 @@ set -e
 
 DIR="$( cd "$( dirname "$0" )" && pwd )"
 
-$DIR/../libra-build.sh $DIR/Dockerfile cluster-test:latest
+$DIR/../libra-build.sh $DIR/Dockerfile cluster-test:latest "$@"
