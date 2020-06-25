@@ -10,7 +10,6 @@
 //! connect to or accept connections from an end-point running in authenticated mode as
 //! long as the latter is in its trusted peers set.
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use futures::stream::StreamExt;
 use libra_config::{
     chain_id::ChainId,
     config::{DiscoveryMethod, NetworkConfig, RoleType, HANDSHAKE_VERSION},
@@ -23,7 +22,7 @@ use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use netcore::transport::{memory, Transport};
 use network::{
-    connectivity_manager::{ConnectivityManager, ConnectivityRequest},
+    connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
     constants, counters,
     peer_manager::{
         conn_notifs_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
@@ -46,14 +45,9 @@ use std::{
     collections::HashMap,
     num::NonZeroUsize,
     sync::{Arc, RwLock},
-    time::Duration,
 };
 use subscription_service::ReconfigSubscription;
-use tokio::{
-    runtime::{Builder, Handle, Runtime},
-    time::interval,
-};
-use tokio_retry::strategy::ExponentialBackoff;
+use tokio::runtime::{Builder, Handle, Runtime};
 
 #[derive(Debug)]
 pub enum AuthenticationMode {
@@ -110,7 +104,6 @@ pub struct NetworkBuilder {
     pm_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
     connection_reqs_tx: libra_channel::Sender<PeerId, ConnectionRequest>,
     connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
-    conn_mgr_reqs_tx: Option<channel::Sender<ConnectivityRequest>>,
     connectivity_check_interval_ms: u64,
     max_concurrent_network_reqs: usize,
     max_concurrent_network_notifs: usize,
@@ -118,6 +111,7 @@ pub struct NetworkBuilder {
     /// For now full node connections are limited by
     max_fullnode_connections: usize,
 
+    connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
     discovery_builder: Option<DiscoveryBuilder>,
     health_checker_builder: Option<HealthCheckerBuilder>,
 }
@@ -162,13 +156,13 @@ impl NetworkBuilder {
             pm_reqs_rx,
             connection_reqs_tx,
             connection_reqs_rx,
-            conn_mgr_reqs_tx: None,
             discovery_interval_ms: constants::DISCOVERY_INTERVAL_MS,
             connectivity_check_interval_ms: constants::CONNECTIVITY_CHECK_INTERNAL_MS,
             max_concurrent_network_reqs: constants::MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
             max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
+            connectivity_manager_builder: None,
             discovery_builder: None,
             health_checker_builder: None,
         }
@@ -318,7 +312,10 @@ impl NetworkBuilder {
     }
 
     pub fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
-        self.conn_mgr_reqs_tx.clone()
+        match self.connectivity_manager_builder.as_ref() {
+            Some(conn_mgr_builder) => Some(conn_mgr_builder.conn_mgr_reqs_tx()),
+            None => None,
+        }
     }
 
     fn supported_protocols(&self) -> SupportedProtocols {
@@ -385,36 +382,45 @@ impl NetworkBuilder {
     /// Note: a connectivity manager should only be added if the network is
     /// permissioned.
     pub fn add_connectivity_manager(&mut self) -> &mut Self {
-        let (conn_mgr_reqs_tx, conn_mgr_reqs_rx) = channel::new(
-            self.channel_size,
-            &counters::PENDING_CONNECTIVITY_MANAGER_REQUESTS,
-        );
-        self.conn_mgr_reqs_tx = Some(conn_mgr_reqs_tx);
         let trusted_peers = self.trusted_peers.clone();
         let seed_peers = self.seed_peers.clone();
         let max_connection_delay_ms = self.max_connection_delay_ms;
         let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
-        let conn_mgr = self.executor.enter(|| {
-            let connection_limit = if let RoleType::FullNode = self.network_context.role() {
-                Some(self.max_fullnode_connections)
-            } else {
-                None
-            };
-            ConnectivityManager::new(
-                self.network_context.clone(),
-                trusted_peers,
-                seed_peers,
-                interval(Duration::from_millis(connectivity_check_interval_ms)).fuse(),
-                ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
-                pm_conn_mgr_notifs_rx,
-                conn_mgr_reqs_rx,
-                ExponentialBackoff::from_millis(2).factor(1000),
-                max_connection_delay_ms,
-                connection_limit,
-            )
-        });
-        self.executor.spawn(conn_mgr.start());
+        let connection_limit = if let RoleType::FullNode = self.network_context.role() {
+            Some(self.max_fullnode_connections)
+        } else {
+            None
+        };
+
+        self.connectivity_manager_builder = Some(ConnectivityManagerBuilder::create(
+            self.network_context(),
+            trusted_peers,
+            seed_peers,
+            connectivity_check_interval_ms,
+            // TODO:  move this into a config
+            2, // Legacy hardcoded value,
+            max_connection_delay_ms,
+            self.channel_size,
+            ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
+            pm_conn_mgr_notifs_rx,
+            connection_limit,
+        ));
+        self.build_connectivity_manager()
+            .start_connectivity_manager()
+    }
+
+    fn build_connectivity_manager(&mut self) -> &mut Self {
+        if let Some(builder) = self.connectivity_manager_builder.as_mut() {
+            builder.build(&self.executor);
+        }
+        self
+    }
+
+    fn start_connectivity_manager(&mut self) -> &mut Self {
+        if let Some(builder) = self.connectivity_manager_builder.as_mut() {
+            builder.start(&self.executor);
+        }
         self
     }
 
