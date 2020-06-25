@@ -356,16 +356,6 @@ jobs:
           command: |
             RUST_BACKTRACE=1 $CI_TIMEOUT \
             ./scripts/run_quarantined.sh -c <your package here> -r 3 -f
-  validate-cluster-test-dockerfile:
-    description: Validate that committed docker files for cluster test are up to date
-    executor: audit-executor
-    steps:
-      - build_setup
-      - run:
-          # generate dockerfile; diff config to existing one
-          name: Validate cluster-test dockerfiles
-          command: ./docker/cluster-test/generate.sh
-      - build_teardown
   audit:
     executor: audit-executor
     steps:
@@ -543,7 +533,6 @@ workflows:
   commit-workflow:
     jobs:
       - lint-docker
-      - validate-cluster-test-dockerfile
       - terraform
       - prefetch-crates
       - lint:
