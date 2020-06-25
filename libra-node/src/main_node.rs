@@ -17,6 +17,7 @@ use libra_mempool::gen_mempool_reconfig_subscription;
 use libra_metrics::metric_server;
 use libra_vm::LibraVM;
 use libradb::LibraDB;
+use network_builder::builder::NetworkBuilder;
 use network_simple_onchain_discovery::{
     gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
 };
@@ -129,7 +130,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (role, network_config) in network_configs {
         // Perform common instantiation steps
-        let (runtime, mut network_builder) = network_builder::builder::setup_network(
+        let (runtime, mut network_builder) = NetworkBuilder::create(
             &node_config.base.chain_id,
             role,
             network_config,
