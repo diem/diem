@@ -8,7 +8,7 @@ module LibraAccount {
     use 0x1::Coin2::Coin2;
     use 0x1::Event::{Self, EventHandle};
     use 0x1::Hash;
-    use 0x1::LBR::{Self, LBR};
+    use 0x1::LBR::LBR;
     use 0x1::LCS;
     use 0x1::LibraTimestamp;
     use 0x1::LibraTransactionTimeout;
@@ -279,7 +279,7 @@ module LibraAccount {
 
     // Create `amount` coins of type `Token` and send them to `payee`.
     // `mint_to_address` can only be called by accounts with Libra::MintCapability<Token> and with
-    // Token=Coin1 or Token=Coin2. `mint_lbr_to_address` should be used for minting LBR
+    // Token=Coin1 or Token=Coin2
     public fun mint_to_address<Token>(
         account: &signer,
         payee: address,
@@ -287,18 +287,6 @@ module LibraAccount {
     ) acquires LibraAccount, Balance, AccountOperationsCapability {
         // Mint and deposit the coin
         deposit(account, payee, Libra::mint<Token>(account, amount));
-    }
-
-    // Create `amount` LBR and send them to `payee`.
-    // `mint_lbr_to_address` can only be called by accounts with Libra::MintCapability<Coin1> and
-    // Libra::MintCapability<Coin2>
-    public fun mint_lbr_to_address(
-        account: &signer,
-        payee: address,
-        amount: u64
-    ) acquires LibraAccount, Balance, AccountOperationsCapability {
-        // Mint and deposit the coin
-        deposit(account, payee, LBR::mint(account, amount));
     }
 
     // Cancel the oldest burn request from `preburn_address` and return the funds.

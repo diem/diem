@@ -11,6 +11,7 @@ use crate::{
 };
 use libra_proptest_helpers::Index;
 use libra_types::{
+    account_config,
     transaction::{SignedTransaction, TransactionStatus},
     vm_status::{StatusCode, VMStatus},
 };
@@ -42,6 +43,7 @@ impl AUTransactionGen for CreateAccountGen {
             &self.new_account,
             sender.sequence_number,
             self.amount,
+            account_config::lbr_type_tag(),
         );
 
         let mut gas_used = sender.create_account_gas_cost();
@@ -100,6 +102,7 @@ impl AUTransactionGen for CreateExistingAccountGen {
             receiver.account(),
             sender.sequence_number,
             self.amount,
+            account_config::lbr_type_tag(),
         );
 
         // This transaction should never work, but it will fail differently if there's not enough

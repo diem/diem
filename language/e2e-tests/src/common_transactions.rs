@@ -12,6 +12,7 @@ use libra_types::{
     account_config::{lbr_type_tag, LBR_NAME},
     transaction::{RawTransaction, SignedTransaction, TransactionArgument},
 };
+use move_core_types::language_storage::TypeTag;
 use once_cell::sync::Lazy;
 
 pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
@@ -127,6 +128,7 @@ pub fn create_account_txn(
     new_account: &Account,
     seq_num: u64,
     initial_amount: u64,
+    type_tag: TypeTag,
 ) -> SignedTransaction {
     let mut args: Vec<TransactionArgument> = Vec::new();
     args.push(TransactionArgument::Address(*new_account.address()));
@@ -135,7 +137,7 @@ pub fn create_account_txn(
 
     sender.create_signed_txn_with_args(
         CREATE_ACCOUNT_SCRIPT.to_vec(),
-        vec![lbr_type_tag()],
+        vec![type_tag],
         args,
         seq_num,
         gas_costs::TXN_RESERVED,

@@ -8,13 +8,13 @@
 
 script {
 use 0x1::LibraAccount;
-use 0x1::LBR::LBR;
+use 0x1::Coin1::Coin1;
 use {{sender}}::MyModule;
 
 fun main(account: &signer, recipient: address, amount: u64) {
     let with_cap = LibraAccount::extract_withdraw_capability(account);
-    let coin = LibraAccount::withdraw_from<LBR>(&with_cap, amount);
+    let coin = LibraAccount::withdraw_from<Coin1>(&with_cap, amount);
     LibraAccount::restore_withdraw_capability(with_cap);
-    LibraAccount::deposit<LBR>(account, recipient, MyModule::id(coin));
+    LibraAccount::deposit<Coin1>(account, recipient, MyModule::id(coin));
 }
 }

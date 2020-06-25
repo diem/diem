@@ -13,7 +13,6 @@
 -  [Function `swap_into`](#0x1_LBR_swap_into)
 -  [Function `create`](#0x1_LBR_create)
 -  [Function `unpack`](#0x1_LBR_unpack)
--  [Function `mint`](#0x1_LBR_mint)
 
 This module defines the
 <code><a href="#0x1_LBR">LBR</a></code> currency as an on-chain reserve. The
@@ -458,44 +457,6 @@ would be
     <b>let</b> coin1 = <a href="Libra.md#0x1_Libra_withdraw">Libra::withdraw</a>(&<b>mut</b> reserve.coin1.backing, coin1_amount);
     <b>let</b> coin2 = <a href="Libra.md#0x1_Libra_withdraw">Libra::withdraw</a>(&<b>mut</b> reserve.coin2.backing, coin2_amount);
     (coin1, coin2)
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LBR_mint"></a>
-
-## Function `mint`
-
-Creates
-<code>amount_lbr</code>
-<code><a href="#0x1_LBR">LBR</a></code> using the
-<code>MintCapability</code> for the backing currencies in the reserve.
-Calls to this will abort if the caller does not have the appropriate
-<code>MintCapability</code> for each of the backing currencies.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_mint">mint</a>(account: &signer, amount_lbr: u64): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;<a href="#0x1_LBR_LBR">LBR::LBR</a>&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_mint">mint</a>(account: &signer, amount_lbr: u64): <a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="#0x1_LBR">LBR</a>&gt; <b>acquires</b> <a href="#0x1_LBR_Reserve">Reserve</a> {
-    <b>let</b> reserve = borrow_global&lt;<a href="#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
-    <b>let</b> num_coin1 = 1 + <a href="FixedPoint32.md#0x1_FixedPoint32_multiply_u64">FixedPoint32::multiply_u64</a>(amount_lbr, *&reserve.coin1.ratio);
-    <b>let</b> num_coin2 = 1 + <a href="FixedPoint32.md#0x1_FixedPoint32_multiply_u64">FixedPoint32::multiply_u64</a>(amount_lbr, *&reserve.coin2.ratio);
-    <b>let</b> coin1 = <a href="Libra.md#0x1_Libra_mint">Libra::mint</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(account, num_coin1);
-    <b>let</b> coin2 = <a href="Libra.md#0x1_Libra_mint">Libra::mint</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(account, num_coin2);
-    <b>let</b> (lbr, leftover1, leftover2) = <a href="#0x1_LBR_create">create</a>(amount_lbr, coin1, coin2);
-    <a href="Libra.md#0x1_Libra_destroy_zero">Libra::destroy_zero</a>(leftover1);
-    <a href="Libra.md#0x1_Libra_destroy_zero">Libra::destroy_zero</a>(leftover2);
-    lbr
 }
 </code></pre>
 

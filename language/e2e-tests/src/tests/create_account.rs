@@ -7,6 +7,7 @@ use crate::{
     executor::FakeExecutor,
 };
 use libra_types::{
+    account_config,
     transaction::TransactionStatus,
     vm_status::{StatusCode, VMStatus},
 };
@@ -20,7 +21,13 @@ fn create_account() {
 
     // define the arguments to the create account transaction
     let initial_amount = 0;
-    let txn = create_account_txn(&sender, &new_account, 1, initial_amount);
+    let txn = create_account_txn(
+        &sender,
+        &new_account,
+        1,
+        initial_amount,
+        account_config::lbr_type_tag(),
+    );
 
     // execute transaction
     let output = executor.execute_transaction(txn);

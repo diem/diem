@@ -22,8 +22,8 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
-        from_currency_code_string, lbr_type_tag, treasury_compliance_account_address,
-        BalanceResource, LBR_NAME,
+        coin1_tag, from_currency_code_string, treasury_compliance_account_address, BalanceResource,
+        COIN1_NAME,
     },
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
@@ -139,7 +139,7 @@ fn get_mint_transaction(
         association_key.clone(),
         association_key.public_key(),
         Some(encode_mint_script(
-            lbr_type_tag(),
+            coin1_tag(),
             &account,
             account_auth_key.prefix().to_vec(),
             amount,
@@ -160,7 +160,7 @@ fn get_transfer_transaction(
         sender_key.clone(),
         sender_key.public_key(),
         Some(encode_transfer_with_metadata_script(
-            lbr_type_tag(),
+            coin1_tag(),
             recipient,
             amount,
             vec![],
@@ -177,9 +177,9 @@ fn get_balance(account: &AccountAddress, db: &DbReaderWriter) -> u64 {
         .unwrap();
     let account_state = AccountState::try_from(&account_state_blob).unwrap();
     account_state
-        .get_balance_resources(&[from_currency_code_string(LBR_NAME).unwrap()])
+        .get_balance_resources(&[from_currency_code_string(COIN1_NAME).unwrap()])
         .unwrap()
-        .get(&from_currency_code_string(LBR_NAME).unwrap())
+        .get(&from_currency_code_string(COIN1_NAME).unwrap())
         .unwrap()
         .coin()
 }
@@ -267,7 +267,7 @@ fn test_pre_genesis() {
                 WriteOp::Value(lcs::to_bytes(&ValidatorSet::new(vec![])).unwrap()),
             ),
             (
-                AccessPath::new(account1, BalanceResource::resource_path()),
+                AccessPath::new(account1, BalanceResource::access_path_for(coin1_tag())),
                 WriteOp::Value(lcs::to_bytes(&BalanceResource::new(1000)).unwrap()),
             ),
         ])
@@ -276,7 +276,7 @@ fn test_pre_genesis() {
         vec![ContractEvent::new(
             on_chain_config::new_epoch_event_key(),
             0,
-            lbr_type_tag(),
+            coin1_tag(),
             vec![],
         )],
     ));
@@ -338,7 +338,7 @@ fn test_new_genesis() {
                 WriteOp::Value(lcs::to_bytes(&configuration.bump_epoch_for_test()).unwrap()),
             ),
             (
-                AccessPath::new(account1, BalanceResource::resource_path()),
+                AccessPath::new(account1, BalanceResource::access_path_for(coin1_tag())),
                 WriteOp::Value(lcs::to_bytes(&BalanceResource::new(1_000_000)).unwrap()),
             ),
         ])
@@ -347,7 +347,7 @@ fn test_new_genesis() {
         vec![ContractEvent::new(
             *configuration.events().key(),
             0,
-            lbr_type_tag(),
+            coin1_tag(),
             vec![],
         )],
     ));

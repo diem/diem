@@ -1,4 +1,4 @@
-//! account: default, 0LBR
+//! account: default, 0Coin1
 
 module M {
     public rec(x: u64) {
@@ -11,11 +11,11 @@ module M {
 
 //! new-transaction
 //! sender: association
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.LibraAccount;
 import 0x1.Libra;
 main(blessed: &signer) {
-    LibraAccount.deposit_to<LBR.LBR>(copy(blessed), LBR.mint(copy(blessed), 50000));
+    LibraAccount.deposit_to<Coin1.Coin1>(copy(blessed), Libra.mint<Coin1.Coin1>(copy(blessed), 50000));
     return;
 }
 

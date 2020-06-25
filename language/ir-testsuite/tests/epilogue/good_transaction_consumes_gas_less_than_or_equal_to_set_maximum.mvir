@@ -1,33 +1,37 @@
-//! account: default, 0, 0
+//! account: default, 0Coin1
 
 //! new-transaction
 //! sender: blessed
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.LibraAccount;
 import 0x1.Libra;
 main(blessed: &signer) {
-    LibraAccount.deposit<LBR.LBR>(copy(blessed), {{default}}, LBR.mint(move(blessed), 10000));
+    LibraAccount.deposit<Coin1.Coin1>(copy(blessed), {{default}}, Libra.mint<Coin1.Coin1>(move(blessed), 10000));
     return;
 }
+// check: EXECUTED
 
 //! new-transaction
 //! gas-price: 1
 //! max-gas: 5000
+//! gas-currency: Coin1
 main() {
     return;
 }
+// check: EXECUTED
 
 //! new-transaction
 import 0x1.LibraAccount;
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Signer;
 
 main(account: &signer) {
     let sender: address;
     sender = Signer.address_of(move(account));
     // Ensures that the account was deducted for the gas fee.
-    assert(LibraAccount.balance<LBR.LBR>(copy(sender)) < 10000, 42);
+    assert(LibraAccount.balance<Coin1.Coin1>(copy(sender)) < 10000, 42);
     // Ensures that we are not just charging max_gas for the transaction.
-    assert(LibraAccount.balance<LBR.LBR>(move(sender)) >= 5000, 42);
+    assert(LibraAccount.balance<Coin1.Coin1>(move(sender)) >= 5000, 42);
     return;
 }
+// check: EXECUTED

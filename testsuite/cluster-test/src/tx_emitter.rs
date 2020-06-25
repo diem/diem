@@ -20,7 +20,7 @@ use libra_crypto::{
 use libra_logger::*;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{lbr_type_tag, treasury_compliance_account_address, LBR_NAME},
+    account_config::{self, treasury_compliance_account_address, COIN1_NAME},
     transaction::{
         authenticator::AuthenticationKey, helpers::create_user_txn, Script, TransactionPayload,
     },
@@ -551,7 +551,7 @@ async fn query_sequence_numbers(
 
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
 const GAS_UNIT_PRICE: u64 = 0;
-const GAS_CURRENCY_CODE: &str = LBR_NAME;
+const GAS_CURRENCY_CODE: &str = COIN1_NAME;
 const TXN_EXPIRATION_SECONDS: i64 = 50;
 const TXN_MAX_WAIT: Duration = Duration::from_secs(TXN_EXPIRATION_SECONDS as u64 + 30);
 const LIBRA_PER_NEW_ACCOUNT: u64 = 1_000_000;
@@ -580,7 +580,7 @@ fn gen_mint_request(faucet_account: &mut AccountData, num_coins: u64) -> SignedT
     let auth_key_prefix = faucet_account.auth_key_prefix();
     gen_submit_transaction_request(
         transaction_builder::encode_mint_script(
-            lbr_type_tag(),
+            account_config::coin1_tag(),
             &receiver,
             auth_key_prefix,
             num_coins,
@@ -596,7 +596,7 @@ fn gen_transfer_txn_request(
 ) -> SignedTransaction {
     gen_submit_transaction_request(
         transaction_builder::encode_transfer_with_metadata_script(
-            lbr_type_tag(),
+            account_config::coin1_tag(),
             *receiver,
             num_coins,
             vec![],
@@ -615,7 +615,7 @@ fn gen_create_child_txn_request(
     let add_all_currencies = false;
     gen_submit_transaction_request(
         transaction_builder::encode_create_child_vasp_account(
-            lbr_type_tag(),
+            account_config::coin1_tag(),
             *receiver,
             receiver_auth_key_prefix,
             add_all_currencies,
@@ -633,7 +633,7 @@ fn gen_mint_txn_request(
 ) -> SignedTransaction {
     gen_submit_transaction_request(
         transaction_builder::encode_mint_script(
-            lbr_type_tag(),
+            account_config::coin1_tag(),
             receiver,
             receiver_auth_key_prefix,
             num_coins,
