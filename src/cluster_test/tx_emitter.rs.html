@@ -831,6 +831,46 @@
 <span id="831">831</span>
 <span id="832">832</span>
 <span id="833">833</span>
+<span id="834">834</span>
+<span id="835">835</span>
+<span id="836">836</span>
+<span id="837">837</span>
+<span id="838">838</span>
+<span id="839">839</span>
+<span id="840">840</span>
+<span id="841">841</span>
+<span id="842">842</span>
+<span id="843">843</span>
+<span id="844">844</span>
+<span id="845">845</span>
+<span id="846">846</span>
+<span id="847">847</span>
+<span id="848">848</span>
+<span id="849">849</span>
+<span id="850">850</span>
+<span id="851">851</span>
+<span id="852">852</span>
+<span id="853">853</span>
+<span id="854">854</span>
+<span id="855">855</span>
+<span id="856">856</span>
+<span id="857">857</span>
+<span id="858">858</span>
+<span id="859">859</span>
+<span id="860">860</span>
+<span id="861">861</span>
+<span id="862">862</span>
+<span id="863">863</span>
+<span id="864">864</span>
+<span id="865">865</span>
+<span id="866">866</span>
+<span id="867">867</span>
+<span id="868">868</span>
+<span id="869">869</span>
+<span id="870">870</span>
+<span id="871">871</span>
+<span id="872">872</span>
+<span id="873">873</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -955,6 +995,28 @@
                 <span class="ident">accounts_per_client</span>: <span class="number">15</span>,
                 <span class="ident">workers_per_ac</span>: <span class="prelude-val">None</span>,
                 <span class="ident">thread_params</span>: <span class="ident">EmitThreadParams</span>::<span class="ident">default</span>(),
+            },
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fixed_tps_params</span>(<span class="ident">instance_count</span>: <span class="ident">usize</span>, <span class="ident">tps</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">usize</span>, <span class="ident">u64</span>) {
+        <span class="kw">if</span> <span class="ident">tps</span> <span class="op">&lt;</span> <span class="number">1</span> {
+            <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Target tps {} can not less than 1&quot;</span>, <span class="ident">tps</span>)
+        }
+        <span class="kw">let</span> <span class="ident">num_workers</span> <span class="op">=</span> <span class="ident">tps</span> <span class="kw">as</span> <span class="ident">usize</span> <span class="op">/</span> <span class="ident">instance_count</span> <span class="op">+</span> <span class="number">1</span>;
+        <span class="kw">let</span> <span class="ident">wait_time</span> <span class="op">=</span> (<span class="ident">instance_count</span> <span class="op">*</span> <span class="ident">num_workers</span> <span class="op">*</span> <span class="number">1000_usize</span> <span class="op">/</span> <span class="ident">tps</span> <span class="kw">as</span> <span class="ident">usize</span>) <span class="kw">as</span> <span class="ident">u64</span>;
+        (<span class="ident">num_workers</span>, <span class="ident">wait_time</span>)
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">fixed_tps</span>(<span class="ident">instances</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Instance</span><span class="op">&gt;</span>, <span class="ident">tps</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+        <span class="kw">let</span> (<span class="ident">num_workers</span>, <span class="ident">wait_time</span>) <span class="op">=</span> <span class="ident">EmitJobRequest</span>::<span class="ident">fixed_tps_params</span>(<span class="ident">instances</span>.<span class="ident">len</span>(), <span class="ident">tps</span>);
+        <span class="self">Self</span> {
+            <span class="ident">instances</span>,
+            <span class="ident">accounts_per_client</span>: <span class="number">1</span>,
+            <span class="ident">workers_per_ac</span>: <span class="prelude-val">Some</span>(<span class="ident">num_workers</span>),
+            <span class="ident">thread_params</span>: <span class="ident">EmitThreadParams</span> {
+                <span class="ident">wait_millis</span>: <span class="ident">wait_time</span>,
+                <span class="ident">wait_committed</span>: <span class="bool-val">true</span>,
             },
         }
     }
@@ -1663,6 +1725,24 @@
             <span class="string">&quot;submitted: {} txn/s, committed: {} txn/s, expired: {} txn/s, latency: {} ms, p99 latency: {} ms&quot;</span>,
             <span class="self">self</span>.<span class="ident">submitted</span>, <span class="self">self</span>.<span class="ident">committed</span>, <span class="self">self</span>.<span class="ident">expired</span>, <span class="self">self</span>.<span class="ident">latency</span>, <span class="self">self</span>.<span class="ident">p99_latency</span>,
         )
+    }
+}
+
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
+<span class="kw">mod</span> <span class="ident">test</span> {
+    <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">tx_emitter</span>::<span class="ident">EmitJobRequest</span>;
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">test_fixed_tps_params</span>() {
+        <span class="kw">let</span> <span class="ident">inst_num</span> <span class="op">=</span> <span class="number">30</span>;
+        <span class="kw">let</span> <span class="ident">target_tps</span> <span class="op">=</span> <span class="number">10</span>;
+        <span class="kw">let</span> (<span class="ident">num_workers</span>, <span class="ident">wait_time</span>) <span class="op">=</span> <span class="ident">EmitJobRequest</span>::<span class="ident">fixed_tps_params</span>(<span class="ident">inst_num</span>, <span class="ident">target_tps</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">num_workers</span>, <span class="number">1usize</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">wait_time</span>, <span class="number">3000u64</span>);
+        <span class="kw">let</span> <span class="ident">target_tps</span> <span class="op">=</span> <span class="number">30</span>;
+        <span class="kw">let</span> (<span class="ident">num_workers</span>, <span class="ident">wait_time</span>) <span class="op">=</span> <span class="ident">EmitJobRequest</span>::<span class="ident">fixed_tps_params</span>(<span class="ident">inst_num</span>, <span class="ident">target_tps</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">num_workers</span>, <span class="number">2usize</span>);
+        <span class="macro">assert_eq</span><span class="macro">!</span>(<span class="ident">wait_time</span>, <span class="number">2000u64</span>);
     }
 }
 </pre></div>
