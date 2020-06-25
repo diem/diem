@@ -63,13 +63,15 @@ pub struct BoogieOutput {
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum BoogieErrorKind {
     Compilation,
+    Precondition,
     Postcondition,
     Assertion,
 }
 
 impl BoogieErrorKind {
     fn is_from_verification(self) -> bool {
-        self == BoogieErrorKind::Assertion || self == BoogieErrorKind::Postcondition
+        use BoogieErrorKind::*;
+        matches!(self, Assertion | Precondition | Postcondition)
     }
 }
 
@@ -222,8 +224,8 @@ impl<'env> BoogieWrapper<'env> {
                 if let Some(msg) = info.message_if_requires.as_ref() {
                     // Check whether the Boogie error indicates a precondition, or if this is
                     // the only message we have.
-                    if error.message.contains("precondition") || info.message.is_empty() {
-                        // Extract the location of the call side.
+                    if error.kind == BoogieErrorKind::Precondition || info.message.is_empty() {
+                        // Extract the location of the call site.
                         let call_loc = error
                             .context_position
                             .and_then(|p| self.to_proper_source_location(self.get_locations(p).1));
@@ -595,6 +597,8 @@ impl<'env> BoogieWrapper<'env> {
                 errors.push(BoogieError {
                     kind: if msg.contains("assertion might not hold") {
                         BoogieErrorKind::Assertion
+                    } else if msg.contains("precondition") {
+                        BoogieErrorKind::Precondition
                     } else {
                         BoogieErrorKind::Postcondition
                     },
