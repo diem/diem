@@ -817,6 +817,20 @@
 <span id="817">817</span>
 <span id="818">818</span>
 <span id="819">819</span>
+<span id="820">820</span>
+<span id="821">821</span>
+<span id="822">822</span>
+<span id="823">823</span>
+<span id="824">824</span>
+<span id="825">825</span>
+<span id="826">826</span>
+<span id="827">827</span>
+<span id="828">828</span>
+<span id="829">829</span>
+<span id="830">830</span>
+<span id="831">831</span>
+<span id="832">832</span>
+<span id="833">833</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1060,11 +1074,17 @@
         })
     }
 
-    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">mint_accounts</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">req</span>: <span class="kw-2">&amp;</span><span class="ident">EmitJobRequest</span>, <span class="ident">num_accounts</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">accounts</span>.<span class="ident">len</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="ident">num_accounts</span> {
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">mint_accounts</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">req</span>: <span class="kw-2">&amp;</span><span class="ident">EmitJobRequest</span>,
+        <span class="ident">requested_accounts</span>: <span class="ident">usize</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">if</span> <span class="self">self</span>.<span class="ident">accounts</span>.<span class="ident">len</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="ident">requested_accounts</span> {
             <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Not minting accounts&quot;</span>);
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(()); <span class="comment">// Early return to skip printing &#39;Minting ...&#39; logs</span>
         }
+        <span class="kw">let</span> <span class="ident">num_accounts</span> <span class="op">=</span> <span class="ident">requested_accounts</span> <span class="op">-</span> <span class="self">self</span>.<span class="ident">accounts</span>.<span class="ident">len</span>(); <span class="comment">// Only minting extra accounts</span>
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Minting additional {} accounts&quot;</span>, <span class="ident">num_accounts</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">faucet_account</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">load_faucet_account</span>(<span class="self">self</span>.<span class="ident">pick_mint_instance</span>(<span class="kw-2">&amp;</span><span class="ident">req</span>.<span class="ident">instances</span>))
             .<span class="kw">await</span><span class="question-mark">?</span>;
@@ -1099,7 +1119,8 @@
             .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">i</span>, <span class="ident">seed_account</span>)<span class="op">|</span> {
                 <span class="comment">// Spawn new threads</span>
                 <span class="kw">let</span> <span class="ident">instance</span> <span class="op">=</span> <span class="ident">req</span>.<span class="ident">instances</span>[<span class="ident">i</span>].<span class="ident">clone</span>();
-                <span class="kw">let</span> <span class="ident">num_new_accounts</span> <span class="op">=</span> <span class="ident">num_accounts</span> <span class="op">/</span> <span class="ident">req</span>.<span class="ident">instances</span>.<span class="ident">len</span>();
+                <span class="kw">let</span> <span class="ident">num_new_accounts</span> <span class="op">=</span>
+                    (<span class="ident">num_accounts</span> <span class="op">+</span> <span class="ident">req</span>.<span class="ident">instances</span>.<span class="ident">len</span>() <span class="op">-</span> <span class="number">1</span>) <span class="op">/</span> <span class="ident">req</span>.<span class="ident">instances</span>.<span class="ident">len</span>();
                 <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">json_rpc_client</span>();
                 <span class="ident">create_new_accounts</span>(
                     <span class="ident">seed_account</span>,
@@ -1109,12 +1130,19 @@
                     <span class="ident">client</span>,
                 )
             });
-        <span class="self">self</span>.<span class="ident">accounts</span> <span class="op">=</span> <span class="ident">try_join_all</span>(<span class="ident">account_futures</span>)
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">minted_accounts</span> <span class="op">=</span> <span class="ident">try_join_all</span>(<span class="ident">account_futures</span>)
             .<span class="kw">await</span>
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Failed to mint accounts {}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>
             .<span class="ident">into_iter</span>()
             .<span class="ident">flatten</span>()
             .<span class="ident">collect</span>();
+        <span class="self">self</span>.<span class="ident">accounts</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">minted_accounts</span>);
+        <span class="macro">assert</span><span class="macro">!</span>(
+            <span class="self">self</span>.<span class="ident">accounts</span>.<span class="ident">len</span>() <span class="op">&gt;</span><span class="op">=</span> <span class="ident">num_accounts</span>,
+            <span class="string">&quot;Something wrong in mint_account, wanted to mint {}, only have {}&quot;</span>,
+            <span class="ident">requested_accounts</span>,
+            <span class="self">self</span>.<span class="ident">accounts</span>.<span class="ident">len</span>()
+        );
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Mint is done&quot;</span>);
         <span class="prelude-val">Ok</span>(())
     }
