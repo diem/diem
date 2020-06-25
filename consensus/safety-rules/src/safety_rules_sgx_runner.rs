@@ -42,7 +42,7 @@ fn parse_args() -> Result<String, ()> {
         }
     }
 */
-	Ok("dummy.sgxs".into())
+	Ok("/home/lwg/libra/target/x86_64-fortanix-unknown-sgx/debug/lsr-sgx.sgxs".into())
 }
 
 struct LSRService{

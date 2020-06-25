@@ -10,6 +10,7 @@ fn main() -> std::io::Result<()> {
     let mut b = BufReader::new(stream);
     b.read_line(&mut echo)?;
     println!("{}", echo);
+    println!("lwg: hello world from SGX {}", echo);
 
     Ok(())
 }
