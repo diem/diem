@@ -1867,7 +1867,7 @@ dependencies = [
 
 [[package]]
 name = "hmac"
-version = "0.8.0"
+version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "crypto-mac 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2358,7 +2358,7 @@ dependencies = [
  "digest 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ed25519-dalek 1.0.0-pre.3 (git+https://github.com/calibra/ed25519-dalek.git?branch=fiat2)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "hmac 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hmac 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto-derive 0.1.0",
  "libra-nibble 0.1.0",
@@ -2955,7 +2955,7 @@ dependencies = [
  "byteorder 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "ed25519-dalek 1.0.0-pre.3 (git+https://github.com/calibra/ed25519-dalek.git?branch=fiat2)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "hmac 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hmac 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-crypto 0.1.0",
  "libra-temppath 0.1.0",
  "libra-types 0.1.0",
@@ -3822,7 +3822,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "base64 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "crypto-mac 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "hmac 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "hmac 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -6524,7 +6524,7 @@ dependencies = [
 "checksum hermit-abi 0.1.13 (registry+https://github.com/rust-lang/crates.io-index)" = "91780f809e750b0a89f5544be56617ff6b1227ee485bcb06ebe10cdf89bd3b71"
 "checksum hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "644f9158b2f133fd50f5fb3242878846d9eb792e445c893805ff0e3824006e35"
 "checksum hmac 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "5dcb5e64cda4c23119ab41ba960d1e170a774c8e4b9d9e6a9bc18aabf5e59695"
-"checksum hmac 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b87b580bd66811cc2324a27f3587de707cacf7525b96dca8122f7493e6cce0da"
+"checksum hmac 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "126888268dcc288495a26bf004b38c5fdbb31682f992c84ceb046a1f0fe38840"
 "checksum http 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "28d569972648b2c512421b5f2a405ad6ac9666547189d0c5477a3f200f3e02f9"
 "checksum http-body 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "13d5ff830006f7646652e057693569bfe0d51760c0085a071769d142a205111b"
 "checksum httparse 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "cd179ae861f0c2e53da70d892f5f3029f9594be0c41dc5269cd371691b1dc2f9"
