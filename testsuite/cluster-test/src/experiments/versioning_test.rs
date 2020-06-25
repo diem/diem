@@ -3,7 +3,11 @@
 
 #![forbid(unsafe_code)]
 
-use std::{collections::HashSet, fmt, time::Duration};
+use std::{
+    collections::HashSet,
+    fmt,
+    time::{Duration, Instant},
+};
 
 use rand::Rng;
 
@@ -23,7 +27,6 @@ use libra_types::{
     transaction::{helpers::create_user_txn, TransactionPayload},
 };
 use structopt::StructOpt;
-use tokio::time;
 use transaction_builder::{
     encode_transfer_with_metadata_script, encode_update_libra_version_script,
 };
@@ -70,6 +73,39 @@ impl ExperimentParam for ValidatorVersioningParams {
     }
 }
 
+async fn update_batch_instance(
+    context: &mut Context<'_>,
+    updated_instance: &[Instance],
+    updated_tag: String,
+) -> anyhow::Result<()> {
+    let deadline = Instant::now() + Duration::new(2 * 60, 0);
+
+    // 1. Stop Existing instances.
+    let futures: Vec<_> = updated_instance.iter().map(Instance::stop).collect();
+    try_join_all(futures).await?;
+
+    // 2. Reinstantiate a set of new nodes.
+    let futures: Vec<_> = updated_instance
+        .iter()
+        .map(|instance| {
+            let mut newer_config = instance.instance_config().clone();
+            newer_config.replace_tag(updated_tag.clone()).unwrap();
+            context
+                .cluster_swarm
+                .spawn_new_instance(newer_config, false)
+        })
+        .collect();
+    let instances = try_join_all(futures).await?;
+
+    // 3. Wait for the instances to recover.
+    let futures: Vec<_> = instances
+        .iter()
+        .map(|instance| instance.wait_json_rpc(deadline))
+        .collect();
+    try_join_all(futures).await?;
+    Ok(())
+}
+
 #[async_trait]
 impl Experiment for ValidatorVersioning {
     fn affected_validators(&self) -> HashSet<String> {
@@ -93,23 +129,7 @@ impl Experiment for ValidatorVersioning {
             .await?;
 
         info!("1. Changing the images for the instances in the first batch");
-        let futures: Vec<_> = self.first_batch.iter().map(Instance::stop).collect();
-        try_join_all(futures).await?;
-        let futures: Vec<_> = self
-            .first_batch
-            .iter()
-            .map(|instance| {
-                let mut newer_config = instance.instance_config().clone();
-                newer_config
-                    .replace_tag(self.updated_image_tag.clone())
-                    .unwrap();
-                context
-                    .cluster_swarm
-                    .spawn_new_instance(newer_config, false)
-            })
-            .collect();
-        try_join_all(futures).await?;
-        time::delay_for(Duration::from_secs(20)).await;
+        update_batch_instance(context, &self.first_batch, self.updated_image_tag.clone()).await?;
 
         info!("2. Send a transaction to make sure it is not rejected nor cause any fork");
         let full_node = context.cluster.random_full_node_instance();
@@ -142,23 +162,7 @@ impl Experiment for ValidatorVersioning {
             .await?;
 
         info!("3. Change the rest of the images in the second batch");
-        let futures: Vec<_> = self.second_batch.iter().map(Instance::stop).collect();
-        try_join_all(futures).await?;
-        let futures: Vec<_> = self
-            .second_batch
-            .iter()
-            .map(|instance| {
-                let mut newer_config = instance.instance_config().clone();
-                newer_config
-                    .replace_tag(self.updated_image_tag.clone())
-                    .unwrap();
-                context
-                    .cluster_swarm
-                    .spawn_new_instance(newer_config, false)
-            })
-            .collect();
-        try_join_all(futures).await?;
-        time::delay_for(Duration::from_secs(20)).await;
+        update_batch_instance(context, &self.second_batch, self.updated_image_tag.clone()).await?;
 
         info!("4. Send a transaction to make sure this feature is still not activated.");
         let txn2 = create_user_txn(
@@ -223,23 +227,7 @@ impl Experiment for ValidatorVersioning {
             .unwrap_err();
 
         info!("7. Change the images for the full nodes");
-        let futures: Vec<_> = self.full_nodes.iter().map(Instance::stop).collect();
-        try_join_all(futures).await?;
-        let futures: Vec<_> = self
-            .full_nodes
-            .iter()
-            .map(|instance| {
-                let mut newer_config = instance.instance_config().clone();
-                newer_config
-                    .replace_tag(self.updated_image_tag.clone())
-                    .unwrap();
-                context
-                    .cluster_swarm
-                    .spawn_new_instance(newer_config, false)
-            })
-            .collect();
-        try_join_all(futures).await?;
-        time::delay_for(Duration::from_secs(20)).await;
+        update_batch_instance(context, &self.full_nodes, self.updated_image_tag.clone()).await?;
 
         info!("8. Send a transaction to make sure it gets dropped by the full node mempool.");
 
