@@ -1,11 +1,3 @@
-## DO NOT EDIT cluster-test.Dockerfile
-## Edit cluster-test.Dockerfile.template instead and use ./generate.sh to generate cluster-test.Dockerfile
-## Using C preprocessor to compile this template into cluster-test.Dockerfile for one-step build
-## and cluster-test.container.Dockerfile for incremental build
-##
-## This adds some restrictions to this template file
-## - To comment must use double ##, single # will be treated as pre-processor command
-## -
 FROM debian:buster AS builder
 ## To use http/https proxy while building, use:
 ## docker build --build-arg https_proxy=http:
@@ -17,7 +9,9 @@ COPY rust-toolchain /libra/rust-toolchain
 RUN rustup install $(cat rust-toolchain)
 COPY . /libra
 RUN docker/cluster-test/compile.sh
+
 FROM debian:buster
+
 RUN apt-get update && apt-get install -y openssh-client wget
 RUN cd /usr/local/bin && wget "https://storage.googleapis.com/kubernetes-release/release/v1.17.0/bin/linux/amd64/kubectl" -O kubectl && chmod +x kubectl
 RUN mkdir /etc/cluster-test
