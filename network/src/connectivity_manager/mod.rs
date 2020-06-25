@@ -56,6 +56,7 @@ use std::{
 };
 use tokio::time;
 
+pub mod builder;
 #[cfg(test)]
 mod test;
 
