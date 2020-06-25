@@ -765,11 +765,7 @@ Aborts if the
     <b>let</b> above_threshold = approx_lbr_microlibra_value &gt;= travel_rule_limit_microlibra;
     // travel rule only applies <b>if</b> the sender and recipient are both VASPs
     <b>let</b> both_vasps = <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(sender) && <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee);
-    // Don't check the travel rule <b>if</b> we're on testnet and sender
-    // doesn't specify a metadata signature
-    <b>let</b> is_testnet_transfer = <a href="Testnet.md#0x1_Testnet_is_testnet">Testnet::is_testnet</a>() && <a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(&metadata_signature);
-    <b>if</b> (!is_testnet_transfer &&
-        above_threshold &&
+    <b>if</b> (above_threshold &&
         both_vasps &&
         // travel rule does not <b>apply</b> for intra-<a href="VASP.md#0x1_VASP">VASP</a> transactions
         <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(sender) != <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payee)
@@ -1216,7 +1212,6 @@ Aborts if the
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;
 ) {
-    <b>assert</b>(<a href="Testnet.md#0x1_Testnet_is_testnet">Testnet::is_testnet</a>(), 10042);
     // TODO: refactor so that every attempt <b>to</b> create an existing account hits this check
     // cannot create an account at an address that already has one
     <b>assert</b>(!<a href="#0x1_LibraAccount_exists_at">exists_at</a>(new_account_address), 777777);
@@ -1565,7 +1560,7 @@ also be added. This account will be a child of
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_unhosted_account">create_unhosted_account</a>&lt;Token&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_unhosted_account">create_unhosted_account</a>&lt;Token&gt;(creator_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1576,11 +1571,11 @@ also be added. This account will be a child of
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_unhosted_account">create_unhosted_account</a>&lt;Token&gt;(
     creator_account: &signer,
+    _: &Capability&lt;LibraRootRole&gt;,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     add_all_currencies: bool
 ) {
-    <b>assert</b>(<a href="Testnet.md#0x1_Testnet_is_testnet">Testnet::is_testnet</a>(), 10042);
     <b>assert</b>(!<a href="#0x1_LibraAccount_exists_at">exists_at</a>(new_account_address), 777777);
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Roles.md#0x1_Roles_new_unhosted_role">Roles::new_unhosted_role</a>(creator_account, &new_account);

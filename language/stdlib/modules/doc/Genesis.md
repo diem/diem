@@ -61,9 +61,6 @@
     // Currency setup
     <a href="Libra.md#0x1_Libra_initialize">Libra::initialize</a>(association, &create_config_capability);
 
-    // Set that this is testnet
-    <a href="Testnet.md#0x1_Testnet_initialize">Testnet::initialize</a>(association);
-
     // Currency setup
     <b>let</b> (coin1_mint_cap, coin1_burn_cap) = <a href="Coin1.md#0x1_Coin1_initialize">Coin1::initialize</a>(
         association,

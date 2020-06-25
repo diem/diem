@@ -10,7 +10,7 @@
 
 use crate::{
     account::{self, Account, AccountData},
-    common_transactions::rotate_key_txn,
+    common_transactions::{create_account_txn, rotate_key_txn},
     executor::FakeExecutor,
     keygen::KeyGen,
 };
@@ -279,22 +279,17 @@ fn dual_attestation_payment() {
     let sender_child = Account::new();
     let association = Account::new_association();
     let blessed = Account::new_blessed_tc();
-    let unhosted = {
-        let data = AccountData::new_unhosted();
-        executor.add_account_data(&data);
-        data.into_account()
-    };
-    let unhosted_other = {
-        let data = AccountData::new_unhosted();
-        executor.add_account_data(&data);
-        data.into_account()
-    };
 
     let mut keygen = KeyGen::from_seed([9u8; 32]);
     let (sender_vasp_compliance_private_key, sender_vasp_compliance_public_key) =
         keygen.generate_keypair();
     let (receiver_vasp_compliance_private_key, receiver_vasp_compliance_public_key) =
         keygen.generate_keypair();
+
+    // choose an amount large enough to make multiple payments
+    let mint_amount = 100_000_000_000;
+    // choose an amount above the dual attestation threshold
+    let payment_amount = 1_000_000_000u64;
 
     executor.execute_and_apply(association.signed_script_txn(
         encode_create_parent_vasp_account(
@@ -327,7 +322,7 @@ fn dual_attestation_payment() {
             account_config::lbr_type_tag(),
             &payment_sender.address(),
             vec![],
-            5_000_000,
+            mint_amount,
         ),
         0,
     ));
@@ -348,8 +343,6 @@ fn dual_attestation_payment() {
         // Do the offline protocol: generate a payment id, sign with the receiver's private key, include
         // in transaction from sender's account
         let ref_id = lcs::to_bytes(&7777u64).unwrap();
-        // choose an amount above the dual attestation threshold
-        let payment_amount = 1_000_000u64;
         // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
         let mut domain_separator = vec![
             0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
@@ -389,7 +382,7 @@ fn dual_attestation_payment() {
             encode_transfer_with_metadata_script(
                 account_config::lbr_type_tag(),
                 *payment_receiver.address(),
-                1_000_000,
+                payment_amount,
                 ref_id,
                 b"invalid signature".to_vec(),
             ),
@@ -405,7 +398,6 @@ fn dual_attestation_payment() {
     {
         // transaction >= 1_000_000 threshold goes through signature verification with invalid signature, aborts
         let ref_id = lcs::to_bytes(&9999u64).unwrap();
-        let payment_amount = 1_000_000u64;
         // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
         let mut domain_separator = vec![
             0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
@@ -443,7 +435,6 @@ fn dual_attestation_payment() {
     {
         // similar, but with empty payment ID (make sure signature is still invalid!)
         let ref_id = vec![];
-        let payment_amount = 1_000_000u64;
         // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
         let mut domain_separator = vec![
             0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,
@@ -485,7 +476,7 @@ fn dual_attestation_payment() {
             encode_transfer_with_metadata_script(
                 account_config::lbr_type_tag(),
                 *sender_child.address(),
-                5000,
+                payment_amount * 2,
                 vec![0],
                 b"what a bad signature".to_vec(),
             ),
@@ -499,13 +490,31 @@ fn dual_attestation_payment() {
             encode_transfer_with_metadata_script(
                 account_config::lbr_type_tag(),
                 *payment_sender.address(),
-                3000,
+                payment_amount,
                 vec![0],
                 b"what a bad signature".to_vec(),
             ),
             0,
         ));
     }
+
+    // ======= tests for UHW =======
+
+    // create two unhosted accounts + give some funds to the first one
+    let unhosted = Account::new();
+    let unhosted_other = Account::new();
+    executor.execute_and_apply(create_account_txn(&association, &unhosted, 3, 0));
+    executor.execute_and_apply(create_account_txn(&association, &unhosted_other, 4, 0));
+    executor.execute_and_apply(blessed.signed_script_txn(
+        encode_mint_script(
+            account_config::lbr_type_tag(),
+            &unhosted.address(),
+            vec![],
+            mint_amount,
+        ),
+        1,
+    ));
+
     {
         // Check that unhosted wallet <-> VASP transactions do not require dual attestation
         // since checking isn't performed on VASP->UHW transfers.
@@ -513,7 +522,7 @@ fn dual_attestation_payment() {
             encode_transfer_with_metadata_script(
                 account_config::lbr_type_tag(),
                 *unhosted.address(),
-                2000,
+                payment_amount,
                 vec![0],
                 b"what a bad signature".to_vec(),
             ),
@@ -527,7 +536,7 @@ fn dual_attestation_payment() {
             encode_transfer_with_metadata_script(
                 account_config::lbr_type_tag(),
                 *unhosted.address(),
-                2000,
+                payment_amount,
                 vec![0],
                 b"what a bad signature".to_vec(),
             ),
@@ -540,7 +549,7 @@ fn dual_attestation_payment() {
             encode_transfer_with_metadata_script(
                 account_config::lbr_type_tag(),
                 *payment_sender.address(),
-                1000,
+                payment_amount,
                 vec![0],
                 b"what a bad signature".to_vec(),
             ),
@@ -553,7 +562,7 @@ fn dual_attestation_payment() {
             encode_transfer_with_metadata_script(
                 account_config::lbr_type_tag(),
                 *sender_child.address(),
-                1000,
+                payment_amount,
                 vec![0],
                 b"what a bad signature".to_vec(),
             ),
@@ -567,7 +576,7 @@ fn dual_attestation_payment() {
             encode_transfer_with_metadata_script(
                 account_config::lbr_type_tag(),
                 *unhosted_other.address(),
-                1001,
+                payment_amount,
                 vec![0],
                 b"what a bad signature".to_vec(),
             ),
@@ -589,8 +598,6 @@ fn dual_attestation_payment() {
         // in transaction from sender's account. This tests to make sure their public key was
         // rotated.
         let ref_id = lcs::to_bytes(&9999u64).unwrap();
-        // choose an amount above the dual attestation threshold
-        let payment_amount = 1_000_000u64;
         // UTF8-encoded string "@@$$LIBRA_ATTEST$$@@" without length prefix
         let mut domain_separator = vec![
             0x40, 0x40, 0x24, 0x24, 0x4C, 0x49, 0x42, 0x52, 0x41, 0x5F, 0x41, 0x54, 0x54, 0x45,

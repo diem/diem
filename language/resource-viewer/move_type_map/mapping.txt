@@ -278,19 +278,6 @@
     }
   ],
   [
-    "011a6b8ef150829d72307cf00d363d8b370d927f4fcddd6a080849920558ac3766",
-    {
-      "address": "00000000000000000000000000000001",
-      "module": "Testnet",
-      "name": "IsTestnet",
-      "is_resource": true,
-      "ty_args": [],
-      "layout": [
-        "Bool"
-      ]
-    }
-  ],
-  [
     "011ca7775d4db405f85e75b27d2fc7a8eb67bd56f9e5423aaf23b33b5eebc0f9fa",
     {
       "address": "00000000000000000000000000000001",
