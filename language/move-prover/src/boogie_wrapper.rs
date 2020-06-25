@@ -77,6 +77,7 @@ impl BoogieErrorKind {
 pub struct BoogieError {
     pub kind: BoogieErrorKind,
     pub position: Location,
+    pub context_position: Option<Location>,
     pub message: String,
     pub execution_trace: Vec<(Location, TraceKind, String)>,
     pub model: Option<Model>,
@@ -214,20 +215,24 @@ impl<'env> BoogieWrapper<'env> {
         };
 
         // Create the error
-        let (show_trace, message) = loc_opt
+        let (show_trace, message, call_loc) = loc_opt
             .as_ref()
             .and_then(|loc| self.env.get_condition_info(loc))
             .map(|info| {
                 if let Some(msg) = info.message_if_requires.as_ref() {
                     // Check whether the Boogie error indicates a precondition, or if this is
                     // the only message we have.
-                    if error.message.contains("Precondition") || info.message.is_empty() {
-                        return (!info.omit_trace, msg.clone());
+                    if error.message.contains("precondition") || info.message.is_empty() {
+                        // Extract the location of the call side.
+                        let call_loc = error
+                            .context_position
+                            .and_then(|p| self.to_proper_source_location(self.get_locations(p).1));
+                        return (!info.omit_trace, msg.clone(), call_loc);
                     }
                 }
-                (!info.omit_trace, info.message)
+                (!info.omit_trace, info.message, None)
             })
-            .unwrap_or_else(|| (true, error.message.clone()));
+            .unwrap_or_else(|| (true, error.message.clone(), None));
         let mut diag = Diagnostic::new(
             if on_source {
                 Severity::Error
@@ -238,6 +243,10 @@ impl<'env> BoogieWrapper<'env> {
             message,
             label,
         );
+        if let Some(loc) = call_loc {
+            let label = Label::new(loc.file_id(), loc.span(), "called function");
+            diag.secondary_labels.push(label);
+        }
 
         // Now add trace diagnostics.
         if error.kind.is_from_verification()
@@ -539,17 +548,22 @@ impl<'env> BoogieWrapper<'env> {
                 at += cap.get(0).unwrap().end();
                 // Check whether there is a `Related` message which points to the pre/post condition.
                 // If so, this has the real position.
-                let (line, col) = if let Some(cap1) = verification_diag_related.captures(&out[at..])
-                {
-                    at += cap1.get(0).unwrap().end();
-                    let line = cap1.name("line").unwrap().as_str();
-                    let col = cap1.name("col").unwrap().as_str();
-                    (line, col)
-                } else {
-                    let line = cap.name("line").unwrap().as_str();
-                    let col = cap.name("col").unwrap().as_str();
-                    (line, col)
-                };
+                let (pos, context_pos) =
+                    if let Some(cap1) = verification_diag_related.captures(&out[at..]) {
+                        let call_line = cap.name("line").unwrap().as_str();
+                        let call_col = cap.name("col").unwrap().as_str();
+                        at += cap1.get(0).unwrap().end();
+                        let line = cap1.name("line").unwrap().as_str();
+                        let col = cap1.name("col").unwrap().as_str();
+                        (
+                            make_position(line, col),
+                            Some(make_position(call_line, call_col)),
+                        )
+                    } else {
+                        let line = cap.name("line").unwrap().as_str();
+                        let col = cap.name("col").unwrap().as_str();
+                        (make_position(line, col), None)
+                    };
                 let mut trace = vec![];
                 if let Some(m) = verification_diag_trace.find(&out[at..]) {
                     at += m.end();
@@ -584,7 +598,8 @@ impl<'env> BoogieWrapper<'env> {
                     } else {
                         BoogieErrorKind::Postcondition
                     },
-                    position: make_position(line, col),
+                    position: pos,
+                    context_position: context_pos,
                     message: msg.to_string(),
                     execution_trace: trace,
                     model,
@@ -610,6 +625,7 @@ impl<'env> BoogieWrapper<'env> {
                 BoogieError {
                     kind: BoogieErrorKind::Compilation,
                     position: make_position(line, col),
+                    context_position: None,
                     message: msg.to_string(),
                     execution_trace: vec![],
                     model: None,

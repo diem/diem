@@ -10,12 +10,15 @@ error: post-condition does not hold
     =     at tests/sources/functional/module_invariants.move:51:5: delete_S_incorrect (exit)
     =         x = <redacted>
 
-error: post-condition does not hold
+error: precondition does not hold at this call
 
     ┌── tests/sources/functional/module_invariants.move:29:9 ───
     │
  29 │         invariant global<SCounter>(0x0).n == spec_count;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ·
+ 36 │     public fun new_S(): S acquires SCounter {
+    │                ----- called function
     │
     =     at tests/sources/functional/module_invariants.move:60:5: private_calls_public_incorrect (entry)
     =     at tests/sources/functional/module_invariants.move:36:5: new_S (entry)

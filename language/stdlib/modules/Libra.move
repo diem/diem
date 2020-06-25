@@ -527,7 +527,7 @@ module Libra {
     /// Return a `Libra<CoinType>` worth `coin.value` and reduces the `value` of the input `coin` to
     /// zero. Does not abort.
     public fun withdraw_all<CoinType>(coin: &mut Libra<CoinType>): Libra<CoinType> {
-        let val = value(coin);
+        let val = coin.value;
         withdraw(coin, val)
     }
 
@@ -717,24 +717,20 @@ module Libra {
         assert(is_currency<CoinType>(), 1);
     }
 
-    /// **************** SPECIFICATIONS ****************
-    /// Only a few of the specifications appear at this time. More to come.
+    /// **************** MODULE SPECIFICATION ****************
 
-    /// # Module specifications
+    /// # Module Specification
 
     spec module {
-        // TODO(wrwg): turn this on again.
-        pragma verify = false;
+        /// Verify all functions in this module.
+        pragma verify = true;
     }
 
     spec module {
-        // Address at which currencies should be registered (mirrors CoreAddresses::CURRENCY_INFO_ADDRESS)
-        define spec_currency_addr(): address { 0xA550C18 }
-
         /// Checks whether currency is registered.
         /// Mirrors `Self::is_currency<CoinType>` in Move, above.
         define spec_is_currency<CoinType>(): bool {
-            exists<CurrencyInfo<CoinType>>(spec_currency_addr())
+            exists<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS())
         }
     }
 
@@ -808,7 +804,7 @@ module Libra {
         invariant module !spec_is_currency<CoinType>() ==> sum_of_coin_values<CoinType> == 0;
         invariant module spec_is_currency<CoinType>()
                     ==> sum_of_coin_values<CoinType>
-                        == global<CurrencyInfo<CoinType>>(spec_currency_addr()).total_value;
+                        == global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS()).total_value;
     }
 
     spec module {
