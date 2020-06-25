@@ -1268,7 +1268,6 @@
 <span id="1268">1268</span>
 <span id="1269">1269</span>
 <span id="1270">1270</span>
-<span id="1271">1271</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1281,8 +1280,7 @@
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">file_format</span>::<span class="kw-2">*</span>, <span class="ident">file_format_common</span>::<span class="kw-2">*</span>};
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">bail</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::<span class="ident">Identifier</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">identifier</span>::<span class="ident">Identifier</span>};
 
 <span class="kw">impl</span> <span class="ident">CompiledScript</span> {
     <span class="doccomment">/// Serializes a `CompiledScript` into a binary. The mutable `Vec&lt;u8&gt;` will contain the</span>

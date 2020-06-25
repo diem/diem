@@ -1013,35 +1013,6 @@
 <span id="1013">1013</span>
 <span id="1014">1014</span>
 <span id="1015">1015</span>
-<span id="1016">1016</span>
-<span id="1017">1017</span>
-<span id="1018">1018</span>
-<span id="1019">1019</span>
-<span id="1020">1020</span>
-<span id="1021">1021</span>
-<span id="1022">1022</span>
-<span id="1023">1023</span>
-<span id="1024">1024</span>
-<span id="1025">1025</span>
-<span id="1026">1026</span>
-<span id="1027">1027</span>
-<span id="1028">1028</span>
-<span id="1029">1029</span>
-<span id="1030">1030</span>
-<span id="1031">1031</span>
-<span id="1032">1032</span>
-<span id="1033">1033</span>
-<span id="1034">1034</span>
-<span id="1035">1035</span>
-<span id="1036">1036</span>
-<span id="1037">1037</span>
-<span id="1038">1038</span>
-<span id="1039">1039</span>
-<span id="1040">1040</span>
-<span id="1041">1041</span>
-<span id="1042">1042</span>
-<span id="1043">1043</span>
-<span id="1044">1044</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1520,35 +1491,6 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">genesis_strategy</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="kw">impl</span> <span class="ident">Strategy</span><span class="op">&lt;</span><span class="ident">Value</span> <span class="op">=</span> <span class="self">Self</span><span class="op">&gt;</span> {
         <span class="ident">WriteSet</span>::<span class="ident">genesis_strategy</span>()
             .<span class="ident">prop_map</span>(<span class="op">|</span><span class="ident">ws</span><span class="op">|</span> <span class="ident">TransactionPayload</span>::<span class="ident">WriteSet</span>(<span class="ident">ChangeSet</span>::<span class="ident">new</span>(<span class="ident">ws</span>, <span class="macro">vec</span><span class="macro">!</span>[])))
-    }
-}
-
-<span class="doccomment">/// The `Arbitrary` impl only generates validation statuses since the full enum is too large.</span>
-<span class="kw">impl</span> <span class="ident">Arbitrary</span> <span class="kw">for</span> <span class="ident">StatusCode</span> {
-    <span class="kw">type</span> <span class="ident">Parameters</span> <span class="op">=</span> ();
-    <span class="kw">type</span> <span class="ident">Strategy</span> <span class="op">=</span> <span class="ident">BoxedStrategy</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span>;
-
-    <span class="kw">fn</span> <span class="ident">arbitrary_with</span>(<span class="ident">_args</span>: ()) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span>::<span class="ident">Strategy</span> {
-        <span class="macro">prop_oneof</span><span class="macro">!</span>[
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_VALIDATION_STATUS</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_SIGNATURE</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_AUTH_KEY</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">SEQUENCE_NUMBER_TOO_OLD</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">SEQUENCE_NUMBER_TOO_NEW</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">TRANSACTION_EXPIRED</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">SENDING_ACCOUNT_DOES_NOT_EXIST</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">REJECTED_WRITE_SET</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">INVALID_WRITE_SET</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">EXCEEDED_MAX_TRANSACTION_SIZE</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_SCRIPT</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_MODULE</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">GAS_UNIT_PRICE_BELOW_MIN_BOUND</span>),
-            <span class="ident">Just</span>(<span class="ident">StatusCode</span>::<span class="ident">GAS_UNIT_PRICE_ABOVE_MAX_BOUND</span>),
-        ]
-        .<span class="ident">boxed</span>()
     }
 }
 

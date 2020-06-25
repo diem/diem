@@ -493,7 +493,6 @@
 <span id="493">493</span>
 <span id="494">494</span>
 <span id="495">495</span>
-<span id="496">496</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -506,8 +505,7 @@
     <span class="ident">StructDefinition</span>, <span class="ident">StructFieldInformation</span>, <span class="ident">StructHandle</span>, <span class="ident">StructHandleIndex</span>, <span class="ident">TableIndex</span>,
     <span class="ident">TypeSignature</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
-<span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">identifier</span>::<span class="ident">Identifier</span>;
+<span class="kw">use</span> <span class="ident">move_core_types</span>::{<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>, <span class="ident">identifier</span>::<span class="ident">Identifier</span>};
 <span class="kw">use</span> <span class="ident">proptest</span>::{
     <span class="ident">collection</span>::{<span class="ident">btree_set</span>, <span class="ident">vec</span>, <span class="ident">SizeRange</span>},
     <span class="ident">option</span>,
