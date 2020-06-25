@@ -245,12 +245,7 @@ impl Client {
             .upgrade_request(request)
             .send_json(json!({ "type": "ed25519", "exportable": exportable }));
         match resp.status() {
-            200 => {
-                // Explicitly clear buffer so the stream can be re-used.
-                resp.into_string()?;
-                Ok(())
-            }
-            204 => {
+            200 | 204 => {
                 // Explicitly clear buffer so the stream can be re-used.
                 resp.into_string()?;
                 Ok(())
