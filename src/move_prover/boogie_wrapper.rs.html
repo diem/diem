@@ -1432,6 +1432,10 @@
 <span id="1432">1432</span>
 <span id="1433">1433</span>
 <span id="1434">1434</span>
+<span id="1435">1435</span>
+<span id="1436">1436</span>
+<span id="1437">1437</span>
+<span id="1438">1438</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1498,13 +1502,15 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">PartialEq</span>, <span class="ident">Eq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">BoogieErrorKind</span> {
     <span class="ident">Compilation</span>,
+    <span class="ident">Precondition</span>,
     <span class="ident">Postcondition</span>,
     <span class="ident">Assertion</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">BoogieErrorKind</span> {
     <span class="kw">fn</span> <span class="ident">is_from_verification</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
-        <span class="self">self</span> <span class="op">=</span><span class="op">=</span> <span class="ident">BoogieErrorKind</span>::<span class="ident">Assertion</span> <span class="op">|</span><span class="op">|</span> <span class="self">self</span> <span class="op">=</span><span class="op">=</span> <span class="ident">BoogieErrorKind</span>::<span class="ident">Postcondition</span>
+        <span class="kw">use</span> <span class="ident">BoogieErrorKind</span>::<span class="kw-2">*</span>;
+        <span class="macro">matches</span><span class="macro">!</span>(<span class="self">self</span>, <span class="ident">Assertion</span> <span class="op">|</span> <span class="ident">Precondition</span> <span class="op">|</span> <span class="ident">Postcondition</span>)
     }
 }
 
@@ -1657,8 +1663,8 @@
                 <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">msg</span>) <span class="op">=</span> <span class="ident">info</span>.<span class="ident">message_if_requires</span>.<span class="ident">as_ref</span>() {
                     <span class="comment">// Check whether the Boogie error indicates a precondition, or if this is</span>
                     <span class="comment">// the only message we have.</span>
-                    <span class="kw">if</span> <span class="ident">error</span>.<span class="ident">message</span>.<span class="ident">contains</span>(<span class="string">&quot;precondition&quot;</span>) <span class="op">|</span><span class="op">|</span> <span class="ident">info</span>.<span class="ident">message</span>.<span class="ident">is_empty</span>() {
-                        <span class="comment">// Extract the location of the call side.</span>
+                    <span class="kw">if</span> <span class="ident">error</span>.<span class="ident">kind</span> <span class="op">=</span><span class="op">=</span> <span class="ident">BoogieErrorKind</span>::<span class="ident">Precondition</span> <span class="op">|</span><span class="op">|</span> <span class="ident">info</span>.<span class="ident">message</span>.<span class="ident">is_empty</span>() {
+                        <span class="comment">// Extract the location of the call site.</span>
                         <span class="kw">let</span> <span class="ident">call_loc</span> <span class="op">=</span> <span class="ident">error</span>
                             .<span class="ident">context_position</span>
                             .<span class="ident">and_then</span>(<span class="op">|</span><span class="ident">p</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">to_proper_source_location</span>(<span class="self">self</span>.<span class="ident">get_locations</span>(<span class="ident">p</span>).<span class="number">1</span>));
@@ -2030,6 +2036,8 @@
                 <span class="ident">errors</span>.<span class="ident">push</span>(<span class="ident">BoogieError</span> {
                     <span class="ident">kind</span>: <span class="kw">if</span> <span class="ident">msg</span>.<span class="ident">contains</span>(<span class="string">&quot;assertion might not hold&quot;</span>) {
                         <span class="ident">BoogieErrorKind</span>::<span class="ident">Assertion</span>
+                    } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">msg</span>.<span class="ident">contains</span>(<span class="string">&quot;precondition&quot;</span>) {
+                        <span class="ident">BoogieErrorKind</span>::<span class="ident">Precondition</span>
                     } <span class="kw">else</span> {
                         <span class="ident">BoogieErrorKind</span>::<span class="ident">Postcondition</span>
                     },
