@@ -77,6 +77,9 @@ impl TransactionStore {
         // Maximum TPS from benchmark is around 1000.
         const MAX_VERSIONS_TO_SEARCH: usize = 1000 * 3;
 
+        // Linear search via `DB::rev_iter()` here, NOT expecting performance hit, due to the fact
+        // that the iterator caches data block and that there are limited number of transactions in
+        // each block.
         let mut iter = self.db.rev_iter::<TransactionSchema>(Default::default())?;
         iter.seek(&version)?;
         for res in iter.take(MAX_VERSIONS_TO_SEARCH) {

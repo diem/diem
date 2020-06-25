@@ -150,7 +150,6 @@ proptest! {
             }
         }
     }
-
 }
 
 fn init_store(
