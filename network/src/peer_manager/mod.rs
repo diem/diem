@@ -47,6 +47,7 @@ use std::{
 };
 use tokio::runtime::Handle;
 
+pub mod builder;
 pub mod conn_notifs_channel;
 mod error;
 #[cfg(test)]

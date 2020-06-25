@@ -26,6 +26,7 @@ use network::{
     connectivity_manager::{ConnectivityManager, ConnectivityRequest},
     constants, counters,
     peer_manager::{
+        builder::{AuthenticationMode, PeerManagerBuilder},
         conn_notifs_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
@@ -52,33 +53,6 @@ use tokio::{
     time::interval,
 };
 use tokio_retry::strategy::ExponentialBackoff;
-
-#[derive(Debug)]
-pub enum AuthenticationMode {
-    /// Inbound and outbound connections are secured with NoiseIK; however, only
-    /// clients/dialers will authenticate the servers/listeners. More specifically,
-    /// dialers will pin the connection to a specific, expected pubkey while
-    /// listeners will accept any inbound dialer's pubkey.
-    ServerOnly(x25519::PrivateKey),
-    /// Inbound and outbound connections are secured with NoiseIK. Both dialer and
-    /// listener will only accept connections that successfully authenticate to a
-    /// pubkey in their "trusted peers" set.
-    Mutual(x25519::PrivateKey),
-}
-
-impl AuthenticationMode {
-    /// Convenience method to retrieve the public key for the auth mode's inner
-    /// network identity key.
-    ///
-    /// Note: this only works because all auth modes are Noise-based.
-    pub fn public_key(&self) -> x25519::PublicKey {
-        match self {
-            AuthenticationMode::ServerOnly(key) | AuthenticationMode::Mutual(key) => {
-                key.public_key()
-            }
-        }
-    }
-}
 
 /// Build Network module with custom configuration values.
 /// Methods can be chained in order to set the configuration values.
@@ -118,6 +92,7 @@ pub struct NetworkBuilder {
     max_connection_delay_ms: u64,
     /// For now full node connections are limited by
     max_fullnode_connections: usize,
+    peer_manager_builder: Option<PeerManagerBuilder>,
 }
 
 impl NetworkBuilder {
@@ -142,6 +117,7 @@ impl NetworkBuilder {
             NonZeroUsize::new(constants::NETWORK_CHANNEL_SIZE).unwrap(),
             None,
         );
+
         NetworkBuilder {
             executor,
             chain_id,
@@ -149,7 +125,7 @@ impl NetworkBuilder {
             listen_address,
             advertised_address: None,
             seed_peers: HashMap::new(),
-            trusted_peers: Arc::new(RwLock::new(HashMap::new())),
+            trusted_peers:           Arc::new(RwLock::new(HashMap::new())),
             authentication_mode: None,
             channel_size: constants::NETWORK_CHANNEL_SIZE,
             direct_send_protocols: vec![],
@@ -170,7 +146,10 @@ impl NetworkBuilder {
             max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
             max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
+
+            peer_manager_builder: None,
         }
+
     }
 
     pub fn network_context(&self) -> Arc<NetworkContext> {
@@ -179,12 +158,6 @@ impl NetworkBuilder {
 
     pub fn peer_id(&self) -> PeerId {
         self.network_context.peer_id()
-    }
-
-    /// Set network authentication mode.
-    pub fn authentication_mode(&mut self, authentication_mode: AuthenticationMode) -> &mut Self {
-        self.authentication_mode = Some(authentication_mode);
-        self
     }
 
     /// Set an address to advertise, if different from the listen address
@@ -331,7 +304,7 @@ impl NetworkBuilder {
     /// peers as a network protocol.
     ///
     /// This is for testing purposes only and should not be used in production networks.
-    pub fn add_gossip_discovery(&mut self) -> &mut Self {
+    pub fn add_gossip_discovery(&mut self, public_key: x25519::PublicKey) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager not enabled");
@@ -354,12 +327,7 @@ impl NetworkBuilder {
             .advertised_address
             .clone()
             .unwrap_or_else(|| self.listen_address.clone());
-        let authentication_mode = self
-            .authentication_mode
-            .as_ref()
-            .expect("Authentication Mode not set");
-        let pubkey = authentication_mode.public_key();
-        let advertised_address = advertised_address.append_prod_protos(pubkey, HANDSHAKE_VERSION);
+        let advertised_address = advertised_address.append_prod_protos(public_key, HANDSHAKE_VERSION);
 
         let addrs = vec![advertised_address];
         let discovery_interval_ms = self.discovery_interval_ms;
@@ -400,98 +368,68 @@ impl NetworkBuilder {
         self
     }
 
-    /// Create the configured transport and start PeerManager.
-    /// Return the actual NetworkAddress over which this peer is listening.
-    pub fn build(mut self) -> NetworkAddress {
-        use libra_network_address::Protocol::*;
-
-        let chain_id = self.chain_id.clone();
-        let network_id = self.network_context.network_id().clone();
-        let protos = self.supported_protocols();
-
-        let authentication_mode = self
-            .authentication_mode
-            .take()
-            .expect("Authentication Mode not set");
-
-        let (key, maybe_trusted_peers, peer_id) = match authentication_mode {
-            // validator-operated full node
-            AuthenticationMode::ServerOnly(key)
-                if self.network_context.peer_id() == PeerId::ZERO =>
-            {
-                let public_key = key.public_key();
-                let peer_id = PeerId::from_identity_public_key(public_key);
-                (key, None, peer_id)
-            }
-            // full node
-            AuthenticationMode::ServerOnly(key) => (key, None, self.network_context.peer_id()),
-            // validator
-            AuthenticationMode::Mutual(key) => (
-                key,
-                Some(self.trusted_peers.clone()),
-                self.network_context.peer_id(),
-            ),
-        };
-
-        match self.listen_address.as_slice() {
-            [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => {
-                self.build_with_transport(LibraNetTransport::new(
-                    LIBRA_TCP_TRANSPORT.clone(),
-                    peer_id,
-                    key,
-                    maybe_trusted_peers,
-                    HANDSHAKE_VERSION,
-                    chain_id,
-                    network_id,
-                    protos,
-                ))
-            }
-            [Memory(_)] => self.build_with_transport(LibraNetTransport::new(
-                memory::MemoryTransport,
-                peer_id,
-                key,
-                maybe_trusted_peers,
-                HANDSHAKE_VERSION,
-                chain_id,
-                network_id,
-                protos,
-            )),
-            _ => panic!(
-                "{} Unsupported listen_address: '{}', expected '/memory/<port>', \
-                 '/ip4/<addr>/tcp/<port>', or '/ip6/<addr>/tcp/<port>'.",
-                self.network_context, self.listen_address
-            ),
-        }
+    fn add_peer_manager(
+        &mut self,
+        chain_id: ChainId,
+        listen_address: NetworkAddress,
+        trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+        authentication_mode: AuthenticationMode,
+        channel_size: usize,
+        max_concurrent_network_reqs: usize,
+        max_concurrent_network_notifs: usize,
+    ) -> &mut Self {
+        self.peer_manager_builder = Some(PeerManagerBuilder::create(
+            chain_id,
+            self.network_context(),
+            listen_address,
+            trusted_peers,
+            authentication_mode,
+            channel_size,
+            max_concurrent_network_reqs,
+            max_concurrent_network_notifs,
+        ));
+        self
     }
 
-    /// Given a transport build and launch PeerManager.
+    fn build_peer_manager(&mut self) -> &mut Self {
+        self.peer_manager_builder
+            .as_mut()
+            .expect("PeerManager must be instantiated")
+            .build(&self.executor);
+        self
+    }
+
+    fn start_peer_manager(&mut self) -> &mut Self {
+        self.peer_manager_builder
+            .as_mut()
+            .expect("PeerManager must be instantiated")
+            .start(&self.executor);
+        self
+    }
+
+    /// Create the configured transport and start PeerManager.
     /// Return the actual NetworkAddress over which this peer is listening.
-    fn build_with_transport<TTransport, TSocket>(self, transport: TTransport) -> NetworkAddress
-    where
-        TTransport: Transport<Output = Connection<TSocket>> + Send + 'static,
-        TSocket: transport::TSocket,
-    {
-        let peer_mgr = PeerManager::new(
-            self.executor.clone(),
-            transport,
-            self.network_context.clone(),
-            // TODO(philiphayes): peer manager should take `Vec<NetworkAddress>`
-            // (which could be empty, like in client use case)
-            self.listen_address,
-            self.pm_reqs_rx,
-            self.connection_reqs_rx,
-            self.upstream_handlers,
-            self.connection_event_handlers,
-            self.max_concurrent_network_reqs,
-            self.max_concurrent_network_notifs,
-            self.channel_size,
-        );
-        let listen_addr = peer_mgr.listen_addr().clone();
-
-        self.executor.spawn(peer_mgr.start());
-        debug!("{} Started peer manager", self.network_context);
-
-        listen_addr
+    pub fn build(&mut self) -> NetworkAddress {
+        // TODO: move add_peer_manager to ::create()
+        self.add_peer_manager(
+            self.chain_id.clone(),
+            self.listen_address.clone(),
+            self.trusted_peers.clone(),
+            self.authentication_mode
+                .clone()
+                .expect("AuthenticationMode must be set"),
+            // TODO: Move to NetworkConfig
+            constants::NETWORK_CHANNEL_SIZE,
+            // TODO: Move to NetworkConfig
+            constants::MAX_CONCURRENT_NETWORK_REQS,
+            // TODO: Move to NetworkConfig
+            constants::MAX_CONCURRENT_NETWORK_NOTIFS,
+        )
+        .build_peer_manager()
+        .start_peer_manager();
+        self.peer_manager_builder
+            .expect("PeerManagerBuilder just created")
+            .listen_address()
     }
 
     /// Adds a endpoints for the provided configuration.  Returns NetworkSender and NetworkEvent which
@@ -550,6 +488,27 @@ pub fn setup_network(
         peer_id,
         config.listen_address.clone(),
     );
+    let authentication_mode = if config.mutual_authentication {
+        AuthenticationMode::Mutual(identity_key)
+    } else {
+        AuthenticationMode::ServerOnly(identity_key)
+    };
+
+    let mut trusted_peers =  Arc::new(RwLock::new(HashMap::new()));
+    network_builder.add_peer_manager(
+        chain_id.clone(),
+        config.listen_address.clone(),
+        trusted_peers.clone(),
+        authentication_mode
+            .expect("AuthenticationMode must be set"),
+        // TODO: Move to NetworkConfig
+        constants::NETWORK_CHANNEL_SIZE,
+        // TODO: Move to NetworkConfig
+        constants::MAX_CONCURRENT_NETWORK_REQS,
+        // TODO: Move to NetworkConfig
+        constants::MAX_CONCURRENT_NETWORK_NOTIFS,
+    );
+
     network_builder.add_connection_monitoring();
 
     // Sanity check seed peer addresses.
@@ -573,14 +532,11 @@ pub fn setup_network(
         );
 
         network_builder
-            .authentication_mode(AuthenticationMode::Mutual(identity_key))
             .trusted_peers(trusted_peers)
             .seed_peers(seed_peers)
             .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
             .add_connectivity_manager();
     } else {
-        // Enforce the outgoing connection (dialer) verifies the identity of the listener (server)
-        network_builder.authentication_mode(AuthenticationMode::ServerOnly(identity_key));
         if !seed_peers.is_empty() {
             network_builder
                 .seed_peers(seed_peers)

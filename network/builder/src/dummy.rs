@@ -3,7 +3,7 @@
 
 //! Integration tests for validator_network.
 
-use crate::builder::{AuthenticationMode, NetworkBuilder};
+use crate::builder::NetworkBuilder;
 use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
 use libra_config::{chain_id::ChainId, config::RoleType, network_id::NetworkId};
@@ -14,7 +14,9 @@ use libra_types::PeerId;
 use network::{
     constants::NETWORK_CHANNEL_SIZE,
     error::NetworkError,
-    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
+    peer_manager::{
+        builder::AuthenticationMode, ConnectionRequestSender, PeerManagerRequestSender,
+    },
     protocols::{
         network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
