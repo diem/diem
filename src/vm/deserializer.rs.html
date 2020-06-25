@@ -1406,12 +1406,14 @@
 <span id="1406">1406</span>
 <span id="1407">1407</span>
 <span id="1408">1408</span>
+<span id="1409">1409</span>
+<span id="1410">1410</span>
+<span id="1411">1411</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">errors</span>::<span class="kw-2">*</span>, <span class="ident">file_format</span>::<span class="kw-2">*</span>, <span class="ident">file_format_common</span>::<span class="kw-2">*</span>};
-<span class="kw">use</span> <span class="ident">byteorder</span>::{<span class="ident">LittleEndian</span>, <span class="ident">ReadBytesExt</span>};
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">identifier</span>::<span class="ident">Identifier</span>,
@@ -1478,15 +1480,19 @@
 }
 
 <span class="kw">fn</span> <span class="ident">read_u64_internal</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">u64_bytes</span> <span class="op">=</span> [<span class="number">0</span>; <span class="number">8</span>];
     <span class="ident">cursor</span>
-        .<span class="ident">read_u64</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_U64</span>))
+        .<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">u64_bytes</span>)
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_U64</span>))<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="ident">u64</span>::<span class="ident">from_le_bytes</span>(<span class="ident">u64_bytes</span>))
 }
 
 <span class="kw">fn</span> <span class="ident">read_u128_internal</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">u128</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">u128_bytes</span> <span class="op">=</span> [<span class="number">0</span>; <span class="number">16</span>];
     <span class="ident">cursor</span>
-        .<span class="ident">read_u128</span>::<span class="op">&lt;</span><span class="ident">LittleEndian</span><span class="op">&gt;</span>()
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_U128</span>))
+        .<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">u128_bytes</span>)
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">BAD_U128</span>))<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="ident">u128</span>::<span class="ident">from_le_bytes</span>(<span class="ident">u128_bytes</span>))
 }
 
 <span class="comment">//</span>
@@ -1715,7 +1721,7 @@
     }
     <span class="kw">let</span> <span class="ident">major_ver</span> <span class="op">=</span> <span class="number">1u8</span>;
     <span class="kw">let</span> <span class="ident">minor_ver</span> <span class="op">=</span> <span class="number">0u8</span>;
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">ver</span>) <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">ver</span>) <span class="op">=</span> <span class="ident">read_u8</span>(<span class="ident">cursor</span>) {
         <span class="kw">if</span> <span class="ident">ver</span> <span class="op">!</span><span class="op">=</span> <span class="ident">major_ver</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_VERSION</span>));
         }
@@ -1724,7 +1730,7 @@
             <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>).<span class="ident">with_message</span>(<span class="string">&quot;Bad binary header&quot;</span>.<span class="ident">to_string</span>())
         );
     }
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">ver</span>) <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">ver</span>) <span class="op">=</span> <span class="ident">read_u8</span>(<span class="ident">cursor</span>) {
         <span class="kw">if</span> <span class="ident">ver</span> <span class="op">!</span><span class="op">=</span> <span class="ident">minor_ver</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNKNOWN_VERSION</span>));
         }
@@ -1753,7 +1759,7 @@
 <span class="doccomment">/// Reads a table from a slice at a given offset.</span>
 <span class="doccomment">/// If a table is not recognized an error is returned.</span>
 <span class="kw">fn</span> <span class="ident">read_table</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">Table</span><span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">kind</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
+    <span class="kw">let</span> <span class="ident">kind</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">read_u8</span>(<span class="ident">cursor</span>) {
         <span class="prelude-val">Ok</span>(<span class="ident">kind</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">kind</span>,
         <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>)
@@ -1769,7 +1775,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">bytes</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
     <span class="comment">// TODO: can we rewrite this in a better way?</span>
     <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">n</span> {
-        <span class="kw">match</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
+        <span class="kw">match</span> <span class="ident">read_u8</span>(<span class="ident">cursor</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">b</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">bytes</span>.<span class="ident">push</span>(<span class="ident">b</span>),
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>)
@@ -2322,7 +2328,7 @@
     <span class="kw">use</span> <span class="ident">TypeBuilder</span> <span class="kw">as</span> <span class="ident">T</span>;
 
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">read_next</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> {
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">byte</span>) <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">byte</span>) <span class="op">=</span> <span class="ident">read_u8</span>(<span class="ident">cursor</span>) {
             <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">S</span>::<span class="ident">from_u8</span>(<span class="ident">byte</span>)<span class="question-mark">?</span> {
                 <span class="ident">S</span>::<span class="ident">BOOL</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Saturated</span>(<span class="ident">SignatureToken</span>::<span class="ident">Bool</span>),
                 <span class="ident">S</span>::<span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Saturated</span>(<span class="ident">SignatureToken</span>::<span class="ident">U8</span>),
@@ -2375,7 +2381,7 @@
 }
 
 <span class="kw">fn</span> <span class="ident">load_nominal_resource_flag</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">bool</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">byte</span>) <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">byte</span>) <span class="op">=</span> <span class="ident">read_u8</span>(<span class="ident">cursor</span>) {
         <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">SerializedNominalResourceFlag</span>::<span class="ident">from_u8</span>(<span class="ident">byte</span>)<span class="question-mark">?</span> {
             <span class="ident">SerializedNominalResourceFlag</span>::<span class="ident">NOMINAL_RESOURCE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">true</span>,
             <span class="ident">SerializedNominalResourceFlag</span>::<span class="ident">NORMAL_STRUCT</span> <span class="op">=</span><span class="op">&gt;</span> <span class="bool-val">false</span>,
@@ -2386,7 +2392,7 @@
 }
 
 <span class="kw">fn</span> <span class="ident">load_kind</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">Kind</span><span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">byte</span>) <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">byte</span>) <span class="op">=</span> <span class="ident">read_u8</span>(<span class="ident">cursor</span>) {
         <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">SerializedKind</span>::<span class="ident">from_u8</span>(<span class="ident">byte</span>)<span class="question-mark">?</span> {
             <span class="ident">SerializedKind</span>::<span class="ident">ALL</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Kind</span>::<span class="ident">All</span>,
             <span class="ident">SerializedKind</span>::<span class="ident">COPYABLE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Kind</span>::<span class="ident">Copyable</span>,
@@ -2417,7 +2423,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cursor</span> <span class="op">=</span> <span class="ident">Cursor</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">binary</span>[<span class="ident">start</span>..<span class="ident">end</span>]);
     <span class="kw">while</span> <span class="ident">cursor</span>.<span class="ident">position</span>() <span class="op">&lt;</span> <span class="ident">u64</span>::<span class="ident">from</span>(<span class="ident">table</span>.<span class="ident">count</span>) {
         <span class="kw">let</span> <span class="ident">struct_handle</span> <span class="op">=</span> <span class="ident">load_struct_handle_index</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">field_information_flag</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
+        <span class="kw">let</span> <span class="ident">field_information_flag</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">read_u8</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cursor</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">byte</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">SerializedNativeStructFlag</span>::<span class="ident">from_u8</span>(<span class="ident">byte</span>)<span class="question-mark">?</span>,
             <span class="prelude-val">Err</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>)
@@ -2521,7 +2527,7 @@
 <span class="kw">fn</span> <span class="ident">load_function_def</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">BinaryLoaderResult</span><span class="op">&lt;</span><span class="ident">FunctionDefinition</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">function</span> <span class="op">=</span> <span class="ident">load_function_handle_index</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
 
-    <span class="kw">let</span> <span class="ident">flags</span> <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+    <span class="kw">let</span> <span class="ident">flags</span> <span class="op">=</span> <span class="ident">read_u8</span>(<span class="ident">cursor</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
         <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>).<span class="ident">with_message</span>(<span class="string">&quot;Unexpected EOF&quot;</span>.<span class="ident">to_string</span>())
     })<span class="question-mark">?</span>;
     <span class="kw">let</span> <span class="ident">is_public</span> <span class="op">=</span> (<span class="ident">flags</span> <span class="op">&amp;</span> <span class="ident">FunctionDefinition</span>::<span class="ident">PUBLIC</span>) <span class="op">!</span><span class="op">=</span> <span class="number">0</span>;
@@ -2569,7 +2575,7 @@
     <span class="kw">let</span> <span class="ident">bytecode_count</span> <span class="op">=</span> <span class="ident">load_bytecode_count</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>;
 
     <span class="kw">while</span> <span class="ident">code</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">bytecode_count</span> {
-        <span class="kw">let</span> <span class="ident">byte</span> <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+        <span class="kw">let</span> <span class="ident">byte</span> <span class="op">=</span> <span class="ident">read_u8</span>(<span class="ident">cursor</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
             <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>).<span class="ident">with_message</span>(<span class="string">&quot;Unexpected EOF&quot;</span>.<span class="ident">to_string</span>())
         })<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">bytecode</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">Opcodes</span>::<span class="ident">from_u8</span>(<span class="ident">byte</span>)<span class="question-mark">?</span> {
@@ -2579,7 +2585,7 @@
             <span class="ident">Opcodes</span>::<span class="ident">BR_FALSE</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">BrFalse</span>(<span class="ident">load_bytecode_index</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>),
             <span class="ident">Opcodes</span>::<span class="ident">BRANCH</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Bytecode</span>::<span class="ident">Branch</span>(<span class="ident">load_bytecode_index</span>(<span class="ident">cursor</span>)<span class="question-mark">?</span>),
             <span class="ident">Opcodes</span>::<span class="ident">LD_U8</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>().<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
+                <span class="kw">let</span> <span class="ident">value</span> <span class="op">=</span> <span class="ident">read_u8</span>(<span class="ident">cursor</span>).<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> {
                     <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">MALFORMED</span>).<span class="ident">with_message</span>(<span class="string">&quot;Unexpected EOF&quot;</span>.<span class="ident">to_string</span>())
                 })<span class="question-mark">?</span>;
                 <span class="ident">Bytecode</span>::<span class="ident">LdU8</span>(<span class="ident">value</span>)

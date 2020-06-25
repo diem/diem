@@ -421,6 +421,14 @@
 <span id="421">421</span>
 <span id="422">422</span>
 <span id="423">423</span>
+<span id="424">424</span>
+<span id="425">425</span>
+<span id="426">426</span>
+<span id="427">427</span>
+<span id="428">428</span>
+<span id="429">429</span>
+<span id="430">430</span>
+<span id="431">431</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -436,8 +444,10 @@
 <span class="doccomment">//! It&#39;s used to compress mostly indexes into the main binary tables.</span>
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">file_format</span>::<span class="ident">Bytecode</span>;
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">bail</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="ident">byteorder</span>::<span class="ident">ReadBytesExt</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">io</span>::<span class="ident">Cursor</span>, <span class="ident">mem</span>::<span class="ident">size_of</span>};
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">io</span>::{<span class="ident">Cursor</span>, <span class="ident">Read</span>},
+    <span class="ident">mem</span>::<span class="ident">size_of</span>,
+};
 
 <span class="doccomment">/// Constant values for the binary format header.</span>
 <span class="doccomment">///</span>
@@ -746,10 +756,16 @@
     <span class="ident">binary</span>.<span class="ident">extend</span>(<span class="kw-2">&amp;</span><span class="ident">value</span>.<span class="ident">to_le_bytes</span>())
 }
 
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_u8</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">buf</span> <span class="op">=</span> [<span class="number">0</span>; <span class="number">1</span>];
+    <span class="ident">cursor</span>.<span class="ident">read_exact</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">buf</span>)<span class="question-mark">?</span>;
+    <span class="prelude-val">Ok</span>(<span class="ident">buf</span>[<span class="number">0</span>])
+}
+
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">read_uleb128_as_u64</span>(<span class="ident">cursor</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Cursor</span><span class="op">&lt;</span><span class="kw-2">&amp;</span>[<span class="ident">u8</span>]<span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">value</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0</span>;
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">shift</span> <span class="op">=</span> <span class="number">0</span>;
-    <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">byte</span>) <span class="op">=</span> <span class="ident">cursor</span>.<span class="ident">read_u8</span>() {
+    <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">byte</span>) <span class="op">=</span> <span class="ident">read_u8</span>(<span class="ident">cursor</span>) {
         <span class="kw">let</span> <span class="ident">cur</span> <span class="op">=</span> (<span class="ident">byte</span> <span class="op">&amp;</span> <span class="number">0x7f</span>) <span class="kw">as</span> <span class="ident">u64</span>;
         <span class="kw">if</span> (<span class="ident">cur</span> <span class="op">&lt;</span><span class="op">&lt;</span> <span class="ident">shift</span>) <span class="op">&gt;</span><span class="op">&gt;</span> <span class="ident">shift</span> <span class="op">!</span><span class="op">=</span> <span class="ident">cur</span> {
             <span class="macro">bail</span><span class="macro">!</span>(<span class="string">&quot;invalid ULEB128 repr for usize&quot;</span>);
