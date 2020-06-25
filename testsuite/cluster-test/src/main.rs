@@ -98,6 +98,12 @@ struct Args {
     )]
     pub emit_to_validator: Option<bool>,
 
+    #[structopt(
+        long,
+        help = "Wait for given number of seconds if experiment fails. This require experiment to return error, it does not catch panics"
+    )]
+    pub wait_on_failure: Option<u64>,
+
     #[structopt(flatten)]
     pub cluster_builder_params: ClusterBuilderParams,
 }
@@ -129,11 +135,42 @@ pub async fn main() {
         return;
     }
 
-    let mut runner = ClusterTestRunner::setup(&args)
-        .await
-        .expect("Failed to setup cluster test runner");
+    let wait_on_failure = if let Some(wait_on_failure) = args.wait_on_failure {
+        if wait_on_failure > 20 * 60 {
+            println!("wait_on_failure can not be more then 1200 seconds on shared cluster");
+            process::exit(1);
+        }
+        Some(Duration::from_secs(wait_on_failure))
+    } else {
+        None
+    };
+
+    let runner = ClusterTestRunner::setup(&args).await;
+    let mut runner = match runner {
+        Ok(r) => r,
+        Err(e) => {
+            if let Some(wait_on_failure) = wait_on_failure {
+                warn!(
+                    "Setting up runner failed with {}, waiting for {:?} before terminating",
+                    e, wait_on_failure
+                );
+                delay_for(wait_on_failure).await;
+            }
+            panic!("Failed to setup cluster test runner: {}", e);
+        }
+    };
 
     let result = handle_cluster_test_runner_commands(&args, &mut runner).await;
+    if let Err(e) = &result {
+        if let Some(wait_on_failure) = wait_on_failure {
+            warn!(
+                "Command failed with {}, waiting for {:?} before terminating",
+                e, wait_on_failure
+            );
+            delay_for(wait_on_failure).await;
+            warn!("Tearing down cluster now");
+        }
+    }
     runner.teardown().await;
     let perf_msg = exit_on_error(result);
 
