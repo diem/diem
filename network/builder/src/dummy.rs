@@ -3,7 +3,7 @@
 
 //! Integration tests for validator_network.
 
-use crate::builder::{AuthenticationMode, NetworkBuilder};
+use crate::builder::NetworkBuilder;
 use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
 use libra_config::{chain_id::ChainId, config::RoleType, network_id::NetworkId};
@@ -14,7 +14,9 @@ use libra_types::PeerId;
 use network::{
     constants::NETWORK_CHANNEL_SIZE,
     error::NetworkError,
-    peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
+    peer_manager::{
+        builder::AuthenticationMode, ConnectionRequestSender, PeerManagerRequestSender,
+    },
     protocols::{
         network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
@@ -126,6 +128,8 @@ pub fn setup_network() -> DummyNetwork {
     .into_iter()
     .collect();
 
+    let authentication_mode = AuthenticationMode::Mutual(listener_identity_private_key);
+
     // Set up the listener network
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
@@ -134,15 +138,16 @@ pub fn setup_network() -> DummyNetwork {
         RoleType::Validator,
         listener_peer_id,
         listener_addr,
+        authentication_mode,
     );
     network_builder
-        .authentication_mode(AuthenticationMode::Mutual(listener_identity_private_key))
         .trusted_peers(trusted_peers.clone())
         .add_connectivity_manager();
     let (listener_sender, mut listener_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
     let listener_addr = network_builder.build();
 
+    let authentication_mode = AuthenticationMode::Mutual(dialer_identity_private_key);
     // Set up the dialer network
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
@@ -151,9 +156,9 @@ pub fn setup_network() -> DummyNetwork {
         RoleType::Validator,
         dialer_peer_id,
         dialer_addr,
+        authentication_mode,
     );
     network_builder
-        .authentication_mode(AuthenticationMode::Mutual(dialer_identity_private_key))
         .trusted_peers(trusted_peers)
         .seed_peers(
             [(listener_peer_id, vec![listener_addr])]
