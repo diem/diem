@@ -793,6 +793,99 @@
         }
     }
 
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">create</span>(
+        <span class="ident">chain_id</span>: <span class="kw-2">&amp;</span><span class="ident">ChainId</span>,
+        <span class="ident">role</span>: <span class="ident">RoleType</span>,
+        <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NetworkConfig</span>,
+        <span class="ident">libra_db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">DbReader</span><span class="op">&gt;</span>,
+        <span class="ident">waypoint</span>: <span class="ident">Waypoint</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Runtime</span>, <span class="ident">NetworkBuilder</span>) {
+        <span class="kw">let</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="ident">Builder</span>::<span class="ident">new</span>()
+            .<span class="ident">thread_name</span>(<span class="string">&quot;network-&quot;</span>)
+            .<span class="ident">threaded_scheduler</span>()
+            .<span class="ident">enable_all</span>()
+            .<span class="ident">build</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;Failed to start runtime. Won&#39;t be able to start networking.&quot;</span>);
+
+        <span class="kw">let</span> <span class="ident">identity_key</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">identity_key</span>();
+        <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">peer_id</span>();
+
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network_builder</span> <span class="op">=</span> <span class="ident">NetworkBuilder</span>::<span class="ident">new</span>(
+            <span class="ident">runtime</span>.<span class="ident">handle</span>().<span class="ident">clone</span>(),
+            <span class="ident">chain_id</span>.<span class="ident">clone</span>(),
+            <span class="ident">config</span>.<span class="ident">network_id</span>.<span class="ident">clone</span>(),
+            <span class="ident">role</span>,
+            <span class="ident">peer_id</span>,
+            <span class="ident">config</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>(),
+        );
+        <span class="ident">network_builder</span>.<span class="ident">add_connection_monitoring</span>();
+
+        <span class="comment">// Sanity check seed peer addresses.</span>
+        <span class="ident">config</span>
+            .<span class="ident">verify_seed_peer_addrs</span>()
+            .<span class="ident">expect</span>(<span class="string">&quot;Seed peer addresses must be well-formed&quot;</span>);
+        <span class="kw">let</span> <span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">seed_peers</span>.<span class="ident">clone</span>();
+
+        <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">mutual_authentication</span> {
+            <span class="kw">let</span> <span class="ident">network_peers</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">network_peers</span>.<span class="ident">clone</span>();
+            <span class="kw">let</span> <span class="ident">trusted_peers</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">role</span> <span class="op">=</span><span class="op">=</span> <span class="ident">RoleType</span>::<span class="ident">Validator</span> {
+                <span class="comment">// for validators, trusted_peers is empty will be populated from consensus</span>
+                <span class="ident">HashMap</span>::<span class="ident">new</span>()
+            } <span class="kw">else</span> {
+                <span class="ident">network_peers</span>
+            };
+
+            <span class="macro">info</span><span class="macro">!</span>(
+                <span class="string">&quot;network setup: role: {}, seed_peers: {:?}, trusted_peers: {:?}&quot;</span>,
+                <span class="ident">role</span>, <span class="ident">seed_peers</span>, <span class="ident">trusted_peers</span>,
+            );
+
+            <span class="ident">network_builder</span>
+                .<span class="ident">authentication_mode</span>(<span class="ident">AuthenticationMode</span>::<span class="ident">Mutual</span>(<span class="ident">identity_key</span>))
+                .<span class="ident">trusted_peers</span>(<span class="ident">trusted_peers</span>)
+                .<span class="ident">seed_peers</span>(<span class="ident">seed_peers</span>)
+                .<span class="ident">connectivity_check_interval_ms</span>(<span class="ident">config</span>.<span class="ident">connectivity_check_interval_ms</span>)
+                .<span class="ident">add_connectivity_manager</span>();
+        } <span class="kw">else</span> {
+            <span class="comment">// Enforce the outgoing connection (dialer) verifies the identity of the listener (server)</span>
+            <span class="ident">network_builder</span>.<span class="ident">authentication_mode</span>(<span class="ident">AuthenticationMode</span>::<span class="ident">ServerOnly</span>(<span class="ident">identity_key</span>));
+            <span class="kw">if</span> <span class="op">!</span><span class="ident">seed_peers</span>.<span class="ident">is_empty</span>() {
+                <span class="ident">network_builder</span>
+                    .<span class="ident">seed_peers</span>(<span class="ident">seed_peers</span>)
+                    .<span class="ident">add_connectivity_manager</span>();
+            }
+        }
+
+        <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">discovery_method</span> {
+            <span class="ident">DiscoveryMethod</span>::<span class="ident">Gossip</span>(<span class="ident">gossip_config</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">network_builder</span>
+                    .<span class="ident">advertised_address</span>(<span class="ident">gossip_config</span>.<span class="ident">advertised_address</span>.<span class="ident">clone</span>())
+                    .<span class="ident">discovery_interval_ms</span>(<span class="ident">gossip_config</span>.<span class="ident">discovery_interval_ms</span>)
+                    .<span class="ident">add_gossip_discovery</span>();
+            }
+            <span class="ident">DiscoveryMethod</span>::<span class="ident">Onchain</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> (<span class="ident">network_tx</span>, <span class="ident">discovery_events</span>) <span class="op">=</span> <span class="ident">network_builder</span>.<span class="ident">add_protocol_handler</span>(
+                    <span class="ident">onchain_discovery</span>::<span class="ident">network_interface</span>::<span class="ident">network_endpoint_config</span>(),
+                );
+                <span class="kw">let</span> <span class="ident">onchain_discovery_builder</span> <span class="op">=</span> <span class="ident">OnchainDiscoveryBuilder</span>::<span class="ident">build</span>(
+                    <span class="ident">network_builder</span>
+                        .<span class="ident">conn_mgr_reqs_tx</span>()
+                        .<span class="ident">expect</span>(<span class="string">&quot;ConnectivityManager must be installed&quot;</span>),
+                    <span class="ident">network_tx</span>,
+                    <span class="ident">discovery_events</span>,
+                    <span class="ident">network_builder</span>.<span class="ident">network_context</span>(),
+                    <span class="ident">libra_db</span>,
+                    <span class="ident">waypoint</span>,
+                    <span class="ident">runtime</span>.<span class="ident">handle</span>(),
+                );
+                <span class="ident">onchain_discovery_builder</span>.<span class="ident">start</span>(<span class="ident">runtime</span>.<span class="ident">handle</span>());
+            }
+            <span class="ident">DiscoveryMethod</span>::<span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {}
+        }
+
+        (<span class="ident">runtime</span>, <span class="ident">network_builder</span>)
+    }
+
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">network_context</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">NetworkContext</span><span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">clone</span>()
     }
@@ -1143,99 +1236,6 @@
             <span class="ident">EventT</span>::<span class="ident">new</span>(<span class="ident">peer_mgr_reqs_rx</span>, <span class="ident">connection_notifs_rx</span>),
         )
     }
-}
-
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">setup_network</span>(
-    <span class="ident">chain_id</span>: <span class="kw-2">&amp;</span><span class="ident">ChainId</span>,
-    <span class="ident">role</span>: <span class="ident">RoleType</span>,
-    <span class="ident">config</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">NetworkConfig</span>,
-    <span class="ident">libra_db</span>: <span class="ident">Arc</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">DbReader</span><span class="op">&gt;</span>,
-    <span class="ident">waypoint</span>: <span class="ident">Waypoint</span>,
-) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Runtime</span>, <span class="ident">NetworkBuilder</span>) {
-    <span class="kw">let</span> <span class="ident">runtime</span> <span class="op">=</span> <span class="ident">Builder</span>::<span class="ident">new</span>()
-        .<span class="ident">thread_name</span>(<span class="string">&quot;network-&quot;</span>)
-        .<span class="ident">threaded_scheduler</span>()
-        .<span class="ident">enable_all</span>()
-        .<span class="ident">build</span>()
-        .<span class="ident">expect</span>(<span class="string">&quot;Failed to start runtime. Won&#39;t be able to start networking.&quot;</span>);
-
-    <span class="kw">let</span> <span class="ident">identity_key</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">identity_key</span>();
-    <span class="kw">let</span> <span class="ident">peer_id</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">peer_id</span>();
-
-    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">network_builder</span> <span class="op">=</span> <span class="ident">NetworkBuilder</span>::<span class="ident">new</span>(
-        <span class="ident">runtime</span>.<span class="ident">handle</span>().<span class="ident">clone</span>(),
-        <span class="ident">chain_id</span>.<span class="ident">clone</span>(),
-        <span class="ident">config</span>.<span class="ident">network_id</span>.<span class="ident">clone</span>(),
-        <span class="ident">role</span>,
-        <span class="ident">peer_id</span>,
-        <span class="ident">config</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>(),
-    );
-    <span class="ident">network_builder</span>.<span class="ident">add_connection_monitoring</span>();
-
-    <span class="comment">// Sanity check seed peer addresses.</span>
-    <span class="ident">config</span>
-        .<span class="ident">verify_seed_peer_addrs</span>()
-        .<span class="ident">expect</span>(<span class="string">&quot;Seed peer addresses must be well-formed&quot;</span>);
-    <span class="kw">let</span> <span class="ident">seed_peers</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">seed_peers</span>.<span class="ident">clone</span>();
-
-    <span class="kw">if</span> <span class="ident">config</span>.<span class="ident">mutual_authentication</span> {
-        <span class="kw">let</span> <span class="ident">network_peers</span> <span class="op">=</span> <span class="ident">config</span>.<span class="ident">network_peers</span>.<span class="ident">clone</span>();
-        <span class="kw">let</span> <span class="ident">trusted_peers</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">role</span> <span class="op">=</span><span class="op">=</span> <span class="ident">RoleType</span>::<span class="ident">Validator</span> {
-            <span class="comment">// for validators, trusted_peers is empty will be populated from consensus</span>
-            <span class="ident">HashMap</span>::<span class="ident">new</span>()
-        } <span class="kw">else</span> {
-            <span class="ident">network_peers</span>
-        };
-
-        <span class="macro">info</span><span class="macro">!</span>(
-            <span class="string">&quot;network setup: role: {}, seed_peers: {:?}, trusted_peers: {:?}&quot;</span>,
-            <span class="ident">role</span>, <span class="ident">seed_peers</span>, <span class="ident">trusted_peers</span>,
-        );
-
-        <span class="ident">network_builder</span>
-            .<span class="ident">authentication_mode</span>(<span class="ident">AuthenticationMode</span>::<span class="ident">Mutual</span>(<span class="ident">identity_key</span>))
-            .<span class="ident">trusted_peers</span>(<span class="ident">trusted_peers</span>)
-            .<span class="ident">seed_peers</span>(<span class="ident">seed_peers</span>)
-            .<span class="ident">connectivity_check_interval_ms</span>(<span class="ident">config</span>.<span class="ident">connectivity_check_interval_ms</span>)
-            .<span class="ident">add_connectivity_manager</span>();
-    } <span class="kw">else</span> {
-        <span class="comment">// Enforce the outgoing connection (dialer) verifies the identity of the listener (server)</span>
-        <span class="ident">network_builder</span>.<span class="ident">authentication_mode</span>(<span class="ident">AuthenticationMode</span>::<span class="ident">ServerOnly</span>(<span class="ident">identity_key</span>));
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">seed_peers</span>.<span class="ident">is_empty</span>() {
-            <span class="ident">network_builder</span>
-                .<span class="ident">seed_peers</span>(<span class="ident">seed_peers</span>)
-                .<span class="ident">add_connectivity_manager</span>();
-        }
-    }
-
-    <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">config</span>.<span class="ident">discovery_method</span> {
-        <span class="ident">DiscoveryMethod</span>::<span class="ident">Gossip</span>(<span class="ident">gossip_config</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="ident">network_builder</span>
-                .<span class="ident">advertised_address</span>(<span class="ident">gossip_config</span>.<span class="ident">advertised_address</span>.<span class="ident">clone</span>())
-                .<span class="ident">discovery_interval_ms</span>(<span class="ident">gossip_config</span>.<span class="ident">discovery_interval_ms</span>)
-                .<span class="ident">add_gossip_discovery</span>();
-        }
-        <span class="ident">DiscoveryMethod</span>::<span class="ident">Onchain</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> (<span class="ident">network_tx</span>, <span class="ident">discovery_events</span>) <span class="op">=</span> <span class="ident">network_builder</span>.<span class="ident">add_protocol_handler</span>(
-                <span class="ident">onchain_discovery</span>::<span class="ident">network_interface</span>::<span class="ident">network_endpoint_config</span>(),
-            );
-            <span class="kw">let</span> <span class="ident">onchain_discovery_builder</span> <span class="op">=</span> <span class="ident">OnchainDiscoveryBuilder</span>::<span class="ident">build</span>(
-                <span class="ident">network_builder</span>
-                    .<span class="ident">conn_mgr_reqs_tx</span>()
-                    .<span class="ident">expect</span>(<span class="string">&quot;ConnectivityManager must be installed&quot;</span>),
-                <span class="ident">network_tx</span>,
-                <span class="ident">discovery_events</span>,
-                <span class="ident">network_builder</span>.<span class="ident">network_context</span>(),
-                <span class="ident">libra_db</span>,
-                <span class="ident">waypoint</span>,
-                <span class="ident">runtime</span>.<span class="ident">handle</span>(),
-            );
-            <span class="ident">onchain_discovery_builder</span>.<span class="ident">start</span>(<span class="ident">runtime</span>.<span class="ident">handle</span>());
-        }
-        <span class="ident">DiscoveryMethod</span>::<span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {}
-    }
-
-    (<span class="ident">runtime</span>, <span class="ident">network_builder</span>)
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "network_builder";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
