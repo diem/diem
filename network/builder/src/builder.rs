@@ -30,7 +30,7 @@ use network::{
         PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
     },
     protocols::{
-        discovery::{self, Discovery},
+        discovery::{self, builder::DiscoveryBuilder},
         health_checker::{self, HealthChecker},
         network::{NewNetworkEvents, NewNetworkSender},
         wire::handshake::v1::SupportedProtocols,
@@ -118,6 +118,8 @@ pub struct NetworkBuilder {
     max_connection_delay_ms: u64,
     /// For now full node connections are limited by
     max_fullnode_connections: usize,
+
+    discovery_builder: Option<DiscoveryBuilder>,
 }
 
 impl NetworkBuilder {
@@ -170,6 +172,7 @@ impl NetworkBuilder {
             max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
             max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
+            discovery_builder: None,
         }
     }
 
@@ -424,6 +427,7 @@ impl NetworkBuilder {
     /// peers as a network protocol.
     ///
     /// This is for testing purposes only and should not be used in production networks.
+    // TODO:  remove the pub qualifier
     pub fn add_gossip_discovery(&mut self) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
@@ -456,18 +460,32 @@ impl NetworkBuilder {
 
         let addrs = vec![advertised_address];
         let discovery_interval_ms = self.discovery_interval_ms;
-        let discovery = self.executor.enter(|| {
-            Discovery::new(
-                self.network_context.clone(),
-                addrs,
-                interval(Duration::from_millis(discovery_interval_ms)).fuse(),
-                discovery_network_tx,
-                discovery_network_rx,
-                conn_mgr_reqs_tx,
-            )
-        });
-        self.executor.spawn(discovery.start());
-        debug!("{} Started discovery protocol actor", self.network_context);
+
+        self.discovery_builder = Some(DiscoveryBuilder::create(
+            self.network_context(),
+            addrs,
+            discovery_interval_ms,
+            discovery_network_tx,
+            discovery_network_rx,
+            conn_mgr_reqs_tx,
+        ));
+        self.build_gossip_discovery().start_gossip_discovery();
+        self
+    }
+
+    fn build_gossip_discovery(&mut self) -> &mut Self {
+        if let Some(discovery_builder) = self.discovery_builder.as_mut() {
+            discovery_builder.build(&self.executor);
+            debug!("{} Built Gossip Discovery", self.network_context());
+        }
+        self
+    }
+
+    fn start_gossip_discovery(&mut self) -> &mut Self {
+        if let Some(discovery_builder) = self.discovery_builder.as_mut() {
+            discovery_builder.start(&self.executor);
+            debug!("{} Started gossip discovery", self.network_context());
+        }
         self
     }
 
