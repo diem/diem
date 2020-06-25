@@ -14,7 +14,7 @@ use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{treasury_compliance_account_address, COIN1_NAME},
+    account_config::{association_address, treasury_compliance_account_address, COIN1_NAME},
     ledger_info::LedgerInfo,
     transaction::authenticator::AuthenticationKey,
     waypoint::Waypoint,
@@ -875,6 +875,7 @@ fn test_full_node_basic_flow() {
 
     // ensure the client has up-to-date sequence number after test_smoke_script(3 minting)
     let sender_account = treasury_compliance_account_address();
+    let creation_account = association_address();
     full_node_client
         .wait_for_transaction(sender_account, 3)
         .unwrap();
@@ -901,9 +902,14 @@ fn test_full_node_basic_flow() {
     full_node_client_2.create_next_account(false).unwrap();
 
     let sequence_reset = format!("sequence {} true", sender_account);
+    let creation_sequence_reset = format!("sequence {} true", creation_account);
     let sequence_reset_command: Vec<_> = sequence_reset.split(' ').collect();
+    let creation_sequence_reset_command: Vec<_> = creation_sequence_reset.split(' ').collect();
     full_node_client
         .get_sequence_number(&sequence_reset_command)
+        .unwrap();
+    full_node_client
+        .get_sequence_number(&creation_sequence_reset_command)
         .unwrap();
     full_node_client
         .mint_coins(&["mintb", "3", "10", "Coin1"], true)
@@ -930,6 +936,12 @@ fn test_full_node_basic_flow() {
         .unwrap();
     full_node_client
         .get_sequence_number(&sequence_reset_command)
+        .unwrap();
+    validator_ac_client
+        .get_sequence_number(&creation_sequence_reset_command)
+        .unwrap();
+    full_node_client
+        .get_sequence_number(&creation_sequence_reset_command)
         .unwrap();
 
     // mint from validator and check both nodes have correct balance

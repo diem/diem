@@ -9,12 +9,9 @@ use libra_types::{
     account_address::AccountAddress,
     block_metadata::BlockMetadata,
     on_chain_config::{LibraVersion, VMPublishingOption},
-    transaction::{
-        authenticator::AuthenticationKey, ChangeSet, Script, Transaction, TransactionArgument,
-    },
+    transaction::{ChangeSet, Script, Transaction, TransactionArgument},
     write_set::{WriteOp, WriteSetMut},
 };
-use mirai_annotations::*;
 use move_core_types::language_storage::TypeTag;
 use std::convert::TryFrom;
 use vm::access::ModuleAccess;
@@ -60,26 +57,10 @@ pub fn encode_stdlib_script(
     Script::new(stdlib_script.compiled_bytes().into_vec(), type_args, args)
 }
 
-fn validate_auth_key_prefix(auth_key_prefix: &[u8]) {
-    let auth_key_prefix_length = auth_key_prefix.len();
-    checked_assume!(
-        auth_key_prefix_length == 0
-            || auth_key_prefix_length == AuthenticationKey::LENGTH - AccountAddress::LENGTH,
-        "Bad auth key prefix length {}",
-        auth_key_prefix_length
-    );
-}
-
 // TODO: this should go away once we are no longer using it in tests/testnet
 /// Encode a program creating `amount` coins for sender
-pub fn encode_mint_script(
-    token: TypeTag,
-    recipient: &AccountAddress,
-    auth_key_prefix: Vec<u8>,
-    amount: u64,
-) -> Script {
-    validate_auth_key_prefix(&auth_key_prefix);
-    generated::encode_mint_script(token, *recipient, auth_key_prefix, amount)
+pub fn encode_mint_script(token: TypeTag, recipient: &AccountAddress, amount: u64) -> Script {
+    generated::encode_mint_script(token, *recipient, amount)
 }
 
 pub fn encode_modify_publishing_option_script(config: VMPublishingOption) -> Script {

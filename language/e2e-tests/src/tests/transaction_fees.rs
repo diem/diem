@@ -14,20 +14,29 @@ use move_core_types::{
     language_storage::{StructTag, TypeTag},
 };
 use std::convert::TryFrom;
-use transaction_builder::{encode_burn_txn_fees_script, encode_mint_script};
+use transaction_builder::{
+    encode_burn_txn_fees_script, encode_create_testing_account_script, encode_mint_script,
+};
 
 #[test]
 fn burn_txn_fees() {
     let mut executor = FakeExecutor::from_genesis_file();
     let sender = Account::new();
     let tc = Account::new_blessed_tc();
-    executor.execute_and_apply(tc.signed_script_txn(
-        encode_mint_script(
+    let association = Account::new_association();
+
+    executor.execute_and_apply(association.signed_script_txn(
+        encode_create_testing_account_script(
             account_config::coin1_tag(),
-            &sender.address(),
+            *sender.address(),
             sender.auth_key_prefix(),
-            10_000_000,
+            false,
         ),
+        1,
+    ));
+
+    executor.execute_and_apply(tc.signed_script_txn(
+        encode_mint_script(account_config::coin1_tag(), sender.address(), 10_000_000),
         0,
     ));
 

@@ -1,5 +1,6 @@
 //! account: bob, 10000LBR
 //! account: alice, 10000LBR
+//! account: abby, 0, 0, address
 
 module Holder {
     use 0x1::Signer;
@@ -109,22 +110,6 @@ script {
             0
         );
         LibraAccount::restore_withdraw_capability(with_cap);
-    }
-}
-// check: EXECUTED
-
-//! new-transaction
-//! sender: association
-script {
-    use 0x1::LibraAccount;
-    use 0x1::LBR::LBR;
-    use 0x1::Roles::{Self, LibraRootRole};
-    fun main(account: &signer) {
-        let r = Roles::extract_privilege_to_capability<LibraRootRole>(account);
-        LibraAccount::create_testnet_account<LBR>(
-            account, &r, 0xDEADBEEF, x"00000000000000000000000000000000"
-        );
-        Roles::restore_capability_to_privilege(account, r);
     }
 }
 // check: EXECUTED

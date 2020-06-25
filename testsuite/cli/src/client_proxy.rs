@@ -453,12 +453,43 @@ impl ClientProxy {
 
         ensure!(num_coins > 0, "Invalid number of coins to mint.");
 
+        if self.assoc_root_account.is_some() {
+            let script = transaction_builder::encode_create_testing_account_script(
+                type_tag_for_currency_code(currency_code.clone()),
+                receiver,
+                receiver_auth_key.prefix().to_vec(),
+                false, /* add all currencies */
+            );
+            // If the receiver is local, create it now.
+            if let Some(pos) = self
+                .accounts
+                .iter()
+                .position(|account_data| account_data.address == receiver)
+            {
+                let status = &self.accounts.get(pos).unwrap().status;
+                if &AccountStatus::Local == status {
+                    // This needs to be blocking since the mint can't happen until it completes
+                    self.association_transaction_with_local_assoc_root_account(
+                        TransactionPayload::Script(script),
+                        true,
+                    )?;
+                    self.accounts.get_mut(pos).unwrap().status = AccountStatus::Persisted;
+                }
+            } else {
+                // We can't determine the account state. So try and create the account, but
+                // if it already exists don't error.
+                let _ = self.association_transaction_with_local_assoc_root_account(
+                    TransactionPayload::Script(script),
+                    true,
+                );
+            } // else, the account has already been created -- do nothing
+        }
+
         match self.treasury_compliance_account {
             Some(_) => {
                 let script = transaction_builder::encode_mint_script(
                     type_tag_for_currency_code(currency_code),
                     &receiver,
-                    receiver_auth_key.prefix().to_vec(),
                     num_coins,
                 );
                 self.association_transaction_with_local_treasury_compliance_account(

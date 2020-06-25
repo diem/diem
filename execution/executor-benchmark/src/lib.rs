@@ -12,7 +12,10 @@ use libra_crypto::{
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{coin1_tag, treasury_compliance_account_address, AccountResource, COIN1_NAME},
+    account_config::{
+        association_address, coin1_tag, treasury_compliance_account_address, AccountResource,
+        COIN1_NAME,
+    },
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{
@@ -31,7 +34,9 @@ use std::{
 use storage_client::StorageClient;
 use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::start_storage_service_with_db;
-use transaction_builder::{encode_mint_script, encode_transfer_with_metadata_script};
+use transaction_builder::{
+    encode_create_testing_account_script, encode_mint_script, encode_transfer_with_metadata_script,
+};
 
 struct AccountData {
     private_key: Ed25519PrivateKey,
@@ -96,8 +101,38 @@ impl TransactionGenerator {
     }
 
     fn run(&mut self, init_account_balance: u64, block_size: usize, num_transfer_blocks: usize) {
+        self.gen_account_creations(block_size);
         self.gen_mint_transactions(init_account_balance, block_size);
         self.gen_transfer_transactions(block_size, num_transfer_blocks);
+    }
+
+    fn gen_account_creations(&self, block_size: usize) {
+        let assoc_account = association_address();
+
+        for (i, block) in self.accounts.chunks(block_size).enumerate() {
+            let mut transactions = Vec::with_capacity(block_size);
+            for (j, account) in block.iter().enumerate() {
+                let txn = create_transaction(
+                    assoc_account,
+                    1 + (i * block_size + j) as u64,
+                    &self.genesis_key,
+                    self.genesis_key.public_key(),
+                    encode_create_testing_account_script(
+                        coin1_tag(),
+                        account.address,
+                        account.auth_key_prefix(),
+                        false, /* add all currencies */
+                    ),
+                );
+                transactions.push(txn);
+            }
+
+            self.block_sender
+                .as_ref()
+                .unwrap()
+                .send(transactions)
+                .unwrap();
+        }
     }
 
     /// Generates transactions that allocate `init_account_balance` to every account.
@@ -112,12 +147,7 @@ impl TransactionGenerator {
                     (i * block_size + j) as u64,
                     &self.genesis_key,
                     self.genesis_key.public_key(),
-                    encode_mint_script(
-                        coin1_tag(),
-                        &account.address,
-                        account.auth_key_prefix(),
-                        init_account_balance,
-                    ),
+                    encode_mint_script(coin1_tag(), &account.address, init_account_balance),
                 );
                 transactions.push(txn);
             }

@@ -111,38 +111,35 @@ fn mint_to_existing() {
     // We can't run mint test on terraform genesis as we don't have the private key to sign the
     // mint transaction.
     let mut executor = FakeExecutor::from_genesis_file();
-    let association = Account::new_blessed_tc();
+    let tc = Account::new_blessed_tc();
+    let association = Account::new_association();
 
     // create and publish a sender with 1_000_000 coins
     let receiver = Account::new();
-    let initial_amount = 1;
 
     executor.execute_and_apply(association.signed_script_txn(
-        encode_mint_script(
+        encode_create_testing_account_script(
             account_config::coin1_tag(),
-            &receiver.address(),
+            *receiver.address(),
             receiver.auth_key_prefix(),
-            initial_amount,
-        ),
-        0,
-    ));
-
-    let mint_amount = 1_000;
-    executor.execute_and_apply(association.signed_script_txn(
-        encode_mint_script(
-            account_config::coin1_tag(),
-            &receiver.address(),
-            vec![],
-            mint_amount,
+            false,
         ),
         1,
     ));
 
-    // check that numbers in stored DB are correct
-    let receiver_balance = initial_amount + mint_amount;
+    let mint_amount = 1_000;
+    executor.execute_and_apply(tc.signed_script_txn(
+        encode_mint_script(
+            account_config::coin1_tag(),
+            &receiver.address(),
+            mint_amount,
+        ),
+        0,
+    ));
 
+    // check that numbers in stored DB are correct
     let updated_sender = executor
-        .read_account_resource(&association)
+        .read_account_resource(&tc)
         .expect("sender balance must exist");
     let updated_receiver = executor
         .read_account_resource(&receiver)
@@ -150,8 +147,8 @@ fn mint_to_existing() {
     let updated_receiver_balance = executor
         .read_balance_resource(&receiver, account::coin1_currency_code())
         .expect("receiver balance must exist");
-    assert_eq!(receiver_balance, updated_receiver_balance.coin());
-    assert_eq!(2, updated_sender.sequence_number());
+    assert_eq!(mint_amount, updated_receiver_balance.coin());
+    assert_eq!(1, updated_sender.sequence_number());
     assert_eq!(0, updated_receiver.sequence_number());
 }
 
@@ -161,55 +158,27 @@ fn mint_to_new_account() {
     // We can't run mint test on terraform genesis as we don't have the private key to sign the
     // mint transaction.
 
-    let mut executor = FakeExecutor::from_genesis_file();
+    let executor = FakeExecutor::from_genesis_file();
     let association = Account::new_blessed_tc();
 
     // create and publish a sender with TXN_RESERVED coins
     let new_account = Account::new();
 
     let mint_amount = TXN_RESERVED;
-    executor.execute_and_apply(association.signed_script_txn(
+    let output = executor.execute_transaction(association.signed_script_txn(
         encode_mint_script(
             account_config::coin1_tag(),
             &new_account.address(),
-            new_account.auth_key_prefix(),
             mint_amount,
         ),
         0,
     ));
 
-    // check that numbers in stored DB are correct
-    let receiver_balance = mint_amount;
-
-    let updated_sender = executor
-        .read_account_resource(&association)
-        .expect("sender must exist");
-    let updated_receiver = executor
-        .read_account_resource(&new_account)
-        .expect("receiver must exist");
-    let updated_receiver_balance = executor
-        .read_balance_resource(&new_account, account::coin1_currency_code())
-        .expect("receiver balance must exist");
-    assert_eq!(receiver_balance, updated_receiver_balance.coin());
-    assert_eq!(1, updated_sender.sequence_number());
-    assert_eq!(0, updated_receiver.sequence_number());
-
-    // Mint can only be called from genesis address;
-    let txn = new_account.signed_script_txn(
-        encode_mint_script(
-            account_config::coin1_tag(),
-            &new_account.address(),
-            vec![],
-            mint_amount,
-        ),
-        0,
+    assert_eq!(
+        output.status().vm_status().major_status,
+        StatusCode::ABORTED
     );
-    let output = executor.execute_transaction(txn);
-
-    assert!(transaction_status_eq(
-        &output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(3))
-    ));
+    assert_eq!(output.status().vm_status().sub_status, Some(8000971));
 }
 
 #[test]

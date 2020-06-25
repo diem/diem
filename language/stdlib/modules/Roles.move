@@ -184,10 +184,6 @@ module Roles {
         // Grant the TC role to the treasury_compliance_account
         move_to(treasury_compliance_account, RoleId { role_id: TREASURY_COMPLIANCE_ROLE_ID() });
         move_to(treasury_compliance_account, Privilege<TreasuryComplianceRole>{ witness: TreasuryComplianceRole{}, is_extracted: false});
-
-        // > XXX/TODO/HACK/REMOVE (tzakian): This is a _HACK_ for right now
-        // so that we can allow minting to create an account. THIS NEEDS TO BE REMOVED.
-        move_to(treasury_compliance_account, Privilege<LibraRootRole>{ witness: LibraRootRole{}, is_extracted: false})
     }
 
     /// Generic new role creation (for role ids != LIBRA_ROOT_ROLE_ID
@@ -260,15 +256,9 @@ module Roles {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(
-                calling_role.role_id == LIBRA_ROOT_ROLE_ID()
-                // XXX/HACK/REMOVE(tzakian): This is for testnet semantics
-                // only. THIS NEEDS TO BE REMOVED.
-                || calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID(),
-                0
-            );
-            move_to(new_account, RoleId { role_id: PARENT_VASP_ROLE_ID() });
-            move_to(new_account, Privilege<ParentVASPRole>{ witness: ParentVASPRole{}, is_extracted: false })
+        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID(), 0);
+        move_to(new_account, RoleId { role_id: PARENT_VASP_ROLE_ID() });
+        move_to(new_account, Privilege<ParentVASPRole>{ witness: ParentVASPRole{}, is_extracted: false })
     }
 
     /// Publish a ChildVASP `RoleId` under `new_account`.
