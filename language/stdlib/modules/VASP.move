@@ -10,7 +10,7 @@ module VASP {
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
     use 0x1::Signature;
-    use 0x1::Roles::{Capability, AssociationRootRole, ParentVASPRole};
+    use 0x1::Roles::{Capability, LibraRootRole, ParentVASPRole};
 
     /// Each VASP has a unique root account that holds a `ParentVASP` resource. This resource holds
     /// the VASP's globally unique name and all of the metadata that other VASPs need to perform
@@ -66,7 +66,7 @@ module VASP {
     /// Aborts if `association` is not an Association account
     public fun publish_parent_vasp_credential(
         vasp: &signer,
-        _: &Capability<AssociationRootRole>,
+        _: &Capability<LibraRootRole>,
         human_name: vector<u8>,
         base_url: vector<u8>,
         compliance_public_key: vector<u8>

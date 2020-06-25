@@ -96,7 +96,7 @@
 ): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> {
     // enforce that this is only going <b>to</b> one specific address,
     <b>assert</b>(
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(),
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
         0
     );
     <b>let</b> cap = <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>(
@@ -188,7 +188,7 @@ Returns true iff initialize has been called.
 
 
 <pre><code><b>define</b> <a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>(): bool {
-    <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::SPEC_ASSOCIATION_ROOT_ADDRESS</a>())
+    <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
 }
 </code></pre>
 
@@ -268,10 +268,10 @@ There is no address with a RegisteredCurrencies value before initialization.
 
 <pre><code><b>schema</b> <a href="#0x1_RegisteredCurrencies_OnlyConfigAddressHasRegisteredCurrencies">OnlyConfigAddressHasRegisteredCurrencies</a> {
     <b>invariant</b> <a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>()
-        ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::SPEC_ASSOCIATION_ROOT_ADDRESS</a>())
+        ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
             && (forall addr: address:
                    <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(addr)
-                              ==&gt; addr == <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::SPEC_ASSOCIATION_ROOT_ADDRESS</a>());
+                              ==&gt; addr == <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
 }
 </code></pre>
 

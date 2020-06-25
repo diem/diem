@@ -86,7 +86,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraWriteSetManager_initialize">initialize</a>(account: &signer) {
     // Operational constraint
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 1);
 
     move_to(
         account,
@@ -122,7 +122,7 @@
     writeset_public_key: vector&lt;u8&gt;,
 ) {
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>assert</b>(sender == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 33);
+    <b>assert</b>(sender == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 33);
 
     <b>let</b> association_auth_key = <a href="LibraAccount.md#0x1_LibraAccount_authentication_key">LibraAccount::authentication_key</a>(sender);
     <b>let</b> sequence_number = <a href="LibraAccount.md#0x1_LibraAccount_sequence_number">LibraAccount::sequence_number</a>(sender);
@@ -157,7 +157,7 @@
 
 
 <pre><code><b>fun</b> <a href="#0x1_LibraWriteSetManager_epilogue">epilogue</a>(account: &signer, writeset_payload: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a> {
-    <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>());
+    <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x1_LibraWriteSetManager">LibraWriteSetManager</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     <b>let</b> association_root_capability = <a href="Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>(account);
 
     <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x1_LibraWriteSetManager_UpgradeEvent">Self::UpgradeEvent</a>&gt;(

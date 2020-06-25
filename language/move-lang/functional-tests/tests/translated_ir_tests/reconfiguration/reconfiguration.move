@@ -10,10 +10,10 @@
 // Reconfiguration can only be invoked by association.
 script {
 use 0x1::LibraConfig;
-use 0x1::Roles::{Self, AssociationRootRole};
+use 0x1::Roles::{Self, LibraRootRole};
 
 fun main(account: &signer) {
-    let r = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+    let r = Roles::extract_privilege_to_capability<LibraRootRole>(account);
     LibraConfig::reconfigure(&r);
     Roles::restore_capability_to_privilege(account, r);
 }
@@ -26,10 +26,10 @@ fun main(account: &signer) {
 //! sender: association
 script {
 use 0x1::LibraConfig;
-use 0x1::Roles::{Self, AssociationRootRole};
+use 0x1::Roles::{Self, LibraRootRole};
 
 fun main(account: &signer) {
-    let r = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+    let r = Roles::extract_privilege_to_capability<LibraRootRole>(account);
     LibraConfig::reconfigure(&r);
     Roles::restore_capability_to_privilege(account, r);
 }
@@ -42,10 +42,10 @@ fun main(account: &signer) {
 // Cannot trigger two reconfiguration within the same block.
 script {
 use 0x1::LibraConfig;
-use 0x1::Roles::{Self, AssociationRootRole};
+use 0x1::Roles::{Self, LibraRootRole};
 
 fun main(account: &signer) {
-    let r = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+    let r = Roles::extract_privilege_to_capability<LibraRootRole>(account);
     LibraConfig::reconfigure(&r);
     Roles::restore_capability_to_privilege(account, r);
 }
@@ -61,10 +61,10 @@ fun main(account: &signer) {
 //! sender: association
 script {
 use 0x1::LibraConfig;
-use 0x1::Roles::{Self, AssociationRootRole};
+use 0x1::Roles::{Self, LibraRootRole};
 
 fun main(account: &signer) {
-    let r = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+    let r = Roles::extract_privilege_to_capability<LibraRootRole>(account);
     LibraConfig::reconfigure(&r);
     Roles::restore_capability_to_privilege(account, r);
 }

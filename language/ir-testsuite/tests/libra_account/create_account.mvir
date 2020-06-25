@@ -6,13 +6,13 @@ import 0x1.Roles;
 //! sender: association
 main(account: &signer) {
     let addr: address;
-    let x: Roles.Capability<Roles.AssociationRootRole>;
-    x = Roles.extract_privilege_to_capability<Roles.AssociationRootRole>(copy(account));
+    let x: Roles.Capability<Roles.LibraRootRole>;
+    x = Roles.extract_privilege_to_capability<Roles.LibraRootRole>(copy(account));
 
     addr = 0x111101;
     assert(!LibraAccount.exists_at(copy(addr)), 83);
     LibraAccount.create_testnet_account<LBR.LBR>(copy(account), &x, copy(addr), LCS.to_bytes<address>(&addr));
-    Roles.restore_capability_to_privilege<Roles.AssociationRootRole>(move(account), move(x));
+    Roles.restore_capability_to_privilege<Roles.LibraRootRole>(move(account), move(x));
     return;
 }
 

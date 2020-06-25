@@ -12,10 +12,10 @@ import 0x1.LibraConfig;
 import 0x1.Roles;
 
 main(account: &signer) {
-    let x: Roles.Capability<Roles.AssociationRootRole>;
-    x = Roles.extract_privilege_to_capability<Roles.AssociationRootRole>(copy(account));
+    let x: Roles.Capability<Roles.LibraRootRole>;
+    x = Roles.extract_privilege_to_capability<Roles.LibraRootRole>(copy(account));
     LibraConfig.reconfigure(&x);
-    Roles.restore_capability_to_privilege<Roles.AssociationRootRole>(move(account), move(x));
+    Roles.restore_capability_to_privilege<Roles.LibraRootRole>(move(account), move(x));
     return;
 }
 
@@ -28,10 +28,10 @@ import 0x1.LibraConfig;
 import 0x1.Roles;
 
 main(account: &signer) {
-    let x: Roles.Capability<Roles.AssociationRootRole>;
-    x = Roles.extract_privilege_to_capability<Roles.AssociationRootRole>(copy(account));
+    let x: Roles.Capability<Roles.LibraRootRole>;
+    x = Roles.extract_privilege_to_capability<Roles.LibraRootRole>(copy(account));
     LibraConfig.reconfigure(&x);
-    Roles.restore_capability_to_privilege<Roles.AssociationRootRole>(move(account), move(x));
+    Roles.restore_capability_to_privilege<Roles.LibraRootRole>(move(account), move(x));
     return;
 }
 
@@ -45,10 +45,10 @@ import 0x1.LibraConfig;
 import 0x1.Roles;
 
 main(account: &signer) {
-    let x: Roles.Capability<Roles.AssociationRootRole>;
-    x = Roles.extract_privilege_to_capability<Roles.AssociationRootRole>(copy(account));
+    let x: Roles.Capability<Roles.LibraRootRole>;
+    x = Roles.extract_privilege_to_capability<Roles.LibraRootRole>(copy(account));
     LibraConfig.reconfigure(&x);
-    Roles.restore_capability_to_privilege<Roles.AssociationRootRole>(move(account), move(x));
+    Roles.restore_capability_to_privilege<Roles.LibraRootRole>(move(account), move(x));
     return;
 }
 
@@ -65,10 +65,10 @@ import 0x1.LibraConfig;
 import 0x1.Roles;
 
 main(account: &signer) {
-    let x: Roles.Capability<Roles.AssociationRootRole>;
-    x = Roles.extract_privilege_to_capability<Roles.AssociationRootRole>(copy(account));
+    let x: Roles.Capability<Roles.LibraRootRole>;
+    x = Roles.extract_privilege_to_capability<Roles.LibraRootRole>(copy(account));
     LibraConfig.reconfigure(&x);
-    Roles.restore_capability_to_privilege<Roles.AssociationRootRole>(move(account), move(x));
+    Roles.restore_capability_to_privilege<Roles.LibraRootRole>(move(account), move(x));
     return;
 }
 

@@ -20,7 +20,7 @@ module FooConfig {
     public fun claim(account: &signer) {
         LibraConfig::claim_delegated_modify_config<T>(
             account,
-            CoreAddresses::ASSOCIATION_ROOT_ADDRESS(),
+            CoreAddresses::LIBRA_ROOT_ADDRESS(),
         );
     }
 

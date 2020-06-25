@@ -98,11 +98,11 @@ fun main(account: &signer) {
 //! sender: association
 script {
 use 0x1::LibraAccount;
-use 0x1::Roles::{Self, AssociationRootRole};
+use 0x1::Roles::{Self, LibraRootRole};
 use 0x1::LBR::LBR;
 fun main(association: &signer) {
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
-    let r = Roles::extract_privilege_to_capability<AssociationRootRole>(association);
+    let r = Roles::extract_privilege_to_capability<LibraRootRole>(association);
     LibraAccount::create_parent_vasp_account<LBR>(
         association,
         &r,

@@ -119,7 +119,7 @@ module LBR {
     ): (Libra<LBR>, Libra<Coin1>, Libra<Coin2>)
     acquires Reserve {
         // Grab the reserve
-        let reserve = borrow_global_mut<Reserve>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
+        let reserve = borrow_global_mut<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         let coin1_value = Libra::value(&coin1);
         let coin2_value = Libra::value(&coin2);
         // If either of the coin's values is <= 1, then we don't create any LBR
@@ -150,7 +150,7 @@ module LBR {
     ): (Libra<LBR>, Libra<Coin1>, Libra<Coin2>)
     acquires Reserve {
         if (amount_lbr == 0) return (Libra::zero<LBR>(), coin1, coin2);
-        let reserve = borrow_global_mut<Reserve>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
+        let reserve = borrow_global_mut<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         // We take the truncated multiplication + 1 (not ceiling!) to withdraw for each currency.
         // This is because we want to ensure that the reserve is always
         // positive. We could do this with other more complex methods such as
@@ -176,7 +176,7 @@ module LBR {
     /// would be `6` and `3` for `Coin1` and `Coin2` respectively.
     public fun unpack(account: &signer, coin: Libra<LBR>): (Libra<Coin1>, Libra<Coin2>)
     acquires Reserve {
-        let reserve = borrow_global_mut<Reserve>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
+        let reserve = borrow_global_mut<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         let ratio_multiplier = Libra::value(&coin);
         let sender = Signer::address_of(account);
         Libra::preburn_with_resource(coin, &mut reserve.preburn_cap, sender);
@@ -192,7 +192,7 @@ module LBR {
     /// Calls to this will abort if the caller does not have the appropriate
     /// `MintCapability` for each of the backing currencies.
     public fun mint(account: &signer, amount_lbr: u64): Libra<LBR> acquires Reserve {
-        let reserve = borrow_global<Reserve>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
+        let reserve = borrow_global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         let num_coin1 = 1 + FixedPoint32::multiply_u64(amount_lbr, *&reserve.coin1.ratio);
         let num_coin2 = 1 + FixedPoint32::multiply_u64(amount_lbr, *&reserve.coin2.ratio);
         let coin1 = Libra::mint<Coin1>(account, num_coin1);
@@ -212,10 +212,10 @@ module LBR {
     and coin2 respectively in the reserve to be backing LBR. Here, the "sufficient amount" is determined by the
     pre-defined ratio of each of the fiat coins to the total value of LBR. To define this global property more precisely,
 
-    let reserve_coin1 refer to global<Reserve>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).coin1 (the reserve of coin1 backing LBR)
-    let reserve_coin2 refer to global<Reserve>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).coin2 (the reserve of coin2 backing LBR).
+    let reserve_coin1 refer to global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS()).coin1 (the reserve of coin1 backing LBR)
+    let reserve_coin2 refer to global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS()).coin2 (the reserve of coin2 backing LBR).
     Let lbr_total_value be the synthetic variable that represents the total amount of LBR that exists.
-    Note: lbr_total_value could refer to global<Libra::CurrencyInfo<LBR::T>>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).total_value, but this may make
+    Note: lbr_total_value could refer to global<Libra::CurrencyInfo<LBR::T>>(CoreAddresses::LIBRA_ROOT_ADDRESS()).total_value, but this may make
     verification harder because one need prove a relational invariant of two modules (such as Libra and LBR).
     The module invariant can be formulated as:
     (1) lbr_total_value * r_coin1.ratio <= reserve_coin1.backing.value, and

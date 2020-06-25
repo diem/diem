@@ -63,7 +63,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Testnet_initialize">initialize</a>(account: &signer) {
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 0);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 0);
     move_to(account, <a href="#0x1_Testnet_IsTestnet">IsTestnet</a>{})
 }
 </code></pre>
@@ -88,7 +88,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Testnet_is_testnet">is_testnet</a>(): bool {
-    exists&lt;<a href="#0x1_Testnet_IsTestnet">IsTestnet</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>())
+    exists&lt;<a href="#0x1_Testnet_IsTestnet">IsTestnet</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>())
 }
 </code></pre>
 
@@ -113,8 +113,8 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Testnet_remove_testnet">remove_testnet</a>(account: &signer)
 <b>acquires</b> <a href="#0x1_Testnet_IsTestnet">IsTestnet</a> {
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 0);
-    <a href="#0x1_Testnet_IsTestnet">IsTestnet</a>{} = move_from&lt;<a href="#0x1_Testnet_IsTestnet">IsTestnet</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>());
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 0);
+    <a href="#0x1_Testnet_IsTestnet">IsTestnet</a>{} = move_from&lt;<a href="#0x1_Testnet_IsTestnet">IsTestnet</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 }
 </code></pre>
 

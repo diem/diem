@@ -28,7 +28,7 @@ module LibraBlock {
     // Currently, it is invoked in the genesis transaction
     public fun initialize_block_metadata(account: &signer) {
       // Operational constraint, only callable by the Association address
-      assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
+      assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
 
       move_to<BlockMetadata>(
           account,
@@ -67,7 +67,7 @@ module LibraBlock {
         previous_block_votes: vector<address>,
         proposer: address
     ) acquires BlockMetadata {
-        let block_metadata_ref = borrow_global_mut<BlockMetadata>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
+        let block_metadata_ref = borrow_global_mut<BlockMetadata>(CoreAddresses::LIBRA_ROOT_ADDRESS());
 
         // TODO: Figure out a story for errors in the system transactions.
         if(proposer != CoreAddresses::VM_RESERVED_ADDRESS()) assert(LibraSystem::is_validator(proposer), 5002);
@@ -86,7 +86,7 @@ module LibraBlock {
 
     // Get the current block height
     public fun get_current_block_height(): u64 acquires BlockMetadata {
-      borrow_global<BlockMetadata>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).height
+      borrow_global<BlockMetadata>(CoreAddresses::LIBRA_ROOT_ADDRESS()).height
     }
 }
 

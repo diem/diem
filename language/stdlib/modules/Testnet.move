@@ -7,19 +7,19 @@ module Testnet {
     resource struct IsTestnet { }
 
     public fun initialize(account: &signer) {
-        assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
+        assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 0);
         move_to(account, IsTestnet{})
     }
 
     public fun is_testnet(): bool {
-        exists<IsTestnet>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS())
+        exists<IsTestnet>(CoreAddresses::LIBRA_ROOT_ADDRESS())
     }
 
     // only used for testing purposes
     public fun remove_testnet(account: &signer)
     acquires IsTestnet {
-        assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
-        IsTestnet{} = move_from<IsTestnet>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
+        assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 0);
+        IsTestnet{} = move_from<IsTestnet>(CoreAddresses::LIBRA_ROOT_ADDRESS());
     }
 
     // **************** SPECIFICATIONS ****************

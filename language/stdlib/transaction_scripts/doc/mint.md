@@ -28,7 +28,7 @@ Create
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_mint">mint</a>&lt;Token&gt;(account: &signer, payee: address, auth_key_prefix: vector&lt;u8&gt;, amount: u64) {
-  <b>let</b> assoc_root_role = <a href="../../modules/doc/Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>&lt;AssociationRootRole&gt;(account);
+  <b>let</b> assoc_root_role = <a href="../../modules/doc/Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>&lt;LibraRootRole&gt;(account);
   <b>if</b> (!<a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_exists_at">LibraAccount::exists_at</a>(payee)) {
       <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_testnet_account">LibraAccount::create_testnet_account</a>&lt;Token&gt;(
         account,

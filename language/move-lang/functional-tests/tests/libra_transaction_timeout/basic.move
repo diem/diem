@@ -11,9 +11,9 @@ script {
 //! new-transaction
 script {
     use 0x1::LibraTransactionTimeout;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let cap = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        let cap = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         LibraTransactionTimeout::set_timeout(&cap, 0);
         Roles::restore_capability_to_privilege(account, cap);
     }
@@ -24,9 +24,9 @@ script {
 //! new-transaction
 script {
     use 0x1::LibraTransactionTimeout;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let cap = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        let cap = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         LibraTransactionTimeout::set_timeout(&cap, 0);
         Roles::restore_capability_to_privilege(account, cap);
     }
@@ -38,9 +38,9 @@ script {
 //! sender: association
 script {
     use 0x1::LibraTransactionTimeout;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let cap = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        let cap = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         LibraTransactionTimeout::set_timeout(&cap, 86400000000);
         Roles::restore_capability_to_privilege(account, cap);
     }

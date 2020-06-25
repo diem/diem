@@ -25,7 +25,7 @@ module RegisteredCurrencies {
     ): RegistrationCapability {
         // enforce that this is only going to one specific address,
         assert(
-            Signer::address_of(config_account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(),
+            Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
             0
         );
         let cap = LibraConfig::publish_new_config_with_capability(
@@ -59,7 +59,7 @@ module RegisteredCurrencies {
 
         /// Returns true iff initialize has been called.
         define spec_is_initialized(): bool {
-            LibraConfig::spec_is_published<RegisteredCurrencies>(CoreAddresses::SPEC_ASSOCIATION_ROOT_ADDRESS())
+            LibraConfig::spec_is_published<RegisteredCurrencies>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
         }
     }
 
@@ -92,10 +92,10 @@ module RegisteredCurrencies {
 
         /// *Informally:* After initialization, only singleton_address() has a RegisteredCurrencies value.
         invariant spec_is_initialized()
-            ==> LibraConfig::spec_is_published<RegisteredCurrencies>(CoreAddresses::SPEC_ASSOCIATION_ROOT_ADDRESS())
+            ==> LibraConfig::spec_is_published<RegisteredCurrencies>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
                 && (forall addr: address:
                        LibraConfig::spec_is_published<RegisteredCurrencies>(addr)
-                                  ==> addr == CoreAddresses::SPEC_ASSOCIATION_ROOT_ADDRESS());
+                                  ==> addr == CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
     }
     spec module {
         apply OnlyConfigAddressHasRegisteredCurrencies to *;

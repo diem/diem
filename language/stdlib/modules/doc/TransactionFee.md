@@ -75,7 +75,7 @@ Called in genesis. Sets up the needed resources to collect transaction fees from
     tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
 ) {
     <b>assert</b>(
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(assoc_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(),
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(assoc_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
         0
     );
 
@@ -150,7 +150,7 @@ Deposit
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_pay_fee">pay_fee</a>&lt;CoinType&gt;(coin: <a href="Libra.md#0x1_Libra">Libra</a>&lt;CoinType&gt;) <b>acquires</b> <a href="#0x1_TransactionFee">TransactionFee</a> {
     <b>let</b> fees = borrow_global_mut&lt;<a href="#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt;&gt;(
-        <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()
+        <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()
     );
     <a href="Libra.md#0x1_Libra_deposit">Libra::deposit</a>(&<b>mut</b> fees.balance, coin)
 }
@@ -184,7 +184,7 @@ underlying fiat.
     tc_account: &signer,
     tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
 ) <b>acquires</b> <a href="#0x1_TransactionFee">TransactionFee</a> {
-    <b>let</b> fee_address =  <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>();
+    <b>let</b> fee_address =  <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
     <b>if</b> (<a href="LBR.md#0x1_LBR_is_lbr">LBR::is_lbr</a>&lt;CoinType&gt;()) {
         // extract fees
         <b>let</b> fees = borrow_global_mut&lt;<a href="#0x1_TransactionFee">TransactionFee</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;&gt;(fee_address);

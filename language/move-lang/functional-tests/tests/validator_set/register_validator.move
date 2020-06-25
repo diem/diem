@@ -41,11 +41,11 @@ script{
 //! sender: association
 script{
     use 0x1::LibraAccount;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
 
     // register Alice as a validator candidate
     fun main(creator: &signer) {
-        let r = Roles::extract_privilege_to_capability<AssociationRootRole>(creator);
+        let r = Roles::extract_privilege_to_capability<LibraRootRole>(creator);
         LibraAccount::create_validator_account(
             creator, &r, 0xAA, x"00000000000000000000000000000000"
         );

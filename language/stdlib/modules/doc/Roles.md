@@ -8,7 +8,7 @@
 -  [Resource `RoleId`](#0x1_Roles_RoleId)
 -  [Resource `Capability`](#0x1_Roles_Capability)
 -  [Resource `Privilege`](#0x1_Roles_Privilege)
--  [Resource `AssociationRootRole`](#0x1_Roles_AssociationRootRole)
+-  [Resource `LibraRootRole`](#0x1_Roles_LibraRootRole)
 -  [Resource `TreasuryComplianceRole`](#0x1_Roles_TreasuryComplianceRole)
 -  [Resource `DesignatedDealerRole`](#0x1_Roles_DesignatedDealerRole)
 -  [Resource `ValidatorRole`](#0x1_Roles_ValidatorRole)
@@ -16,7 +16,7 @@
 -  [Resource `ParentVASPRole`](#0x1_Roles_ParentVASPRole)
 -  [Resource `ChildVASPRole`](#0x1_Roles_ChildVASPRole)
 -  [Resource `UnhostedRole`](#0x1_Roles_UnhostedRole)
--  [Function `ASSOCIATION_ROOT_ROLE_ID`](#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID)
+-  [Function `LIBRA_ROOT_ROLE_ID`](#0x1_Roles_LIBRA_ROOT_ROLE_ID)
 -  [Function `TREASURY_COMPLIANCE_ROLE_ID`](#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID)
 -  [Function `DESIGNATED_DEALER_ROLE_ID`](#0x1_Roles_DESIGNATED_DEALER_ROLE_ID)
 -  [Function `VALIDATOR_ROLE_ID`](#0x1_Roles_VALIDATOR_ROLE_ID)
@@ -185,9 +185,9 @@ for each privilege, but can instead write this generically.
 
 </details>
 
-<a name="0x1_Roles_AssociationRootRole"></a>
+<a name="0x1_Roles_LibraRootRole"></a>
 
-## Resource `AssociationRootRole`
+## Resource `LibraRootRole`
 
 Every role is granted a "default privilege" for that role. This can
 be seen as a base-permission for every account of that role type.
@@ -195,7 +195,7 @@ INVARIANT: Every account has exactly one of these, and these
 correspond precisely to the RoleId.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Roles_AssociationRootRole">AssociationRootRole</a>
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Roles_LibraRootRole">LibraRootRole</a>
 </code></pre>
 
 
@@ -413,13 +413,13 @@ correspond precisely to the RoleId.
 
 </details>
 
-<a name="0x1_Roles_ASSOCIATION_ROOT_ROLE_ID"></a>
+<a name="0x1_Roles_LIBRA_ROOT_ROLE_ID"></a>
 
-## Function `ASSOCIATION_ROOT_ROLE_ID`
+## Function `LIBRA_ROOT_ROLE_ID`
 
 
 
-<pre><code><b>fun</b> <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(): u64
+<pre><code><b>fun</b> <a href="#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>(): u64
 </code></pre>
 
 
@@ -428,7 +428,7 @@ correspond precisely to the RoleId.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(): u64 { 0 }
+<pre><code><b>fun</b> <a href="#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>(): u64 { 0 }
 </code></pre>
 
 
@@ -649,7 +649,7 @@ being assigned to outside of the module is statically determinable.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_add_privilege_to_account_association_root_role">add_privilege_to_account_association_root_role</a>&lt;Priv: <b>resource</b>&gt;(account: &signer, witness: Priv)
 <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
-    <a href="#0x1_Roles_add_privilege_to_account">add_privilege_to_account</a>(account, witness, <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>());
+    <a href="#0x1_Roles_add_privilege_to_account">add_privilege_to_account</a>(account, witness, <a href="#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>());
 }
 </code></pre>
 
@@ -856,10 +856,10 @@ privileges need to be created before accounts can be made
 ) {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_is_genesis">LibraTimestamp::assert_is_genesis</a>();
     <b>let</b> owner_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association);
-    <b>assert</b>(owner_address == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 0);
+    <b>assert</b>(owner_address == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 0);
     // Grant the role <b>to</b> the association root account
-    move_to(association, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>() });
-    move_to(association, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_AssociationRootRole">AssociationRootRole</a>&gt;{ witness: <a href="#0x1_Roles_AssociationRootRole">AssociationRootRole</a>{}, is_extracted: <b>false</b>})
+    move_to(association, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>() });
+    move_to(association, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_LibraRootRole">LibraRootRole</a>&gt;{ witness: <a href="#0x1_Roles_LibraRootRole">LibraRootRole</a>{}, is_extracted: <b>false</b>})
 }
 </code></pre>
 
@@ -877,7 +877,7 @@ Granted in genesis. So there cannot be any pre-existing privileges
 and roles.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_grant_treasury_compliance_role">grant_treasury_compliance_role</a>(treasury_compliance_account: &signer, _: &<a href="#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_grant_treasury_compliance_role">grant_treasury_compliance_role</a>(treasury_compliance_account: &signer, _: &<a href="#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;)
 </code></pre>
 
 
@@ -888,7 +888,7 @@ and roles.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_grant_treasury_compliance_role">grant_treasury_compliance_role</a>(
     treasury_compliance_account: &signer,
-    _: &<a href="#0x1_Roles_Capability">Capability</a>&lt;<a href="#0x1_Roles_AssociationRootRole">AssociationRootRole</a>&gt;,
+    _: &<a href="#0x1_Roles_Capability">Capability</a>&lt;<a href="#0x1_Roles_LibraRootRole">LibraRootRole</a>&gt;,
 ) {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_is_genesis">LibraTimestamp::assert_is_genesis</a>();
     <b>let</b> owner_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(treasury_compliance_account);
@@ -899,7 +899,7 @@ and roles.
 
     // &gt; XXX/TODO/HACK/REMOVE (tzakian): This is a _HACK_ for right now
     // so that we can allow minting <b>to</b> create an account. THIS NEEDS TO BE REMOVED.
-    move_to(treasury_compliance_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_AssociationRootRole">AssociationRootRole</a>&gt;{ witness: <a href="#0x1_Roles_AssociationRootRole">AssociationRootRole</a>{}, is_extracted: <b>false</b>})
+    move_to(treasury_compliance_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_LibraRootRole">LibraRootRole</a>&gt;{ witness: <a href="#0x1_Roles_LibraRootRole">LibraRootRole</a>{}, is_extracted: <b>false</b>})
 }
 </code></pre>
 
@@ -911,7 +911,7 @@ and roles.
 
 ## Function `new_designated_dealer_role`
 
-Generic new role creation (for role ids != ASSOCIATION_ROOT_ROLE_ID
+Generic new role creation (for role ids != LIBRA_ROOT_ROLE_ID
 and TREASURY_COMPLIANCE_ROLE_ID).
 We take a
 <code>&signer</code> here and link it with the account address so
@@ -957,7 +957,7 @@ The </code>creating_account` must be TreasuryCompliance
     <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
     // A role cannot have previously been assigned <b>to</b> `new_account`.
     <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
-    //<b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(), 0);
+    //<b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>(), 0);
     <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>(), 0);
     move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_DESIGNATED_DEALER_ROLE_ID">DESIGNATED_DEALER_ROLE_ID</a>() });
     move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_DesignatedDealerRole">DesignatedDealerRole</a>&gt;{ witness: <a href="#0x1_Roles_DesignatedDealerRole">DesignatedDealerRole</a>{}, is_extracted: <b>false</b> })
@@ -995,7 +995,7 @@ The
     <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
     // A role cannot have previously been assigned <b>to</b> `new_account`.
     <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
-    <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(), 0);
+    <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>(), 0);
     move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_VALIDATOR_ROLE_ID">VALIDATOR_ROLE_ID</a>() });
     move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_ValidatorRole">ValidatorRole</a>&gt;{ witness: <a href="#0x1_Roles_ValidatorRole">ValidatorRole</a>{}, is_extracted: <b>false</b> })
 }
@@ -1032,7 +1032,7 @@ The
     <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
     // A role cannot have previously been assigned <b>to</b> `new_account`.
     <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
-    <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>(), 0);
+    <b>assert</b>(calling_role.role_id == <a href="#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>(), 0);
     move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: <a href="#0x1_Roles_VALIDATOR_OPERATOR_ROLE_ID">VALIDATOR_OPERATOR_ROLE_ID</a>() });
     move_to(new_account, <a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_ValidatorOperatorRole">ValidatorOperatorRole</a>&gt;{ witness: <a href="#0x1_Roles_ValidatorOperatorRole">ValidatorOperatorRole</a>{}, is_extracted: <b>false</b> })
 }
@@ -1070,7 +1070,7 @@ The
     // A role cannot have previously been assigned <b>to</b> `new_account`.
     <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
     <b>assert</b>(
-            calling_role.role_id == <a href="#0x1_Roles_ASSOCIATION_ROOT_ROLE_ID">ASSOCIATION_ROOT_ROLE_ID</a>()
+            calling_role.role_id == <a href="#0x1_Roles_LIBRA_ROOT_ROLE_ID">LIBRA_ROOT_ROLE_ID</a>()
             // XXX/HACK/REMOVE(tzakian): This is for testnet semantics
             // only. THIS NEEDS TO BE REMOVED.
             || calling_role.role_id == <a href="#0x1_Roles_TREASURY_COMPLIANCE_ROLE_ID">TREASURY_COMPLIANCE_ROLE_ID</a>(),
@@ -1289,8 +1289,8 @@ Helper functions
 <b>define</b> <a href="#0x1_Roles_spec_get_role_id">spec_get_role_id</a>(addr: address): u64 {
     <b>global</b>&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(addr).role_id
 }
-<a name="0x1_Roles_SPEC_ASSOCIATION_ROOT_ROLE_ID"></a>
-<b>define</b> <a href="#0x1_Roles_SPEC_ASSOCIATION_ROOT_ROLE_ID">SPEC_ASSOCIATION_ROOT_ROLE_ID</a>(): u64 { 0 }
+<a name="0x1_Roles_SPEC_LIBRA_ROOT_ROLE_ID"></a>
+<b>define</b> <a href="#0x1_Roles_SPEC_LIBRA_ROOT_ROLE_ID">SPEC_LIBRA_ROOT_ROLE_ID</a>(): u64 { 0 }
 <a name="0x1_Roles_SPEC_TREASURY_COMPLIANCE_ROLE_ID"></a>
 <b>define</b> <a href="#0x1_Roles_SPEC_TREASURY_COMPLIANCE_ROLE_ID">SPEC_TREASURY_COMPLIANCE_ROLE_ID</a>(): u64 { 1 }
 <a name="0x1_Roles_SPEC_DESIGNATED_DEALER_ROLE_ID"></a>
@@ -1338,33 +1338,33 @@ will remain an account with role
 
 
 
-<a name="0x1_Roles_AssociationRootRoleMatchesRoleId"></a>
+<a name="0x1_Roles_LibraRootRoleMatchesRoleId"></a>
 
 **Informally:** Each address has a RoleID iff the address has a privilege that
 matches the role_id field of the RoleId.
 
 >TODO BUG (dd): The Prover finds many false errors for the following because
 the Prover thinks many add_privilege_* functions can store *any* privilege,
-including the AssociationRootRole, on addresses that don't have the
+including the LibraRootRole, on addresses that don't have the
 association root RootId.  This false error is due to a limitation of
 the Move Prover. In reality, the add_privilege_* functions cannot
-be called with an AssociationRootRole argument, because no instances
-of AssociationRootRole can be accessed by another module (and, of course,
+be called with an LibraRootRole argument, because no instances
+of LibraRootRole can be accessed by another module (and, of course,
 add_privilege_* functions are not called in a way that violates the
 property in this module.
 
 
-<pre><code><b>schema</b> <a href="#0x1_Roles_AssociationRootRoleMatchesRoleId">AssociationRootRoleMatchesRoleId</a> {
+<pre><code><b>schema</b> <a href="#0x1_Roles_LibraRootRoleMatchesRoleId">LibraRootRoleMatchesRoleId</a> {
     <b>invariant</b> <b>module</b> forall addr: address where <a href="#0x1_Roles_spec_has_role_id">spec_has_role_id</a>(addr):
-        (<a href="#0x1_Roles_spec_get_role_id">spec_get_role_id</a>(addr) == <a href="#0x1_Roles_SPEC_ASSOCIATION_ROOT_ROLE_ID">SPEC_ASSOCIATION_ROOT_ROLE_ID</a>())
-        ==&gt; exists&lt;<a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_AssociationRootRole">AssociationRootRole</a>&gt;&gt;(addr);
+        (<a href="#0x1_Roles_spec_get_role_id">spec_get_role_id</a>(addr) == <a href="#0x1_Roles_SPEC_LIBRA_ROOT_ROLE_ID">SPEC_LIBRA_ROOT_ROLE_ID</a>())
+        ==&gt; exists&lt;<a href="#0x1_Roles_Privilege">Privilege</a>&lt;<a href="#0x1_Roles_LibraRootRole">LibraRootRole</a>&gt;&gt;(addr);
 }
 </code></pre>
 
 
 
 
-<pre><code><b>apply</b> <a href="#0x1_Roles_AssociationRootRoleMatchesRoleId">AssociationRootRoleMatchesRoleId</a> <b>to</b> <b>public</b> *&lt;T&gt;, *;
+<pre><code><b>apply</b> <a href="#0x1_Roles_LibraRootRoleMatchesRoleId">LibraRootRoleMatchesRoleId</a> <b>to</b> <b>public</b> *&lt;T&gt;, *;
 </code></pre>
 
 
@@ -1372,7 +1372,7 @@ property in this module.
 role ID also has a treasury compliance privilege.
 
 > TODO (dd): Need to add the converse, but that will have the
-same problem as AssociationRootRoleMatchesRoleId due to prover
+same problem as LibraRootRoleMatchesRoleId due to prover
 limitation.
 
 

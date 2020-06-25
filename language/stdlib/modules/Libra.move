@@ -30,7 +30,7 @@ module Libra {
     /// The `MintCapability` resource defines a capability to allow minting
     /// of coins of `CoinType` currency by the holder of this capability.
     /// This capability is held only either by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()` account or the
-    /// `0x1::LBR` module (and `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()` in testnet).
+    /// `0x1::LBR` module (and `CoreAddresses::LIBRA_ROOT_ADDRESS()` in testnet).
     ///
     /// > TODO(wrwg): what does it mean that a capability is held by a module? Consider to remove?
     resource struct MintCapability<CoinType> { }
@@ -38,11 +38,11 @@ module Libra {
     /// The `BurnCapability` resource defines a capability to allow coins
     /// of `CoinType` currency to be burned by the holder of the
     /// capability. This capability is only held by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()` account,
-    /// and the `0x1::LBR` module (and `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()` in testnet).
+    /// and the `0x1::LBR` module (and `CoreAddresses::LIBRA_ROOT_ADDRESS()` in testnet).
     resource struct BurnCapability<CoinType> { }
 
     /// The `CurrencyRegistrationCapability` is a singleton resource
-    /// published under the `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()` and grants
+    /// published under the `CoreAddresses::LIBRA_ROOT_ADDRESS()` and grants
     /// the capability to the `0x1::Libra` module to add currencies to the
     /// `0x1::RegisteredCurrencies` on-chain config.
     resource struct CurrencyRegistrationCapability {
@@ -195,14 +195,14 @@ module Libra {
     /// Initialization of the `Libra` module; initializes the set of
     /// registered currencies in the `0x1::RegisteredCurrencies` on-chain
     /// config, and publishes the `CurrencyRegistrationCapability` under the
-    /// `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()`.
+    /// `CoreAddresses::LIBRA_ROOT_ADDRESS()`.
     public fun initialize(
         config_account: &signer,
         create_config_capability: &Capability<CreateOnChainConfig>,
     ) {
         // Operational constraint
         assert(
-            Signer::address_of(config_account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(),
+            Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
             0
         );
         let cap = RegisteredCurrencies::initialize(config_account, create_config_capability);
@@ -604,7 +604,7 @@ module Libra {
         });
         RegisteredCurrencies::add_currency_code(
             currency_code,
-            &borrow_global<CurrencyRegistrationCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).cap
+            &borrow_global<CurrencyRegistrationCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).cap
         );
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
