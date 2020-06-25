@@ -229,7 +229,7 @@ variable "vault_type" {
 
 variable "safety_rules_use_vault" {
   description = "Configure safety-rules to use Vault as the backend"
-  default     = false
+  default     = true
 }
 
 variable "persist_libra_data" {
