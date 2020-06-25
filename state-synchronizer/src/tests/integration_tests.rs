@@ -29,13 +29,14 @@ use libra_types::{
 use network::{
     constants,
     peer_manager::{
-        conn_notifs_channel, ConnectionNotification, ConnectionRequestSender,
-        PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
+        builder::AuthenticationMode, conn_notifs_channel, ConnectionNotification,
+        ConnectionRequestSender, PeerManagerNotification, PeerManagerRequest,
+        PeerManagerRequestSender,
     },
     protocols::network::{NewNetworkEvents, NewNetworkSender},
     ProtocolId,
 };
-use network_builder::builder::{AuthenticationMode, NetworkBuilder};
+use network_builder::builder::NetworkBuilder;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::HashMap,
@@ -292,6 +293,9 @@ impl SynchronizerEnv {
                     vec![self.peer_addresses[new_peer_idx - 1].clone()],
                 );
             }
+            let authentication_mode =
+                AuthenticationMode::Mutual(self.network_keys[new_peer_idx].clone());
+            let pub_key = authentication_mode.public_key();
             let mut network_builder = NetworkBuilder::new(
                 self.runtime.handle().clone(),
                 ChainId::default(),
@@ -299,15 +303,13 @@ impl SynchronizerEnv {
                 RoleType::Validator,
                 self.peer_ids[new_peer_idx],
                 addr.clone(),
+                authentication_mode,
             );
             network_builder
-                .authentication_mode(AuthenticationMode::Mutual(
-                    self.network_keys[new_peer_idx].clone(),
-                ))
                 .trusted_peers(trusted_peers)
                 .seed_peers(seed_peers)
                 .add_connectivity_manager()
-                .add_gossip_discovery(addr, constants::DISCOVERY_INTERVAL_MS);
+                .add_gossip_discovery(addr, constants::DISCOVERY_INTERVAL_MS, pub_key);
 
             let (sender, events) =
                 network_builder.add_protocol_handler(crate::network::network_endpoint_config());
