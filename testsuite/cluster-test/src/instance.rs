@@ -10,8 +10,13 @@ use libra_config::config::NodeConfig;
 use libra_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch};
 use reqwest::{Client, Url};
 use serde_json::Value;
-use std::{collections::HashSet, fmt, str::FromStr};
-use tokio::process::Command;
+use std::{
+    collections::HashSet,
+    fmt,
+    str::FromStr,
+    time::{Duration, Instant},
+};
+use tokio::{process::Command, time};
 
 #[derive(Debug, Clone)]
 pub struct InstanceConfig {
@@ -183,6 +188,16 @@ impl Instance {
 
     pub async fn try_json_rpc(&self) -> Result<()> {
         self.json_rpc_client().execute(JsonRpcBatch::new()).await?;
+        Ok(())
+    }
+
+    pub async fn wait_json_rpc(&self, deadline: Instant) -> Result<()> {
+        while self.try_json_rpc().await.is_err() {
+            if Instant::now() > deadline {
+                return Err(format_err!("wait_json_rpc for {} timed out", self));
+            }
+            time::delay_for(Duration::from_secs(3)).await;
+        }
         Ok(())
     }
 
