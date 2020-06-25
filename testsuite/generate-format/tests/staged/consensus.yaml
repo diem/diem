@@ -180,11 +180,6 @@ TimeoutCertificate:
             TYPENAME: AccountAddress
           VALUE:
             TYPENAME: Ed25519Signature
-    - markers:
-        MAP:
-          KEY:
-            TYPENAME: AccountAddress
-          VALUE: U64
 ValidatorConsensusInfo:
   STRUCT:
     - public_key:

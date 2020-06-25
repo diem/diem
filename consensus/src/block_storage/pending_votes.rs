@@ -129,7 +129,7 @@ impl PendingVotes {
             .entry(timeout.round())
             .or_insert_with(|| TimeoutCertificate::new(timeout));
         tc.add_signature(vote.author(), timeout_signature);
-        tc.add_marker(vote.author(), vote.marker());
+
         match validator_verifier.check_voting_power(tc.signatures().keys()) {
             Ok(_) => Some(VoteReceptionResult::NewTimeoutCertificate(Arc::new(
                 tc.clone(),
