@@ -43,6 +43,7 @@ use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
+pub mod builder;
 #[cfg(test)]
 mod test;
 
