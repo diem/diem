@@ -31,7 +31,7 @@ use network::{
     },
     protocols::{
         discovery::{self, builder::DiscoveryBuilder},
-        health_checker::{self, HealthChecker},
+        health_checker::{self, builder::HealthCheckerBuilder},
         network::{NewNetworkEvents, NewNetworkSender},
         wire::handshake::v1::SupportedProtocols,
     },
@@ -103,9 +103,6 @@ pub struct NetworkBuilder {
     direct_send_protocols: Vec<ProtocolId>,
     rpc_protocols: Vec<ProtocolId>,
     discovery_interval_ms: u64,
-    ping_interval_ms: u64,
-    ping_timeout_ms: u64,
-    ping_failures_tolerated: u64,
     upstream_handlers:
         HashMap<ProtocolId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     connection_event_handlers: Vec<conn_notifs_channel::Sender>,
@@ -122,6 +119,7 @@ pub struct NetworkBuilder {
     max_fullnode_connections: usize,
 
     discovery_builder: Option<DiscoveryBuilder>,
+    health_checker_builder: Option<HealthCheckerBuilder>,
 }
 
 impl NetworkBuilder {
@@ -166,15 +164,13 @@ impl NetworkBuilder {
             connection_reqs_rx,
             conn_mgr_reqs_tx: None,
             discovery_interval_ms: constants::DISCOVERY_INTERVAL_MS,
-            ping_interval_ms: constants::PING_INTERVAL_MS,
-            ping_timeout_ms: constants::PING_TIMEOUT_MS,
-            ping_failures_tolerated: constants::PING_FAILURES_TOLERATED,
             connectivity_check_interval_ms: constants::CONNECTIVITY_CHECK_INTERNAL_MS,
             max_concurrent_network_reqs: constants::MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
             max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
             discovery_builder: None,
+            health_checker_builder: None,
         }
     }
 
@@ -202,7 +198,12 @@ impl NetworkBuilder {
             peer_id,
             config.listen_address.clone(),
         );
-        network_builder.add_connection_monitoring();
+        network_builder.add_connection_monitoring(
+            // TODO: Move these values into NetworkConfig
+            constants::PING_INTERVAL_MS,
+            constants::PING_TIMEOUT_MS,
+            constants::PING_FAILURES_TOLERATED,
+        );
 
         // Sanity check seed peer addresses.
         config
@@ -486,25 +487,44 @@ impl NetworkBuilder {
         self
     }
 
-    pub fn add_connection_monitoring(&mut self) -> &mut Self {
+    /// Add a HealthChecker to the network.
+    pub fn add_connection_monitoring(
+        &mut self,
+        ping_interval_ms: u64,
+        ping_timeout_ms: u64,
+        ping_failures_tolerated: u64,
+    ) -> &mut Self {
         // Initialize and start HealthChecker.
         let (hc_network_tx, hc_network_rx) =
             self.add_protocol_handler(health_checker::network_endpoint_config());
-        let ping_interval_ms = self.ping_interval_ms;
-        let ping_timeout_ms = self.ping_timeout_ms;
-        let ping_failures_tolerated = self.ping_failures_tolerated;
-        let health_checker = self.executor.enter(|| {
-            HealthChecker::new(
-                self.network_context.clone(),
-                interval(Duration::from_millis(ping_interval_ms)).fuse(),
-                hc_network_tx,
-                hc_network_rx,
-                Duration::from_millis(ping_timeout_ms),
-                ping_failures_tolerated,
-            )
-        });
-        self.executor.spawn(health_checker.start());
-        debug!("{} Started health checker", self.network_context);
+
+        self.health_checker_builder = Some(HealthCheckerBuilder::create(
+            self.network_context(),
+            ping_interval_ms,
+            ping_timeout_ms,
+            ping_failures_tolerated,
+            hc_network_tx,
+            hc_network_rx,
+        ));
+        debug!("{} Created health checker", self.network_context);
+        self.build_connection_monitoring()
+    }
+
+    /// Build the HealthChecker, if it has been added.
+    fn build_connection_monitoring(&mut self) -> &mut Self {
+        if let Some(health_checker) = self.health_checker_builder.as_mut() {
+            health_checker.build(&self.executor);
+            debug!("{} Built health checker", self.network_context);
+        };
+        self.start_connection_monitoring()
+    }
+
+    /// Star the built HealthChecker.
+    fn start_connection_monitoring(&mut self) -> &mut Self {
+        if let Some(health_checker) = self.health_checker_builder.as_mut() {
+            health_checker.start(&self.executor);
+            debug!("{} Started health checker", self.network_context);
+        };
         self
     }
 
