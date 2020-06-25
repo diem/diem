@@ -617,6 +617,24 @@
 <span id="617">617</span>
 <span id="618">618</span>
 <span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -650,7 +668,7 @@
         <span class="ident">PeerManagerNotification</span>, <span class="ident">PeerManagerRequest</span>, <span class="ident">PeerManagerRequestSender</span>,
     },
     <span class="ident">protocols</span>::{
-        <span class="ident">discovery</span>::{<span class="self">self</span>, <span class="ident">Discovery</span>},
+        <span class="ident">discovery</span>::{<span class="self">self</span>, <span class="ident">builder</span>::<span class="ident">DiscoveryBuilder</span>},
         <span class="ident">health_checker</span>::{<span class="self">self</span>, <span class="ident">HealthChecker</span>},
         <span class="ident">network</span>::{<span class="ident">NewNetworkEvents</span>, <span class="ident">NewNetworkSender</span>},
         <span class="ident">wire</span>::<span class="ident">handshake</span>::<span class="ident">v1</span>::<span class="ident">SupportedProtocols</span>,
@@ -738,6 +756,8 @@
     <span class="ident">max_connection_delay_ms</span>: <span class="ident">u64</span>,
     <span class="doccomment">/// For now full node connections are limited by</span>
     <span class="ident">max_fullnode_connections</span>: <span class="ident">usize</span>,
+
+    <span class="ident">discovery_builder</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DiscoveryBuilder</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">NetworkBuilder</span> {
@@ -790,6 +810,7 @@
             <span class="ident">max_concurrent_network_notifs</span>: <span class="ident">constants</span>::<span class="ident">MAX_CONCURRENT_NETWORK_NOTIFS</span>,
             <span class="ident">max_connection_delay_ms</span>: <span class="ident">constants</span>::<span class="ident">MAX_CONNECTION_DELAY_MS</span>,
             <span class="ident">max_fullnode_connections</span>: <span class="ident">constants</span>::<span class="ident">MAX_FULLNODE_CONNECTIONS</span>,
+            <span class="ident">discovery_builder</span>: <span class="prelude-val">None</span>,
         }
     }
 
@@ -1044,6 +1065,7 @@
     <span class="doccomment">/// peers as a network protocol.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// This is for testing purposes only and should not be used in production networks.</span>
+    <span class="comment">// TODO:  remove the pub qualifier</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_gossip_discovery</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">conn_mgr_reqs_tx</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">conn_mgr_reqs_tx</span>()
@@ -1076,18 +1098,32 @@
 
         <span class="kw">let</span> <span class="ident">addrs</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="ident">advertised_address</span>];
         <span class="kw">let</span> <span class="ident">discovery_interval_ms</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">discovery_interval_ms</span>;
-        <span class="kw">let</span> <span class="ident">discovery</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">executor</span>.<span class="ident">enter</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="ident">Discovery</span>::<span class="ident">new</span>(
-                <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">clone</span>(),
-                <span class="ident">addrs</span>,
-                <span class="ident">interval</span>(<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="ident">discovery_interval_ms</span>)).<span class="ident">fuse</span>(),
-                <span class="ident">discovery_network_tx</span>,
-                <span class="ident">discovery_network_rx</span>,
-                <span class="ident">conn_mgr_reqs_tx</span>,
-            )
-        });
-        <span class="self">self</span>.<span class="ident">executor</span>.<span class="ident">spawn</span>(<span class="ident">discovery</span>.<span class="ident">start</span>());
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} Started discovery protocol actor&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
+
+        <span class="self">self</span>.<span class="ident">discovery_builder</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">DiscoveryBuilder</span>::<span class="ident">create</span>(
+            <span class="self">self</span>.<span class="ident">network_context</span>(),
+            <span class="ident">addrs</span>,
+            <span class="ident">discovery_interval_ms</span>,
+            <span class="ident">discovery_network_tx</span>,
+            <span class="ident">discovery_network_rx</span>,
+            <span class="ident">conn_mgr_reqs_tx</span>,
+        ));
+        <span class="self">self</span>.<span class="ident">build_gossip_discovery</span>().<span class="ident">start_gossip_discovery</span>();
+        <span class="self">self</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">build_gossip_discovery</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">discovery_builder</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">discovery_builder</span>.<span class="ident">as_mut</span>() {
+            <span class="ident">discovery_builder</span>.<span class="ident">build</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">executor</span>);
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} Built Gossip Discovery&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>());
+        }
+        <span class="self">self</span>
+    }
+
+    <span class="kw">fn</span> <span class="ident">start_gossip_discovery</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">discovery_builder</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">discovery_builder</span>.<span class="ident">as_mut</span>() {
+            <span class="ident">discovery_builder</span>.<span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">executor</span>);
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} Started gossip discovery&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>());
+        }
         <span class="self">self</span>
     }
 
