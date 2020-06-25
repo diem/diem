@@ -321,6 +321,21 @@
 <span id="321">321</span>
 <span id="322">322</span>
 <span id="323">323</span>
+<span id="324">324</span>
+<span id="325">325</span>
+<span id="326">326</span>
+<span id="327">327</span>
+<span id="328">328</span>
+<span id="329">329</span>
+<span id="330">330</span>
+<span id="331">331</span>
+<span id="332">332</span>
+<span id="333">333</span>
+<span id="334">334</span>
+<span id="335">335</span>
+<span id="336">336</span>
+<span id="337">337</span>
+<span id="338">338</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -334,8 +349,13 @@
 <span class="kw">use</span> <span class="ident">libra_json_rpc_client</span>::{<span class="ident">JsonRpcAsyncClient</span>, <span class="ident">JsonRpcBatch</span>};
 <span class="kw">use</span> <span class="ident">reqwest</span>::{<span class="ident">Client</span>, <span class="ident">Url</span>};
 <span class="kw">use</span> <span class="ident">serde_json</span>::<span class="ident">Value</span>;
-<span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashSet</span>, <span class="ident">fmt</span>, <span class="ident">str</span>::<span class="ident">FromStr</span>};
-<span class="kw">use</span> <span class="ident">tokio</span>::<span class="ident">process</span>::<span class="ident">Command</span>;
+<span class="kw">use</span> <span class="ident">std</span>::{
+    <span class="ident">collections</span>::<span class="ident">HashSet</span>,
+    <span class="ident">fmt</span>,
+    <span class="ident">str</span>::<span class="ident">FromStr</span>,
+    <span class="ident">time</span>::{<span class="ident">Duration</span>, <span class="ident">Instant</span>},
+};
+<span class="kw">use</span> <span class="ident">tokio</span>::{<span class="ident">process</span>::<span class="ident">Command</span>, <span class="ident">time</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>)]</span>
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">InstanceConfig</span> {
@@ -507,6 +527,16 @@
 
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">try_json_rpc</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">json_rpc_client</span>().<span class="ident">execute</span>(<span class="ident">JsonRpcBatch</span>::<span class="ident">new</span>()).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">wait_json_rpc</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">deadline</span>: <span class="ident">Instant</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">while</span> <span class="self">self</span>.<span class="ident">try_json_rpc</span>().<span class="kw">await</span>.<span class="ident">is_err</span>() {
+            <span class="kw">if</span> <span class="ident">Instant</span>::<span class="ident">now</span>() <span class="op">&gt;</span> <span class="ident">deadline</span> {
+                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;wait_json_rpc for {} timed out&quot;</span>, <span class="self">self</span>));
+            }
+            <span class="ident">time</span>::<span class="ident">delay_for</span>(<span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="number">3</span>)).<span class="kw">await</span>;
+        }
         <span class="prelude-val">Ok</span>(())
     }
 
