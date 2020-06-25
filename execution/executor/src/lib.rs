@@ -22,6 +22,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_logger::prelude::*;
+use libra_state_view::StateViewId;
 use libra_types::{
     account_address::AccountAddress,
     account_state::AccountState,
@@ -420,9 +421,11 @@ where
 
     fn get_executed_state_view<'a>(
         &self,
+        id: StateViewId,
         executed_trees: &'a ExecutedTrees,
     ) -> VerifiedStateView<'a> {
         VerifiedStateView::new(
+            id,
             Arc::clone(&self.db.reader),
             self.cache.committed_trees().version(),
             self.cache.committed_trees().state_root(),
@@ -503,6 +506,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
 
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
+            StateViewId::ChunkExecution { first_version },
             Arc::clone(&self.db.reader),
             self.cache.synced_trees().version(),
             self.cache.synced_trees().state_root(),
@@ -653,7 +657,10 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
 
             let parent_block_executed_trees = self.get_executed_trees(parent_block_id)?;
 
-            let state_view = self.get_executed_state_view(&parent_block_executed_trees);
+            let state_view = self.get_executed_state_view(
+                StateViewId::BlockExecution { block_id },
+                &parent_block_executed_trees,
+            );
 
             let vm_outputs = {
                 trace_code_block!("executor::execute_block", {"block", block_id});

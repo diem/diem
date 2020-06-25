@@ -2850,6 +2850,7 @@ name = "libra-state-view"
 version = "0.1.0"
 dependencies = [
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-crypto 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
 ]
