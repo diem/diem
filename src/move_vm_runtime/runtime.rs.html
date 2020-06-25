@@ -153,23 +153,11 @@
 <span id="153">153</span>
 <span id="154">154</span>
 <span id="155">155</span>
-<span id="156">156</span>
-<span id="157">157</span>
-<span id="158">158</span>
-<span id="159">159</span>
-<span id="160">160</span>
-<span id="161">161</span>
-<span id="162">162</span>
-<span id="163">163</span>
-<span id="164">164</span>
-<span id="165">165</span>
-<span id="166">166</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::{<span class="ident">interpreter</span>::<span class="ident">Interpreter</span>, <span class="ident">loader</span>::<span class="ident">Loader</span>};
-<span class="kw">use</span> <span class="ident">bytecode_verifier</span>::<span class="ident">VerifiedModule</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>};
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{
@@ -181,7 +169,7 @@
 <span class="kw">use</span> <span class="ident">vm</span>::{
     <span class="ident">access</span>::<span class="ident">ModuleAccess</span>,
     <span class="ident">errors</span>::{<span class="ident">verification_error</span>, <span class="ident">vm_error</span>, <span class="ident">Location</span>, <span class="ident">VMResult</span>},
-    <span class="ident">file_format</span>::{<span class="ident">Signature</span>, <span class="ident">SignatureToken</span>},
+    <span class="ident">file_format</span>::<span class="ident">SignatureToken</span>,
     <span class="ident">CompiledModule</span>, <span class="ident">IndexKind</span>,
 };
 
@@ -204,6 +192,8 @@
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
         <span class="ident">_cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="comment">// deserialize the module. Perform bounds check. After this indexes can be</span>
+        <span class="comment">// used with the `[]` operator</span>
         <span class="kw">let</span> <span class="ident">compiled_module</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">CompiledModule</span>::<span class="ident">deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">module</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">module</span>,
             <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -233,8 +223,9 @@
             ));
         };
 
-        <span class="kw">let</span> <span class="ident">verified_module</span> <span class="op">=</span> <span class="ident">VerifiedModule</span>::<span class="ident">new</span>(<span class="ident">compiled_module</span>).<span class="ident">map_err</span>(<span class="op">|</span>(<span class="kw">_</span>, <span class="ident">e</span>)<span class="op">|</span> <span class="ident">e</span>)<span class="question-mark">?</span>;
-        <span class="ident">Loader</span>::<span class="ident">check_natives</span>(<span class="kw-2">&amp;</span><span class="ident">verified_module</span>)<span class="question-mark">?</span>;
+        <span class="comment">// perform bytecode and loading verification</span>
+        <span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">verify_module</span>(<span class="kw-2">&amp;</span><span class="ident">compiled_module</span>)<span class="question-mark">?</span>;
+
         <span class="ident">data_store</span>.<span class="ident">publish_module</span>(<span class="ident">module_id</span>, <span class="ident">module</span>)
     }
 
@@ -247,6 +238,7 @@
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
         <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="comment">// signer helper closure</span>
         <span class="kw">fn</span> <span class="ident">is_signer_reference</span>(<span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="ident">SignatureToken</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">bool</span> {
             <span class="kw">use</span> <span class="ident">SignatureToken</span> <span class="kw">as</span> <span class="ident">S</span>;
             <span class="kw">match</span> <span class="ident">s</span> {
@@ -255,20 +247,17 @@
             }
         }
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">type_params</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-        <span class="kw">for</span> <span class="ident">ty</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">ty_args</span> {
-            <span class="ident">type_params</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">load_type</span>(<span class="ident">ty</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>);
-        }
-        <span class="kw">let</span> <span class="ident">main</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">load_script</span>(<span class="kw-2">&amp;</span><span class="ident">script</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>;
+        <span class="comment">// load the script, perform verification</span>
+        <span class="kw">let</span> (<span class="ident">main</span>, <span class="ident">type_params</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">load_script</span>(<span class="kw-2">&amp;</span><span class="ident">script</span>, <span class="kw-2">&amp;</span><span class="ident">ty_args</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>;
 
-        <span class="self">self</span>.<span class="ident">loader</span>
-            .<span class="ident">verify_ty_args</span>(<span class="ident">main</span>.<span class="ident">type_parameters</span>(), <span class="kw-2">&amp;</span><span class="ident">type_params</span>)<span class="question-mark">?</span>;
+        <span class="comment">// build the arguments list for the main and check the arguments are of restricted types</span>
         <span class="kw">let</span> <span class="ident">first_param_opt</span> <span class="op">=</span> <span class="ident">main</span>.<span class="ident">parameters</span>().<span class="number">0</span>.<span class="ident">get</span>(<span class="number">0</span>);
         <span class="kw">if</span> <span class="ident">first_param_opt</span>.<span class="ident">map_or</span>(<span class="bool-val">false</span>, <span class="op">|</span><span class="ident">sig</span><span class="op">|</span> <span class="ident">is_signer_reference</span>(<span class="ident">sig</span>)) {
             <span class="ident">args</span>.<span class="ident">insert</span>(<span class="number">0</span>, <span class="ident">Value</span>::<span class="ident">transaction_argument_signer_reference</span>(<span class="ident">sender</span>))
         }
-        <span class="ident">verify_args</span>(<span class="ident">main</span>.<span class="ident">parameters</span>(), <span class="kw-2">&amp;</span><span class="ident">args</span>)<span class="question-mark">?</span>;
+        <span class="ident">check_args</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>)<span class="question-mark">?</span>;
 
+        <span class="comment">// run the script</span>
         <span class="ident">Interpreter</span>::<span class="ident">entrypoint</span>(
             <span class="ident">main</span>,
             <span class="ident">type_params</span>,
@@ -288,19 +277,16 @@
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
         <span class="ident">cost_strategy</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">CostStrategy</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">type_params</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
-        <span class="kw">for</span> <span class="ident">ty</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">ty_args</span> {
-            <span class="ident">type_params</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">load_type</span>(<span class="ident">ty</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>);
-        }
-        <span class="kw">let</span> <span class="ident">func</span> <span class="op">=</span> <span class="self">self</span>
-            .<span class="ident">loader</span>
-            .<span class="ident">load_function</span>(<span class="ident">function_name</span>, <span class="ident">module</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>;
+        <span class="comment">// load the function in the given module, perform verification of the module and</span>
+        <span class="comment">// its dependencies if the module was not loaded</span>
+        <span class="kw">let</span> (<span class="ident">func</span>, <span class="ident">type_params</span>) <span class="op">=</span>
+            <span class="self">self</span>.<span class="ident">loader</span>
+                .<span class="ident">load_function</span>(<span class="ident">function_name</span>, <span class="ident">module</span>, <span class="kw-2">&amp;</span><span class="ident">ty_args</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>;
 
-        <span class="self">self</span>.<span class="ident">loader</span>
-            .<span class="ident">verify_ty_args</span>(<span class="ident">func</span>.<span class="ident">type_parameters</span>(), <span class="kw-2">&amp;</span><span class="ident">type_params</span>)<span class="question-mark">?</span>;
-        <span class="comment">// REVIEW: argument verification should happen in the interpreter</span>
-        <span class="comment">//verify_args(func.parameters(), &amp;args)?;</span>
+        <span class="comment">// check the arguments provided are of restricted types</span>
+        <span class="ident">check_args</span>(<span class="kw-2">&amp;</span><span class="ident">args</span>)<span class="question-mark">?</span>;
 
+        <span class="comment">// run the function</span>
         <span class="ident">Interpreter</span>::<span class="ident">entrypoint</span>(
             <span class="ident">func</span>,
             <span class="ident">type_params</span>,
@@ -312,21 +298,13 @@
     }
 }
 
-<span class="doccomment">/// Verify if the transaction arguments match the type signature of the main function.</span>
-<span class="kw">fn</span> <span class="ident">verify_args</span>(<span class="ident">signature</span>: <span class="kw-2">&amp;</span><span class="ident">Signature</span>, <span class="ident">args</span>: <span class="kw-2">&amp;</span>[<span class="ident">Value</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">if</span> <span class="ident">signature</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">args</span>.<span class="ident">len</span>() {
-        <span class="kw">return</span> <span class="prelude-val">Err</span>(
-            <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">TYPE_MISMATCH</span>).<span class="ident">with_message</span>(<span class="macro">format</span><span class="macro">!</span>(
-                <span class="string">&quot;argument length mismatch: expected {} got {}&quot;</span>,
-                <span class="ident">signature</span>.<span class="ident">len</span>(),
-                <span class="ident">args</span>.<span class="ident">len</span>()
-            )),
-        );
-    }
-    <span class="kw">for</span> (<span class="ident">tok</span>, <span class="ident">val</span>) <span class="kw">in</span> <span class="ident">signature</span>.<span class="number">0</span>.<span class="ident">iter</span>().<span class="ident">zip</span>(<span class="ident">args</span>) {
-        <span class="kw">if</span> <span class="op">!</span><span class="ident">val</span>.<span class="ident">is_valid_script_arg</span>(<span class="ident">tok</span>) {
+<span class="doccomment">/// Check that the transaction arguments are acceptable by the VM.</span>
+<span class="doccomment">/// Constants are the only arguments allowed.</span>
+<span class="kw">fn</span> <span class="ident">check_args</span>(<span class="ident">args</span>: <span class="kw-2">&amp;</span>[<span class="ident">Value</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">for</span> <span class="ident">val</span> <span class="kw">in</span> <span class="ident">args</span> {
+        <span class="kw">if</span> <span class="op">!</span><span class="ident">val</span>.<span class="ident">is_constant_or_signer_ref</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">TYPE_MISMATCH</span>)
-                .<span class="ident">with_message</span>(<span class="string">&quot;argument type mismatch&quot;</span>.<span class="ident">to_string</span>()));
+                .<span class="ident">with_message</span>(<span class="string">&quot;VM argument types are restricted&quot;</span>.<span class="ident">to_string</span>()));
         }
     }
     <span class="prelude-val">Ok</span>(())

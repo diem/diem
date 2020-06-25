@@ -1431,14 +1431,68 @@
 <span id="1431">1431</span>
 <span id="1432">1432</span>
 <span id="1433">1433</span>
+<span id="1434">1434</span>
+<span id="1435">1435</span>
+<span id="1436">1436</span>
+<span id="1437">1437</span>
+<span id="1438">1438</span>
+<span id="1439">1439</span>
+<span id="1440">1440</span>
+<span id="1441">1441</span>
+<span id="1442">1442</span>
+<span id="1443">1443</span>
+<span id="1444">1444</span>
+<span id="1445">1445</span>
+<span id="1446">1446</span>
+<span id="1447">1447</span>
+<span id="1448">1448</span>
+<span id="1449">1449</span>
+<span id="1450">1450</span>
+<span id="1451">1451</span>
+<span id="1452">1452</span>
+<span id="1453">1453</span>
+<span id="1454">1454</span>
+<span id="1455">1455</span>
+<span id="1456">1456</span>
+<span id="1457">1457</span>
+<span id="1458">1458</span>
+<span id="1459">1459</span>
+<span id="1460">1460</span>
+<span id="1461">1461</span>
+<span id="1462">1462</span>
+<span id="1463">1463</span>
+<span id="1464">1464</span>
+<span id="1465">1465</span>
+<span id="1466">1466</span>
+<span id="1467">1467</span>
+<span id="1468">1468</span>
+<span id="1469">1469</span>
+<span id="1470">1470</span>
+<span id="1471">1471</span>
+<span id="1472">1472</span>
+<span id="1473">1473</span>
+<span id="1474">1474</span>
+<span id="1475">1475</span>
+<span id="1476">1476</span>
+<span id="1477">1477</span>
+<span id="1478">1478</span>
+<span id="1479">1479</span>
+<span id="1480">1480</span>
+<span id="1481">1481</span>
+<span id="1482">1482</span>
+<span id="1483">1483</span>
+<span id="1484">1484</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">native_functions</span>::<span class="ident">NativeFunction</span>;
 <span class="kw">use</span> <span class="ident">bytecode_verifier</span>::{
+    <span class="ident">constants</span>::<span class="ident">ConstantsChecker</span>,
+    <span class="ident">instantiation_loops</span>::<span class="ident">InstantiationLoopChecker</span>,
     <span class="ident">verifier</span>::{<span class="ident">verify_dependencies</span>, <span class="ident">verify_script_dependency_map</span>},
-    <span class="ident">VerifiedModule</span>, <span class="ident">VerifiedScript</span>,
+    <span class="ident">CodeUnitVerifier</span>, <span class="ident">DuplicationChecker</span>, <span class="ident">InstructionConsistency</span>, <span class="ident">RecursiveStructDefChecker</span>,
+    <span class="ident">ResourceTransitiveChecker</span>, <span class="ident">SignatureChecker</span>, <span class="ident">VerifiedScript</span>,
 };
 <span class="kw">use</span> <span class="ident">libra_crypto</span>::<span class="ident">HashValue</span>;
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
@@ -1559,9 +1613,9 @@
         <span class="self">self</span>.<span class="ident">modules</span>.<span class="ident">get</span>(<span class="ident">id</span>).<span class="ident">map</span>(<span class="op">|</span><span class="ident">module</span><span class="op">|</span> <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="ident">module</span>))
     }
 
-    <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">id</span>: <span class="ident">ModuleId</span>, <span class="ident">ver_module</span>: <span class="ident">VerifiedModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Module</span><span class="op">&gt;</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">add_module</span>(<span class="kw-2">&amp;</span><span class="ident">ver_module</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">Module</span>::<span class="ident">new</span>(<span class="ident">ver_module</span>, <span class="self">self</span>)<span class="question-mark">?</span>;
+    <span class="kw">fn</span> <span class="ident">insert</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">id</span>: <span class="ident">ModuleId</span>, <span class="ident">module</span>: <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Module</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">add_module</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="ident">Module</span>::<span class="ident">new</span>(<span class="ident">module</span>, <span class="self">self</span>)<span class="question-mark">?</span>;
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">id</span>) {
             <span class="prelude-val">Some</span>(<span class="ident">module</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">module</span>),
             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="self">self</span>.<span class="ident">modules</span>.<span class="ident">insert</span>(<span class="ident">id</span>, <span class="ident">module</span>))),
@@ -1576,7 +1630,7 @@
         <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">structs</span>[<span class="ident">idx</span>])
     }
 
-    <span class="kw">fn</span> <span class="ident">add_module</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">add_module</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">starting_idx</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">structs</span>.<span class="ident">len</span>();
         <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">struct_def</span>) <span class="kw">in</span> <span class="ident">module</span>.<span class="ident">struct_defs</span>().<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
             <span class="kw">let</span> <span class="ident">st</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">load_type</span>(<span class="ident">module</span>, <span class="ident">struct_def</span>, <span class="ident">StructDefinitionIndex</span>(<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">u16</span>))<span class="question-mark">?</span>;
@@ -1593,7 +1647,7 @@
 
     <span class="kw">fn</span> <span class="ident">load_type</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span>,
+        <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>,
         <span class="ident">struct_def</span>: <span class="kw-2">&amp;</span><span class="ident">StructDefinition</span>,
         <span class="ident">idx</span>: <span class="ident">StructDefinitionIndex</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">StructType</span><span class="op">&gt;</span> {
@@ -1612,7 +1666,7 @@
         })
     }
 
-    <span class="kw">fn</span> <span class="ident">load_fields</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span>, <span class="ident">starting_idx</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">load_fields</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>, <span class="ident">starting_idx</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_types</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">for</span> <span class="ident">struct_def</span> <span class="kw">in</span> <span class="ident">module</span>.<span class="ident">struct_defs</span>() {
             <span class="kw">let</span> <span class="ident">fields</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">struct_def</span>.<span class="ident">field_information</span> {
@@ -1622,7 +1676,7 @@
 
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">field_tys</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
             <span class="kw">for</span> <span class="ident">field</span> <span class="kw">in</span> <span class="ident">fields</span> {
-                <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">make_type</span>(<span class="ident">module</span>.<span class="ident">as_inner</span>(), <span class="kw-2">&amp;</span><span class="ident">field</span>.<span class="ident">signature</span>.<span class="number">0</span>)<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">make_type</span>(<span class="ident">module</span>, <span class="kw-2">&amp;</span><span class="ident">field</span>.<span class="ident">signature</span>.<span class="number">0</span>)<span class="question-mark">?</span>;
                 <span class="macro">assume</span><span class="macro">!</span>(<span class="ident">field_tys</span>.<span class="ident">len</span>() <span class="op">&lt;</span> <span class="ident">usize</span>::<span class="ident">max_value</span>());
                 <span class="ident">field_tys</span>.<span class="ident">push</span>(<span class="ident">ty</span>);
             }
@@ -1705,10 +1759,12 @@
                 <span class="kw">return</span> <span class="prelude-val">Ok</span>((<span class="ident">idx</span>, <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="ident">ty</span>)));
             }
         }
-        <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNREACHABLE</span>).<span class="ident">with_message</span>(<span class="macro">format</span><span class="macro">!</span>(
-            <span class="string">&quot;Cannot find {:?}::{:?} in cache&quot;</span>,
-            <span class="ident">module_id</span>, <span class="ident">struct_name</span>
-        )))
+        <span class="prelude-val">Err</span>(
+            <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">TYPE_RESOLUTION_FAILURE</span>).<span class="ident">with_message</span>(<span class="macro">format</span><span class="macro">!</span>(
+                <span class="string">&quot;Cannot find {:?}::{:?} in cache&quot;</span>,
+                <span class="ident">module_id</span>, <span class="ident">struct_name</span>
+            )),
+        )
     }
 
     <span class="kw">fn</span> <span class="ident">resolve_function_handle</span>(
@@ -1721,13 +1777,17 @@
                 <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">idx</span>);
             }
         }
-        <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">UNREACHABLE</span>)
-            .<span class="ident">with_message</span>(<span class="string">&quot;Missing function in cache&quot;</span>.<span class="ident">to_string</span>()))
+        <span class="prelude-val">Err</span>(
+            <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">FUNCTION_RESOLUTION_FAILURE</span>).<span class="ident">with_message</span>(<span class="macro">format</span><span class="macro">!</span>(
+                <span class="string">&quot;Cannot find {:?}::{:?} in cache&quot;</span>,
+                <span class="ident">module_id</span>, <span class="ident">func_name</span>
+            )),
+        )
     }
 
     <span class="kw">fn</span> <span class="ident">load_function</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span>,
+        <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>,
         <span class="ident">func_def</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionDefinition</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">Function</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="ident">Function</span>::<span class="ident">new</span>(<span class="ident">func_def</span>, <span class="ident">module</span>))
@@ -1753,45 +1813,83 @@
         }
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">function_at</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">idx</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Function</span><span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">module_cache</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">function_at</span>(<span class="ident">idx</span>)
-    }
-
+    <span class="comment">// Entry point for function execution (`MoveVM::execute_function`).</span>
+    <span class="comment">// Loading verifies the module if it was never loaded.</span>
+    <span class="comment">// Type parameters are checked as well after every type is loaded.</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">load_function</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">function_name</span>: <span class="kw-2">&amp;</span><span class="ident">IdentStr</span>,
         <span class="ident">module_id</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleId</span>,
+        <span class="ident">ty_args</span>: <span class="kw-2">&amp;</span>[<span class="ident">TypeTag</span>],
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Function</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Function</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
         <span class="self">self</span>.<span class="ident">load_module</span>(<span class="ident">module_id</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">idx</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">module_cache</span>
             .<span class="ident">lock</span>()
             .<span class="ident">unwrap</span>()
             .<span class="ident">resolve_function_handle</span>(<span class="ident">function_name</span>, <span class="ident">module_id</span>)<span class="question-mark">?</span>;
-        <span class="prelude-val">Ok</span>(<span class="self">self</span>.<span class="ident">module_cache</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">function_at</span>(<span class="ident">idx</span>))
+        <span class="kw">let</span> <span class="ident">func</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">module_cache</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">function_at</span>(<span class="ident">idx</span>);
+
+        <span class="comment">// verify type arguments</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">type_params</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+        <span class="kw">for</span> <span class="ident">ty</span> <span class="kw">in</span> <span class="ident">ty_args</span> {
+            <span class="ident">type_params</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">load_type</span>(<span class="ident">ty</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>);
+        }
+        <span class="self">self</span>.<span class="ident">verify_ty_args</span>(<span class="ident">func</span>.<span class="ident">type_parameters</span>(), <span class="kw-2">&amp;</span><span class="ident">type_params</span>)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>((<span class="ident">func</span>, <span class="ident">type_params</span>))
     }
 
+    <span class="comment">// Entry point for script execution (`MoveVM::execute_script`).</span>
+    <span class="comment">// Verifies the script if it is not in the cache of scripts loaded.</span>
+    <span class="comment">// Type parameters are checked as well after every type is loaded.</span>
     <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">load_script</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">script_blob</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
+        <span class="ident">ty_args</span>: <span class="kw-2">&amp;</span>[<span class="ident">TypeTag</span>],
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Function</span><span class="op">&gt;</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>(<span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Function</span><span class="op">&gt;</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span>)<span class="op">&gt;</span> {
+        <span class="comment">// retrieve or load the script</span>
         <span class="kw">let</span> <span class="ident">hash_value</span> <span class="op">=</span> <span class="ident">HashValue</span>::<span class="ident">sha3_256_of</span>(<span class="ident">script_blob</span>);
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">main</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">scripts</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">hash_value</span>) {
-            <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">main</span>);
-        }
+        <span class="kw">let</span> <span class="ident">opt_main</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">scripts</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="ident">hash_value</span>);
+        <span class="kw">let</span> <span class="ident">main</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">opt_main</span> {
+            <span class="prelude-val">Some</span>(<span class="ident">main</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">main</span>,
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">ver_script</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">deserialize_and_verify_script</span>(<span class="ident">script_blob</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>;
+                <span class="kw">let</span> <span class="ident">script</span> <span class="op">=</span>
+                    <span class="ident">Script</span>::<span class="ident">new</span>(<span class="ident">ver_script</span>, <span class="kw-2">&amp;</span><span class="ident">hash_value</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module_cache</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>())<span class="question-mark">?</span>;
+                <span class="self">self</span>.<span class="ident">scripts</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">insert</span>(<span class="ident">hash_value</span>, <span class="ident">script</span>)<span class="question-mark">?</span>
+            }
+        };
 
-        <span class="kw">let</span> <span class="ident">ver_script</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">deserialize_and_verify_script</span>(<span class="ident">script_blob</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="ident">script</span> <span class="op">=</span> <span class="ident">Script</span>::<span class="ident">new</span>(<span class="ident">ver_script</span>, <span class="kw-2">&amp;</span><span class="ident">hash_value</span>, <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module_cache</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>())<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">scripts</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">insert</span>(<span class="ident">hash_value</span>, <span class="ident">script</span>)
+        <span class="comment">// verify type arguments</span>
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">type_params</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
+        <span class="kw">for</span> <span class="ident">ty</span> <span class="kw">in</span> <span class="ident">ty_args</span> {
+            <span class="ident">type_params</span>.<span class="ident">push</span>(<span class="self">self</span>.<span class="ident">load_type</span>(<span class="ident">ty</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>);
+        }
+        <span class="self">self</span>.<span class="ident">verify_ty_args</span>(<span class="ident">main</span>.<span class="ident">type_parameters</span>(), <span class="kw-2">&amp;</span><span class="ident">type_params</span>)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>((<span class="ident">main</span>, <span class="ident">type_params</span>))
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">load_type</span>(
-        <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">type_tag</span>: <span class="kw-2">&amp;</span><span class="ident">TypeTag</span>,
-        <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span> {
+    <span class="comment">// Entry point for module publishing (`MoveVM::publish_module`).</span>
+    <span class="comment">// A module to be published must be loadable.</span>
+    <span class="comment">// This step performs all verification steps to load the module without loading it.</span>
+    <span class="comment">// The module is not added to the code cache. It is simply published to the data cache.</span>
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">verify_module</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="ident">DuplicationChecker</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+        <span class="ident">SignatureChecker</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+        <span class="ident">InstructionConsistency</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+        <span class="ident">ResourceTransitiveChecker</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+        <span class="ident">ConstantsChecker</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+        <span class="ident">RecursiveStructDefChecker</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+        <span class="ident">InstantiationLoopChecker</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+        <span class="ident">CodeUnitVerifier</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+        <span class="self">Self</span>::<span class="ident">check_natives</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)
+    }
+
+    <span class="kw">fn</span> <span class="ident">load_type</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">type_tag</span>: <span class="kw-2">&amp;</span><span class="ident">TypeTag</span>, <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">Type</span><span class="op">&gt;</span> {
         <span class="prelude-val">Ok</span>(<span class="kw">match</span> <span class="ident">type_tag</span> {
             <span class="ident">TypeTag</span>::<span class="ident">Bool</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">Bool</span>,
             <span class="ident">TypeTag</span>::<span class="ident">U8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Type</span>::<span class="ident">U8</span>,
@@ -1831,7 +1929,7 @@
         <span class="self">self</span>.<span class="ident">module_cache</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">insert</span>(<span class="ident">id</span>.<span class="ident">clone</span>(), <span class="ident">module</span>)
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">verify_ty_args</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">constraints</span>: <span class="kw-2">&amp;</span>[<span class="ident">Kind</span>], <span class="ident">ty_args</span>: <span class="kw-2">&amp;</span>[<span class="ident">Type</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">verify_ty_args</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">constraints</span>: <span class="kw-2">&amp;</span>[<span class="ident">Kind</span>], <span class="ident">ty_args</span>: <span class="kw-2">&amp;</span>[<span class="ident">Type</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="ident">constraints</span>.<span class="ident">len</span>() <span class="op">!</span><span class="op">=</span> <span class="ident">ty_args</span>.<span class="ident">len</span>() {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">NUMBER_OF_TYPE_ARGUMENTS_MISMATCH</span>));
         }
@@ -1848,7 +1946,7 @@
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">check_natives</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">check_natives</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">native_function</span>) <span class="kw">in</span> <span class="ident">module</span>
             .<span class="ident">function_defs</span>()
             .<span class="ident">iter</span>()
@@ -1882,6 +1980,10 @@
             }
         }
         <span class="prelude-val">Ok</span>(())
+    }
+
+    <span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">function_at</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">idx</span>: <span class="ident">usize</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Function</span><span class="op">&gt;</span> {
+        <span class="self">self</span>.<span class="ident">module_cache</span>.<span class="ident">lock</span>().<span class="ident">unwrap</span>().<span class="ident">function_at</span>(<span class="ident">idx</span>)
     }
 
     <span class="kw">fn</span> <span class="ident">get_module</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">idx</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleId</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Arc</span><span class="op">&lt;</span><span class="ident">Module</span><span class="op">&gt;</span> {
@@ -1945,7 +2047,7 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">script</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>],
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">VerifiedScript</span><span class="op">&gt;</span> {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">CompiledScript</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">script</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">CompiledScript</span>::<span class="ident">deserialize</span>(<span class="ident">script</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">script</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">script</span>,
             <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -1969,7 +2071,7 @@
                     <span class="ident">dependency_map</span>.<span class="ident">insert</span>(<span class="ident">dependency</span>.<span class="ident">module_id</span>().<span class="ident">clone</span>(), <span class="ident">dependency</span>.<span class="ident">module</span>());
                 }
                 <span class="kw">match</span> <span class="ident">verify_script_dependency_map</span>(<span class="kw-2">&amp;</span><span class="ident">script</span>, <span class="kw-2">&amp;</span><span class="ident">dependency_map</span>) {
-                    <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">script</span>),
+                    <span class="prelude-val">Ok</span>(()) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">script</span>.<span class="ident">into_inner</span>()),
                     <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>,
                 }
             }
@@ -1989,8 +2091,8 @@
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">id</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleId</span>,
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">comp_module</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">data_store</span>.<span class="ident">load_module</span>(<span class="ident">id</span>) {
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">CompiledModule</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">module</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">data_store</span>.<span class="ident">load_module</span>(<span class="ident">id</span>) {
             <span class="prelude-val">Ok</span>(<span class="ident">blob</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">match</span> <span class="ident">CompiledModule</span>::<span class="ident">deserialize</span>(<span class="kw-2">&amp;</span><span class="ident">blob</span>) {
                 <span class="prelude-val">Ok</span>(<span class="ident">module</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">module</span>,
                 <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -2003,18 +2105,18 @@
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>);
             }
         };
-        <span class="kw">match</span> <span class="ident">VerifiedModule</span>::<span class="ident">new</span>(<span class="ident">comp_module</span>) {
-            <span class="prelude-val">Ok</span>(<span class="ident">module</span>) <span class="op">=</span><span class="op">&gt;</span> {
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">verify_module</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>) {
+            <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="self">self</span>.<span class="ident">check_dependencies</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>, <span class="ident">data_store</span>)<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(<span class="ident">module</span>)
             }
-            <span class="prelude-val">Err</span>((<span class="kw">_</span>, <span class="ident">err</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>),
+            <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">err</span>),
         }
     }
 
     <span class="kw">fn</span> <span class="ident">check_dependencies</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
-        <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span>,
+        <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>,
         <span class="ident">data_store</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw">dyn</span> <span class="ident">DataStore</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">deps</span> <span class="op">=</span> <span class="ident">load_module_dependencies</span>(<span class="ident">module</span>);
@@ -2164,7 +2266,7 @@
                     .<span class="ident">module_cache</span>
                     .<span class="ident">lock</span>()
                     .<span class="ident">unwrap</span>()
-                    .<span class="ident">make_type</span>(<span class="ident">binary</span>.<span class="ident">as_inner</span>(), <span class="ident">token</span>)<span class="question-mark">?</span>
+                    .<span class="ident">make_type</span>(<span class="ident">binary</span>, <span class="ident">token</span>)<span class="question-mark">?</span>
                     .<span class="ident">subst</span>(<span class="ident">type_context</span>)<span class="question-mark">?</span>;
                 <span class="self">self</span>.<span class="ident">loader</span>.<span class="ident">type_to_fat_type</span>(<span class="kw-2">&amp;</span><span class="ident">ty</span>)
             }
@@ -2189,7 +2291,7 @@
 <span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">Module</span> {
     <span class="ident">id</span>: <span class="ident">ModuleId</span>,
     <span class="comment">// primitive pools</span>
-    <span class="ident">module</span>: <span class="ident">VerifiedModule</span>,
+    <span class="ident">module</span>: <span class="ident">CompiledModule</span>,
 
     <span class="comment">// types as indexes into the Loader type list</span>
     <span class="ident">struct_refs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
@@ -2208,14 +2310,14 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Module</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module</span>: <span class="ident">VerifiedModule</span>, <span class="ident">cache</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleCache</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module</span>: <span class="ident">CompiledModule</span>, <span class="ident">cache</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleCache</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">id</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">self_id</span>();
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">struct_refs</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">for</span> <span class="ident">struct_handle</span> <span class="kw">in</span> <span class="ident">module</span>.<span class="ident">struct_handles</span>() {
             <span class="kw">let</span> <span class="ident">struct_name</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">identifier_at</span>(<span class="ident">struct_handle</span>.<span class="ident">name</span>);
             <span class="kw">let</span> <span class="ident">module_handle</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">module_handle_at</span>(<span class="ident">struct_handle</span>.<span class="ident">module</span>);
-            <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">as_inner</span>().<span class="ident">module_id_for_handle</span>(<span class="ident">module_handle</span>);
+            <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">module_id_for_handle</span>(<span class="ident">module_handle</span>);
             <span class="ident">struct_refs</span>.<span class="ident">push</span>(<span class="ident">cache</span>.<span class="ident">find_struct_by_name</span>(<span class="ident">struct_name</span>, <span class="kw-2">&amp;</span><span class="ident">module_id</span>)<span class="question-mark">?</span>.<span class="number">0</span>);
         }
 
@@ -2233,7 +2335,7 @@
             <span class="kw">let</span> <span class="ident">field_count</span> <span class="op">=</span> <span class="ident">struct_def</span>.<span class="ident">field_count</span>;
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">instantiation</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
             <span class="kw">for</span> <span class="ident">ty</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">module</span>.<span class="ident">signature_at</span>(<span class="ident">struct_inst</span>.<span class="ident">type_parameters</span>).<span class="number">0</span> {
-                <span class="ident">instantiation</span>.<span class="ident">push</span>(<span class="ident">cache</span>.<span class="ident">make_type</span>(<span class="ident">module</span>.<span class="ident">as_inner</span>(), <span class="ident">ty</span>)<span class="question-mark">?</span>);
+                <span class="ident">instantiation</span>.<span class="ident">push</span>(<span class="ident">cache</span>.<span class="ident">make_type</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>, <span class="ident">ty</span>)<span class="question-mark">?</span>);
             }
             <span class="ident">struct_instantiations</span>.<span class="ident">push</span>(<span class="ident">StructInstantiation</span> {
                 <span class="ident">field_count</span>,
@@ -2246,7 +2348,7 @@
         <span class="kw">for</span> <span class="ident">func_handle</span> <span class="kw">in</span> <span class="ident">module</span>.<span class="ident">function_handles</span>() {
             <span class="kw">let</span> <span class="ident">func_name</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">identifier_at</span>(<span class="ident">func_handle</span>.<span class="ident">name</span>);
             <span class="kw">let</span> <span class="ident">module_handle</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">module_handle_at</span>(<span class="ident">func_handle</span>.<span class="ident">module</span>);
-            <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">as_inner</span>().<span class="ident">module_id_for_handle</span>(<span class="ident">module_handle</span>);
+            <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">module_id_for_handle</span>(<span class="ident">module_handle</span>);
             <span class="kw">let</span> <span class="ident">ref_idx</span> <span class="op">=</span> <span class="ident">cache</span>.<span class="ident">resolve_function_handle</span>(<span class="ident">func_name</span>, <span class="kw-2">&amp;</span><span class="ident">module_id</span>)<span class="question-mark">?</span>;
             <span class="ident">function_refs</span>.<span class="ident">push</span>(<span class="ident">ref_idx</span>);
         }
@@ -2256,7 +2358,7 @@
             <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">function_refs</span>[<span class="ident">func_inst</span>.<span class="ident">handle</span>.<span class="number">0</span> <span class="kw">as</span> <span class="ident">usize</span>];
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">instantiation</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
             <span class="kw">for</span> <span class="ident">ty</span> <span class="kw">in</span> <span class="kw-2">&amp;</span><span class="ident">module</span>.<span class="ident">signature_at</span>(<span class="ident">func_inst</span>.<span class="ident">type_parameters</span>).<span class="number">0</span> {
-                <span class="ident">instantiation</span>.<span class="ident">push</span>(<span class="ident">cache</span>.<span class="ident">make_type</span>(<span class="ident">module</span>.<span class="ident">as_inner</span>(), <span class="ident">ty</span>)<span class="question-mark">?</span>);
+                <span class="ident">instantiation</span>.<span class="ident">push</span>(<span class="ident">cache</span>.<span class="ident">make_type</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>, <span class="ident">ty</span>)<span class="question-mark">?</span>);
             }
             <span class="ident">function_instantiations</span>.<span class="ident">push</span>(<span class="ident">FunctionInstantiation</span> {
                 <span class="ident">handle</span>,
@@ -2321,7 +2423,7 @@
         <span class="self">self</span>.<span class="ident">struct_instantiations</span>[<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">usize</span>].<span class="ident">field_count</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">module</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span> {
+    <span class="kw">fn</span> <span class="ident">module</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span> {
         <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">module</span>
     }
 
@@ -2341,7 +2443,7 @@
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>)]</span>
 <span class="kw">struct</span> <span class="ident">Script</span> {
     <span class="comment">// primitive pools</span>
-    <span class="ident">script</span>: <span class="ident">VerifiedScript</span>,
+    <span class="ident">script</span>: <span class="ident">CompiledScript</span>,
 
     <span class="comment">// types as indexes into the Loader type list</span>
     <span class="ident">struct_refs</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>,
@@ -2356,7 +2458,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Script</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">script</span>: <span class="ident">VerifiedScript</span>, <span class="ident">script_hash</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>, <span class="ident">cache</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleCache</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">script</span>: <span class="ident">CompiledScript</span>, <span class="ident">script_hash</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>, <span class="ident">cache</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleCache</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="self">Self</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">struct_refs</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
         <span class="kw">for</span> <span class="ident">struct_handle</span> <span class="kw">in</span> <span class="ident">script</span>.<span class="ident">struct_handles</span>() {
             <span class="kw">let</span> <span class="ident">struct_name</span> <span class="op">=</span> <span class="ident">script</span>.<span class="ident">identifier_at</span>(<span class="ident">struct_handle</span>.<span class="ident">name</span>);
@@ -2396,7 +2498,7 @@
 
         <span class="kw">let</span> <span class="ident">scope</span> <span class="op">=</span> <span class="ident">Scope</span>::<span class="ident">Script</span>(<span class="kw-2">*</span><span class="ident">script_hash</span>);
 
-        <span class="kw">let</span> <span class="ident">compiled_script</span> <span class="op">=</span> <span class="ident">script</span>.<span class="ident">as_inner</span>().<span class="ident">as_inner</span>();
+        <span class="kw">let</span> <span class="ident">compiled_script</span> <span class="op">=</span> <span class="ident">script</span>.<span class="ident">as_inner</span>();
         <span class="kw">let</span> <span class="ident">code</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Bytecode</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">compiled_script</span>.<span class="ident">code</span>.<span class="ident">code</span>.<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">parameters</span> <span class="op">=</span> <span class="ident">script</span>.<span class="ident">signature_at</span>(<span class="ident">compiled_script</span>.<span class="ident">parameters</span>).<span class="ident">clone</span>();
         <span class="kw">let</span> <span class="ident">return_</span> <span class="op">=</span> <span class="ident">Signature</span>(<span class="macro">vec</span><span class="macro">!</span>[]);
@@ -2466,7 +2568,7 @@
 }
 
 <span class="kw">impl</span> <span class="ident">Function</span> {
-    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">def</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionDefinition</span>, <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">def</span>: <span class="kw-2">&amp;</span><span class="ident">FunctionDefinition</span>, <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="ident">handle</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">function_handle_at</span>(<span class="ident">def</span>.<span class="ident">function</span>);
         <span class="kw">let</span> <span class="ident">name</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">identifier_at</span>(<span class="ident">handle</span>.<span class="ident">name</span>).<span class="ident">to_owned</span>();
         <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">self_id</span>();

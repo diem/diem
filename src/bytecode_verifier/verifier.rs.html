@@ -382,6 +382,11 @@
 <span id="382">382</span>
 <span id="383">383</span>
 <span id="384">384</span>
+<span id="385">385</span>
+<span id="386">386</span>
+<span id="387">387</span>
+<span id="388">388</span>
+<span id="389">389</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -428,16 +433,6 @@
         }
     }
 
-    <span class="doccomment">/// Returns a new `VerifiedModule` that **does not do any verification.**</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// THIS IS INCREDIBLY DANGEROUS BECAUSE IT BREAKS CORE ASSUMPTIONS. DO NOT USE THIS OUTSIDE OF</span>
-    <span class="doccomment">/// TESTS.</span>
-    <span class="attribute">#[<span class="ident">allow</span>(<span class="ident">non_snake_case</span>)]</span>
-    <span class="attribute">#[<span class="ident">doc</span>(<span class="ident">hidden</span>)]</span>
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">bypass_verifier_DANGEROUS_FOR_TESTING_ONLY</span>(<span class="ident">module</span>: <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VerifiedModule</span> {
-        <span class="ident">VerifiedModule</span>(<span class="ident">module</span>)
-    }
-
     <span class="doccomment">/// Serializes this module into the provided buffer.</span>
     <span class="doccomment">///</span>
     <span class="doccomment">/// This is merely a convenience wrapper around `module.as_inner().serialize(buf)`.</span>
@@ -461,13 +456,13 @@
 }
 
 <span class="kw">fn</span> <span class="ident">verify_module</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="ident">DuplicationChecker</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>).<span class="ident">verify</span>()<span class="question-mark">?</span>;
-    <span class="ident">SignatureChecker</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>).<span class="ident">verify</span>()<span class="question-mark">?</span>;
-    <span class="ident">InstructionConsistency</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>).<span class="ident">verify</span>()<span class="question-mark">?</span>;
-    <span class="ident">ResourceTransitiveChecker</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>).<span class="ident">verify</span>()<span class="question-mark">?</span>;
-    <span class="ident">ConstantsChecker</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>).<span class="ident">verify</span>()<span class="question-mark">?</span>;
-    <span class="ident">RecursiveStructDefChecker</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>).<span class="ident">verify</span>()<span class="question-mark">?</span>;
-    <span class="ident">InstantiationLoopChecker</span>::<span class="ident">new</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>).<span class="ident">verify</span>()<span class="question-mark">?</span>;
+    <span class="ident">DuplicationChecker</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+    <span class="ident">SignatureChecker</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+    <span class="ident">InstructionConsistency</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+    <span class="ident">ResourceTransitiveChecker</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+    <span class="ident">ConstantsChecker</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+    <span class="ident">RecursiveStructDefChecker</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
+    <span class="ident">InstantiationLoopChecker</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)<span class="question-mark">?</span>;
     <span class="ident">CodeUnitVerifier</span>::<span class="ident">verify</span>(<span class="kw-2">&amp;</span><span class="ident">module</span>)
 }
 
@@ -592,7 +587,7 @@
     <span class="prelude-val">Ok</span>(())
 }
 
-<span class="doccomment">/// Verification of a module in isolation (using `VerifiedModule::new`) trusts that struct and</span>
+<span class="doccomment">/// Verification of a module in isolation trusts that struct and</span>
 <span class="doccomment">/// function handles not implemented in the module are declared correctly. The following procedure</span>
 <span class="doccomment">/// justifies this trust by checking that these declarations match the definitions in the module</span>
 <span class="doccomment">/// dependencies. Each dependency of &#39;module&#39; is looked up in &#39;dependencies&#39;.  If not found, an</span>
@@ -600,8 +595,8 @@
 <span class="doccomment">/// dependency in &#39;module&#39; is checked against the declarations in the found module and mismatch</span>
 <span class="doccomment">/// errors are returned.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_module_dependencies</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
-    <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span>,
-    <span class="ident">dependencies</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">VerifiedModule</span><span class="op">&gt;</span>,
+    <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>,
+    <span class="ident">dependencies</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CompiledModule</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">self_id</span>();
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">dependency_map</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
@@ -614,9 +609,24 @@
     <span class="ident">verify_dependencies</span>(<span class="ident">module</span>, <span class="kw-2">&amp;</span><span class="ident">dependency_map</span>)
 }
 
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_vmodule_dependencies</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
+    <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>,
+    <span class="ident">dependencies</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">VerifiedModule</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">self_id</span>();
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">dependency_map</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
+    <span class="kw">for</span> <span class="ident">dependency</span> <span class="kw">in</span> <span class="ident">dependencies</span> {
+        <span class="kw">let</span> <span class="ident">dependency_id</span> <span class="op">=</span> <span class="ident">dependency</span>.<span class="ident">self_id</span>();
+        <span class="kw">if</span> <span class="ident">module_id</span> <span class="op">!</span><span class="op">=</span> <span class="ident">dependency_id</span> {
+            <span class="ident">dependency_map</span>.<span class="ident">insert</span>(<span class="ident">dependency_id</span>, <span class="ident">dependency</span>.<span class="ident">as_inner</span>());
+        }
+    }
+    <span class="ident">verify_dependencies</span>(<span class="ident">module</span>, <span class="kw-2">&amp;</span><span class="ident">dependency_map</span>)
+}
+
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_dependencies</span>(
-    <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span>,
-    <span class="ident">dependency_map</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleId</span>, <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span>,
+    <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>,
+    <span class="ident">dependency_map</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleId</span>, <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">module_view</span> <span class="op">=</span> <span class="ident">ModuleView</span>::<span class="ident">new</span>(<span class="ident">module</span>);
     <span class="ident">verify_struct_kind</span>(<span class="kw-2">&amp;</span><span class="ident">module_view</span>, <span class="kw-2">&amp;</span><span class="ident">dependency_map</span>)<span class="question-mark">?</span>;
@@ -630,8 +640,8 @@
 <span class="doccomment">/// If found, usage of types and functions of the dependency in &#39;script&#39; is checked against the</span>
 <span class="doccomment">/// declarations in the found module and mismatch errors are returned.</span>
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_script_dependencies</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span>(
-    <span class="ident">script</span>: <span class="kw-2">&amp;</span><span class="ident">VerifiedScript</span>,
-    <span class="ident">dependencies</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">VerifiedModule</span><span class="op">&gt;</span>,
+    <span class="ident">script</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledScript</span>,
+    <span class="ident">dependencies</span>: <span class="kw">impl</span> <span class="ident">IntoIterator</span><span class="op">&lt;</span><span class="ident">Item</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CompiledModule</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">fake_module</span>) <span class="op">=</span> <span class="ident">script</span>.<span class="ident">clone</span>().<span class="ident">into_module</span>();
     <span class="ident">verify_module_dependencies</span>(<span class="kw-2">&amp;</span><span class="ident">fake_module</span>, <span class="ident">dependencies</span>)
@@ -639,15 +649,15 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify_script_dependency_map</span>(
     <span class="ident">script</span>: <span class="kw-2">&amp;</span><span class="ident">VerifiedScript</span>,
-    <span class="ident">dependency_map</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleId</span>, <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span>,
+    <span class="ident">dependency_map</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleId</span>, <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> (<span class="kw">_</span>, <span class="ident">fake_module</span>) <span class="op">=</span> <span class="ident">script</span>.<span class="ident">clone</span>().<span class="ident">into_module</span>();
-    <span class="ident">verify_dependencies</span>(<span class="kw-2">&amp;</span><span class="ident">fake_module</span>, <span class="ident">dependency_map</span>)
+    <span class="ident">verify_dependencies</span>(<span class="ident">fake_module</span>.<span class="ident">as_inner</span>(), <span class="ident">dependency_map</span>)
 }
 
 <span class="kw">fn</span> <span class="ident">verify_all_dependencies_provided</span>(
-    <span class="ident">module_view</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleView</span><span class="op">&lt;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span>,
-    <span class="ident">dependency_map</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleId</span>, <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span>,
+    <span class="ident">module_view</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleView</span><span class="op">&lt;</span><span class="ident">CompiledModule</span><span class="op">&gt;</span>,
+    <span class="ident">dependency_map</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleId</span>, <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">module_handle_view</span>) <span class="kw">in</span> <span class="ident">module_view</span>.<span class="ident">module_handles</span>().<span class="ident">enumerate</span>() {
         <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">module_handle_view</span>.<span class="ident">module_id</span>();
@@ -665,8 +675,8 @@
 }
 
 <span class="kw">fn</span> <span class="ident">verify_struct_kind</span>(
-    <span class="ident">module_view</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleView</span><span class="op">&lt;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span>,
-    <span class="ident">dependency_map</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleId</span>, <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span>,
+    <span class="ident">module_view</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleView</span><span class="op">&lt;</span><span class="ident">CompiledModule</span><span class="op">&gt;</span>,
+    <span class="ident">dependency_map</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleId</span>, <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">struct_handle_view</span>) <span class="kw">in</span> <span class="ident">module_view</span>.<span class="ident">struct_handles</span>().<span class="ident">enumerate</span>() {
         <span class="kw">let</span> <span class="ident">owner_module_id</span> <span class="op">=</span> <span class="ident">struct_handle_view</span>.<span class="ident">module_id</span>();
@@ -700,8 +710,8 @@
 }
 
 <span class="kw">fn</span> <span class="ident">verify_function_visibility_and_type</span>(
-    <span class="ident">module_view</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleView</span><span class="op">&lt;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span>,
-    <span class="ident">dependency_map</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleId</span>, <span class="kw-2">&amp;</span><span class="ident">VerifiedModule</span><span class="op">&gt;</span>,
+    <span class="ident">module_view</span>: <span class="kw-2">&amp;</span><span class="ident">ModuleView</span><span class="op">&lt;</span><span class="ident">CompiledModule</span><span class="op">&gt;</span>,
+    <span class="ident">dependency_map</span>: <span class="kw-2">&amp;</span><span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">ModuleId</span>, <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">resolver</span> <span class="op">=</span> <span class="ident">Resolver</span>::<span class="ident">new</span>(<span class="ident">module_view</span>.<span class="ident">as_inner</span>());
     <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">function_handle_view</span>) <span class="kw">in</span> <span class="ident">module_view</span>.<span class="ident">function_handles</span>().<span class="ident">enumerate</span>() {
@@ -760,7 +770,7 @@
     <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">verified_modules</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[];
     <span class="kw">for</span> <span class="ident">module</span> <span class="kw">in</span> <span class="ident">modules</span>.<span class="ident">into_iter</span>() {
         <span class="kw">let</span> <span class="ident">verified_module</span> <span class="op">=</span> <span class="ident">VerifiedModule</span>::<span class="ident">new</span>(<span class="ident">module</span>).<span class="ident">expect</span>(<span class="string">&quot;stdlib module failed to verify&quot;</span>);
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">verify_module_dependencies</span>(<span class="kw-2">&amp;</span><span class="ident">verified_module</span>, <span class="kw-2">&amp;</span><span class="ident">verified_modules</span>) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">verify_vmodule_dependencies</span>(<span class="ident">verified_module</span>.<span class="ident">as_inner</span>(), <span class="kw-2">&amp;</span><span class="ident">verified_modules</span>) {
             <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;{:?} at {:?}&quot;</span>, <span class="ident">e</span>, <span class="ident">verified_module</span>.<span class="ident">self_id</span>())
         }
         <span class="ident">verified_modules</span>.<span class="ident">push</span>(<span class="ident">verified_module</span>);

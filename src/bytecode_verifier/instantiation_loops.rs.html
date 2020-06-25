@@ -285,6 +285,9 @@
 <span id="285">285</span>
 <span id="286">286</span>
 <span id="287">287</span>
+<span id="288">288</span>
+<span id="289">289</span>
+<span id="290">290</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -358,7 +361,7 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">InstantiationLoopChecker</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="self">Self</span> {
             <span class="ident">module</span>,
             <span class="ident">graph</span>: <span class="ident">Graph</span>::<span class="ident">new</span>(),
@@ -369,6 +372,38 @@
                 .<span class="ident">enumerate</span>()
                 .<span class="ident">map</span>(<span class="op">|</span>(<span class="ident">def_idx</span>, <span class="ident">def</span>)<span class="op">|</span> (<span class="ident">def</span>.<span class="ident">function</span>, <span class="ident">FunctionDefinitionIndex</span>::<span class="ident">new</span>(<span class="ident">def_idx</span> <span class="kw">as</span> <span class="ident">u16</span>)))
                 .<span class="ident">collect</span>(),
+        }
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">checker</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">new</span>(<span class="ident">module</span>);
+        <span class="ident">checker</span>.<span class="ident">build_graph</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">components</span> <span class="op">=</span> <span class="ident">checker</span>.<span class="ident">find_non_trivial_components</span>();
+
+        <span class="kw">match</span> <span class="ident">components</span>.<span class="ident">pop</span>() {
+            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
+            <span class="prelude-val">Some</span>((<span class="ident">nodes</span>, <span class="ident">edges</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">msg_edges</span> <span class="op">=</span> <span class="ident">edges</span>
+                    .<span class="ident">into_iter</span>()
+                    .<span class="ident">filter_map</span>(
+                        <span class="op">|</span><span class="ident">edge_idx</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">checker</span>.<span class="ident">graph</span>.<span class="ident">edge_weight</span>(<span class="ident">edge_idx</span>).<span class="ident">unwrap</span>() {
+                            <span class="ident">Edge</span>::<span class="ident">TyConApp</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="ident">checker</span>.<span class="ident">format_edge</span>(<span class="ident">edge_idx</span>)),
+                            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+                        },
+                    )
+                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+                    .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>);
+                <span class="kw">let</span> <span class="ident">msg_nodes</span> <span class="op">=</span> <span class="ident">nodes</span>
+                    .<span class="ident">into_iter</span>()
+                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">node_idx</span><span class="op">|</span> <span class="ident">checker</span>.<span class="ident">format_node</span>(<span class="ident">node_idx</span>))
+                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
+                    .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>);
+                <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+                    <span class="string">&quot;edges with constructors: [{}], nodes: [{}]&quot;</span>,
+                    <span class="ident">msg_edges</span>, <span class="ident">msg_nodes</span>
+                );
+                <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">LOOP_IN_INSTANTIATION_GRAPH</span>).<span class="ident">with_message</span>(<span class="ident">msg</span>))
+            }
         }
     }
 
@@ -541,35 +576,6 @@
         <span class="kw">match</span> <span class="self">self</span>.<span class="ident">graph</span>.<span class="ident">edge_weight</span>(<span class="ident">edge_idx</span>).<span class="ident">unwrap</span>() {
             <span class="ident">Edge</span>::<span class="ident">TyConApp</span>(<span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{} --{:?}--&gt; {}&quot;</span>, <span class="ident">node_1</span>, <span class="ident">ty</span>, <span class="ident">node_2</span>,),
             <span class="ident">Edge</span>::<span class="ident">Identity</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{} ----&gt; {}&quot;</span>, <span class="ident">node_1</span>, <span class="ident">node_2</span>),
-        }
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="self">self</span>.<span class="ident">build_graph</span>();
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">components</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">find_non_trivial_components</span>();
-
-        <span class="kw">match</span> <span class="ident">components</span>.<span class="ident">pop</span>() {
-            <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(()),
-            <span class="prelude-val">Some</span>((<span class="ident">nodes</span>, <span class="ident">edges</span>)) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">msg_edges</span> <span class="op">=</span> <span class="ident">edges</span>
-                    .<span class="ident">into_iter</span>()
-                    .<span class="ident">filter_map</span>(<span class="op">|</span><span class="ident">edge_idx</span><span class="op">|</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">graph</span>.<span class="ident">edge_weight</span>(<span class="ident">edge_idx</span>).<span class="ident">unwrap</span>() {
-                        <span class="ident">Edge</span>::<span class="ident">TyConApp</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Some</span>(<span class="self">self</span>.<span class="ident">format_edge</span>(<span class="ident">edge_idx</span>)),
-                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
-                    })
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                    .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>);
-                <span class="kw">let</span> <span class="ident">msg_nodes</span> <span class="op">=</span> <span class="ident">nodes</span>
-                    .<span class="ident">into_iter</span>()
-                    .<span class="ident">map</span>(<span class="op">|</span><span class="ident">node_idx</span><span class="op">|</span> <span class="self">self</span>.<span class="ident">format_node</span>(<span class="ident">node_idx</span>))
-                    .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>()
-                    .<span class="ident">join</span>(<span class="string">&quot;, &quot;</span>);
-                <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                    <span class="string">&quot;edges with constructors: [{}], nodes: [{}]&quot;</span>,
-                    <span class="ident">msg_edges</span>, <span class="ident">msg_nodes</span>
-                );
-                <span class="prelude-val">Err</span>(<span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">StatusCode</span>::<span class="ident">LOOP_IN_INSTANTIATION_GRAPH</span>).<span class="ident">with_message</span>(<span class="ident">msg</span>))
-            }
         }
     }
 }

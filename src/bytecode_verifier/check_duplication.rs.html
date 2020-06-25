@@ -268,13 +268,10 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">DuplicationChecker</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">module</span> }
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">checker</span> <span class="op">=</span> <span class="self">Self</span> { <span class="ident">module</span> };
         <span class="comment">// Identifiers</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">identifiers</span>()) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">identifiers</span>()) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">Identifier</span>,
                 <span class="ident">idx</span>,
@@ -282,7 +279,7 @@
             ));
         }
         <span class="comment">// Constants</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">constant_pool</span>()) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">constant_pool</span>()) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">ConstantPool</span>,
                 <span class="ident">idx</span>,
@@ -290,7 +287,7 @@
             ));
         }
         <span class="comment">// Signatures</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">signatures</span>()) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">signatures</span>()) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">Signature</span>,
                 <span class="ident">idx</span>,
@@ -298,7 +295,7 @@
             ));
         }
         <span class="comment">// ModuleHandles</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">module_handles</span>()) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">module_handles</span>()) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">ModuleHandle</span>,
                 <span class="ident">idx</span>,
@@ -307,7 +304,8 @@
         }
         <span class="comment">// StructHandles - module and name define uniqueness</span>
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(
-            <span class="self">self</span>.<span class="ident">module</span>
+            <span class="ident">checker</span>
+                .<span class="ident">module</span>
                 .<span class="ident">struct_handles</span>()
                 .<span class="ident">iter</span>()
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> (<span class="ident">x</span>.<span class="ident">module</span>, <span class="ident">x</span>.<span class="ident">name</span>)),
@@ -320,7 +318,8 @@
         }
         <span class="comment">// FunctionHandles - module and name define uniqueness</span>
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(
-            <span class="self">self</span>.<span class="ident">module</span>
+            <span class="ident">checker</span>
+                .<span class="ident">module</span>
                 .<span class="ident">function_handles</span>()
                 .<span class="ident">iter</span>()
                 .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> (<span class="ident">x</span>.<span class="ident">module</span>, <span class="ident">x</span>.<span class="ident">name</span>)),
@@ -332,7 +331,7 @@
             ));
         }
         <span class="comment">// FieldHandles</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">field_handles</span>()) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">field_handles</span>()) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">FieldHandle</span>,
                 <span class="ident">idx</span>,
@@ -340,7 +339,7 @@
             ));
         }
         <span class="comment">// StructInstantiations</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">struct_instantiations</span>()) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">struct_instantiations</span>()) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">StructDefInstantiation</span>,
                 <span class="ident">idx</span>,
@@ -348,7 +347,7 @@
             ));
         }
         <span class="comment">// FunctionInstantiations</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">function_instantiations</span>()) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">function_instantiations</span>()) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">FunctionInstantiation</span>,
                 <span class="ident">idx</span>,
@@ -356,7 +355,7 @@
             ));
         }
         <span class="comment">// FieldInstantiations</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">field_instantiations</span>()) {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">field_instantiations</span>()) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">FieldInstantiation</span>,
                 <span class="ident">idx</span>,
@@ -364,9 +363,9 @@
             ));
         }
         <span class="comment">// StructDefinition - contained StructHandle defines uniqueness</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span>
-            <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">struct_defs</span>().<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">struct_handle</span>))
-        {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(
+            <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">struct_defs</span>().<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">struct_handle</span>),
+        ) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">StructDefinition</span>,
                 <span class="ident">idx</span>,
@@ -375,7 +374,7 @@
         }
         <span class="comment">// FunctionDefinition - contained FunctionHandle defines uniqueness</span>
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span>
-            <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">function_defs</span>().<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">function</span>))
+            <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">function_defs</span>().<span class="ident">iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">function</span>))
         {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">FunctionDefinition</span>,
@@ -384,7 +383,7 @@
             ));
         }
         <span class="comment">// Acquires in function declarations contain unique struct definitions</span>
-        <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">function_def</span>) <span class="kw">in</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">function_defs</span>().<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
+        <span class="kw">for</span> (<span class="ident">idx</span>, <span class="ident">function_def</span>) <span class="kw">in</span> <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">function_defs</span>().<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
             <span class="kw">let</span> <span class="ident">acquires</span> <span class="op">=</span> <span class="ident">function_def</span>.<span class="ident">acquires_global_resources</span>.<span class="ident">iter</span>();
             <span class="kw">if</span> <span class="self">Self</span>::<span class="ident">first_duplicate_element</span>(<span class="ident">acquires</span>).<span class="ident">is_some</span>() {
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
@@ -395,7 +394,7 @@
             }
         }
         <span class="comment">// Field names in structs must be unique</span>
-        <span class="kw">for</span> (<span class="ident">struct_idx</span>, <span class="ident">struct_def</span>) <span class="kw">in</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">struct_defs</span>().<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
+        <span class="kw">for</span> (<span class="ident">struct_idx</span>, <span class="ident">struct_def</span>) <span class="kw">in</span> <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">struct_defs</span>().<span class="ident">iter</span>().<span class="ident">enumerate</span>() {
             <span class="kw">let</span> <span class="ident">fields</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">struct_def</span>.<span class="ident">field_information</span> {
                 <span class="ident">StructFieldInformation</span>::<span class="ident">Native</span> <span class="op">=</span><span class="op">&gt;</span> <span class="kw">continue</span>,
                 <span class="ident">StructFieldInformation</span>::<span class="ident">Declared</span>(<span class="ident">fields</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">fields</span>,
@@ -416,8 +415,9 @@
             }
         }
         <span class="comment">// Check that each struct definition is pointing to the self module</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">struct_defs</span>().<span class="ident">iter</span>().<span class="ident">position</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
-            <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">struct_handle_at</span>(<span class="ident">x</span>.<span class="ident">struct_handle</span>).<span class="ident">module</span> <span class="op">!</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">self_handle_idx</span>()
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">struct_defs</span>().<span class="ident">iter</span>().<span class="ident">position</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
+            <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">struct_handle_at</span>(<span class="ident">x</span>.<span class="ident">struct_handle</span>).<span class="ident">module</span>
+                <span class="op">!</span><span class="op">=</span> <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">self_handle_idx</span>()
         }) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">StructDefinition</span>,
@@ -426,8 +426,8 @@
             ));
         }
         <span class="comment">// Check that each function definition is pointing to the self module</span>
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">function_defs</span>().<span class="ident">iter</span>().<span class="ident">position</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
-            <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">function_handle_at</span>(<span class="ident">x</span>.<span class="ident">function</span>).<span class="ident">module</span> <span class="op">!</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">self_handle_idx</span>()
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">function_defs</span>().<span class="ident">iter</span>().<span class="ident">position</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
+            <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">function_handle_at</span>(<span class="ident">x</span>.<span class="ident">function</span>).<span class="ident">module</span> <span class="op">!</span><span class="op">=</span> <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">self_handle_idx</span>()
         }) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
                 <span class="ident">IndexKind</span>::<span class="ident">FunctionDefinition</span>,
@@ -436,15 +436,15 @@
             ));
         }
         <span class="comment">// Check that each struct handle in self module is implemented (has a declaration)</span>
-        <span class="kw">let</span> <span class="ident">implemented_struct_handles</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">StructHandleIndex</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">let</span> <span class="ident">implemented_struct_handles</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">StructHandleIndex</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">checker</span>
             .<span class="ident">module</span>
             .<span class="ident">struct_defs</span>()
             .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">struct_handle</span>)
             .<span class="ident">collect</span>();
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> (<span class="number">0</span>..<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">struct_handles</span>().<span class="ident">len</span>()).<span class="ident">position</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> (<span class="number">0</span>..<span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">struct_handles</span>().<span class="ident">len</span>()).<span class="ident">position</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">y</span> <span class="op">=</span> <span class="ident">StructHandleIndex</span>::<span class="ident">new</span>(<span class="ident">x</span> <span class="kw">as</span> <span class="ident">u16</span>);
-            <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">struct_handle_at</span>(<span class="ident">y</span>).<span class="ident">module</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">self_handle_idx</span>()
+            <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">struct_handle_at</span>(<span class="ident">y</span>).<span class="ident">module</span> <span class="op">=</span><span class="op">=</span> <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">self_handle_idx</span>()
                 <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">implemented_struct_handles</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">y</span>)
         }) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(
@@ -454,15 +454,15 @@
             ));
         }
         <span class="comment">// Check that each function handle in self module is implemented (has a declaration)</span>
-        <span class="kw">let</span> <span class="ident">implemented_function_handles</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">FunctionHandleIndex</span><span class="op">&gt;</span> <span class="op">=</span> <span class="self">self</span>
+        <span class="kw">let</span> <span class="ident">implemented_function_handles</span>: <span class="ident">HashSet</span><span class="op">&lt;</span><span class="ident">FunctionHandleIndex</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">checker</span>
             .<span class="ident">module</span>
             .<span class="ident">function_defs</span>()
             .<span class="ident">iter</span>()
             .<span class="ident">map</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> <span class="ident">x</span>.<span class="ident">function</span>)
             .<span class="ident">collect</span>();
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> (<span class="number">0</span>..<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">function_handles</span>().<span class="ident">len</span>()).<span class="ident">position</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">idx</span>) <span class="op">=</span> (<span class="number">0</span>..<span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">function_handles</span>().<span class="ident">len</span>()).<span class="ident">position</span>(<span class="op">|</span><span class="ident">x</span><span class="op">|</span> {
             <span class="kw">let</span> <span class="ident">y</span> <span class="op">=</span> <span class="ident">FunctionHandleIndex</span>::<span class="ident">new</span>(<span class="ident">x</span> <span class="kw">as</span> <span class="ident">u16</span>);
-            <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">function_handle_at</span>(<span class="ident">y</span>).<span class="ident">module</span> <span class="op">=</span><span class="op">=</span> <span class="self">self</span>.<span class="ident">module</span>.<span class="ident">self_handle_idx</span>()
+            <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">function_handle_at</span>(<span class="ident">y</span>).<span class="ident">module</span> <span class="op">=</span><span class="op">=</span> <span class="ident">checker</span>.<span class="ident">module</span>.<span class="ident">self_handle_idx</span>()
                 <span class="kw-2">&amp;</span><span class="op">&amp;</span> <span class="op">!</span><span class="ident">implemented_function_handles</span>.<span class="ident">contains</span>(<span class="kw-2">&amp;</span><span class="ident">y</span>)
         }) {
             <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">verification_error</span>(

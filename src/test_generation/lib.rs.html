@@ -452,7 +452,6 @@
 <span id="452">452</span>
 <span id="453">453</span>
 <span id="454">454</span>
-<span id="455">455</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -499,16 +498,17 @@
 };
 
 <span class="doccomment">/// This function calls the Bytecode verifier to test it</span>
-<span class="kw">fn</span> <span class="ident">run_verifier</span>(<span class="ident">module</span>: <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">VerifiedModule</span>, <span class="ident">String</span><span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">run_verifier</span>(<span class="ident">module</span>: <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">CompiledModule</span>, <span class="ident">String</span><span class="op">&gt;</span> {
     <span class="kw">let</span> <span class="ident">verifier_panic</span> <span class="op">=</span> <span class="ident">panic</span>::<span class="ident">catch_unwind</span>(<span class="op">|</span><span class="op">|</span> {
-        <span class="ident">VerifiedModule</span>::<span class="ident">new</span>(<span class="ident">module</span>.<span class="ident">clone</span>())
+        <span class="ident">VerifiedModule</span>::<span class="ident">new</span>(<span class="ident">module</span>)
+            .<span class="ident">map</span>(<span class="op">|</span><span class="ident">verified_module</span><span class="op">|</span> <span class="ident">verified_module</span>.<span class="ident">into_inner</span>())
             .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Module verification failed: {:#?}&quot;</span>, <span class="ident">err</span>))
     });
     <span class="ident">verifier_panic</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="ident">err</span><span class="op">|</span> <span class="prelude-val">Err</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Verifier panic: {:#?}&quot;</span>, <span class="ident">err</span>)))
 }
 
 <span class="doccomment">/// This function runs a verified module in the VM runtime</span>
-<span class="kw">fn</span> <span class="ident">run_vm</span>(<span class="ident">module</span>: <span class="ident">VerifiedModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+<span class="kw">fn</span> <span class="ident">run_vm</span>(<span class="ident">module</span>: <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
     <span class="comment">// By convention the 0&#39;th index function definition is the entrypoint to the module (i.e. that</span>
     <span class="comment">// will contain only simply-typed arguments).</span>
     <span class="kw">let</span> <span class="ident">entry_idx</span> <span class="op">=</span> <span class="ident">FunctionDefinitionIndex</span>::<span class="ident">new</span>(<span class="number">0</span>);
@@ -543,13 +543,13 @@
 
 <span class="doccomment">/// Execute the first function in a module</span>
 <span class="kw">fn</span> <span class="ident">execute_function_in_module</span>(
-    <span class="ident">module</span>: <span class="ident">VerifiedModule</span>,
+    <span class="ident">module</span>: <span class="ident">CompiledModule</span>,
     <span class="ident">idx</span>: <span class="ident">FunctionDefinitionIndex</span>,
     <span class="ident">ty_args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">TypeTag</span><span class="op">&gt;</span>,
     <span class="ident">args</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Value</span><span class="op">&gt;</span>,
     <span class="ident">state_view</span>: <span class="kw-2">&amp;</span><span class="kw">dyn</span> <span class="ident">StateView</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-    <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">as_inner</span>().<span class="ident">self_id</span>();
+    <span class="kw">let</span> <span class="ident">module_id</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">self_id</span>();
     <span class="kw">let</span> <span class="ident">entry_name</span> <span class="op">=</span> {
         <span class="kw">let</span> <span class="ident">entry_func_idx</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">function_def_at</span>(<span class="ident">idx</span>).<span class="ident">function</span>;
         <span class="kw">let</span> <span class="ident">entry_name_idx</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">function_handle_at</span>(<span class="ident">entry_func_idx</span>).<span class="ident">name</span>;
@@ -724,9 +724,7 @@
                 <span class="kw">let</span> <span class="ident">uid</span> <span class="op">=</span> <span class="ident">rng</span>.<span class="ident">gen</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>();
                 <span class="ident">output_error_case</span>(<span class="ident">module</span>.<span class="ident">clone</span>(), <span class="ident">output_path</span>.<span class="ident">clone</span>(), <span class="ident">uid</span>, <span class="ident">tid</span>);
                 <span class="kw">if</span> <span class="ident">EXECUTE_UNVERIFIED_MODULE</span> {
-                    <span class="prelude-val">Some</span>(<span class="ident">VerifiedModule</span>::<span class="ident">bypass_verifier_DANGEROUS_FOR_TESTING_ONLY</span>(
-                        <span class="ident">module</span>.<span class="ident">clone</span>(),
-                    ))
+                    <span class="prelude-val">Some</span>(<span class="ident">module</span>.<span class="ident">clone</span>())
                 } <span class="kw">else</span> {
                     <span class="prelude-val">None</span>
                 }

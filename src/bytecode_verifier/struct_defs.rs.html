@@ -128,9 +128,6 @@
 <span id="128">128</span>
 <span id="129">129</span>
 <span id="130">130</span>
-<span id="131">131</span>
-<span id="132">132</span>
-<span id="133">133</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -157,12 +154,9 @@
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">RecursiveStructDefChecker</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span> { <span class="ident">module</span> }
-    }
-
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
-        <span class="kw">let</span> <span class="ident">graph</span> <span class="op">=</span> <span class="ident">StructDefGraphBuilder</span>::<span class="ident">new</span>(<span class="self">self</span>.<span class="ident">module</span>).<span class="ident">build</span>()<span class="question-mark">?</span>;
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">verify</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">checker</span> <span class="op">=</span> <span class="self">Self</span> { <span class="ident">module</span> };
+        <span class="kw">let</span> <span class="ident">graph</span> <span class="op">=</span> <span class="ident">StructDefGraphBuilder</span>::<span class="ident">new</span>(<span class="ident">checker</span>.<span class="ident">module</span>).<span class="ident">build</span>()<span class="question-mark">?</span>;
 
         <span class="comment">// toposort is iterative while petgraph::algo::is_cyclic_directed is recursive. Prefer</span>
         <span class="comment">// the iterative solution here as this code may be dealing with untrusted data.</span>
@@ -179,14 +173,14 @@
 
 <span class="doccomment">/// Given a module, build a graph of struct definitions. This is useful when figuring out whether</span>
 <span class="doccomment">/// the struct definitions in module form a cycle.</span>
-<span class="kw">pub</span> <span class="kw">struct</span> <span class="ident">StructDefGraphBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+<span class="kw">struct</span> <span class="ident">StructDefGraphBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
     <span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CompiledModule</span>,
     <span class="doccomment">/// Used to follow field definitions&#39; signatures&#39; struct handles to their struct definitions.</span>
     <span class="ident">handle_to_def</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">StructHandleIndex</span>, <span class="ident">StructDefinitionIndex</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> <span class="ident">StructDefGraphBuilder</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">fn</span> <span class="ident">new</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="ident">CompiledModule</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">handle_to_def</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
         <span class="comment">// the mapping from struct definitions to struct handles is already checked to be 1-1 by</span>
         <span class="comment">// DuplicationChecker</span>
@@ -201,7 +195,7 @@
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">build</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">DiGraphMap</span><span class="op">&lt;</span><span class="ident">StructDefinitionIndex</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">build</span>(<span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">DiGraphMap</span><span class="op">&lt;</span><span class="ident">StructDefinitionIndex</span>, ()<span class="op">&gt;</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">neighbors</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
         <span class="kw">for</span> <span class="ident">idx</span> <span class="kw">in</span> <span class="number">0</span>..<span class="self">self</span>.<span class="ident">module</span>.<span class="ident">struct_defs</span>().<span class="ident">len</span>() {
             <span class="kw">let</span> <span class="ident">sd_idx</span> <span class="op">=</span> <span class="ident">StructDefinitionIndex</span>::<span class="ident">new</span>(<span class="ident">idx</span> <span class="kw">as</span> <span class="ident">TableIndex</span>);

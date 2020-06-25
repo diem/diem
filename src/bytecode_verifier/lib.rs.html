@@ -38,6 +38,55 @@
 <span id="38">38</span>
 <span id="39">39</span>
 <span id="40">40</span>
+<span id="41">41</span>
+<span id="42">42</span>
+<span id="43">43</span>
+<span id="44">44</span>
+<span id="45">45</span>
+<span id="46">46</span>
+<span id="47">47</span>
+<span id="48">48</span>
+<span id="49">49</span>
+<span id="50">50</span>
+<span id="51">51</span>
+<span id="52">52</span>
+<span id="53">53</span>
+<span id="54">54</span>
+<span id="55">55</span>
+<span id="56">56</span>
+<span id="57">57</span>
+<span id="58">58</span>
+<span id="59">59</span>
+<span id="60">60</span>
+<span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -79,5 +128,54 @@
     <span class="ident">batch_verify_modules</span>, <span class="ident">verify_main_signature</span>, <span class="ident">verify_module_dependencies</span>,
     <span class="ident">verify_script_dependencies</span>, <span class="ident">VerifiedModule</span>, <span class="ident">VerifiedScript</span>,
 };
+<span class="kw">use</span> <span class="ident">vm</span>::{
+    <span class="ident">access</span>::<span class="ident">ModuleAccess</span>,
+    <span class="ident">file_format</span>::{<span class="ident">Kind</span>, <span class="ident">SignatureToken</span>},
+    <span class="ident">CompiledModule</span>,
+};
+
+<span class="comment">//</span>
+<span class="comment">// Helpers functions for signatures</span>
+<span class="comment">//</span>
+
+<span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn</span> <span class="ident">kind</span>(<span class="ident">module</span>: <span class="kw-2">&amp;</span><span class="ident">CompiledModule</span>, <span class="ident">ty</span>: <span class="kw-2">&amp;</span><span class="ident">SignatureToken</span>, <span class="ident">constraints</span>: <span class="kw-2">&amp;</span>[<span class="ident">Kind</span>]) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Kind</span> {
+    <span class="kw">use</span> <span class="ident">SignatureToken</span>::<span class="kw-2">*</span>;
+
+    <span class="kw">match</span> <span class="ident">ty</span> {
+        <span class="comment">// The primitive types &amp; references have kind unrestricted.</span>
+        <span class="ident">Bool</span> <span class="op">|</span> <span class="ident">U8</span> <span class="op">|</span> <span class="ident">U64</span> <span class="op">|</span> <span class="ident">U128</span> <span class="op">|</span> <span class="ident">Address</span> <span class="op">|</span> <span class="ident">Reference</span>(<span class="kw">_</span>) <span class="op">|</span> <span class="ident">MutableReference</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Kind</span>::<span class="ident">Copyable</span>,
+        <span class="ident">Signer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Kind</span>::<span class="ident">Resource</span>,
+        <span class="ident">TypeParameter</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">constraints</span>[<span class="kw-2">*</span><span class="ident">idx</span> <span class="kw">as</span> <span class="ident">usize</span>],
+        <span class="ident">Vector</span>(<span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">kind</span>(<span class="ident">module</span>, <span class="ident">ty</span>, <span class="ident">constraints</span>),
+        <span class="ident">Struct</span>(<span class="ident">idx</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">sh</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">struct_handle_at</span>(<span class="kw-2">*</span><span class="ident">idx</span>);
+            <span class="kw">if</span> <span class="ident">sh</span>.<span class="ident">is_nominal_resource</span> {
+                <span class="ident">Kind</span>::<span class="ident">Resource</span>
+            } <span class="kw">else</span> {
+                <span class="ident">Kind</span>::<span class="ident">Copyable</span>
+            }
+        }
+        <span class="ident">StructInstantiation</span>(<span class="ident">idx</span>, <span class="ident">type_args</span>) <span class="op">=</span><span class="op">&gt;</span> {
+            <span class="kw">let</span> <span class="ident">sh</span> <span class="op">=</span> <span class="ident">module</span>.<span class="ident">struct_handle_at</span>(<span class="kw-2">*</span><span class="ident">idx</span>);
+            <span class="kw">if</span> <span class="ident">sh</span>.<span class="ident">is_nominal_resource</span> {
+                <span class="kw">return</span> <span class="ident">Kind</span>::<span class="ident">Resource</span>;
+            }
+            <span class="comment">// Gather the kinds of the type actuals.</span>
+            <span class="kw">let</span> <span class="ident">kinds</span> <span class="op">=</span> <span class="ident">type_args</span>
+                .<span class="ident">iter</span>()
+                .<span class="ident">map</span>(<span class="op">|</span><span class="ident">ty</span><span class="op">|</span> <span class="ident">kind</span>(<span class="ident">module</span>, <span class="ident">ty</span>, <span class="ident">constraints</span>))
+                .<span class="ident">collect</span>::<span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="kw">_</span><span class="op">&gt;</span><span class="op">&gt;</span>();
+            <span class="comment">// Derive the kind of the struct.</span>
+            <span class="comment">//   - If any of the type actuals is `all`, then the struct is `all`.</span>
+            <span class="comment">//     - `all` means some part of the type can be either `resource` or</span>
+            <span class="comment">//       `unrestricted`.</span>
+            <span class="comment">//     - Therefore it is also impossible to determine the kind of the type as a</span>
+            <span class="comment">//       whole, and thus `all`.</span>
+            <span class="comment">//   - If none of the type actuals is `all`, then the struct is a resource if</span>
+            <span class="comment">//     and only if one of the type actuals is `resource`.</span>
+            <span class="ident">kinds</span>.<span class="ident">iter</span>().<span class="ident">cloned</span>().<span class="ident">fold</span>(<span class="ident">Kind</span>::<span class="ident">Copyable</span>, <span class="ident">Kind</span>::<span class="ident">join</span>)
+        }
+    }
+}
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../";window.currentCrate = "bytecode_verifier";</script><script src="../../aliases.js"></script><script src="../../main.js"></script><script src="../../source-script.js"></script><script src="../../source-files.js"></script><script defer src="../../search-index.js"></script></body></html>
