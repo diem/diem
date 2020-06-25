@@ -26,7 +26,6 @@
 -  [Function `deposit_with_metadata`](#0x1_LibraAccount_deposit_with_metadata)
 -  [Function `deposit_with_sender_and_metadata`](#0x1_LibraAccount_deposit_with_sender_and_metadata)
 -  [Function `mint_to_address`](#0x1_LibraAccount_mint_to_address)
--  [Function `mint_lbr_to_address`](#0x1_LibraAccount_mint_lbr_to_address)
 -  [Function `cancel_burn`](#0x1_LibraAccount_cancel_burn)
 -  [Function `withdraw_from_balance`](#0x1_LibraAccount_withdraw_from_balance)
 -  [Function `withdraw_from`](#0x1_LibraAccount_withdraw_from)
@@ -861,35 +860,6 @@ Aborts if the
 ) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a>, <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     // Mint and deposit the coin
     <a href="#0x1_LibraAccount_deposit">deposit</a>(account, payee, <a href="Libra.md#0x1_Libra_mint">Libra::mint</a>&lt;Token&gt;(account, amount));
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraAccount_mint_lbr_to_address"></a>
-
-## Function `mint_lbr_to_address`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_mint_lbr_to_address">mint_lbr_to_address</a>(account: &signer, payee: address, amount: u64)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_mint_lbr_to_address">mint_lbr_to_address</a>(
-    account: &signer,
-    payee: address,
-    amount: u64
-) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a>, <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-    // Mint and deposit the coin
-    <a href="#0x1_LibraAccount_deposit">deposit</a>(account, payee, <a href="LBR.md#0x1_LBR_mint">LBR::mint</a>(account, amount));
 }
 </code></pre>
 

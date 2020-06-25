@@ -15,12 +15,18 @@ use crate::{
         types::Executor,
     },
 };
-use libra_types::{transaction::SignedTransaction, vm_status::VMStatus};
+use libra_types::{account_config, transaction::SignedTransaction, vm_status::VMStatus};
 
 fn txn(seq_num: u64) -> SignedTransaction {
     let account = Account::new();
     let assoc = Account::new_association();
-    create_account_txn(&assoc, &account, seq_num + 1, 0)
+    create_account_txn(
+        &assoc,
+        &account,
+        seq_num + 1,
+        0,
+        account_config::lbr_type_tag(),
+    )
 }
 
 #[test]

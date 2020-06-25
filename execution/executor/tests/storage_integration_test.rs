@@ -13,8 +13,8 @@ use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, x25519, HashValue, PrivateKey, Uniform};
 use libra_types::{
     account_config::{
-        association_address, from_currency_code_string, lbr_type_tag,
-        treasury_compliance_account_address, LBR_NAME,
+        association_address, coin1_tag, from_currency_code_string,
+        treasury_compliance_account_address, COIN1_NAME,
     },
     account_state::AccountState,
     account_state_blob::AccountStateWithProof,
@@ -106,7 +106,7 @@ fn test_reconfiguration() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_transfer_with_metadata_script(
-            lbr_type_tag(),
+            coin1_tag(),
             validator_account,
             1_000_000,
             vec![],
@@ -215,7 +215,7 @@ fn test_change_publishing_option_to_custom() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_transfer_with_metadata_script(
-            lbr_type_tag(),
+            coin1_tag(),
             validator_account,
             1_000_000,
             vec![],
@@ -388,7 +388,7 @@ fn test_extend_whitelist() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_transfer_with_metadata_script(
-            lbr_type_tag(),
+            coin1_tag(),
             validator_account,
             1_000_000,
             vec![],
@@ -577,7 +577,7 @@ fn test_execution_with_storage() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_mint_script(
-            lbr_type_tag(),
+            coin1_tag(),
             &account1,
             account1_auth_key.prefix().to_vec(),
             2_000_000,
@@ -591,7 +591,7 @@ fn test_execution_with_storage() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_mint_script(
-            lbr_type_tag(),
+            coin1_tag(),
             &account2,
             account2_auth_key.prefix().to_vec(),
             1_200_000,
@@ -605,7 +605,7 @@ fn test_execution_with_storage() {
         genesis_key.clone(),
         genesis_key.public_key(),
         Some(encode_mint_script(
-            lbr_type_tag(),
+            coin1_tag(),
             &account3,
             account3_auth_key.prefix().to_vec(),
             1_000_000,
@@ -620,7 +620,7 @@ fn test_execution_with_storage() {
         privkey1.clone(),
         pubkey1.clone(),
         Some(encode_transfer_with_metadata_script(
-            lbr_type_tag(),
+            coin1_tag(),
             account2,
             20_000,
             vec![],
@@ -636,7 +636,7 @@ fn test_execution_with_storage() {
         privkey2,
         pubkey2,
         Some(encode_transfer_with_metadata_script(
-            lbr_type_tag(),
+            coin1_tag(),
             account3,
             10_000,
             vec![],
@@ -652,7 +652,7 @@ fn test_execution_with_storage() {
         privkey1.clone(),
         pubkey1.clone(),
         Some(encode_transfer_with_metadata_script(
-            lbr_type_tag(),
+            coin1_tag(),
             account3,
             70_000,
             vec![],
@@ -674,7 +674,7 @@ fn test_execution_with_storage() {
             privkey1.clone(),
             pubkey1.clone(),
             Some(encode_transfer_with_metadata_script(
-                lbr_type_tag(),
+                coin1_tag(),
                 account3,
                 10_000,
                 vec![],
@@ -915,8 +915,8 @@ where
 {
     let balance = if let Some(blob) = &account_state_with_proof.blob {
         AccountState::try_from(blob)?
-            .get_balance_resources(&[from_currency_code_string(LBR_NAME).unwrap()])?
-            .get(&from_currency_code_string(LBR_NAME).unwrap())
+            .get_balance_resources(&[from_currency_code_string(COIN1_NAME).unwrap()])?
+            .get(&from_currency_code_string(COIN1_NAME).unwrap())
             .map(|b| b.coin())
             .unwrap_or(0)
     } else {

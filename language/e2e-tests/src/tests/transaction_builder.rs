@@ -287,13 +287,13 @@ fn dual_attestation_payment() {
         keygen.generate_keypair();
 
     // choose an amount large enough to make multiple payments
-    let mint_amount = 100_000_000_000;
+    let mint_amount = 1_000_000_000_000;
     // choose an amount above the dual attestation threshold
-    let payment_amount = 1_000_000_000u64;
+    let payment_amount = 10_000_000_000u64;
 
     executor.execute_and_apply(association.signed_script_txn(
         encode_create_parent_vasp_account(
-            account_config::lbr_type_tag(),
+            account_config::coin1_tag(),
             *payment_sender.address(),
             payment_sender.auth_key_prefix(),
             vec![],
@@ -306,7 +306,7 @@ fn dual_attestation_payment() {
 
     executor.execute_and_apply(association.signed_script_txn(
         encode_create_parent_vasp_account(
-            account_config::lbr_type_tag(),
+            account_config::coin1_tag(),
             *payment_receiver.address(),
             payment_receiver.auth_key_prefix(),
             vec![],
@@ -319,7 +319,7 @@ fn dual_attestation_payment() {
 
     executor.execute_and_apply(blessed.signed_script_txn(
         encode_mint_script(
-            account_config::lbr_type_tag(),
+            account_config::coin1_tag(),
             &payment_sender.address(),
             vec![],
             mint_amount,
@@ -330,7 +330,7 @@ fn dual_attestation_payment() {
     // create a child VASP with a balance of amount
     executor.execute_and_apply(payment_sender.signed_script_txn(
         encode_create_child_vasp_account(
-            account_config::lbr_type_tag(),
+            account_config::coin1_tag(),
             *sender_child.address(),
             sender_child.auth_key_prefix(),
             false,
@@ -361,7 +361,7 @@ fn dual_attestation_payment() {
         );
         let output = executor.execute_and_apply(payment_sender.signed_script_txn(
             encode_transfer_with_metadata_script(
-                account_config::lbr_type_tag(),
+                account_config::coin1_tag(),
                 *payment_receiver.address(),
                 payment_amount,
                 ref_id,
@@ -380,7 +380,7 @@ fn dual_attestation_payment() {
         let ref_id = [0u8; 32].to_vec();
         let output = executor.execute_transaction(payment_sender.signed_script_txn(
             encode_transfer_with_metadata_script(
-                account_config::lbr_type_tag(),
+                account_config::coin1_tag(),
                 *payment_receiver.address(),
                 payment_amount,
                 ref_id,
@@ -417,7 +417,7 @@ fn dual_attestation_payment() {
         );
         let output = executor.execute_transaction(payment_sender.signed_script_txn(
             encode_transfer_with_metadata_script(
-                account_config::lbr_type_tag(),
+                account_config::coin1_tag(),
                 *payment_receiver.address(),
                 payment_amount,
                 ref_id,
@@ -454,7 +454,7 @@ fn dual_attestation_payment() {
         );
         let output = executor.execute_transaction(payment_sender.signed_script_txn(
             encode_transfer_with_metadata_script(
-                account_config::lbr_type_tag(),
+                account_config::coin1_tag(),
                 *payment_receiver.address(),
                 payment_amount,
                 ref_id,
@@ -474,7 +474,7 @@ fn dual_attestation_payment() {
         // parent->child
         executor.execute_and_apply(payment_sender.signed_script_txn(
             encode_transfer_with_metadata_script(
-                account_config::lbr_type_tag(),
+                account_config::coin1_tag(),
                 *sender_child.address(),
                 payment_amount * 2,
                 vec![0],
@@ -488,7 +488,7 @@ fn dual_attestation_payment() {
         // child->parent
         executor.execute_and_apply(sender_child.signed_script_txn(
             encode_transfer_with_metadata_script(
-                account_config::lbr_type_tag(),
+                account_config::coin1_tag(),
                 *payment_sender.address(),
                 payment_amount,
                 vec![0],
@@ -503,11 +503,23 @@ fn dual_attestation_payment() {
     // create two unhosted accounts + give some funds to the first one
     let unhosted = Account::new();
     let unhosted_other = Account::new();
-    executor.execute_and_apply(create_account_txn(&association, &unhosted, 3, 0));
-    executor.execute_and_apply(create_account_txn(&association, &unhosted_other, 4, 0));
+    executor.execute_and_apply(create_account_txn(
+        &association,
+        &unhosted,
+        3,
+        0,
+        account_config::coin1_tag(),
+    ));
+    executor.execute_and_apply(create_account_txn(
+        &association,
+        &unhosted_other,
+        4,
+        0,
+        account_config::coin1_tag(),
+    ));
     executor.execute_and_apply(blessed.signed_script_txn(
         encode_mint_script(
-            account_config::lbr_type_tag(),
+            account_config::coin1_tag(),
             &unhosted.address(),
             vec![],
             mint_amount,
@@ -520,7 +532,7 @@ fn dual_attestation_payment() {
         // since checking isn't performed on VASP->UHW transfers.
         executor.execute_and_apply(payment_sender.signed_script_txn(
             encode_transfer_with_metadata_script(
-                account_config::lbr_type_tag(),
+                account_config::coin1_tag(),
                 *unhosted.address(),
                 payment_amount,
                 vec![0],
@@ -534,7 +546,7 @@ fn dual_attestation_payment() {
         // Check from a child account.
         executor.execute_and_apply(sender_child.signed_script_txn(
             encode_transfer_with_metadata_script(
-                account_config::lbr_type_tag(),
+                account_config::coin1_tag(),
                 *unhosted.address(),
                 payment_amount,
                 vec![0],
@@ -547,7 +559,7 @@ fn dual_attestation_payment() {
         // Checking isn't performed on UHW->VASP
         executor.execute_and_apply(unhosted.signed_script_txn(
             encode_transfer_with_metadata_script(
-                account_config::lbr_type_tag(),
+                account_config::coin1_tag(),
                 *payment_sender.address(),
                 payment_amount,
                 vec![0],
@@ -560,7 +572,7 @@ fn dual_attestation_payment() {
         // Checking isn't performed on UHW->VASP
         executor.execute_and_apply(unhosted.signed_script_txn(
             encode_transfer_with_metadata_script(
-                account_config::lbr_type_tag(),
+                account_config::coin1_tag(),
                 *sender_child.address(),
                 payment_amount,
                 vec![0],
@@ -574,7 +586,7 @@ fn dual_attestation_payment() {
         // Checking isn't performed on UHW->UHW
         executor.execute_and_apply(unhosted.signed_script_txn(
             encode_transfer_with_metadata_script(
-                account_config::lbr_type_tag(),
+                account_config::coin1_tag(),
                 *unhosted_other.address(),
                 payment_amount,
                 vec![0],
@@ -616,7 +628,7 @@ fn dual_attestation_payment() {
         );
         let output = executor.execute_transaction(payment_sender.signed_script_txn(
             encode_transfer_with_metadata_script(
-                account_config::lbr_type_tag(),
+                account_config::coin1_tag(),
                 *payment_receiver.address(),
                 payment_amount,
                 ref_id,

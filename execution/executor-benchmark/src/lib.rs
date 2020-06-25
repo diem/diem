@@ -12,9 +12,7 @@ use libra_crypto::{
 use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{
-        lbr_type_tag, treasury_compliance_account_address, AccountResource, LBR_NAME,
-    },
+    account_config::{coin1_tag, treasury_compliance_account_address, AccountResource, COIN1_NAME},
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{
@@ -115,7 +113,7 @@ impl TransactionGenerator {
                     &self.genesis_key,
                     self.genesis_key.public_key(),
                     encode_mint_script(
-                        lbr_type_tag(),
+                        coin1_tag(),
                         &account.address,
                         account.auth_key_prefix(),
                         init_account_balance,
@@ -149,7 +147,7 @@ impl TransactionGenerator {
                     &sender.private_key,
                     sender.public_key.clone(),
                     encode_transfer_with_metadata_script(
-                        lbr_type_tag(),
+                        coin1_tag(),
                         receiver.address,
                         1, /* amount */
                         vec![],
@@ -342,9 +340,9 @@ fn create_transaction(
         sender,
         sequence_number,
         program,
-        1_000_000,           /* max_gas_amount */
-        0,                   /* gas_unit_price */
-        LBR_NAME.to_owned(), /* gas_currency_code */
+        1_000_000,             /* max_gas_amount */
+        0,                     /* gas_unit_price */
+        COIN1_NAME.to_owned(), /* gas_currency_code */
         expiration_time,
     );
 
