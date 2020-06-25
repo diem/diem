@@ -19,7 +19,7 @@ module LibraWriteSetManager {
 
     public fun initialize(account: &signer) {
         // Operational constraint
-        assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
+        assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
 
         move_to(
             account,
@@ -35,7 +35,7 @@ module LibraWriteSetManager {
         writeset_public_key: vector<u8>,
     ) {
         let sender = Signer::address_of(account);
-        assert(sender == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 33);
+        assert(sender == CoreAddresses::LIBRA_ROOT_ADDRESS(), 33);
 
         let association_auth_key = LibraAccount::authentication_key(sender);
         let sequence_number = LibraAccount::sequence_number(sender);
@@ -50,7 +50,7 @@ module LibraWriteSetManager {
     }
 
     fun epilogue(account: &signer, writeset_payload: vector<u8>) acquires LibraWriteSetManager {
-        let t_ref = borrow_global_mut<LibraWriteSetManager>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
+        let t_ref = borrow_global_mut<LibraWriteSetManager>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         let association_root_capability = Roles::extract_privilege_to_capability(account);
 
         Event::emit_event<Self::UpgradeEvent>(

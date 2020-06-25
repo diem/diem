@@ -11,9 +11,9 @@
 //! sender: association
 script{
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let assoc_root_role = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         LibraSystem::remove_validator(&assoc_root_role, {{alice}});
         Roles::restore_capability_to_privilege(account, assoc_root_role);
         assert(!LibraSystem::is_validator({{alice}}), 77);
@@ -34,9 +34,9 @@ script{
 // bob cannot remove itself, only the association can remove validators from the set
 script{
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let assoc_root_role = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         LibraSystem::remove_validator(&assoc_root_role, {{bob}});
         Roles::restore_capability_to_privilege(account, assoc_root_role);
     }
@@ -53,9 +53,9 @@ script{
 //! sender: association
 script{
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let assoc_root_role = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         LibraSystem::add_validator(&assoc_root_role, {{alice}});
         Roles::restore_capability_to_privilege(account, assoc_root_role);
 

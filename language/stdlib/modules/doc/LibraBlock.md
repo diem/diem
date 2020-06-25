@@ -115,7 +115,7 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraBlock_initialize_block_metadata">initialize_block_metadata</a>(account: &signer) {
   // Operational constraint, only callable by the Association address
-  <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1);
+  <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 1);
 
   move_to&lt;<a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(
       account,
@@ -188,7 +188,7 @@
     previous_block_votes: vector&lt;address&gt;,
     proposer: address
 ) <b>acquires</b> <a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a> {
-    <b>let</b> block_metadata_ref = borrow_global_mut&lt;<a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>());
+    <b>let</b> block_metadata_ref = borrow_global_mut&lt;<a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 
     // TODO: Figure out a story for errors in the system transactions.
     <b>if</b>(proposer != <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) <b>assert</b>(<a href="LibraSystem.md#0x1_LibraSystem_is_validator">LibraSystem::is_validator</a>(proposer), 5002);
@@ -226,7 +226,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraBlock_get_current_block_height">get_current_block_height</a>(): u64 <b>acquires</b> <a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a> {
-  borrow_global&lt;<a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>()).height
+  borrow_global&lt;<a href="#0x1_LibraBlock_BlockMetadata">BlockMetadata</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).height
 }
 </code></pre>
 

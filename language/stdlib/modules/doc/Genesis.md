@@ -39,7 +39,7 @@
     <a href="LibraConfig.md#0x1_LibraConfig_grant_privileges">LibraConfig::grant_privileges</a>(association);
     <a href="LibraAccount.md#0x1_LibraAccount_grant_association_privileges">LibraAccount::grant_association_privileges</a>(association);
     <a href="SlidingNonce.md#0x1_SlidingNonce_grant_privileges">SlidingNonce::grant_privileges</a>(association);
-    <b>let</b> assoc_root_capability = <a href="Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>&lt;AssociationRootRole&gt;(association);
+    <b>let</b> assoc_root_capability = <a href="Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>&lt;LibraRootRole&gt;(association);
     <b>let</b> create_config_capability = <a href="Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>&lt;CreateOnChainConfig&gt;(association);
     <b>let</b> create_sliding_nonce_capability = <a href="Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>&lt;CreateSlidingNonce&gt;(association);
 

@@ -28,7 +28,7 @@ module DualAttestationLimit {
         tc_account: &signer,
         create_on_chain_config_capability: &Capability<CreateOnChainConfig>,
     ) {
-        assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 1);
+        assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
         let cap = LibraConfig::publish_new_config_with_capability<DualAttestationLimit>(
             account,
             create_on_chain_config_capability,

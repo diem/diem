@@ -22,9 +22,9 @@ module Holder {
 //! new-transaction
 script {
     use 0x1::LibraAccount;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
     fun main(sender: &signer) {
-        let cap = Roles::extract_privilege_to_capability<AssociationRootRole>(sender);
+        let cap = Roles::extract_privilege_to_capability<LibraRootRole>(sender);
         LibraAccount::initialize(sender, &cap);
         Roles::restore_capability_to_privilege(sender, cap);
     }
@@ -115,10 +115,10 @@ script {
     use 0x1::LibraAccount;
     use 0x1::LBR::LBR;
     use 0x1::Testnet;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
         Testnet::remove_testnet(account);
-        let r = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        let r = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         LibraAccount::create_testnet_account<LBR>(account, &r, 0xDEADBEEF, x"");
         Testnet::initialize(account);
         Roles::restore_capability_to_privilege(account, r);

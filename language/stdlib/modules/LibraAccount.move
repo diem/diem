@@ -24,7 +24,7 @@ module LibraAccount {
     use 0x1::Libra::{Self, Libra};
     use 0x1::Option::{Self, Option};
     use 0x1::DualAttestationLimit;
-    use 0x1::Roles::{Self, Capability, AssociationRootRole, ParentVASPRole, TreasuryComplianceRole};
+    use 0x1::Roles::{Self, Capability, LibraRootRole, ParentVASPRole, TreasuryComplianceRole};
     use 0x1::SlidingNonce::CreateSlidingNonce;
 
     resource struct AccountFreezing {}
@@ -144,10 +144,10 @@ module LibraAccount {
 
     public fun initialize(
         association: &signer,
-        assoc_root_capability: &Capability<AssociationRootRole>,
+        assoc_root_capability: &Capability<LibraRootRole>,
     ) {
         // Operational constraint, not a privilege constraint.
-        assert(Signer::address_of(association) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
+        assert(Signer::address_of(association) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 0);
         move_to(
             association,
             AccountOperationsCapability {
@@ -239,12 +239,12 @@ module LibraAccount {
 
         // Ensure that this deposit is compliant with the account limits on
         // this account.
-        let _ = borrow_global<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
+        let _ = borrow_global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         /*assert(
             AccountLimits::update_deposit_limits<Token>(
                 deposit_value,
                 payee,
-                &borrow_global<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).limits_cap
+                &borrow_global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).limits_cap
             ),
             9
         );*/
@@ -324,11 +324,11 @@ module LibraAccount {
     ): Libra<Token> acquires AccountOperationsCapability {
         // Make sure that this withdrawal is compliant with the limits on
         // the account.
-        let _  = borrow_global<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS());
+        let _  = borrow_global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         /*let can_withdraw = AccountLimits::update_withdrawal_limits<Token>(
             amount,
             addr,
-            &borrow_global<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).limits_cap
+            &borrow_global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).limits_cap
         );
         assert(can_withdraw, 11);*/
         Libra::withdraw(&mut balance.coin, amount)
@@ -422,7 +422,7 @@ module LibraAccount {
     // reserved address for the MoveVM.
     public fun create_testnet_account<Token>(
         creator_account: &signer,
-        parent_vasp_creation_capability: &Capability<AssociationRootRole>,
+        parent_vasp_creation_capability: &Capability<LibraRootRole>,
         new_account_address: address,
         auth_key_prefix: vector<u8>
     ) {
@@ -512,7 +512,7 @@ module LibraAccount {
         auth_key_prefix: vector<u8>,
     ) {
         LibraTimestamp::assert_is_genesis();
-        assert(new_account_address == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
+        assert(new_account_address == CoreAddresses::LIBRA_ROOT_ADDRESS(), 0);
         let new_account = create_signer(new_account_address);
         make_account(new_account, auth_key_prefix)
     }
@@ -520,7 +520,7 @@ module LibraAccount {
     /// Create a treasury/compliance account at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address`
     public fun create_treasury_compliance_account(
-        _: &Capability<AssociationRootRole>,
+        _: &Capability<LibraRootRole>,
         tc_capability: &Capability<TreasuryComplianceRole>,
         sliding_nonce_creation_capability: &Capability<CreateSlidingNonce>,
         new_account_address: address,
@@ -573,7 +573,7 @@ module LibraAccount {
     /// all available currencies in the system will also be added.
     public fun create_parent_vasp_account<Token>(
         creator_account: &signer,
-        parent_vasp_creation_capability: &Capability<AssociationRootRole>,
+        parent_vasp_creation_capability: &Capability<LibraRootRole>,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
         human_name: vector<u8>,
@@ -724,10 +724,10 @@ module LibraAccount {
     acquires LibraAccount, AccountOperationsCapability {
         let initiator_address = Signer::address_of(account);
         // The root association account cannot be frozen
-        assert(frozen_address != CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 14);
+        assert(frozen_address != CoreAddresses::LIBRA_ROOT_ADDRESS(), 14);
         borrow_global_mut<LibraAccount>(frozen_address).is_frozen = true;
         Event::emit_event<FreezeAccountEvent>(
-            &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).freeze_event_handle,
+            &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).freeze_event_handle,
             FreezeAccountEvent {
                 initiator_address,
                 frozen_address
@@ -745,7 +745,7 @@ module LibraAccount {
         let initiator_address = Signer::address_of(account);
         borrow_global_mut<LibraAccount>(unfrozen_address).is_frozen = false;
         Event::emit_event<UnfreezeAccountEvent>(
-            &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::ASSOCIATION_ROOT_ADDRESS()).unfreeze_event_handle,
+            &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).unfreeze_event_handle,
             UnfreezeAccountEvent {
                 initiator_address,
                 unfrozen_address
@@ -871,7 +871,7 @@ module LibraAccount {
 
     public fun create_validator_account(
         creator_account: &signer,
-        assoc_root_capability: &Capability<AssociationRootRole>,
+        assoc_root_capability: &Capability<LibraRootRole>,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
@@ -884,7 +884,7 @@ module LibraAccount {
 
     public fun create_validator_operator_account(
         creator_account: &signer,
-        _: &Capability<AssociationRootRole>,
+        _: &Capability<LibraRootRole>,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {

@@ -23,7 +23,7 @@ module TransactionFee {
         tc_capability: &Capability<TreasuryComplianceRole>,
     ) {
         assert(
-            Signer::address_of(assoc_account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(),
+            Signer::address_of(assoc_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
             0
         );
 
@@ -52,7 +52,7 @@ module TransactionFee {
     /// Deposit `coin` into the transaction fees bucket
     public fun pay_fee<CoinType>(coin: Libra<CoinType>) acquires TransactionFee {
         let fees = borrow_global_mut<TransactionFee<CoinType>>(
-            CoreAddresses::ASSOCIATION_ROOT_ADDRESS()
+            CoreAddresses::LIBRA_ROOT_ADDRESS()
         );
         Libra::deposit(&mut fees.balance, coin)
     }
@@ -64,7 +64,7 @@ module TransactionFee {
         tc_account: &signer,
         tc_capability: &Capability<TreasuryComplianceRole>,
     ) acquires TransactionFee {
-        let fee_address =  CoreAddresses::ASSOCIATION_ROOT_ADDRESS();
+        let fee_address =  CoreAddresses::LIBRA_ROOT_ADDRESS();
         if (LBR::is_lbr<CoinType>()) {
             // extract fees
             let fees = borrow_global_mut<TransactionFee<LBR>>(fee_address);

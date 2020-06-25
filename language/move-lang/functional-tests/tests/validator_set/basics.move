@@ -19,9 +19,9 @@ fun main(account: &signer) {
 //! new-transaction
 script {
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let assoc_root_role = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         LibraSystem::update_and_reconfigure(&assoc_root_role);
         Roles::restore_capability_to_privilege(account, assoc_root_role);
     }

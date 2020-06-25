@@ -12,14 +12,14 @@
 //! sender: association
 script{
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
     // Decertify two validators to make sure we can remove both
     // from the set and trigger reconfiguration
     fun main(account: &signer) {
         assert(LibraSystem::is_validator({{alice}}) == true, 98);
         assert(LibraSystem::is_validator({{vivian}}) == true, 99);
         assert(LibraSystem::is_validator({{viola}}) == true, 100);
-        let assoc_root_role = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         LibraSystem::remove_validator(&assoc_root_role, {{vivian}});
         Roles::restore_capability_to_privilege(account, assoc_root_role);
         assert(LibraSystem::is_validator({{alice}}) == true, 101);
@@ -55,9 +55,9 @@ script{
 //! sender: association
 script{
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let assoc_root_role = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         LibraSystem::update_and_reconfigure(&assoc_root_role);
         Roles::restore_capability_to_privilege(account, assoc_root_role);
     }
@@ -83,9 +83,9 @@ script{
 //! sender: association
 script{
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, AssociationRootRole};
+    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let assoc_root_role = Roles::extract_privilege_to_capability<AssociationRootRole>(account);
+        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         LibraSystem::update_and_reconfigure(&assoc_root_role);
         Roles::restore_capability_to_privilege(account, assoc_root_role);
     }

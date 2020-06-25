@@ -146,7 +146,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_AssociationRootRole">Roles::AssociationRootRole</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;)
 </code></pre>
 
 
@@ -155,7 +155,7 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, _: &Capability&lt;AssociationRootRole&gt;) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, _: &Capability&lt;LibraRootRole&gt;) {
     move_to(account, <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
         config: <a href="Option.md#0x1_Option_none">Option::none</a>(),
         operator_account: <a href="Option.md#0x1_Option_none">Option::none</a>(),

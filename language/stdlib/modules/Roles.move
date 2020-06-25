@@ -39,7 +39,7 @@ module Roles {
     ///////////////////////////////////////////////////////////////////////////
 
     // TODO: Change these to constants once the source language has them
-    fun ASSOCIATION_ROOT_ROLE_ID(): u64 { 0 }
+    fun LIBRA_ROOT_ROLE_ID(): u64 { 0 }
     fun TREASURY_COMPLIANCE_ROLE_ID(): u64 { 1 }
     fun DESIGNATED_DEALER_ROLE_ID(): u64 { 2 }
     fun VALIDATOR_ROLE_ID(): u64 { 3 }
@@ -82,7 +82,7 @@ module Roles {
     /// be seen as a base-permission for every account of that role type.
     /// INVARIANT: Every account has exactly one of these, and these
     ///            correspond precisely to the RoleId.
-    resource struct AssociationRootRole {}
+    resource struct LibraRootRole {}
     resource struct TreasuryComplianceRole {}
     resource struct DesignatedDealerRole {}
     resource struct ValidatorRole {}
@@ -114,7 +114,7 @@ module Roles {
     /// being assigned to outside of the module is statically determinable.
     public fun add_privilege_to_account_association_root_role<Priv: resource>(account: &signer, witness: Priv)
     acquires RoleId {
-        add_privilege_to_account(account, witness, ASSOCIATION_ROOT_ROLE_ID());
+        add_privilege_to_account(account, witness, LIBRA_ROOT_ROLE_ID());
     }
 
     public fun add_privilege_to_account_treasury_compliance_role<Priv: resource>(account: &signer, witness: Priv)
@@ -165,10 +165,10 @@ module Roles {
     ) {
         LibraTimestamp::assert_is_genesis();
         let owner_address = Signer::address_of(association);
-        assert(owner_address == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 0);
+        assert(owner_address == CoreAddresses::LIBRA_ROOT_ADDRESS(), 0);
         // Grant the role to the association root account
-        move_to(association, RoleId { role_id: ASSOCIATION_ROOT_ROLE_ID() });
-        move_to(association, Privilege<AssociationRootRole>{ witness: AssociationRootRole{}, is_extracted: false})
+        move_to(association, RoleId { role_id: LIBRA_ROOT_ROLE_ID() });
+        move_to(association, Privilege<LibraRootRole>{ witness: LibraRootRole{}, is_extracted: false})
     }
 
     /// NB: currency-related privileges are defined in the `Libra` module.
@@ -176,7 +176,7 @@ module Roles {
     /// and roles.
     public fun grant_treasury_compliance_role(
         treasury_compliance_account: &signer,
-        _: &Capability<AssociationRootRole>,
+        _: &Capability<LibraRootRole>,
     ) {
         LibraTimestamp::assert_is_genesis();
         let owner_address = Signer::address_of(treasury_compliance_account);
@@ -187,10 +187,10 @@ module Roles {
 
         // > XXX/TODO/HACK/REMOVE (tzakian): This is a _HACK_ for right now
         // so that we can allow minting to create an account. THIS NEEDS TO BE REMOVED.
-        move_to(treasury_compliance_account, Privilege<AssociationRootRole>{ witness: AssociationRootRole{}, is_extracted: false})
+        move_to(treasury_compliance_account, Privilege<LibraRootRole>{ witness: LibraRootRole{}, is_extracted: false})
     }
 
-    /// Generic new role creation (for role ids != ASSOCIATION_ROOT_ROLE_ID
+    /// Generic new role creation (for role ids != LIBRA_ROOT_ROLE_ID
     /// and TREASURY_COMPLIANCE_ROLE_ID).
     /// We take a `&signer` here and link it with the account address so
     /// that we link the `signer` and `owner_address` together in this
@@ -217,7 +217,7 @@ module Roles {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        //assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), 0);
+        //assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID(), 0);
         assert(calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID(), 0);
         move_to(new_account, RoleId { role_id: DESIGNATED_DEALER_ROLE_ID() });
         move_to(new_account, Privilege<DesignatedDealerRole>{ witness: DesignatedDealerRole{}, is_extracted: false })
@@ -232,7 +232,7 @@ module Roles {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), 0);
+        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID(), 0);
         move_to(new_account, RoleId { role_id: VALIDATOR_ROLE_ID() });
         move_to(new_account, Privilege<ValidatorRole>{ witness: ValidatorRole{}, is_extracted: false })
     }
@@ -246,7 +246,7 @@ module Roles {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID(), 0);
+        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID(), 0);
         move_to(new_account, RoleId { role_id: VALIDATOR_OPERATOR_ROLE_ID() });
         move_to(new_account, Privilege<ValidatorOperatorRole>{ witness: ValidatorOperatorRole{}, is_extracted: false })
     }
@@ -261,7 +261,7 @@ module Roles {
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
         assert(
-                calling_role.role_id == ASSOCIATION_ROOT_ROLE_ID()
+                calling_role.role_id == LIBRA_ROOT_ROLE_ID()
                 // XXX/HACK/REMOVE(tzakian): This is for testnet semantics
                 // only. THIS NEEDS TO BE REMOVED.
                 || calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID(),
@@ -373,7 +373,7 @@ module Roles {
             global<RoleId>(addr).role_id
         }
 
-        define SPEC_ASSOCIATION_ROOT_ROLE_ID(): u64 { 0 }
+        define SPEC_LIBRA_ROOT_ROLE_ID(): u64 { 0 }
         define SPEC_TREASURY_COMPLIANCE_ROLE_ID(): u64 { 1 }
         define SPEC_DESIGNATED_DEALER_ROLE_ID(): u64 { 2 }
         define SPEC_VALIDATOR_ROLE_ID(): u64 { 3 }
@@ -397,37 +397,37 @@ module Roles {
 
     /// ## Role-specific privileges
 
-    spec schema AssociationRootRoleMatchesRoleId {
+    spec schema LibraRootRoleMatchesRoleId {
         /// **Informally:** Each address has a RoleID iff the address has a privilege that
         /// matches the role_id field of the RoleId.
         ///
         /// >TODO BUG (dd): The Prover finds many false errors for the following because
         /// the Prover thinks many add_privilege_* functions can store *any* privilege,
-        /// including the AssociationRootRole, on addresses that don't have the
+        /// including the LibraRootRole, on addresses that don't have the
         /// association root RootId.  This false error is due to a limitation of
         /// the Move Prover. In reality, the add_privilege_* functions cannot
-        /// be called with an AssociationRootRole argument, because no instances
-        /// of AssociationRootRole can be accessed by another module (and, of course,
+        /// be called with an LibraRootRole argument, because no instances
+        /// of LibraRootRole can be accessed by another module (and, of course,
         /// add_privilege_* functions are not called in a way that violates the
         /// property in this module.
         ///
         // invariant forall addr: address where spec_has_role_id(addr):
-        //     exists<Privilege<AssociationRootRole>>(addr)
-        //     ==> (spec_get_role_id(addr) == SPEC_ASSOCIATION_ROOT_ROLE_ID());
+        //     exists<Privilege<LibraRootRole>>(addr)
+        //     ==> (spec_get_role_id(addr) == SPEC_LIBRA_ROOT_ROLE_ID());
 
         invariant module forall addr: address where spec_has_role_id(addr):
-            (spec_get_role_id(addr) == SPEC_ASSOCIATION_ROOT_ROLE_ID())
-            ==> exists<Privilege<AssociationRootRole>>(addr);
+            (spec_get_role_id(addr) == SPEC_LIBRA_ROOT_ROLE_ID())
+            ==> exists<Privilege<LibraRootRole>>(addr);
     }
     spec module {
-        apply AssociationRootRoleMatchesRoleId to public *<T>, *;
+        apply LibraRootRoleMatchesRoleId to public *<T>, *;
     }
 
     /// **Informally:** Every address that has the treasury compliance
     /// role ID also has a treasury compliance privilege.
     ///
     /// > TODO (dd): Need to add the converse, but that will have the
-    /// same problem as AssociationRootRoleMatchesRoleId due to prover
+    /// same problem as LibraRootRoleMatchesRoleId due to prover
     /// limitation.
     spec schema TreasuryComplianceRoleMatchesRoleId {
         invariant module forall addr: address where spec_has_role_id(addr):
