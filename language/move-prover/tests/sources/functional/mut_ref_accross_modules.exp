@@ -24,22 +24,28 @@ error: post-condition does not hold
     =     at tests/sources/functional/mut_ref_accross_modules.move:58:5: increment_invalid (exit)
     =         result = <redacted>
 
-error: post-condition does not hold
+error: precondition does not hold at this call
 
     ┌── tests/sources/functional/mut_ref_accross_modules.move:30:9 ───
     │
  30 │         invariant global<TSum>(0x0).sum == spec_sum;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ·
+ 51 │     public fun increment(x: &mut T) acquires TSum {
+    │                --------- called function
     │
     =     at tests/sources/functional/mut_ref_accross_modules.move:94:5: private_to_public_caller (entry)
     =     at tests/sources/functional/mut_ref_accross_modules.move:51:5: increment (entry)
 
-error: post-condition does not hold
+error: precondition does not hold at this call
 
     ┌── tests/sources/functional/mut_ref_accross_modules.move:30:9 ───
     │
  30 │         invariant global<TSum>(0x0).sum == spec_sum;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ·
+ 51 │     public fun increment(x: &mut T) acquires TSum {
+    │                --------- called function
     │
     =     at tests/sources/functional/mut_ref_accross_modules.move:110:6: private_to_public_caller_invalid_precondition (entry)
     =     at tests/sources/functional/mut_ref_accross_modules.move:51:5: increment (entry)
