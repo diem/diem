@@ -10,7 +10,7 @@ publish = false
 edition = "2018"
 
 [dependencies]
-base64 = "0.12.2"
+base64 = "0.12.3"
 chrono = "0.4.11"
 rustls = "0.17.0"
 serde = { version = "1.0.114", features = ["derive"], default-features = false }
