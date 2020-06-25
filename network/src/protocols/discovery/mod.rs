@@ -65,6 +65,7 @@ use std::{
     time::SystemTime,
 };
 
+pub mod builder;
 #[cfg(test)]
 mod test;
 
