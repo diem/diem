@@ -2,13 +2,15 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    manifest::state_snapshot::{StateSnapshotBackup, StateSnapshotChunk},
+    backup_types::state_snapshot::manifest::{StateSnapshotBackup, StateSnapshotChunk},
     storage::{BackupHandleRef, BackupStorage, FileHandle, ShellSafeName},
-    ReadRecordBytes,
+    utils::{
+        backup_service_client::BackupServiceClient, read_record_bytes::ReadRecordBytes,
+        GlobalBackupOpt,
+    },
 };
 use anyhow::{anyhow, Result};
 use bytes::Bytes;
-use futures::stream::TryStreamExt;
 use libra_crypto::HashValue;
 use libra_types::{
     account_state_blob::AccountStateBlob, ledger_info::LedgerInfoWithSignatures,
@@ -17,88 +19,7 @@ use libra_types::{
 use once_cell::sync::Lazy;
 use std::{convert::TryInto, mem::size_of, str::FromStr, sync::Arc};
 use structopt::StructOpt;
-use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
-use tokio_util::compat::FuturesAsyncReadCompatExt;
-
-#[derive(StructOpt)]
-pub struct BackupServiceClientOpt {
-    #[structopt(
-        long = "backup-service-port",
-        help = "Backup service port. The service must listen on localhost."
-    )]
-    pub port: u16,
-}
-
-pub struct BackupServiceClient {
-    port: u16,
-    client: reqwest::Client,
-}
-
-impl BackupServiceClient {
-    pub fn new_with_opt(opt: BackupServiceClientOpt) -> Self {
-        Self::new(opt.port)
-    }
-
-    pub fn new(port: u16) -> Self {
-        Self {
-            port,
-            client: reqwest::Client::builder()
-                .no_proxy()
-                .build()
-                .expect("Http client should build."),
-        }
-    }
-
-    async fn get(&self, path: &str) -> Result<impl AsyncRead> {
-        Ok(self
-            .client
-            .get(&format!("http://localhost:{}/{}", self.port, path))
-            .send()
-            .await?
-            .error_for_status()?
-            .bytes_stream()
-            .map_err(|e| futures::io::Error::new(futures::io::ErrorKind::Other, e))
-            .into_async_read()
-            .compat())
-    }
-
-    pub async fn get_latest_state_root(&self) -> Result<(Version, HashValue)> {
-        let mut buf = Vec::new();
-        self.get("latest_state_root")
-            .await?
-            .read_to_end(&mut buf)
-            .await?;
-        Ok(lcs::from_bytes(&buf)?)
-    }
-
-    async fn get_account_range_proof(
-        &self,
-        key: HashValue,
-        version: Version,
-    ) -> Result<impl AsyncRead> {
-        self.get(&format!("state_range_proof/{}/{:x}", version, key))
-            .await
-    }
-
-    async fn get_state_snapshot(&self, version: Version) -> Result<impl AsyncRead> {
-        self.get(&format!("state_snapshot/{}", version)).await
-    }
-
-    async fn get_state_root_proof(&self, version: Version) -> Result<Vec<u8>> {
-        let mut buf = Vec::new();
-        self.get(&format!("state_root_proof/{}", version))
-            .await?
-            .read_to_end(&mut buf)
-            .await?;
-        Ok(buf)
-    }
-}
-
-#[derive(StructOpt)]
-pub struct GlobalBackupOpt {
-    #[structopt(long = "max-chunk-size", help = "Maximum chunk file size in bytes.")]
-    pub max_chunk_size: usize,
-}
+use tokio::io::AsyncWriteExt;
 
 #[derive(StructOpt)]
 pub struct StateSnapshotBackupOpt {

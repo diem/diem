@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    manifest::state_snapshot::StateSnapshotBackup,
+    backup_types::state_snapshot::manifest::StateSnapshotBackup,
     storage::{BackupStorage, FileHandle},
-    ReadRecordBytes,
+    utils::read_record_bytes::ReadRecordBytes,
 };
 use anyhow::Result;
 use libra_crypto::HashValue;
@@ -12,15 +12,9 @@ use libra_types::{
     account_state_blob::AccountStateBlob, proof::SparseMerkleRangeProof, transaction::Version,
 };
 use libradb::LibraDB;
-use std::{path::PathBuf, sync::Arc};
+use std::sync::Arc;
 use structopt::StructOpt;
 use tokio::io::AsyncReadExt;
-
-#[derive(StructOpt)]
-pub struct GlobalRestoreOpt {
-    #[structopt(long = "target-db-dir", parse(from_os_str))]
-    pub db_dir: PathBuf,
-}
 
 #[derive(StructOpt)]
 pub struct StateSnapshotRestoreOpt {
