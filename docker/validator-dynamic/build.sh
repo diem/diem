@@ -5,5 +5,5 @@ set -e
 
 DIR="$( cd "$( dirname "$0" )" && pwd )"
 
-$DIR/../libra-build.sh $DIR/../validator/Dockerfile libra_e2e
-$DIR/../libra-build.sh $DIR/Dockerfile libra_validator_dynamic
+$DIR/../libra-build.sh $DIR/../validator/Dockerfile libra_e2e "$@"
+$DIR/../libra-build.sh $DIR/Dockerfile libra_validator_dynamic "$@"
