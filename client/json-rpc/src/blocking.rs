@@ -27,7 +27,7 @@ impl JsonRpcClient {
 
     /// Sends a JSON RPC batched request.
     /// Returns a vector of responses s.t. response order matches the request order
-    pub fn execute(&mut self, batch: JsonRpcBatch) -> Result<Vec<Result<JsonRpcResponse>>> {
+    pub fn execute(&self, batch: JsonRpcBatch) -> Result<Vec<Result<JsonRpcResponse>>> {
         if batch.requests.is_empty() {
             return Ok(vec![]);
         }
@@ -49,7 +49,7 @@ impl JsonRpcClient {
 
     // send with retry
     pub fn send_with_retry(
-        &mut self,
+        &self,
         request: serde_json::Value,
     ) -> Result<reqwest::blocking::Response> {
         let mut response = self.send(&request);
@@ -63,7 +63,7 @@ impl JsonRpcClient {
         response
     }
 
-    fn send(&mut self, request: &serde_json::Value) -> Result<reqwest::blocking::Response> {
+    fn send(&self, request: &serde_json::Value) -> Result<reqwest::blocking::Response> {
         self.client
             .post(self.url.clone())
             .json(request)
