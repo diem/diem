@@ -48,7 +48,7 @@ impl NetworkContext {
         self.role
     }
 
-    #[cfg(any(test, feature = "fuzzing"))]
+    #[cfg(any(test, feature = "testing", feature = "fuzzing"))]
     pub fn mock() -> std::sync::Arc<Self> {
         std::sync::Arc::new(Self {
             network_id: NetworkId::default(),

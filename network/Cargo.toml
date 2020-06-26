@@ -47,15 +47,17 @@ stream-ratelimiter = { path = "../common/stream-ratelimiter", version = "0.1.0" 
 
 [dev-dependencies]
 criterion = "0.3.2"
-serial_test = "0.4.0"
-
+libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
 network-builder = {path = "../network/builder", version = "0.1.0"}
+proptest = { version = "0.10.0", default-features = true }
+rand_core = { version = "0.5.1" }
+serial_test = "0.4.0"
 socket-bench-server = { path = "../network/socket-bench-server", version = "0.1.0" }
 
 [features]
 default = []
 fuzzing = ["proptest", "libra-proptest-helpers", "libra-types/fuzzing", "libra-network-address/fuzzing", "rand_core"]
-testing = []
+testing = ["libra-config/testing"]
 
 [[bench]]
 name = "socket_bench"
