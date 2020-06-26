@@ -9,11 +9,12 @@ set -e
 export RUSTFLAGS="-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"
 cargo build --release -p libra-management -p libra-node -p cli -p config-builder -p libra-key-manager -p safety-rules -p db-bootstrapper -p backup-cli "$@"
 
-rm -r target/release/{build,deps,incremental}
+rm -rf target/release/{build,deps,incremental}
 
-strip /libra/target/release/config-builder
-strip /libra/target/release/cli
-strip /libra/target/release/db-backup
-strip /libra/target/release/db-bootstrapper
-strip /libra/target/release/db-restore
-strip /libra/target/release/libra-management
+STRIP_DIR=${STRIP_DIR:-/libra/target}
+strip "$STRIP_DIR/release/config-builder"
+strip "$STRIP_DIR/release/cli"
+strip "$STRIP_DIR/release/db-backup"
+strip "$STRIP_DIR/release/db-bootstrapper"
+strip "$STRIP_DIR/release/db-restore"
+strip "$STRIP_DIR/release/libra-management"
