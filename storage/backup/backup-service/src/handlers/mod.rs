@@ -9,7 +9,7 @@ use crate::handlers::utils::{
 };
 use libra_crypto::hash::HashValue;
 use libra_types::transaction::Version;
-use libradb::backup::BackupHandler;
+use libradb::backup::backup_handler::BackupHandler;
 use warp::{filters::BoxedFilter, reply::Reply, Filter};
 
 pub(crate) fn get_routes(backup_handler: BackupHandler) -> BoxedFilter<(impl Reply,)> {

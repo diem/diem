@@ -34,7 +34,7 @@ mod libradb_test;
 pub use libradb_test::test_save_blocks_impl;
 
 use crate::{
-    backup::BackupHandler,
+    backup::backup_handler::BackupHandler,
     change_set::{ChangeSet, SealedChangeSet},
     errors::LibraDbError,
     event_store::EventStore,

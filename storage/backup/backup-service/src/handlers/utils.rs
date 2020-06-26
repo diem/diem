@@ -5,7 +5,7 @@ use anyhow::Result;
 use bytes::Bytes;
 use hyper::Body;
 use libra_logger::prelude::*;
-use libradb::backup::BackupHandler;
+use libradb::backup::backup_handler::BackupHandler;
 use serde::Serialize;
 use std::{convert::Infallible, future::Future};
 use warp::{reply::Response, Rejection, Reply};
