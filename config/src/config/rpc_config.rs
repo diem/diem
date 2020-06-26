@@ -16,7 +16,7 @@ pub const DEFAULT_JSON_RPC_PORT: u16 = 8080;
 impl Default for RpcConfig {
     fn default() -> RpcConfig {
         RpcConfig {
-            address: format!("0.0.0.0:{}", DEFAULT_JSON_RPC_PORT)
+            address: format!("127.0.0.1:{}", DEFAULT_JSON_RPC_PORT)
                 .parse()
                 .unwrap(),
         }
