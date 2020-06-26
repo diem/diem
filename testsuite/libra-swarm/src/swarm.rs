@@ -348,12 +348,12 @@ impl LibraSwarm {
             .unwrap();
             self.nodes.insert(node_id, node);
         }
-        let expected_peer = match self.role {
+        let expected_peers = match self.role {
             RoleType::Validator => self.nodes.len() as i64 - 1,
             RoleType::FullNode => 1,
         };
         self.wait_for_startup()?;
-        self.wait_for_connectivity(expected_peer)?;
+        self.wait_for_connectivity(expected_peers)?;
         info!("Successfully launched Swarm");
         Ok(())
     }
