@@ -59,6 +59,25 @@
 <span id="59">59</span>
 <span id="60">60</span>
 <span id="61">61</span>
+<span id="62">62</span>
+<span id="63">63</span>
+<span id="64">64</span>
+<span id="65">65</span>
+<span id="66">66</span>
+<span id="67">67</span>
+<span id="68">68</span>
+<span id="69">69</span>
+<span id="70">70</span>
+<span id="71">71</span>
+<span id="72">72</span>
+<span id="73">73</span>
+<span id="74">74</span>
+<span id="75">75</span>
+<span id="76">76</span>
+<span id="77">77</span>
+<span id="78">78</span>
+<span id="79">79</span>
+<span id="80">80</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -77,7 +96,26 @@
     <span class="doccomment">/// The value specifies the timeout in ms to wait for an available response.</span>
     <span class="doccomment">/// This &quot;long poll&quot; approach allows an upstream node to add the request to the list of its</span>
     <span class="doccomment">/// subscriptions for the duration of a timeout until some new information becomes available.</span>
-    <span class="ident">HighestAvailable</span> { <span class="ident">timeout_ms</span>: <span class="ident">u64</span> },
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// `target_li`: While asking for the highest available ledger info, this request also provides</span>
+    <span class="doccomment">/// the option to the sync requester to specify a target LI.</span>
+    <span class="doccomment">/// This is to support the scenario where the sync requester is lagging too much behind the upstream node</span>
+    <span class="doccomment">/// in the sync process. If the highest ledger info version keeps advancing on the upstream node,</span>
+    <span class="doccomment">/// even though the sync requester continues to receive and sync txns, those txns will never be backed an LI,</span>
+    <span class="doccomment">/// since a LI can only be committed once all the transactions up to the LI&#39;s version has been received.</span>
+    <span class="doccomment">/// (It is important for a transaction to be backed by an LI, because transactions need to be backed by an LI</span>
+    <span class="doccomment">/// to be shown as committed upon storage query)</span>
+    <span class="doccomment">/// To prevent the above problem where the transactions are never backed by a LI during sync catch-up</span>
+    <span class="doccomment">/// (or the difference between synced version and committed LI version keeps growing on sync requester),</span>
+    <span class="doccomment">/// this `TargetType` can simultaneously (1) ask for the highest ledger info, and (2) specify a target</span>
+    <span class="doccomment">/// to build the requested transactions w.r.t.. With (1), the sync requester can store the LI later to target-sync</span>
+    <span class="doccomment">/// once it is ready for that LI after syncing to an earlier target LI via (2).</span>
+    <span class="doccomment">///</span>
+    <span class="doccomment">/// If `target_li` is not specified, the upstream node will build the responses against its highest LI</span>
+    <span class="ident">HighestAvailable</span> {
+        <span class="ident">target_li</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">LedgerInfoWithSignatures</span><span class="op">&gt;</span>,
+        <span class="ident">timeout_ms</span>: <span class="ident">u64</span>,
+    },
     <span class="doccomment">/// The response is built relative to a LedgerInfo at a given version.</span>
     <span class="ident">Waypoint</span>(<span class="ident">Version</span>),
 }
