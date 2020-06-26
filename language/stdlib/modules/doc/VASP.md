@@ -27,6 +27,7 @@
     -  [Module specifications](#0x1_VASP_@Module_specifications)
         -  [Number of children is consistent](#0x1_VASP_@Number_of_children_is_consistent)
         -  [Number of children does not change](#0x1_VASP_@Number_of_children_does_not_change)
+        -  [Parent does not change](#0x1_VASP_@Parent_does_not_change)
         -  [Specifications for individual functions](#0x1_VASP_@Specifications_for_individual_functions)
     -  [Function `recertify_vasp`](#0x1_VASP_Specification_recertify_vasp)
     -  [Function `decertify_vasp`](#0x1_VASP_Specification_decertify_vasp)
@@ -615,12 +616,8 @@ Rotate the compliance public key for
 ### Module specifications
 
 
-> TODO(emmazzz): verification is turned off because
-<code><a href="Signature.md#0x1_Signature">Signature</a></code> module
-> has not been specified. See issue #4666.
 
-
-<pre><code>pragma verify = <b>false</b>;
+<pre><code>pragma verify = <b>true</b>;
 </code></pre>
 
 
@@ -732,6 +729,31 @@ Returns the parent address of a VASP.
 
 
 <pre><code><b>apply</b> <a href="#0x1_VASP_NumChildrenRemainsSame">NumChildrenRemainsSame</a> <b>to</b> * <b>except</b> publish_child_vasp_credential;
+</code></pre>
+
+
+
+<a name="0x1_VASP_@Parent_does_not_change"></a>
+
+#### Parent does not change
+
+
+
+<a name="0x1_VASP_ParentRemainsSame"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_VASP_ParentRemainsSame">ParentRemainsSame</a> {
+    <b>ensures</b> forall child_addr: address
+        where <b>old</b>(<a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(child_addr)):
+            <b>old</b>(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(child_addr))
+             == <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(child_addr);
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_VASP_ParentRemainsSame">ParentRemainsSame</a> <b>to</b> *;
 </code></pre>
 
 
