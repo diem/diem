@@ -1282,14 +1282,14 @@ procedure {:inline 1} $Signer_borrow_address(signer: $Value) returns (res: $Valu
 // ==================================================================================
 // Native signature
 
-// TODO: implement the below methods
+// TODO: implement the below methods. See issue #4666.
 
 procedure {:inline 1} $Signature_ed25519_validate_pubkey(public_key: $Value) returns (res: $Value) {
-    assert false; // $Signature_ed25519_validate_pubkey not implemented
+    res := $Boolean(true);
 }
 
 procedure {:inline 1} $Signature_ed25519_verify(signature: $Value, public_key: $Value, message: $Value) returns (res: $Value) {
-    assert false; // $Signature_ed25519_verify not implemented
+    res := $Boolean(true);
 }
 
 procedure {:inline 1} Signature_ed25519_threshold_verify(bitmap: $Value, signature: $Value, public_key: $Value, message: $Value) returns (res: $Value) {

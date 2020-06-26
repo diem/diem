@@ -185,9 +185,7 @@ module VASP {
     /// # Module specifications
 
     spec module {
-        /// > TODO(emmazzz): verification is turned off because `Signature` module
-        /// > has not been specified. See issue #4666.
-        pragma verify = false;
+        pragma verify = true;
     }
 
     spec module {
@@ -248,6 +246,19 @@ module VASP {
 
     spec module {
         apply NumChildrenRemainsSame to * except publish_child_vasp_credential;
+    }
+
+    /// ## Parent does not change
+
+    spec schema ParentRemainsSame {
+        ensures forall child_addr: address
+            where old(spec_is_child_vasp(child_addr)):
+                old(spec_parent_address(child_addr))
+                 == spec_parent_address(child_addr);
+    }
+
+    spec module {
+        apply ParentRemainsSame to *;
     }
 
     /// ## Specifications for individual functions
