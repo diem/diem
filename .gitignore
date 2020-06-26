@@ -43,3 +43,7 @@ language/tools/vm-genesis/genesis/vm_config.toml
 
 # Move Build Output
 move_build_output/
+
+# Docker incremental build temporary files and directories
+target-out-docker
+**/Dockerfile.tmp
