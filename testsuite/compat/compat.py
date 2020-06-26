@@ -30,9 +30,9 @@ from compat_helpers import (
     unlock_cluster,
 )
 
-
-NUM_VALIDATORS = int(os.getenv("NUM_VALIDATORS", 4))
-NUM_FULLNODES = int(os.getenv("NUM_FULLNODES", 2))
+# TODO: currently unsed, https://github.com/libra/libra/issues/4765
+NUM_VALIDATORS = int(os.getenv("TESTNET_COMPATIBLE", 1))
+NUM_FULLNODES = int(os.getenv("PREV_COMPATIBLE", 1))
 ECS_POOL_SIZE = int(os.getenv("ECS_POOL_SIZE", 1))
 
 
