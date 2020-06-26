@@ -2273,15 +2273,3 @@ the total_value CurrencyInfo keeps track of.
 
 <pre><code><b>apply</b> <a href="#0x1_Libra_SumOfCoinValuesInvariant">SumOfCoinValuesInvariant</a>&lt;CoinType&gt; <b>to</b> *&lt;CoinType&gt;;
 </code></pre>
-
-
-
-Apply invariant from
-<code><a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a></code> to functions
-that call functions in
-<code><a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies">RegisteredCurrencies</a></code>.
-
-
-<pre><code><b>apply</b> <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_OnlyConfigAddressHasRegisteredCurrencies">RegisteredCurrencies::OnlyConfigAddressHasRegisteredCurrencies</a> <b>to</b>
-    initialize, <a href="#0x1_Libra_register_currency">register_currency</a>&lt;CoinType&gt;;
-</code></pre>

@@ -30,6 +30,10 @@ module FixedPoint32 {
         (product as u64)
     }
 
+    spec fun multiply_u64 {
+        pragma intrinsic = true;
+    }
+
     // Divide a u64 integer by a fixed-point number, truncating any
     // fractional part of the quotient. This will abort if the divisor
     // is zero or if the quotient overflows.
@@ -45,7 +49,9 @@ module FixedPoint32 {
         // with an arithmetic error.
         (quotient as u64)
     }
-
+    spec fun divide_u64 {
+        pragma intrinsic = true;
+    }
     // Create a fixed-point value from a rational number specified by its
     // numerator and denominator. This function is for convenience; it is also
     // perfectly fine to create a fixed-point value by directly specifying the
@@ -68,10 +74,16 @@ module FixedPoint32 {
         // with an arithmetic error if the number is too large.
         T { value: (quotient as u64) }
     }
+    spec fun create_from_rational {
+        pragma intrinsic = true;
+    }
+
 
     public fun create_from_raw_value(value: u64): T {
         T { value }
     }
+
+
 
     // Accessor for the raw u64 value. Other less common operations, such as
     // adding or subtracting FixedPoint32 values, can be done using the raw

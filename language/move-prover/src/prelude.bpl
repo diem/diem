@@ -1270,7 +1270,7 @@ procedure {:inline 1} $Event_write_to_event_store(ta: $TypeValue, guid: $Value, 
 }
 
 // ==================================================================================
-// Native signer
+// Native Signer
 
 procedure {:inline 1} $Signer_borrow_address(signer: $Value) returns (res: $Value)
     {{backend.type_requires}} is#$Address(signer);
@@ -1338,3 +1338,17 @@ function $Signer_get_address($m: $Memory, $txn: $Transaction, signer: $Value): $
     // A signer is currently identical to an address.
     signer
 }
+
+// ==================================================================================
+// FixedPoint32 intrinsic functions
+
+procedure {:inline} $FixedPoint32_multiply_u64(num: $Value, multiplier: $Value) returns (res: $Value);
+ensures $IsValidU64(res);
+
+procedure {:inline} $FixedPoint32_divide_u64(num: $Value, multiplier: $Value) returns (res: $Value);
+ensures $IsValidU64(res);
+
+procedure {:inline} $FixedPoint32_create_from_rational(numerator: $Value, denominator: $Value) returns (res: $Value);
+// The predicate in the following line is equivalent to $FixedPoint32_FixedPoint32_is_well_formed(res),
+// but written this way to avoid the forward declaration.
+ensures $Vector_is_well_formed(res) && $vlen(res) == 1 && $IsValidU64($SelectField(res, 0));

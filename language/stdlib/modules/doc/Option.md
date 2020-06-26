@@ -481,6 +481,12 @@ because it's 0 for "none" or 1 for "some".
 
 
 
+
+<pre><code>pragma verify=<b>true</b>;
+</code></pre>
+
+
+
 Return true iff t contains none.
 
 
