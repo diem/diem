@@ -2,11 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::{Context, Result};
-use config_builder::SwarmConfig;
+use config_builder::{FullNodeConfig, SwarmConfig, ValidatorConfig};
 use debug_interface::NodeDebugClient;
 use libra_config::config::{NodeConfig, RoleType};
 use libra_logger::prelude::*;
-use libra_management::config_builder::{ValidatorBuilder, ValidatorFullnodeBuilder};
 use libra_temppath::TempPath;
 use libra_types::account_address::AccountAddress;
 use std::{
@@ -242,6 +241,35 @@ pub enum SwarmLaunchFailure {
 }
 
 impl LibraSwarm {
+    pub fn launch_swarm(
+        num_nodes: usize,
+        role: RoleType,
+        disable_logging: bool,
+        config_dir: Option<String>,
+        template: Option<NodeConfig>,
+        upstream_config_dir: Option<String>,
+    ) -> Self {
+        let num_launch_attempts = 5;
+        for i in 0..num_launch_attempts {
+            info!("Launch swarm attempt: {} of {}", i, num_launch_attempts);
+
+            if let Ok(mut swarm) = Self::configure_swarm(
+                num_nodes,
+                role,
+                config_dir.clone(),
+                Some(template.as_ref().cloned().unwrap_or_default()),
+                upstream_config_dir.clone(),
+            ) {
+                if let Err(e) = swarm.launch_attempt(role, disable_logging) {
+                    error!("Error launching swarm: {}", e);
+                } else {
+                    return swarm;
+                }
+            }
+        }
+        panic!("Max out {} attempts to launch swarm", num_launch_attempts);
+    }
+
     /// Either create a persistent directory for swarm or return a temporary one.
     /// If specified persistent directory already exists,
     /// assumably due to previous launch failure, it will be removed.
@@ -262,46 +290,49 @@ impl LibraSwarm {
             LibraSwarmDir::Temporary(temp_dir)
         }
     }
-    pub fn configure_vfn_swarm(
-        config_dir: Option<String>,
-        template: Option<NodeConfig>,
-        upstream_config: &SwarmConfig,
-    ) -> Result<LibraSwarm> {
-        let swarm_config_dir = Self::setup_config_dir(&config_dir);
-        info!("logs at {:?}", swarm_config_dir);
 
-        let node_config = template.unwrap_or_else(NodeConfig::default_for_validator_full_node);
-
-        let config_path = &swarm_config_dir.as_ref().to_path_buf();
-        let builder = ValidatorFullnodeBuilder::new(
-            upstream_config.config_files.clone(),
-            upstream_config.faucet_key_path.clone(),
-            node_config,
-        );
-        let config = SwarmConfig::build(&builder, config_path)?;
-
-        Ok(Self {
-            dir: swarm_config_dir,
-            nodes: HashMap::new(),
-            config,
-        })
-    }
-
-    pub fn configure_validator_swarm(
+    pub fn configure_swarm(
         num_nodes: usize,
+        role: RoleType,
         config_dir: Option<String>,
         template: Option<NodeConfig>,
+        upstream_config_dir: Option<String>,
     ) -> Result<LibraSwarm> {
         LibraNode::prepare();
 
         let swarm_config_dir = Self::setup_config_dir(&config_dir);
         info!("logs at {:?}", swarm_config_dir);
 
-        let node_config = template.unwrap_or_else(NodeConfig::default_for_validator);
+        let mut node_config = if let Some(template) = template {
+            template
+        } else {
+            NodeConfig::default()
+        };
+        node_config.base.role = role;
 
         let config_path = &swarm_config_dir.as_ref().to_path_buf();
-        let builder = ValidatorBuilder::new(num_nodes, node_config, &swarm_config_dir);
-        let config = SwarmConfig::build(&builder, config_path)?;
+        let config = if role.is_validator() {
+            let mut validator_builder = ValidatorConfig::new();
+            validator_builder.template = node_config;
+            validator_builder.num_nodes = num_nodes;
+            SwarmConfig::build(&validator_builder, config_path)?
+        } else {
+            let upstream_config_dir = upstream_config_dir.expect("No upstream node for full nodes");
+            let upstream_config_file = PathBuf::from(upstream_config_dir).join("node.config.toml");
+            let mut validator_config = NodeConfig::load(&upstream_config_file)?;
+            let genesis = validator_config.execution.genesis.as_ref();
+            let mut full_node_builder = FullNodeConfig::new();
+            full_node_builder.num_full_nodes = num_nodes;
+            full_node_builder.genesis =
+                Some(genesis.expect("Missing genesis from validator").clone());
+            full_node_builder.template(node_config);
+            full_node_builder.extend_validator(&mut validator_config)?;
+            validator_config.save(&upstream_config_file)?;
+            full_node_builder.bootstrap = validator_config.full_node_networks[0]
+                .discovery_method
+                .advertised_address();
+            SwarmConfig::build(&full_node_builder, config_path)?
+        };
 
         Ok(Self {
             dir: swarm_config_dir,
@@ -332,17 +363,13 @@ impl LibraSwarm {
             .unwrap();
             self.nodes.insert(node_id, node);
         }
-        let expected_peer = match role {
-            RoleType::Validator => self.nodes.len() as i64 - 1,
-            RoleType::FullNode => 1,
-        };
         self.wait_for_startup()?;
-        self.wait_for_connectivity(expected_peer)?;
+        self.wait_for_connectivity()?;
         info!("Successfully launched Swarm");
         Ok(())
     }
 
-    fn wait_for_connectivity(&mut self, expected_peers: i64) -> Result<(), SwarmLaunchFailure> {
+    fn wait_for_connectivity(&mut self) -> Result<(), SwarmLaunchFailure> {
         // Early return if we're only launching a single node
         if self.nodes.len() == 1 {
             return Ok(());
@@ -353,10 +380,11 @@ impl LibraSwarm {
         for i in 0..num_attempts {
             println!("Wait for connectivity attempt: {}", i);
 
+            let len = self.nodes.len();
             if self
                 .nodes
                 .values_mut()
-                .all(|node| node.check_connectivity(expected_peers))
+                .all(|node| node.check_connectivity(len as i64 - 1))
             {
                 return Ok(());
             }
@@ -541,7 +569,7 @@ impl LibraSwarm {
         for _ in 0..60 {
             if let HealthStatus::Healthy = node.health_check() {
                 self.nodes.insert(node_id, node);
-                return self.wait_for_connectivity(self.nodes.len() as i64 - 1);
+                return self.wait_for_connectivity();
             }
             ::std::thread::sleep(::std::time::Duration::from_millis(1000));
         }

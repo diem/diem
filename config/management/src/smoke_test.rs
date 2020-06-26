@@ -2,41 +2,43 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{constants, layout::Layout, storage_helper::StorageHelper};
-use config_builder::BuildSwarm;
+use config_builder::{BuildSwarm, SwarmConfig};
 use libra_config::config::{
-    Identity, NodeConfig, OnDiskStorageConfig, SafetyRulesService, SecureBackend, SeedPeersConfig,
+    Identity, NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend, SeedPeersConfig,
     WaypointConfig, HANDSHAKE_VERSION,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
+use libra_swarm::swarm::{LibraNode, LibraSwarm, LibraSwarmDir};
 use libra_temppath::TempPath;
 use libra_types::account_address;
+use libra_types::waypoint::Waypoint;
 use std::path::{Path, PathBuf};
 
 const SHARED: &str = "_shared";
 const ASSOCIATION: &str = "association";
 const ASSOCIATION_SHARED: &str = "association_shared";
 
-pub struct ValidatorBuilder<T: AsRef<Path>> {
+struct ManagementBuilder {
     storage_helper: StorageHelper,
     num_validators: usize,
-    template: NodeConfig,
-    swarm_path: T,
+    swarm_path: TempPath,
 }
 
-impl<T: AsRef<Path>> ValidatorBuilder<T> {
-    pub fn new(num_validators: usize, template: NodeConfig, swarm_path: T) -> Self {
+impl ManagementBuilder {
+    pub fn new(num_validators: usize) -> Self {
+        let swarm_path = TempPath::new();
+        swarm_path.create_as_dir().unwrap();
         Self {
             storage_helper: StorageHelper::new(),
             num_validators,
-            template,
             swarm_path,
         }
     }
 
     fn secure_backend(&self, ns: &str, usage: &str) -> SecureBackend {
         let original = self.storage_helper.path();
-        let dst_base = self.swarm_path.as_ref();
+        let dst_base = self.swarm_path.path();
         let mut dst = dst_base.to_path_buf();
         dst.push(format!("{}_{}", usage, ns));
         std::fs::copy(original, &dst).unwrap();
@@ -84,7 +86,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         let operator_key = self.storage_helper.operator_key(&ns, &ns_shared).unwrap();
 
         let validator_account = account_address::from_public_key(&operator_key);
-        let mut config = self.template.clone_for_template();
+        let mut config = NodeConfig::default_for_validator();
         config.randomize_ports();
 
         let validator_network = config.validator_network.as_mut().unwrap();
@@ -117,7 +119,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 
     /// Operators generate genesis from shared storage and verify against waypoint.
     /// Insert the genesis/waypoint into local config.
-    fn finish_validator_config(&self, index: usize, config: &mut NodeConfig) {
+    fn finish_validator_config(&self, index: usize, config: &mut NodeConfig, waypoint: Waypoint) {
         let ns = index.to_string();
         let genesis_path = TempPath::new();
         genesis_path.create_as_file().unwrap();
@@ -129,20 +131,33 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
             .storage_helper
             .verify_genesis(&ns, genesis_path.path())
             .unwrap();
-        assert_eq!(output.split("match").count(), 5);
+        assert_eq!(output.split("match").count(), self.num_validators);
 
-        config.consensus.safety_rules.service = SafetyRulesService::Thread;
         config.consensus.safety_rules.backend = self.secure_backend(&ns, "safety-rules");
         config.execution.backend = self.secure_backend(&ns, "execution");
 
-        let backend = self.secure_backend(&ns, "waypoint");
-        config.base.waypoint = WaypointConfig::FromStorage(backend);
-        config.execution.genesis = Some(genesis);
+        if index == 0 {
+            // This is unfortunate due to the way SwarmConfig works
+            config.base.waypoint = WaypointConfig::FromConfig(waypoint);
+        } else {
+            let backend = self.secure_backend(&ns, "waypoint");
+            config.base.waypoint = WaypointConfig::FromStorage(backend);
+        }
+        config.execution.genesis = Some(genesis.clone());
         config.execution.genesis_file_location = PathBuf::from("");
+    }
+
+    fn create_swarm(self) -> LibraSwarm {
+        let config = SwarmConfig::build(&self, &self.swarm_path.path().to_path_buf()).unwrap();
+        LibraSwarm {
+            dir: LibraSwarmDir::Temporary(self.swarm_path),
+            nodes: std::collections::HashMap::new(),
+            config,
+        }
     }
 }
 
-impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
+impl BuildSwarm for ManagementBuilder {
     fn build_swarm(&self) -> anyhow::Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
         self.create_layout();
         self.create_association();
@@ -154,80 +169,73 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
         let mut configs: Vec<_> = (0..self.num_validators)
             .map(|i| self.initialize_validator_config(i))
             .collect();
-        self.storage_helper
+        let waypoint = self
+            .storage_helper
             .create_waypoint(constants::COMMON_NS)
             .unwrap();
-        for (i, config) in configs.iter_mut().enumerate() {
-            self.finish_validator_config(i, config);
-        }
+        configs
+            .iter_mut()
+            .enumerate()
+            .for_each(|(i, config)| self.finish_validator_config(i, config, waypoint));
         Ok((configs, faucet_key))
     }
 }
 
-pub struct ValidatorFullnodeBuilder {
-    validator_config_path: Vec<PathBuf>,
-    faucet_key_path: PathBuf,
-    template: NodeConfig,
+#[test]
+fn smoke_test() {
+    LibraNode::prepare();
+    let mut swarm = ManagementBuilder::new(5).create_swarm();
+    swarm.launch_attempt(RoleType::Validator, false).unwrap();
 }
 
-impl ValidatorFullnodeBuilder {
-    pub fn new(
-        validator_config_path: Vec<PathBuf>,
-        faucet_key_path: PathBuf,
-        template: NodeConfig,
-    ) -> Self {
-        Self {
-            validator_config_path,
-            faucet_key_path,
-            template,
+fn check_connectivity(swarm: &mut LibraSwarm, expected_peers: i64) -> bool {
+    for node in swarm.nodes.iter_mut() {
+        let mut timed_out = true;
+        for i in 0..60 {
+            println!("Wait for connectivity attempt: {} {}", node.0, i);
+            std::thread::sleep(std::time::Duration::from_secs(1));
+            if node.1.check_connectivity(expected_peers) {
+                timed_out = false;
+                break;
+            }
+        }
+        if timed_out {
+            return false;
         }
     }
-
-    fn attach_validator_full_node(&self, validator_config: &mut NodeConfig) -> NodeConfig {
-        // Create two vfns, we'll pass one to the validator later
-        let mut full_node_config = self.template.clone_for_template();
-        full_node_config.randomize_ports();
-
-        // The FN's first network is the external, public network, it needs to swap listen addresses
-        // with the validator's VFN and to copy it's key access:
-        let pfn = &mut full_node_config.full_node_networks[0];
-        let v_vfn = &mut validator_config.full_node_networks[0];
-        pfn.identity = v_vfn.identity.clone();
-        let temp_listen = v_vfn.listen_address.clone();
-        v_vfn.listen_address = pfn.listen_address.clone();
-        pfn.listen_address = temp_listen;
-
-        // Now let's prepare the full nodes internal network to communicate with the validators
-        // internal network
-
-        let v_vfn_network_address = v_vfn.listen_address.clone();
-        let v_vfn_pub_key = v_vfn.identity_key().public_key();
-        let v_vfn_network_address =
-            v_vfn_network_address.append_prod_protos(v_vfn_pub_key, HANDSHAKE_VERSION);
-        let v_vfn_id = v_vfn.peer_id();
-        let mut seed_peers = SeedPeersConfig::default();
-        seed_peers.insert(v_vfn_id, vec![v_vfn_network_address]);
-
-        let fn_vfn = &mut full_node_config.full_node_networks[1];
-        fn_vfn.seed_peers = seed_peers;
-
-        full_node_config.base.waypoint = validator_config.base.waypoint.clone();
-        full_node_config.execution.genesis = validator_config.execution.genesis.clone();
-        full_node_config.execution.genesis_file_location = PathBuf::from("");
-        full_node_config
-    }
+    true
 }
 
-impl BuildSwarm for ValidatorFullnodeBuilder {
-    fn build_swarm(&self) -> anyhow::Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
-        let mut configs = vec![];
-        for path in &self.validator_config_path {
-            let mut validator_config = NodeConfig::load(path)?;
-            let fullnode_config = self.attach_validator_full_node(&mut validator_config);
-            validator_config.save(path)?;
-            configs.push(fullnode_config);
-        }
-        let faucet_key = generate_key::load_key(&self.faucet_key_path);
-        Ok((configs, faucet_key))
-    }
+fn attach_validator_full_node(validator_config: &mut NodeConfig) -> NodeConfig {
+    // Create two vfns, we'll pass one to the validator later
+    let mut full_node_config = NodeConfig::default_for_validator_full_node();
+    full_node_config.randomize_ports();
+
+    // The FN's first network is the external, public network, it needs to swap listen addresses
+    // with the validator's VFN and to copy it's key access:
+    let pfn = &mut full_node_config.full_node_networks[0];
+    let v_vfn = &mut validator_config.full_node_networks[0];
+    pfn.identity = v_vfn.identity.clone();
+    let temp_listen = v_vfn.listen_address.clone();
+    v_vfn.listen_address = pfn.listen_address.clone();
+    pfn.listen_address = temp_listen;
+
+    // Now let's prepare the full nodes internal network to communicate with the validators
+    // internal network
+
+    let v_vfn_network_address = v_vfn.listen_address.clone();
+    let v_vfn_pub_key = v_vfn.identity_key().public_key();
+    let v_vfn_network_address =
+        v_vfn_network_address.append_prod_protos(v_vfn_pub_key, HANDSHAKE_VERSION);
+    let v_vfn_id = v_vfn.peer_id();
+    let mut seed_peers = SeedPeersConfig::default();
+    seed_peers.insert(v_vfn_id, vec![v_vfn_network_address]);
+
+    let fn_vfn = &mut full_node_config.full_node_networks[1];
+    fn_vfn.seed_peers = seed_peers;
+
+    full_node_config.base.waypoint = validator_config.base.waypoint.clone();
+    full_node_config.execution.genesis = validator_config.execution.genesis.clone();
+    full_node_config.execution.genesis_file_location = PathBuf::from("");
+    full_node_config
 }

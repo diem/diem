@@ -4,7 +4,7 @@
 use cli::client_proxy::ClientProxy;
 use debug_interface::{libra_trace, NodeDebugClient};
 use libra_config::config::{
-    KeyManagerConfig, NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend,
+    KeyManagerConfig, NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend, TestConfig,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, PrivateKey, SigningKey, Uniform};
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
@@ -47,11 +47,21 @@ struct TestEnvironment {
 impl TestEnvironment {
     fn new(num_validators: usize) -> Self {
         ::libra_logger::Logger::new().init();
-        let mut template = NodeConfig::default_for_validator();
+        let mut template = NodeConfig::default();
+        template.test = Some(TestConfig::open_module());
         template.state_sync.chunk_limit = 5;
+        template.consensus.safety_rules.backend =
+            SecureBackend::OnDiskStorage(OnDiskStorageConfig::default());
+        template.execution.backend = SecureBackend::OnDiskStorage(OnDiskStorageConfig::default());
 
-        let validator_swarm =
-            LibraSwarm::configure_validator_swarm(num_validators, None, Some(template)).unwrap();
+        let validator_swarm = LibraSwarm::configure_swarm(
+            num_validators,
+            RoleType::Validator,
+            None,
+            Some(template),
+            None,
+        )
+        .unwrap();
 
         let mnemonic_file = libra_temppath::TempPath::new();
         mnemonic_file
@@ -74,9 +84,23 @@ impl TestEnvironment {
         }
     }
 
-    fn setup_full_node_swarm(&mut self) {
+    fn setup_full_node_swarm(&mut self, num_full_nodes: usize) {
         self.full_node_swarm = Some(
-            LibraSwarm::configure_vfn_swarm(None, None, &self.validator_swarm.config).unwrap(),
+            LibraSwarm::configure_swarm(
+                num_full_nodes,
+                RoleType::FullNode,
+                None,
+                None,
+                Some(String::from(
+                    self.validator_swarm
+                        .dir
+                        .as_ref()
+                        .join("0")
+                        .to_str()
+                        .expect("Failed to convert std::fs::Path to String"),
+                )),
+            )
+            .unwrap(),
         );
     }
 
@@ -866,7 +890,7 @@ fn test_external_transaction_signer() {
 fn test_full_node_basic_flow() {
     // launch environment of 4 validator nodes and 2 full nodes
     let mut env = TestEnvironment::new(4);
-    env.setup_full_node_swarm();
+    env.setup_full_node_swarm(2);
     env.launch_swarm(RoleType::Validator);
     env.launch_swarm(RoleType::FullNode);
 

@@ -29,7 +29,7 @@ libra-json-rpc = { path = "../json-rpc", version = "0.1.0" }
 libra-key-manager = { path = "../secure/key-manager", version = "0.1.0" }
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-secure-storage = { path = "../secure/storage", version = "0.1.0", features = ["testing"] }
-libra-swarm = { path = "libra-swarm", version = "0.1.0"}
+libra-swarm = { path = "libra-swarm", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }

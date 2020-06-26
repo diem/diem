@@ -3,9 +3,10 @@
 
 #![forbid(unsafe_code)]
 
-use libra_config::config::{NodeConfig, RoleType};
+use libra_config::config::{NodeConfig, RoleType, TestConfig};
 use libra_swarm::{client, swarm::LibraSwarm};
 use libra_temppath::TempPath;
+use libra_types::on_chain_config::VMPublishingOption;
 use std::path::Path;
 use structopt::StructOpt;
 
@@ -36,19 +37,39 @@ fn main() {
     let args = Args::from_args();
     let num_nodes = args.num_nodes;
     let num_full_nodes = args.num_full_nodes;
+    let mut dev_config = NodeConfig::default();
+    dev_config.test = Some({
+        let mut config = TestConfig::default();
+        config.publishing_option = Some(VMPublishingOption::Open);
+        config
+    });
 
     libra_logger::Logger::new().init();
 
-    let mut validator_swarm =
-        LibraSwarm::configure_validator_swarm(num_nodes, args.config_dir.clone(), None)
-            .expect("Failed to configure validator swarm");
+    let mut validator_swarm = LibraSwarm::configure_swarm(
+        num_nodes,
+        RoleType::Validator,
+        args.config_dir.clone(),
+        Some(dev_config.clone()), /* template config */
+        None,                     /* upstream_config_dir */
+    )
+    .expect("Failed to configure validator swarm");
 
     let mut full_node_swarm = if num_full_nodes > 0 {
         Some(
-            LibraSwarm::configure_vfn_swarm(
-                None, /* config dir */
-                None,
-                &validator_swarm.config,
+            LibraSwarm::configure_swarm(
+                num_full_nodes,
+                RoleType::FullNode,
+                None,             /* config dir */
+                Some(dev_config), /* template config */
+                Some(String::from(
+                    validator_swarm
+                        .dir
+                        .as_ref()
+                        .join("0")
+                        .to_str()
+                        .expect("Failed to convert std::fs::Path to String"),
+                )),
             )
             .expect("Failed to configure full node swarm"),
         )
@@ -66,7 +87,11 @@ fn main() {
 
     let faucet_key_file_path = &validator_swarm.config.faucet_key_path;
     let validator_config = NodeConfig::load(&validator_swarm.config.config_files[0]).unwrap();
-    let waypoint = validator_config.base.waypoint.waypoint();
+    let waypoint = validator_config
+        .base
+        .waypoint
+        .waypoint_from_config()
+        .unwrap();
 
     println!("To run the Libra CLI client in a separate process and connect to the validator nodes you just spawned, use this command:");
 
