@@ -239,8 +239,12 @@ fn restore_state_to_db(
     root_hash: HashValue,
     version: Version,
 ) {
-    db.restore_account_state(vec![(accounts, proof)].into_iter(), version, root_hash)
-        .unwrap();
+    let rh = db.get_restore_handler();
+    let mut receiver = rh.get_state_restore_receiver(version, root_hash).unwrap();
+    for (chunk, proof) in vec![(accounts, proof)].into_iter() {
+        receiver.add_chunk(chunk, proof).unwrap();
+    }
+    receiver.finish().unwrap();
 }
 
 #[test]

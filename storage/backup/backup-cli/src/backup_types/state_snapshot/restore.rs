@@ -11,7 +11,7 @@ use libra_crypto::HashValue;
 use libra_types::{
     account_state_blob::AccountStateBlob, proof::SparseMerkleRangeProof, transaction::Version,
 };
-use libradb::LibraDB;
+use libradb::backup::restore_handler::RestoreHandler;
 use std::sync::Arc;
 use structopt::StructOpt;
 use tokio::io::AsyncReadExt;
@@ -26,7 +26,7 @@ pub struct StateSnapshotRestoreOpt {
 
 pub struct StateSnapshotRestoreController {
     storage: Arc<dyn BackupStorage>,
-    db: Arc<LibraDB>,
+    restore_handler: Arc<RestoreHandler>,
     version: Version,
     manifest_handle: FileHandle,
 }
@@ -35,11 +35,11 @@ impl StateSnapshotRestoreController {
     pub fn new(
         opt: StateSnapshotRestoreOpt,
         storage: Arc<dyn BackupStorage>,
-        db: Arc<LibraDB>,
+        restore_handler: Arc<RestoreHandler>,
     ) -> Self {
         Self {
             storage,
-            db,
+            restore_handler,
             version: opt.version,
             manifest_handle: opt.manifest_handle,
         }
@@ -55,7 +55,7 @@ impl StateSnapshotRestoreController {
         let manifest: StateSnapshotBackup = serde_json::from_slice(&manifest_bytes)?;
 
         let mut receiver = self
-            .db
+            .restore_handler
             .get_state_restore_receiver(self.version, manifest.root_hash)?;
 
         for chunk in manifest.chunks {
