@@ -155,7 +155,7 @@
         <span class="kw">let</span> <span class="ident">genesis</span> <span class="op">=</span> <span class="ident">vm_genesis</span>::<span class="ident">encode_genesis_transaction_with_validator</span>(
             <span class="ident">association_key</span>,
             <span class="kw-2">&amp;</span><span class="ident">validators</span>,
-            <span class="prelude-val">None</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">libra_types</span>::<span class="ident">on_chain_config</span>::<span class="ident">VMPublishingOption</span>::<span class="ident">CustomScripts</span>),
         );
 
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">path</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">path</span> {
