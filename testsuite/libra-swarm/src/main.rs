@@ -3,8 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use libra_config::config::NodeConfig;
-use libra_management::config_builder::FullnodeType;
+use libra_config::config::{NodeConfig, RoleType};
 use libra_swarm::{client, swarm::LibraSwarm};
 use libra_temppath::TempPath;
 use std::path::Path;
@@ -46,11 +45,10 @@ fn main() {
 
     let mut full_node_swarm = if num_full_nodes > 0 {
         Some(
-            LibraSwarm::configure_fn_swarm(
+            LibraSwarm::configure_vfn_swarm(
                 None, /* config dir */
                 None,
                 &validator_swarm.config,
-                FullnodeType::ValidatorFullnode,
             )
             .expect("Failed to configure full node swarm"),
         )
@@ -58,11 +56,11 @@ fn main() {
         None
     };
     validator_swarm
-        .launch_attempt(!args.enable_logging)
+        .launch_attempt(RoleType::Validator, !args.enable_logging)
         .expect("Failed to launch validator swarm");
     if let Some(ref mut swarm) = full_node_swarm {
         swarm
-            .launch_attempt(!args.enable_logging)
+            .launch_attempt(RoleType::FullNode, !args.enable_logging)
             .expect("Failed to launch full node swarm");
     }
 
