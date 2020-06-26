@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::{bail, format_err, Result};
-use libra_logger::info;
+use libra_logger::{info, warn};
 use rusoto_autoscaling::{
     AutoScalingGroupNamesType, Autoscaling, AutoscalingClient, SetDesiredCapacityType,
 };
@@ -38,9 +38,19 @@ pub async fn set_asg_size(
 
     let dispatcher = rusoto_core::HttpClient::new().expect("failed to create request dispatcher");
     let asc = AutoscalingClient::new_with(dispatcher, credentials_provider, Region::UsWest2);
-    asc.set_desired_capacity(set_desired_capacity_type)
-        .await
-        .map_err(|e| format_err!("set_desired_capacity failed: {:?}", e))?;
+    libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10_000, 60), || {
+        let asc = asc.clone();
+        let set_desired_capacity_type = set_desired_capacity_type.clone();
+        Box::pin(async move {
+            asc.set_desired_capacity(set_desired_capacity_type)
+                .await
+                .map_err(|e| {
+                    warn!("set_desired_capacity failed: {}, retrying", e);
+                    format_err!("set_desired_capacity failed: {}", e)
+                })
+        })
+    })
+    .await?;
     if !wait_for_completion {
         return Ok(());
     }
