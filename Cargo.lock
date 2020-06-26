@@ -5479,6 +5479,23 @@ version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "swiss-knife"
+version = "0.1.0"
+dependencies = [
+ "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-canonical-serialization 0.1.0",
+ "libra-crypto 0.1.0",
+ "libra-types 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "move-core-types 0.1.0",
+ "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 1.0.55 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "transaction-builder 0.1.0",
+]
+
+[[package]]
 name = "syn"
 version = "0.15.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
