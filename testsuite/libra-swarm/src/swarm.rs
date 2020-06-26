@@ -6,7 +6,7 @@ use config_builder::SwarmConfig;
 use debug_interface::NodeDebugClient;
 use libra_config::config::{NodeConfig, RoleType};
 use libra_logger::prelude::*;
-use libra_management::config_builder::{FullnodeBuilder, FullnodeType, ValidatorBuilder};
+use libra_management::config_builder::{ValidatorBuilder, ValidatorFullnodeBuilder};
 use libra_temppath::TempPath;
 use libra_types::account_address::AccountAddress;
 use std::{
@@ -224,7 +224,6 @@ pub struct LibraSwarm {
     // Maps the node id of a node to the LibraNode struct
     pub nodes: HashMap<String, LibraNode>,
     pub config: SwarmConfig,
-    pub role: RoleType,
 }
 
 #[derive(Debug, Error)]
@@ -263,27 +262,21 @@ impl LibraSwarm {
             LibraSwarmDir::Temporary(temp_dir)
         }
     }
-
-    pub fn configure_fn_swarm(
+    pub fn configure_vfn_swarm(
         config_dir: Option<String>,
         template: Option<NodeConfig>,
         upstream_config: &SwarmConfig,
-        fn_type: FullnodeType,
     ) -> Result<LibraSwarm> {
         let swarm_config_dir = Self::setup_config_dir(&config_dir);
-        info!("logs for {:?} at {:?}", fn_type, swarm_config_dir);
+        info!("logs at {:?}", swarm_config_dir);
 
-        let node_config = template.unwrap_or_else(|| match fn_type {
-            FullnodeType::ValidatorFullnode => NodeConfig::default_for_validator_full_node(),
-            FullnodeType::PublicFullnode(_) => NodeConfig::default_for_public_full_node(),
-        });
+        let node_config = template.unwrap_or_else(NodeConfig::default_for_validator_full_node);
 
         let config_path = &swarm_config_dir.as_ref().to_path_buf();
-        let builder = FullnodeBuilder::new(
+        let builder = ValidatorFullnodeBuilder::new(
             upstream_config.config_files.clone(),
             upstream_config.faucet_key_path.clone(),
             node_config,
-            fn_type,
         );
         let config = SwarmConfig::build(&builder, config_path)?;
 
@@ -291,7 +284,6 @@ impl LibraSwarm {
             dir: swarm_config_dir,
             nodes: HashMap::new(),
             config,
-            role: RoleType::FullNode,
         })
     }
 
@@ -303,7 +295,7 @@ impl LibraSwarm {
         LibraNode::prepare();
 
         let swarm_config_dir = Self::setup_config_dir(&config_dir);
-        info!("logs for validator at {:?}", swarm_config_dir);
+        info!("logs at {:?}", swarm_config_dir);
 
         let node_config = template.unwrap_or_else(NodeConfig::default_for_validator);
 
@@ -315,22 +307,14 @@ impl LibraSwarm {
             dir: swarm_config_dir,
             nodes: HashMap::new(),
             config,
-            role: RoleType::Validator,
         })
     }
 
-    pub fn launch(&mut self) {
-        let num_attempts = 5;
-        for _ in 0..num_attempts {
-            match self.launch_attempt(false) {
-                Ok(_) => return,
-                Err(err) => error!("Error launching swarm: {}", err),
-            }
-        }
-        panic!("Max out {} attempts to launch test swarm", num_attempts);
-    }
-
-    pub fn launch_attempt(&mut self, disable_logging: bool) -> Result<(), SwarmLaunchFailure> {
+    pub fn launch_attempt(
+        &mut self,
+        role: RoleType,
+        disable_logging: bool,
+    ) -> Result<(), SwarmLaunchFailure> {
         let logs_dir_path = self.dir.as_ref().join("logs");
         std::fs::create_dir(&logs_dir_path)?;
         // For each config launch a node
@@ -339,7 +323,7 @@ impl LibraSwarm {
             let node_id = format!("{}", index);
             let node = LibraNode::launch(
                 node_id.clone(),
-                self.role,
+                role,
                 &path,
                 logs_dir_path.join(format!("{}.log", index)),
                 logs_dir_path.join(format!("{}.struct.log", index)),
@@ -348,7 +332,7 @@ impl LibraSwarm {
             .unwrap();
             self.nodes.insert(node_id, node);
         }
-        let expected_peer = match self.role {
+        let expected_peer = match role {
             RoleType::Validator => self.nodes.len() as i64 - 1,
             RoleType::FullNode => 1,
         };
@@ -528,6 +512,7 @@ impl LibraSwarm {
     pub fn add_node(
         &mut self,
         idx: usize,
+        role: RoleType,
         disable_logging: bool,
     ) -> Result<(), SwarmLaunchFailure> {
         // First take the configs out to not keep immutable borrow on self when calling
@@ -546,7 +531,7 @@ impl LibraSwarm {
         let node_id = format!("{}", idx);
         let mut node = LibraNode::launch(
             node_id.clone(),
-            self.role,
+            role,
             path,
             log_file_path,
             struct_log_file_path,
