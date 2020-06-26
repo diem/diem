@@ -446,6 +446,7 @@ impl NoiseUpgrader {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::testutils::fake_socket::ReadWriteTestSocket;
     use futures::{executor::block_on, future::join};
     use libra_crypto::{test_utils::TEST_SEED, traits::Uniform as _};
     use memsocket::MemorySocket;
@@ -612,5 +613,27 @@ mod test {
     #[test]
     fn test_handshake_self_fails_mutual_auth() {
         test_handshake_self_fails(true /* is_mutual_auth */);
+    }
+
+    #[test]
+    fn test_handshake_fragmented_reads() {
+        // create an in-memory socket for testing
+        let (mut dialer_socket, mut listener_socket) = ReadWriteTestSocket::new_pair();
+
+        // fragment reads
+        dialer_socket.set_fragmented_read();
+        listener_socket.set_fragmented_read();
+
+        // get peers
+        let ((client, _client_public_key), (server, server_public_key)) = build_peers(false);
+
+        // perform the handshake
+        let (client_session, server_session) = block_on(join(
+            client.upgrade_outbound(dialer_socket, server_public_key, AntiReplayTimestamps::now),
+            server.upgrade_inbound(listener_socket),
+        ));
+
+        client_session.unwrap();
+        server_session.unwrap();
     }
 }
