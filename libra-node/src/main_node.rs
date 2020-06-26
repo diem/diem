@@ -25,6 +25,10 @@ use storage_service::start_storage_service_with_db;
 use tokio::runtime::Runtime;
 
 use debug_interface::libra_trace;
+use libra_config::config::DiscoveryMethod;
+use network_simple_onchain_discovery::{
+    gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
+};
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
@@ -155,6 +159,20 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 // TODO:  `expect_none` would be perfect here, once it is stable.
                 if consensus_network_handles.is_some() {
                     panic!("There can be at most one validator network!");
+                }
+                // HACK: gossip relies on on-chain discovery for the eligible peers update.
+                if network_config.discovery_method != DiscoveryMethod::Onchain {
+                    let conn_mgr_reqs_tx = network_builder
+                        .conn_mgr_reqs_tx()
+                        .expect("ConnectivityManager must be installed for validator");
+                    let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
+                        gen_simple_discovery_reconfig_subscription();
+                    reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
+                    let network_config_listener =
+                        ConfigurationChangeListener::new(conn_mgr_reqs_tx, role);
+                    runtime
+                        .handle()
+                        .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
                 }
 
                 consensus_network_handles =
