@@ -106,6 +106,7 @@ sourcesIndex["storage_interface"] = {"name":"","files":["lib.rs","mock.rs","stat
 sourcesIndex["storage_service"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["stream_ratelimiter"] = {"name":"","files":["lib.rs"]};
 sourcesIndex["subscription_service"] = {"name":"","files":["lib.rs"]};
+sourcesIndex["swiss_knife"] = {"name":"","files":["helpers.rs","lib.rs"]};
 sourcesIndex["test_generation"] = {"name":"","files":["abstract_state.rs","borrow_graph.rs","bytecode_generator.rs","config.rs","control_flow_graph.rs","error.rs","lib.rs","summaries.rs","transitions.rs"]};
 sourcesIndex["test_utils"] = {"name":"","files":["baseline_test.rs","lib.rs"]};
 sourcesIndex["testsuite"] = {"name":"","files":["lib.rs"]};

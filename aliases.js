@@ -106,6 +106,7 @@ ALIASES["storage_interface"] = {};
 ALIASES["storage_service"] = {};
 ALIASES["stream_ratelimiter"] = {};
 ALIASES["subscription_service"] = {};
+ALIASES["swiss_knife"] = {};
 ALIASES["test_generation"] = {};
 ALIASES["test_utils"] = {};
 ALIASES["testsuite"] = {};
