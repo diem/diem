@@ -16,6 +16,7 @@ serde = { version = "1.0.114", features = ["derive"] }
 
 [dev-dependencies]
 criterion = "0.3.2"
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 proptest = "0.10.0"
 proptest-derive = "0.2.0"
 

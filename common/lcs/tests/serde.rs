@@ -4,15 +4,25 @@
 // For some reason deriving `Arbitrary` results in clippy firing a `unit_arg` violation
 #![allow(clippy::unit_arg)]
 
-use libra_canonical_serialization::{
-    from_bytes, serialized_size, to_bytes, Error, MAX_SEQUENCE_LENGTH,
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    convert::TryFrom,
+    fmt,
 };
+
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use std::{
-    collections::{BTreeMap, BTreeSet},
-    fmt,
+
+use libra_canonical_serialization::{
+    from_bytes, serialized_size, to_bytes, Error, MAX_SEQUENCE_LENGTH,
+};
+use libra_crypto::{
+    ed25519::{
+        Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH,
+        ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH,
+    },
+    HashValue, Signature, SigningKey,
 };
 
 fn is_same<T>(t: T)
@@ -567,4 +577,28 @@ fn serde_known_vector() {
     // make sure we can deserialize the test vector into expected struct
     let deserialized_foo: Foo = from_bytes(&test_vector).unwrap();
     assert_eq!(f, deserialized_foo);
+}
+
+#[test]
+fn ed25519_material() {
+    use std::borrow::Cow;
+
+    let private_key =
+        Ed25519PrivateKey::try_from([1u8; ED25519_PRIVATE_KEY_LENGTH].as_ref()).unwrap();
+    let public_key = Ed25519PublicKey::from(&private_key);
+
+    let serialized_public_key = to_bytes(&Cow::Borrowed(&public_key)).unwrap();
+    assert_eq!(serialized_public_key.len(), ED25519_PUBLIC_KEY_LENGTH + 1);
+
+    let deserialized_public_key: Ed25519PublicKey = from_bytes(&serialized_public_key).unwrap();
+    assert_eq!(deserialized_public_key, public_key);
+
+    let message_hash = HashValue::sha3_256_of(&[2u8; 8]);
+    let signature: Ed25519Signature = private_key.sign_message(&message_hash);
+
+    let serialized_signature = to_bytes(&Cow::Borrowed(&signature)).unwrap();
+    assert_eq!(serialized_signature.len(), ED25519_SIGNATURE_LENGTH + 1);
+
+    let verified_signature = signature.verify(&message_hash, &public_key);
+    assert!(verified_signature.is_ok())
 }
