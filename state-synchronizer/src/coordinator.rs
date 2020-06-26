@@ -377,6 +377,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             highest_local_li, target_version
         );
 
+        if let Some(old_req) = &self.sync_request {
+            debug!(
+                "[state sync] overwriting existing request {} to {}",
+                old_req.target.ledger_info().version(),
+                request.target.ledger_info().version()
+            );
+        }
         self.sync_request = Some(request);
         self.send_chunk_request(
             self.local_state.highest_version_in_local_storage(),
