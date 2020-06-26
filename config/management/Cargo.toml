@@ -17,8 +17,9 @@ thiserror = "1.0.20"
 toml = { version = "0.5.6", default-features = false }
 
 executor = { path = "../../execution/executor", version = "0.1.0" }
+generate-key = { path = "../../config/generate-key", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-libra-config = { path = "..", version = "0.1.0" }
+libra-config = { path = "..", version = "0.1.0"}
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-global-constants = { path = "../../config/global-constants", version = "0.1.0"}
 libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
@@ -33,14 +34,8 @@ libradb = { path = "../../storage/libradb", version = "0.1.0" }
 storage-interface = { path = "../../storage/storage-interface", version = "0.1.0" }
 transaction-builder = { path = "../../language/transaction-builder", version = "0.1.0" }
 vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
-
-# libra-swarm is actually a dev-dependency, but because libra-management is a default workspace member,
-# cargo's V1 resolver will make it take part in feature resolution. Setting it as optional works, but it
-# needs to be moved into the [dependencies] section for that to work.
-libra-swarm = { path = "../../testsuite/libra-swarm", version = "0.1.0", optional = true }
-
-[dev-dependencies]
 config-builder = { path = "../config-builder", version = "0.1.0" }
 
 [features]
-fuzzing = ["libra-secure-storage/fuzzing"]
+testing = []
+fuzzing = ["libra-config/fuzzing"]
