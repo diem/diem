@@ -7,7 +7,7 @@ use crate::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    vm_error::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode, VMStatus},
+    vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode, VMStatus},
 };
 use move_core_types::gas_schedule::{
     words_in, AbstractMemorySize, GasAlgebra, GasCarrier, GasUnits, CONST_SIZE, REFERENCE_SIZE,

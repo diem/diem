@@ -19,7 +19,7 @@ use libra_types::{
         RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument,
         TransactionOutput, TransactionPayload, TransactionStatus,
     },
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use libra_vm::VMExecutor;

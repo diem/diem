@@ -21,7 +21,7 @@ use crate::{
         Transaction, TransactionArgument, TransactionListWithProof, TransactionPayload,
         TransactionStatus, TransactionToCommit, Version,
     },
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use libra_crypto::{

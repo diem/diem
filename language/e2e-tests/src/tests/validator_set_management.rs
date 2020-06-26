@@ -11,7 +11,7 @@ use crate::{
 use libra_types::{
     on_chain_config::new_epoch_event_key,
     transaction::TransactionStatus,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 
 #[test]

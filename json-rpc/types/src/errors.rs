@@ -4,7 +4,7 @@
 use anyhow::Result;
 use libra_types::{
     mempool_status::{MempoolStatus, MempoolStatusCode},
-    vm_error::{StatusType, VMStatus},
+    vm_status::{StatusType, VMStatus},
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -14,7 +14,7 @@ use serde_json::Value;
 pub enum ServerCode {
     DefaultServerError = -32000,
 
-    // VM errors - see `vm_error.rs` for specs
+    // VM errors - see `vm_status.rs` for specs
     VmValidationError = -32001,
     VmVerificationError = -32002,
     VmInvariantViolationError = -32003,
@@ -108,7 +108,7 @@ impl JsonRpcError {
         })
     }
 
-    pub fn vm_error(error: VMStatus) -> Self {
+    pub fn vm_status(error: VMStatus) -> Self {
         // map VM status to custom server code
         let vm_status_type = error.status_type();
         let code = match vm_status_type {
@@ -127,10 +127,10 @@ impl JsonRpcError {
         }
     }
 
-    pub fn get_vm_error(&self) -> Option<VMStatus> {
+    pub fn get_vm_status(&self) -> Option<VMStatus> {
         if let Some(data) = &self.data {
-            if let Ok(vm_error) = serde_json::from_value::<VMStatus>(data.clone()) {
-                return Some(vm_error);
+            if let Ok(vm_status) = serde_json::from_value::<VMStatus>(data.clone()) {
+                return Some(vm_status);
             }
         }
         None

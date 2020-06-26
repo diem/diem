@@ -13,7 +13,7 @@ use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use move_core_types::{
     identifier::{IdentStr, Identifier},
@@ -34,7 +34,7 @@ use std::{
 };
 use vm::{
     access::{ModuleAccess, ScriptAccess},
-    errors::{verification_error, vm_error, Location, VMResult},
+    errors::{verification_error, vm_status, Location, VMResult},
     file_format::{
         Bytecode, CompiledScript, Constant, ConstantPoolIndex, FieldHandleIndex,
         FieldInstantiationIndex, FunctionDefinition, FunctionHandleIndex,
@@ -567,7 +567,7 @@ impl Loader {
             Ok(script) => script,
             Err(err) => {
                 error!("[VM] deserializer for script returned error: {:?}", err);
-                let error = vm_error(Location::default(), StatusCode::CODE_DESERIALIZATION_ERROR)
+                let error = vm_status(Location::default(), StatusCode::CODE_DESERIALIZATION_ERROR)
                     .append(err);
                 return Err(error);
             }

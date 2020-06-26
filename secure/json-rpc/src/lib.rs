@@ -279,7 +279,7 @@ mod test {
             SignedTransaction, TransactionInfo, TransactionListWithProof, TransactionWithProof,
             Version,
         },
-        vm_error::StatusCode,
+        vm_status::StatusCode,
     };
     use libradb::errors::LibraDbError::NotFound;
     use std::{collections::BTreeMap, convert::TryFrom, sync::Arc};

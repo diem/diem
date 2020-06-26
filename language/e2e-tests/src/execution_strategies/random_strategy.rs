@@ -6,7 +6,7 @@ use crate::{
     execution_strategies::types::{Block, Executor, ExecutorResult, PartitionStrategy},
     executor::FakeExecutor,
 };
-use libra_types::{transaction::SignedTransaction, vm_error::VMStatus};
+use libra_types::{transaction::SignedTransaction, vm_status::VMStatus};
 use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,

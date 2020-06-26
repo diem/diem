@@ -23,7 +23,7 @@ use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
 use libra_logger::{debug, error, info};
 use libra_state_view::StateView;
-use libra_types::{account_address::AccountAddress, vm_error::StatusCode};
+use libra_types::{account_address::AccountAddress, vm_status::StatusCode};
 use libra_vm::LibraVM;
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},

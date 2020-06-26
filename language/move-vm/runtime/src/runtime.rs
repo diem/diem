@@ -3,7 +3,7 @@
 
 use crate::{interpreter::Interpreter, loader::Loader};
 use libra_logger::prelude::*;
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_status::{StatusCode, VMStatus};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
@@ -12,7 +12,7 @@ use move_core_types::{
 use move_vm_types::{data_store::DataStore, gas_schedule::CostStrategy, values::Value};
 use vm::{
     access::ModuleAccess,
-    errors::{verification_error, vm_error, Location, VMResult},
+    errors::{verification_error, vm_status, Location, VMResult},
     file_format::SignatureToken,
     CompiledModule, IndexKind,
 };
@@ -61,7 +61,7 @@ impl VMRuntime {
         // under the transaction sender's account.
         let module_id = compiled_module.self_id();
         if data_store.exists_module(&module_id) {
-            return Err(vm_error(
+            return Err(vm_status(
                 Location::default(),
                 StatusCode::DUPLICATE_MODULE_NAME,
             ));

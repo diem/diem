@@ -15,7 +15,7 @@ use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
     transaction::{Transaction, TransactionArgument, TransactionPayload},
-    vm_error::StatusCode,
+    vm_status::StatusCode,
 };
 use move_core_types::{
     identifier::Identifier,

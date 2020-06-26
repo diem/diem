@@ -20,7 +20,7 @@ use libra_types::{
     transaction::{
         Transaction, TransactionInfo, TransactionListWithProof, TransactionWithProof, Version,
     },
-    vm_error::StatusCode,
+    vm_status::StatusCode,
 };
 use std::{collections::BTreeMap, net::SocketAddr, sync::Arc};
 use storage_interface::{DbReader, StartupInfo, TreeState};

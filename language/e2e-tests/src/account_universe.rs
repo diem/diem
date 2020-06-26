@@ -30,7 +30,7 @@ use crate::{
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use once_cell::sync::Lazy;
 use proptest::{prelude::*, strategy::Union};

@@ -4,7 +4,7 @@
 //! This module defines the abstract state for the type and memory safety analysis.
 use crate::absint::{AbstractDomain, JoinResult};
 use borrow_graph::references::RefID;
-use libra_types::vm_error::StatusCode;
+use libra_types::vm_status::StatusCode;
 use mirai_annotations::{checked_postcondition, checked_precondition, checked_verify};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::{

@@ -4,7 +4,7 @@
 //! This module provides a checker for verifing that struct definitions in a module are not
 //! recursive. Since the module dependency graph is acylic by construction, applying this checker to
 //! each module in isolation guarantees that there is no structural recursion globally.
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_status::{StatusCode, VMStatus};
 use petgraph::{algo::toposort, graphmap::DiGraphMap};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::{

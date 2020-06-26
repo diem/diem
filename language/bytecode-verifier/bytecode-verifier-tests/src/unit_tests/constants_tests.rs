@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 use bytecode_verifier::constants::ConstantsChecker;
-use libra_types::vm_error::StatusCode;
+use libra_types::vm_status::StatusCode;
 use proptest::prelude::*;
 use vm::file_format::{empty_module, CompiledModule, Constant, SignatureToken};
 

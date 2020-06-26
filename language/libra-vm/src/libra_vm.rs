@@ -23,7 +23,7 @@ use libra_types::{
         TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
         VMValidatorResult,
     },
-    vm_error::{sub_status, StatusCode, VMStatus},
+    vm_status::{sub_status, StatusCode, VMStatus},
     write_set::{WriteSet, WriteSetMut},
 };
 use move_core_types::{

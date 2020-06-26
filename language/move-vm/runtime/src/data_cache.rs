@@ -5,7 +5,7 @@ use libra_types::{
     access_path::AccessPath,
     contract_event::ContractEvent,
     on_chain_config::ConfigStorage,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use move_core_types::language_storage::ModuleId;
@@ -69,7 +69,7 @@ impl<'txn> TransactionDataCache<'txn> {
     /// Gives all proper guarantees on lifetime of global data as well.
     pub fn make_write_set(&mut self) -> VMResult<WriteSet> {
         if self.data_map.len() + self.module_map.len() > usize::max_value() {
-            return Err(vm_error(Location::new(), StatusCode::INVALID_DATA));
+            return Err(vm_status(Location::new(), StatusCode::INVALID_DATA));
         }
 
         let mut sorted_ws: BTreeMap<AccessPath, WriteOp> = BTreeMap::new();
@@ -85,7 +85,7 @@ impl<'txn> TransactionDataCache<'txn> {
                         let blob = match data.simple_serialize(&layout) {
                             Some(blob) => blob,
                             None => {
-                                return Err(vm_error(
+                                return Err(vm_status(
                                     Location::new(),
                                     StatusCode::VALUE_SERIALIZATION_ERROR,
                                 ))
@@ -111,7 +111,7 @@ impl<'txn> TransactionDataCache<'txn> {
         }
         write_set
             .freeze()
-            .map_err(|_| vm_error(Location::new(), StatusCode::DATA_FORMAT_ERROR))
+            .map_err(|_| vm_status(Location::new(), StatusCode::DATA_FORMAT_ERROR))
     }
 
     /// Return the events that were published during the execution of the transaction.

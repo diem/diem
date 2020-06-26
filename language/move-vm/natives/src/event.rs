@@ -4,7 +4,7 @@
 use libra_types::{
     contract_event::ContractEvent,
     event::EventKey,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use move_core_types::gas_schedule::ZERO_GAS_UNITS;
 use move_vm_types::{

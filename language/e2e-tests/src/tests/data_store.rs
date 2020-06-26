@@ -7,7 +7,7 @@ use compiler::Compiler;
 use libra_types::{
     account_config::LBR_NAME,
     transaction::{Module, SignedTransaction, Transaction, TransactionPayload, TransactionStatus},
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 
 #[test]

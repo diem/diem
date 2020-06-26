@@ -34,7 +34,7 @@ use libra_types::{
         parse_transaction_argument, Module, RawTransaction, Script, SignedTransaction,
         TransactionArgument, TransactionPayload, Version,
     },
-    vm_error::StatusCode,
+    vm_status::StatusCode,
     waypoint::Waypoint,
 };
 use libra_wallet::{io_utils, WalletLibrary};

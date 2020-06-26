@@ -15,7 +15,7 @@ use crate::{
         types::Executor,
     },
 };
-use libra_types::{transaction::SignedTransaction, vm_error::VMStatus};
+use libra_types::{transaction::SignedTransaction, vm_status::VMStatus};
 
 fn txn(seq_num: u64) -> SignedTransaction {
     let account = Account::new();

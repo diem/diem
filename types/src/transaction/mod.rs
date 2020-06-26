@@ -10,7 +10,7 @@ use crate::{
     ledger_info::LedgerInfo,
     proof::{accumulator::InMemoryAccumulator, TransactionInfoWithProof, TransactionListProof},
     transaction::authenticator::TransactionAuthenticator,
-    vm_error::{StatusCode, StatusType, VMStatus},
+    vm_status::{StatusCode, StatusType, VMStatus},
     write_set::WriteSet,
 };
 use anyhow::{ensure, format_err, Error, Result};

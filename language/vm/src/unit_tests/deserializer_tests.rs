@@ -5,7 +5,7 @@ use crate::{
     file_format::{CompiledModule, CompiledScript},
     file_format_common::*,
 };
-use move_core_types::vm_error::StatusCode;
+use move_core_types::vm_status::StatusCode;
 
 #[test]
 fn malformed_simple() {

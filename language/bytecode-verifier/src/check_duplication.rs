@@ -8,7 +8,7 @@
 //! - struct and field definitions are consistent
 //! - the handles in struct and function definitions point to the self module index
 //! - all struct and function handles pointing to the self module index have a definition
-use libra_types::vm_error::StatusCode;
+use libra_types::vm_status::StatusCode;
 use std::{collections::HashSet, hash::Hash};
 use vm::{
     access::ModuleAccess,

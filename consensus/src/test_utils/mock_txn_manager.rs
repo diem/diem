@@ -12,7 +12,7 @@ use futures::channel::mpsc;
 use libra_mempool::ConsensusRequest;
 use libra_types::{
     transaction::TransactionStatus,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use rand::Rng;
 

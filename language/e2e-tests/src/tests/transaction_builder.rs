@@ -18,7 +18,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, PrivateKey, U
 use libra_types::{
     account_config,
     transaction::{authenticator::AuthenticationKey, TransactionStatus},
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use move_core_types::{
     identifier::Identifier,

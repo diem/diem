@@ -5,7 +5,7 @@
 //! another. This functionaliy is used in verify_module_dependencies and verify_script_dependencies.
 use libra_types::{
     account_address::AccountAddress,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use move_core_types::identifier::Identifier;
 use std::collections::BTreeMap;

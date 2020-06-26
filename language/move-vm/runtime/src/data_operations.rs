@@ -4,7 +4,7 @@
 use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
-    vm_error::{sub_status, StatusCode},
+    vm_status::{sub_status, StatusCode},
 };
 use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier};
 use move_vm_types::{
@@ -12,7 +12,7 @@ use move_vm_types::{
     loaded_data::types::FatStructType,
     values::{GlobalValue, Struct, Value},
 };
-use vm::errors::{vm_error, Location, VMResult};
+use vm::errors::{vm_status, Location, VMResult};
 
 //
 // Provides an implementation for data store bytecodes and guarantees proper invariants
@@ -47,7 +47,7 @@ pub(crate) fn move_resource_to(
             "[VM] Cannot write over existing resource type {:?} access path {}",
             ty, ap
         );
-        Err(vm_error(
+        Err(vm_status(
             Location::new(),
             StatusCode::CANNOT_WRITE_EXISTING_RESOURCE,
         ))
@@ -72,7 +72,7 @@ pub(crate) fn move_resource_from(
     match root_value {
         Some(global_val) => Ok(Value::struct_(global_val.into_owned_struct()?)),
         None => Err(
-            vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
+            vm_status(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
                 .with_sub_status(sub_status::DRE_GLOBAL_ALREADY_BORROWED),
         ),
     }
@@ -101,7 +101,7 @@ pub(crate) fn borrow_global<'a>(
         Ok(Some(g)) => Ok(g),
         Ok(None) => Err(
             // TODO: wrong status code?
-            vm_error(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
+            vm_status(Location::new(), StatusCode::DYNAMIC_REFERENCE_ERROR)
                 .with_sub_status(sub_status::DRE_GLOBAL_ALREADY_BORROWED),
         ),
         Err(e) => {

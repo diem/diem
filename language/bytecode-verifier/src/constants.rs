@@ -4,7 +4,7 @@
 //! This module implements a checker for verifying that
 //! - a constant's type only refers to primitive types
 //! - a constant's data serializes correctly for that type
-use libra_types::vm_error::StatusCode;
+use libra_types::vm_status::StatusCode;
 use vm::{
     access::ModuleAccess,
     errors::{verification_error, VMResult},

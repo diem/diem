@@ -11,7 +11,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_config::{self, BurnEvent, LBR_NAME},
     transaction::{authenticator::AuthenticationKey, TransactionArgument},
-    vm_error::StatusCode,
+    vm_status::StatusCode,
 };
 use move_core_types::{
     identifier::Identifier,

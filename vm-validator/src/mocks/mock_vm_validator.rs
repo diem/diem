@@ -8,7 +8,7 @@ use libra_types::{
     account_address::AccountAddress,
     on_chain_config::OnChainConfigPayload,
     transaction::{SignedTransaction, VMValidatorResult},
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use libra_vm::VMValidator;
 use std::convert::TryFrom;

@@ -6,7 +6,7 @@ use libra_logger::prelude::*;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet},
 };
 use move_vm_runtime::data_cache::RemoteCache;

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_status::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
     errors::verification_error,

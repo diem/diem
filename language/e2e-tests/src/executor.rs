@@ -20,7 +20,7 @@ use libra_types::{
     transaction::{
         SignedTransaction, Transaction, TransactionOutput, TransactionStatus, VMValidatorResult,
     },
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
     write_set::WriteSet,
 };
 use libra_vm::{data_cache::RemoteStorage, LibraVM, VMExecutor, VMValidator};

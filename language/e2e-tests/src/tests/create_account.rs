@@ -8,7 +8,7 @@ use crate::{
 };
 use libra_types::{
     transaction::TransactionStatus,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 
 #[test]
