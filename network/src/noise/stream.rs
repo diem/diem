@@ -61,11 +61,6 @@ impl<TSocket> NoiseStream<TSocket> {
     pub fn get_remote_static(&self) -> x25519::PublicKey {
         self.session.get_remote_static()
     }
-
-    #[cfg(any(test, feature = "fuzzing"))]
-    pub fn into_socket(self) -> TSocket {
-        self.socket
-    }
 }
 
 //
@@ -550,7 +545,10 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::noise::{AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader};
+    use crate::{
+        noise::{AntiReplayTimestamps, HandshakeAuthMode, NoiseUpgrader},
+        testutils::fake_socket::ReadWriteTestSocket,
+    };
     use futures::{
         executor::block_on,
         future::join,
@@ -671,5 +669,48 @@ mod test {
         let mut buf_receive = [0; noise::MAX_SIZE_NOISE_MSG];
         block_on(server.read_exact(&mut buf_receive)).unwrap();
         assert_eq!(&buf_receive[..], &buf_send[..]);
+    }
+
+    #[test]
+    fn fragmented_stream() {
+        // create an in-memory socket for testing
+        let (mut dialer_socket, mut listener_socket) = ReadWriteTestSocket::new_pair();
+
+        // fragment reads
+        dialer_socket.set_fragmented_read();
+        listener_socket.set_fragmented_read();
+
+        // get peers
+        let ((client, _client_public_key), (server, server_public_key)) = build_peers();
+
+        // perform the handshake
+        let (client, server) = block_on(join(
+            client.upgrade_outbound(dialer_socket, server_public_key, AntiReplayTimestamps::now),
+            server.upgrade_inbound(listener_socket),
+        ));
+
+        // get session
+        let mut client = client.unwrap();
+        let (mut server, _) = server.unwrap();
+
+        // test send and receive
+        block_on(client.write_all(b"The Name of the Wind")).unwrap();
+        block_on(client.flush()).unwrap();
+        block_on(client.write_all(b"The Wise Man's Fear")).unwrap();
+        block_on(client.flush()).unwrap();
+
+        block_on(server.write_all(b"The Doors of Stone")).unwrap();
+        block_on(server.flush()).unwrap();
+
+        let mut buf = [0; 20];
+        block_on(server.read_exact(&mut buf)).unwrap();
+        assert_eq!(&buf, b"The Name of the Wind");
+        let mut buf = [0; 19];
+        block_on(server.read_exact(&mut buf)).unwrap();
+        assert_eq!(&buf, b"The Wise Man's Fear");
+
+        let mut buf = [0; 18];
+        block_on(client.read_exact(&mut buf)).unwrap();
+        assert_eq!(&buf, b"The Doors of Stone");
     }
 }
