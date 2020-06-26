@@ -10,7 +10,7 @@ use crate::{
     struct_defs::RecursiveStructDefChecker,
 };
 use anyhow::Error;
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_status::{StatusCode, VMStatus};
 use move_core_types::language_storage::ModuleId;
 use std::collections::BTreeMap;
 use vm::{

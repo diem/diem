@@ -15,7 +15,7 @@ use libra_types::{
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, TransactionPayload, TransactionStatus,
     },
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSetMut},
 };
 use move_core_types::{

@@ -12,7 +12,7 @@
 //! instances. We do reject recursive functions that create a new type upon each call but do
 //! terminate eventually.
 
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_status::{StatusCode, VMStatus};
 use petgraph::{
     algo::tarjan_scc,
     graph::{EdgeIndex, NodeIndex},

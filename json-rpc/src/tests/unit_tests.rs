@@ -27,7 +27,7 @@ use libra_types::{
     proof::{SparseMerkleProof, TransactionAccumulatorProof, TransactionInfoWithProof},
     test_helpers::transaction_test_helpers::get_test_signed_txn,
     transaction::{Transaction, TransactionInfo, TransactionPayload},
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use libradb::test_helper::arb_blocks_to_commit;
 use move_core_types::language_storage::TypeTag;
@@ -213,10 +213,10 @@ fn test_transaction_submission() {
     if let Err(e) = response {
         if let Some(error) = e.downcast_ref::<JsonRpcError>() {
             assert_eq!(error.code, ServerCode::VmValidationError as i16);
-            let vm_error: VMStatus =
+            let vm_status: VMStatus =
                 serde_json::from_value(error.data.as_ref().unwrap().clone()).unwrap();
             assert_eq!(
-                vm_error.major_status,
+                vm_status.major_status,
                 StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
             );
         } else {

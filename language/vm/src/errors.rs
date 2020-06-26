@@ -4,7 +4,7 @@
 use crate::IndexKind;
 use move_core_types::{
     account_address::AccountAddress,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 
 // TODO: Fill in the details for Locations. Ideally it should be a unique handle into a function and
@@ -84,7 +84,7 @@ pub fn convert_prologue_runtime_error(err: &VMStatus, txn_sender: &AccountAddres
     }
 }
 
-pub fn vm_error(location: Location, err: StatusCode) -> VMStatus {
+pub fn vm_status(location: Location, err: StatusCode) -> VMStatus {
     let msg = format!("At location {:#?}", location);
     VMStatus::new(err).with_message(msg)
 }

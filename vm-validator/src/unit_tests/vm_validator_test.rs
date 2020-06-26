@@ -10,7 +10,7 @@ use libra_types::{
     account_config::{lbr_type_tag, LBR_NAME},
     test_helpers::transaction_test_helpers,
     transaction::{Module, Script, TransactionArgument, MAX_TRANSACTION_SIZE_IN_BYTES},
-    vm_error::StatusCode,
+    vm_status::StatusCode,
 };
 use libra_vm::LibraVM;
 use libradb::LibraDB;

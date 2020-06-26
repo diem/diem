@@ -4,7 +4,7 @@
 use crate::{account, account::AccountData, executor::FakeExecutor, gas_costs};
 use libra_types::{
     account_address::AccountAddress, account_config, on_chain_config::VMPublishingOption,
-    transaction::TransactionStatus, vm_error::StatusCode,
+    transaction::TransactionStatus, vm_status::StatusCode,
 };
 use move_core_types::identifier::Identifier;
 use vm::file_format::{

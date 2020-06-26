@@ -15,4 +15,4 @@ pub mod transaction_argument;
 #[cfg(test)]
 mod unit_tests;
 pub mod value;
-pub mod vm_error;
+pub mod vm_status;

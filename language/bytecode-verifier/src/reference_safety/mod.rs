@@ -14,7 +14,7 @@ use crate::{
     control_flow_graph::VMControlFlowGraph,
 };
 use abstract_state::{AbstractState, AbstractValue};
-use libra_types::vm_error::VMStatus;
+use libra_types::vm_status::VMStatus;
 use mirai_annotations::*;
 use vm::{
     access::ModuleAccess,

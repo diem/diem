@@ -14,7 +14,7 @@ use libra_temppath::TempPath;
 #[allow(unused_imports)]
 use libra_types::{
     account_config::AccountResource, contract_event::ContractEvent, ledger_info::LedgerInfo,
-    proof::SparseMerkleLeafNode, vm_error::StatusCode,
+    proof::SparseMerkleLeafNode, vm_status::StatusCode,
 };
 use proptest::prelude::*;
 use std::collections::HashMap;

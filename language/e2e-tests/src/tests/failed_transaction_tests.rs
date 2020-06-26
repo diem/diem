@@ -6,7 +6,7 @@ use crate::{
     common_transactions::peer_to_peer_txn,
     executor::FakeExecutor,
 };
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_status::{StatusCode, VMStatus};
 use libra_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, LibraVM};
 use move_core_types::gas_schedule::{GasAlgebra, GasPrice, GasUnits};
 use move_vm_types::gas_schedule::zero_cost_schedule;

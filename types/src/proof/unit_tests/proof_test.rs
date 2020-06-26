@@ -13,7 +13,7 @@ use crate::{
         TransactionAccumulatorInternalNode, TransactionAccumulatorProof, TransactionInfoWithProof,
     },
     transaction::{RawTransaction, Script, Transaction, TransactionInfo},
-    vm_error::StatusCode,
+    vm_status::StatusCode,
 };
 use libra_crypto::{
     ed25519::Ed25519PrivateKey,

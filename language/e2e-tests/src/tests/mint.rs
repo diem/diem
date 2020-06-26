@@ -10,7 +10,7 @@ use crate::{
 use libra_types::{
     account_config,
     transaction::TransactionStatus,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use transaction_builder::*;
 

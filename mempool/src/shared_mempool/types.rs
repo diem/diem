@@ -23,7 +23,7 @@ use libra_types::{
     mempool_status::MempoolStatus,
     on_chain_config::{ConfigID, LibraVersion, OnChainConfig, OnChainConfigPayload, VMConfig},
     transaction::SignedTransaction,
-    vm_error::VMStatus,
+    vm_status::VMStatus,
 };
 use std::{
     collections::HashMap,

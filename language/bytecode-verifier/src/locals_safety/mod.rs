@@ -13,7 +13,7 @@ use crate::{
     control_flow_graph::VMControlFlowGraph,
 };
 use abstract_state::{AbstractState, LocalState};
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_status::{StatusCode, VMStatus};
 use mirai_annotations::*;
 use vm::{
     errors::{err_at_offset, VMResult},

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::InstructionConsistency;
-use libra_types::vm_error::StatusCode;
+use libra_types::vm_status::StatusCode;
 use move_core_types::{account_address::AccountAddress, identifier::Identifier};
 use vm::file_format::*;
 

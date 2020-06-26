@@ -12,7 +12,7 @@ use libra_types::{
     account_config::{self, LBR_NAME},
     on_chain_config::VMPublishingOption,
     transaction::TransactionStatus,
-    vm_error::{StatusCode, StatusType, VMStatus},
+    vm_status::{StatusCode, StatusType, VMStatus},
 };
 
 // A module with an address different from the sender's address should be rejected

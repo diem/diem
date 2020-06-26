@@ -8,7 +8,7 @@ use crate::{
     acquires_list_verifier::AcquiresVerifier, control_flow_graph::VMControlFlowGraph,
     locals_safety, reference_safety, stack_usage_verifier::StackUsageVerifier, type_safety,
 };
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_status::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
     errors::{append_err_info, err_at_offset, VMResult},

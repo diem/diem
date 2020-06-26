@@ -9,7 +9,7 @@ use crate::{
 use libra_types::{
     account_config::lbr_type_tag,
     transaction::TransactionStatus,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use move_vm_types::values::Value;
 

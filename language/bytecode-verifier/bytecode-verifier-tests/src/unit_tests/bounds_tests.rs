@@ -5,7 +5,7 @@ use invalid_mutations::bounds::{
     ApplyCodeUnitBoundsContext, ApplyOutOfBoundsContext, CodeUnitBoundsMutation,
     OutOfBoundsMutation,
 };
-use libra_types::{account_address::AccountAddress, vm_error::StatusCode};
+use libra_types::{account_address::AccountAddress, vm_status::StatusCode};
 use move_core_types::identifier::Identifier;
 use proptest::{collection::vec, prelude::*};
 use vm::{check_bounds::BoundsChecker, file_format::*, proptest_types::CompiledModuleStrategyGen};

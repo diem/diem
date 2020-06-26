@@ -11,7 +11,7 @@ use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    vm_error::{StatusCode, StatusType, VMStatus},
+    vm_status::{StatusCode, StatusType, VMStatus},
 };
 use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier};
 use move_vm_types::{

@@ -13,7 +13,7 @@ use libra_types::{
     account_config::LBR_NAME,
     on_chain_config::LibraVersion,
     transaction::{TransactionArgument, TransactionStatus},
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use libra_vm::LibraVM;
 use transaction_builder::encode_update_travel_rule_limit;

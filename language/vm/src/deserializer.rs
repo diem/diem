@@ -5,7 +5,7 @@ use crate::{errors::*, file_format::*, file_format_common::*};
 use move_core_types::{
     account_address::AccountAddress,
     identifier::Identifier,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use std::{
     collections::HashSet,

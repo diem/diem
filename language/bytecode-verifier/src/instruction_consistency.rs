@@ -4,7 +4,7 @@
 //! This module defines the transfer functions for verifying type safety of a procedure body.
 //! It does not utilize control flow, but does check each block independently
 
-use libra_types::vm_error::StatusCode;
+use libra_types::vm_status::StatusCode;
 use vm::{
     access::ModuleAccess,
     errors::{err_at_offset, VMResult},

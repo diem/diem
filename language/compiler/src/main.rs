@@ -12,7 +12,7 @@ use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use compiler::{util, Compiler};
 use ir_to_bytecode::parser::{parse_module, parse_script};
 use libra_types::{
-    access_path::AccessPath, account_address::AccountAddress, account_config, vm_error::VMStatus,
+    access_path::AccessPath, account_address::AccountAddress, account_config, vm_status::VMStatus,
 };
 use std::{
     convert::TryFrom,

@@ -19,7 +19,7 @@ use libra_types::{
         Script, TransactionArgument, TransactionPayload, TransactionStatus,
         MAX_TRANSACTION_SIZE_IN_BYTES,
     },
-    vm_error::{StatusCode, StatusType, VMStatus},
+    vm_status::{StatusCode, StatusType, VMStatus},
 };
 use move_core_types::gas_schedule::{GasAlgebra, GasConstants};
 use transaction_builder::encode_transfer_with_metadata_script;

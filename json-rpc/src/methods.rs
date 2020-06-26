@@ -86,10 +86,10 @@ async fn submit(mut service: JsonRpcService, request: JsonRpcRequest) -> Result<
         .mempool_sender
         .send((transaction, req_sender))
         .await?;
-    let (mempool_status, vm_status) = callback.await??;
+    let (mempool_status, vm_status_opt) = callback.await??;
 
-    if let Some(vm_error) = vm_status {
-        Err(Error::new(JsonRpcError::vm_error(vm_error)))
+    if let Some(vm_status) = vm_status_opt {
+        Err(Error::new(JsonRpcError::vm_status(vm_status)))
     } else if mempool_status.code == MempoolStatusCode::Accepted {
         Ok(())
     } else {

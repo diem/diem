@@ -35,7 +35,7 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use num_variants::NumVariants;
 #[cfg(any(test, feature = "fuzzing"))]
