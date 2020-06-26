@@ -217,6 +217,11 @@
 
 
 
+<pre><code>pragma intrinsic = <b>true</b>;
+</code></pre>
+
+
+
 <a name="0x1_FixedPoint32_Specification_divide_u64"></a>
 
 ### Function `divide_u64`
@@ -228,6 +233,11 @@
 
 
 
+<pre><code>pragma intrinsic = <b>true</b>;
+</code></pre>
+
+
+
 <a name="0x1_FixedPoint32_Specification_create_from_rational"></a>
 
 ### Function `create_from_rational`
@@ -236,6 +246,11 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_FixedPoint32_create_from_rational">create_from_rational</a>(numerator: u64, denominator: u64): <a href="#0x1_FixedPoint32_FixedPoint32">FixedPoint32::FixedPoint32</a>
 </code></pre>
 
+
+
+
+<pre><code>pragma intrinsic = <b>true</b>;
+</code></pre>
 
 
 

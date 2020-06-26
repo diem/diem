@@ -257,7 +257,7 @@ There is no address with a RegisteredCurrencies value before initialization.
 
 
 <pre><code><b>schema</b> <a href="#0x1_RegisteredCurrencies_OnlyConfigAddressHasRegisteredCurrencies">OnlyConfigAddressHasRegisteredCurrencies</a> {
-    <b>invariant</b> !<a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>()
+    <b>invariant</b> <b>module</b> !<a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>()
         ==&gt; (forall addr: address: !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(addr));
 }
 </code></pre>
@@ -267,7 +267,7 @@ There is no address with a RegisteredCurrencies value before initialization.
 
 
 <pre><code><b>schema</b> <a href="#0x1_RegisteredCurrencies_OnlyConfigAddressHasRegisteredCurrencies">OnlyConfigAddressHasRegisteredCurrencies</a> {
-    <b>invariant</b> <a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>()
+    <b>invariant</b> <b>module</b> <a href="#0x1_RegisteredCurrencies_spec_is_initialized">spec_is_initialized</a>()
         ==&gt; <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
             && (forall addr: address:
                    <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;(addr)

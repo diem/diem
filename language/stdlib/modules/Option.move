@@ -120,6 +120,10 @@ module Option {
     }
 
     spec module {
+        pragma verify=true;
+    }
+
+    spec module {
         /// Return true iff t contains none.
         define spec_is_none<Element>(t: Option<Element>): bool {
             len(t.vec) == 0

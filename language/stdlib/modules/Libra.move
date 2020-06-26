@@ -811,13 +811,6 @@ module Libra {
         apply SumOfCoinValuesInvariant<CoinType> to *<CoinType>;
     }
 
-    spec module {
-        /// Apply invariant from `RegisteredCurrencies` to functions
-        /// that call functions in `RegisteredCurrencies`.
-        apply RegisteredCurrencies::OnlyConfigAddressHasRegisteredCurrencies to
-            initialize, register_currency<CoinType>;
-    }
-
     /*
     TODO: specify the following:
 
