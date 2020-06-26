@@ -78,11 +78,26 @@
 <span id="78">78</span>
 <span id="79">79</span>
 <span id="80">80</span>
+<span id="81">81</span>
+<span id="82">82</span>
+<span id="83">83</span>
+<span id="84">84</span>
+<span id="85">85</span>
+<span id="86">86</span>
+<span id="87">87</span>
+<span id="88">88</span>
+<span id="89">89</span>
+<span id="90">90</span>
+<span id="91">91</span>
+<span id="92">92</span>
+<span id="93">93</span>
+<span id="94">94</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
+<span class="kw">use</span> <span class="ident">libra_state_view</span>::<span class="ident">StateViewId</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">account_config</span>::<span class="ident">AccountResource</span>,
@@ -119,8 +134,13 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">vm</span> <span class="op">=</span> <span class="ident">LibraVM</span>::<span class="ident">new</span>();
         <span class="kw">let</span> (<span class="ident">version</span>, <span class="ident">state_root</span>) <span class="op">=</span> <span class="ident">db_reader</span>.<span class="ident">get_latest_state_root</span>().<span class="ident">expect</span>(<span class="string">&quot;Should not fail.&quot;</span>);
         <span class="kw">let</span> <span class="ident">smt</span> <span class="op">=</span> <span class="ident">SparseMerkleTree</span>::<span class="ident">new</span>(<span class="ident">state_root</span>);
-        <span class="kw">let</span> <span class="ident">state_view</span> <span class="op">=</span>
-            <span class="ident">VerifiedStateView</span>::<span class="ident">new</span>(<span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">db_reader</span>), <span class="prelude-val">Some</span>(<span class="ident">version</span>), <span class="ident">state_root</span>, <span class="kw-2">&amp;</span><span class="ident">smt</span>);
+        <span class="kw">let</span> <span class="ident">state_view</span> <span class="op">=</span> <span class="ident">VerifiedStateView</span>::<span class="ident">new</span>(
+            <span class="ident">StateViewId</span>::<span class="ident">Miscellaneous</span>,
+            <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">db_reader</span>),
+            <span class="prelude-val">Some</span>(<span class="ident">version</span>),
+            <span class="ident">state_root</span>,
+            <span class="kw-2">&amp;</span><span class="ident">smt</span>,
+        );
 
         <span class="ident">vm</span>.<span class="ident">load_configs</span>(<span class="kw-2">&amp;</span><span class="ident">state_view</span>);
         <span class="ident">VMValidator</span> { <span class="ident">db_reader</span>, <span class="ident">vm</span> }
@@ -138,7 +158,15 @@
         <span class="kw">let</span> <span class="ident">vm</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">vm</span>.<span class="ident">clone</span>();
 
         <span class="kw">let</span> <span class="ident">smt</span> <span class="op">=</span> <span class="ident">SparseMerkleTree</span>::<span class="ident">new</span>(<span class="ident">state_root</span>);
-        <span class="kw">let</span> <span class="ident">state_view</span> <span class="op">=</span> <span class="ident">VerifiedStateView</span>::<span class="ident">new</span>(<span class="ident">db_reader</span>, <span class="prelude-val">Some</span>(<span class="ident">version</span>), <span class="ident">state_root</span>, <span class="kw-2">&amp;</span><span class="ident">smt</span>);
+        <span class="kw">let</span> <span class="ident">state_view</span> <span class="op">=</span> <span class="ident">VerifiedStateView</span>::<span class="ident">new</span>(
+            <span class="ident">StateViewId</span>::<span class="ident">TransactionValidation</span> {
+                <span class="ident">base_version</span>: <span class="ident">version</span>,
+            },
+            <span class="ident">db_reader</span>,
+            <span class="prelude-val">Some</span>(<span class="ident">version</span>),
+            <span class="ident">state_root</span>,
+            <span class="kw-2">&amp;</span><span class="ident">smt</span>,
+        );
 
         <span class="prelude-val">Ok</span>(<span class="ident">vm</span>.<span class="ident">validate_transaction</span>(<span class="ident">txn</span>, <span class="kw-2">&amp;</span><span class="ident">state_view</span>))
     }
