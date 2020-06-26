@@ -3,14 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-use std::{
-    collections::HashSet,
-    fmt,
-    time::{Duration, Instant},
-};
-
-use rand::Rng;
-
 use crate::{
     cluster::Cluster,
     experiments::{Context, Experiment, ExperimentParam},
@@ -18,6 +10,7 @@ use crate::{
     instance::Instance,
     tx_emitter::{execute_and_wait_transactions, EmitJobRequest},
 };
+use anyhow::format_err;
 use async_trait::async_trait;
 use futures::future::try_join_all;
 use libra_logger::prelude::*;
@@ -26,6 +19,11 @@ use libra_types::{
     on_chain_config::LibraVersion,
     transaction::{helpers::create_user_txn, TransactionPayload},
 };
+use std::{
+    collections::HashSet,
+    fmt,
+    time::{Duration, Instant},
+};
 use structopt::StructOpt;
 use transaction_builder::{
     encode_transfer_with_metadata_script, encode_update_libra_version_script,
@@ -33,7 +31,11 @@ use transaction_builder::{
 
 #[derive(StructOpt, Debug)]
 pub struct ValidatorVersioningParams {
-    #[structopt(long, default_value = "10", help = "Number of nodes to reboot")]
+    #[structopt(
+        long,
+        default_value = "10",
+        help = "Number of nodes to update in the first batch"
+    )]
     pub count: usize,
     #[structopt(long, help = "Image tag of newer validator software")]
     pub updated_image_tag: String,
@@ -56,23 +58,18 @@ impl ExperimentParam for ValidatorVersioningParams {
                 cluster.validator_instances().len()
             );
         }
-        let mut instances = Vec::with_capacity(self.count);
-        let mut all_instances = cluster.validator_instances().to_vec();
-        let mut rnd = rand::thread_rng();
-        for _i in 0..self.count {
-            let instance = all_instances.remove(rnd.gen_range(0, all_instances.len()));
-            instances.push(instance);
-        }
+        let (first_batch, second_batch) = cluster.split_n_validators_random(self.count);
 
         Self::E {
-            first_batch: instances,
-            second_batch: all_instances,
+            first_batch: first_batch.into_validator_instances(),
+            second_batch: second_batch.into_validator_instances(),
             full_nodes: cluster.fullnode_instances().to_vec(),
             updated_image_tag: self.updated_image_tag,
         }
     }
 }
 
+// Reboot `updated_instance` with newer image tag
 async fn update_batch_instance(
     context: &mut Context<'_>,
     updated_instance: &[Instance],
@@ -80,28 +77,24 @@ async fn update_batch_instance(
 ) -> anyhow::Result<()> {
     let deadline = Instant::now() + Duration::new(2 * 60, 0);
 
-    // 1. Stop Existing instances.
-    let futures: Vec<_> = updated_instance.iter().map(Instance::stop).collect();
+    info!("Stop Existing instances.");
+    let futures = updated_instance.iter().map(Instance::stop);
     try_join_all(futures).await?;
 
-    // 2. Reinstantiate a set of new nodes.
-    let futures: Vec<_> = updated_instance
-        .iter()
-        .map(|instance| {
-            let mut newer_config = instance.instance_config().clone();
-            newer_config.replace_tag(updated_tag.clone()).unwrap();
-            context
-                .cluster_swarm
-                .spawn_new_instance(newer_config, false)
-        })
-        .collect();
+    info!("Reinstantiate a set of new nodes.");
+    let futures = updated_instance.iter().map(|instance| {
+        let mut newer_config = instance.instance_config().clone();
+        newer_config.replace_tag(updated_tag.clone()).unwrap();
+        context
+            .cluster_swarm
+            .spawn_new_instance(newer_config, false)
+    });
     let instances = try_join_all(futures).await?;
 
-    // 3. Wait for the instances to recover.
-    let futures: Vec<_> = instances
+    info!("Wait for the instances to recover.");
+    let futures = instances
         .iter()
-        .map(|instance| instance.wait_json_rpc(deadline))
-        .collect();
+        .map(|instance| instance.wait_json_rpc(deadline));
     try_join_all(futures).await?;
     Ok(())
 }
@@ -155,7 +148,8 @@ impl Experiment for ValidatorVersioning {
             LBR_NAME.to_owned(),
             10,
         )
-        .expect("Failed to create signed transaction");
+        .map_err(|e| format_err!("Failed to create signed transaction: {}", e))?;
+
         account_1.sequence_number += 1;
 
         execute_and_wait_transactions(&mut full_node_client, &mut account_1, vec![txn1.clone()])
@@ -175,7 +169,8 @@ impl Experiment for ValidatorVersioning {
             LBR_NAME.to_owned(),
             10,
         )
-        .expect("Failed to create signed transaction");
+        .map_err(|e| format_err!("Failed to create signed transaction: {}", e))?;
+
         account_1.sequence_number += 1;
         execute_and_wait_transactions(&mut full_node_client, &mut account_1, vec![txn2.clone()])
             .await?;
@@ -194,7 +189,7 @@ impl Experiment for ValidatorVersioning {
             LBR_NAME.to_owned(),
             10,
         )
-        .expect("Failed to create signed transaction");
+        .map_err(|e| format_err!("Failed to create signed transaction: {}", e))?;
         faucet_account.sequence_number += 1;
 
         execute_and_wait_transactions(
@@ -215,16 +210,21 @@ impl Experiment for ValidatorVersioning {
             LBR_NAME.to_owned(),
             10,
         )
-        .expect("Failed to create signed transaction");
+        .map_err(|e| format_err!("Failed to create signed transaction: {}", e))?;
 
         full_node_client
             .submit_transaction(txn3.clone())
             .await
-            .expect("Transaction should pass the full node mempool");
+            .map_err(|e| format_err!("Transaction should pass the full node mempool: {}", e))?;
 
-        execute_and_wait_transactions(&mut full_node_client, &mut account_1, vec![txn3.clone()])
+        if execute_and_wait_transactions(&mut full_node_client, &mut account_1, vec![txn3.clone()])
             .await
-            .unwrap_err();
+            .is_ok()
+        {
+            return Err(format_err!(
+                "Transaction should not be committed by the validators"
+            ));
+        };
 
         info!("7. Change the images for the full nodes");
         update_batch_instance(context, &self.full_nodes, self.updated_image_tag.clone()).await?;
@@ -235,15 +235,16 @@ impl Experiment for ValidatorVersioning {
             .cluster
             .random_full_node_instance()
             .json_rpc_client();
-        updated_full_node
-            .submit_transaction(txn3)
-            .await
-            .unwrap_err();
+        if updated_full_node.submit_transaction(txn3).await.is_ok() {
+            return Err(format_err!(
+                "Transaction should not be accepted by the full node."
+            ));
+        };
         Ok(())
     }
 
     fn deadline(&self) -> Duration {
-        Duration::from_secs(20 * 60)
+        Duration::from_secs(6 * 60)
     }
 }
 

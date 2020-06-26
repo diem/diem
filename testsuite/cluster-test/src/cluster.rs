@@ -65,7 +65,10 @@ impl Cluster {
 
     pub fn random_validator_instance(&self) -> Instance {
         let mut rnd = rand::thread_rng();
-        self.validator_instances.choose(&mut rnd).unwrap().clone()
+        self.validator_instances
+            .choose(&mut rnd)
+            .expect("random_validator_instance requires non-empty validator_instances")
+            .clone()
     }
 
     pub fn validator_instances(&self) -> &[Instance] {
@@ -74,7 +77,10 @@ impl Cluster {
 
     pub fn random_full_node_instance(&self) -> Instance {
         let mut rnd = rand::thread_rng();
-        self.fullnode_instances.choose(&mut rnd).unwrap().clone()
+        self.fullnode_instances
+            .choose(&mut rnd)
+            .expect("random_full_node_instance requires non-empty fullnode_instances")
+            .clone()
     }
 
     pub fn fullnode_instances(&self) -> &[Instance] {
