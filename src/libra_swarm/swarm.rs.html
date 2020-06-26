@@ -603,28 +603,16 @@
 <span id="603">603</span>
 <span id="604">604</span>
 <span id="605">605</span>
-<span id="606">606</span>
-<span id="607">607</span>
-<span id="608">608</span>
-<span id="609">609</span>
-<span id="610">610</span>
-<span id="611">611</span>
-<span id="612">612</span>
-<span id="613">613</span>
-<span id="614">614</span>
-<span id="615">615</span>
-<span id="616">616</span>
-<span id="617">617</span>
-<span id="618">618</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">Context</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="ident">config_builder</span>::{<span class="ident">FullNodeConfig</span>, <span class="ident">SwarmConfig</span>, <span class="ident">ValidatorConfig</span>};
+<span class="kw">use</span> <span class="ident">config_builder</span>::<span class="ident">SwarmConfig</span>;
 <span class="kw">use</span> <span class="ident">debug_interface</span>::<span class="ident">NodeDebugClient</span>;
 <span class="kw">use</span> <span class="ident">libra_config</span>::<span class="ident">config</span>::{<span class="ident">NodeConfig</span>, <span class="ident">RoleType</span>};
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
+<span class="kw">use</span> <span class="ident">libra_management</span>::<span class="ident">config_builder</span>::{<span class="ident">FullnodeBuilder</span>, <span class="ident">FullnodeType</span>, <span class="ident">ValidatorBuilder</span>};
 <span class="kw">use</span> <span class="ident">libra_temppath</span>::<span class="ident">TempPath</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">account_address</span>::<span class="ident">AccountAddress</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{
@@ -842,6 +830,7 @@
     <span class="comment">// Maps the node id of a node to the LibraNode struct</span>
     <span class="kw">pub</span> <span class="ident">nodes</span>: <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">String</span>, <span class="ident">LibraNode</span><span class="op">&gt;</span>,
     <span class="kw">pub</span> <span class="ident">config</span>: <span class="ident">SwarmConfig</span>,
+    <span class="kw">pub</span> <span class="ident">role</span>: <span class="ident">RoleType</span>,
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Error</span>)]</span>
@@ -860,35 +849,6 @@
 }
 
 <span class="kw">impl</span> <span class="ident">LibraSwarm</span> {
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">launch_swarm</span>(
-        <span class="ident">num_nodes</span>: <span class="ident">usize</span>,
-        <span class="ident">role</span>: <span class="ident">RoleType</span>,
-        <span class="ident">disable_logging</span>: <span class="ident">bool</span>,
-        <span class="ident">config_dir</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-        <span class="ident">template</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeConfig</span><span class="op">&gt;</span>,
-        <span class="ident">upstream_config_dir</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="kw">let</span> <span class="ident">num_launch_attempts</span> <span class="op">=</span> <span class="number">5</span>;
-        <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_launch_attempts</span> {
-            <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Launch swarm attempt: {} of {}&quot;</span>, <span class="ident">i</span>, <span class="ident">num_launch_attempts</span>);
-
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="kw-2">mut</span> <span class="ident">swarm</span>) <span class="op">=</span> <span class="self">Self</span>::<span class="ident">configure_swarm</span>(
-                <span class="ident">num_nodes</span>,
-                <span class="ident">role</span>,
-                <span class="ident">config_dir</span>.<span class="ident">clone</span>(),
-                <span class="prelude-val">Some</span>(<span class="ident">template</span>.<span class="ident">as_ref</span>().<span class="ident">cloned</span>().<span class="ident">unwrap_or_default</span>()),
-                <span class="ident">upstream_config_dir</span>.<span class="ident">clone</span>(),
-            ) {
-                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">swarm</span>.<span class="ident">launch_attempt</span>(<span class="ident">role</span>, <span class="ident">disable_logging</span>) {
-                    <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error launching swarm: {}&quot;</span>, <span class="ident">e</span>);
-                } <span class="kw">else</span> {
-                    <span class="kw">return</span> <span class="ident">swarm</span>;
-                }
-            }
-        }
-        <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Max out {} attempts to launch swarm&quot;</span>, <span class="ident">num_launch_attempts</span>);
-    }
-
     <span class="doccomment">/// Either create a persistent directory for swarm or return a temporary one.</span>
     <span class="doccomment">/// If specified persistent directory already exists,</span>
     <span class="doccomment">/// assumably due to previous launch failure, it will be removed.</span>
@@ -910,61 +870,73 @@
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure_swarm</span>(
-        <span class="ident">num_nodes</span>: <span class="ident">usize</span>,
-        <span class="ident">role</span>: <span class="ident">RoleType</span>,
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure_fn_swarm</span>(
         <span class="ident">config_dir</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
         <span class="ident">template</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeConfig</span><span class="op">&gt;</span>,
-        <span class="ident">upstream_config_dir</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+        <span class="ident">upstream_config</span>: <span class="kw-2">&amp;</span><span class="ident">SwarmConfig</span>,
+        <span class="ident">fn_type</span>: <span class="ident">FullnodeType</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LibraSwarm</span><span class="op">&gt;</span> {
-        <span class="ident">LibraNode</span>::<span class="ident">prepare</span>();
-
         <span class="kw">let</span> <span class="ident">swarm_config_dir</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">setup_config_dir</span>(<span class="kw-2">&amp;</span><span class="ident">config_dir</span>);
-        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;logs at {:?}&quot;</span>, <span class="ident">swarm_config_dir</span>);
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;logs for {:?} at {:?}&quot;</span>, <span class="ident">fn_type</span>, <span class="ident">swarm_config_dir</span>);
 
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node_config</span> <span class="op">=</span> <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">template</span>) <span class="op">=</span> <span class="ident">template</span> {
-            <span class="ident">template</span>
-        } <span class="kw">else</span> {
-            <span class="ident">NodeConfig</span>::<span class="ident">default</span>()
-        };
-        <span class="ident">node_config</span>.<span class="ident">base</span>.<span class="ident">role</span> <span class="op">=</span> <span class="ident">role</span>;
+        <span class="kw">let</span> <span class="ident">node_config</span> <span class="op">=</span> <span class="ident">template</span>.<span class="ident">unwrap_or_else</span>(<span class="op">|</span><span class="op">|</span> <span class="kw">match</span> <span class="ident">fn_type</span> {
+            <span class="ident">FullnodeType</span>::<span class="ident">ValidatorFullnode</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NodeConfig</span>::<span class="ident">default_for_validator_full_node</span>(),
+            <span class="ident">FullnodeType</span>::<span class="ident">PublicFullnode</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">NodeConfig</span>::<span class="ident">default_for_public_full_node</span>(),
+        });
 
         <span class="kw">let</span> <span class="ident">config_path</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">swarm_config_dir</span>.<span class="ident">as_ref</span>().<span class="ident">to_path_buf</span>();
-        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">role</span>.<span class="ident">is_validator</span>() {
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">validator_builder</span> <span class="op">=</span> <span class="ident">ValidatorConfig</span>::<span class="ident">new</span>();
-            <span class="ident">validator_builder</span>.<span class="ident">template</span> <span class="op">=</span> <span class="ident">node_config</span>;
-            <span class="ident">validator_builder</span>.<span class="ident">num_nodes</span> <span class="op">=</span> <span class="ident">num_nodes</span>;
-            <span class="ident">SwarmConfig</span>::<span class="ident">build</span>(<span class="kw-2">&amp;</span><span class="ident">validator_builder</span>, <span class="ident">config_path</span>)<span class="question-mark">?</span>
-        } <span class="kw">else</span> {
-            <span class="kw">let</span> <span class="ident">upstream_config_dir</span> <span class="op">=</span> <span class="ident">upstream_config_dir</span>.<span class="ident">expect</span>(<span class="string">&quot;No upstream node for full nodes&quot;</span>);
-            <span class="kw">let</span> <span class="ident">upstream_config_file</span> <span class="op">=</span> <span class="ident">PathBuf</span>::<span class="ident">from</span>(<span class="ident">upstream_config_dir</span>).<span class="ident">join</span>(<span class="string">&quot;node.config.toml&quot;</span>);
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">validator_config</span> <span class="op">=</span> <span class="ident">NodeConfig</span>::<span class="ident">load</span>(<span class="kw-2">&amp;</span><span class="ident">upstream_config_file</span>)<span class="question-mark">?</span>;
-            <span class="kw">let</span> <span class="ident">genesis</span> <span class="op">=</span> <span class="ident">validator_config</span>.<span class="ident">execution</span>.<span class="ident">genesis</span>.<span class="ident">as_ref</span>();
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">full_node_builder</span> <span class="op">=</span> <span class="ident">FullNodeConfig</span>::<span class="ident">new</span>();
-            <span class="ident">full_node_builder</span>.<span class="ident">num_full_nodes</span> <span class="op">=</span> <span class="ident">num_nodes</span>;
-            <span class="ident">full_node_builder</span>.<span class="ident">genesis</span> <span class="op">=</span>
-                <span class="prelude-val">Some</span>(<span class="ident">genesis</span>.<span class="ident">expect</span>(<span class="string">&quot;Missing genesis from validator&quot;</span>).<span class="ident">clone</span>());
-            <span class="ident">full_node_builder</span>.<span class="ident">template</span>(<span class="ident">node_config</span>);
-            <span class="ident">full_node_builder</span>.<span class="ident">extend_validator</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">validator_config</span>)<span class="question-mark">?</span>;
-            <span class="ident">validator_config</span>.<span class="ident">save</span>(<span class="kw-2">&amp;</span><span class="ident">upstream_config_file</span>)<span class="question-mark">?</span>;
-            <span class="ident">full_node_builder</span>.<span class="ident">bootstrap</span> <span class="op">=</span> <span class="ident">validator_config</span>.<span class="ident">full_node_networks</span>[<span class="number">0</span>]
-                .<span class="ident">discovery_method</span>
-                .<span class="ident">advertised_address</span>();
-            <span class="ident">SwarmConfig</span>::<span class="ident">build</span>(<span class="kw-2">&amp;</span><span class="ident">full_node_builder</span>, <span class="ident">config_path</span>)<span class="question-mark">?</span>
-        };
+        <span class="kw">let</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">FullnodeBuilder</span>::<span class="ident">new</span>(
+            <span class="ident">upstream_config</span>.<span class="ident">config_files</span>.<span class="ident">clone</span>(),
+            <span class="ident">upstream_config</span>.<span class="ident">faucet_key_path</span>.<span class="ident">clone</span>(),
+            <span class="ident">node_config</span>,
+            <span class="ident">fn_type</span>,
+        );
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">SwarmConfig</span>::<span class="ident">build</span>(<span class="kw-2">&amp;</span><span class="ident">builder</span>, <span class="ident">config_path</span>)<span class="question-mark">?</span>;
 
         <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
             <span class="ident">dir</span>: <span class="ident">swarm_config_dir</span>,
             <span class="ident">nodes</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
             <span class="ident">config</span>,
+            <span class="ident">role</span>: <span class="ident">RoleType</span>::<span class="ident">FullNode</span>,
         })
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">launch_attempt</span>(
-        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
-        <span class="ident">role</span>: <span class="ident">RoleType</span>,
-        <span class="ident">disable_logging</span>: <span class="ident">bool</span>,
-    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">SwarmLaunchFailure</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">configure_validator_swarm</span>(
+        <span class="ident">num_nodes</span>: <span class="ident">usize</span>,
+        <span class="ident">config_dir</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
+        <span class="ident">template</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">NodeConfig</span><span class="op">&gt;</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">LibraSwarm</span><span class="op">&gt;</span> {
+        <span class="ident">LibraNode</span>::<span class="ident">prepare</span>();
+
+        <span class="kw">let</span> <span class="ident">swarm_config_dir</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">setup_config_dir</span>(<span class="kw-2">&amp;</span><span class="ident">config_dir</span>);
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;logs for validator at {:?}&quot;</span>, <span class="ident">swarm_config_dir</span>);
+
+        <span class="kw">let</span> <span class="ident">node_config</span> <span class="op">=</span> <span class="ident">template</span>.<span class="ident">unwrap_or_else</span>(<span class="ident">NodeConfig</span>::<span class="ident">default_for_validator</span>);
+
+        <span class="kw">let</span> <span class="ident">config_path</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">swarm_config_dir</span>.<span class="ident">as_ref</span>().<span class="ident">to_path_buf</span>();
+        <span class="kw">let</span> <span class="ident">builder</span> <span class="op">=</span> <span class="ident">ValidatorBuilder</span>::<span class="ident">new</span>(<span class="ident">num_nodes</span>, <span class="ident">node_config</span>, <span class="kw-2">&amp;</span><span class="ident">swarm_config_dir</span>);
+        <span class="kw">let</span> <span class="ident">config</span> <span class="op">=</span> <span class="ident">SwarmConfig</span>::<span class="ident">build</span>(<span class="kw-2">&amp;</span><span class="ident">builder</span>, <span class="ident">config_path</span>)<span class="question-mark">?</span>;
+
+        <span class="prelude-val">Ok</span>(<span class="self">Self</span> {
+            <span class="ident">dir</span>: <span class="ident">swarm_config_dir</span>,
+            <span class="ident">nodes</span>: <span class="ident">HashMap</span>::<span class="ident">new</span>(),
+            <span class="ident">config</span>,
+            <span class="ident">role</span>: <span class="ident">RoleType</span>::<span class="ident">Validator</span>,
+        })
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">launch</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) {
+        <span class="kw">let</span> <span class="ident">num_attempts</span> <span class="op">=</span> <span class="number">5</span>;
+        <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_attempts</span> {
+            <span class="kw">match</span> <span class="self">self</span>.<span class="ident">launch_attempt</span>(<span class="bool-val">false</span>) {
+                <span class="prelude-val">Ok</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="kw">return</span>,
+                <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;Error launching swarm: {}&quot;</span>, <span class="ident">err</span>),
+            }
+        }
+        <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;Max out {} attempts to launch test swarm&quot;</span>, <span class="ident">num_attempts</span>);
+    }
+
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">launch_attempt</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">disable_logging</span>: <span class="ident">bool</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">SwarmLaunchFailure</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">logs_dir_path</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">dir</span>.<span class="ident">as_ref</span>().<span class="ident">join</span>(<span class="string">&quot;logs&quot;</span>);
         <span class="ident">std</span>::<span class="ident">fs</span>::<span class="ident">create_dir</span>(<span class="kw-2">&amp;</span><span class="ident">logs_dir_path</span>)<span class="question-mark">?</span>;
         <span class="comment">// For each config launch a node</span>
@@ -973,7 +945,7 @@
             <span class="kw">let</span> <span class="ident">node_id</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">index</span>);
             <span class="kw">let</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">LibraNode</span>::<span class="ident">launch</span>(
                 <span class="ident">node_id</span>.<span class="ident">clone</span>(),
-                <span class="ident">role</span>,
+                <span class="self">self</span>.<span class="ident">role</span>,
                 <span class="kw-2">&amp;</span><span class="ident">path</span>,
                 <span class="ident">logs_dir_path</span>.<span class="ident">join</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}.log&quot;</span>, <span class="ident">index</span>)),
                 <span class="ident">logs_dir_path</span>.<span class="ident">join</span>(<span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}.struct.log&quot;</span>, <span class="ident">index</span>)),
@@ -982,13 +954,17 @@
             .<span class="ident">unwrap</span>();
             <span class="self">self</span>.<span class="ident">nodes</span>.<span class="ident">insert</span>(<span class="ident">node_id</span>, <span class="ident">node</span>);
         }
+        <span class="kw">let</span> <span class="ident">expected_peer</span> <span class="op">=</span> <span class="kw">match</span> <span class="self">self</span>.<span class="ident">role</span> {
+            <span class="ident">RoleType</span>::<span class="ident">Validator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="self">self</span>.<span class="ident">nodes</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">i64</span> <span class="op">-</span> <span class="number">1</span>,
+            <span class="ident">RoleType</span>::<span class="ident">FullNode</span> <span class="op">=</span><span class="op">&gt;</span> <span class="number">1</span>,
+        };
         <span class="self">self</span>.<span class="ident">wait_for_startup</span>()<span class="question-mark">?</span>;
-        <span class="self">self</span>.<span class="ident">wait_for_connectivity</span>()<span class="question-mark">?</span>;
+        <span class="self">self</span>.<span class="ident">wait_for_connectivity</span>(<span class="ident">expected_peer</span>)<span class="question-mark">?</span>;
         <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Successfully launched Swarm&quot;</span>);
         <span class="prelude-val">Ok</span>(())
     }
 
-    <span class="kw">fn</span> <span class="ident">wait_for_connectivity</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">SwarmLaunchFailure</span><span class="op">&gt;</span> {
+    <span class="kw">fn</span> <span class="ident">wait_for_connectivity</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">expected_peers</span>: <span class="ident">i64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">SwarmLaunchFailure</span><span class="op">&gt;</span> {
         <span class="comment">// Early return if we&#39;re only launching a single node</span>
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">nodes</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">1</span> {
             <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
@@ -999,11 +975,10 @@
         <span class="kw">for</span> <span class="ident">i</span> <span class="kw">in</span> <span class="number">0</span>..<span class="ident">num_attempts</span> {
             <span class="macro">println</span><span class="macro">!</span>(<span class="string">&quot;Wait for connectivity attempt: {}&quot;</span>, <span class="ident">i</span>);
 
-            <span class="kw">let</span> <span class="ident">len</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">nodes</span>.<span class="ident">len</span>();
             <span class="kw">if</span> <span class="self">self</span>
                 .<span class="ident">nodes</span>
                 .<span class="ident">values_mut</span>()
-                .<span class="ident">all</span>(<span class="op">|</span><span class="ident">node</span><span class="op">|</span> <span class="ident">node</span>.<span class="ident">check_connectivity</span>(<span class="ident">len</span> <span class="kw">as</span> <span class="ident">i64</span> <span class="op">-</span> <span class="number">1</span>))
+                .<span class="ident">all</span>(<span class="op">|</span><span class="ident">node</span><span class="op">|</span> <span class="ident">node</span>.<span class="ident">check_connectivity</span>(<span class="ident">expected_peers</span>))
             {
                 <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
             }
@@ -1159,7 +1134,6 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_node</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">idx</span>: <span class="ident">usize</span>,
-        <span class="ident">role</span>: <span class="ident">RoleType</span>,
         <span class="ident">disable_logging</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>(), <span class="ident">SwarmLaunchFailure</span><span class="op">&gt;</span> {
         <span class="comment">// First take the configs out to not keep immutable borrow on self when calling</span>
@@ -1178,7 +1152,7 @@
         <span class="kw">let</span> <span class="ident">node_id</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">idx</span>);
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">node</span> <span class="op">=</span> <span class="ident">LibraNode</span>::<span class="ident">launch</span>(
             <span class="ident">node_id</span>.<span class="ident">clone</span>(),
-            <span class="ident">role</span>,
+            <span class="self">self</span>.<span class="ident">role</span>,
             <span class="ident">path</span>,
             <span class="ident">log_file_path</span>,
             <span class="ident">struct_log_file_path</span>,
@@ -1188,7 +1162,7 @@
         <span class="kw">for</span> <span class="kw">_</span> <span class="kw">in</span> <span class="number">0</span>..<span class="number">60</span> {
             <span class="kw">if</span> <span class="kw">let</span> <span class="ident">HealthStatus</span>::<span class="ident">Healthy</span> <span class="op">=</span> <span class="ident">node</span>.<span class="ident">health_check</span>() {
                 <span class="self">self</span>.<span class="ident">nodes</span>.<span class="ident">insert</span>(<span class="ident">node_id</span>, <span class="ident">node</span>);
-                <span class="kw">return</span> <span class="self">self</span>.<span class="ident">wait_for_connectivity</span>();
+                <span class="kw">return</span> <span class="self">self</span>.<span class="ident">wait_for_connectivity</span>(<span class="self">self</span>.<span class="ident">nodes</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">i64</span> <span class="op">-</span> <span class="number">1</span>);
             }
             ::<span class="ident">std</span>::<span class="ident">thread</span>::<span class="ident">sleep</span>(::<span class="ident">std</span>::<span class="ident">time</span>::<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="number">1000</span>));
         }
