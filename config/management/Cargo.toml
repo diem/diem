@@ -19,7 +19,7 @@ toml = { version = "0.5.6", default-features = false }
 executor = { path = "../../execution/executor", version = "0.1.0" }
 generate-key = { path = "../../config/generate-key", version = "0.1.0" }
 lcs = { path = "../../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
-libra-config = { path = "..", version = "0.1.0"}
+libra-config = { path = "..", version = "0.1.0" }
 libra-crypto = { path = "../../crypto/crypto", version = "0.1.0" }
 libra-global-constants = { path = "../../config/global-constants", version = "0.1.0"}
 libra-network-address = { path = "../../network/network-address", version = "0.1.0" }
@@ -38,4 +38,3 @@ config-builder = { path = "../config-builder", version = "0.1.0" }
 
 [features]
 testing = []
-fuzzing = ["libra-config/fuzzing"]

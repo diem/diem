@@ -20,7 +20,7 @@ use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
+use libra_types::{waypoint::Waypoint, PeerId};
 use netcore::transport::{memory, Transport};
 use network::{
     connectivity_manager::{ConnectivityManager, ConnectivityRequest},
@@ -38,9 +38,7 @@ use network::{
     transport::{self, Connection, LibraNetTransport, LIBRA_TCP_TRANSPORT},
     ProtocolId,
 };
-use network_simple_onchain_discovery::{
-    gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
-};
+use onchain_discovery::builder::OnchainDiscoveryBuilder;
 use std::{
     clone::Clone,
     collections::HashMap,
@@ -48,7 +46,7 @@ use std::{
     sync::{Arc, RwLock},
     time::Duration,
 };
-use subscription_service::ReconfigSubscription;
+use storage_interface::DbReader;
 use tokio::{
     runtime::{Builder, Handle, Runtime},
     time::interval,
@@ -182,7 +180,8 @@ impl NetworkBuilder {
         chain_id: &ChainId,
         role: RoleType,
         config: &mut NetworkConfig,
-        reconfig_subscriptions: &mut Vec<ReconfigSubscription>,
+        libra_db: Arc<dyn DbReader>,
+        waypoint: Waypoint,
     ) -> (Runtime, NetworkBuilder) {
         let runtime = Builder::new()
             .thread_name("network-")
@@ -233,7 +232,7 @@ impl NetworkBuilder {
         } else {
             // Enforce the outgoing connection (dialer) verifies the identity of the listener (server)
             network_builder.authentication_mode(AuthenticationMode::ServerOnly(identity_key));
-            if config.discovery_method == DiscoveryMethod::Onchain || !seed_peers.is_empty() {
+            if !seed_peers.is_empty() {
                 network_builder
                     .seed_peers(seed_peers)
                     .add_connectivity_manager();
@@ -248,17 +247,21 @@ impl NetworkBuilder {
                     .add_gossip_discovery();
             }
             DiscoveryMethod::Onchain => {
-                let conn_mgr_reqs_tx = network_builder
-                    .conn_mgr_reqs_tx()
-                    .expect("ConnectivityManager must be installed for on-chain discovery");
-                let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
-                    gen_simple_discovery_reconfig_subscription();
-                reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
-                let network_config_listener =
-                    ConfigurationChangeListener::new(conn_mgr_reqs_tx, role);
-                runtime
-                    .handle()
-                    .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
+                let (network_tx, discovery_events) = network_builder.add_protocol_handler(
+                    onchain_discovery::network_interface::network_endpoint_config(),
+                );
+                let onchain_discovery_builder = OnchainDiscoveryBuilder::build(
+                    network_builder
+                        .conn_mgr_reqs_tx()
+                        .expect("ConnectivityManager must be installed"),
+                    network_tx,
+                    discovery_events,
+                    network_builder.network_context(),
+                    libra_db,
+                    waypoint,
+                    runtime.handle(),
+                );
+                onchain_discovery_builder.start(runtime.handle());
             }
             DiscoveryMethod::None => {}
         }
