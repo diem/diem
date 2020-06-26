@@ -256,6 +256,23 @@
 <span id="256">256</span>
 <span id="257">257</span>
 <span id="258">258</span>
+<span id="259">259</span>
+<span id="260">260</span>
+<span id="261">261</span>
+<span id="262">262</span>
+<span id="263">263</span>
+<span id="264">264</span>
+<span id="265">265</span>
+<span id="266">266</span>
+<span id="267">267</span>
+<span id="268">268</span>
+<span id="269">269</span>
+<span id="270">270</span>
+<span id="271">271</span>
+<span id="272">272</span>
+<span id="273">273</span>
+<span id="274">274</span>
+<span id="275">275</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -277,6 +294,9 @@
 <span class="kw">use</span> <span class="ident">libra_vm</span>::<span class="ident">LibraVM</span>;
 <span class="kw">use</span> <span class="ident">libradb</span>::<span class="ident">LibraDB</span>;
 <span class="kw">use</span> <span class="ident">network_builder</span>::<span class="ident">builder</span>::<span class="ident">NetworkBuilder</span>;
+<span class="kw">use</span> <span class="ident">network_simple_onchain_discovery</span>::{
+    <span class="ident">gen_simple_discovery_reconfig_subscription</span>, <span class="ident">ConfigurationChangeListener</span>,
+};
 <span class="kw">use</span> <span class="ident">state_synchronizer</span>::<span class="ident">StateSynchronizer</span>;
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">boxed</span>::<span class="ident">Box</span>, <span class="ident">net</span>::<span class="ident">ToSocketAddrs</span>, <span class="ident">sync</span>::<span class="ident">Arc</span>, <span class="ident">thread</span>, <span class="ident">time</span>::<span class="ident">Instant</span>};
 <span class="kw">use</span> <span class="ident">storage_interface</span>::<span class="ident">DbReaderWriter</span>;
@@ -390,7 +410,8 @@
             <span class="kw-2">&amp;</span><span class="ident">node_config</span>.<span class="ident">base</span>.<span class="ident">chain_id</span>,
             <span class="ident">role</span>,
             <span class="ident">network_config</span>,
-            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">reconfig_subscriptions</span>,
+            <span class="ident">Arc</span>::<span class="ident">clone</span>(<span class="kw-2">&amp;</span><span class="ident">db_rw</span>.<span class="ident">reader</span>),
+            <span class="ident">waypoint</span>,
         );
         <span class="kw">let</span> <span class="ident">network_id</span> <span class="op">=</span> <span class="ident">network_config</span>.<span class="ident">network_id</span>.<span class="ident">clone</span>();
 
@@ -415,6 +436,19 @@
                 <span class="kw">if</span> <span class="ident">consensus_network_handles</span>.<span class="ident">is_some</span>() {
                     <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;There can be at most one validator network!&quot;</span>);
                 }
+
+                <span class="comment">// Set up to listen for network configuration changes from StateSync.</span>
+                <span class="comment">// TODO:  move this inside network_builder.</span>
+                <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">conn_mgr_reqs_tx</span>) <span class="op">=</span> <span class="ident">network_builder</span>.<span class="ident">conn_mgr_reqs_tx</span>() {
+                    <span class="kw">let</span> (<span class="ident">simple_discovery_reconfig_subscription</span>, <span class="ident">simple_discovery_reconfig_rx</span>) <span class="op">=</span>
+                        <span class="ident">gen_simple_discovery_reconfig_subscription</span>();
+                    <span class="ident">reconfig_subscriptions</span>.<span class="ident">push</span>(<span class="ident">simple_discovery_reconfig_subscription</span>);
+                    <span class="kw">let</span> <span class="ident">network_config_listener</span> <span class="op">=</span>
+                        <span class="ident">ConfigurationChangeListener</span>::<span class="ident">new</span>(<span class="ident">conn_mgr_reqs_tx</span>, <span class="ident">RoleType</span>::<span class="ident">Validator</span>);
+                    <span class="ident">runtime</span>
+                        .<span class="ident">handle</span>()
+                        .<span class="ident">spawn</span>(<span class="ident">network_config_listener</span>.<span class="ident">start</span>(<span class="ident">simple_discovery_reconfig_rx</span>));
+                };
 
                 <span class="ident">consensus_network_handles</span> <span class="op">=</span>
                     <span class="prelude-val">Some</span>(<span class="ident">network_builder</span>.<span class="ident">add_protocol_handler</span>(
