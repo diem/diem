@@ -116,6 +116,16 @@
 <span id="116">116</span>
 <span id="117">117</span>
 <span id="118">118</span>
+<span id="119">119</span>
+<span id="120">120</span>
+<span id="121">121</span>
+<span id="122">122</span>
+<span id="123">123</span>
+<span id="124">124</span>
+<span id="125">125</span>
+<span id="126">126</span>
+<span id="127">127</span>
+<span id="128">128</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -123,7 +133,7 @@
 <span class="attribute">#![<span class="ident">forbid</span>(<span class="ident">unsafe_code</span>)]</span>
 
 <span class="kw">use</span> <span class="ident">anyhow</span>::{<span class="ident">bail</span>, <span class="ident">format_err</span>, <span class="prelude-ty">Result</span>};
-<span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">info</span>;
+<span class="kw">use</span> <span class="ident">libra_logger</span>::{<span class="ident">info</span>, <span class="ident">warn</span>};
 <span class="kw">use</span> <span class="ident">rusoto_autoscaling</span>::{
     <span class="ident">AutoScalingGroupNamesType</span>, <span class="ident">Autoscaling</span>, <span class="ident">AutoscalingClient</span>, <span class="ident">SetDesiredCapacityType</span>,
 };
@@ -157,9 +167,19 @@
 
     <span class="kw">let</span> <span class="ident">dispatcher</span> <span class="op">=</span> <span class="ident">rusoto_core</span>::<span class="ident">HttpClient</span>::<span class="ident">new</span>().<span class="ident">expect</span>(<span class="string">&quot;failed to create request dispatcher&quot;</span>);
     <span class="kw">let</span> <span class="ident">asc</span> <span class="op">=</span> <span class="ident">AutoscalingClient</span>::<span class="ident">new_with</span>(<span class="ident">dispatcher</span>, <span class="ident">credentials_provider</span>, <span class="ident">Region</span>::<span class="ident">UsWest2</span>);
-    <span class="ident">asc</span>.<span class="ident">set_desired_capacity</span>(<span class="ident">set_desired_capacity_type</span>)
-        .<span class="kw">await</span>
-        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;set_desired_capacity failed: {:?}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>;
+    <span class="ident">libra_retrier</span>::<span class="ident">retry_async</span>(<span class="ident">libra_retrier</span>::<span class="ident">fixed_retry_strategy</span>(<span class="number">10_000</span>, <span class="number">60</span>), <span class="op">|</span><span class="op">|</span> {
+        <span class="kw">let</span> <span class="ident">asc</span> <span class="op">=</span> <span class="ident">asc</span>.<span class="ident">clone</span>();
+        <span class="kw">let</span> <span class="ident">set_desired_capacity_type</span> <span class="op">=</span> <span class="ident">set_desired_capacity_type</span>.<span class="ident">clone</span>();
+        <span class="ident">Box</span>::<span class="ident">pin</span>(<span class="kw">async</span> <span class="kw">move</span> {
+            <span class="ident">asc</span>.<span class="ident">set_desired_capacity</span>(<span class="ident">set_desired_capacity_type</span>)
+                .<span class="kw">await</span>
+                .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+                    <span class="macro">warn</span><span class="macro">!</span>(<span class="string">&quot;set_desired_capacity failed: {}, retrying&quot;</span>, <span class="ident">e</span>);
+                    <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;set_desired_capacity failed: {}&quot;</span>, <span class="ident">e</span>)
+                })
+        })
+    })
+    .<span class="kw">await</span><span class="question-mark">?</span>;
     <span class="kw">if</span> <span class="op">!</span><span class="ident">wait_for_completion</span> {
         <span class="kw">return</span> <span class="prelude-val">Ok</span>(());
     }
