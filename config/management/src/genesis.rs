@@ -33,7 +33,7 @@ impl Genesis {
         let genesis = vm_genesis::encode_genesis_transaction_with_validator(
             association_key,
             &validators,
-            Some(libra_types::on_chain_config::VMPublishingOption::CustomScripts),
+            Some(libra_types::on_chain_config::VMPublishingOption::Open),
         );
 
         if let Some(path) = self.path {

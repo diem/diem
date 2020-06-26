@@ -18,9 +18,6 @@ use libra_metrics::metric_server;
 use libra_vm::LibraVM;
 use libradb::LibraDB;
 use network_builder::builder::NetworkBuilder;
-use network_simple_onchain_discovery::{
-    gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
-};
 use state_synchronizer::StateSynchronizer;
 use std::{boxed::Box, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_interface::DbReaderWriter;
@@ -134,8 +131,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             &node_config.base.chain_id,
             role,
             network_config,
-            Arc::clone(&db_rw.reader),
-            waypoint,
+            &mut reconfig_subscriptions,
         );
         let network_id = network_config.network_id.clone();
 
@@ -160,19 +156,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 if consensus_network_handles.is_some() {
                     panic!("There can be at most one validator network!");
                 }
-
-                // Set up to listen for network configuration changes from StateSync.
-                // TODO:  move this inside network_builder.
-                if let Some(conn_mgr_reqs_tx) = network_builder.conn_mgr_reqs_tx() {
-                    let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
-                        gen_simple_discovery_reconfig_subscription();
-                    reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
-                    let network_config_listener =
-                        ConfigurationChangeListener::new(conn_mgr_reqs_tx, RoleType::Validator);
-                    runtime
-                        .handle()
-                        .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
-                };
 
                 consensus_network_handles =
                     Some(network_builder.add_protocol_handler(

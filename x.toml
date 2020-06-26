@@ -65,6 +65,7 @@ features = ["fuzzing"]
 # For more, see the "Conditional compilation for tests" section in documentation/coding_guidelines.md.
 [workspace.test-only]
 members = [
+    "common/option-future",
     "common/proptest-helpers",
     "common/retrier",
     "common/workspace-builder",
@@ -84,6 +85,7 @@ members = [
     "language/tools/test-generation",
     "language/tools/utils",
     "language/vm/serializer-tests",
+    "network/onchain-discovery",
     "network/socket-bench-server",
     "testsuite",
     "testsuite/cluster-test",
