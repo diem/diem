@@ -357,7 +357,6 @@ module Roles {
 
     /// >**Note:** Just started, only a few specs.
     ///
-    /// ## Role persistence
 
     spec module {
         pragma verify = true;
@@ -381,8 +380,168 @@ module Roles {
         define SPEC_PARENT_VASP_ROLE_ID(): u64 { 5 }
         define SPEC_CHILD_VASP_ROLE_ID(): u64 { 6 }
         define SPEC_UNHOSTED_ROLE_ID(): u64 { 7 }
-
     }
+
+    /// ## Matching of role_id's and role-specific privileges.
+
+    /// To prove some of the invariants, it is necessary to add a precondition that
+    /// the "witness" argument of add_privilege_to_* functions cannot be one
+    /// of the "default privileges" declared above.  The reason is that there
+    /// is no way an external module calling one of these functions to obtain
+    /// an instance of these types to pass as an the witness argument.
+    /// Ideally, the prover would have a way to figure this out,
+    /// but it can't (yet).
+    ///
+    /// Instead, we add the precondition.  That assumption is sufficient to prove
+    /// the invariant in this module.  When the function is called from another
+    /// module, the precondition becomes a proof obligation (which, I hope, the
+    /// prover can prove).
+
+    spec module {
+        /// Helper function that expresses the precondition predicate
+        define is_not_internal_privilege(t: type): bool {
+            type<t>() != type<AssociationRootRole>()
+            && type<t>() != type<TreasuryComplianceRole>()
+            && type<t>() != type<DesignatedDealerRole>()
+            && type<t>() != type<ValidatorRole>()
+            && type<t>() != type<ValidatorOperatorRole>()
+            && type<t>() != type<ParentVASPRole>()
+            && type<t>() != type<ChildVASPRole>()
+            && type<t>() != type<UnhostedRole>()
+        }
+    }
+
+    spec schema IsNotInternalPrivilege<Priv> {
+        requires is_not_internal_privilege(type<Priv>());
+    }
+    spec module {
+        apply IsNotInternalPrivilege<Priv> to public add_privilege_to_*<Priv>;
+    }
+
+    /// The properties below all assert the invariant that, for each address, there
+    /// is a RoleId resource with role_id field == SOMETHING_ROLE_ID() iff that
+    /// address has a Privilege<SomethingRole> resource . The property is split into
+    /// separate "if" and "only if" parts for ease of debugging. There is a temporary
+    /// "except" in the apply for AssociationRoot because of a temporary testnet hack
+    /// that violates it.
+
+    spec schema AssociationRootRoleMatchesRoleId {
+        /// **Informally:** For every address, if the address has an
+        /// AssociationRootRole Privilege, then it has a RoleId resource
+        /// with role_id == ASSOCIATION_ROOT_ROLE_ID. (The remaining Role
+        /// privileges are similar, so this explanation is not repeated.)
+        invariant module forall addr: address where exists<Privilege<AssociationRootRole>>(addr):
+             spec_has_role_id(addr)
+                && (spec_get_role_id(addr) == SPEC_ASSOCIATION_ROOT_ROLE_ID());
+
+        /// **Informally:** For every address, if the address has a RootRole resource,
+        /// and the role_id == ASSOCIATION_ROOT_ROLE_ID, then that address also has
+        /// an AssociationRootRole Privilege (also similar to the following properties,
+        /// so also not repeated).
+        invariant module forall addr: address where spec_has_role_id(addr):
+            (spec_get_role_id(addr) == SPEC_ASSOCIATION_ROOT_ROLE_ID())
+                ==> exists<Privilege<AssociationRootRole>>(addr);
+    }
+    spec module {
+        /// TODO (dd) "except" is a work-around for the testnet weirdness in
+        /// `grant_treasury_compliance_role`
+        /// BUG? (dd) If you delete "public" in front of "*", the "except" doesn't
+        /// seem to work. I haven't been able to reproduce this in a simple test.
+        apply AssociationRootRoleMatchesRoleId to public *, public *<T> except grant_treasury_compliance_role;
+    }
+
+    spec schema TreasuryComplianceRoleMatchesRoleId {
+        invariant module forall addr: address where exists<Privilege<TreasuryComplianceRole>>(addr):
+             spec_has_role_id(addr)
+                && (spec_get_role_id(addr) == SPEC_TREASURY_COMPLIANCE_ROLE_ID());
+
+        invariant module forall addr: address where spec_has_role_id(addr):
+            (spec_get_role_id(addr) == SPEC_TREASURY_COMPLIANCE_ROLE_ID())
+                ==> exists<Privilege<TreasuryComplianceRole>>(addr);
+    }
+    spec module {
+        apply TreasuryComplianceRoleMatchesRoleId to public *, public *<T>;
+    }
+
+    spec schema DesignatedDealerRoleMatchesRoleId {
+        invariant module forall addr: address where exists<Privilege<DesignatedDealerRole>>(addr):
+             spec_has_role_id(addr)
+                && (spec_get_role_id(addr) == SPEC_DESIGNATED_DEALER_ROLE_ID());
+
+        invariant module forall addr: address where spec_has_role_id(addr):
+            (spec_get_role_id(addr) == SPEC_DESIGNATED_DEALER_ROLE_ID())
+                ==> exists<Privilege<DesignatedDealerRole>>(addr);
+    }
+    spec module {
+        apply DesignatedDealerRoleMatchesRoleId to public *, public *<T>;
+    }
+
+    spec schema ValidatorRoleMatchesRoleId {
+        invariant module forall addr: address where exists<Privilege<ValidatorRole>>(addr):
+             spec_has_role_id(addr)
+                && (spec_get_role_id(addr) == SPEC_VALIDATOR_ROLE_ID());
+
+        invariant module forall addr: address where spec_has_role_id(addr):
+            (spec_get_role_id(addr) == SPEC_VALIDATOR_ROLE_ID())
+                ==> exists<Privilege<ValidatorRole>>(addr);
+    }
+    spec module {
+        apply ValidatorRoleMatchesRoleId to public *, public *<T>;
+    }
+
+    spec schema ValidatorOperatorRoleMatchesRoleId {
+        invariant module forall addr: address where exists<Privilege<ValidatorOperatorRole>>(addr):
+             spec_has_role_id(addr)
+                && (spec_get_role_id(addr) == SPEC_VALIDATOR_OPERATOR_ROLE_ID());
+
+        invariant module forall addr: address where spec_has_role_id(addr):
+            (spec_get_role_id(addr) == SPEC_VALIDATOR_OPERATOR_ROLE_ID())
+                ==> exists<Privilege<ValidatorOperatorRole>>(addr);
+    }
+    spec module {
+        apply ValidatorOperatorRoleMatchesRoleId to public *, public *<T>;
+    }
+
+    spec schema ParentVASPRoleMatchesRoleId {
+        invariant module forall addr: address where exists<Privilege<ParentVASPRole>>(addr):
+             spec_has_role_id(addr)
+                && (spec_get_role_id(addr) == SPEC_PARENT_VASP_ROLE_ID());
+
+        invariant module forall addr: address where spec_has_role_id(addr):
+            (spec_get_role_id(addr) == SPEC_PARENT_VASP_ROLE_ID())
+                ==> exists<Privilege<ParentVASPRole>>(addr);
+    }
+    spec module {
+        apply ParentVASPRoleMatchesRoleId to public *, public *<T>;
+    }
+
+    spec schema ChildVASPRoleMatchesRoleId {
+        invariant module forall addr: address where exists<Privilege<ChildVASPRole>>(addr):
+             spec_has_role_id(addr)
+                && (spec_get_role_id(addr) == SPEC_CHILD_VASP_ROLE_ID());
+
+        invariant module forall addr: address where spec_has_role_id(addr):
+            (spec_get_role_id(addr) == SPEC_CHILD_VASP_ROLE_ID())
+                ==> exists<Privilege<ChildVASPRole>>(addr);
+    }
+    spec module {
+        apply ChildVASPRoleMatchesRoleId to public *, public *<T>;
+    }
+
+    spec schema UnhostedRoleMatchesRoleId {
+        invariant module forall addr: address where exists<Privilege<UnhostedRole>>(addr):
+             spec_has_role_id(addr)
+                && (spec_get_role_id(addr) == SPEC_UNHOSTED_ROLE_ID());
+
+        invariant module forall addr: address where spec_has_role_id(addr):
+            (spec_get_role_id(addr) == SPEC_UNHOSTED_ROLE_ID())
+                ==> exists<Privilege<UnhostedRole>>(addr);
+    }
+    spec module {
+        apply UnhostedRoleMatchesRoleId to public *, public *<T>;
+    }
+
+    /// ## Role persistence
 
     /// **Informally:** Once an account at address `A` is granted a role `R` it
     /// will remain an account with role `R` for all time.
@@ -395,47 +554,64 @@ module Roles {
         apply RoleIdPersists to *<T>, *;
     }
 
-    /// ## Role-specific privileges
+    /// ## Privilege extraction
 
-    spec schema AssociationRootRoleMatchesRoleId {
-        /// **Informally:** Each address has a RoleID iff the address has a privilege that
-        /// matches the role_id field of the RoleId.
-        ///
-        /// >TODO BUG (dd): The Prover finds many false errors for the following because
-        /// the Prover thinks many add_privilege_* functions can store *any* privilege,
-        /// including the AssociationRootRole, on addresses that don't have the
-        /// association root RootId.  This false error is due to a limitation of
-        /// the Move Prover. In reality, the add_privilege_* functions cannot
-        /// be called with an AssociationRootRole argument, because no instances
-        /// of AssociationRootRole can be accessed by another module (and, of course,
-        /// add_privilege_* functions are not called in a way that violates the
-        /// property in this module.
-        ///
-        // invariant forall addr: address where spec_has_role_id(addr):
-        //     exists<Privilege<AssociationRootRole>>(addr)
-        //     ==> (spec_get_role_id(addr) == SPEC_ASSOCIATION_ROOT_ROLE_ID());
+/// >TODO: This has not been proved yet and may be wrong, or need further
+/// strengthening.  Or, it may just be too hard for the prover.
+/// The capability returned from extract_privilege_to_capability is free-floating,
+/// so we have to quantify over members of the type, not over addresses or something.
 
-        invariant module forall addr: address where spec_has_role_id(addr):
-            (spec_get_role_id(addr) == SPEC_ASSOCIATION_ROOT_ROLE_ID())
-            ==> exists<Privilege<AssociationRootRole>>(addr);
+    spec schema IsExtractedIffCapabilityExists {
+        /// **Informally:** No capabilities for a privilege witness at a given
+        /// address exist until the privilege exists.
+        /// > NOTE: This verifies by itself when applied to everything.
+        invariant forall priv: type, addr: address where !exists<Privilege<priv>>(addr):
+            !(exists c: Capability<priv>: c.owner_address == addr);
+
+        // Without additional properties, this appears to be violated by
+        // restore_capability because the prover thinks
+        // there could be >1 capability when is_extracted == true.  restore_capability
+        // destroys one capability, but it doesn't know that it destroyed the ONLY one.
+        // Proof sketch of the following: If there are no capabilities, it holds vacuously.
+        // When we create one capability (with no capabilities is precondition),
+        // it holds (not sure how prover knows).
+        // We can't create any more capabilities until that is destroyed.
+        // **Informally:** for each type `priv` and address `addr`,
+        // there is at most one instance of Capability<priv>{ owner_address: addr}
+        //
+        // > NOTE: This verifies when applied to extract_privilege_to_capability,
+        // and might verify when applied to everything.
+        // invariant
+        //     forall priv: type, addr: address where exists<Privilege<priv>>(addr):
+        //         forall c1: Capability<priv>, c2: Capability<priv>
+        //             where c1.owner_address == c2.owner_address:
+        //                 c1 == c2;
+
+        // **Informally:** For every address that has a privilege with witness Priv,
+        // if the `is_extracted` field of the privilege is true, then there is a
+        // capability for that privilege whose `owner_address` field is address.
+        //
+        // > NOTE: This verifies when applied to extract_privilege_to_capability,
+        // and might verify when applied to everything.
+        // invariant module
+        //      forall priv: type, addr: address where exists<Privilege<priv>>(addr):
+        //          !global<Privilege<priv>>(addr).is_extracted
+        //              ==> !(exists c: Capability<priv>: c.owner_address == addr);
+
+        // **Informally:** For every address that has a privilege with witness Priv,
+        // if the `is_extracted` field of the privilege is true, then there is a
+        // capability for that privilege whose `owner_address` field is address.
+        //
+        // > TODO: This property causes the prover to hang, even when applied to
+        // just one function.  Perhaps the proeprty is wrong.
+        // invariant module
+        //     forall priv: type, addr: address where exists<Privilege<priv>>(addr):
+        //         global<Privilege<priv>>(addr).is_extracted
+        //              ==> (exists c: Capability<priv>: c.owner_address == addr);
     }
     spec module {
-        apply AssociationRootRoleMatchesRoleId to public *<T>, *;
-    }
-
-    /// **Informally:** Every address that has the treasury compliance
-    /// role ID also has a treasury compliance privilege.
-    ///
-    /// > TODO (dd): Need to add the converse, but that will have the
-    /// same problem as AssociationRootRoleMatchesRoleId due to prover
-    /// limitation.
-    spec schema TreasuryComplianceRoleMatchesRoleId {
-        invariant module forall addr: address where spec_has_role_id(addr):
-            (spec_get_role_id(addr) == SPEC_TREASURY_COMPLIANCE_ROLE_ID())
-             ==> exists<Privilege<TreasuryComplianceRole>>(addr);
-    }
-    spec module {
-        apply TreasuryComplianceRoleMatchesRoleId to *<T>, *;
+        apply IsExtractedIffCapabilityExists to *<T>, *;
+    //        apply IsExtractedIffCapabilityExists to extract_privilege_to_capability<Priv>;
     }
 
     // TODO: Role is supposed to be set by end of genesis?
@@ -444,7 +620,6 @@ module Roles {
 
     // ## Capabilities
     //
-    // TODO: Capability is stored a owner_address unless is_extract == true??
     // TODO: Capability always returned to owner_address
 
 }
