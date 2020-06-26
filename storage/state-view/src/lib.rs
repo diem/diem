@@ -13,7 +13,7 @@ use libra_types::{access_path::AccessPath, transaction::Version};
 /// the VM for transaction execution, during which the VM is guaranteed to read anything at the
 /// given state.
 pub trait StateView {
-    /// For logging and debugging purpose, identifies what's this view is for.
+    /// For logging and debugging purpose, identifies what this view is for.
     fn id(&self) -> StateViewId {
         StateViewId::Miscellaneous
     }

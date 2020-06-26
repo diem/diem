@@ -26,7 +26,7 @@ use std::{
 /// `VerifiedStateView` is like a snapshot of the global state comprised of state view at two
 /// levels, persistent storage and memory.
 pub struct VerifiedStateView<'a> {
-    /// For logging and debugging purpose, identifies what's this view is for.
+    /// For logging and debugging purpose, identifies what this view is for.
     id: StateViewId,
 
     /// A gateway implementing persistent storage interface, which can be a RPC client or direct
