@@ -2345,6 +2345,7 @@ name = "libra-canonical-serialization"
 version = "0.1.0"
 dependencies = [
  "criterion 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libra-crypto 0.1.0",
  "libra-workspace-hack 0.1.0",
  "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
