@@ -13,10 +13,10 @@ mod validator_config;
 mod verify;
 mod waypoint;
 
-#[cfg(any(test, feature = "testing"))]
-pub mod config_builder;
+#[cfg(test)]
+mod smoke_test;
 
-#[cfg(any(test, feature = "testing"))]
+#[cfg(test)]
 mod storage_helper;
 
 use crate::{error::Error, layout::SetLayout, secure_backend::SecureBackend};
