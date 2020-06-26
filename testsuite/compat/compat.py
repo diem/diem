@@ -20,8 +20,9 @@ from pyhelpers.aws import (
     update_service_task_def,
     register_task_def_update,
     update_service_force,
+    batch_image_exists,
 )
-from pyhelpers.git import latest_branch_tag, prev_tag
+from pyhelpers.git import latest_testnet_tag, prev_tag
 from compat_helpers import (
     get_task_defs,
     update_task_def_image_tags,
@@ -31,8 +32,8 @@ from compat_helpers import (
 )
 
 # TODO: currently unsed, https://github.com/libra/libra/issues/4765
-NUM_VALIDATORS = int(os.getenv("TESTNET_COMPATIBLE", 1))
-NUM_FULLNODES = int(os.getenv("PREV_COMPATIBLE", 1))
+TESTNET_COMPATIBLE = int(os.getenv("TESTNET_COMPATIBLE", 1))
+PREV_COMPATIBLE = int(os.getenv("PREV_COMPATIBLE", 1))
 ECS_POOL_SIZE = int(os.getenv("ECS_POOL_SIZE", 1))
 
 
@@ -108,16 +109,25 @@ if COMMAND == "admin":
 
 
 print("Starting compat test with the following configuration:")
-print(f"\tNUM_VALIDATORS={NUM_VALIDATORS}")
-print(f"\tNUM_FULLNODES={NUM_FULLNODES}")
+print(f"\tTESTNET_COMPATIBLE={TESTNET_COMPATIBLE}")
+print(f"\tPREV_COMPATIBLE={PREV_COMPATIBLE}")
 print(f"\tECS_POOL_SIZE={ECS_POOL_SIZE}")
 
 # get the right tags for testing
 TEST_TAG = args.tag
 if TEST_MODE == "testnet":
-    ALT_TEST_TAG = latest_branch_tag("testnet")
+    ALT_TEST_TAG = latest_testnet_tag()
 else:
     ALT_TEST_TAG = args.alt_tag
+
+if not all(
+    [
+        batch_image_exists("libra_validator", [TEST_TAG, ALT_TEST_TAG]),
+        batch_image_exists("libra_safety_rules", [TEST_TAG, ALT_TEST_TAG]),
+    ]
+):
+    print("Missing images, exiting...")
+    sys.exit(1)
 
 if args.workspace:
     WORKSPACE = args.workspace
