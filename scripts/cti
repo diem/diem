@@ -12,6 +12,8 @@ WORKSPACE=""
 ENV=""
 REPORT=""
 EXIT_CODE=0
+# Default timeout is 30 mins
+TIMEOUT_SECS=1800
 
 K8S_CONTEXT_PATTERN='arn:aws:eks:us-west-2:853397791086:cluster/CLUSTERNAME-k8s-testnet'
 
@@ -115,7 +117,7 @@ kube_wait_pod () {
       echo "${pod_name} reached phase : ${phase}"
       return
     fi
-    if kubectl --context="${context}" get pod "${pod_name}" | grep -i -e ImagePullBackOff -e ErrImagePull &>/dev/null; then
+    if kubectl --context="${context}" get pod "${pod_name}" | grep -i -e ImagePullBackOff -e InvalidImageName -e ErrImagePull &>/dev/null; then
       image_name=$(kubectl --context="${context}" get pod "${pod_name}" -o jsonpath="{.spec.containers[0].image}")
       echo "${pod_name} name failed to be scheduled because there was an error pulling the image : ${image_name}"
       # Delete the pod so that it doesn't block other pods from being scheduled on this
@@ -137,6 +139,10 @@ while (( "$#" )); do
       ;;
     -p|--pr)
       PR=$2
+      shift 2
+      ;;
+    --timeout-secs)
+      TIMEOUT_SECS=$2
       shift 2
       ;;
     -M|--master)
@@ -177,11 +183,12 @@ if [ -z "$PR" ] && [ -z "$TAG" ]
 then
       echo "No PR or tag specified"
       echo "Usage:"
-      echo "cti [--pr <PR>|--master|--tag <TAG>] [--workspace <WORKSPACE>] [-E <env>] <cluster test arguments>"
+      echo "cti [--pr <PR>|--master|--tag <TAG>] [--workspace <WORKSPACE>] [-E <env>] [--timeout-secs <timeout_in_seconds>] <cluster test arguments>"
       echo
       echo "--pr <PR>: Build image from pull request #<PR>"
       echo "-M|--master: Use latest image available in CI"
       echo "-T|--tag <TAG>: Use image with tag TAG"
+      echo "--timeout-secs: Timeout in seconds"
       echo "--cluster-test-tag <TAG>: Use this tag for cluster test"
       echo "-W|--workspace <WORKSPACE>: Use custom workplace <WORKSPACE>"
       echo "-E|--env <ENV>: Set environment variable, ex. -E RUST_LOG=debug. Can be repeated, e.g. -E A=B -E C=D"
@@ -223,6 +230,7 @@ join_env_vars $ENV
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 sed -e "s/{pod_name}/${pod_name}/g" \
     -e "s/{image_tag}/${VALIDATOR_TAG}/g" \
+    -e "s/{timeout_secs}/${TIMEOUT_SECS}/g" \
     -e "s/{cluster_test_image_tag}/${CLUSTER_TEST_TAG}/g" \
     -e "s^{env_variables}^${retval_join_env_vars}^g" \
     -e "s+{extra_args}+${retval_join_args}+g" \

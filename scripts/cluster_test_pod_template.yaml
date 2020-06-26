@@ -18,7 +18,7 @@ spec:
     image: 853397791086.dkr.ecr.us-west-2.amazonaws.com/libra_cluster_test:{cluster_test_image_tag}
     imagePullPolicy: Always
     env: [{env_variables}]
-    command: [cluster-test, --deploy={image_tag} {extra_args}]
+    command: [timeout, "{timeout_secs}", cluster-test, --deploy={image_tag} {extra_args}]
   affinity:
     podAntiAffinity:
       requiredDuringSchedulingIgnoredDuringExecution:
