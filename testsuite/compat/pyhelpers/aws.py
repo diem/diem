@@ -99,3 +99,28 @@ def register_task_def_update(family: str, task_def_obj: dict) -> str:
     print(f"Updated task definition {family} to revision {rev}")
 
     return rev
+
+
+def batch_image_exists(repository_name: str, image_tags: list) -> bool:
+    image_tags_strs = [f"imageTag={tag}" for tag in image_tags]
+    get_image_output = execute_cmd_with_json_output(
+        [
+            "aws",
+            "ecr",
+            "batch-get-image",
+            "--repository-name",
+            repository_name,
+            "--image-ids",
+        ]
+        + image_tags_strs,
+        err=f"Error fetching {repository_name}:{image_tags}",
+    )
+    if not get_image_output:
+        return False
+    failures = get_image_output.get("failures")
+    if len(failures) > 0:
+        fail_tags = [fail.get("imageId").get("imageTag") for fail in failures]
+        print(f"Image fetch failures {repository_name}:{fail_tags}")
+        return False
+
+    return True
