@@ -1815,6 +1815,88 @@
 <span id="1815">1815</span>
 <span id="1816">1816</span>
 <span id="1817">1817</span>
+<span id="1818">1818</span>
+<span id="1819">1819</span>
+<span id="1820">1820</span>
+<span id="1821">1821</span>
+<span id="1822">1822</span>
+<span id="1823">1823</span>
+<span id="1824">1824</span>
+<span id="1825">1825</span>
+<span id="1826">1826</span>
+<span id="1827">1827</span>
+<span id="1828">1828</span>
+<span id="1829">1829</span>
+<span id="1830">1830</span>
+<span id="1831">1831</span>
+<span id="1832">1832</span>
+<span id="1833">1833</span>
+<span id="1834">1834</span>
+<span id="1835">1835</span>
+<span id="1836">1836</span>
+<span id="1837">1837</span>
+<span id="1838">1838</span>
+<span id="1839">1839</span>
+<span id="1840">1840</span>
+<span id="1841">1841</span>
+<span id="1842">1842</span>
+<span id="1843">1843</span>
+<span id="1844">1844</span>
+<span id="1845">1845</span>
+<span id="1846">1846</span>
+<span id="1847">1847</span>
+<span id="1848">1848</span>
+<span id="1849">1849</span>
+<span id="1850">1850</span>
+<span id="1851">1851</span>
+<span id="1852">1852</span>
+<span id="1853">1853</span>
+<span id="1854">1854</span>
+<span id="1855">1855</span>
+<span id="1856">1856</span>
+<span id="1857">1857</span>
+<span id="1858">1858</span>
+<span id="1859">1859</span>
+<span id="1860">1860</span>
+<span id="1861">1861</span>
+<span id="1862">1862</span>
+<span id="1863">1863</span>
+<span id="1864">1864</span>
+<span id="1865">1865</span>
+<span id="1866">1866</span>
+<span id="1867">1867</span>
+<span id="1868">1868</span>
+<span id="1869">1869</span>
+<span id="1870">1870</span>
+<span id="1871">1871</span>
+<span id="1872">1872</span>
+<span id="1873">1873</span>
+<span id="1874">1874</span>
+<span id="1875">1875</span>
+<span id="1876">1876</span>
+<span id="1877">1877</span>
+<span id="1878">1878</span>
+<span id="1879">1879</span>
+<span id="1880">1880</span>
+<span id="1881">1881</span>
+<span id="1882">1882</span>
+<span id="1883">1883</span>
+<span id="1884">1884</span>
+<span id="1885">1885</span>
+<span id="1886">1886</span>
+<span id="1887">1887</span>
+<span id="1888">1888</span>
+<span id="1889">1889</span>
+<span id="1890">1890</span>
+<span id="1891">1891</span>
+<span id="1892">1892</span>
+<span id="1893">1893</span>
+<span id="1894">1894</span>
+<span id="1895">1895</span>
+<span id="1896">1896</span>
+<span id="1897">1897</span>
+<span id="1898">1898</span>
+<span id="1899">1899</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2578,11 +2660,155 @@
     <span class="ident">es</span>.<span class="ident">into_iter</span>().<span class="ident">map</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="ident">exp_</span>(<span class="ident">context</span>, <span class="ident">e</span>)).<span class="ident">collect</span>()
 }
 
-<span class="kw">fn</span> <span class="ident">exp</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">ne</span>: <span class="ident">N</span>::<span class="ident">Exp</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>::<span class="ident">Exp</span><span class="op">&gt;</span> {
-    <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">exp_</span>(<span class="ident">context</span>, <span class="ident">ne</span>))
+<span class="kw">fn</span> <span class="ident">exp</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">ne</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">N</span>::<span class="ident">Exp</span><span class="op">&gt;</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>::<span class="ident">Exp</span><span class="op">&gt;</span> {
+    <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">exp_</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">ne</span>))
 }
 
-<span class="kw">fn</span> <span class="ident">exp_</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="ident">eloc</span>, <span class="ident">ne_</span>): <span class="ident">N</span>::<span class="ident">Exp</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Exp</span> {
+<span class="kw">fn</span> <span class="ident">exp_</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">initial_ne</span>: <span class="ident">N</span>::<span class="ident">Exp</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Exp</span> {
+    <span class="kw">use</span> <span class="ident">N</span>::<span class="ident">Exp_</span> <span class="kw">as</span> <span class="ident">NE</span>;
+    <span class="kw">use</span> <span class="ident">T</span>::<span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">TE</span>;
+    <span class="kw">struct</span> <span class="ident">Stack</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+        <span class="ident">frames</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">FnOnce</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span>)<span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">operands</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">T</span>::<span class="ident">Exp</span><span class="op">&gt;</span>,
+        <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">Context</span>,
+    }
+    <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">inner</span> {
+        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {{
+            <span class="kw">move</span> <span class="op">|</span><span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Stack</span><span class="op">|</span> <span class="ident">exp_loop</span>(<span class="ident">s</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>)
+        }};
+    }
+    <span class="kw">fn</span> <span class="ident">exp_loop</span>(<span class="ident">stack</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Stack</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">cur_</span>): <span class="ident">N</span>::<span class="ident">Exp</span>) {
+        <span class="kw">match</span> <span class="ident">cur_</span> {
+            <span class="ident">NE</span>::<span class="ident">BinopExp</span>(<span class="ident">nlhs</span>, <span class="ident">bop</span>, <span class="ident">nrhs</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">f_lhs</span> <span class="op">=</span> <span class="macro">inner</span><span class="macro">!</span>(<span class="kw-2">*</span><span class="ident">nlhs</span>);
+                <span class="kw">let</span> <span class="ident">f_rhs</span> <span class="op">=</span> <span class="macro">inner</span><span class="macro">!</span>(<span class="kw-2">*</span><span class="ident">nrhs</span>);
+                <span class="kw">let</span> <span class="ident">f_binop</span> <span class="op">=</span> <span class="kw">move</span> <span class="op">|</span><span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Stack</span><span class="op">|</span> {
+                    <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">s</span>.<span class="ident">operands</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>());
+                    <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">s</span>.<span class="ident">operands</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>());
+                    <span class="kw">use</span> <span class="ident">BinOp_</span>::<span class="kw-2">*</span>;
+                    <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Incompatible arguments to &#39;{}&#39;&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">bop</span>);
+                    <span class="kw">let</span> <span class="ident">context</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">s</span>.<span class="ident">context</span>;
+                    <span class="kw">let</span> (<span class="ident">ty</span>, <span class="ident">operand_ty</span>) <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">bop</span>.<span class="ident">value</span> {
+                        <span class="ident">Sub</span> <span class="op">|</span> <span class="ident">Add</span> <span class="op">|</span> <span class="ident">Mul</span> <span class="op">|</span> <span class="ident">Mod</span> <span class="op">|</span> <span class="ident">Div</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="comment">// TODO after typing refactor, just add to operand ty</span>
+                            <span class="ident">context</span>.<span class="ident">add_numeric_constraint</span>(
+                                <span class="ident">el</span>.<span class="ident">exp</span>.<span class="ident">loc</span>,
+                                <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(),
+                                <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(),
+                            );
+                            <span class="ident">context</span>.<span class="ident">add_numeric_constraint</span>(
+                                <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>,
+                                <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(),
+                                <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(),
+                            );
+                            <span class="kw">let</span> <span class="ident">operand_ty</span> <span class="op">=</span>
+                                <span class="ident">join</span>(<span class="ident">context</span>, <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
+                            (<span class="ident">operand_ty</span>.<span class="ident">clone</span>(), <span class="ident">operand_ty</span>)
+                        }
+
+                        <span class="ident">BitOr</span> <span class="op">|</span> <span class="ident">BitAnd</span> <span class="op">|</span> <span class="ident">Xor</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="comment">// TODO after typing refactor, just add to operand ty</span>
+                            <span class="ident">context</span>.<span class="ident">add_bits_constraint</span>(
+                                <span class="ident">el</span>.<span class="ident">exp</span>.<span class="ident">loc</span>,
+                                <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(),
+                                <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(),
+                            );
+                            <span class="ident">context</span>.<span class="ident">add_bits_constraint</span>(
+                                <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>,
+                                <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(),
+                                <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(),
+                            );
+                            <span class="kw">let</span> <span class="ident">operand_ty</span> <span class="op">=</span>
+                                <span class="ident">join</span>(<span class="ident">context</span>, <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
+                            <span class="ident">context</span>.<span class="ident">add_bits_constraint</span>(
+                                <span class="ident">loc</span>,
+                                <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(),
+                                <span class="ident">operand_ty</span>.<span class="ident">clone</span>(),
+                            );
+                            (<span class="ident">operand_ty</span>.<span class="ident">clone</span>(), <span class="ident">operand_ty</span>)
+                        }
+
+                        <span class="ident">Shl</span> <span class="op">|</span> <span class="ident">Shr</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid argument to &#39;{}&#39;&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">bop</span>);
+                            <span class="kw">let</span> <span class="ident">u8ty</span> <span class="op">=</span> <span class="ident">Type_</span>::<span class="ident">u8</span>(<span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>);
+                            <span class="ident">context</span>.<span class="ident">add_bits_constraint</span>(
+                                <span class="ident">el</span>.<span class="ident">exp</span>.<span class="ident">loc</span>,
+                                <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(),
+                                <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(),
+                            );
+                            <span class="ident">subtype</span>(<span class="ident">context</span>, <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">u8ty</span>);
+                            (<span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>())
+                        }
+
+                        <span class="ident">Lt</span> <span class="op">|</span> <span class="ident">Gt</span> <span class="op">|</span> <span class="ident">Le</span> <span class="op">|</span> <span class="ident">Ge</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="comment">// TODO after typing refactor, just add to operand ty</span>
+                            <span class="ident">context</span>.<span class="ident">add_ordered_constraint</span>(
+                                <span class="ident">el</span>.<span class="ident">exp</span>.<span class="ident">loc</span>,
+                                <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(),
+                                <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(),
+                            );
+                            <span class="ident">context</span>.<span class="ident">add_ordered_constraint</span>(
+                                <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>,
+                                <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(),
+                                <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(),
+                            );
+                            <span class="kw">let</span> <span class="ident">operand_ty</span> <span class="op">=</span>
+                                <span class="ident">join</span>(<span class="ident">context</span>, <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
+                            (<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">loc</span>), <span class="ident">operand_ty</span>)
+                        }
+
+                        <span class="ident">Eq</span> <span class="op">|</span> <span class="ident">Neq</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">join</span>(<span class="ident">context</span>, <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
+                            <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid arguments to &#39;{}&#39;&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">bop</span>);
+                            <span class="ident">context</span>.<span class="ident">add_single_type_constraint</span>(<span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">ty</span>.<span class="ident">clone</span>());
+                            <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
+                            <span class="string">&quot;Cannot use &#39;{}&#39; on resource values. This would destroy the resource. Try \
+                             borrowing the values with &#39;&amp;&#39; first.&#39;&quot;</span>,
+                            <span class="kw-2">&amp;</span><span class="ident">bop</span>
+                        );
+                            <span class="ident">context</span>.<span class="ident">add_copyable_constraint</span>(<span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">ty</span>.<span class="ident">clone</span>());
+                            (<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">loc</span>), <span class="ident">ty</span>)
+                        }
+
+                        <span class="ident">And</span> <span class="op">|</span> <span class="ident">Or</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="kw">let</span> <span class="ident">lloc</span> <span class="op">=</span> <span class="ident">el</span>.<span class="ident">exp</span>.<span class="ident">loc</span>;
+                            <span class="ident">subtype</span>(<span class="ident">context</span>, <span class="ident">lloc</span>, <span class="ident">msg</span>, <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">lloc</span>));
+                            <span class="kw">let</span> <span class="ident">rloc</span> <span class="op">=</span> <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>;
+                            <span class="ident">subtype</span>(<span class="ident">context</span>, <span class="ident">rloc</span>, <span class="ident">msg</span>, <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">lloc</span>));
+                            (<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">loc</span>), <span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">loc</span>))
+                        }
+
+                        <span class="ident">Range</span> <span class="op">|</span> <span class="ident">Implies</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;specification operator unexpected&quot;</span>),
+                    };
+                    <span class="kw">let</span> <span class="ident">binop</span> <span class="op">=</span>
+                        <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">ty</span>, <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">TE</span>::<span class="ident">BinopExp</span>(<span class="ident">el</span>, <span class="ident">bop</span>, <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">operand_ty</span>), <span class="ident">er</span>)));
+                    <span class="ident">s</span>.<span class="ident">operands</span>.<span class="ident">push</span>(<span class="ident">binop</span>)
+                };
+
+                <span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">push</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">f_binop</span>));
+                <span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">push</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">f_rhs</span>));
+                <span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">push</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">f_lhs</span>));
+            }
+            <span class="ident">cur_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">stack</span>.<span class="ident">operands</span>.<span class="ident">push</span>(<span class="ident">exp_inner</span>(<span class="ident">stack</span>.<span class="ident">context</span>, <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">cur_</span>))),
+        }
+    }
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stack</span> <span class="op">=</span> <span class="ident">Stack</span> {
+        <span class="ident">frames</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+        <span class="ident">operands</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+        <span class="ident">context</span>,
+    };
+    <span class="ident">exp_loop</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">stack</span>, <span class="ident">initial_ne</span>);
+    <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">f</span>) <span class="op">=</span> <span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">pop</span>() {
+        <span class="ident">f</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">stack</span>)
+    }
+    <span class="kw">let</span> <span class="ident">e_res</span> <span class="op">=</span> <span class="ident">stack</span>.<span class="ident">operands</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">is_empty</span>());
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">stack</span>.<span class="ident">operands</span>.<span class="ident">is_empty</span>());
+    <span class="ident">e_res</span>
+}
+
+<span class="kw">fn</span> <span class="ident">exp_inner</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="ident">eloc</span>, <span class="ident">ne_</span>): <span class="ident">N</span>::<span class="ident">Exp</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">T</span>::<span class="ident">Exp</span> {
     <span class="kw">use</span> <span class="ident">N</span>::<span class="ident">Exp_</span> <span class="kw">as</span> <span class="ident">NE</span>;
     <span class="kw">use</span> <span class="ident">T</span>::<span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">TE</span>;
     <span class="kw">let</span> (<span class="ident">ty</span>, <span class="ident">e_</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">ne_</span> {
@@ -2625,7 +2851,7 @@
         }
 
         <span class="ident">NE</span>::<span class="ident">IfElse</span>(<span class="ident">nb</span>, <span class="ident">nt</span>, <span class="ident">nf</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">eb</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nb</span>);
+            <span class="kw">let</span> <span class="ident">eb</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nb</span>);
             <span class="kw">let</span> <span class="ident">bloc</span> <span class="op">=</span> <span class="ident">eb</span>.<span class="ident">exp</span>.<span class="ident">loc</span>;
             <span class="ident">subtype</span>(
                 <span class="ident">context</span>,
@@ -2634,8 +2860,8 @@
                 <span class="ident">eb</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(),
                 <span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">bloc</span>),
             );
-            <span class="kw">let</span> <span class="ident">et</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nt</span>);
-            <span class="kw">let</span> <span class="ident">ef</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nf</span>);
+            <span class="kw">let</span> <span class="ident">et</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nt</span>);
+            <span class="kw">let</span> <span class="ident">ef</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nf</span>);
             <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">join</span>(
                 <span class="ident">context</span>,
                 <span class="ident">eloc</span>,
@@ -2646,7 +2872,7 @@
             (<span class="ident">ty</span>, <span class="ident">TE</span>::<span class="ident">IfElse</span>(<span class="ident">eb</span>, <span class="ident">et</span>, <span class="ident">ef</span>))
         }
         <span class="ident">NE</span>::<span class="ident">While</span>(<span class="ident">nb</span>, <span class="ident">nloop</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">eb</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nb</span>);
+            <span class="kw">let</span> <span class="ident">eb</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nb</span>);
             <span class="kw">let</span> <span class="ident">bloc</span> <span class="op">=</span> <span class="ident">eb</span>.<span class="ident">exp</span>.<span class="ident">loc</span>;
             <span class="ident">subtype</span>(
                 <span class="ident">context</span>,
@@ -2655,11 +2881,11 @@
                 <span class="ident">eb</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(),
                 <span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">bloc</span>),
             );
-            <span class="kw">let</span> (<span class="ident">_has_break</span>, <span class="ident">ty</span>, <span class="ident">body</span>) <span class="op">=</span> <span class="ident">loop_body</span>(<span class="ident">context</span>, <span class="ident">eloc</span>, <span class="bool-val">false</span>, <span class="kw-2">*</span><span class="ident">nloop</span>);
+            <span class="kw">let</span> (<span class="ident">_has_break</span>, <span class="ident">ty</span>, <span class="ident">body</span>) <span class="op">=</span> <span class="ident">loop_body</span>(<span class="ident">context</span>, <span class="ident">eloc</span>, <span class="bool-val">false</span>, <span class="ident">nloop</span>);
             (<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">ty</span>.<span class="ident">value</span>), <span class="ident">TE</span>::<span class="ident">While</span>(<span class="ident">eb</span>, <span class="ident">body</span>))
         }
         <span class="ident">NE</span>::<span class="ident">Loop</span>(<span class="ident">nloop</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> (<span class="ident">has_break</span>, <span class="ident">ty</span>, <span class="ident">body</span>) <span class="op">=</span> <span class="ident">loop_body</span>(<span class="ident">context</span>, <span class="ident">eloc</span>, <span class="bool-val">true</span>, <span class="kw-2">*</span><span class="ident">nloop</span>);
+            <span class="kw">let</span> (<span class="ident">has_break</span>, <span class="ident">ty</span>, <span class="ident">body</span>) <span class="op">=</span> <span class="ident">loop_body</span>(<span class="ident">context</span>, <span class="ident">eloc</span>, <span class="bool-val">true</span>, <span class="ident">nloop</span>);
             <span class="kw">let</span> <span class="ident">eloop</span> <span class="op">=</span> <span class="ident">TE</span>::<span class="ident">Loop</span> { <span class="ident">has_break</span>, <span class="ident">body</span> };
             (<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">ty</span>.<span class="ident">value</span>), <span class="ident">eloop</span>)
         }
@@ -2669,22 +2895,22 @@
         }
 
         <span class="ident">NE</span>::<span class="ident">Assign</span>(<span class="ident">na</span>, <span class="ident">nr</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nr</span>);
+            <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nr</span>);
             <span class="kw">let</span> <span class="ident">a</span> <span class="op">=</span> <span class="ident">assign_list</span>(<span class="ident">context</span>, <span class="ident">na</span>, <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
             <span class="kw">let</span> <span class="ident">lvalue_ty</span> <span class="op">=</span> <span class="ident">lvalues_expected_types</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="ident">a</span>);
             (<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">Type_</span>::<span class="ident">Unit</span>), <span class="ident">TE</span>::<span class="ident">Assign</span>(<span class="ident">a</span>, <span class="ident">lvalue_ty</span>, <span class="ident">er</span>))
         }
 
         <span class="ident">NE</span>::<span class="ident">Mutate</span>(<span class="ident">nl</span>, <span class="ident">nr</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nl</span>);
-            <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nr</span>);
+            <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nl</span>);
+            <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nr</span>);
             <span class="ident">check_mutation</span>(<span class="ident">context</span>, <span class="ident">el</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">er</span>.<span class="ident">ty</span>);
             (<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">Type_</span>::<span class="ident">Unit</span>), <span class="ident">TE</span>::<span class="ident">Mutate</span>(<span class="ident">el</span>, <span class="ident">er</span>))
         }
 
         <span class="ident">NE</span>::<span class="ident">FieldMutate</span>(<span class="ident">ndotted</span>, <span class="ident">nr</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">lhsloc</span> <span class="op">=</span> <span class="ident">ndotted</span>.<span class="ident">loc</span>;
-            <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nr</span>);
+            <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nr</span>);
             <span class="kw">let</span> (<span class="ident">edotted</span>, <span class="kw">_</span>) <span class="op">=</span> <span class="ident">exp_dotted</span>(<span class="ident">context</span>, <span class="string">&quot;mutation&quot;</span>, <span class="ident">ndotted</span>);
             <span class="kw">let</span> <span class="ident">eborrow</span> <span class="op">=</span> <span class="ident">exp_dotted_to_borrow</span>(<span class="ident">context</span>, <span class="ident">lhsloc</span>, <span class="bool-val">true</span>, <span class="ident">edotted</span>);
             <span class="ident">check_mutation</span>(<span class="ident">context</span>, <span class="ident">eborrow</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">eborrow</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="kw-2">&amp;</span><span class="ident">er</span>.<span class="ident">ty</span>);
@@ -2692,13 +2918,13 @@
         }
 
         <span class="ident">NE</span>::<span class="ident">Return</span>(<span class="ident">nret</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">eret</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nret</span>);
+            <span class="kw">let</span> <span class="ident">eret</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nret</span>);
             <span class="kw">let</span> <span class="ident">ret_ty</span> <span class="op">=</span> <span class="ident">context</span>.<span class="ident">return_type</span>.<span class="ident">clone</span>().<span class="ident">unwrap</span>();
             <span class="ident">subtype</span>(<span class="ident">context</span>, <span class="ident">eloc</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;Invalid return&quot;</span>, <span class="ident">eret</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">ret_ty</span>);
             (<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">Type_</span>::<span class="ident">Anything</span>), <span class="ident">TE</span>::<span class="ident">Return</span>(<span class="ident">eret</span>))
         }
         <span class="ident">NE</span>::<span class="ident">Abort</span>(<span class="ident">ncode</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">ecode</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">ncode</span>);
+            <span class="kw">let</span> <span class="ident">ecode</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">ncode</span>);
             <span class="kw">let</span> <span class="ident">code_ty</span> <span class="op">=</span> <span class="ident">Type_</span>::<span class="ident">u64</span>(<span class="ident">eloc</span>);
             <span class="ident">subtype</span>(<span class="ident">context</span>, <span class="ident">eloc</span>, <span class="op">|</span><span class="op">|</span> <span class="string">&quot;Invalid abort&quot;</span>, <span class="ident">ecode</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">code_ty</span>);
             (<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">Type_</span>::<span class="ident">Anything</span>), <span class="ident">TE</span>::<span class="ident">Abort</span>(<span class="ident">ecode</span>))
@@ -2732,7 +2958,7 @@
         }
 
         <span class="ident">NE</span>::<span class="ident">Dereference</span>(<span class="ident">nref</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">eref</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nref</span>);
+            <span class="kw">let</span> <span class="ident">eref</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nref</span>);
             <span class="kw">let</span> <span class="ident">inner</span> <span class="op">=</span> <span class="ident">core</span>::<span class="ident">make_tvar</span>(<span class="ident">context</span>, <span class="ident">eloc</span>);
             <span class="kw">let</span> <span class="ident">ref_ty</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">Type_</span>::<span class="ident">Ref</span>(<span class="bool-val">false</span>, <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">inner</span>.<span class="ident">clone</span>())));
             <span class="ident">subtype</span>(
@@ -2752,7 +2978,7 @@
         <span class="ident">NE</span>::<span class="ident">UnaryExp</span>(<span class="ident">uop</span>, <span class="ident">nr</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">use</span> <span class="ident">UnaryOp_</span>::<span class="kw-2">*</span>;
             <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid argument to &#39;{}&#39;&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">uop</span>);
-            <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nr</span>);
+            <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nr</span>);
             <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">uop</span>.<span class="ident">value</span> {
                 <span class="ident">Not</span> <span class="op">=</span><span class="op">&gt;</span> {
                     <span class="kw">let</span> <span class="ident">rloc</span> <span class="op">=</span> <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>;
@@ -2761,70 +2987,6 @@
                 }
             };
             (<span class="ident">ty</span>, <span class="ident">TE</span>::<span class="ident">UnaryExp</span>(<span class="ident">uop</span>, <span class="ident">er</span>))
-        }
-        <span class="ident">NE</span>::<span class="ident">BinopExp</span>(<span class="ident">nl</span>, <span class="ident">bop</span>, <span class="ident">nr</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">use</span> <span class="ident">BinOp_</span>::<span class="kw-2">*</span>;
-            <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Incompatible arguments to &#39;{}&#39;&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">bop</span>);
-            <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nl</span>);
-            <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nr</span>);
-            <span class="kw">let</span> (<span class="ident">ty</span>, <span class="ident">operand_ty</span>) <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">bop</span>.<span class="ident">value</span> {
-                <span class="ident">Sub</span> <span class="op">|</span> <span class="ident">Add</span> <span class="op">|</span> <span class="ident">Mul</span> <span class="op">|</span> <span class="ident">Mod</span> <span class="op">|</span> <span class="ident">Div</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="comment">// TODO after typing refactor, just add to operand ty</span>
-                    <span class="ident">context</span>.<span class="ident">add_numeric_constraint</span>(<span class="ident">el</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(), <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
-                    <span class="ident">context</span>.<span class="ident">add_numeric_constraint</span>(<span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(), <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
-                    <span class="kw">let</span> <span class="ident">operand_ty</span> <span class="op">=</span> <span class="ident">join</span>(<span class="ident">context</span>, <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
-                    (<span class="ident">operand_ty</span>.<span class="ident">clone</span>(), <span class="ident">operand_ty</span>)
-                }
-
-                <span class="ident">BitOr</span> <span class="op">|</span> <span class="ident">BitAnd</span> <span class="op">|</span> <span class="ident">Xor</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="comment">// TODO after typing refactor, just add to operand ty</span>
-                    <span class="ident">context</span>.<span class="ident">add_bits_constraint</span>(<span class="ident">el</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(), <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
-                    <span class="ident">context</span>.<span class="ident">add_bits_constraint</span>(<span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(), <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
-                    <span class="kw">let</span> <span class="ident">operand_ty</span> <span class="op">=</span> <span class="ident">join</span>(<span class="ident">context</span>, <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
-                    <span class="ident">context</span>.<span class="ident">add_bits_constraint</span>(<span class="ident">eloc</span>, <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(), <span class="ident">operand_ty</span>.<span class="ident">clone</span>());
-                    (<span class="ident">operand_ty</span>.<span class="ident">clone</span>(), <span class="ident">operand_ty</span>)
-                }
-
-                <span class="ident">Shl</span> <span class="op">|</span> <span class="ident">Shr</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="op">|</span><span class="op">|</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid argument to &#39;{}&#39;&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">bop</span>);
-                    <span class="kw">let</span> <span class="ident">u8ty</span> <span class="op">=</span> <span class="ident">Type_</span>::<span class="ident">u8</span>(<span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>);
-                    <span class="ident">context</span>.<span class="ident">add_bits_constraint</span>(<span class="ident">el</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(), <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
-                    <span class="ident">subtype</span>(<span class="ident">context</span>, <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">u8ty</span>);
-                    (<span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>())
-                }
-
-                <span class="ident">Lt</span> <span class="op">|</span> <span class="ident">Gt</span> <span class="op">|</span> <span class="ident">Le</span> <span class="op">|</span> <span class="ident">Ge</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="comment">// TODO after typing refactor, just add to operand ty</span>
-                    <span class="ident">context</span>.<span class="ident">add_ordered_constraint</span>(<span class="ident">el</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(), <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
-                    <span class="ident">context</span>.<span class="ident">add_ordered_constraint</span>(<span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">bop</span>.<span class="ident">value</span>.<span class="ident">symbol</span>(), <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
-                    <span class="kw">let</span> <span class="ident">operand_ty</span> <span class="op">=</span> <span class="ident">join</span>(<span class="ident">context</span>, <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
-                    (<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">eloc</span>), <span class="ident">operand_ty</span>)
-                }
-
-                <span class="ident">Eq</span> <span class="op">|</span> <span class="ident">Neq</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">join</span>(<span class="ident">context</span>, <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="ident">msg</span>, <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
-                    <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;Invalid arguments to &#39;{}&#39;&quot;</span>, <span class="kw-2">&amp;</span><span class="ident">bop</span>);
-                    <span class="ident">context</span>.<span class="ident">add_single_type_constraint</span>(<span class="ident">eloc</span>, <span class="ident">msg</span>, <span class="ident">ty</span>.<span class="ident">clone</span>());
-                    <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(
-                        <span class="string">&quot;Cannot use &#39;{}&#39; on resource values. This would destroy the resource. Try \
-                         borrowing the values with &#39;&amp;&#39; first.&#39;&quot;</span>,
-                        <span class="kw-2">&amp;</span><span class="ident">bop</span>
-                    );
-                    <span class="ident">context</span>.<span class="ident">add_copyable_constraint</span>(<span class="ident">eloc</span>, <span class="ident">msg</span>, <span class="ident">ty</span>.<span class="ident">clone</span>());
-                    (<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">eloc</span>), <span class="ident">ty</span>)
-                }
-
-                <span class="ident">And</span> <span class="op">|</span> <span class="ident">Or</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">lloc</span> <span class="op">=</span> <span class="ident">el</span>.<span class="ident">exp</span>.<span class="ident">loc</span>;
-                    <span class="ident">subtype</span>(<span class="ident">context</span>, <span class="ident">lloc</span>, <span class="ident">msg</span>, <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">lloc</span>));
-                    <span class="kw">let</span> <span class="ident">rloc</span> <span class="op">=</span> <span class="ident">er</span>.<span class="ident">exp</span>.<span class="ident">loc</span>;
-                    <span class="ident">subtype</span>(<span class="ident">context</span>, <span class="ident">rloc</span>, <span class="ident">msg</span>, <span class="ident">er</span>.<span class="ident">ty</span>.<span class="ident">clone</span>(), <span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">lloc</span>));
-                    (<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">eloc</span>), <span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">eloc</span>))
-                }
-
-                <span class="ident">Range</span> <span class="op">|</span> <span class="ident">Implies</span> <span class="op">=</span><span class="op">&gt;</span> <span class="macro">panic</span><span class="macro">!</span>(<span class="string">&quot;specification operator unexpected&quot;</span>),
-            };
-            (<span class="ident">ty</span>, <span class="ident">TE</span>::<span class="ident">BinopExp</span>(<span class="ident">el</span>, <span class="ident">bop</span>, <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">operand_ty</span>), <span class="ident">er</span>))
         }
 
         <span class="ident">NE</span>::<span class="ident">ExpList</span>(<span class="ident">nes</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -2905,7 +3067,7 @@
         }
 
         <span class="ident">NE</span>::<span class="ident">Cast</span>(<span class="ident">nl</span>, <span class="ident">ty</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nl</span>);
+            <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nl</span>);
             <span class="kw">let</span> <span class="ident">tyloc</span> <span class="op">=</span> <span class="ident">ty</span>.<span class="ident">loc</span>;
             <span class="kw">let</span> <span class="ident">rhs</span> <span class="op">=</span> <span class="ident">core</span>::<span class="ident">instantiate</span>(<span class="ident">context</span>, <span class="ident">ty</span>);
             <span class="ident">context</span>.<span class="ident">add_numeric_constraint</span>(<span class="ident">el</span>.<span class="ident">exp</span>.<span class="ident">loc</span>, <span class="string">&quot;as&quot;</span>, <span class="ident">el</span>.<span class="ident">ty</span>.<span class="ident">clone</span>());
@@ -2914,7 +3076,7 @@
         }
 
         <span class="ident">NE</span>::<span class="ident">Annotate</span>(<span class="ident">nl</span>, <span class="ident">ty_annot</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">nl</span>);
+            <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">nl</span>);
             <span class="kw">let</span> <span class="ident">annot_loc</span> <span class="op">=</span> <span class="ident">ty_annot</span>.<span class="ident">loc</span>;
             <span class="kw">let</span> <span class="ident">rhs</span> <span class="op">=</span> <span class="ident">core</span>::<span class="ident">instantiate</span>(<span class="ident">context</span>, <span class="ident">ty_annot</span>);
             <span class="ident">subtype</span>(
@@ -2940,6 +3102,8 @@
             <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">context</span>.<span class="ident">has_errors</span>());
             (<span class="ident">context</span>.<span class="ident">error_type</span>(<span class="ident">eloc</span>), <span class="ident">TE</span>::<span class="ident">UnresolvedError</span>)
         }
+
+        <span class="ident">NE</span>::<span class="ident">BinopExp</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
     };
     <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">ty</span>, <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">e_</span>))
 }
@@ -2948,7 +3112,7 @@
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
     <span class="ident">eloc</span>: <span class="ident">Loc</span>,
     <span class="ident">is_loop</span>: <span class="ident">bool</span>,
-    <span class="ident">nloop</span>: <span class="ident">N</span>::<span class="ident">Exp</span>,
+    <span class="ident">nloop</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">N</span>::<span class="ident">Exp</span><span class="op">&gt;</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">bool</span>, <span class="ident">Type</span>, <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>::<span class="ident">Exp</span><span class="op">&gt;</span>) {
     <span class="kw">let</span> <span class="ident">old_in_loop</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">replace</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>.<span class="ident">in_loop</span>, <span class="bool-val">true</span>);
     <span class="kw">let</span> <span class="ident">old_break_type</span> <span class="op">=</span> <span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">replace</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">context</span>.<span class="ident">break_type</span>, <span class="prelude-val">None</span>);
@@ -3328,7 +3492,7 @@
     <span class="kw">let</span> (<span class="ident">edot_</span>, <span class="ident">ty</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">ndot_</span> {
         <span class="ident">NE</span>::<span class="ident">Exp</span>(<span class="ident">ne</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">use</span> <span class="ident">Type_</span>::<span class="kw-2">*</span>;
-            <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">ne</span>);
+            <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">ne</span>);
             <span class="kw">let</span> <span class="ident">ety</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="ident">e</span>.<span class="ident">ty</span>;
             <span class="kw">let</span> <span class="ident">unfolded</span> <span class="op">=</span> <span class="ident">core</span>::<span class="ident">unfold_type</span>(<span class="kw-2">&amp;</span><span class="ident">context</span>.<span class="ident">subst</span>, <span class="ident">ety</span>.<span class="ident">clone</span>());
             <span class="kw">let</span> (<span class="ident">borrow_needed</span>, <span class="ident">ty</span>) <span class="op">=</span> <span class="kw">match</span> <span class="ident">unfolded</span>.<span class="ident">value</span> {

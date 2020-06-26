@@ -1691,6 +1691,79 @@
 <span id="1691">1691</span>
 <span id="1692">1692</span>
 <span id="1693">1693</span>
+<span id="1694">1694</span>
+<span id="1695">1695</span>
+<span id="1696">1696</span>
+<span id="1697">1697</span>
+<span id="1698">1698</span>
+<span id="1699">1699</span>
+<span id="1700">1700</span>
+<span id="1701">1701</span>
+<span id="1702">1702</span>
+<span id="1703">1703</span>
+<span id="1704">1704</span>
+<span id="1705">1705</span>
+<span id="1706">1706</span>
+<span id="1707">1707</span>
+<span id="1708">1708</span>
+<span id="1709">1709</span>
+<span id="1710">1710</span>
+<span id="1711">1711</span>
+<span id="1712">1712</span>
+<span id="1713">1713</span>
+<span id="1714">1714</span>
+<span id="1715">1715</span>
+<span id="1716">1716</span>
+<span id="1717">1717</span>
+<span id="1718">1718</span>
+<span id="1719">1719</span>
+<span id="1720">1720</span>
+<span id="1721">1721</span>
+<span id="1722">1722</span>
+<span id="1723">1723</span>
+<span id="1724">1724</span>
+<span id="1725">1725</span>
+<span id="1726">1726</span>
+<span id="1727">1727</span>
+<span id="1728">1728</span>
+<span id="1729">1729</span>
+<span id="1730">1730</span>
+<span id="1731">1731</span>
+<span id="1732">1732</span>
+<span id="1733">1733</span>
+<span id="1734">1734</span>
+<span id="1735">1735</span>
+<span id="1736">1736</span>
+<span id="1737">1737</span>
+<span id="1738">1738</span>
+<span id="1739">1739</span>
+<span id="1740">1740</span>
+<span id="1741">1741</span>
+<span id="1742">1742</span>
+<span id="1743">1743</span>
+<span id="1744">1744</span>
+<span id="1745">1745</span>
+<span id="1746">1746</span>
+<span id="1747">1747</span>
+<span id="1748">1748</span>
+<span id="1749">1749</span>
+<span id="1750">1750</span>
+<span id="1751">1751</span>
+<span id="1752">1752</span>
+<span id="1753">1753</span>
+<span id="1754">1754</span>
+<span id="1755">1755</span>
+<span id="1756">1756</span>
+<span id="1757">1757</span>
+<span id="1758">1758</span>
+<span id="1759">1759</span>
+<span id="1760">1760</span>
+<span id="1761">1761</span>
+<span id="1762">1762</span>
+<span id="1763">1763</span>
+<span id="1764">1764</span>
+<span id="1765">1765</span>
+<span id="1766">1766</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -2414,17 +2487,214 @@
 <span class="kw">fn</span> <span class="ident">exp_</span>(
     <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
     <span class="ident">result</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Block</span>,
-    <span class="ident">expected_type_opt</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">H</span>::<span class="ident">Type</span><span class="op">&gt;</span>,
-    <span class="ident">te</span>: <span class="ident">T</span>::<span class="ident">Exp</span>,
+    <span class="ident">initial_expected_type_opt</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="kw-2">&amp;</span><span class="ident">H</span>::<span class="ident">Type</span><span class="op">&gt;</span>,
+    <span class="ident">initial_e</span>: <span class="ident">T</span>::<span class="ident">Exp</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">H</span>::<span class="ident">Exp</span> {
-    <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="ident">exp_impl</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">te</span>);
-    <span class="kw">match</span> (<span class="kw-2">&amp;</span><span class="ident">e</span>.<span class="ident">exp</span>.<span class="ident">value</span>, <span class="ident">expected_type_opt</span>) {
-        (<span class="ident">H</span>::<span class="ident">UnannotatedExp_</span>::<span class="ident">Unreachable</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>,
-        (<span class="kw">_</span>, <span class="prelude-val">Some</span>(<span class="ident">ety</span>)) <span class="kw">if</span> <span class="ident">needs_freeze</span>(<span class="kw-2">&amp;</span><span class="ident">e</span>.<span class="ident">ty</span>, <span class="ident">ety</span>) <span class="op">!</span><span class="op">=</span> <span class="ident">Freeze</span>::<span class="ident">NotNeeded</span> <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="ident">freeze</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">ety</span>, <span class="ident">e</span>)
-        }
-        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>,
+    <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">cell</span>::<span class="ident">RefCell</span>, <span class="ident">rc</span>::<span class="ident">Rc</span>};
+
+    <span class="kw">struct</span> <span class="ident">Stack</span><span class="op">&lt;</span><span class="lifetime">&#39;a</span><span class="op">&gt;</span> {
+        <span class="ident">frames</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">Box</span><span class="op">&lt;</span><span class="kw">dyn</span> <span class="ident">FnOnce</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span>)<span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">operands</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">H</span>::<span class="ident">Exp</span><span class="op">&gt;</span>,
+        <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="lifetime">&#39;a</span> <span class="kw-2">mut</span> <span class="ident">Context</span>,
     }
+
+    <span class="macro">macro_rules</span><span class="macro">!</span> <span class="ident">inner</span> {
+        (<span class="macro-nonterminal">$</span><span class="macro-nonterminal">block</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">exp_ty_opt</span>:<span class="ident">expr</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>:<span class="ident">expr</span>) <span class="op">=</span><span class="op">&gt;</span> {{
+            <span class="kw">let</span> <span class="ident">e_result</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">block</span>.<span class="ident">clone</span>();
+            <span class="kw">let</span> <span class="ident">e_exp_ty_opt</span> <span class="op">=</span> <span class="macro-nonterminal">$</span><span class="macro-nonterminal">exp_ty_opt</span>;
+            <span class="kw">move</span> <span class="op">|</span><span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Stack</span><span class="op">|</span> <span class="ident">exp_loop</span>(<span class="ident">s</span>, <span class="ident">e_result</span>, <span class="ident">e_exp_ty_opt</span>, <span class="macro-nonterminal">$</span><span class="macro-nonterminal">e</span>)
+        }};
+    }
+
+    <span class="kw">fn</span> <span class="ident">maybe_freeze</span>(
+        <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
+        <span class="ident">result</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Block</span>,
+        <span class="ident">expected_type_opt</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">H</span>::<span class="ident">Type</span><span class="op">&gt;</span>,
+        <span class="ident">e</span>: <span class="ident">H</span>::<span class="ident">Exp</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">H</span>::<span class="ident">Exp</span> {
+        <span class="kw">match</span> (<span class="kw-2">&amp;</span><span class="ident">e</span>.<span class="ident">exp</span>.<span class="ident">value</span>, <span class="ident">expected_type_opt</span>.<span class="ident">as_ref</span>()) {
+            (<span class="ident">H</span>::<span class="ident">UnannotatedExp_</span>::<span class="ident">Unreachable</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>,
+            (<span class="kw">_</span>, <span class="prelude-val">Some</span>(<span class="ident">exty</span>)) <span class="kw">if</span> <span class="ident">needs_freeze</span>(<span class="kw-2">&amp;</span><span class="ident">e</span>.<span class="ident">ty</span>, <span class="ident">exty</span>) <span class="op">!</span><span class="op">=</span> <span class="ident">Freeze</span>::<span class="ident">NotNeeded</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="ident">freeze</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">exty</span>, <span class="ident">e</span>)
+            }
+            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">e</span>,
+        }
+    }
+
+    <span class="kw">fn</span> <span class="ident">exp_loop</span>(
+        <span class="ident">stack</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Stack</span>,
+        <span class="ident">result</span>: <span class="ident">Rc</span><span class="op">&lt;</span><span class="ident">RefCell</span><span class="op">&lt;</span><span class="ident">Block</span><span class="op">&gt;</span><span class="op">&gt;</span>,
+        <span class="ident">cur_expected_type_opt</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">H</span>::<span class="ident">Type</span><span class="op">&gt;</span>,
+        <span class="ident">cur</span>: <span class="ident">Box</span><span class="op">&lt;</span><span class="ident">T</span>::<span class="ident">Exp</span><span class="op">&gt;</span>,
+    ) {
+        <span class="kw">use</span> <span class="ident">H</span>::{<span class="ident">Statement_</span> <span class="kw">as</span> <span class="ident">S</span>, <span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">HE</span>};
+        <span class="kw">use</span> <span class="ident">T</span>::<span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">TE</span>;
+
+        <span class="kw">let</span> (<span class="ident">tty</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="ident">loc</span>, <span class="ident">cur_</span>)) <span class="op">=</span> (<span class="ident">cur</span>.<span class="ident">ty</span>, <span class="ident">cur</span>.<span class="ident">exp</span>);
+        <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">type_</span>(<span class="ident">stack</span>.<span class="ident">context</span>, <span class="ident">tty</span>);
+        <span class="kw">match</span> <span class="ident">cur_</span> {
+            <span class="comment">//***********************************************</span>
+            <span class="comment">// Stack-ified traversal</span>
+            <span class="comment">//***********************************************</span>
+            <span class="ident">TE</span>::<span class="ident">IfElse</span>(<span class="ident">cond</span>, <span class="ident">if_true</span>, <span class="ident">if_false</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">f_cond</span> <span class="op">=</span> <span class="macro">inner</span><span class="macro">!</span>(<span class="ident">result</span>, <span class="prelude-val">None</span>, <span class="ident">cond</span>);
+
+                <span class="kw">let</span> <span class="ident">if_block</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="ident">Block</span>::<span class="ident">new</span>()));
+                <span class="kw">let</span> <span class="ident">f_if</span> <span class="op">=</span> <span class="macro">inner</span><span class="macro">!</span>(<span class="ident">if_block</span>, <span class="prelude-val">Some</span>(<span class="ident">ty</span>.<span class="ident">clone</span>()), <span class="ident">if_true</span>);
+
+                <span class="kw">let</span> <span class="ident">else_block</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="ident">Block</span>::<span class="ident">new</span>()));
+                <span class="kw">let</span> <span class="ident">f_else</span> <span class="op">=</span> <span class="macro">inner</span><span class="macro">!</span>(<span class="ident">else_block</span>, <span class="prelude-val">Some</span>(<span class="ident">ty</span>.<span class="ident">clone</span>()), <span class="ident">if_false</span>);
+
+                <span class="kw">let</span> <span class="ident">f_if_else</span> <span class="op">=</span> <span class="kw">move</span> <span class="op">|</span><span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Stack</span><span class="op">|</span> {
+                    <span class="kw">let</span> <span class="ident">ef</span> <span class="op">=</span> <span class="ident">s</span>.<span class="ident">operands</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
+                    <span class="kw">let</span> <span class="ident">et</span> <span class="op">=</span> <span class="ident">s</span>.<span class="ident">operands</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
+                    <span class="kw">let</span> <span class="ident">cond</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">s</span>.<span class="ident">operands</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>());
+
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">if_block</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">try_unwrap</span>(<span class="ident">if_block</span>).<span class="ident">unwrap</span>().<span class="ident">into_inner</span>();
+                    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">else_block</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">try_unwrap</span>(<span class="ident">else_block</span>).<span class="ident">unwrap</span>().<span class="ident">into_inner</span>();
+                    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">result</span>.<span class="ident">borrow_mut</span>();
+
+                    <span class="kw">let</span> <span class="ident">e_</span> <span class="op">=</span> <span class="kw">match</span> (<span class="kw-2">&amp;</span><span class="ident">et</span>.<span class="ident">exp</span>.<span class="ident">value</span>, <span class="kw-2">&amp;</span><span class="ident">ef</span>.<span class="ident">exp</span>.<span class="ident">value</span>) {
+                        (<span class="ident">HE</span>::<span class="ident">Unreachable</span>, <span class="ident">HE</span>::<span class="ident">Unreachable</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="kw">let</span> <span class="ident">s_</span> <span class="op">=</span> <span class="ident">S</span>::<span class="ident">IfElse</span> {
+                                <span class="ident">cond</span>,
+                                <span class="ident">if_block</span>,
+                                <span class="ident">else_block</span>,
+                            };
+                            <span class="ident">result</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">s_</span>));
+                            <span class="ident">HE</span>::<span class="ident">Unreachable</span>
+                        }
+                        <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                            <span class="kw">let</span> <span class="ident">tmps</span> <span class="op">=</span> <span class="ident">make_temps</span>(<span class="ident">s</span>.<span class="ident">context</span>, <span class="ident">loc</span>, <span class="ident">ty</span>.<span class="ident">clone</span>());
+                            <span class="kw">let</span> <span class="ident">tres</span> <span class="op">=</span> <span class="ident">bind_exp_</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">if_block</span>, <span class="ident">loc</span>, <span class="ident">tmps</span>.<span class="ident">clone</span>(), <span class="ident">et</span>);
+                            <span class="kw">let</span> <span class="ident">fres</span> <span class="op">=</span> <span class="ident">bind_exp_</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">else_block</span>, <span class="ident">loc</span>, <span class="ident">tmps</span>, <span class="ident">ef</span>);
+                            <span class="kw">let</span> <span class="ident">s_</span> <span class="op">=</span> <span class="ident">S</span>::<span class="ident">IfElse</span> {
+                                <span class="ident">cond</span>,
+                                <span class="ident">if_block</span>,
+                                <span class="ident">else_block</span>,
+                            };
+                            <span class="ident">result</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">s_</span>));
+                            <span class="kw">match</span> (<span class="ident">tres</span>, <span class="ident">fres</span>) {
+                                (<span class="ident">HE</span>::<span class="ident">Unreachable</span>, <span class="ident">HE</span>::<span class="ident">Unreachable</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
+                                (<span class="ident">HE</span>::<span class="ident">Unreachable</span>, <span class="ident">res</span>) <span class="op">|</span> (<span class="ident">res</span>, <span class="ident">HE</span>::<span class="ident">Unreachable</span>) <span class="op">|</span> (<span class="ident">res</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">res</span>,
+                            }
+                        }
+                    };
+                    <span class="kw">let</span> <span class="ident">e_res</span> <span class="op">=</span> <span class="ident">H</span>::<span class="ident">exp</span>(<span class="ident">ty</span>, <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">e_</span>));
+                    <span class="comment">// each branch is frozen so no need to freeze</span>
+                    <span class="ident">s</span>.<span class="ident">operands</span>.<span class="ident">push</span>(<span class="ident">e_res</span>)
+                };
+
+                <span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">push</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">f_if_else</span>));
+                <span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">push</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">f_else</span>));
+                <span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">push</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">f_if</span>));
+                <span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">push</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">f_cond</span>));
+            }
+            <span class="ident">TE</span>::<span class="ident">BinopExp</span>(<span class="ident">lhs</span>, <span class="ident">op</span>, <span class="ident">toperand_ty</span>, <span class="ident">rhs</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">operand_exp_ty_opt</span> <span class="op">=</span> <span class="kw">match</span> <span class="kw-2">&amp;</span><span class="ident">op</span>.<span class="ident">value</span> {
+                    <span class="ident">BinOp_</span>::<span class="ident">And</span> <span class="kw">if</span> <span class="ident">bind_for_short_circuit</span>(<span class="kw-2">&amp;</span><span class="ident">rhs</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="kw">let</span> <span class="ident">tfalse_</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">TE</span>::<span class="ident">Value</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">Value_</span>::<span class="ident">Bool</span>(<span class="bool-val">false</span>))));
+                        <span class="kw">let</span> <span class="ident">tfalse</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">loc</span>), <span class="ident">tfalse_</span>));
+                        <span class="kw">let</span> <span class="ident">if_else_</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">TE</span>::<span class="ident">IfElse</span>(<span class="ident">lhs</span>, <span class="ident">rhs</span>, <span class="ident">tfalse</span>));
+                        <span class="kw">let</span> <span class="ident">if_else</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">ty</span>.<span class="ident">loc</span>), <span class="ident">if_else_</span>));
+                        <span class="kw">return</span> <span class="ident">exp_loop</span>(<span class="ident">stack</span>, <span class="ident">result</span>, <span class="ident">cur_expected_type_opt</span>, <span class="ident">if_else</span>);
+                    }
+                    <span class="ident">BinOp_</span>::<span class="ident">Or</span> <span class="kw">if</span> <span class="ident">bind_for_short_circuit</span>(<span class="kw-2">&amp;</span><span class="ident">rhs</span>) <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="kw">let</span> <span class="ident">ttrue_</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">TE</span>::<span class="ident">Value</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">Value_</span>::<span class="ident">Bool</span>(<span class="bool-val">true</span>))));
+                        <span class="kw">let</span> <span class="ident">ttrue</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">loc</span>), <span class="ident">ttrue_</span>));
+                        <span class="kw">let</span> <span class="ident">if_else_</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">TE</span>::<span class="ident">IfElse</span>(<span class="ident">lhs</span>, <span class="ident">ttrue</span>, <span class="ident">rhs</span>));
+                        <span class="kw">let</span> <span class="ident">if_else</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">ty</span>.<span class="ident">loc</span>), <span class="ident">if_else_</span>));
+                        <span class="kw">return</span> <span class="ident">exp_loop</span>(<span class="ident">stack</span>, <span class="ident">result</span>, <span class="ident">cur_expected_type_opt</span>, <span class="ident">if_else</span>);
+                    }
+                    <span class="ident">BinOp_</span>::<span class="ident">Eq</span> <span class="op">|</span> <span class="ident">BinOp_</span>::<span class="ident">Neq</span> <span class="op">=</span><span class="op">&gt;</span> {
+                        <span class="kw">let</span> <span class="ident">operand_ty</span> <span class="op">=</span> <span class="ident">type_</span>(<span class="ident">stack</span>.<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">toperand_ty</span>);
+                        <span class="prelude-val">Some</span>(<span class="ident">freeze_ty</span>(<span class="ident">operand_ty</span>))
+                    }
+                    <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">None</span>,
+                };
+
+                <span class="kw">let</span> <span class="ident">f_lhs</span> <span class="op">=</span> <span class="macro">inner</span><span class="macro">!</span>(<span class="ident">result</span>, <span class="ident">operand_exp_ty_opt</span>.<span class="ident">clone</span>(), <span class="ident">lhs</span>);
+                <span class="kw">let</span> <span class="ident">f_rhs</span> <span class="op">=</span> <span class="macro">inner</span><span class="macro">!</span>(<span class="ident">result</span>, <span class="ident">operand_exp_ty_opt</span>, <span class="ident">rhs</span>);
+                <span class="kw">let</span> <span class="ident">f_binop</span> <span class="op">=</span> <span class="kw">move</span> <span class="op">|</span><span class="ident">s</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Stack</span><span class="op">|</span> {
+                    <span class="kw">let</span> <span class="ident">rhs</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">s</span>.<span class="ident">operands</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>());
+                    <span class="kw">let</span> <span class="ident">lhs</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">s</span>.<span class="ident">operands</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>());
+
+                    <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">result</span>.<span class="ident">borrow_mut</span>();
+
+                    <span class="kw">let</span> <span class="ident">e_res</span> <span class="op">=</span> <span class="ident">H</span>::<span class="ident">exp</span>(<span class="ident">ty</span>, <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">HE</span>::<span class="ident">BinopExp</span>(<span class="ident">lhs</span>, <span class="ident">op</span>, <span class="ident">rhs</span>)));
+                    <span class="kw">let</span> <span class="ident">e_res</span> <span class="op">=</span> <span class="ident">maybe_freeze</span>(<span class="ident">s</span>.<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">cur_expected_type_opt</span>, <span class="ident">e_res</span>);
+                    <span class="ident">s</span>.<span class="ident">operands</span>.<span class="ident">push</span>(<span class="ident">e_res</span>)
+                };
+                <span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">push</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">f_binop</span>));
+                <span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">push</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">f_rhs</span>));
+                <span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">push</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">f_lhs</span>));
+            }
+            <span class="ident">TE</span>::<span class="ident">Builtin</span>(<span class="ident">bt</span>, <span class="ident">arguments</span>) <span class="kw">if</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">bt</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">T</span>::<span class="ident">BuiltinFunction_</span>::<span class="ident">Assert</span>)) <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">tbool</span> <span class="op">=</span> <span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">loc</span>);
+                <span class="kw">let</span> <span class="ident">tu64</span> <span class="op">=</span> <span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">u64</span>(<span class="ident">loc</span>);
+                <span class="kw">let</span> <span class="ident">tunit</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">Unit</span>);
+                <span class="kw">let</span> <span class="ident">vcond</span> <span class="op">=</span> <span class="ident">Var</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">new_temp_name</span>()));
+                <span class="kw">let</span> <span class="ident">vcode</span> <span class="op">=</span> <span class="ident">Var</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">new_temp_name</span>()));
+
+                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stmts</span> <span class="op">=</span> <span class="ident">VecDeque</span>::<span class="ident">new</span>();
+
+                <span class="kw">let</span> <span class="ident">bvar</span> <span class="op">=</span> <span class="op">|</span><span class="ident">v</span>, <span class="ident">st</span><span class="op">|</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">T</span>::<span class="ident">LValue_</span>::<span class="ident">Var</span>(<span class="ident">v</span>, <span class="ident">st</span>));
+                <span class="kw">let</span> <span class="ident">bind_list</span> <span class="op">=</span> <span class="ident">sp</span>(
+                    <span class="ident">loc</span>,
+                    <span class="macro">vec</span><span class="macro">!</span>[
+                        <span class="ident">bvar</span>(<span class="ident">vcond</span>.<span class="ident">clone</span>(), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">tbool</span>.<span class="ident">clone</span>())),
+                        <span class="ident">bvar</span>(<span class="ident">vcode</span>.<span class="ident">clone</span>(), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">tu64</span>.<span class="ident">clone</span>())),
+                    ],
+                );
+                <span class="kw">let</span> <span class="ident">tys</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="prelude-val">Some</span>(<span class="ident">tbool</span>.<span class="ident">clone</span>()), <span class="prelude-val">Some</span>(<span class="ident">tu64</span>.<span class="ident">clone</span>())];
+                <span class="kw">let</span> <span class="ident">bind</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">T</span>::<span class="ident">SequenceItem_</span>::<span class="ident">Bind</span>(<span class="ident">bind_list</span>, <span class="ident">tys</span>, <span class="ident">arguments</span>));
+                <span class="ident">stmts</span>.<span class="ident">push_back</span>(<span class="ident">bind</span>);
+
+                <span class="kw">let</span> <span class="ident">mvar</span> <span class="op">=</span> <span class="op">|</span><span class="ident">var</span>, <span class="ident">st</span><span class="op">|</span> {
+                    <span class="kw">let</span> <span class="ident">from_user</span> <span class="op">=</span> <span class="bool-val">false</span>;
+                    <span class="kw">let</span> <span class="ident">mv</span> <span class="op">=</span> <span class="ident">TE</span>::<span class="ident">Move</span> { <span class="ident">from_user</span>, <span class="ident">var</span> };
+                    <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">st</span>, <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">mv</span>))
+                };
+                <span class="kw">let</span> <span class="ident">econd</span> <span class="op">=</span> <span class="ident">mvar</span>(<span class="ident">vcond</span>, <span class="ident">tu64</span>);
+                <span class="kw">let</span> <span class="ident">ecode</span> <span class="op">=</span> <span class="ident">mvar</span>(<span class="ident">vcode</span>, <span class="ident">tbool</span>);
+                <span class="kw">let</span> <span class="ident">eabort</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">TE</span>::<span class="ident">Abort</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">ecode</span>))));
+                <span class="kw">let</span> <span class="ident">eunit</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">TE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> }));
+                <span class="kw">let</span> <span class="ident">inlined_</span> <span class="op">=</span> <span class="ident">TE</span>::<span class="ident">IfElse</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">econd</span>), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">eunit</span>), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">eabort</span>));
+                <span class="kw">let</span> <span class="ident">inlined</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">inlined_</span>));
+                <span class="ident">stmts</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">T</span>::<span class="ident">SequenceItem_</span>::<span class="ident">Seq</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">inlined</span>))));
+
+                <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>, <span class="ident">sp</span>(<span class="ident">loc</span>, <span class="ident">TE</span>::<span class="ident">Block</span>(<span class="ident">stmts</span>)));
+                <span class="ident">exp_loop</span>(<span class="ident">stack</span>, <span class="ident">result</span>, <span class="ident">cur_expected_type_opt</span>, <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">block</span>));
+            }
+            <span class="ident">te_</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="kw">let</span> <span class="ident">result</span> <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="kw-2">*</span><span class="ident">result</span>.<span class="ident">borrow_mut</span>();
+                <span class="kw">let</span> <span class="ident">e_res</span> <span class="op">=</span> <span class="ident">exp_impl</span>(<span class="ident">stack</span>.<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">ty</span>, <span class="ident">loc</span>, <span class="ident">te_</span>);
+                <span class="kw">let</span> <span class="ident">e_res</span> <span class="op">=</span> <span class="ident">maybe_freeze</span>(<span class="ident">stack</span>.<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">cur_expected_type_opt</span>, <span class="ident">e_res</span>);
+                <span class="ident">stack</span>.<span class="ident">operands</span>.<span class="ident">push</span>(<span class="ident">e_res</span>)
+            }
+        }
+    }
+
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stack</span> <span class="op">=</span> <span class="ident">Stack</span> {
+        <span class="ident">frames</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+        <span class="ident">operands</span>: <span class="macro">vec</span><span class="macro">!</span>[],
+        <span class="ident">context</span>,
+    };
+    <span class="kw">let</span> <span class="ident">rc_result</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">new</span>(<span class="ident">RefCell</span>::<span class="ident">new</span>(<span class="ident">std</span>::<span class="ident">mem</span>::<span class="ident">replace</span>(<span class="ident">result</span>, <span class="ident">Block</span>::<span class="ident">new</span>())));
+    <span class="ident">exp_loop</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">stack</span>,
+        <span class="ident">rc_result</span>.<span class="ident">clone</span>(),
+        <span class="ident">initial_expected_type_opt</span>.<span class="ident">cloned</span>(),
+        <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">initial_e</span>),
+    );
+    <span class="kw">while</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">f</span>) <span class="op">=</span> <span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">pop</span>() {
+        <span class="ident">f</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">stack</span>)
+    }
+    <span class="kw">let</span> <span class="ident">e_res</span> <span class="op">=</span> <span class="ident">stack</span>.<span class="ident">operands</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">stack</span>.<span class="ident">frames</span>.<span class="ident">is_empty</span>());
+    <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">stack</span>.<span class="ident">operands</span>.<span class="ident">is_empty</span>());
+    <span class="kw-2">*</span><span class="ident">result</span> <span class="op">=</span> <span class="ident">Rc</span>::<span class="ident">try_unwrap</span>(<span class="ident">rc_result</span>).<span class="ident">unwrap</span>().<span class="ident">into_inner</span>();
+    <span class="ident">e_res</span>
 }
 
 <span class="kw">enum</span> <span class="ident">TmpItem</span> {
@@ -2432,51 +2702,18 @@
     <span class="ident">Splat</span>(<span class="ident">Loc</span>, <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">H</span>::<span class="ident">SingleType</span><span class="op">&gt;</span>),
 }
 
-<span class="kw">fn</span> <span class="ident">exp_impl</span>(<span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>, <span class="ident">result</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Block</span>, <span class="ident">e</span>: <span class="ident">T</span>::<span class="ident">Exp</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">H</span>::<span class="ident">Exp</span> {
+<span class="kw">fn</span> <span class="ident">exp_impl</span>(
+    <span class="ident">context</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Context</span>,
+    <span class="ident">result</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">Block</span>,
+    <span class="ident">ty</span>: <span class="ident">H</span>::<span class="ident">Type</span>,
+    <span class="ident">eloc</span>: <span class="ident">Loc</span>,
+    <span class="ident">e_</span>: <span class="ident">T</span>::<span class="ident">UnannotatedExp_</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">H</span>::<span class="ident">Exp</span> {
     <span class="kw">use</span> <span class="ident">H</span>::{<span class="ident">Command_</span> <span class="kw">as</span> <span class="ident">C</span>, <span class="ident">Statement_</span> <span class="kw">as</span> <span class="ident">S</span>, <span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">HE</span>};
     <span class="kw">use</span> <span class="ident">T</span>::<span class="ident">UnannotatedExp_</span> <span class="kw">as</span> <span class="ident">TE</span>;
 
-    <span class="kw">let</span> <span class="ident">tloc</span> <span class="op">=</span> <span class="ident">e</span>.<span class="ident">ty</span>.<span class="ident">loc</span>;
-    <span class="kw">let</span> <span class="ident">ty</span> <span class="op">=</span> <span class="ident">type_</span>(<span class="ident">context</span>, <span class="ident">e</span>.<span class="ident">ty</span>);
-    <span class="kw">let</span> <span class="macro">sp</span><span class="macro">!</span>(<span class="ident">eloc</span>, <span class="ident">e_</span>) <span class="op">=</span> <span class="ident">e</span>.<span class="ident">exp</span>;
     <span class="kw">let</span> <span class="ident">res</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">e_</span> {
         <span class="comment">// Statement-like expressions</span>
-        <span class="ident">TE</span>::<span class="ident">IfElse</span>(<span class="ident">tb</span>, <span class="ident">tt</span>, <span class="ident">tf</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">cond</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="prelude-val">None</span>, <span class="kw-2">*</span><span class="ident">tb</span>);
-
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">if_block</span> <span class="op">=</span> <span class="ident">Block</span>::<span class="ident">new</span>();
-            <span class="kw">let</span> <span class="ident">et</span> <span class="op">=</span> <span class="ident">exp_</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">if_block</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">ty</span>), <span class="kw-2">*</span><span class="ident">tt</span>);
-
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">else_block</span> <span class="op">=</span> <span class="ident">Block</span>::<span class="ident">new</span>();
-            <span class="kw">let</span> <span class="ident">ef</span> <span class="op">=</span> <span class="ident">exp_</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">else_block</span>, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="ident">ty</span>), <span class="kw-2">*</span><span class="ident">tf</span>);
-
-            <span class="kw">match</span> (<span class="kw-2">&amp;</span><span class="ident">et</span>.<span class="ident">exp</span>.<span class="ident">value</span>, <span class="kw-2">&amp;</span><span class="ident">ef</span>.<span class="ident">exp</span>.<span class="ident">value</span>) {
-                (<span class="ident">HE</span>::<span class="ident">Unreachable</span>, <span class="ident">HE</span>::<span class="ident">Unreachable</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">s_</span> <span class="op">=</span> <span class="ident">S</span>::<span class="ident">IfElse</span> {
-                        <span class="ident">cond</span>,
-                        <span class="ident">if_block</span>,
-                        <span class="ident">else_block</span>,
-                    };
-                    <span class="ident">result</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">s_</span>));
-                    <span class="ident">HE</span>::<span class="ident">Unreachable</span>
-                }
-                <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> {
-                    <span class="kw">let</span> <span class="ident">tmps</span> <span class="op">=</span> <span class="ident">make_temps</span>(<span class="ident">context</span>, <span class="ident">eloc</span>, <span class="ident">ty</span>.<span class="ident">clone</span>());
-                    <span class="kw">let</span> <span class="ident">tres</span> <span class="op">=</span> <span class="ident">bind_exp_</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">if_block</span>, <span class="ident">eloc</span>, <span class="ident">tmps</span>.<span class="ident">clone</span>(), <span class="ident">et</span>);
-                    <span class="kw">let</span> <span class="ident">fres</span> <span class="op">=</span> <span class="ident">bind_exp_</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">else_block</span>, <span class="ident">eloc</span>, <span class="ident">tmps</span>, <span class="ident">ef</span>);
-                    <span class="kw">let</span> <span class="ident">s_</span> <span class="op">=</span> <span class="ident">S</span>::<span class="ident">IfElse</span> {
-                        <span class="ident">cond</span>,
-                        <span class="ident">if_block</span>,
-                        <span class="ident">else_block</span>,
-                    };
-                    <span class="ident">result</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">s_</span>));
-                    <span class="kw">match</span> (<span class="ident">tres</span>, <span class="ident">fres</span>) {
-                        (<span class="ident">HE</span>::<span class="ident">Unreachable</span>, <span class="ident">HE</span>::<span class="ident">Unreachable</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
-                        (<span class="ident">HE</span>::<span class="ident">Unreachable</span>, <span class="ident">res</span>) <span class="op">|</span> (<span class="ident">res</span>, <span class="ident">HE</span>::<span class="ident">Unreachable</span>) <span class="op">|</span> (<span class="ident">res</span>, <span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">res</span>,
-                    }
-                }
-            }
-        }
         <span class="ident">TE</span>::<span class="ident">While</span>(<span class="ident">tb</span>, <span class="ident">loop_body</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">cond_block</span> <span class="op">=</span> <span class="ident">Block</span>::<span class="ident">new</span>();
             <span class="kw">let</span> <span class="ident">cond_exp</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">cond_block</span>, <span class="prelude-val">None</span>, <span class="kw-2">*</span><span class="ident">tb</span>);
@@ -2591,43 +2828,6 @@
             };
             <span class="ident">HE</span>::<span class="ident">ModuleCall</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">call</span>))
         }
-        <span class="ident">TE</span>::<span class="ident">Builtin</span>(<span class="ident">bt</span>, <span class="ident">arguments</span>) <span class="kw">if</span> <span class="macro">matches</span><span class="macro">!</span>(<span class="kw-2">&amp;</span><span class="kw-2">*</span><span class="ident">bt</span>, <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">T</span>::<span class="ident">BuiltinFunction_</span>::<span class="ident">Assert</span>)) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">tbool</span> <span class="op">=</span> <span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">eloc</span>);
-            <span class="kw">let</span> <span class="ident">tu64</span> <span class="op">=</span> <span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">u64</span>(<span class="ident">eloc</span>);
-            <span class="kw">let</span> <span class="ident">tunit</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">Unit</span>);
-            <span class="kw">let</span> <span class="ident">vcond</span> <span class="op">=</span> <span class="ident">Var</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">new_temp_name</span>()));
-            <span class="kw">let</span> <span class="ident">vcode</span> <span class="op">=</span> <span class="ident">Var</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">new_temp_name</span>()));
-
-            <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">stmts</span> <span class="op">=</span> <span class="ident">VecDeque</span>::<span class="ident">new</span>();
-
-            <span class="kw">let</span> <span class="ident">bvar</span> <span class="op">=</span> <span class="op">|</span><span class="ident">v</span>, <span class="ident">st</span><span class="op">|</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">T</span>::<span class="ident">LValue_</span>::<span class="ident">Var</span>(<span class="ident">v</span>, <span class="ident">st</span>));
-            <span class="kw">let</span> <span class="ident">bind_list</span> <span class="op">=</span> <span class="ident">sp</span>(
-                <span class="ident">eloc</span>,
-                <span class="macro">vec</span><span class="macro">!</span>[
-                    <span class="ident">bvar</span>(<span class="ident">vcond</span>.<span class="ident">clone</span>(), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">tbool</span>.<span class="ident">clone</span>())),
-                    <span class="ident">bvar</span>(<span class="ident">vcode</span>.<span class="ident">clone</span>(), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">tu64</span>.<span class="ident">clone</span>())),
-                ],
-            );
-            <span class="kw">let</span> <span class="ident">tys</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[<span class="prelude-val">Some</span>(<span class="ident">tbool</span>.<span class="ident">clone</span>()), <span class="prelude-val">Some</span>(<span class="ident">tu64</span>.<span class="ident">clone</span>())];
-            <span class="kw">let</span> <span class="ident">bind</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">T</span>::<span class="ident">SequenceItem_</span>::<span class="ident">Bind</span>(<span class="ident">bind_list</span>, <span class="ident">tys</span>, <span class="ident">arguments</span>));
-            <span class="ident">stmts</span>.<span class="ident">push_back</span>(<span class="ident">bind</span>);
-
-            <span class="kw">let</span> <span class="ident">mvar</span> <span class="op">=</span> <span class="op">|</span><span class="ident">var</span>, <span class="ident">st</span><span class="op">|</span> {
-                <span class="kw">let</span> <span class="ident">from_user</span> <span class="op">=</span> <span class="bool-val">false</span>;
-                <span class="kw">let</span> <span class="ident">mv</span> <span class="op">=</span> <span class="ident">TE</span>::<span class="ident">Move</span> { <span class="ident">from_user</span>, <span class="ident">var</span> };
-                <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">st</span>, <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">mv</span>))
-            };
-            <span class="kw">let</span> <span class="ident">econd</span> <span class="op">=</span> <span class="ident">mvar</span>(<span class="ident">vcond</span>, <span class="ident">tu64</span>);
-            <span class="kw">let</span> <span class="ident">ecode</span> <span class="op">=</span> <span class="ident">mvar</span>(<span class="ident">vcode</span>, <span class="ident">tbool</span>);
-            <span class="kw">let</span> <span class="ident">eabort</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Abort</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">ecode</span>))));
-            <span class="kw">let</span> <span class="ident">eunit</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Unit</span> { <span class="ident">trailing</span>: <span class="bool-val">false</span> }));
-            <span class="kw">let</span> <span class="ident">inlined_</span> <span class="op">=</span> <span class="ident">TE</span>::<span class="ident">IfElse</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">econd</span>), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">eunit</span>), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">eabort</span>));
-            <span class="kw">let</span> <span class="ident">inlined</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>.<span class="ident">clone</span>(), <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">inlined_</span>));
-            <span class="ident">stmts</span>.<span class="ident">push_back</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">T</span>::<span class="ident">SequenceItem_</span>::<span class="ident">Seq</span>(<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">inlined</span>))));
-
-            <span class="kw">let</span> <span class="ident">block</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">tunit</span>, <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Block</span>(<span class="ident">stmts</span>)));
-            <span class="kw">return</span> <span class="ident">exp_impl</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">block</span>);
-        }
         <span class="ident">TE</span>::<span class="ident">Builtin</span>(<span class="ident">bf</span>, <span class="ident">targ</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">builtin</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">eloc</span>, <span class="kw-2">*</span><span class="ident">bf</span>, <span class="ident">targ</span>),
         <span class="ident">TE</span>::<span class="ident">Dereference</span>(<span class="ident">te</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="prelude-val">None</span>, <span class="kw-2">*</span><span class="ident">te</span>);
@@ -2636,62 +2836,6 @@
         <span class="ident">TE</span>::<span class="ident">UnaryExp</span>(<span class="ident">op</span>, <span class="ident">te</span>) <span class="op">=</span><span class="op">&gt;</span> {
             <span class="kw">let</span> <span class="ident">e</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="prelude-val">None</span>, <span class="kw-2">*</span><span class="ident">te</span>);
             <span class="ident">HE</span>::<span class="ident">UnaryExp</span>(<span class="ident">op</span>, <span class="ident">e</span>)
-        }
-
-        <span class="ident">TE</span>::<span class="ident">BinopExp</span>(<span class="ident">tl</span>, <span class="ident">op</span> @ <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">BinOp_</span>::<span class="ident">Eq</span>), <span class="ident">toperand_ty</span>, <span class="ident">tr</span>)
-        <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">BinopExp</span>(<span class="ident">tl</span>, <span class="ident">op</span> @ <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">BinOp_</span>::<span class="ident">Neq</span>), <span class="ident">toperand_ty</span>, <span class="ident">tr</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> <span class="ident">operand_ty</span> <span class="op">=</span> <span class="ident">type_</span>(<span class="ident">context</span>, <span class="kw-2">*</span><span class="ident">toperand_ty</span>);
-            <span class="kw">let</span> (<span class="ident">el</span>, <span class="ident">er</span>) <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">frozen_ty</span> <span class="op">=</span> <span class="ident">freeze_ty</span>(<span class="ident">operand_ty</span>);
-                <span class="kw">let</span> <span class="ident">tes</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[(<span class="kw-2">*</span><span class="ident">tl</span>, <span class="prelude-val">Some</span>(<span class="ident">frozen_ty</span>.<span class="ident">clone</span>())), (<span class="kw-2">*</span><span class="ident">tr</span>, <span class="prelude-val">Some</span>(<span class="ident">frozen_ty</span>))];
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">es</span> <span class="op">=</span> <span class="ident">exp_evaluation_order</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">tes</span>);
-                <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">es</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">2</span>, <span class="string">&quot;ICE exp_evaluation_order changed arity&quot;</span>);
-                <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">es</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
-                <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">es</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
-                (<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">el</span>), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">er</span>))
-            };
-            <span class="ident">HE</span>::<span class="ident">BinopExp</span>(<span class="ident">el</span>, <span class="ident">op</span>, <span class="ident">er</span>)
-        }
-        <span class="ident">TE</span>::<span class="ident">BinopExp</span>(<span class="ident">tl</span>, <span class="ident">op</span> @ <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">BinOp_</span>::<span class="ident">And</span>), <span class="kw">_</span>, <span class="ident">tr</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">bind_for_short_circuit</span>(<span class="kw-2">&amp;</span><span class="ident">tr</span>) {
-                <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="prelude-val">None</span>, <span class="kw-2">*</span><span class="ident">tl</span>);
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">empty_result</span> <span class="op">=</span> <span class="ident">Block</span>::<span class="ident">new</span>();
-                <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">empty_result</span>, <span class="prelude-val">None</span>, <span class="kw-2">*</span><span class="ident">tr</span>);
-                <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">empty_result</span>.<span class="ident">is_empty</span>(), <span class="string">&quot;ICE bind_for_short_circuit failed&quot;</span>);
-                <span class="ident">HE</span>::<span class="ident">BinopExp</span>(<span class="ident">el</span>, <span class="ident">op</span>, <span class="ident">er</span>)
-            } <span class="kw">else</span> {
-                <span class="kw">let</span> <span class="ident">tfalse_</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Value</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">Value_</span>::<span class="ident">Bool</span>(<span class="bool-val">false</span>))));
-                <span class="kw">let</span> <span class="ident">tfalse</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">eloc</span>), <span class="ident">tfalse_</span>));
-                <span class="kw">let</span> <span class="ident">if_else_</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">IfElse</span>(<span class="ident">tl</span>, <span class="ident">tr</span>, <span class="ident">tfalse</span>));
-                <span class="kw">let</span> <span class="ident">if_else</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">tloc</span>), <span class="ident">if_else_</span>);
-                <span class="kw">return</span> <span class="ident">exp_impl</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">if_else</span>);
-            }
-        }
-        <span class="ident">TE</span>::<span class="ident">BinopExp</span>(<span class="ident">tl</span>, <span class="ident">op</span> @ <span class="macro">sp</span><span class="macro">!</span>(<span class="kw">_</span>, <span class="ident">BinOp_</span>::<span class="ident">Or</span>), <span class="kw">_</span>, <span class="ident">tr</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">if</span> <span class="op">!</span><span class="ident">bind_for_short_circuit</span>(<span class="kw-2">&amp;</span><span class="ident">tr</span>) {
-                <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="prelude-val">None</span>, <span class="kw-2">*</span><span class="ident">tl</span>);
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">empty_result</span> <span class="op">=</span> <span class="ident">Block</span>::<span class="ident">new</span>();
-                <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">exp</span>(<span class="ident">context</span>, <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">empty_result</span>, <span class="prelude-val">None</span>, <span class="kw-2">*</span><span class="ident">tr</span>);
-                <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">empty_result</span>.<span class="ident">is_empty</span>(), <span class="string">&quot;ICE bind_for_short_circuit failed&quot;</span>);
-                <span class="ident">HE</span>::<span class="ident">BinopExp</span>(<span class="ident">el</span>, <span class="ident">op</span>, <span class="ident">er</span>)
-            } <span class="kw">else</span> {
-                <span class="kw">let</span> <span class="ident">ttrue_</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">Value</span>(<span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">Value_</span>::<span class="ident">Bool</span>(<span class="bool-val">true</span>))));
-                <span class="kw">let</span> <span class="ident">ttrue</span> <span class="op">=</span> <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">eloc</span>), <span class="ident">ttrue_</span>));
-                <span class="kw">let</span> <span class="ident">if_else_</span> <span class="op">=</span> <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">TE</span>::<span class="ident">IfElse</span>(<span class="ident">tl</span>, <span class="ident">ttrue</span>, <span class="ident">tr</span>));
-                <span class="kw">let</span> <span class="ident">if_else</span> <span class="op">=</span> <span class="ident">T</span>::<span class="ident">exp</span>(<span class="ident">N</span>::<span class="ident">Type_</span>::<span class="ident">bool</span>(<span class="ident">tloc</span>), <span class="ident">if_else_</span>);
-                <span class="kw">return</span> <span class="ident">exp_impl</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">if_else</span>);
-            }
-        }
-        <span class="ident">TE</span>::<span class="ident">BinopExp</span>(<span class="ident">tl</span>, <span class="ident">op</span>, <span class="kw">_</span>, <span class="ident">tr</span>) <span class="op">=</span><span class="op">&gt;</span> {
-            <span class="kw">let</span> (<span class="ident">el</span>, <span class="ident">er</span>) <span class="op">=</span> {
-                <span class="kw">let</span> <span class="ident">tes</span> <span class="op">=</span> <span class="macro">vec</span><span class="macro">!</span>[(<span class="kw-2">*</span><span class="ident">tl</span>, <span class="prelude-val">None</span>), (<span class="kw-2">*</span><span class="ident">tr</span>, <span class="prelude-val">None</span>)];
-                <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">es</span> <span class="op">=</span> <span class="ident">exp_evaluation_order</span>(<span class="ident">context</span>, <span class="ident">result</span>, <span class="ident">tes</span>);
-                <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">es</span>.<span class="ident">len</span>() <span class="op">=</span><span class="op">=</span> <span class="number">2</span>, <span class="string">&quot;ICE exp_evaluation_order changed arity&quot;</span>);
-                <span class="kw">let</span> <span class="ident">er</span> <span class="op">=</span> <span class="ident">es</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
-                <span class="kw">let</span> <span class="ident">el</span> <span class="op">=</span> <span class="ident">es</span>.<span class="ident">pop</span>().<span class="ident">unwrap</span>();
-                (<span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">el</span>), <span class="ident">Box</span>::<span class="ident">new</span>(<span class="ident">er</span>))
-            };
-            <span class="ident">HE</span>::<span class="ident">BinopExp</span>(<span class="ident">el</span>, <span class="ident">op</span>, <span class="ident">er</span>)
         }
 
         <span class="ident">TE</span>::<span class="ident">Pack</span>(<span class="kw">_</span>, <span class="ident">s</span>, <span class="ident">tbs</span>, <span class="ident">tfields</span>) <span class="op">=</span><span class="op">&gt;</span> {
@@ -2821,6 +2965,8 @@
             <span class="macro">assert</span><span class="macro">!</span>(<span class="ident">context</span>.<span class="ident">has_errors</span>());
             <span class="ident">HE</span>::<span class="ident">UnresolvedError</span>
         }
+
+        <span class="ident">TE</span>::<span class="ident">IfElse</span>(..) <span class="op">|</span> <span class="ident">TE</span>::<span class="ident">BinopExp</span>(..) <span class="op">=</span><span class="op">&gt;</span> <span class="macro">unreachable</span><span class="macro">!</span>(),
     };
     <span class="ident">H</span>::<span class="ident">exp</span>(<span class="ident">ty</span>, <span class="ident">sp</span>(<span class="ident">eloc</span>, <span class="ident">res</span>))
 }
