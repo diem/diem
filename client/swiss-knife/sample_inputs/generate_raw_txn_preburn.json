@@ -1,0 +1,16 @@
+{
+  "txn_params": {
+    "sender_address": "0xe1b3d22871989e9fd9dc6814b2f4fc41",
+    "sequence_number": 42,
+    "max_gas_amount": 1000000,
+    "gas_unit_price": 0,
+    "gas_currency_code": "LBR",
+    "expiration_timestamp": 1593189628
+  },
+  "script_params": {
+    "preburn": {
+      "coin_tag": "LBR",
+      "amount": 100
+    }
+  }
+}

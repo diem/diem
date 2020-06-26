@@ -3,6 +3,7 @@
 members = [
     "client/json-rpc",
     "client/libra-dev",
+    "client/swiss-knife",
     "common/bitvec",
     "common/bounded-executor",
     "common/channel",
@@ -140,6 +141,7 @@ default-members = [
     "config/management",
     "consensus/safety-rules",
     "client/libra-dev",
+    "client/swiss-knife",
     "execution/db-bootstrapper",
     "execution/execution-correctness",
     "testsuite/cli",
