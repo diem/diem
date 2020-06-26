@@ -35,5 +35,5 @@ libra-state-view = { path = "../../../storage/state-view", version = "0.1.0" }
 
 [features]
 default = []
-debug_module = []
+debug_module = ["move-vm-natives/debug_module"]
 fuzzing = ["move-vm-types/fuzzing"]
