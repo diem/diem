@@ -38,7 +38,8 @@ async fn main() -> Result<()> {
         .expect("Failed opening DB."),
     );
     let storage = opt.storage.init_storage().await?;
-    StateSnapshotRestoreController::new(opt.state_snapshot, storage, db)
+    let restore_handler = Arc::new(db.get_restore_handler());
+    StateSnapshotRestoreController::new(opt.state_snapshot, storage, restore_handler)
         .run()
         .await
         .context("Failed restoring state_snapshot.")?;

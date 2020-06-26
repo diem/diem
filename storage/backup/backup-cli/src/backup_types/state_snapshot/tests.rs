@@ -53,7 +53,7 @@ fn end_to_end() {
                 version: PRE_GENESIS_VERSION,
             },
             store,
-            Arc::clone(&tgt_db),
+            Arc::new(tgt_db.get_restore_handler()),
         )
         .run(),
     )

@@ -34,7 +34,7 @@ mod libradb_test;
 pub use libradb_test::test_save_blocks_impl;
 
 use crate::{
-    backup::backup_handler::BackupHandler,
+    backup::{backup_handler::BackupHandler, restore_handler::RestoreHandler},
     change_set::{ChangeSet, SealedChangeSet},
     errors::LibraDbError,
     event_store::EventStore,
@@ -48,7 +48,6 @@ use crate::{
 };
 use anyhow::{ensure, Result};
 use itertools::{izip, zip_eq};
-use jellyfish_merkle::{restore::JellyfishMerkleRestore, TreeReader, TreeWriter};
 use libra_crypto::hash::{CryptoHash, HashValue, SPARSE_MERKLE_PLACEHOLDER_HASH};
 use libra_logger::prelude::*;
 use libra_metrics::{
@@ -64,7 +63,7 @@ use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{
         AccountStateProof, AccumulatorConsistencyProof, EventProof, SparseMerkleProof,
-        SparseMerkleRangeProof, TransactionListProof,
+        TransactionListProof,
     },
     transaction::{
         TransactionInfo, TransactionListWithProof, TransactionToCommit, TransactionWithProof,
@@ -291,27 +290,13 @@ impl LibraDB {
         )
     }
 
-    pub fn restore_account_state(
-        &self,
-        iter: impl Iterator<Item = (Vec<(HashValue, AccountStateBlob)>, SparseMerkleRangeProof)>,
-        version: Version,
-        expected_root_hash: HashValue,
-    ) -> Result<()> {
-        let mut restore =
-            JellyfishMerkleRestore::new(&*self.state_store, version, expected_root_hash)?;
-        for (chunk, proof) in iter {
-            restore.add_chunk(chunk, proof)?;
-        }
-        restore.finish()?;
-        Ok(())
-    }
-
-    pub fn get_state_restore_receiver(
-        &self,
-        version: Version,
-        expected_root_hash: HashValue,
-    ) -> Result<JellyfishMerkleRestore<impl TreeReader + TreeWriter>> {
-        JellyfishMerkleRestore::new(&*self.state_store, version, expected_root_hash)
+    /// Gets an instance of `RestoreHandler` for data restore purpose.
+    pub fn get_restore_handler(&self) -> RestoreHandler {
+        RestoreHandler::new(
+            Arc::clone(&self.ledger_store),
+            Arc::clone(&self.transaction_store),
+            Arc::clone(&self.state_store),
+        )
     }
 
     // ================================== Private APIs ==================================
