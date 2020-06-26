@@ -54,7 +54,7 @@ impl MockStorage {
 
     fn add_txns(&mut self, txns: &mut Vec<Transaction>) {
         self.transactions.append(txns);
-        let num_leaves = self.transactions.len();
+        let num_leaves = self.transactions.len() + 1;
         let frozen_subtree_roots = vec![HashValue::zero(); num_leaves.count_ones() as usize];
         self.synced_trees = ExecutedTrees::new(
             HashValue::zero(), /* dummy_state_root */
@@ -128,13 +128,17 @@ impl MockStorage {
         if verified_target_li.ledger_info().epoch() != self.epoch_num() {
             return;
         }
-        self.ledger_infos.insert(
-            verified_target_li.ledger_info().epoch(),
-            verified_target_li.clone(),
-        );
-        if let Some(next_epoch_state) = verified_target_li.ledger_info().next_epoch_state() {
-            self.epoch_num = next_epoch_state.epoch;
-            self.epoch_state = next_epoch_state.clone();
+
+        // store ledger info only if version matches last tx
+        if verified_target_li.ledger_info().version() == self.version() {
+            self.ledger_infos.insert(
+                verified_target_li.ledger_info().epoch(),
+                verified_target_li.clone(),
+            );
+            if let Some(next_epoch_state) = verified_target_li.ledger_info().next_epoch_state() {
+                self.epoch_num = next_epoch_state.epoch;
+                self.epoch_state = next_epoch_state.clone();
+            }
         }
     }
 

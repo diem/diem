@@ -110,14 +110,13 @@ impl PendingLedgerInfos {
         self.pending_li_queue = self.pending_li_queue.split_off(&(highest_committed_li + 1));
 
         // pick target LI to use for sending ProgressiveTargetType requests.
-        // first, try to finding LI with max version that will fit in a single chunk
-        self.target_li = if let Some((_version, ledger_info)) = self
-            .pending_li_queue
-            .range((Included(0), Included(highest_synced + chunk_limit)))
-            .rev()
-            .next()
-        {
-            Some(ledger_info.clone())
+        self.target_li = if highest_committed_li == highest_synced {
+            // try to find LI with max version that will fit in a single chunk
+            self.pending_li_queue
+                .range((Included(0), Included(highest_synced + chunk_limit)))
+                .rev()
+                .next()
+                .map(|(_version, ledger_info)| ledger_info.clone())
         } else {
             self.pending_li_queue
                 .iter()
