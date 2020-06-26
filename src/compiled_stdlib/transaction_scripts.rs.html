@@ -291,6 +291,12 @@
 <span id="291">291</span>
 <span id="292">292</span>
 <span id="293">293</span>
+<span id="294">294</span>
+<span id="295">295</span>
+<span id="296">296</span>
+<span id="297">297</span>
+<span id="298">298</span>
+<span id="299">299</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -326,6 +332,7 @@
     <span class="ident">CreateParentVaspAccount</span>,
     <span class="ident">CreateRecoveryAddress</span>,
     <span class="ident">CreateValidatorAccount</span>,
+    <span class="ident">CreateValidatorOperatorAccount</span>,
     <span class="ident">EmptyScript</span>,
     <span class="ident">FreezeAccount</span>,
     <span class="ident">Mint</span>,
@@ -343,6 +350,7 @@
     <span class="ident">RotateCompliancePublicKey</span>,
     <span class="ident">RotateSharedEd2551PublicKey</span>,
     <span class="ident">SetValidatorConfig</span>,
+    <span class="ident">SetValidatorOperator</span>,
     <span class="ident">TieredMint</span>,
     <span class="ident">UpdateTravelRuleLimit</span>,
     <span class="ident">UnfreezeAccount</span>,
@@ -371,6 +379,7 @@
             <span class="ident">CreateParentVaspAccount</span>,
             <span class="ident">CreateRecoveryAddress</span>,
             <span class="ident">CreateValidatorAccount</span>,
+            <span class="ident">CreateValidatorOperatorAccount</span>,
             <span class="ident">EmptyScript</span>,
             <span class="ident">FreezeAccount</span>,
             <span class="ident">Mint</span>,
@@ -388,6 +397,7 @@
             <span class="ident">RotateCompliancePublicKey</span>,
             <span class="ident">RotateSharedEd2551PublicKey</span>,
             <span class="ident">SetValidatorConfig</span>,
+            <span class="ident">SetValidatorOperator</span>,
             <span class="ident">TieredMint</span>,
             <span class="ident">UpdateTravelRuleLimit</span>,
             <span class="ident">UnfreezeAccount</span>,
@@ -495,6 +505,7 @@
                 <span class="ident">CreateParentVaspAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_parent_vasp_account&quot;</span>,
                 <span class="ident">CreateRecoveryAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_recovery_address&quot;</span>,
                 <span class="ident">CreateValidatorAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_validator_account&quot;</span>,
+                <span class="ident">CreateValidatorOperatorAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_validator_operator_account&quot;</span>,
                 <span class="ident">EmptyScript</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;empty_script&quot;</span>,
                 <span class="ident">FreezeAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;freeze_account&quot;</span>,
                 <span class="ident">Mint</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;mint&quot;</span>,
@@ -513,6 +524,7 @@
                 <span class="ident">RotateCompliancePublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_compliance_public_key&quot;</span>,
                 <span class="ident">RotateSharedEd2551PublicKey</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;rotate_shared_ed25519_public_key&quot;</span>,
                 <span class="ident">SetValidatorConfig</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;set_validator_config&quot;</span>,
+                <span class="ident">SetValidatorOperator</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;set_validator_operator&quot;</span>,
                 <span class="ident">TieredMint</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;tiered_mint&quot;</span>,
                 <span class="ident">UpdateTravelRuleLimit</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;update_travel_rule_limit&quot;</span>,
                 <span class="ident">UnfreezeAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;unfreeze_account&quot;</span>,

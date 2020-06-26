@@ -52,6 +52,7 @@ delegated its <code>KeyRotationCapability</code>, already has a <code>RecoveryAd
 not a VASP.</p>
 </td></tr><tr class='module-item'><td><a class="fn" href="fn.encode_create_validator_account.html" title='transaction_builder::encode_create_validator_account fn'>encode_create_validator_account</a></td><td class='docblock-short'><p>Create a validator account at <code>new_validator_address</code> with <code>auth_key_prefix</code>.</p>
 </td></tr><tr class='module-item'><td><a class="fn" href="fn.encode_create_validator_account_script.html" title='transaction_builder::encode_create_validator_account_script fn'>encode_create_validator_account_script</a></td><td class='docblock-short'><p>Create a validator account at <code>new_validator_address</code> with <code>auth_key_prefix</code>.</p>
+</td></tr><tr class='module-item'><td><a class="fn" href="fn.encode_create_validator_operator_account_script.html" title='transaction_builder::encode_create_validator_operator_account_script fn'>encode_create_validator_operator_account_script</a></td><td class='docblock-short'><p>Create a validator operator account at <code>new_validator_address</code> with <code>auth_key_prefix</code>.</p>
 </td></tr><tr class='module-item'><td><a class="fn" href="fn.encode_empty_script_script.html" title='transaction_builder::encode_empty_script_script fn'>encode_empty_script_script</a></td><td class='docblock-short'><p>Used for testing.</p>
 </td></tr><tr class='module-item'><td><a class="fn" href="fn.encode_freeze_account.html" title='transaction_builder::encode_freeze_account fn'>encode_freeze_account</a></td><td class='docblock-short'><p>Freeze account <code>address</code>. Initiator must be authorized. <code>sliding_nonce</code> is a unique
 nonce for operation, see sliding_nonce.move for details.</p>
@@ -101,6 +102,7 @@ unique nonce for this operation. See sliding_nonce.move for details.</p>
 Aborts if <code>account</code> does not have a <code>SharedEd25519PublicKey</code> resource. Aborts if the
 length of <code>new_public_key</code> is not 32.</p>
 </td></tr><tr class='module-item'><td><a class="fn" href="fn.encode_set_validator_config_script.html" title='transaction_builder::encode_set_validator_config_script fn'>encode_set_validator_config_script</a></td><td class='docblock-short'><p>Set validator's config.</p>
+</td></tr><tr class='module-item'><td><a class="fn" href="fn.encode_set_validator_operator_script.html" title='transaction_builder::encode_set_validator_operator_script fn'>encode_set_validator_operator_script</a></td><td class='docblock-short'><p>Set validator's operator</p>
 </td></tr><tr class='module-item'><td><a class="fn" href="fn.encode_stdlib_script.html" title='transaction_builder::encode_stdlib_script fn'>encode_stdlib_script</a></td><td class='docblock-short'><p>Encode <code>stdlib_script</code> with arguments <code>args</code>.
 Note: this is not type-safe; the individual type-safe wrappers below should be used when
 possible.</p>
