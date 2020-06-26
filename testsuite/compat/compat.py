@@ -31,11 +31,12 @@ from compat_helpers import (
     unlock_cluster,
 )
 
-# TODO: currently unsed, https://github.com/libra/libra/issues/4765
+# TODO: currently unused, https://github.com/libra/libra/issues/4765
 TESTNET_COMPATIBLE = int(os.getenv("TESTNET_COMPATIBLE", 1))
 PREV_COMPATIBLE = int(os.getenv("PREV_COMPATIBLE", 1))
 ECS_POOL_SIZE = int(os.getenv("ECS_POOL_SIZE", 1))
-
+NUM_VALIDATORS = 4
+NUM_FULLNODES = 2
 
 parser = argparse.ArgumentParser(
     description="Upgrades validator and fullnodes in a compat cluster"
@@ -99,12 +100,10 @@ if COMMAND == "admin":
         unlock_cluster(args.cluster_lock)
         print(f"Successfully unlocked {args.cluster_lock}!")
     elif ADMIN_MODE == "reset":
-        update_service_task_def(args.cluster, f"{args.cluster}-validator-0", 1)
-        update_service_task_def(args.cluster, f"{args.cluster}-validator-1", 1)
-        update_service_task_def(args.cluster, f"{args.cluster}-validator-2", 1)
-        update_service_task_def(args.cluster, f"{args.cluster}-validator-3", 1)
-        update_service_task_def(args.cluster, f"{args.cluster}-fullnode-0", 1)
-        update_service_task_def(args.cluster, f"{args.cluster}-fullnode-1", 1)
+        for i in range(NUM_VALIDATORS):
+            update_service_task_def(args.cluster, f"{args.cluster}-validator-{i}", 1)
+        for i in range(NUM_FULLNODES):
+            update_service_task_def(args.cluster, f"{args.cluster}-fullnode-{i}", 1)
     sys.exit(0)
 
 
@@ -141,161 +140,150 @@ else:
 def_map = get_task_defs(WORKSPACE)
 
 # get the task definition families as they are the def_map keys
-v0_fam = f"{WORKSPACE}-validator-0"
-v1_fam = f"{WORKSPACE}-validator-1"
-v2_fam = f"{WORKSPACE}-validator-2"
-v3_fam = f"{WORKSPACE}-validator-3"
-f0_fam = f"{WORKSPACE}-fullnode-0"
-f1_fam = f"{WORKSPACE}-fullnode-1"
+v_fams = [f"{WORKSPACE}-validator-{i}" for i in range(NUM_VALIDATORS)]
+f_fams = [f"{WORKSPACE}-fullnode-{i}" for i in range(NUM_FULLNODES)]
 vault_fam = f"{WORKSPACE}-vault"
 
 # all tasks in the cluster are running
 try:
-    assert v0_fam in def_map
-    assert v1_fam in def_map
-    assert v2_fam in def_map
-    assert v3_fam in def_map
-    assert f0_fam in def_map
-    assert f1_fam in def_map
+    fams = v_fams + f_fams
+    for fam in fams:
+        assert fam in def_map
 except Exception as e:
     print(f"ERROR: missing tasks in {WORKSPACE}, {e}")
     print("Retry or reset workspace: ./run_compat admin --reset ")
     sys.exit(1)
 
 # get the current task definitions
-v0_def = def_map.get(v0_fam)
-v1_def = def_map.get(v1_fam)
-v2_def = def_map.get(v2_fam)
-v3_def = def_map.get(v3_fam)
-f0_def = def_map.get(f0_fam)
-f1_def = def_map.get(f1_fam)
+v_defs = [def_map.get(fam) for fam in v_fams]
+f_defs = [def_map.get(fam) for fam in f_fams]
 
 # get the current image tags
-curr_tag_v0 = get_image_tag_by_task_def(v0_def)
-curr_tag_v1 = get_image_tag_by_task_def(v1_def)
-curr_tag_v2 = get_image_tag_by_task_def(v2_def)
-curr_tag_v3 = get_image_tag_by_task_def(v3_def)
-curr_tag_f0 = get_image_tag_by_task_def(f0_def)
-curr_tag_f1 = get_image_tag_by_task_def(f1_def)
+curr_v_tags = [get_image_tag_by_task_def(v_def) for v_def in v_defs]
+curr_f_tags = [get_image_tag_by_task_def(f_def) for f_def in f_defs]
 
 print("Network is currently running the following versions:")
-print(f"\t{v0_fam}={curr_tag_v0}")
-print(f"\t{v1_fam}={curr_tag_v1}")
-print(f"\t{v2_fam}={curr_tag_v2}")
-print(f"\t{v3_fam}={curr_tag_v3}")
-print(f"\t{f0_fam}={curr_tag_f0}")
-print(f"\t{f1_fam}={curr_tag_f1}\n")
+for i in range(NUM_VALIDATORS):
+    print(f"\t{v_fams[i]} = {curr_v_tags[i]}")
+for i in range(NUM_FULLNODES):
+    print(f"\t{f_fams[i]} = {curr_f_tags[i]}")
+print()
 
 
 if TEST_MODE == "manual":
     print("\n------------ Starting MANUAL compat test ------------\n")
     print("Upgrade path:")
-    print("\tvault (force)\t==> latest")
-    print(f"\tvalidators 0, 1\t==> {ALT_TEST_TAG}")
-    print(f"\tvalidators 2, 3\t==> {TEST_TAG}")
-    print(f"\tfullnodes 0, 1\t==> {ALT_TEST_TAG}\n")
-    new_v0_def = update_task_def_image_tags(v0_def, ALT_TEST_TAG)
-    new_v1_def = update_task_def_image_tags(v1_def, ALT_TEST_TAG)
-    new_f0_def = update_task_def_image_tags(f0_def, ALT_TEST_TAG)
-    new_f1_def = update_task_def_image_tags(f1_def, ALT_TEST_TAG)
-    new_v2_def = update_task_def_image_tags(v2_def, TEST_TAG)
-    new_v3_def = update_task_def_image_tags(v3_def, TEST_TAG)
+    print("\tvault (force)\t\t==> latest")
+    print(f"\tvalidators {list(range(NUM_VALIDATORS // 2))} \t==> {ALT_TEST_TAG}")
+    print(f"\tvalidators {list(range(NUM_VALIDATORS // 2, NUM_VALIDATORS))}\t==> {TEST_TAG}")
+    print(f"\tfullnodes {list(range(NUM_FULLNODES))}\t==> {ALT_TEST_TAG}\n")
+    new_v_defs = [
+        update_task_def_image_tags(v_def, ALT_TEST_TAG)
+        for v_def in v_defs[: NUM_VALIDATORS // 2]
+    ]
+    new_v_defs += [
+        update_task_def_image_tags(v_def, TEST_TAG)
+        for v_def in v_defs[NUM_VALIDATORS // 2 :]
+    ]
+    new_f_defs = [
+        update_task_def_image_tags(f_def, ALT_TEST_TAG)
+        for f_def in f_defs[: NUM_VALIDATORS // 2]
+    ]
 
     if args.dry:
-        print(f"DRY RUN: updated validators/fullnodes 0,1 to {ALT_TEST_TAG}")
-        print(f"DRY RUN: updated validators 2,3 to {TEST_TAG}")
+        print(f"DRY RUN: updated validators/fullnodes {list(range(NUM_VALIDATORS // 2))} to {ALT_TEST_TAG}")
+        print(f"DRY RUN: updated validators {list(range(NUM_VALIDATORS // 2, NUM_VALIDATORS))} to {TEST_TAG}")
     else:
-        rev_v0 = register_task_def_update(v0_fam, new_v0_def)
-        rev_v1 = register_task_def_update(v1_fam, new_v1_def)
-        rev_f0 = register_task_def_update(f0_fam, new_f0_def)
-        rev_f1 = register_task_def_update(f1_fam, new_f1_def)
-        rev_v2 = register_task_def_update(v2_fam, new_v2_def)
-        rev_v3 = register_task_def_update(v3_fam, new_v3_def)
+        v_revs = [
+            register_task_def_update(v_fams[i], new_v_defs[i])
+            for i in range(NUM_VALIDATORS)
+        ]
+        f_revs = [
+            register_task_def_update(f_fams[i], new_f_defs[i])
+            for i in range(NUM_FULLNODES)
+        ]
 
         update_service_force(WORKSPACE, vault_fam)
 
-        update_service_task_def(WORKSPACE, v0_fam, rev_v0)
-        update_service_task_def(WORKSPACE, v1_fam, rev_v1)
-        update_service_task_def(WORKSPACE, v2_fam, rev_v2)
-        update_service_task_def(WORKSPACE, v3_fam, rev_v3)
+        for i in range(NUM_VALIDATORS):
+            update_service_task_def(WORKSPACE, v_fams[i], v_revs[i])
 
         print("Wait 30 seconds before updating fullnodes.")
         time.sleep(30)
 
-        update_service_task_def(WORKSPACE, f0_fam, rev_f0)
-        update_service_task_def(WORKSPACE, f1_fam, rev_f1)
+        for i in range(NUM_FULLNODES):
+            update_service_task_def(WORKSPACE, f_fams[i], f_revs[i])
 
 elif TEST_MODE == "testnet":
     print("\n------------ Starting TESTNET compat test ------------\n")
     print("Upgrade path:")
-    print("\tvault (force)\t==> latest")
-    print(f"\tvalidators 0, 1\t==> {TEST_TAG}")
-    print(f"\tvalidators 2, 3\t==> {ALT_TEST_TAG}")
-    print(f"\tfullnodes 0, 1\t==> {ALT_TEST_TAG}\n")
-    print("Diagnosing node health...")
-    unhealthy = False
-    all_tags = [
-        curr_tag_v0,
-        curr_tag_v1,
-        curr_tag_v2,
-        curr_tag_v3,
-        curr_tag_f0,
-        curr_tag_f1,
-    ]
+    print("\tvault (force)\t\t==> latest")
+    print(f"\tvalidators {list(range(NUM_VALIDATORS // 2))}\t==> {TEST_TAG}")
+    print(f"\tvalidators {list(range(NUM_VALIDATORS // 2, NUM_VALIDATORS))}\t==> {ALT_TEST_TAG}")
+    print(f"\tfullnodes {list(range(NUM_FULLNODES))}\t==> {ALT_TEST_TAG}\n")
+    print("Checking if nodes are already running latest testnet version...")
+    wrong_versions = False
+    all_tags = curr_v_tags + curr_f_tags
     if not all([tag == ALT_TEST_TAG for tag in all_tags]):
-        unhealthy = True
+        wrong_versions = True
 
-    if unhealthy:
+    if wrong_versions:
         print(
-            f"Cluster is unhealthy, patching entire network to TESTNET_TAG = {ALT_TEST_TAG} and exiting..."
+            f"Cluster is not running testnet version, patching entire network to TESTNET_TAG = {ALT_TEST_TAG} and exiting..."
         )
         # create the patch definitions
-        patch_v0_def = update_task_def_image_tags(v0_def, ALT_TEST_TAG)
-        patch_v1_def = update_task_def_image_tags(v1_def, ALT_TEST_TAG)
-        patch_v2_def = update_task_def_image_tags(v2_def, ALT_TEST_TAG)
-        patch_v3_def = update_task_def_image_tags(v3_def, ALT_TEST_TAG)
-        patch_f0_def = update_task_def_image_tags(f0_def, ALT_TEST_TAG)
-        patch_f1_def = update_task_def_image_tags(f1_def, ALT_TEST_TAG)
+        patch_v_defs = [
+            update_task_def_image_tags(v_def, ALT_TEST_TAG) for v_def in v_defs
+        ]
+        patch_f_defs = [
+            update_task_def_image_tags(f_def, ALT_TEST_TAG) for f_def in f_defs
+        ]
+
         if not args.dry:
 
             # register the task defintions
-            rev_v0 = register_task_def_update(v0_fam, patch_v0_def)
-            rev_v1 = register_task_def_update(v1_fam, patch_v1_def)
-            rev_v2 = register_task_def_update(v2_fam, patch_v2_def)
-            rev_v3 = register_task_def_update(v3_fam, patch_v3_def)
-            rev_f0 = register_task_def_update(f0_fam, patch_f0_def)
-            rev_f1 = register_task_def_update(f1_fam, patch_f1_def)
+            v_revs = [
+                register_task_def_update(v_fams[i], patch_v_defs[i])
+                for i in range(NUM_VALIDATORS)
+            ]
+            f_revs = [
+                register_task_def_update(f_fams[i], patch_f_defs[i])
+                for i in range(NUM_FULLNODES)
+            ]
 
             update_service_force(WORKSPACE, vault_fam)
 
             # update each of the ecs services
-            update_service_task_def(WORKSPACE, v0_fam, rev_v0)
-            update_service_task_def(WORKSPACE, v1_fam, rev_v1)
-            update_service_task_def(WORKSPACE, v2_fam, rev_v2)
-            update_service_task_def(WORKSPACE, v3_fam, rev_v3)
+            for i in range(NUM_VALIDATORS):
+                update_service_task_def(WORKSPACE, v_fams[i], v_revs[i])
 
             print("Wait 30 seconds before updating fullnodes.")
             time.sleep(30)
 
-            update_service_task_def(WORKSPACE, f0_fam, rev_f0)
-            update_service_task_def(WORKSPACE, f1_fam, rev_f1)
+            for i in range(NUM_FULLNODES):
+                update_service_task_def(WORKSPACE, f_fams[i], f_revs[i])
 
-        print("Please retry when the network is healthy\n")
+        print("Please retry when the network is stable running testnet version\n")
         sys.exit(1)
 
     # after this point, validators/fullnodes 2,3 are running what they should
     # time to upgrade validators 0,1
-    print("Cluster is healthy!\n")
-    new_v0_def = update_task_def_image_tags(v0_def, TEST_TAG)
-    new_v1_def = update_task_def_image_tags(v1_def, TEST_TAG)
+    print("Cluster is running testnet verion!\n")
+    new_v_defs = [
+        update_task_def_image_tags(v_def, TEST_TAG)
+        for v_def in v_defs[: NUM_VALIDATORS // 2]
+    ]
 
     if not args.dry:
-        rev_v0 = register_task_def_update(v0_fam, new_v0_def)
-        rev_v1 = register_task_def_update(v1_fam, new_v1_def)
+        v_revs = [
+            register_task_def_update(v_fams[i], new_v_defs[i])
+            for i in range(NUM_VALIDATORS // 2)
+        ]
 
-        update_service_task_def(WORKSPACE, v0_fam, rev_v0)
-        update_service_task_def(WORKSPACE, v1_fam, rev_v1)
+        for i in range(NUM_VALIDATORS // 2):
+            update_service_task_def(WORKSPACE, v_fams[i], v_revs[i])
+
     else:
-        print(f"DRY RUN: updated validators 0,1 to {TEST_TAG}")
+        print(f"DRY RUN: updated validators {list(range(NUM_VALIDATORS // 2))} to {TEST_TAG}")
 
 print("Done!")
