@@ -38,6 +38,7 @@ libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
 bytes = "0.5.5"
 
 config-builder = { path = "../config/config-builder", version = "0.1.0" }
+lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-network-address = { path = "../network/network-address", version = "0.1.0" }
 libradb = { path = "../storage/libradb", version = "0.1.0" }
