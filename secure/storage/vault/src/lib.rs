@@ -53,7 +53,17 @@ impl From<std::io::Error> for Error {
 
 impl From<ureq::Response> for Error {
     fn from(resp: ureq::Response) -> Self {
-        Error::HttpError(resp.status(), resp.status_line().into())
+        if let Some(e) = resp.synthetic_error() {
+            // Local error
+            Error::InternalError(e.to_string())
+        } else {
+            // Clear buffer and use that as the message
+            let status = resp.status();
+            match resp.into_string() {
+                Ok(v) => Error::HttpError(status, v),
+                Err(e) => Error::InternalError(e.to_string()),
+            }
+        }
     }
 }
 
@@ -130,7 +140,11 @@ impl Client {
                 Ok(policies.policies)
             }
             // There are no policies.
-            404 => Ok(vec![]),
+            404 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Ok(vec![])
+            }
             _ => Err(resp.into()),
         }
     }
@@ -194,7 +208,11 @@ impl Client {
                 Ok(resp.data.keys)
             }
             // There are no secrets.
-            404 => Ok(vec![]),
+            404 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Ok(vec![])
+            }
             _ => Err(resp.into()),
         }
     }
@@ -232,7 +250,11 @@ impl Client {
                 let version = data.metadata.version;
                 Ok(ReadResponse::new(created_time, value, version))
             }
-            404 => Err(Error::NotFound(secret.into(), key.into())),
+            404 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Err(Error::NotFound(secret.into(), key.into()))
+            }
             _ => Err(resp.into()),
         }
     }
@@ -250,7 +272,11 @@ impl Client {
                 resp.into_string()?;
                 Ok(())
             }
-            404 => Err(Error::NotFound("transit/".into(), name.into())),
+            404 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Err(Error::NotFound("transit/".into(), name.into()))
+            }
             _ => Err(resp.into()),
         }
     }
@@ -338,7 +364,11 @@ impl Client {
                 let list_keys: ListKeysResponse = serde_json::from_str(&resp.into_string()?)?;
                 Ok(list_keys.data.keys)
             }
-            404 => Err(Error::NotFound("transit/".into(), "keys".into())),
+            404 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Err(Error::NotFound("transit/".into(), "keys".into()))
+            }
             _ => Err(resp.into()),
         }
     }
@@ -364,7 +394,11 @@ impl Client {
                 }
                 Ok(read_resp)
             }
-            404 => Err(Error::NotFound("transit/".into(), name.into())),
+            404 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Err(Error::NotFound("transit/".into(), name.into()))
+            }
             _ => Err(resp.into()),
         }
     }
@@ -422,13 +456,13 @@ impl Client {
         let resp = self
             .upgrade_request(request)
             .send_json(json!({ "data": { key: value } }));
-        match resp.status() {
-            200 => {
-                // Explicitly clear buffer so the stream can be re-used.
-                resp.into_string()?;
-                Ok(())
-            }
-            _ => Err(resp.into()),
+
+        if resp.ok() {
+            // Explicitly clear buffer so the stream can be re-used.
+            resp.into_string()?;
+            Ok(())
+        } else {
+            Err(resp.into())
         }
     }
 
@@ -437,12 +471,11 @@ impl Client {
     pub fn unsealed(&self) -> Result<bool, Error> {
         let request = self.agent.get(&format!("{}/v1/sys/seal-status", self.host));
         let resp = self.upgrade_request_without_token(request).call();
-        match resp.status() {
-            200 => {
-                let resp: SealStatusResponse = serde_json::from_str(&resp.into_string()?)?;
-                Ok(!resp.sealed)
-            }
-            _ => Err(resp.into()),
+        if resp.ok() {
+            let resp: SealStatusResponse = serde_json::from_str(&resp.into_string()?)?;
+            Ok(!resp.sealed)
+        } else {
+            Err(resp.into())
         }
     }
 
