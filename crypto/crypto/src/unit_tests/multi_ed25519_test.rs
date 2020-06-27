@@ -17,7 +17,7 @@ use rand::{rngs::StdRng, SeedableRng};
 
 static MESSAGE_HASH: Lazy<HashValue> = Lazy::new(|| HashValue::sha3_256_of(b"Test Message"));
 
-// Helper function to generate N key pairs.
+// Helper function to generate N ed25519 private keys.
 fn generate_keys(n: usize) -> Vec<Ed25519PrivateKey> {
     let mut rng = StdRng::from_seed(TEST_SEED);
     (0..n)

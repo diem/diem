@@ -12,6 +12,7 @@ use std::{
 
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
+use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use libra_canonical_serialization::{
@@ -22,7 +23,9 @@ use libra_crypto::{
         Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH,
         ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH,
     },
-    HashValue, Signature, SigningKey,
+    multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey, MultiEd25519Signature},
+    test_utils::TEST_SEED,
+    HashValue, Signature, SigningKey, Uniform,
 };
 
 fn is_same<T>(t: T)
@@ -588,8 +591,10 @@ fn ed25519_material() {
     let public_key = Ed25519PublicKey::from(&private_key);
 
     let serialized_public_key = to_bytes(&Cow::Borrowed(&public_key)).unwrap();
-    assert_eq!(serialized_public_key.len(), ED25519_PUBLIC_KEY_LENGTH + 1);
+    // Expected size should be 1 byte due to LCS length prefix + 32 bytes for the raw key bytes
+    assert_eq!(serialized_public_key.len(), 1 + ED25519_PUBLIC_KEY_LENGTH);
 
+    // Ensure public key serialization - deserialization is stable and deterministic
     let deserialized_public_key: Ed25519PublicKey = from_bytes(&serialized_public_key).unwrap();
     assert_eq!(deserialized_public_key, public_key);
 
@@ -597,8 +602,76 @@ fn ed25519_material() {
     let signature: Ed25519Signature = private_key.sign_message(&message_hash);
 
     let serialized_signature = to_bytes(&Cow::Borrowed(&signature)).unwrap();
-    assert_eq!(serialized_signature.len(), ED25519_SIGNATURE_LENGTH + 1);
+    // Expected size should be 1 byte due to LCS length prefix + 64 bytes for the raw signature bytes
+    assert_eq!(serialized_signature.len(), 1 + ED25519_SIGNATURE_LENGTH);
 
+    // Ensure signature serialization - deserialization is stable and deterministic
+    let deserialized_signature: Ed25519Signature = from_bytes(&serialized_signature).unwrap();
+    assert_eq!(deserialized_signature, signature);
+
+    // Verify signature
     let verified_signature = signature.verify(&message_hash, &public_key);
     assert!(verified_signature.is_ok())
+}
+
+#[test]
+fn multi_ed25519_material() {
+    use std::borrow::Cow;
+
+    // Helper function to generate N ed25519 private keys.
+    fn generate_keys(n: usize) -> Vec<Ed25519PrivateKey> {
+        let mut rng = StdRng::from_seed(TEST_SEED);
+        (0..n)
+            .map(|_| Ed25519PrivateKey::generate(&mut rng))
+            .collect()
+    }
+
+    let num_of_keys = 10;
+    let threshold = 7;
+    let private_keys_10 = generate_keys(num_of_keys);
+    let multi_private_key_7of10 = MultiEd25519PrivateKey::new(private_keys_10, threshold).unwrap();
+    let multi_public_key_7of10 = MultiEd25519PublicKey::from(&multi_private_key_7of10);
+
+    let serialized_multi_public_key = to_bytes(&Cow::Borrowed(&multi_public_key_7of10)).unwrap();
+
+    // Expected size due to specialization is
+    // 2 bytes for LCS length prefix (due to ULEB128)
+    // + 10 * single_pub_key_size bytes (each key is the compressed Edwards Y coordinate)
+    // + 1 byte for the threshold
+    assert_eq!(
+        serialized_multi_public_key.len(),
+        2 + num_of_keys * ED25519_PUBLIC_KEY_LENGTH + 1
+    );
+
+    let deserialized_multi_public_key: MultiEd25519PublicKey =
+        from_bytes(&serialized_multi_public_key).unwrap();
+    assert_eq!(deserialized_multi_public_key, multi_public_key_7of10);
+
+    let message_hash = HashValue::sha3_256_of(&[2u8; 8]);
+
+    // Verifying a 7-of-10 signature against a public key with the same threshold should pass.
+    let multi_signature_7of10: MultiEd25519Signature =
+        multi_private_key_7of10.sign_message(&message_hash);
+
+    let serialized_multi_signature = to_bytes(&Cow::Borrowed(&multi_signature_7of10)).unwrap();
+    // Expected size due to specialization is
+    // 2 bytes for LCS length prefix (due to ULEB128)
+    // + 7 * single_signature_size bytes (each sig is of the form (R,s),
+    // a 32B compressed Edwards Y coordinate concatenated with a 32B scalar)
+    // + 4 bytes for the bitmap (the bitmap can hold up to 32 bits)
+    assert_eq!(
+        serialized_multi_signature.len(),
+        2 + threshold as usize * ED25519_SIGNATURE_LENGTH + 4
+    );
+
+    // Verify bitmap
+    assert_eq!(
+        multi_signature_7of10.bitmap(),
+        &[0b1111_1110, 0u8, 0u8, 0u8]
+    );
+
+    // Verify signature
+    assert!(multi_signature_7of10
+        .verify(&message_hash, &multi_public_key_7of10)
+        .is_ok());
 }
