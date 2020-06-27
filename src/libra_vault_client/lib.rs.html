@@ -902,6 +902,39 @@
 <span id="902">902</span>
 <span id="903">903</span>
 <span id="904">904</span>
+<span id="905">905</span>
+<span id="906">906</span>
+<span id="907">907</span>
+<span id="908">908</span>
+<span id="909">909</span>
+<span id="910">910</span>
+<span id="911">911</span>
+<span id="912">912</span>
+<span id="913">913</span>
+<span id="914">914</span>
+<span id="915">915</span>
+<span id="916">916</span>
+<span id="917">917</span>
+<span id="918">918</span>
+<span id="919">919</span>
+<span id="920">920</span>
+<span id="921">921</span>
+<span id="922">922</span>
+<span id="923">923</span>
+<span id="924">924</span>
+<span id="925">925</span>
+<span id="926">926</span>
+<span id="927">927</span>
+<span id="928">928</span>
+<span id="929">929</span>
+<span id="930">930</span>
+<span id="931">931</span>
+<span id="932">932</span>
+<span id="933">933</span>
+<span id="934">934</span>
+<span id="935">935</span>
+<span id="936">936</span>
+<span id="937">937</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -958,7 +991,17 @@
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">ureq</span>::<span class="ident">Response</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">resp</span>: <span class="ident">ureq</span>::<span class="ident">Response</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="ident">Error</span>::<span class="ident">HttpError</span>(<span class="ident">resp</span>.<span class="ident">status</span>(), <span class="ident">resp</span>.<span class="ident">status_line</span>().<span class="ident">into</span>())
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">e</span>) <span class="op">=</span> <span class="ident">resp</span>.<span class="ident">synthetic_error</span>() {
+            <span class="comment">// Local error</span>
+            <span class="ident">Error</span>::<span class="ident">InternalError</span>(<span class="ident">e</span>.<span class="ident">to_string</span>())
+        } <span class="kw">else</span> {
+            <span class="comment">// Clear buffer and use that as the message</span>
+            <span class="kw">let</span> <span class="ident">status</span> <span class="op">=</span> <span class="ident">resp</span>.<span class="ident">status</span>();
+            <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">into_string</span>() {
+                <span class="prelude-val">Ok</span>(<span class="ident">v</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Error</span>::<span class="ident">HttpError</span>(<span class="ident">status</span>, <span class="ident">v</span>),
+                <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">Error</span>::<span class="ident">InternalError</span>(<span class="ident">e</span>.<span class="ident">to_string</span>()),
+            }
+        }
     }
 }
 
@@ -1035,7 +1078,11 @@
                 <span class="prelude-val">Ok</span>(<span class="ident">policies</span>.<span class="ident">policies</span>)
             }
             <span class="comment">// There are no policies.</span>
-            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="macro">vec</span><span class="macro">!</span>[]),
+            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="comment">// Explicitly clear buffer so the stream can be re-used.</span>
+                <span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>;
+                <span class="prelude-val">Ok</span>(<span class="macro">vec</span><span class="macro">!</span>[])
+            }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>()),
         }
     }
@@ -1099,7 +1146,11 @@
                 <span class="prelude-val">Ok</span>(<span class="ident">resp</span>.<span class="ident">data</span>.<span class="ident">keys</span>)
             }
             <span class="comment">// There are no secrets.</span>
-            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="macro">vec</span><span class="macro">!</span>[]),
+            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="comment">// Explicitly clear buffer so the stream can be re-used.</span>
+                <span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>;
+                <span class="prelude-val">Ok</span>(<span class="macro">vec</span><span class="macro">!</span>[])
+            }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>()),
         }
     }
@@ -1137,7 +1188,11 @@
                 <span class="kw">let</span> <span class="ident">version</span> <span class="op">=</span> <span class="ident">data</span>.<span class="ident">metadata</span>.<span class="ident">version</span>;
                 <span class="prelude-val">Ok</span>(<span class="ident">ReadResponse</span>::<span class="ident">new</span>(<span class="ident">created_time</span>, <span class="ident">value</span>, <span class="ident">version</span>))
             }
-            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">NotFound</span>(<span class="ident">secret</span>.<span class="ident">into</span>(), <span class="ident">key</span>.<span class="ident">into</span>())),
+            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="comment">// Explicitly clear buffer so the stream can be re-used.</span>
+                <span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>;
+                <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">NotFound</span>(<span class="ident">secret</span>.<span class="ident">into</span>(), <span class="ident">key</span>.<span class="ident">into</span>()))
+            }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>()),
         }
     }
@@ -1155,7 +1210,11 @@
                 <span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(())
             }
-            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">NotFound</span>(<span class="string">&quot;transit/&quot;</span>.<span class="ident">into</span>(), <span class="ident">name</span>.<span class="ident">into</span>())),
+            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="comment">// Explicitly clear buffer so the stream can be re-used.</span>
+                <span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>;
+                <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">NotFound</span>(<span class="string">&quot;transit/&quot;</span>.<span class="ident">into</span>(), <span class="ident">name</span>.<span class="ident">into</span>()))
+            }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>()),
         }
     }
@@ -1243,7 +1302,11 @@
                 <span class="kw">let</span> <span class="ident">list_keys</span>: <span class="ident">ListKeysResponse</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
                 <span class="prelude-val">Ok</span>(<span class="ident">list_keys</span>.<span class="ident">data</span>.<span class="ident">keys</span>)
             }
-            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">NotFound</span>(<span class="string">&quot;transit/&quot;</span>.<span class="ident">into</span>(), <span class="string">&quot;keys&quot;</span>.<span class="ident">into</span>())),
+            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="comment">// Explicitly clear buffer so the stream can be re-used.</span>
+                <span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>;
+                <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">NotFound</span>(<span class="string">&quot;transit/&quot;</span>.<span class="ident">into</span>(), <span class="string">&quot;keys&quot;</span>.<span class="ident">into</span>()))
+            }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>()),
         }
     }
@@ -1269,7 +1332,11 @@
                 }
                 <span class="prelude-val">Ok</span>(<span class="ident">read_resp</span>)
             }
-            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">NotFound</span>(<span class="string">&quot;transit/&quot;</span>.<span class="ident">into</span>(), <span class="ident">name</span>.<span class="ident">into</span>())),
+            <span class="number">404</span> <span class="op">=</span><span class="op">&gt;</span> {
+                <span class="comment">// Explicitly clear buffer so the stream can be re-used.</span>
+                <span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>;
+                <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">NotFound</span>(<span class="string">&quot;transit/&quot;</span>.<span class="ident">into</span>(), <span class="ident">name</span>.<span class="ident">into</span>()))
+            }
             <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>()),
         }
     }
@@ -1327,13 +1394,13 @@
         <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">upgrade_request</span>(<span class="ident">request</span>)
             .<span class="ident">send_json</span>(<span class="macro">json</span><span class="macro">!</span>({ <span class="string">&quot;data&quot;</span>: { <span class="ident">key</span>: <span class="ident">value</span> } }));
-        <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">status</span>() {
-            <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="comment">// Explicitly clear buffer so the stream can be re-used.</span>
-                <span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>;
-                <span class="prelude-val">Ok</span>(())
-            }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>()),
+
+        <span class="kw">if</span> <span class="ident">resp</span>.<span class="ident">ok</span>() {
+            <span class="comment">// Explicitly clear buffer so the stream can be re-used.</span>
+            <span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(())
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>())
         }
     }
 
@@ -1342,12 +1409,11 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">unsealed</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">bool</span>, <span class="ident">Error</span><span class="op">&gt;</span> {
         <span class="kw">let</span> <span class="ident">request</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">agent</span>.<span class="ident">get</span>(<span class="kw-2">&amp;</span><span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}/v1/sys/seal-status&quot;</span>, <span class="self">self</span>.<span class="ident">host</span>));
         <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">upgrade_request_without_token</span>(<span class="ident">request</span>).<span class="ident">call</span>();
-        <span class="kw">match</span> <span class="ident">resp</span>.<span class="ident">status</span>() {
-            <span class="number">200</span> <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">resp</span>: <span class="ident">SealStatusResponse</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
-                <span class="prelude-val">Ok</span>(<span class="op">!</span><span class="ident">resp</span>.<span class="ident">sealed</span>)
-            }
-            <span class="kw">_</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>()),
+        <span class="kw">if</span> <span class="ident">resp</span>.<span class="ident">ok</span>() {
+            <span class="kw">let</span> <span class="ident">resp</span>: <span class="ident">SealStatusResponse</span> <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_str</span>(<span class="kw-2">&amp;</span><span class="ident">resp</span>.<span class="ident">into_string</span>()<span class="question-mark">?</span>)<span class="question-mark">?</span>;
+            <span class="prelude-val">Ok</span>(<span class="op">!</span><span class="ident">resp</span>.<span class="ident">sealed</span>)
+        } <span class="kw">else</span> {
+            <span class="prelude-val">Err</span>(<span class="ident">resp</span>.<span class="ident">into</span>())
         }
     }
 
