@@ -16,17 +16,17 @@ fun main() {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::LibraAccount;
 use 0x1::LBR::LBR;
 use 0x1::Libra;
 fun main(account: &signer) {
-   LibraAccount::deposit_to(account, Libra::mint<LBR>(account, 1000));
+    let lbr = Libra::mint<LBR>(account, 1000);
+    Libra::destroy_zero(lbr)
 }
 }
 // check: MISSING_DATA
 
 // burning LBR via Libra::burn should not work. This is cumbersome to test directly, so instead test
-// that the Association account does not have a BurnCapability
+// that the Association account does not have a BurnCapability<LBR>
 //! new-transaction
 //! sender: blessed
 script {

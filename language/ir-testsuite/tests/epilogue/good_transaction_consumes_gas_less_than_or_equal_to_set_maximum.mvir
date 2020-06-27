@@ -1,15 +1,4 @@
-//! account: default, 0Coin1
-
-//! new-transaction
-//! sender: blessed
-import 0x1.Coin1;
-import 0x1.LibraAccount;
-import 0x1.Libra;
-main(blessed: &signer) {
-    LibraAccount.deposit<Coin1.Coin1>(copy(blessed), {{default}}, Libra.mint<Coin1.Coin1>(move(blessed), 10000));
-    return;
-}
-// check: EXECUTED
+//! account: default, 10000Coin1
 
 //! new-transaction
 //! gas-price: 1

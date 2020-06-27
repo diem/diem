@@ -26,7 +26,9 @@ fun create_child_vasp_account<CoinType>(
     // Give the newly created child `child_initial_balance` coins
     if (child_initial_balance > 0) {
         let vasp_withdrawal_cap = LibraAccount::extract_withdraw_capability(parent_vasp);
-        LibraAccount::pay_from<CoinType>(&vasp_withdrawal_cap, child_address, child_initial_balance);
+        LibraAccount::pay_from<CoinType>(
+            &vasp_withdrawal_cap, child_address, child_initial_balance, x"", x""
+        );
         LibraAccount::restore_withdraw_capability(vasp_withdrawal_cap);
     };
     Roles::restore_capability_to_privilege(parent_vasp, parent_vasp_capability);

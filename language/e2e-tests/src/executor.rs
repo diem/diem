@@ -154,7 +154,7 @@ impl FakeExecutor {
         let ap = account.make_account_access_path();
         let data_blob = StateView::get(&self.data_store, &ap)
             .expect("account must exist in data store")
-            .expect("data must exist in data store");
+            .unwrap_or_else(|| panic!("Can't fetch account resource for {}", account.address()));
         lcs::from_bytes(data_blob.as_slice()).ok()
     }
 

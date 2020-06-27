@@ -7,8 +7,7 @@
 // a hurdle that must be cleared for all payments to the payee. In addition, approved payments do
 // not have replay protection.
 module ApprovedPayment {
-    use 0x1::Libra::Libra;
-    use 0x1::LibraAccount;
+    use 0x1::Libra::{Self, Libra};
     use 0x1::Signature;
     use 0x1::Signer;
     use 0x1::Vector;
@@ -25,9 +24,9 @@ module ApprovedPayment {
     // Deposit `coin` in `payee`'s account if the `signature` on the payment metadata matches the
     // public key stored in the `approved_payment` resource
     public fun deposit<Token>(
-        payer: &signer,
+        _payer: &signer,
         approved_payment: &T,
-        payee: address,
+        _payee: address,
         coin: Libra<Token>,
         metadata: vector<u8>,
         signature: vector<u8>
@@ -43,7 +42,9 @@ module ApprovedPayment {
             ),
             9002, // TODO: proper error code
         );
-        LibraAccount::deposit_with_metadata<Token>(payer, payee, coin, metadata, x"")
+        //LibraAccount::deposit_with_metadata<Token>(payer, payee, coin, metadata, x"")
+        // TODO: LibraAccount APIs no longer support depositing a coin stored in a local
+        Libra::destroy_zero(coin);
     }
 
     // Wrapper of `deposit` that withdraw's from the sender's balance and uses the top-level
@@ -51,20 +52,20 @@ module ApprovedPayment {
     public fun deposit_to_payee<Token>(
         payer: &signer,
         payee: address,
-        amount: u64,
+        _amount: u64,
         metadata: vector<u8>,
         signature: vector<u8>
     ) acquires T {
-        let with_cap = LibraAccount::extract_withdraw_capability(payer);
         deposit<Token>(
             payer,
             borrow_global<T>(payee),
             payee,
-            LibraAccount::withdraw_from<Token>(&with_cap, amount),
+            // TODO: LibraAccount APIs no longer support withdrawing a coin into a local
+            //LibraAccount::withdraw_from<Token>(&with_cap, amount),
+            Libra::zero<Token>(),
             metadata,
             signature
         );
-        LibraAccount::restore_withdraw_capability(with_cap);
     }
 
     // Rotate the key used to sign approved payments. This will invalidate any approved payments

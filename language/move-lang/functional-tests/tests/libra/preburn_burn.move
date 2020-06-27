@@ -7,7 +7,6 @@ script {
 use 0x1::LibraAccount;
 use 0x1::Coin1::Coin1;
 use 0x1::Roles::{Self, TreasuryComplianceRole};
-use 0x1::DesignatedDealer;
 
 fun main(account: &signer) {
     let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
@@ -17,14 +16,13 @@ fun main(account: &signer) {
         {{dd}},
         {{dd::auth_key}},
     );
-    let coins = DesignatedDealer::tiered_mint<Coin1>(
+    LibraAccount::tiered_mint<Coin1>(
         account,
         &tc_capability,
-        600,
         {{dd}},
+        600,
         0,
     );
-    LibraAccount::deposit(account, {{dd}}, coins);
     Roles::restore_capability_to_privilege(account, tc_capability);
 }
 }
@@ -41,10 +39,9 @@ use 0x1::LibraAccount;
 fun main(account: &signer) {
     let old_market_cap = Libra::market_cap<Coin1>();
     let with_cap = LibraAccount::extract_withdraw_capability(account);
-    let coin = LibraAccount::withdraw_from<Coin1>(&with_cap, 100);
     // send the coins to the preburn bucket. market cap should not be affected, but the preburn
     // bucket should increase in size by 100
-    Libra::preburn_to<Coin1>(account, coin);
+    LibraAccount::preburn<Coin1>(account, &with_cap, 100);
     assert(Libra::market_cap<Coin1>() == old_market_cap, 8002);
     assert(Libra::preburn_value<Coin1>() == 100, 8003);
     LibraAccount::restore_withdraw_capability(with_cap);

@@ -1,5 +1,5 @@
 //! account: bob, 10000LBR
-//! account: alice, 10000LBR
+//! account: alice, 0LBR
 //! account: abby, 0, 0, address
 
 module Holder {
@@ -40,9 +40,8 @@ script {
     use 0x1::LibraAccount;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
-        let coins = LibraAccount::withdraw_from<LBR>(&with_cap, 10);
+        LibraAccount::pay_from<LBR>(&with_cap, {{bob}}, 10, x"", x"");
         LibraAccount::restore_withdraw_capability(with_cap);
-        LibraAccount::deposit_to(account, coins);
     }
 }
 // check: EXECUTED
@@ -121,10 +120,9 @@ script {
     use 0x1::LBR::LBR;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
-        LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 10000);
+        LibraAccount::pay_from<LBR>(&with_cap, {{alice}}, 10000, x"", x"");
         LibraAccount::restore_withdraw_capability(with_cap);
+        assert(LibraAccount::balance<LBR>({{alice}}) == 10000, 60)
     }
 }
-// TODO: what is this testing?
-// chec: ABORTED
-// chec: 9001
+// check: EXECUTED

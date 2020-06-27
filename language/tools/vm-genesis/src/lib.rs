@@ -221,7 +221,7 @@ fn create_and_initialize_testnet_minting(
     context.set_sender(account_config::treasury_compliance_account_address());
     context.exec_script(&create_dd_script);
 
-    // add coins
+    // add coins to the DD account
     context.set_sender(account_config::testnet_dd_account_address());
     context.exec_script(&add_lbr);
     context.exec_script(&add_coin2);
@@ -306,7 +306,7 @@ fn verify_genesis_write_set(events: &[ContractEvent]) {
         //1, // This is the proper number of events for mainnet. Once we have a good layering
         // strategy for mainnet/testnet genesis writesets uncomment this and remove the line
         // below.
-        15, // XXX/TODO(tzakian). For testnet only!
+        12, // XXX/TODO(tzakian). For testnet only!
         "Genesis transaction should emit one event, but found {} events: {:?}",
         events.len(),
         events,

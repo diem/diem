@@ -69,7 +69,7 @@ module TransactionFee {
             // extract fees
             let fees = borrow_global_mut<TransactionFee<LBR>>(fee_address);
             let coins = Libra::withdraw_all<LBR>(&mut fees.balance);
-            let (coin1, coin2) = LBR::unpack(tc_account, coins);
+            let (coin1, coin2) = LBR::unpack(coins);
             // burn
             let coin1_burn_cap = Libra::remove_burn_capability<Coin1>(tc_account);
             let coin2_burn_cap = Libra::remove_burn_capability<Coin2>(tc_account);

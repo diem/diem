@@ -189,7 +189,7 @@ underlying fiat.
         // extract fees
         <b>let</b> fees = borrow_global_mut&lt;<a href="#0x1_TransactionFee">TransactionFee</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;&gt;(fee_address);
         <b>let</b> coins = <a href="Libra.md#0x1_Libra_withdraw_all">Libra::withdraw_all</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(&<b>mut</b> fees.balance);
-        <b>let</b> (coin1, coin2) = <a href="LBR.md#0x1_LBR_unpack">LBR::unpack</a>(tc_account, coins);
+        <b>let</b> (coin1, coin2) = <a href="LBR.md#0x1_LBR_unpack">LBR::unpack</a>(coins);
         // burn
         <b>let</b> coin1_burn_cap = <a href="Libra.md#0x1_Libra_remove_burn_capability">Libra::remove_burn_capability</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(tc_account);
         <b>let</b> coin2_burn_cap = <a href="Libra.md#0x1_Libra_remove_burn_capability">Libra::remove_burn_capability</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(tc_account);

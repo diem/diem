@@ -15,9 +15,8 @@ main(account: &signer, receiver: address) {
     let with_cap: LibraAccount.WithdrawCapability;
 
     with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    coins = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 200);
+    LibraAccount.pay_from<LBR.LBR>(&with_cap, move(receiver), 200, h"", h"");
     LibraAccount.restore_withdraw_capability(move(with_cap));
-    LibraAccount.deposit<LBR.LBR>(move(account), move(receiver), move(coins));
 
     return;
 }

@@ -33,7 +33,7 @@ This will only succeed if
 
 <pre><code><b>fun</b> <a href="#SCRIPT_preburn">preburn</a>&lt;Token&gt;(account: &signer, amount: u64) {
     <b>let</b> withdraw_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(account);
-    <a href="../../modules/doc/Libra.md#0x1_Libra_preburn_to">Libra::preburn_to</a>&lt;Token&gt;(account, <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_withdraw_from">LibraAccount::withdraw_from</a>(&withdraw_cap, amount));
+    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_preburn">LibraAccount::preburn</a>&lt;Token&gt;(account, &withdraw_cap, amount);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_withdraw_capability">LibraAccount::restore_withdraw_capability</a>(withdraw_cap);
 }
 </code></pre>
