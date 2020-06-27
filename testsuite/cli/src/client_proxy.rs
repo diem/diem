@@ -422,7 +422,7 @@ impl ClientProxy {
         self.client
             .submit_transaction(self.accounts.get_mut(sender_ref_id), txn)?;
         if is_blocking {
-            self.wait_for_transaction(sender_address, sequence_number)?;
+            self.wait_for_transaction(sender_address, sequence_number + 1)?;
         }
         Ok(())
     }
