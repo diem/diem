@@ -2,8 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::SecureBackend;
+use libra_network_address::NetworkAddress;
 use serde::{Deserialize, Serialize};
-use std::{net::SocketAddr, path::PathBuf};
+use std::{
+    net::{SocketAddr, ToSocketAddrs},
+    path::PathBuf,
+};
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
@@ -52,5 +56,15 @@ pub enum SafetyRulesService {
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct RemoteService {
-    pub server_address: SocketAddr,
+    pub server_address: NetworkAddress,
+}
+
+impl RemoteService {
+    pub fn server_address(&self) -> SocketAddr {
+        self.server_address
+            .to_socket_addrs()
+            .expect("server_address invalid")
+            .next()
+            .expect("server_address invalid")
+    }
 }

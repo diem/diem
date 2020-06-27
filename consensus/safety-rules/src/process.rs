@@ -26,7 +26,7 @@ impl Process {
             SafetyRulesService::SpawnedProcess(service) => service,
             _ => panic!("Unexpected SafetyRules service: {:?}", service),
         };
-        let server_addr = service.server_address;
+        let server_addr = service.server_address();
 
         Self {
             data: Some(ProcessData {

@@ -14,7 +14,7 @@ consensus:
     safety_rules:
         service:
             type: process
-            server_address: "127.0.0.1:5555"
+            server_address: "/ip4/127.0.0.1/tcp/5555"
         backend:
             type: "in_memory_storage"
 
