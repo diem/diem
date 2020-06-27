@@ -1498,7 +1498,7 @@
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
-    <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
+    <span class="ident">vm_status</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
 };
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{
     <span class="ident">identifier</span>::{<span class="ident">IdentStr</span>, <span class="ident">Identifier</span>},
@@ -1519,7 +1519,7 @@
 };
 <span class="kw">use</span> <span class="ident">vm</span>::{
     <span class="ident">access</span>::{<span class="ident">ModuleAccess</span>, <span class="ident">ScriptAccess</span>},
-    <span class="ident">errors</span>::{<span class="ident">verification_error</span>, <span class="ident">vm_error</span>, <span class="ident">Location</span>, <span class="ident">VMResult</span>},
+    <span class="ident">errors</span>::{<span class="ident">verification_error</span>, <span class="ident">vm_status</span>, <span class="ident">Location</span>, <span class="ident">VMResult</span>},
     <span class="ident">file_format</span>::{
         <span class="ident">Bytecode</span>, <span class="ident">CompiledScript</span>, <span class="ident">Constant</span>, <span class="ident">ConstantPoolIndex</span>, <span class="ident">FieldHandleIndex</span>,
         <span class="ident">FieldInstantiationIndex</span>, <span class="ident">FunctionDefinition</span>, <span class="ident">FunctionHandleIndex</span>,
@@ -2052,7 +2052,7 @@
             <span class="prelude-val">Ok</span>(<span class="ident">script</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">script</span>,
             <span class="prelude-val">Err</span>(<span class="ident">err</span>) <span class="op">=</span><span class="op">&gt;</span> {
                 <span class="macro">error</span><span class="macro">!</span>(<span class="string">&quot;[VM] deserializer for script returned error: {:?}&quot;</span>, <span class="ident">err</span>);
-                <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="ident">vm_error</span>(<span class="ident">Location</span>::<span class="ident">default</span>(), <span class="ident">StatusCode</span>::<span class="ident">CODE_DESERIALIZATION_ERROR</span>)
+                <span class="kw">let</span> <span class="ident">error</span> <span class="op">=</span> <span class="ident">vm_status</span>(<span class="ident">Location</span>::<span class="ident">default</span>(), <span class="ident">StatusCode</span>::<span class="ident">CODE_DESERIALIZATION_ERROR</span>)
                     .<span class="ident">append</span>(<span class="ident">err</span>);
                 <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">error</span>);
             }

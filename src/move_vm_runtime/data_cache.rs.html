@@ -221,7 +221,7 @@
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">contract_event</span>::<span class="ident">ContractEvent</span>,
     <span class="ident">on_chain_config</span>::<span class="ident">ConfigStorage</span>,
-    <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
+    <span class="ident">vm_status</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
     <span class="ident">write_set</span>::{<span class="ident">WriteOp</span>, <span class="ident">WriteSet</span>, <span class="ident">WriteSetMut</span>},
 };
 <span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>::<span class="ident">ModuleId</span>;
@@ -285,7 +285,7 @@
     <span class="doccomment">/// Gives all proper guarantees on lifetime of global data as well.</span>
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">make_write_set</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMResult</span><span class="op">&lt;</span><span class="ident">WriteSet</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="self">self</span>.<span class="ident">data_map</span>.<span class="ident">len</span>() <span class="op">+</span> <span class="self">self</span>.<span class="ident">module_map</span>.<span class="ident">len</span>() <span class="op">&gt;</span> <span class="ident">usize</span>::<span class="ident">max_value</span>() {
-            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">vm_error</span>(<span class="ident">Location</span>::<span class="ident">new</span>(), <span class="ident">StatusCode</span>::<span class="ident">INVALID_DATA</span>));
+            <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">vm_status</span>(<span class="ident">Location</span>::<span class="ident">new</span>(), <span class="ident">StatusCode</span>::<span class="ident">INVALID_DATA</span>));
         }
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sorted_ws</span>: <span class="ident">BTreeMap</span><span class="op">&lt;</span><span class="ident">AccessPath</span>, <span class="ident">WriteOp</span><span class="op">&gt;</span> <span class="op">=</span> <span class="ident">BTreeMap</span>::<span class="ident">new</span>();
@@ -301,7 +301,7 @@
                         <span class="kw">let</span> <span class="ident">blob</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">data</span>.<span class="ident">simple_serialize</span>(<span class="kw-2">&amp;</span><span class="ident">layout</span>) {
                             <span class="prelude-val">Some</span>(<span class="ident">blob</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="ident">blob</span>,
                             <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> {
-                                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">vm_error</span>(
+                                <span class="kw">return</span> <span class="prelude-val">Err</span>(<span class="ident">vm_status</span>(
                                     <span class="ident">Location</span>::<span class="ident">new</span>(),
                                     <span class="ident">StatusCode</span>::<span class="ident">VALUE_SERIALIZATION_ERROR</span>,
                                 ))
@@ -327,7 +327,7 @@
         }
         <span class="ident">write_set</span>
             .<span class="ident">freeze</span>()
-            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">vm_error</span>(<span class="ident">Location</span>::<span class="ident">new</span>(), <span class="ident">StatusCode</span>::<span class="ident">DATA_FORMAT_ERROR</span>))
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="kw">_</span><span class="op">|</span> <span class="ident">vm_status</span>(<span class="ident">Location</span>::<span class="ident">new</span>(), <span class="ident">StatusCode</span>::<span class="ident">DATA_FORMAT_ERROR</span>))
     }
 
     <span class="doccomment">/// Return the events that were published during the execution of the transaction.</span>

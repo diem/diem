@@ -452,10 +452,10 @@
         .<span class="ident">mempool_sender</span>
         .<span class="ident">send</span>((<span class="ident">transaction</span>, <span class="ident">req_sender</span>))
         .<span class="kw">await</span><span class="question-mark">?</span>;
-    <span class="kw">let</span> (<span class="ident">mempool_status</span>, <span class="ident">vm_status</span>) <span class="op">=</span> <span class="ident">callback</span>.<span class="kw">await</span><span class="question-mark">?</span><span class="question-mark">?</span>;
+    <span class="kw">let</span> (<span class="ident">mempool_status</span>, <span class="ident">vm_status_opt</span>) <span class="op">=</span> <span class="ident">callback</span>.<span class="kw">await</span><span class="question-mark">?</span><span class="question-mark">?</span>;
 
-    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">vm_error</span>) <span class="op">=</span> <span class="ident">vm_status</span> {
-        <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">JsonRpcError</span>::<span class="ident">vm_error</span>(<span class="ident">vm_error</span>)))
+    <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">vm_status</span>) <span class="op">=</span> <span class="ident">vm_status_opt</span> {
+        <span class="prelude-val">Err</span>(<span class="ident">Error</span>::<span class="ident">new</span>(<span class="ident">JsonRpcError</span>::<span class="ident">vm_status</span>(<span class="ident">vm_status</span>)))
     } <span class="kw">else</span> <span class="kw">if</span> <span class="ident">mempool_status</span>.<span class="ident">code</span> <span class="op">=</span><span class="op">=</span> <span class="ident">MempoolStatusCode</span>::<span class="ident">Accepted</span> {
         <span class="prelude-val">Ok</span>(())
     } <span class="kw">else</span> {

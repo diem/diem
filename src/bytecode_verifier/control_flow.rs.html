@@ -231,7 +231,7 @@
 <span class="doccomment">//! - All forward jumps do not enter into the middle of a loop</span>
 <span class="doccomment">//! - All &quot;breaks&quot; (forward, loop-exiting jumps) go to the &quot;end&quot; of the loop</span>
 <span class="doccomment">//! - All &quot;continues&quot; (back jumps in a loop) are only to the current loop</span>
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">vm_status</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>};
 <span class="kw">use</span> <span class="ident">std</span>::{<span class="ident">collections</span>::<span class="ident">HashSet</span>, <span class="ident">convert</span>::<span class="ident">TryInto</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::{
     <span class="ident">errors</span>::{<span class="ident">err_at_offset</span>, <span class="ident">VMResult</span>},

@@ -134,7 +134,7 @@
 <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">IndexKind</span>;
 <span class="kw">use</span> <span class="ident">move_core_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-    <span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
+    <span class="ident">vm_status</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
 };
 
 <span class="comment">// TODO: Fill in the details for Locations. Ideally it should be a unique handle into a function and</span>
@@ -214,7 +214,7 @@
     }
 }
 
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">vm_error</span>(<span class="ident">location</span>: <span class="ident">Location</span>, <span class="ident">err</span>: <span class="ident">StatusCode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMStatus</span> {
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">vm_status</span>(<span class="ident">location</span>: <span class="ident">Location</span>, <span class="ident">err</span>: <span class="ident">StatusCode</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">VMStatus</span> {
     <span class="kw">let</span> <span class="ident">msg</span> <span class="op">=</span> <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;At location {:#?}&quot;</span>, <span class="ident">location</span>);
     <span class="ident">VMStatus</span>::<span class="ident">new</span>(<span class="ident">err</span>).<span class="ident">with_message</span>(<span class="ident">msg</span>)
 }

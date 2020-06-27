@@ -143,7 +143,7 @@
 <span class="kw">use</span> <span class="ident">anyhow</span>::<span class="prelude-ty">Result</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">mempool_status</span>::{<span class="ident">MempoolStatus</span>, <span class="ident">MempoolStatusCode</span>},
-    <span class="ident">vm_error</span>::{<span class="ident">StatusType</span>, <span class="ident">VMStatus</span>},
+    <span class="ident">vm_status</span>::{<span class="ident">StatusType</span>, <span class="ident">VMStatus</span>},
 };
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">serde_json</span>::<span class="ident">Value</span>;
@@ -153,7 +153,7 @@
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">ServerCode</span> {
     <span class="ident">DefaultServerError</span> <span class="op">=</span> <span class="op">-</span><span class="number">32000</span>,
 
-    <span class="comment">// VM errors - see `vm_error.rs` for specs</span>
+    <span class="comment">// VM errors - see `vm_status.rs` for specs</span>
     <span class="ident">VmValidationError</span> <span class="op">=</span> <span class="op">-</span><span class="number">32001</span>,
     <span class="ident">VmVerificationError</span> <span class="op">=</span> <span class="op">-</span><span class="number">32002</span>,
     <span class="ident">VmInvariantViolationError</span> <span class="op">=</span> <span class="op">-</span><span class="number">32003</span>,
@@ -247,7 +247,7 @@
         })
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">vm_error</span>(<span class="ident">error</span>: <span class="ident">VMStatus</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">vm_status</span>(<span class="ident">error</span>: <span class="ident">VMStatus</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
         <span class="comment">// map VM status to custom server code</span>
         <span class="kw">let</span> <span class="ident">vm_status_type</span> <span class="op">=</span> <span class="ident">error</span>.<span class="ident">status_type</span>();
         <span class="kw">let</span> <span class="ident">code</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">vm_status_type</span> {
@@ -266,10 +266,10 @@
         }
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_vm_error</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">VMStatus</span><span class="op">&gt;</span> {
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">get_vm_status</span>(<span class="kw-2">&amp;</span><span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">VMStatus</span><span class="op">&gt;</span> {
         <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">data</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">data</span> {
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">vm_error</span>) <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_value</span>::<span class="op">&lt;</span><span class="ident">VMStatus</span><span class="op">&gt;</span>(<span class="ident">data</span>.<span class="ident">clone</span>()) {
-                <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">vm_error</span>);
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Ok</span>(<span class="ident">vm_status</span>) <span class="op">=</span> <span class="ident">serde_json</span>::<span class="ident">from_value</span>::<span class="op">&lt;</span><span class="ident">VMStatus</span><span class="op">&gt;</span>(<span class="ident">data</span>.<span class="ident">clone</span>()) {
+                <span class="kw">return</span> <span class="prelude-val">Some</span>(<span class="ident">vm_status</span>);
             }
         }
         <span class="prelude-val">None</span>

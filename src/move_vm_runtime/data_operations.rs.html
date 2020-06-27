@@ -117,7 +117,7 @@
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="ident">prelude</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
-    <span class="ident">vm_error</span>::{<span class="ident">sub_status</span>, <span class="ident">StatusCode</span>},
+    <span class="ident">vm_status</span>::{<span class="ident">sub_status</span>, <span class="ident">StatusCode</span>},
 };
 <span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">gas_schedule</span>::{<span class="ident">AbstractMemorySize</span>, <span class="ident">GasAlgebra</span>, <span class="ident">GasCarrier</span>};
 <span class="kw">use</span> <span class="ident">move_vm_types</span>::{
@@ -125,7 +125,7 @@
     <span class="ident">loaded_data</span>::<span class="ident">types</span>::<span class="ident">FatStructType</span>,
     <span class="ident">values</span>::{<span class="ident">GlobalValue</span>, <span class="ident">Struct</span>, <span class="ident">Value</span>},
 };
-<span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">errors</span>::{<span class="ident">vm_error</span>, <span class="ident">Location</span>, <span class="ident">VMResult</span>};
+<span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">errors</span>::{<span class="ident">vm_status</span>, <span class="ident">Location</span>, <span class="ident">VMResult</span>};
 
 <span class="comment">//</span>
 <span class="comment">// Provides an implementation for data store bytecodes and guarantees proper invariants</span>
@@ -160,7 +160,7 @@
             <span class="string">&quot;[VM] Cannot write over existing resource type {:?} access path {}&quot;</span>,
             <span class="ident">ty</span>, <span class="ident">ap</span>
         );
-        <span class="prelude-val">Err</span>(<span class="ident">vm_error</span>(
+        <span class="prelude-val">Err</span>(<span class="ident">vm_status</span>(
             <span class="ident">Location</span>::<span class="ident">new</span>(),
             <span class="ident">StatusCode</span>::<span class="ident">CANNOT_WRITE_EXISTING_RESOURCE</span>,
         ))
@@ -185,7 +185,7 @@
     <span class="kw">match</span> <span class="ident">root_value</span> {
         <span class="prelude-val">Some</span>(<span class="ident">global_val</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">Value</span>::<span class="ident">struct_</span>(<span class="ident">global_val</span>.<span class="ident">into_owned_struct</span>()<span class="question-mark">?</span>)),
         <span class="prelude-val">None</span> <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(
-            <span class="ident">vm_error</span>(<span class="ident">Location</span>::<span class="ident">new</span>(), <span class="ident">StatusCode</span>::<span class="ident">DYNAMIC_REFERENCE_ERROR</span>)
+            <span class="ident">vm_status</span>(<span class="ident">Location</span>::<span class="ident">new</span>(), <span class="ident">StatusCode</span>::<span class="ident">DYNAMIC_REFERENCE_ERROR</span>)
                 .<span class="ident">with_sub_status</span>(<span class="ident">sub_status</span>::<span class="ident">DRE_GLOBAL_ALREADY_BORROWED</span>),
         ),
     }
@@ -214,7 +214,7 @@
         <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(<span class="ident">g</span>)) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Ok</span>(<span class="ident">g</span>),
         <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>) <span class="op">=</span><span class="op">&gt;</span> <span class="prelude-val">Err</span>(
             <span class="comment">// TODO: wrong status code?</span>
-            <span class="ident">vm_error</span>(<span class="ident">Location</span>::<span class="ident">new</span>(), <span class="ident">StatusCode</span>::<span class="ident">DYNAMIC_REFERENCE_ERROR</span>)
+            <span class="ident">vm_status</span>(<span class="ident">Location</span>::<span class="ident">new</span>(), <span class="ident">StatusCode</span>::<span class="ident">DYNAMIC_REFERENCE_ERROR</span>)
                 .<span class="ident">with_sub_status</span>(<span class="ident">sub_status</span>::<span class="ident">DRE_GLOBAL_ALREADY_BORROWED</span>),
         ),
         <span class="prelude-val">Err</span>(<span class="ident">e</span>) <span class="op">=</span><span class="op">&gt;</span> {

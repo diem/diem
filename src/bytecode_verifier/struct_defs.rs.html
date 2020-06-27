@@ -135,7 +135,7 @@
 <span class="doccomment">//! This module provides a checker for verifing that struct definitions in a module are not</span>
 <span class="doccomment">//! recursive. Since the module dependency graph is acylic by construction, applying this checker to</span>
 <span class="doccomment">//! each module in isolation guarantees that there is no structural recursion globally.</span>
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">vm_status</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>};
 <span class="kw">use</span> <span class="ident">petgraph</span>::{<span class="ident">algo</span>::<span class="ident">toposort</span>, <span class="ident">graphmap</span>::<span class="ident">DiGraphMap</span>};
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">collections</span>::{<span class="ident">BTreeMap</span>, <span class="ident">BTreeSet</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::{

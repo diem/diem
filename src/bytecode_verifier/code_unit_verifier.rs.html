@@ -74,7 +74,7 @@
     <span class="ident">acquires_list_verifier</span>::<span class="ident">AcquiresVerifier</span>, <span class="ident">control_flow_graph</span>::<span class="ident">VMControlFlowGraph</span>,
     <span class="ident">locals_safety</span>, <span class="ident">reference_safety</span>, <span class="ident">stack_usage_verifier</span>::<span class="ident">StackUsageVerifier</span>, <span class="ident">type_safety</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">vm_error</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::<span class="ident">vm_status</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>};
 <span class="kw">use</span> <span class="ident">vm</span>::{
     <span class="ident">access</span>::<span class="ident">ModuleAccess</span>,
     <span class="ident">errors</span>::{<span class="ident">append_err_info</span>, <span class="ident">err_at_offset</span>, <span class="ident">VMResult</span>},

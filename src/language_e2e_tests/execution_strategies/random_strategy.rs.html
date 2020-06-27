@@ -92,7 +92,7 @@
     <span class="ident">execution_strategies</span>::<span class="ident">types</span>::{<span class="ident">Block</span>, <span class="ident">Executor</span>, <span class="ident">ExecutorResult</span>, <span class="ident">PartitionStrategy</span>},
     <span class="ident">executor</span>::<span class="ident">FakeExecutor</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>, <span class="ident">vm_error</span>::<span class="ident">VMStatus</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>, <span class="ident">vm_status</span>::<span class="ident">VMStatus</span>};
 <span class="kw">use</span> <span class="ident">rand</span>::{
     <span class="ident">rngs</span>::{<span class="ident">OsRng</span>, <span class="ident">StdRng</span>},
     <span class="ident">Rng</span>, <span class="ident">SeedableRng</span>,

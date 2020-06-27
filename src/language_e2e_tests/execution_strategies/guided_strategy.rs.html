@@ -93,7 +93,7 @@
     <span class="ident">execution_strategies</span>::<span class="ident">types</span>::{<span class="ident">Block</span>, <span class="ident">Executor</span>, <span class="ident">ExecutorResult</span>, <span class="ident">PartitionStrategy</span>},
     <span class="ident">executor</span>::<span class="ident">FakeExecutor</span>,
 };
-<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>, <span class="ident">vm_error</span>::<span class="ident">VMStatus</span>};
+<span class="kw">use</span> <span class="ident">libra_types</span>::{<span class="ident">transaction</span>::<span class="ident">SignedTransaction</span>, <span class="ident">vm_status</span>::<span class="ident">VMStatus</span>};
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Clone</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">AnnotatedTransaction</span> {
