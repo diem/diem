@@ -8,7 +8,7 @@ use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::{
-    config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
+    config::{NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
 };
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
@@ -125,12 +125,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (role, network_config) in network_configs {
         // Perform common instantiation steps
-        let (runtime, mut network_builder) = NetworkBuilder::create(
-            &node_config.base.chain_id,
-            role,
-            network_config,
-            &mut reconfig_subscriptions,
-        );
+        let (runtime, mut network_builder) =
+            NetworkBuilder::create(&node_config.base.chain_id, role, network_config);
         let network_id = network_config.network_id.clone();
 
         // Create the endpoints to connect the Network to StateSynchronizer.
@@ -154,8 +150,6 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                 if consensus_network_handles.is_some() {
                     panic!("There can be at most one validator network!");
                 }
-                // HACK: gossip relies on on-chain discovery for the eligible peers update.
-                if network_config.discovery_method != DiscoveryMethod::Onchain {}
 
                 consensus_network_handles =
                     Some(network_builder.add_protocol_handler(
@@ -165,6 +159,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             // Currently no FullNode network specific steps.
             RoleType::FullNode => (),
         }
+
+        reconfig_subscriptions.append(network_builder.reconfig_subscriptions());
 
         // Start the network and cache the runtime so it does not go out of scope.
         // TODO:  move all 'start' commands to a second phase at the end of setup_environment.  Target is to have one pass to wire the pieces together and a second pass to start processing in an appropriate order.
