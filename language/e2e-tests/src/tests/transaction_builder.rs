@@ -46,7 +46,7 @@ fn freeze_unfreeze_account() {
     let blessed = Account::new_blessed_tc();
     // Execute freeze on account
     executor.execute_and_apply(
-        blessed.signed_script_txn(encode_freeze_account(1, *account.address()), 0),
+        blessed.signed_script_txn(encode_freeze_account(3, *account.address()), 0),
     );
 
     // Attempt rotate key txn from frozen account
@@ -63,7 +63,7 @@ fn freeze_unfreeze_account() {
 
     // Execute unfreeze on account
     executor.execute_and_apply(
-        blessed.signed_script_txn(encode_unfreeze_account(2, *account.address()), 1),
+        blessed.signed_script_txn(encode_unfreeze_account(4, *account.address()), 1),
     );
     // execute rotate key transaction from unfrozen account now succeeds
     let output = &executor.execute_transaction(txn);
@@ -135,7 +135,7 @@ fn create_parent_and_child_vasp() {
 fn create_child_vasp_all_currencies() {
     let mut executor = FakeExecutor::from_genesis_file();
     let association = Account::new_association();
-    let blessed = Account::new_blessed_tc();
+    let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let parent = Account::new();
     let child = Account::new();
 
@@ -159,8 +159,8 @@ fn create_child_vasp_all_currencies() {
 
     let amount = 100;
     // mint to the parent VASP
-    executor.execute_and_apply(blessed.signed_script_txn(
-        encode_mint_script(account_config::coin1_tag(), parent.address(), amount),
+    executor.execute_and_apply(dd.signed_script_txn(
+        encode_testnet_mint_script(account_config::coin1_tag(), *parent.address(), amount),
         0,
     ));
 
@@ -201,7 +201,7 @@ fn create_child_vasp_all_currencies() {
 fn create_child_vasp_with_balance() {
     let mut executor = FakeExecutor::from_genesis_file();
     let association = Account::new_association();
-    let blessed = Account::new_blessed_tc();
+    let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let parent = Account::new();
     let child = Account::new();
 
@@ -225,8 +225,8 @@ fn create_child_vasp_with_balance() {
 
     let amount = 100;
     // mint to the parent VASP
-    executor.execute_and_apply(blessed.signed_script_txn(
-        encode_mint_script(account_config::coin1_tag(), parent.address(), amount),
+    executor.execute_and_apply(dd.signed_script_txn(
+        encode_testnet_mint_script(account_config::coin1_tag(), *parent.address(), amount),
         0,
     ));
 
@@ -268,8 +268,7 @@ fn dual_attestation_payment() {
     let payment_sender = Account::new();
     let sender_child = Account::new();
     let association = Account::new_association();
-    let blessed = Account::new_blessed_tc();
-
+    let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let mut keygen = KeyGen::from_seed([9u8; 32]);
     let (sender_vasp_compliance_private_key, sender_vasp_compliance_public_key) =
         keygen.generate_keypair();
@@ -307,10 +306,10 @@ fn dual_attestation_payment() {
         2,
     ));
 
-    executor.execute_and_apply(blessed.signed_script_txn(
-        encode_mint_script(
+    executor.execute_and_apply(dd.signed_script_txn(
+        encode_testnet_mint_script(
             account_config::coin1_tag(),
-            &payment_sender.address(),
+            *payment_sender.address(),
             mint_amount,
         ),
         0,
@@ -506,10 +505,10 @@ fn dual_attestation_payment() {
         0,
         account_config::coin1_tag(),
     ));
-    executor.execute_and_apply(blessed.signed_script_txn(
-        encode_mint_script(
+    executor.execute_and_apply(dd.signed_script_txn(
+        encode_testnet_mint_script(
             account_config::coin1_tag(),
-            &unhosted.address(),
+            *unhosted.address(),
             mint_amount,
         ),
         1,

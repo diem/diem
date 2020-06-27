@@ -6,7 +6,6 @@
 use compiled_stdlib::{transaction_scripts::StdlibScript, StdLibOptions};
 use libra_types::{
     access_path::AccessPath,
-    account_address::AccountAddress,
     block_metadata::BlockMetadata,
     on_chain_config::{LibraVersion, VMPublishingOption},
     transaction::{ChangeSet, Script, Transaction, TransactionArgument},
@@ -55,12 +54,6 @@ pub fn encode_stdlib_script(
     args: Vec<TransactionArgument>,
 ) -> Script {
     Script::new(stdlib_script.compiled_bytes().into_vec(), type_args, args)
-}
-
-// TODO: this should go away once we are no longer using it in tests/testnet
-/// Encode a program creating `amount` coins for sender
-pub fn encode_mint_script(token: TypeTag, recipient: &AccountAddress, amount: u64) -> Script {
-    generated::encode_mint_script(token, *recipient, amount)
 }
 
 pub fn encode_modify_publishing_option_script(config: VMPublishingOption) -> Script {

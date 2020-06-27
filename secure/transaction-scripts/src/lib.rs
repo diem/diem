@@ -36,7 +36,7 @@ pub static SET_VALIDATOR_CONFIG_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("set_va
 pub static ROTATE_AUTHENTICATION_KEY_TXN: Lazy<Vec<u8>> =
     Lazy::new(|| script("rotate_authentication_key"));
 
-pub static MINT_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("mint"));
+pub static TESTNET_MINT_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("testnet_mint"));
 
 pub static EMPTY_TXN: Lazy<Vec<u8>> = Lazy::new(|| script("empty_script"));
 
@@ -53,7 +53,7 @@ mod test {
             &REMOVE_VALIDATOR_TXN,
             &SET_VALIDATOR_CONFIG_TXN,
             &ROTATE_AUTHENTICATION_KEY_TXN,
-            &MINT_TXN,
+            &TESTNET_MINT_TXN,
             &EMPTY_TXN,
         ];
 

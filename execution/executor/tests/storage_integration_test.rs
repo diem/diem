@@ -13,7 +13,7 @@ use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, x25519, HashValue, PrivateKey, Uniform};
 use libra_types::{
     account_config::{
-        association_address, coin1_tag, from_currency_code_string,
+        association_address, coin1_tag, from_currency_code_string, testnet_dd_account_address,
         treasury_compliance_account_address, COIN1_NAME,
     },
     account_state::AccountState,
@@ -32,9 +32,9 @@ use rand::SeedableRng;
 use std::convert::TryFrom;
 use storage_interface::DbReaderWriter;
 use transaction_builder::{
-    encode_block_prologue_script, encode_create_testing_account_script, encode_mint_script,
+    encode_block_prologue_script, encode_create_testing_account_script,
     encode_publishing_option_script, encode_reconfigure_script, encode_set_validator_config_script,
-    encode_transfer_with_metadata_script,
+    encode_testnet_mint_script, encode_transfer_with_metadata_script,
 };
 
 fn create_db_and_executor(config: &NodeConfig) -> (DbReaderWriter, Executor<LibraVM>) {
@@ -568,7 +568,7 @@ fn test_execution_with_storage() {
     let pubkey4 = Ed25519PrivateKey::generate(&mut rng).public_key();
     let account4_auth_key = AuthenticationKey::ed25519(&pubkey4); // non-existent account
     let account4 = account4_auth_key.derived_address();
-    let genesis_account = treasury_compliance_account_address();
+    let genesis_account = testnet_dd_account_address();
     let root_account = association_address();
 
     let tx1 = get_test_signed_transaction(
@@ -616,7 +616,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_mint_script(coin1_tag(), &account1, 2_000_000)),
+        Some(encode_testnet_mint_script(coin1_tag(), account1, 2_000_000)),
     );
 
     // Create account2 with 1.2M coins.
@@ -625,7 +625,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_mint_script(coin1_tag(), &account2, 1_200_000)),
+        Some(encode_testnet_mint_script(coin1_tag(), account2, 1_200_000)),
     );
 
     // Create account3 with 1M coins.
@@ -634,7 +634,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 2,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_mint_script(coin1_tag(), &account3, 1_000_000)),
+        Some(encode_testnet_mint_script(coin1_tag(), account3, 1_000_000)),
     );
 
     // Transfer 20k coins from account1 to account2.

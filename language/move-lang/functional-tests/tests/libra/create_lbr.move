@@ -18,11 +18,14 @@ fun main(account: &signer) {
 //! sender: blessed
 script {
 use 0x1::LibraAccount;
+use 0x1::Libra;
 use 0x1::Coin1::Coin1;
 use 0x1::Coin2::Coin2;
 fun main(account: &signer) {
-    LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 10000000);
-    LibraAccount::mint_to_address<Coin2>(account, {{bob}}, 10000000);
+    let coin1 = Libra::mint<Coin1>(account, 10000000);
+    let coin2 = Libra::mint<Coin2>(account, 10000000);
+    LibraAccount::deposit(account, {{bob}}, coin1);
+    LibraAccount::deposit(account, {{bob}}, coin2);
 }
 }
 // check: EXECUTED

@@ -20,7 +20,7 @@ use libra_crypto::{
 use libra_logger::*;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{self, treasury_compliance_account_address, COIN1_NAME},
+    account_config::{self, testnet_dd_account_address, COIN1_NAME},
     transaction::{
         authenticator::AuthenticationKey, helpers::create_user_txn, Script, TransactionPayload,
     },
@@ -245,7 +245,7 @@ impl TxEmitter {
 
     pub async fn load_faucet_account(&self, instance: &Instance) -> Result<AccountData> {
         let client = instance.json_rpc_client();
-        let address = treasury_compliance_account_address();
+        let address = testnet_dd_account_address();
         let sequence_number = query_sequence_numbers(&client, &[address])
             .await
             .map_err(|e| {
@@ -609,7 +609,11 @@ fn gen_submit_transaction_request(
 fn gen_mint_request(faucet_account: &mut AccountData, num_coins: u64) -> SignedTransaction {
     let receiver = faucet_account.address;
     gen_submit_transaction_request(
-        transaction_builder::encode_mint_script(account_config::coin1_tag(), &receiver, num_coins),
+        transaction_builder::encode_testnet_mint_script(
+            account_config::coin1_tag(),
+            receiver,
+            num_coins,
+        ),
         faucet_account,
     )
 }
@@ -672,7 +676,11 @@ fn gen_mint_txn_request(
     num_coins: u64,
 ) -> SignedTransaction {
     gen_submit_transaction_request(
-        transaction_builder::encode_mint_script(account_config::coin1_tag(), receiver, num_coins),
+        transaction_builder::encode_testnet_mint_script(
+            account_config::coin1_tag(),
+            *receiver,
+            num_coins,
+        ),
         sender,
     )
 }

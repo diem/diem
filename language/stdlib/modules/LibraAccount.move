@@ -277,18 +277,6 @@ module LibraAccount {
         );
     }
 
-    // Create `amount` coins of type `Token` and send them to `payee`.
-    // `mint_to_address` can only be called by accounts with Libra::MintCapability<Token> and with
-    // Token=Coin1 or Token=Coin2
-    public fun mint_to_address<Token>(
-        account: &signer,
-        payee: address,
-        amount: u64
-    ) acquires LibraAccount, Balance, AccountOperationsCapability {
-        // Mint and deposit the coin
-        deposit(account, payee, Libra::mint<Token>(account, amount));
-    }
-
     // Cancel the oldest burn request from `preburn_address` and return the funds.
     // Fails if the sender does not have a published MintCapability.
     public fun cancel_burn<Token>(

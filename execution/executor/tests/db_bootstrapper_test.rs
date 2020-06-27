@@ -22,8 +22,8 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
-        association_address, coin1_tag, from_currency_code_string,
-        treasury_compliance_account_address, BalanceResource, COIN1_NAME,
+        association_address, coin1_tag, from_currency_code_string, testnet_dd_account_address,
+        BalanceResource, COIN1_NAME,
     },
     account_state::AccountState,
     account_state_blob::AccountStateBlob,
@@ -46,7 +46,8 @@ use rand::SeedableRng;
 use std::convert::TryFrom;
 use storage_interface::{DbReader, DbReaderWriter};
 use transaction_builder::{
-    encode_create_testing_account_script, encode_mint_script, encode_transfer_with_metadata_script,
+    encode_create_testing_account_script, encode_testnet_mint_script,
+    encode_transfer_with_metadata_script,
 };
 
 #[test]
@@ -134,11 +135,11 @@ fn get_mint_transaction(
     amount: u64,
 ) -> Transaction {
     get_test_signed_transaction(
-        treasury_compliance_account_address(),
+        testnet_dd_account_address(),
         /* sequence_number = */ association_seq_num,
         association_key.clone(),
         association_key.public_key(),
-        Some(encode_mint_script(coin1_tag(), &account, amount)),
+        Some(encode_testnet_mint_script(coin1_tag(), *account, amount)),
     )
 }
 
