@@ -314,7 +314,6 @@ impl NodeConfig {
         let mut test = TestConfig::new_with_temp_dir();
 
         if self.base.role == RoleType::Validator {
-            test.initialize_storage = true;
             test.random_account_key(rng);
             let peer_id = libra_types::account_address::from_public_key(
                 &test.operator_keypair.as_ref().unwrap().public_key(),
@@ -327,8 +326,14 @@ impl NodeConfig {
 
             let validator_network = self.validator_network.as_mut().unwrap();
             validator_network.random_with_peer_id(rng, Some(peer_id));
-            test.random_consensus_key(rng);
+            // We want to produce this key twice
+            let mut cloned_rng = rng.clone();
             test.random_execution_key(rng);
+
+            let mut safety_rules_test_config = SafetyRulesTestConfig::new(peer_id);
+            safety_rules_test_config.random_consensus_key(rng);
+            safety_rules_test_config.random_execution_key(&mut cloned_rng);
+            self.consensus.safety_rules.test = Some(safety_rules_test_config);
         } else {
             self.validator_network = None;
             if self.full_node_networks.is_empty() {
@@ -454,5 +459,9 @@ mod test {
         NodeConfig::default_for_public_full_node();
         NodeConfig::default_for_validator();
         NodeConfig::default_for_validator_full_node();
+
+        let contents = std::include_str!("test_data/safety_rules.yaml");
+        SafetyRulesConfig::parse(&contents)
+            .unwrap_or_else(|e| panic!("Error in safety_rules.yaml: {}", e));
     }
 }

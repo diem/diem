@@ -6,7 +6,7 @@ use crate::{
     remote_service::{self, RemoteService},
     safety_rules_manager,
 };
-use libra_config::config::{NodeConfig, SafetyRulesService};
+use libra_config::config::{SafetyRulesConfig, SafetyRulesService};
 
 use std::net::SocketAddr;
 
@@ -15,16 +15,14 @@ pub struct Process {
 }
 
 impl Process {
-    pub fn new(mut config: NodeConfig) -> Self {
+    pub fn new(mut config: SafetyRulesConfig) -> Self {
         let storage = safety_rules_manager::storage(&mut config);
 
-        let verify_vote_proposal_signature =
-            config.consensus.safety_rules.verify_vote_proposal_signature;
-        let service = &config.consensus.safety_rules.service;
-        let service = match &service {
+        let verify_vote_proposal_signature = config.verify_vote_proposal_signature;
+        let service = match &config.service {
             SafetyRulesService::Process(service) => service,
             SafetyRulesService::SpawnedProcess(service) => service,
-            _ => panic!("Unexpected SafetyRules service: {:?}", service),
+            _ => panic!("Unexpected SafetyRules service: {:?}", config.service),
         };
         let server_addr = service.server_address();
 

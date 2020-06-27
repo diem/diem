@@ -15,8 +15,6 @@ consensus:
         service:
             type: process
             server_address: "/ip4/127.0.0.1/tcp/5555"
-        backend:
-            type: "in_memory_storage"
 
 execution:
     genesis_file_location: "relative/path/to/genesis"

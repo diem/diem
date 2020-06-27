@@ -154,7 +154,7 @@ impl ValidatorConfig {
                 .and_then(|config| config.publishing_option.clone()),
         );
 
-        let waypoint = if self.build_waypoint {
+        let (waypoint, maybe_waypoint) = if self.build_waypoint {
             let path = TempPath::new();
             let db_rw = DbReaderWriter::new(LibraDB::open(
                 &path, false, /* readonly */
@@ -162,14 +162,18 @@ impl ValidatorConfig {
             )?);
             let waypoint = db_bootstrapper::bootstrap_db_if_empty::<LibraVM>(&db_rw, &genesis)?
                 .ok_or_else(|| format_err!("Failed to bootstrap empty DB."))?;
-            WaypointConfig::FromConfig(waypoint)
+            (WaypointConfig::FromConfig(waypoint), Some(waypoint))
         } else {
-            WaypointConfig::None
+            (WaypointConfig::None, None)
         };
 
         let genesis = Some(genesis);
 
         for node in &mut nodes {
+            if let Some(test_config) = node.consensus.safety_rules.test.as_mut() {
+                test_config.waypoint = maybe_waypoint;
+            }
+
             node.base.waypoint = waypoint.clone();
             node.execution.genesis = genesis.clone();
         }
@@ -186,6 +190,7 @@ impl ValidatorConfig {
 
     fn build_safety_rules(&self, config: &mut NodeConfig) -> Result<()> {
         let safety_rules_config = &mut config.consensus.safety_rules;
+
         if let Some(server_address) = self.safety_rules_addr {
             safety_rules_config.service = SafetyRulesService::Process(RemoteService {
                 server_address: server_address.into(),
