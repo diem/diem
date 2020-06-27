@@ -66,30 +66,6 @@
 <span id="66">66</span>
 <span id="67">67</span>
 <span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
-<span id="88">88</span>
-<span id="89">89</span>
-<span id="90">90</span>
-<span id="91">91</span>
-<span id="92">92</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -102,29 +78,18 @@
 };
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 
-<span class="doccomment">/// CryptoStorage offers a secure storage engine for generating, using and managing cryptographic</span>
-<span class="doccomment">/// keys securely. The API offered here is inspired by the &#39;Transit Secret Engine&#39; provided by</span>
-<span class="doccomment">/// Vault: a production-ready storage engine for cloud infrastructures (e.g., see</span>
-<span class="doccomment">/// https://www.vaultproject.io/docs/secrets/transit/index.html).</span>
+<span class="doccomment">/// CryptoStorage provides an abstraction for secure generation and handling of cryptographic keys.</span>
 <span class="attribute">#[<span class="ident">enum_dispatch</span>]</span>
 <span class="kw">pub</span> <span class="kw">trait</span> <span class="ident">CryptoStorage</span>: <span class="ident">Send</span> <span class="op">+</span> <span class="ident">Sync</span> {
-    <span class="doccomment">/// Securely generates a new named Ed25519 key pair and returns the corresponding public key.</span>
-    <span class="doccomment">/// There are no guarantees about the state of the system after calling this multiple times.</span>
-    <span class="doccomment">/// The behavior is implementation specific.</span>
-    <span class="doccomment">///</span>
-    <span class="doccomment">/// The new key pair is named according to the &#39;name&#39;. To access or use the key pair (e.g., sign</span>
-    <span class="doccomment">/// or encrypt data), subsequent API calls must refer to the key pair by name. As this API call</span>
-    <span class="doccomment">/// may fail (e.g., if a key pair with the given name already exists), an error may also be</span>
-    <span class="doccomment">/// returned.</span>
+    <span class="doccomment">/// Securely generates a new named Ed25519 private key. The behavior for calling this interface</span>
+    <span class="doccomment">/// multiple times with the same name is implementation specific.</span>
     <span class="kw">fn</span> <span class="ident">create_key</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519PublicKey</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
-    <span class="doccomment">/// Returns the private key for a given Ed25519 key pair, as identified by the &#39;name&#39;.</span>
-    <span class="doccomment">/// If the key pair doesn&#39;t exist, or the caller doesn&#39;t have the appropriate permissions to</span>
-    <span class="doccomment">/// retrieve the private key, this call will fail with an error.</span>
+    <span class="doccomment">/// Returns the Ed25519 private key stored at &#39;name&#39;.</span>
     <span class="kw">fn</span> <span class="ident">export_private_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519PrivateKey</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
-    <span class="doccomment">/// An optional API that allows importing private keys. It will store the key at the given</span>
-    <span class="doccomment">/// name. This is not expected to be used in production and the API may throw unimplemented if</span>
+    <span class="doccomment">/// An optional API that allows importing private keys and storing them at the provided name.</span>
+    <span class="doccomment">/// This is not intended to be used in production and the API may throw unimplemented if</span>
     <span class="doccomment">/// not used correctly. As this is purely a testing API, there is no defined behavior for</span>
     <span class="doccomment">/// importing a key for a given name if that name already exists.  It only exists to allow</span>
     <span class="doccomment">/// Libra to be run in test environments where a set of deterministic keys must be generated.</span>
@@ -132,41 +97,28 @@
         <span class="macro">unimplemented</span><span class="macro">!</span>();
     }
 
-    <span class="doccomment">/// Returns the private key for a given Ed25519 key pair version, as identified by the</span>
-    <span class="doccomment">/// &#39;name&#39; and &#39;version&#39;. If the key pair at the specified version doesn&#39;t</span>
-    <span class="doccomment">/// exist, or the caller doesn&#39;t have the appropriate permissions to retrieve the private key,</span>
-    <span class="doccomment">/// this call will fail with an error.</span>
+    <span class="doccomment">/// Returns the Ed25519 private key stored at &#39;name&#39; and identified by &#39;version&#39;, which is the</span>
+    <span class="doccomment">/// corresponding public key. This may fail even if the &#39;named&#39; key exists but the version is</span>
+    <span class="doccomment">/// not present.</span>
     <span class="kw">fn</span> <span class="ident">export_private_key_for_version</span>(
         <span class="kw-2">&amp;</span><span class="self">self</span>,
         <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">version</span>: <span class="ident">Ed25519PublicKey</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519PrivateKey</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
-    <span class="doccomment">/// Returns the public key for a given Ed25519 key pair, as identified by the &#39;name&#39;.</span>
-    <span class="doccomment">/// If the key pair doesn&#39;t exist, or the caller doesn&#39;t have the</span>
-    <span class="doccomment">/// appropriate permissions to retrieve the public key, this call will fail with an error.</span>
+    <span class="doccomment">/// Returns the Ed25519 public key stored at &#39;name&#39;.</span>
     <span class="kw">fn</span> <span class="ident">get_public_key</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">PublicKeyResponse</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
-    <span class="doccomment">/// Rotates an Ed25519 key pair by generating a new Ed25519 key pair, and updating the</span>
-    <span class="doccomment">/// &#39;name&#39; to reference the freshly generated key. The previous key pair is retained</span>
-    <span class="doccomment">/// in storage if needed. If multiple key rotations occur over the lifetime of a key pair, only</span>
-    <span class="doccomment">/// two versions of the key pair are maintained (i.e., the current and previous one).</span>
-    <span class="doccomment">/// If the key pair doesn&#39;t exist, or the caller doesn&#39;t have the appropriate permissions to</span>
-    <span class="doccomment">/// retrieve the public key, this call will fail with an error. Otherwise, the new public</span>
-    <span class="doccomment">/// key for the rotated key pair is returned.</span>
+    <span class="doccomment">/// Rotates an Ed25519 private key. Future calls without version to this &#39;named&#39; key will</span>
+    <span class="doccomment">/// return the rotated key instance. The previous key is retained and can be accessed via</span>
+    <span class="doccomment">/// the version. At most two versions are expected to be retained.</span>
     <span class="kw">fn</span> <span class="ident">rotate_key</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519PublicKey</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
-    <span class="doccomment">/// Signs the given message using the private key associated with the given &#39;name&#39;.</span>
-    <span class="doccomment">/// If the key pair doesn&#39;t exist, or the caller doesn&#39;t have the appropriate</span>
-    <span class="doccomment">/// permissions to retrieve and use the public key, this call will fail with an error.</span>
+    <span class="doccomment">/// Signs the provided message using the &#39;named&#39; private key.</span>
     <span class="kw">fn</span> <span class="ident">sign_message</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>, <span class="ident">message</span>: <span class="kw-2">&amp;</span><span class="ident">HashValue</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Ed25519Signature</span>, <span class="ident">Error</span><span class="op">&gt;</span>;
 
-    <span class="doccomment">/// Signs the given message using the private key associated with the given &#39;name&#39;</span>
-    <span class="doccomment">/// and &#39;version&#39;. If the key pair doesn&#39;t exist, or the caller doesn&#39;t have the</span>
-    <span class="doccomment">/// appropriate permissions to perform the operation, this call will fail with an error.</span>
-    <span class="doccomment">/// Note: the &#39;version&#39; is specified using the public key associated with a key pair.</span>
-    <span class="doccomment">/// Only two versions of a key pair are ever maintained at any given time (i.e., the</span>
-    <span class="doccomment">/// current version, and the previous version).</span>
+    <span class="doccomment">/// Signs the provided message using the &#39;named&#39; and &#39;versioned&#39; private key. This may fail</span>
+    <span class="doccomment">/// even if the &#39;named&#39; key exists but the version is not present.</span>
     <span class="kw">fn</span> <span class="ident">sign_message_using_version</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">name</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
