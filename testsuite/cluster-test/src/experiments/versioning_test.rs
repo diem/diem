@@ -78,23 +78,27 @@ async fn update_batch_instance(
     let deadline = Instant::now() + Duration::new(2 * 60, 0);
 
     info!("Stop Existing instances.");
-    let futures = updated_instance.iter().map(Instance::stop);
+    let futures: Vec<_> = updated_instance.iter().map(Instance::stop).collect();
     try_join_all(futures).await?;
 
     info!("Reinstantiate a set of new nodes.");
-    let futures = updated_instance.iter().map(|instance| {
-        let mut newer_config = instance.instance_config().clone();
-        newer_config.replace_tag(updated_tag.clone()).unwrap();
-        context
-            .cluster_swarm
-            .spawn_new_instance(newer_config, false)
-    });
+    let futures: Vec<_> = updated_instance
+        .iter()
+        .map(|instance| {
+            let mut newer_config = instance.instance_config().clone();
+            newer_config.replace_tag(updated_tag.clone()).unwrap();
+            context
+                .cluster_swarm
+                .spawn_new_instance(newer_config, false)
+        })
+        .collect();
     let instances = try_join_all(futures).await?;
 
     info!("Wait for the instances to recover.");
-    let futures = instances
+    let futures: Vec<_> = instances
         .iter()
-        .map(|instance| instance.wait_json_rpc(deadline));
+        .map(|instance| instance.wait_json_rpc(deadline))
+        .collect();
     try_join_all(futures).await?;
     Ok(())
 }
