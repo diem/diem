@@ -5643,6 +5643,7 @@ dependencies = [
 name = "testsuite"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "cli 0.1.0",
  "debug-interface 0.1.0",
  "generate-key 0.1.0",
@@ -5654,15 +5655,19 @@ dependencies = [
  "libra-key-manager 0.1.0",
  "libra-logger 0.1.0",
  "libra-management 0.1.0",
+ "libra-network-address 0.1.0",
  "libra-secure-storage 0.1.0",
+ "libra-secure-time 0.1.0",
  "libra-swarm 0.1.0",
  "libra-temppath 0.1.0",
+ "libra-transaction-scripts 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
  "num 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "num-traits 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "rust_decimal 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "statistical 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "transaction-builder 0.1.0",
  "workspace-builder 0.1.0",
 ]
 

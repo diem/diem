@@ -335,6 +335,22 @@ impl NetworkAddress {
         })
     }
 
+    /// A function to rotate public keys for `NoiseIK` protocols
+    pub fn rotate_noise_public_key(
+        &mut self,
+        to_replace: &x25519::PublicKey,
+        new_public_key: &x25519::PublicKey,
+    ) {
+        for protocol in self.0.iter_mut() {
+            // Replace the public key in any Noise protocols that match the key
+            if let Protocol::NoiseIK(public_key) = protocol {
+                if public_key == to_replace {
+                    *protocol = Protocol::NoiseIK(*new_public_key);
+                }
+            }
+        }
+    }
+
     #[cfg(any(test, feature = "fuzzing"))]
     pub fn mock() -> Self {
         NetworkAddress::new(vec![Protocol::Memory(1234)])
