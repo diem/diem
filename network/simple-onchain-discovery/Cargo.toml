@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 futures = "0.3.5"
 once_cell = "1.4.0"
+tokio = { version = "0.2.21", features = ["full"] }
 
 channel = {path = "../../common/channel", version = "0.1.0"}
 libra-canonical-serialization = {path = "../../common/lcs", version = "0.1.0"}

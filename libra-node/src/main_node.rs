@@ -3,12 +3,12 @@
 
 use backup_service::start_backup_service;
 use consensus::{consensus_provider::start_consensus, gen_consensus_reconfig_subscription};
-use debug_interface::node_debug_service::NodeDebugService;
+use debug_interface::{libra_trace, node_debug_service::NodeDebugService};
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};
 use libra_config::{
-    config::{NetworkConfig, NodeConfig, RoleType},
+    config::{DiscoveryMethod, NetworkConfig, NodeConfig, RoleType},
     utils::get_genesis_txn,
 };
 use libra_json_rpc::bootstrap_from_config as bootstrap_rpc;
@@ -23,12 +23,6 @@ use std::{boxed::Box, net::ToSocketAddrs, sync::Arc, thread, time::Instant};
 use storage_interface::DbReaderWriter;
 use storage_service::start_storage_service_with_db;
 use tokio::runtime::Runtime;
-
-use debug_interface::libra_trace;
-use libra_config::config::DiscoveryMethod;
-use network_simple_onchain_discovery::{
-    gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
-};
 
 const AC_SMP_CHANNEL_BUFFER_SIZE: usize = 1_024;
 const INTRA_NODE_CHANNEL_BUFFER_SIZE: usize = 1;
@@ -161,19 +155,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
                     panic!("There can be at most one validator network!");
                 }
                 // HACK: gossip relies on on-chain discovery for the eligible peers update.
-                if network_config.discovery_method != DiscoveryMethod::Onchain {
-                    let conn_mgr_reqs_tx = network_builder
-                        .conn_mgr_reqs_tx()
-                        .expect("ConnectivityManager must be installed for validator");
-                    let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
-                        gen_simple_discovery_reconfig_subscription();
-                    reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
-                    let network_config_listener =
-                        ConfigurationChangeListener::new(conn_mgr_reqs_tx, role);
-                    runtime
-                        .handle()
-                        .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
-                }
+                if network_config.discovery_method != DiscoveryMethod::Onchain {}
 
                 consensus_network_handles =
                     Some(network_builder.add_protocol_handler(
