@@ -13,6 +13,7 @@
 -  [Function `swap_into`](#0x1_LBR_swap_into)
 -  [Function `create`](#0x1_LBR_create)
 -  [Function `unpack`](#0x1_LBR_unpack)
+-  [Function `reserve_address`](#0x1_LBR_reserve_address)
 
 This module defines the
 <code><a href="#0x1_LBR">LBR</a></code> currency as an on-chain reserve. The
@@ -232,7 +233,7 @@ restrictions are enforced in the
     tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
 ) {
     // Operational constraint
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>(), 0);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="#0x1_LBR_reserve_address">reserve_address</a>(), 0);
     // Register the `<a href="#0x1_LBR">LBR</a>` currency.
     <b>let</b> (mint_cap, burn_cap) = <a href="Libra.md#0x1_Libra_register_currency">Libra::register_currency</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;(
         association,
@@ -436,7 +437,7 @@ would be
 <code><a href="Coin2.md#0x1_Coin2">Coin2</a></code> respectively.
 
 
-<pre><code><b>public</b> <b>fun</b> <b>unpack</b>(account: &signer, coin: <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;<a href="#0x1_LBR_LBR">LBR::LBR</a>&gt;): (<a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;<a href="Coin1.md#0x1_Coin1_Coin1">Coin1::Coin1</a>&gt;, <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;<a href="Coin2.md#0x1_Coin2_Coin2">Coin2::Coin2</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <b>unpack</b>(coin: <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;<a href="#0x1_LBR_LBR">LBR::LBR</a>&gt;): (<a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;<a href="Coin1.md#0x1_Coin1_Coin1">Coin1::Coin1</a>&gt;, <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;<a href="Coin2.md#0x1_Coin2_Coin2">Coin2::Coin2</a>&gt;)
 </code></pre>
 
 
@@ -445,11 +446,11 @@ would be
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <b>unpack</b>(account: &signer, coin: <a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;): (<a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;, <a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <b>unpack</b>(coin: <a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;): (<a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;, <a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;)
 <b>acquires</b> <a href="#0x1_LBR_Reserve">Reserve</a> {
     <b>let</b> reserve = borrow_global_mut&lt;<a href="#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     <b>let</b> ratio_multiplier = <a href="Libra.md#0x1_Libra_value">Libra::value</a>(&coin);
-    <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    <b>let</b> sender = <a href="#0x1_LBR_reserve_address">reserve_address</a>();
     <a href="Libra.md#0x1_Libra_preburn_with_resource">Libra::preburn_with_resource</a>(coin, &<b>mut</b> reserve.preburn_cap, sender);
     <a href="Libra.md#0x1_Libra_burn_with_resource_cap">Libra::burn_with_resource_cap</a>(&<b>mut</b> reserve.preburn_cap, sender, &reserve.burn_cap);
     <b>let</b> coin1_amount = <a href="FixedPoint32.md#0x1_FixedPoint32_multiply_u64">FixedPoint32::multiply_u64</a>(ratio_multiplier, *&reserve.coin1.ratio);
@@ -457,6 +458,31 @@ would be
     <b>let</b> coin1 = <a href="Libra.md#0x1_Libra_withdraw">Libra::withdraw</a>(&<b>mut</b> reserve.coin1.backing, coin1_amount);
     <b>let</b> coin2 = <a href="Libra.md#0x1_Libra_withdraw">Libra::withdraw</a>(&<b>mut</b> reserve.coin2.backing, coin2_amount);
     (coin1, coin2)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LBR_reserve_address"></a>
+
+## Function `reserve_address`
+
+Return the account address where the globally unique LBR::Reserve resource is stored
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_reserve_address">reserve_address</a>(): address
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_reserve_address">reserve_address</a>(): address {
+    <a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>()
 }
 </code></pre>
 

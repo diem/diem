@@ -13,7 +13,7 @@ fun testnet_mint<Token>(payer: &signer, payee: address, amount: u64) {
   // * 1000000 here because the unit is microlibra
   assert(amount <= 1000000000 * 1000000, 8000973);
   let payer_withdrawal_cap = LibraAccount::extract_withdraw_capability(payer);
-  LibraAccount::pay_from_with_metadata<Token>(&payer_withdrawal_cap, payee, amount, x"", x"");
+  LibraAccount::pay_from<Token>(&payer_withdrawal_cap, payee, amount, x"", x"");
   LibraAccount::restore_withdraw_capability(payer_withdrawal_cap);
 }
 }

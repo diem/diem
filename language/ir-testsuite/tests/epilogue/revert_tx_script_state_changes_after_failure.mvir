@@ -9,7 +9,7 @@ import 0x1.Vector;
 main(account: &signer) {
     let with_cap: LibraAccount.WithdrawCapability;
     with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    LibraAccount.pay_from<LBR.LBR>(&with_cap, {{bob}}, 514);
+    LibraAccount.pay_from<LBR.LBR>(&with_cap, {{bob}}, 514, h"", h"");
     LibraAccount.restore_withdraw_capability(move(with_cap));
     assert(false, 42);
     return;

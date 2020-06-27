@@ -1,17 +1,4 @@
-//! account: bob, 0Coin1
-
-//! new-transaction
-//! sender: blessed
-script {
-    use 0x1::LibraAccount;
-    use 0x1::Libra;
-    use 0x1::Coin1::Coin1;
-    fun main(assoc: &signer) {
-        let coins = Libra::mint<Coin1>(assoc, 10000);
-        LibraAccount::deposit(assoc, {{bob}}, coins);
-    }
-}
-// check: EXECUTED
+//! account: bob, 10000Coin1
 
 //! new-transaction
 //! sender: bob

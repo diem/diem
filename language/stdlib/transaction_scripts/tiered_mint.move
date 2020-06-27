@@ -1,5 +1,4 @@
 script {
-use 0x1::DesignatedDealer;
 use 0x1::LibraAccount;
 use 0x1::SlidingNonce;
 use 0x1::Roles::{Self, TreasuryComplianceRole};
@@ -17,10 +16,9 @@ fun tiered_mint<CoinType>(
 ) {
     SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
     let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(tc_account);
-    let coins = DesignatedDealer::tiered_mint<CoinType>(
-        tc_account, &tc_capability, mint_amount, designated_dealer_address, tier_index
+    LibraAccount::tiered_mint<CoinType>(
+        tc_account, &tc_capability, designated_dealer_address, mint_amount, tier_index
     );
-    Roles::restore_capability_to_privilege(tc_account, tc_capability);
-    LibraAccount::deposit(tc_account, designated_dealer_address, coins)
+    Roles::restore_capability_to_privilege(tc_account, tc_capability)
 }
 }

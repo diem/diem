@@ -7,7 +7,6 @@ script {
 use 0x1::LibraAccount;
 use 0x1::Coin1::Coin1;
 use 0x1::Roles::{Self, TreasuryComplianceRole};
-use 0x1::DesignatedDealer;
 
 // register dd as a preburner
 fun main(account: &signer) {
@@ -18,14 +17,13 @@ fun main(account: &signer) {
         {{dd}},
         {{dd::auth_key}},
     );
-    let coins = DesignatedDealer::tiered_mint<Coin1>(
+    LibraAccount::tiered_mint<Coin1>(
         account,
         &tc_capability,
-        600,
         {{dd}},
+        600,
         0,
     );
-    LibraAccount::deposit(account, {{dd}}, coins);
     Roles::restore_capability_to_privilege(account, tc_capability);
 }
 }
@@ -41,12 +39,9 @@ use 0x1::Libra;
 use 0x1::LibraAccount;
 fun main(account: &signer) {
     let with_cap = LibraAccount::extract_withdraw_capability(account);
-    let coin100 = LibraAccount::withdraw_from<Coin1>(&with_cap, 100);
-    let coin200 = LibraAccount::withdraw_from<Coin1>(&with_cap, 200);
-    let coin300 = LibraAccount::withdraw_from<Coin1>(&with_cap, 300);
-    Libra::preburn_to<Coin1>(account, coin100);
-    Libra::preburn_to<Coin1>(account, coin200);
-    Libra::preburn_to<Coin1>(account, coin300);
+    LibraAccount::preburn<Coin1>(account, &with_cap, 100);
+    LibraAccount::preburn<Coin1>(account, &with_cap, 200);
+    LibraAccount::preburn<Coin1>(account, &with_cap, 300);
     assert(Libra::preburn_value<Coin1>() == 600, 8001);
     LibraAccount::restore_withdraw_capability(with_cap);
 }

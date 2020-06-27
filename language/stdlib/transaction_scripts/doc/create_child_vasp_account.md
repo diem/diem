@@ -53,7 +53,9 @@ This account will a child of the transaction sender, which must be a ParentVASP.
     // Give the newly created child `child_initial_balance` coins
     <b>if</b> (child_initial_balance &gt; 0) {
         <b>let</b> vasp_withdrawal_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(parent_vasp);
-        <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_pay_from">LibraAccount::pay_from</a>&lt;CoinType&gt;(&vasp_withdrawal_cap, child_address, child_initial_balance);
+        <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_pay_from">LibraAccount::pay_from</a>&lt;CoinType&gt;(
+            &vasp_withdrawal_cap, child_address, child_initial_balance, x"", x""
+        );
         <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_withdraw_capability">LibraAccount::restore_withdraw_capability</a>(vasp_withdrawal_cap);
     };
     <a href="../../modules/doc/Roles.md#0x1_Roles_restore_capability_to_privilege">Roles::restore_capability_to_privilege</a>(parent_vasp, parent_vasp_capability);

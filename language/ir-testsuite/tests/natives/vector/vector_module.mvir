@@ -49,54 +49,12 @@ import 0x1.LBR;
 
 //! new-transaction
 import {{default}}.M;
-import 0x1.LibraAccount;
 import 0x1.LBR;
 import 0x1.Libra;
 
 main(account: &signer) {
-    let coin: Libra.Libra<LBR.LBR>;
-    let with_cap: LibraAccount.WithdrawCapability;
-    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    coin = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 1000);
-    LibraAccount.restore_withdraw_capability(move(with_cap));
     M.new(copy(account));
-    M.put_coin(copy(account), move(coin));
+    M.put_coin(copy(account), Libra.zero<LBR.LBR>());
 
-    return;
-}
-
-//! new-transaction
-import {{default}}.M;
-import 0x1.LBR;
-import 0x1.Libra;
-import 0x1.LibraAccount;
-
-main(account: &signer) {
-    let coin: Libra.Libra<LBR.LBR>;
-    let with_cap: LibraAccount.WithdrawCapability;
-
-    assert(M.get_value(copy(account), 0) == 1000, 4);
-    with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    coin = LibraAccount.withdraw_from<LBR.LBR>(&with_cap, 300);
-    LibraAccount.restore_withdraw_capability(move(with_cap));
-    M.put_coin(copy(account), move(coin));
-
-    return;
-}
-
-
-//! new-transaction
-import {{default}}.M;
-import 0x1.LBR;
-import 0x1.Libra;
-import 0x1.LibraAccount;
-
-main(account: &signer) {
-    let coin: Libra.Libra<LBR.LBR>;
-
-    assert(M.get_value(copy(account), 0) == 1000, 4);
-    assert(M.get_value(copy(account), 1) == 300, 4);
-    coin = M.pop(copy(account));
-    LibraAccount.deposit_to<LBR.LBR>(copy(account), move(coin));
     return;
 }

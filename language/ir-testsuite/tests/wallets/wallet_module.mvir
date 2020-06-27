@@ -71,7 +71,6 @@ module ColdWallet {
     import 0x1.LBR;
     import 0x1.LCS;
     import 0x1.Libra;
-    import 0x1.LibraAccount;
     import 0x1.Vector;
     import 0x1.Signer;
     import {{default}}.ApprovalGroup;
@@ -166,7 +165,9 @@ module ColdWallet {
             *(&mut copy(payer_ref).sequence_num) = move(seq) + 1;
 
             withdraw_amount = Libra.withdraw<LBR.LBR>(&mut copy(payer_ref).balance, move(amount));
-            LibraAccount.deposit<LBR.LBR>(copy(payer_), move(payee), move(withdraw_amount));
+            // LibraAccount no longer has this API
+            //LibraAccount.deposit<LBR.LBR>(copy(payer_), move(payee), move(withdraw_amount));
+            Libra.destroy_zero<LBR.LBR>(move(withdraw_amount));
 
         } else {
             // how to handle error?

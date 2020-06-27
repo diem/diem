@@ -1,6 +1,4 @@
 //! account: bob, 0Coin1
-//! account: c1, 0Coin1
-//! account: c2, 0Coin2
 
 module BurnCapabilityHolder {
     use 0x1::Libra;
@@ -18,9 +16,9 @@ module BurnCapabilityHolder {
 //! sender: blessed
 script {
 use 0x1::Libra;
-use 0x1::LibraAccount;
 use 0x1::Coin1::Coin1;
 use 0x1::Coin2::Coin2;
+use 0x1::Offer;
 fun main(account: &signer) {
     let coin1 = Libra::mint<Coin1>(account, 10000);
     let coin2 = Libra::mint<Coin2>(account, 10000);
@@ -43,8 +41,8 @@ fun main(account: &signer) {
     let coin2 = Libra::join(coin21, coin22);
     assert(Libra::value<Coin1>(&coin1) == 10000, 7);
     assert(Libra::value<Coin2>(&coin2) == 10000, 8);
-    LibraAccount::deposit(account, {{c1}}, coin1);
-    LibraAccount::deposit(account, {{c2}}, coin2);
+    Offer::create(account, coin1, {{blessed}});
+    Offer::create(account, coin2, {{blessed}});
 
     Libra::destroy_zero(Libra::zero<Coin1>());
     Libra::destroy_zero(Libra::zero<Coin2>());

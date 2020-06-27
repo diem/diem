@@ -71,7 +71,7 @@ module LBR {
         tc_capability: &Capability<TreasuryComplianceRole>,
     ) {
         // Operational constraint
-        assert(Signer::address_of(association) == CoreAddresses::CURRENCY_INFO_ADDRESS(), 0);
+        assert(Signer::address_of(association) == reserve_address(), 0);
         // Register the `LBR` currency.
         let (mint_cap, burn_cap) = Libra::register_currency<LBR>(
             association,
@@ -174,11 +174,11 @@ module LBR {
     /// the coin and the value of `coin`. e.g.,, if `coin = 10` and `LBR` is
     /// defined as `2/3` `Coin1` and `1/3` `Coin2`, then the values returned
     /// would be `6` and `3` for `Coin1` and `Coin2` respectively.
-    public fun unpack(account: &signer, coin: Libra<LBR>): (Libra<Coin1>, Libra<Coin2>)
+    public fun unpack(coin: Libra<LBR>): (Libra<Coin1>, Libra<Coin2>)
     acquires Reserve {
         let reserve = borrow_global_mut<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         let ratio_multiplier = Libra::value(&coin);
-        let sender = Signer::address_of(account);
+        let sender = reserve_address();
         Libra::preburn_with_resource(coin, &mut reserve.preburn_cap, sender);
         Libra::burn_with_resource_cap(&mut reserve.preburn_cap, sender, &reserve.burn_cap);
         let coin1_amount = FixedPoint32::multiply_u64(ratio_multiplier, *&reserve.coin1.ratio);
@@ -186,6 +186,11 @@ module LBR {
         let coin1 = Libra::withdraw(&mut reserve.coin1.backing, coin1_amount);
         let coin2 = Libra::withdraw(&mut reserve.coin2.backing, coin2_amount);
         (coin1, coin2)
+    }
+
+    /// Return the account address where the globally unique LBR::Reserve resource is stored
+    public fun reserve_address(): address {
+        CoreAddresses::CURRENCY_INFO_ADDRESS()
     }
 
     // **************** SPECIFICATIONS ****************

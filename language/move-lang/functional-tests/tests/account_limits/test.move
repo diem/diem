@@ -3,6 +3,8 @@
 //! account: alice, 100000000Coin1, 0, unhosted
 //! account: otherblessed, 0Coin1, 0, unhosted
 
+//! account: moneybags, 1000000000000Coin1
+
 //! new-transaction
 //! sender: bob
 script {
@@ -10,7 +12,7 @@ script {
     use 0x1::Coin1::Coin1;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
-        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 1);
+        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 1, x"", x"");
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -19,13 +21,14 @@ script {
 // chec: 10048
 
 //! new-transaction
-//! sender: blessed
+//! sender: moneybags
 script {
 use 0x1::Coin1::Coin1;
 use 0x1::LibraAccount;
-use 0x1::Libra;
 fun main(account: &signer) {
-    LibraAccount::deposit(account, {{otherblessed}}, Libra::mint<Coin1>(account, 1));
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    LibraAccount::pay_from<Coin1>(&with_cap, {{otherblessed}}, 1, x"", x"");
+    LibraAccount::restore_withdraw_capability(with_cap)
 }
 }
 // TODO: fix
@@ -62,15 +65,16 @@ script {
 // ------ try and mint to unhosted bob, but inflow is higher than total flow
 
 //! new-transaction
-//! sender: blessed
+//! sender: moneybags
 script {
     use 0x1::Coin1::Coin1;
     use 0x1::LibraAccount;
-    use 0x1::Libra;
     fun main(account: &signer) {
-        LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1>(account, 3));
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<Coin1>(&with_cap, {{bob}}, 3, x"", x"");
+        LibraAccount::restore_withdraw_capability(with_cap)
     }
-    }
+}
 
 // TODO fix (should ABORT) - update unhosted //! account directive, and flow/balance updates for accounts
 // check: EXECUTED
@@ -149,20 +153,21 @@ script {
     // account limits code, but it is.
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
-        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 1);
+        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 1, x"", x"");
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // check: EXECUTED
 
 //! new-transaction
-//! sender: blessed
+//! sender: moneybags
 script {
 use 0x1::Coin1::Coin1;
 use 0x1::LibraAccount;
-use 0x1::Libra;
 fun main(account: &signer) {
-    LibraAccount::deposit(account, {{otherblessed}}, Libra::mint<Coin1>(account, 2));
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    LibraAccount::pay_from<Coin1>(&with_cap, {{otherblessed}}, 2, x"", x"");
+    LibraAccount::restore_withdraw_capability(with_cap);
 }
 }
 // check: EXECUTED
@@ -174,7 +179,7 @@ script {
     use 0x1::Coin1::Coin1;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
-        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 1);
+        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 1, x"", x"");
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -197,13 +202,14 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: blessed
+//! sender: moneybags
 script {
 use 0x1::Coin1::Coin1;
 use 0x1::LibraAccount;
-use 0x1::Libra;
 fun main(account: &signer) {
-    LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1>(account, 2));
+    let with_cap = LibraAccount::extract_withdraw_capability(account);
+    LibraAccount::pay_from<Coin1>(&with_cap, {{bob}}, 2, x"", x"");
+    LibraAccount::restore_withdraw_capability(with_cap);
 }
 }
 // check: EXECUTED
@@ -215,7 +221,7 @@ script {
     use 0x1::Coin1::Coin1;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
-        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 1);
+        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 1, x"", x"");
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -241,7 +247,7 @@ script {
     use 0x1::Coin1::Coin1;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
-        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 1);
+        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 1, x"", x"");
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -275,25 +281,27 @@ script {
 //! block-time: 40001
 
 //! new-transaction
-//! sender: blessed
+//! sender: moneybags
 script {
     use 0x1::Coin1::Coin1;
     use 0x1::LibraAccount;
-    use 0x1::Libra;
     fun main(account: &signer) {
-        LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1>(account, 100));
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<Coin1>(&with_cap, {{bob}}, 100, x"", x"");
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // check: EXECUTED
 
 //! new-transaction
-//! sender: blessed
+//! sender: moneybags
 script {
     use 0x1::Coin1::Coin1;
     use 0x1::LibraAccount;
-    use 0x1::Libra;
     fun main(account: &signer) {
-        LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1>(account, 1));
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<Coin1>(&with_cap, {{bob}}, 1, x"", x"");
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // TODO: fix
@@ -307,7 +315,7 @@ script {
     use 0x1::Coin1::Coin1;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
-        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 101);
+        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 101, x"", x"");
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -334,7 +342,7 @@ script {
     use 0x1::Coin1::Coin1;
     fun main(account: &signer) {
         let with_cap = LibraAccount::extract_withdraw_capability(account);
-        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 1);
+        LibraAccount::pay_from<Coin1>(&with_cap, {{alice}}, 1, x"", x"");
         LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
@@ -343,13 +351,14 @@ script {
 // chec: 1
 
 //! new-transaction
-//! sender: blessed
+//! sender: moneybags
 script {
     use 0x1::Coin1::Coin1;
     use 0x1::LibraAccount;
-    use 0x1::Libra;
     fun main(account: &signer) {
-        LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1>(account, 1));
+        let with_cap = LibraAccount::extract_withdraw_capability(account);
+        LibraAccount::pay_from<Coin1>(&with_cap, {{bob}}, 1, x"", x"");
+        LibraAccount::restore_withdraw_capability(with_cap);
     }
 }
 // TODO: fix

@@ -8,7 +8,7 @@ module LibraAccount {
     use 0x1::Coin2::Coin2;
     use 0x1::Event::{Self, EventHandle};
     use 0x1::Hash;
-    use 0x1::LBR::LBR;
+    use 0x1::LBR::{Self, LBR};
     use 0x1::LCS;
     use 0x1::LibraTimestamp;
     use 0x1::LibraTransactionTimeout;
@@ -55,7 +55,7 @@ module LibraAccount {
         // The current sequence number.
         // Incremented by one each time a transaction is submitted
         sequence_number: u64,
-        // If true, the account cannot be used to send transactions or receiver funds
+        // If true, the account cannot be used to send transactions or receive funds
         is_frozen: bool,
     }
 
@@ -157,44 +157,54 @@ module LibraAccount {
         );
     }
 
-    // Deposits the `to_deposit` coin into the `payee`'s account balance
-    public fun deposit<Token>(payer: &signer, payee: address, to_deposit: Libra<Token>)
+    /// Use `cap` to mint `amount_lbr` LBR by withdrawing the appropriate quantity of reserve assets
+    /// from `cap.address`, giving them to the LBR reserve, and depositing the LBR into
+    /// `cap.address`.
+    /// The `payee` address in the `SentPaymentEvent`s emitted by this functipn be the LBR reserve
+    /// address to signify that this was a special payment that debits the `cap.addr`'s balance and
+    /// crebits the LBR reserve.
+    public fun staple_lbr(cap: &WithdrawCapability, amount_lbr: u64)
     acquires LibraAccount, Balance, AccountOperationsCapability {
-        deposit_with_metadata(payer, payee, to_deposit, x"", x"")
+        let cap_address = cap.account_address;
+        // withdraw all Coin1 and Coin2
+        let coin1_balance = balance<Coin1>(cap_address);
+        let coin2_balance = balance<Coin2>(cap_address);
+        // use the LBR reserve address as `payee_address`
+        let payee_address = LBR::reserve_address();
+        let coin1 = withdraw_from<Coin1>(cap, payee_address, coin1_balance, x"");
+        let coin2 = withdraw_from<Coin2>(cap, payee_address, coin2_balance, x"");
+        // Create `amount_lbr` LBR
+        let (lbr, coin1, coin2) = LBR::create(amount_lbr, coin1, coin2);
+        // use the reserved address as the payer for the LBR payment because the funds did not come
+        // from an existing balance
+        deposit(CoreAddresses::VM_RESERVED_ADDRESS(), cap_address, lbr, x"", x"");
+        // TODO: eliminate these self-deposits by withdrawing appropriate amounts up-front
+        // Deposit the Coin1/Coin2 remainders
+        deposit(cap_address, cap_address, coin1, x"", x"");
+        deposit(cap_address, cap_address, coin2, x"", x"")
     }
 
-    // Deposits the `to_deposit` coin into `account`
-    public fun deposit_to<Token>(account: &signer, to_deposit: Libra<Token>)
+    /// Use `cap` to withdraw `amount_lbr`, burn the LBR, withdraw the corresponding assets from the
+    /// LBR reserve, and deposit them to `cap.address`.
+    /// The `payer` address in the` RecievedPaymentEvent`s emitted by this function will be the LBR
+    /// reserve address to signify that this was a special payment that credits
+    /// `cap.address`'s balance and credits the LBR reserve.
+    public fun unstaple_lbr(cap: &WithdrawCapability, amount_lbr: u64)
     acquires LibraAccount, Balance, AccountOperationsCapability {
-        deposit(account, Signer::address_of(account), to_deposit)
+        // use the reserved address as the payee because the funds will be burned
+        let lbr = withdraw_from<LBR>(cap, CoreAddresses::VM_RESERVED_ADDRESS(), amount_lbr, x"");
+        let (coin1, coin2) = LBR::unpack(lbr);
+        // These funds come from the LBR reserve, so use the LBR reserve address as the payer
+        let payer_address = LBR::reserve_address();
+        let payee_address = cap.account_address;
+        deposit(payer_address, payee_address, coin1, x"", x"");
+        deposit(payer_address, payee_address, coin2, x"", x"")
     }
 
-    // Deposits the `to_deposit` coin into the `payee`'s account balance with the attached `metadata`
-    // We specifically do _not_ use a withdrawal capability here since the
-    // funds need not be derived from an account withdrawal (e.g. minting),
-    // or from a withdrawal from the same account that is depositing coins
-    // (e.g. using a different withdrawal capability).
-    public fun deposit_with_metadata<Token>(
-        payer: &signer,
+    /// Record a payment of `to_deposit` from `payer` to `payee` with the attached `metadata`
+    fun deposit<Token>(
+        payer: address,
         payee: address,
-        to_deposit: Libra<Token>,
-        metadata: vector<u8>,
-        metadata_signature: vector<u8>
-    ) acquires LibraAccount, Balance, AccountOperationsCapability {
-        deposit_with_sender_and_metadata(
-            payee,
-            Signer::address_of(payer),
-            to_deposit,
-            metadata,
-            metadata_signature
-        );
-    }
-
-    // Deposits the `to_deposit` coin into the `payee`'s account balance with the attached `metadata` and
-    // sender address
-    fun deposit_with_sender_and_metadata<Token>(
-        payee: address,
-        sender: address,
         to_deposit: Libra<Token>,
         metadata: vector<u8>,
         metadata_signature: vector<u8>
@@ -207,18 +217,18 @@ module LibraAccount {
         let approx_lbr_microlibra_value = Libra::approx_lbr_for_value<Token>(deposit_value);
         let above_threshold = approx_lbr_microlibra_value >= travel_rule_limit_microlibra;
         // travel rule only applies if the sender and recipient are both VASPs
-        let both_vasps = VASP::is_vasp(sender) && VASP::is_vasp(payee);
+        let both_vasps = VASP::is_vasp(payer) && VASP::is_vasp(payee);
         if (above_threshold &&
             both_vasps &&
             // travel rule does not apply for intra-VASP transactions
-            VASP::parent_address(sender) != VASP::parent_address(payee)
+            VASP::parent_address(payer) != VASP::parent_address(payee)
         ) {
             // sanity check of signature validity
             assert(Vector::length(&metadata_signature) == 64, 9001);
-            // message should be metadata | sender_address | amount | domain_separator
+            // message should be metadata | payer | amount | domain_separator
             let domain_separator = b"@@$$LIBRA_ATTEST$$@@";
             let message = copy metadata;
-            Vector::append(&mut message, LCS::to_bytes(&sender));
+            Vector::append(&mut message, LCS::to_bytes(&payer));
             Vector::append(&mut message, LCS::to_bytes(&deposit_value));
             Vector::append(&mut message, domain_separator);
             // cryptographic check of signature validity
@@ -244,37 +254,36 @@ module LibraAccount {
             9
         );*/
 
-        // Get the code symbol for this currency
-        let currency_code = Libra::currency_code<Token>();
-
-        // Load the sender's account
-        let sender_account_ref = borrow_global_mut<LibraAccount>(sender);
-        // Log a sent event
-        Event::emit_event<SentPaymentEvent>(
-            &mut sender_account_ref.sent_events,
-            SentPaymentEvent {
-                amount: deposit_value,
-                currency_code: copy currency_code,
-                payee: payee,
-                metadata: *&metadata
-            },
-        );
-
-        // Load the payee's account
-        let payee_account_ref = borrow_global_mut<LibraAccount>(payee);
-        let payee_balance = borrow_global_mut<Balance<Token>>(payee);
         // Deposit the `to_deposit` coin
-        Libra::deposit(&mut payee_balance.coin, to_deposit);
+        Libra::deposit(&mut borrow_global_mut<Balance<Token>>(payee).coin, to_deposit);
         // Log a received event
         Event::emit_event<ReceivedPaymentEvent>(
-            &mut payee_account_ref.received_events,
+            &mut borrow_global_mut<LibraAccount>(payee).received_events,
             ReceivedPaymentEvent {
                 amount: deposit_value,
-                currency_code,
-                payer: sender,
+                currency_code: Libra::currency_code<Token>(),
+                payer,
                 metadata: metadata
             }
         );
+    }
+
+    /// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
+    /// Max valid tier index is 3 since there are max 4 tiers per DD.
+    /// Sender should be treasury compliance account and receiver authorized DD.
+    public fun tiered_mint<Token>(
+        tc_account: &signer,
+        tc_capability: &Capability<TreasuryComplianceRole>,
+        designated_dealer_address: address,
+        mint_amount: u64,
+        tier_index: u64,
+    ) acquires LibraAccount, Balance, AccountOperationsCapability {
+        let coin = DesignatedDealer::tiered_mint<Token>(
+            tc_account, tc_capability, mint_amount, designated_dealer_address, tier_index
+        );
+        // use the reserved address as the payer because the funds did not come from an existing
+        // balance
+        deposit(CoreAddresses::VM_RESERVED_ADDRESS(), designated_dealer_address, coin, x"", x"")
     }
 
     // Cancel the oldest burn request from `preburn_address` and return the funds.
@@ -283,8 +292,10 @@ module LibraAccount {
         account: &signer,
         preburn_address: address,
     ) acquires LibraAccount, Balance, AccountOperationsCapability {
-        let to_return = Libra::cancel_burn<Token>(account, preburn_address);
-        deposit(account, preburn_address, to_return)
+        let coin = Libra::cancel_burn<Token>(account, preburn_address);
+        // record both sender and recipient as `preburn_address`: the coins are moving from
+        // `preburn_address`'s `Preburn` resource to its balance
+        deposit(preburn_address, preburn_address, coin, x"", x"")
     }
 
     // Helper to withdraw `amount` from the given account balance and return the withdrawn Libra<Token>
@@ -307,11 +318,33 @@ module LibraAccount {
 
     // Withdraw `amount` Libra<Token> from the account balance under
     // `cap.account_address`
-    public fun withdraw_from<Token>(cap: &WithdrawCapability, amount: u64): Libra<Token>
-    acquires Balance, AccountOperationsCapability {
-        let account_balance = borrow_global_mut<Balance<Token>>(cap.account_address);
-        // The sender has retained her withdraw privileges--proceed.
-        withdraw_from_balance<Token>(cap.account_address, account_balance, amount)
+    fun withdraw_from<Token>(
+        cap: &WithdrawCapability,
+        payee: address,
+        amount: u64,
+        metadata: vector<u8>,
+    ): Libra<Token> acquires Balance, AccountOperationsCapability, LibraAccount {
+        let payer = cap.account_address;
+        let account_balance = borrow_global_mut<Balance<Token>>(payer);
+        // Load the payer's account and emit an event to record the withdrawal
+        Event::emit_event<SentPaymentEvent>(
+            &mut borrow_global_mut<LibraAccount>(payer).sent_events,
+            SentPaymentEvent {
+                amount,
+                currency_code: Libra::currency_code<Token>(),
+                payee,
+                metadata
+            },
+        );
+        withdraw_from_balance<Token>(payer, account_balance, amount)
+    }
+
+    /// Withdraw `amount` `Libra<Token>`'s from `cap.address` and send them to the `Preburn`
+    /// resource under `dd`.
+    public fun preburn<Token>(
+        dd: &signer, cap: &WithdrawCapability, amount: u64
+    ) acquires Balance, AccountOperationsCapability, LibraAccount {
+        Libra::preburn_to<Token>(dd, withdraw_from(cap, Signer::address_of(dd), amount, x""))
     }
 
     // Return a unique capability granting permission to withdraw from the sender's account balance.
@@ -332,32 +365,26 @@ module LibraAccount {
         Option::fill(&mut account.withdrawal_capability, cap)
     }
 
-    // Withdraws `amount` Libra<Token> using the passed in WithdrawCapability, and deposits it
-    // into the `payee`'s account balance. Creates the `payee` account if it doesn't exist.
-    public fun pay_from_with_metadata<Token>(
+    /// Withdraw `amount` Libra<Token> from the address embedded in `WithdrawCapability` and
+    /// deposits it into the `payee`'s account balance.
+    /// The included `metadata` will appear in the `SentPaymentEvent` and `ReceivedPaymentEvent`.
+    /// The `metadata_signature` will only be checked if this payment is subject to the dual
+    /// attestation protocol
+    public fun pay_from<Token>(
         cap: &WithdrawCapability,
         payee: address,
         amount: u64,
         metadata: vector<u8>,
         metadata_signature: vector<u8>
     ) acquires LibraAccount, Balance, AccountOperationsCapability {
-        deposit_with_sender_and_metadata<Token>(
-            payee,
+        deposit<Token>(
             *&cap.account_address,
-            withdraw_from(cap, amount),
+            payee,
+            withdraw_from(cap, payee, amount, copy metadata),
             metadata,
             metadata_signature
         );
     }
-
-    // Withdraw `amount` Libra<Token> from the transaction sender's
-    // account balance  and send the coin to the `payee` address
-    // Creates the `payee` account if it does not exist
-    public fun pay_from<Token>(withdraw_cap: &WithdrawCapability, payee: address, amount: u64)
-    acquires LibraAccount, Balance, AccountOperationsCapability {
-        pay_from_with_metadata<Token>(withdraw_cap, payee, amount, x"", x"");
-    }
-
     // Rotate the authentication key for the account under cap.account_address
     public fun rotate_authentication_key(
         cap: &KeyRotationCapability,

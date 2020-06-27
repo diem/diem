@@ -31,10 +31,12 @@ pub static CREATE_ACCOUNT_SCRIPT: Lazy<Vec<u8>> = Lazy::new(|| {
       );
       if (copy(initial_amount) > 0) {
          with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-         LibraAccount.deposit<Token>(
-           copy(account),
+         LibraAccount.pay_from<Token>(
+           &with_cap,
            move(fresh_address),
-           LibraAccount.withdraw_from<Token>(&with_cap, move(initial_amount))
+           move(initial_amount),
+           h\"\",
+           h\"\"
          );
          LibraAccount.restore_withdraw_capability(move(with_cap));
       }

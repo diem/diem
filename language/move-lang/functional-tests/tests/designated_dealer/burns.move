@@ -36,10 +36,9 @@ script {
         let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(tc_account);
         let designated_dealer_address = 0xDEADBEEF;
         DesignatedDealer::add_tier(&tc_capability, 0xDEADBEEF, 100); // first Tier, 0th index
-        let coins = DesignatedDealer::tiered_mint<Coin1>(
-            tc_account, &tc_capability, 99, designated_dealer_address, 0
+        LibraAccount::tiered_mint<Coin1>(
+            tc_account, &tc_capability, designated_dealer_address, 99, 0
         );
-        LibraAccount::deposit(tc_account, designated_dealer_address, coins);
         DesignatedDealer::add_tier(&tc_capability, 0xDEADBEEF, 1000); // second Tier
         DesignatedDealer::add_tier(&tc_capability, 0xDEADBEEF, 10000); // third Tier
         Roles::restore_capability_to_privilege(tc_account, tc_capability);

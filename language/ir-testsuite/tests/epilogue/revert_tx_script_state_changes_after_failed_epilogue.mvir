@@ -1,17 +1,6 @@
-//! account: alice, 0Coin1
-//! account: bob, 0Coin1
+//! account: alice, 1000000Coin1
+//! account: bob, 1000000Coin1
 //! account: carol, 0Coin1
-
-//! new-transaction
-//! sender: blessed
-import 0x1.Coin1;
-import 0x1.LibraAccount;
-import 0x1.Libra;
-main(blessed: &signer) {
-    LibraAccount.deposit<Coin1.Coin1>(copy(blessed), {{alice}}, Libra.mint<Coin1.Coin1>(copy(blessed), 1000000));
-    LibraAccount.deposit<Coin1.Coin1>(copy(blessed), {{bob}}, Libra.mint<Coin1.Coin1>(move(blessed), 1000000));
-    return;
-}
 
 
 // Transfer all of the Alice's funds to Carol. this script will execute successfully, but
@@ -30,7 +19,7 @@ import 0x1.Vector;
 main(account: &signer, amount: u64) {
     let with_cap: LibraAccount.WithdrawCapability;
     with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    LibraAccount.pay_from<Coin1.Coin1>(&with_cap, {{carol}}, move(amount));
+    LibraAccount.pay_from<Coin1.Coin1>(&with_cap, {{carol}}, move(amount), h"", h"");
     LibraAccount.restore_withdraw_capability(move(with_cap));
     return;
 }
@@ -54,7 +43,7 @@ import 0x1.Vector;
 main(account: &signer, amount: u64) {
     let with_cap: LibraAccount.WithdrawCapability;
     with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    LibraAccount.pay_from<Coin1.Coin1>(&with_cap, {{carol}}, move(amount));
+    LibraAccount.pay_from<Coin1.Coin1>(&with_cap, {{carol}}, move(amount), h"", h"");
     LibraAccount.restore_withdraw_capability(move(with_cap));
     return;
 }
