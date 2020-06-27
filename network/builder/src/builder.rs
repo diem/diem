@@ -38,7 +38,7 @@ use network::{
     ProtocolId,
 };
 use network_simple_onchain_discovery::{
-    gen_simple_discovery_reconfig_subscription, ConfigurationChangeListener,
+    builder::ConfigurationChangeListenerBuilder, gen_simple_discovery_reconfig_subscription,
 };
 use std::{
     clone::Clone,
@@ -241,6 +241,22 @@ impl NetworkBuilder {
                     .advertised_address(gossip_config.advertised_address.clone())
                     .discovery_interval_ms(gossip_config.discovery_interval_ms)
                     .add_gossip_discovery();
+                if role == RoleType::Validator {
+                    let conn_mgr_reqs_tx = network_builder
+                        .conn_mgr_reqs_tx()
+                        .expect("ConnectivityManager must be installed for validator");
+                    let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
+                        gen_simple_discovery_reconfig_subscription();
+                    reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
+
+                    ConfigurationChangeListenerBuilder::create(
+                        role,
+                        conn_mgr_reqs_tx,
+                        simple_discovery_reconfig_rx,
+                    )
+                    .build()
+                    .start(runtime.handle());
+                }
             }
             DiscoveryMethod::Onchain => {
                 let conn_mgr_reqs_tx = network_builder
@@ -249,11 +265,14 @@ impl NetworkBuilder {
                 let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
                     gen_simple_discovery_reconfig_subscription();
                 reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
-                let network_config_listener =
-                    ConfigurationChangeListener::new(conn_mgr_reqs_tx, role);
-                runtime
-                    .handle()
-                    .spawn(network_config_listener.start(simple_discovery_reconfig_rx));
+
+                ConfigurationChangeListenerBuilder::create(
+                    role,
+                    conn_mgr_reqs_tx,
+                    simple_discovery_reconfig_rx,
+                )
+                .build()
+                .start(runtime.handle());
             }
             DiscoveryMethod::None => {}
         }
