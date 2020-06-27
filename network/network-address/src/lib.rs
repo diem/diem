@@ -14,7 +14,7 @@ use std::{
     convert::{Into, TryFrom},
     fmt,
     iter::IntoIterator,
-    net::{self, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
+    net::{self, IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, ToSocketAddrs},
     num,
     str::FromStr,
     string::ToString,
@@ -372,6 +372,24 @@ impl FromStr for NetworkAddress {
         }
 
         Ok(NetworkAddress::new(protocols))
+    }
+}
+
+impl ToSocketAddrs for NetworkAddress {
+    type Iter = std::vec::IntoIter<SocketAddr>;
+
+    fn to_socket_addrs(&self) -> Result<Self::Iter, std::io::Error> {
+        if let Some(((ipaddr, port), _)) = parse_ip_tcp(self.as_slice()) {
+            Ok(vec![SocketAddr::new(ipaddr, port)].into_iter())
+        } else if let Some(((ip_filter, dns_name, port), _)) = parse_dns_tcp(self.as_slice()) {
+            format!("{}:{}", dns_name, port).to_socket_addrs().map(|v| {
+                v.filter(|addr| ip_filter.matches(addr.ip()))
+                    .collect::<Vec<_>>()
+                    .into_iter()
+            })
+        } else {
+            Ok(vec![].into_iter())
+        }
     }
 }
 
