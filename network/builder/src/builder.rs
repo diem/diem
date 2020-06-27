@@ -111,9 +111,12 @@ pub struct NetworkBuilder {
     /// For now full node connections are limited by
     max_fullnode_connections: usize,
 
+    configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
     connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
     discovery_builder: Option<DiscoveryBuilder>,
     health_checker_builder: Option<HealthCheckerBuilder>,
+
+    reconfig_subscriptions: Vec<ReconfigSubscription>,
 }
 
 impl NetworkBuilder {
@@ -162,9 +165,11 @@ impl NetworkBuilder {
             max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
             max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
             max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
+            configuration_change_listener_builder: None,
             connectivity_manager_builder: None,
             discovery_builder: None,
             health_checker_builder: None,
+            reconfig_subscriptions: vec![],
         }
     }
 
@@ -172,7 +177,6 @@ impl NetworkBuilder {
         chain_id: &ChainId,
         role: RoleType,
         config: &mut NetworkConfig,
-        reconfig_subscriptions: &mut Vec<ReconfigSubscription>,
     ) -> (Runtime, NetworkBuilder) {
         let runtime = Builder::new()
             .thread_name("network-")
@@ -241,43 +245,22 @@ impl NetworkBuilder {
                     .advertised_address(gossip_config.advertised_address.clone())
                     .discovery_interval_ms(gossip_config.discovery_interval_ms)
                     .add_gossip_discovery();
+                // HACK: gossip relies on on-chain discovery for the eligible peers update.
                 if role == RoleType::Validator {
-                    let conn_mgr_reqs_tx = network_builder
-                        .conn_mgr_reqs_tx()
-                        .expect("ConnectivityManager must be installed for validator");
-                    let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
-                        gen_simple_discovery_reconfig_subscription();
-                    reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
-
-                    ConfigurationChangeListenerBuilder::create(
-                        role,
-                        conn_mgr_reqs_tx,
-                        simple_discovery_reconfig_rx,
-                    )
-                    .build()
-                    .start(runtime.handle());
+                    network_builder.add_configuration_change_listener(role);
                 }
             }
             DiscoveryMethod::Onchain => {
-                let conn_mgr_reqs_tx = network_builder
-                    .conn_mgr_reqs_tx()
-                    .expect("ConnectivityManager must be installed for on-chain discovery");
-                let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
-                    gen_simple_discovery_reconfig_subscription();
-                reconfig_subscriptions.push(simple_discovery_reconfig_subscription);
-
-                ConfigurationChangeListenerBuilder::create(
-                    role,
-                    conn_mgr_reqs_tx,
-                    simple_discovery_reconfig_rx,
-                )
-                .build()
-                .start(runtime.handle());
+                network_builder.add_configuration_change_listener(role);
             }
             DiscoveryMethod::None => {}
         }
 
         (runtime, network_builder)
+    }
+
+    pub fn reconfig_subscriptions(&mut self) -> &mut Vec<ReconfigSubscription> {
+        &mut self.reconfig_subscriptions
     }
 
     pub fn network_context(&self) -> Arc<NetworkContext> {
@@ -439,6 +422,43 @@ impl NetworkBuilder {
     fn start_connectivity_manager(&mut self) -> &mut Self {
         if let Some(builder) = self.connectivity_manager_builder.as_mut() {
             builder.start(&self.executor);
+        }
+        self
+    }
+
+    fn add_configuration_change_listener(&mut self, role: RoleType) -> &mut Self {
+        let conn_mgr_reqs_tx = self
+            .conn_mgr_reqs_tx()
+            .expect("ConnectivityManager must be installed for validator");
+        let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
+            gen_simple_discovery_reconfig_subscription();
+        self.reconfig_subscriptions
+            .push(simple_discovery_reconfig_subscription);
+
+        self.configuration_change_listener_builder =
+            Some(ConfigurationChangeListenerBuilder::create(
+                role,
+                conn_mgr_reqs_tx,
+                simple_discovery_reconfig_rx,
+            ));
+        self.build_configuration_change_listener()
+            .start_configuration_change_listener()
+    }
+
+    fn build_configuration_change_listener(&mut self) -> &mut Self {
+        if let Some(configuration_change_listener) =
+            self.configuration_change_listener_builder.as_mut()
+        {
+            configuration_change_listener.build();
+        }
+        self
+    }
+
+    fn start_configuration_change_listener(&mut self) -> &mut Self {
+        if let Some(configuration_change_listener) =
+            self.configuration_change_listener_builder.as_mut()
+        {
+            configuration_change_listener.start(&self.executor);
         }
         self
     }
