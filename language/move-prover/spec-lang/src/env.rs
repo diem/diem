@@ -135,6 +135,12 @@ pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
 /// Pragma indicating that the function will run the smoke test for constant global states
 pub const CONST_EXP_TEST_PRAGMA: &str = "const_exp_test";
 
+/// Pragma indicating that the function will run the specification check for constant global states
+pub const CONST_FIELD_TEST_PRAGMA: &str = "const_exp_test";
+
+/// Pragma listing the addresses that the constant field check will check against
+pub const CONST_SC_ADDR: &str = "const_sc_addr";
+
 // =================================================================================================
 /// # Locations
 
@@ -1435,9 +1441,11 @@ impl<'env> ModuleEnv<'env> {
     }
 
     /// Allocates a new node id and assigns location and type to it.
-    pub fn new_node(&self, loc: Loc, ty: Type) -> NodeId {
+    pub fn new_node(&self, loc_opt: Option<Loc>, ty: Type) -> NodeId {
         let id = self.new_node_id();
-        self.data.loc_map.borrow_mut().insert(id, loc);
+        if let Some(loc) = loc_opt {
+            self.data.loc_map.borrow_mut().insert(id, loc);
+        }
         self.data.type_map.borrow_mut().insert(id, ty);
         id
     }

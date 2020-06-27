@@ -1331,7 +1331,7 @@ procedure {:inline 1} $Event_emit_event(t: $TypeValue, handler: $Value, msg: $Va
 }
 
 // ==================================================================================
-// Smoke testing constants
+// Specification checking constants
 
 // An address used for the constant expression specification check
 const $sc_addr: $Value;

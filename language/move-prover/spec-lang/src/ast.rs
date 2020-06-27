@@ -6,9 +6,15 @@
 use num::{BigInt, BigUint, Num};
 
 use crate::{
-    env::{FieldId, Loc, ModuleId, NodeId, SpecFunId, SpecVarId, StructId},
+    env::{FieldId, Loc, ModuleId, ModuleEnv, NodeId, SpecFunId, SpecVarId, StructId},
     symbol::{Symbol, SymbolPool},
-    ty::Type,
+    ty::{
+        Type,
+        BOOL_TYPE,
+        NUM_TYPE,
+        ADDRESS_TYPE,
+        RANGE_TYPE,
+    },
 };
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -172,6 +178,8 @@ pub struct Spec {
     pub properties: PropertyBag,
     // If this is a function, specs associated with individual code points.
     pub on_impl: BTreeMap<CodeOffset, Spec>,
+    // For specification checking, this is the index of the mutated code
+    pub rewritten_code_index: Option<u64>
 }
 
 impl Spec {
@@ -623,5 +631,86 @@ impl<'a> fmt::Display for ExpDisplay<'a> {
             }
         }
         Ok(())
+    }
+}
+
+// =================================================================================================
+// # AST Expression Helpers
+
+impl Exp {
+    fn new_node(module_env: &ModuleEnv<'_>, typ: Type) -> NodeId {
+        module_env.new_node(None, typ)
+    }
+    // Value
+    pub fn make_value_address(module_env: &ModuleEnv<'_>, i: BigUint) -> Exp {
+        let node_id = Self::new_node(module_env, ADDRESS_TYPE.clone());
+        Exp::Value(node_id, Value::Address(i))
+    }
+    pub fn make_value_number(module_env: &ModuleEnv<'_>, i: BigInt) -> Exp {
+        let node_id = Self::new_node(module_env, NUM_TYPE.clone());
+        Exp::Value(node_id, Value::Number(i))
+    }
+    pub fn make_value_bool(module_env: &ModuleEnv<'_>, value: bool) -> Exp {
+        let node_id = Self::new_node(module_env, BOOL_TYPE.clone());
+        Exp::Value(node_id, Value::Bool(value))
+    }
+    // LocalVar
+    pub fn make_localvar(module_env: &ModuleEnv<'_>, name: &str, typ: Type) -> Exp {
+        let node_id = Self::new_node(module_env, typ);
+        let symbol_id = module_env
+            .symbol_pool()
+            .make(name);
+        Exp::LocalVar(node_id, symbol_id)
+    }
+    // Call
+    pub fn make_call_select(module_env: &ModuleEnv<'_>, struct_id: StructId, field_id: FieldId, struct_exp: Exp) -> Exp {
+        let field_type = module_env.get_struct(struct_id.clone()).get_field(field_id.clone()).get_type();
+        let node_id = Self::new_node(module_env, field_type);
+        let select_op = Operation::Select(module_env.get_id(), struct_id.clone(), field_id.clone());
+        Exp::Call(node_id, select_op, vec![struct_exp])
+    }
+    // Call (binary operators)
+    pub fn make_call_implies(module_env: &ModuleEnv<'_>, ante: Exp, conc: Exp) -> Exp {
+        let node_id = Self::new_node(module_env, BOOL_TYPE.clone());
+        Exp::Call(node_id, Operation::Implies, vec![ante, conc])
+    }
+    pub fn make_call_and(module_env: &ModuleEnv<'_>, exp1: Exp, exp2: Exp) -> Exp {
+        let node_id = Self::new_node(module_env, BOOL_TYPE.clone());
+        Exp::Call(node_id, Operation::And, vec![exp1, exp2])
+    }
+    pub fn make_call_eq(module_env: &ModuleEnv<'_>, exp1: Exp, exp2: Exp) -> Exp {
+        let node_id = Self::new_node(module_env, BOOL_TYPE.clone());
+        Exp::Call(node_id, Operation::Eq, vec![exp1, exp2])
+    }
+    // Call (builtins)
+    pub fn make_call_global(module_env: &ModuleEnv<'_>, param_type: Type, addr: Exp) -> Exp {
+        let node_id = Self::new_node(module_env, param_type.clone());
+        module_env.set_node_instantiation(&node_id, param_type);
+        Exp::Call(node_id, Operation::Global, vec![addr])
+    }
+    pub fn make_call_exists(module_env: &ModuleEnv<'_>, param_type: Type, addr: Exp) -> Exp {
+        let node_id = Self::new_node(module_env, BOOL_TYPE.clone());
+        module_env.set_node_instantiation(&node_id, param_type);
+        Exp::Call(node_id, Operation::Exists, vec![addr])
+    }
+    pub fn make_call_old(module_env: &ModuleEnv<'_>, exp: Exp) -> Exp {
+        let node_type = module_env.get_node_type(exp.node_id());
+        let old_id = Self::new_node(module_env, node_type);
+        Exp::Call(old_id, Operation::Old, vec![exp])
+    }
+    // Call (quantifiers)
+    pub fn make_call_all(module_env: &ModuleEnv<'_>, vars: Vec<LocalVarDecl>, body: Exp) -> Exp {
+        let exists_id = Self::new_node(module_env, BOOL_TYPE.clone());
+        let bound_id = Self::new_node(module_env, RANGE_TYPE.clone());
+        let bound_exp = Exp::Value(bound_id, Value::Bool(true));    // dummy
+        let lambda_id = Self::new_node(module_env, BOOL_TYPE.clone());
+        Exp::Call(exists_id, Operation::All, vec![bound_exp, Exp::Lambda(lambda_id, vars, Box::new(body))])
+    }
+    pub fn make_call_any(module_env: &ModuleEnv<'_>, vars: Vec<LocalVarDecl>, body: Exp) -> Exp {
+        let exists_id = Self::new_node(module_env, BOOL_TYPE.clone());
+        let bound_id = Self::new_node(module_env, RANGE_TYPE.clone());
+        let bound_exp = Exp::Value(bound_id, Value::Bool(true));    // dummy
+        let lambda_id = Self::new_node(module_env, BOOL_TYPE.clone());
+        Exp::Call(exists_id, Operation::Any, vec![bound_exp, Exp::Lambda(lambda_id, vars, Box::new(body))])
     }
 }

@@ -570,6 +570,37 @@ impl<'env> ModuleTranslator<'env> {
             }
         }
 
+        if func_target.data.rewritten_spec.len() > 0 {
+            // generate the _smoke_test version of the function which creates a new procedure
+            // for condition `EnsuresSmokeTest` so that ALL the errors will be reported
+            for (i, spec) in func_target.data.rewritten_spec.iter().enumerate() {
+                let ensure_spec_checks = spec
+                    .conditions
+                    .iter()
+                    .filter(|cond| cond.kind == ConditionKind::EnsuresSmokeTest)
+                    .collect_vec();
+                // Check that there is at most one ensures specification
+                // Boogie is not gauranteed to return all errors
+                assert!(ensure_spec_checks.len() <= 1, "There should only be at most one EnsuresSmokeTest condition kind.");
+                if let Some(cond) = &ensure_spec_checks.first() {
+                    // > TODO(kkmc): Generate a function with the rewritten code.
+                    self.generate_smoke_test_function_sig(i, func_target);
+                    self.generate_function_args_well_formed(func_target);
+                    self.generate_smoke_test_ensure(func_target, &cond);
+                    let st = self.new_spec_translator(func_target.clone(), false);
+                    let distribution = self.generate_function_spec(&st, FunctionEntryPoint::Verification);
+                    self.generate_function_stub(
+                        &st,
+                        FunctionEntryPoint::Verification,
+                        FunctionEntryPoint::VerificationDefinition,
+                        distribution,
+                    );
+                }
+            }
+
+            return;
+        }
+
         // generate the verify functions with full pre/post conditions.
         self.generate_function_sig(func_target, FunctionEntryPoint::VerificationDefinition);
         self.set_top_level_verify(true); // Ensure that DirectCall is used from this definition
@@ -586,23 +617,6 @@ impl<'env> ModuleTranslator<'env> {
             distribution,
         );
         emitln!(self.writer);
-
-        // generate the _smoke_test version of the function which creates a new procedure
-        // for condition `EnsuresSmokeTest` so that ALL the errors will be reported
-        if let Some(spec) = &func_target.data.rewritten_spec {
-            for (i, condition) in spec.conditions.iter().enumerate() {
-                if condition.kind != ConditionKind::EnsuresSmokeTest {
-                    continue;
-                }
-                self.generate_smoke_test_function_sig(i, func_target);
-                self.generate_function_args_well_formed(func_target);
-                self.generate_smoke_test_ensure(func_target, &condition);
-                let st = self.new_spec_translator(func_target.clone(), true);
-                let distribution = self.generate_function_spec(&st, FunctionEntryPoint::Verification);
-                self.generate_function_stub(&st, FunctionEntryPoint::Verification, FunctionEntryPoint::VerificationDefinition, distribution);
-                emitln!(self.writer);
-            }
-        }
     }
 
     fn generate_smoke_test_ensure(&self, func_target: &FunctionTarget<'_>, cond: &Condition) {

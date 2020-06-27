@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use crate::{
     function_target::FunctionTargetData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
+    stackless_bytecode::{Bytecode, Operation},
 };
 use spec_lang::{
     ast::{
@@ -13,31 +14,31 @@ use spec_lang::{
         Exp,
         PropertyBag,
         Spec,
-        Value,
-        Operation,
-        LocalVarDecl,
     },
     env::{
-        NodeId,
         Loc,
         ConditionInfo,
         ConditionTag,
+        ModuleEnv,
         FunctionEnv,
         StructEnv,
+        ModuleId,
+        StructId,
         FieldEnv,
         VerificationScope,
         ALWAYS_ABORTS_TEST_PRAGMA,
-        CONST_EXP_TEST_PRAGMA,
+        CONST_FIELD_TEST_PRAGMA,
+        CONST_SC_ADDR,
     },
     ty::{
-        Type,
         BOOL_TYPE,
         ADDRESS_TYPE,
-        RANGE_TYPE,
     },
     symbol::Symbol,
 };
 use codespan::{Span, ByteOffset};
+
+use num::BigUint;
 
 /// A function target processor which instruments specifications and code for the purpose
 /// of specification testing.
@@ -56,7 +57,7 @@ impl FunctionTargetProcessor for TestInstrumenter {
     /// Implements the FunctionTargetProcessor trait.
     fn process(
         &self,
-        _targets: &mut FunctionTargetsHolder,
+        targets: &mut FunctionTargetsHolder,
         func_env: &FunctionEnv<'_>,
         mut data: FunctionTargetData,
     ) -> FunctionTargetData {
@@ -67,8 +68,8 @@ impl FunctionTargetProcessor for TestInstrumenter {
         if func_env.is_pragma_true(ALWAYS_ABORTS_TEST_PRAGMA, || false) {
             self.instrument_always_aborts(func_env, &mut data);
         }
-        if func_env.is_pragma_true(CONST_EXP_TEST_PRAGMA, || false) {
-            self.instrument_const_exp(func_env, &mut data);
+        if func_env.is_pragma_true(CONST_FIELD_TEST_PRAGMA, || false) {
+            self.instrument_const_fields(func_env, &mut data, targets);
         }
         data
     }
@@ -92,7 +93,7 @@ impl TestInstrumenter {
         let cond = self.make_condition(
             func_env.get_loc(),
             ConditionKind::EnsuresSmokeTest,
-            self.make_abort_flag_bool_exp(func_env),
+            self.make_abort_flag_bool_exp(&func_env.module_env),
         );
         let cond_loc = cond.loc.clone();
         conds.push(cond);
@@ -100,8 +101,9 @@ impl TestInstrumenter {
             conditions: conds,
             properties: Default::default(),
             on_impl: Default::default(),
+            rewritten_code_index: None,
         };
-        data.rewritten_spec = Some(spec);
+        data.add_spec_check(spec, None);
         // Add ConditionInfo to global environment for backend error reporting.
         let info = ConditionInfo {
             message: "function always aborts".to_string(),
@@ -122,20 +124,27 @@ impl TestInstrumenter {
 
 impl TestInstrumenter {
     /// Instrument the function to check whether there are constant global expressions.
-    fn instrument_const_exp(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData) {
+    fn instrument_const_fields(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData, targets: &mut FunctionTargetsHolder) {
+        let module_env = &func_env.module_env;
         let mut conds = vec![];
+
         // Keep the precondtions
         conds.append(&mut self.get_smoke_test_preconditions(func_env));
-        // For every struct, add condition that struct fields don't change
+
         let struct_envs = func_env
             .module_env
             .get_structs();
         for struct_env in struct_envs {
-            // TODO: Why is this 1 when it's empty?
-            if struct_env.get_field_count() == 1 {
+            // For every struct, add condition that struct fields don't change
+
+            if struct_env.get_field_count() == 1
+                || !self.can_mutate(data, &struct_env.get_id()) {
+                // Ignore struct with no fields (except the dummy field) and functions
+                // that don't potentially mutate the global resource
                 continue;
             }
-            // Check if the struct generics are contained in the function's
+
+            // Check if the struct's generic parameters are defined in the function
             let func_type_params_set = func_env
                 .get_named_type_parameters()
                 .iter()
@@ -148,17 +157,39 @@ impl TestInstrumenter {
                     acc && func_type_params_set.contains(&tp.0)
                 });
             if !contains_params {
+                // Parameters are not all defined so it cannot not possibly
+                // change this struct
                 continue;
             }
+
+            // Check if the struct is moved to the top level of the global store
+            if !self.is_top_level_struct(&targets, &data, &struct_env) {
+                continue;
+            }
+
+            let const_addr = BigUint::from(func_env.get_num_pragma(CONST_SC_ADDR, || 0));
+            // Add assumption that $sc_addr == const_addr
+            // if the `const_sc_addr` pragma is declared
+            let cond = self.make_condition(
+                    struct_env.get_loc().clone(),
+                    ConditionKind::RequiresSmokeTest,
+                    self.sc_addr_is_const(module_env, const_addr)
+                );
+            conds.push(cond);
+
+            // Add the unchanged field post conditions
             for field_env in struct_env.get_fields() {
-                // Create a unique location for each field
+                // Vector of conditions for the specific field
+                let mut conds_for_field = conds.clone();
+
+                // Create a condition and spec for the field
                 // FIXME: Location is not exact. Simply added the offset to the beginning of the span
                 // to create a dummy unqiue span.
                 let field_span =
                     Span::new(struct_env.get_loc().span().start() + ByteOffset(field_env.get_offset() as i64), struct_env.get_loc().span().end());
                 let field_loc =
                     Loc::new(struct_env.get_loc().file_id(), field_span);
-                let field_unchanged_exp = self.field_unchanged_exp(func_env, &struct_env, &field_env, struct_env.get_loc());
+                let field_unchanged_exp = self.field_unchanged_exp(func_env, &struct_env, &field_env);
                 let cond = self.make_condition(
                         field_loc.clone(),
                         ConditionKind::EnsuresSmokeTest,
@@ -172,43 +203,81 @@ impl TestInstrumenter {
                     negative_cond: true,
                 };
                 func_env.module_env.env.set_condition_info(field_loc, ConditionTag::NegativeTest, info);
-                conds.push(cond);
+                conds_for_field.push(cond);
+
+                // Add the specification check
+                let spec = Spec {
+                    conditions: conds_for_field,
+                    properties: Default::default(),
+                    on_impl: Default::default(),
+                    rewritten_code_index: None,
+                };
+                data.add_spec_check(spec, None);
             }
         }
-        // Replace the specifications with the specification check
-        let spec = Spec {
-            conditions: conds,
-            properties: Default::default(),
-            on_impl: Default::default(),
-        };
-        data.rewritten_spec = Some(spec);
     }
 
-    /// Helper to create the value == old(value) check
-    fn make_value_unchanged_exp(&self, func_env: &FunctionEnv<'_>, exp: Exp, loc: Loc) -> Exp {
-        // old(value)
-        let old_value = self.make_old_exp(func_env, exp.clone(), loc.clone());
-        // value == old(value)
-        let compare_id = self.new_node_id(func_env, loc.clone(), BOOL_TYPE.clone());
-        Exp::Call(compare_id, Operation::Eq, vec![old_value, exp.clone()])
+    /// Helper function to check if the current struct is moved to the top level of the global store
+    fn is_top_level_struct(&self, targets: &FunctionTargetsHolder, data: &FunctionTargetData, struct_env: &StructEnv<'_>) -> bool {
+        let func_envs = struct_env
+            .module_env
+            .get_functions();
+        // Check if any function has a move_to<T>, where T is `struct_env`
+        for bytecode in &data.code {
+            if self.is_struct_move_to(&bytecode, struct_env.module_env.get_id(), struct_env.get_id()) {
+                return true;
+            }
+        }
+        for func_env in func_envs {
+            if !targets.has_target(&func_env) {
+                continue;
+            }
+            for bytecode in &targets.get_target(&func_env).data.code {
+                if self.is_struct_move_to(&bytecode, struct_env.module_env.get_id(), struct_env.get_id()) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
-    /// Condition that the given field of the struct is unchanged
-    fn field_unchanged_exp(&self, func_env: &FunctionEnv<'_>, struct_env: &StructEnv<'_>, field_env: &FieldEnv<'_>, loc: Loc) -> Exp {
-        let addr_id = self.new_node_id(func_env, loc.clone(), ADDRESS_TYPE.clone());
-        let addr_symbol = func_env
-            .symbol_pool()
-            .make("$sc_addr");
-        let addr_var = Exp::LocalVar(addr_id, addr_symbol);
-        // Generate a constraint for the field to check value == old(value)
-        let global_value = self.make_builtin_global_exp(func_env, struct_env.get_type(), addr_var.clone(), loc.clone());
-        let global_field_value = self.make_field_select(func_env, struct_env, &field_env, global_value, loc.clone());
-        let unchanged_field_exp = self.make_value_unchanged_exp(func_env, global_field_value, loc.clone());
-        let global_exists = self.make_builtin_exists_exp(func_env, struct_env.get_type(), addr_var.clone(), loc.clone());
-        let old_global_exists = self.make_old_exp(func_env, global_exists, loc.clone());
-        let body = self.make_implies_exp(func_env, old_global_exists, unchanged_field_exp, loc.clone());
-        // Return the implication `exists<T>(addr) ==> global<T>(addr) == old(global<T>(addr))`
-        body
+    /// Helper function to check if the bytecode is a move_to with the given struct
+    fn is_struct_move_to(&self, bytecode: &Bytecode, module_id: ModuleId, struct_id: StructId) -> bool {
+        match bytecode {
+            Bytecode::Call(_, _, Operation::MoveTo(module_id_, struct_id_, _), _) =>
+                module_id == *module_id_ && struct_id == *struct_id_,
+            _ => false,
+        }
+    }
+
+    /// Helper to create the expression `old(exists<T>($sc_addr)) ==> global<T>($sc_addr) == old(global<T>($sc_addr))`
+    fn field_unchanged_exp(&self, func_env: &FunctionEnv<'_>, struct_env: &StructEnv<'_>, field_env: &FieldEnv<'_>) -> Exp {
+        let module_env = &func_env.module_env;
+        let sc_addr_var = Exp::make_localvar(module_env, "$sc_addr", ADDRESS_TYPE.clone());
+        // Make the expression `global<T>($sc_addr) == old(global<T>($sc_addr))`
+        let global_struct = Exp::make_call_global(module_env, struct_env.get_type(), sc_addr_var.clone());
+        let global_field_value = Exp::make_call_select(module_env, struct_env.get_id(), field_env.get_id(), global_struct);
+        let unchanged_field_exp = self.make_value_unchanged_exp(module_env, global_field_value);
+        // Generate the expression `old(exists<T>($sc_addr))`
+        let global_exists = Exp::make_call_exists(module_env, struct_env.get_type(), sc_addr_var.clone());
+        let old_global_exists = Exp::make_call_old(module_env, global_exists);
+        // Return the implication `old(exists<T>($sc_addr)) ==> global<T>($sc_addr) == old(global<T>($sc_addr))`
+        Exp::make_call_implies(module_env, old_global_exists, unchanged_field_exp)
+    }
+
+    /// Helper to create the expression `exp == old(exp)`
+    fn make_value_unchanged_exp(&self, module_env: &ModuleEnv<'_>, exp: Exp) -> Exp {
+        // old(exp)
+        let old_value = Exp::make_call_old(module_env, exp.clone());
+        // exp == old(exp)
+        Exp::make_call_eq(module_env, exp.clone(), old_value)
+    }
+
+    // Expression that says `$sc_addr` is equal to the given BigUInt constant
+    fn sc_addr_is_const(&self, module_env: &ModuleEnv<'_>, const_addr: BigUint) -> Exp {
+        let sc_addr_var = Exp::make_localvar(module_env, "$sc_addr", ADDRESS_TYPE.clone());
+        let const_addr = Exp::make_value_address(module_env, const_addr);
+        Exp::make_call_eq(module_env, sc_addr_var, const_addr)
     }
 }
 
@@ -238,11 +307,6 @@ impl TestInstrumenter {
         conds
     }
 
-    /// Helper to create fresh node id for an expression
-    fn new_node_id(&self, func_env: &FunctionEnv<'_>, loc: Loc, typ: Type) -> NodeId {
-        func_env.module_env.new_node(loc, typ)
-    }
-
     /// Helper to create a specification condition.
     fn make_condition(
         &self,
@@ -257,60 +321,28 @@ impl TestInstrumenter {
             exp,
         }
     }
-}
-
-// ==============================================================================
-// AST Helpers
-
-impl TestInstrumenter {
-    /// Creates an expression for imply: `ante` ==> `conc`
-    fn make_implies_exp(&self, func_env: &FunctionEnv<'_>, ante: Exp, conc: Exp, loc: Loc) -> Exp {
-        let imply_id = self.new_node_id(func_env, loc.clone(), BOOL_TYPE.clone());
-        Exp::Call(imply_id, Operation::Implies, vec![ante, conc])
-    }
-
-    /// Field select
-    fn make_field_select(&self, func_env: &FunctionEnv<'_>, struct_env: &StructEnv<'_>, field_env: &FieldEnv<'_>, exp: Exp, loc: Loc) -> Exp {
-        let select_field_id = self.new_node_id(func_env, loc, field_env.get_type());
-        let field_select_op = Operation::Select(func_env.module_env.get_id(), struct_env.get_id(), field_env.get_id());
-        Exp::Call(select_field_id, field_select_op, vec![exp])
-    }
-
-    /// Create existential quantifier
-    fn make_forall_exp(&self, func_env: &FunctionEnv<'_>, vars: Vec<LocalVarDecl>, body: Exp, loc: Loc) -> Exp {
-        let exists_id = self.new_node_id(func_env, loc.clone(), BOOL_TYPE.clone());
-        let bound_id = self.new_node_id(func_env, loc.clone(), RANGE_TYPE.clone());
-        let bound_exp = Exp::Value(bound_id, Value::Bool(true));    // dummy
-        let lambda_id = self.new_node_id(func_env, loc.clone(), BOOL_TYPE.clone());
-        Exp::Call(exists_id, Operation::All, vec![bound_exp, Exp::Lambda(lambda_id, vars, Box::new(body))])
-    }
-
-    /// Helper to create exists<T>(addr)
-    fn make_builtin_exists_exp(&self, func_env: &FunctionEnv<'_>, param_type: Type, addr: Exp, loc: Loc) -> Exp {
-        let global_exists_id = self.new_node_id(func_env, loc, BOOL_TYPE.clone());
-        func_env.module_env.set_node_instantiation(&global_exists_id, param_type);
-        Exp::Call(global_exists_id, Operation::Exists, vec![addr])
-    }
-
-    /// Helper to create global<T>(addr)
-    fn make_builtin_global_exp(&self, func_env: &FunctionEnv<'_>, param_type: Type, addr: Exp, loc: Loc) -> Exp {
-        let global_id = self.new_node_id(func_env, loc, param_type.clone());
-        func_env.module_env.set_node_instantiation(&global_id, param_type);
-        Exp::Call(global_id, Operation::Global, vec![addr])
-    }
-
-    /// Helper to create an old expression
-    fn make_old_exp(&self, func_env: &FunctionEnv<'_>, exp: Exp, loc: Loc) -> Exp {
-        let old_id = self.new_node_id(func_env, loc.clone(), func_env.module_env.get_node_type(exp.node_id()));
-        Exp::Call(old_id, Operation::Old, vec![exp])
-    }
 
     /// Helper to create the $abort_flag variable.
-    fn make_abort_flag_bool_exp(&self, func_env: &FunctionEnv<'_>) -> Exp {
-        let node_id = self.new_node_id(func_env, func_env.get_loc(), BOOL_TYPE.clone());
-        let symbol_id = func_env
-            .symbol_pool()
-            .make("$Boolean($abort_flag)");
-        Exp::LocalVar(node_id, symbol_id)
+    fn make_abort_flag_bool_exp(&self, module_env: &ModuleEnv<'_>) -> Exp {
+        Exp::make_localvar(module_env, "$Boolean($abort_flag)", BOOL_TYPE.clone())
+    }
+
+    /// Helper function to statically check if a struct is potentially modified
+    fn can_mutate(&self, data: &FunctionTargetData, struct_id: &StructId) -> bool {
+        data.code
+            .iter()
+            .find(|bc| match bc {
+                Bytecode::Call(_, _, op, _) => {
+                    use Operation::*;
+                    match op {
+                        Pack(_, struct_id_, _) => struct_id == struct_id_,
+                        Unpack(_, struct_id_, _) => struct_id == struct_id_,
+                        BorrowGlobal(_, struct_id_, _) => struct_id == struct_id_,
+                        _ => false
+                    }
+                },
+                _ => false
+            })
+            .is_some()
     }
 }

@@ -56,7 +56,8 @@ pub struct FunctionTargetData {
     pub acquires_global_resources: Vec<StructId>,
     pub locations: BTreeMap<AttrId, Loc>,
     pub annotations: Annotations,
-    pub rewritten_spec: Option<Spec>,
+    pub rewritten_spec: Vec<Spec>,
+    pub rewritten_code: BTreeMap<u64, Vec<Bytecode>>,
 
     /// Map of spec block ids as given by the source, to the code offset in the original
     /// bytecode. Those spec block's content is found at
@@ -192,10 +193,7 @@ impl<'env> FunctionTarget<'env> {
 
     /// Returns specification associated with this function.
     pub fn get_spec(&'env self) -> &'env Spec {
-        self.data
-            .rewritten_spec
-            .as_ref()
-            .unwrap_or_else(|| self.func_env.get_spec())
+        self.func_env.get_spec()
     }
 
     /// Returns specification conditions associated with this function at spec block id.
@@ -283,7 +281,8 @@ impl FunctionTargetData {
             acquires_global_resources,
             locations,
             annotations: Default::default(),
-            rewritten_spec: None,
+            rewritten_spec: vec![],
+            rewritten_code: BTreeMap::new(),
             given_spec_blocks_on_impl: given_spec_blocks,
             generated_spec_blocks_on_impl: Default::default(),
             next_free_spec_block_id,
@@ -296,6 +295,17 @@ impl FunctionTargetData {
         self.next_free_spec_block_id += 1;
         self.generated_spec_blocks_on_impl.insert(id, spec);
         id
+    }
+
+    /// Adds a mutated specification and the corresponding mutated code to the list
+    /// of specification checks
+    pub fn add_spec_check(&mut self, spec: Spec, rewritten_code_opt: Option<Vec<Bytecode>>) {
+        if let Some(rewritten_code) = rewritten_code_opt {
+            if let Some(index) = spec.rewritten_code_index {
+                self.rewritten_code.insert(index, rewritten_code);
+            }
+        }
+        self.rewritten_spec.push(spec);
     }
 }
 

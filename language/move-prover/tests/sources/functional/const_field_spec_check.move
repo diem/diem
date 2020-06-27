@@ -5,6 +5,7 @@ module TestEnsuresFalseSmokeTest {
         // pragma verify = true;
         // pragma always_aborts_test = true;
         pragma const_exp_test = true;
+        pragma const_sc_addr = 0x0;
     }
 
     /// NOTE: Example motivated by !preburn.is_approved example in libra.move
@@ -33,9 +34,9 @@ module TestEnsuresFalseSmokeTest {
         apply SomeResourceNeverMoves to *;
     }
     spec fun init_some_resource {
-        aborts_if exists<SomeResource>(Signer::get_address(account));
-        ensures exists<SomeResource>(Signer::get_address(account));
-        ensures !global<SomeResource>(Signer::get_address(account)).can_move;
+        aborts_if exists<SomeResource>(Signer::spec_address_of(account));
+        ensures exists<SomeResource>(Signer::spec_address_of(account));
+        ensures !global<SomeResource>(Signer::spec_address_of(account)).can_move;
     }
 
     public fun remove_some_resource(account: &signer)
