@@ -1,0 +1,1 @@
+initSidebarItems({"mod":[["fake_socket","This module exposes two types of sockets useful for tests: - ReadOnlyTestSocket: a socket that can be read from in different ways. - ReadWriteTestSocket: a similar wrapper but around MemorySocket to retrieve handshake messages being sent as well."]]});

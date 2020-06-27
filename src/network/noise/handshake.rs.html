@@ -614,6 +614,29 @@
 <span id="614">614</span>
 <span id="615">615</span>
 <span id="616">616</span>
+<span id="617">617</span>
+<span id="618">618</span>
+<span id="619">619</span>
+<span id="620">620</span>
+<span id="621">621</span>
+<span id="622">622</span>
+<span id="623">623</span>
+<span id="624">624</span>
+<span id="625">625</span>
+<span id="626">626</span>
+<span id="627">627</span>
+<span id="628">628</span>
+<span id="629">629</span>
+<span id="630">630</span>
+<span id="631">631</span>
+<span id="632">632</span>
+<span id="633">633</span>
+<span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1063,6 +1086,7 @@
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">test</span>)]</span>
 <span class="kw">mod</span> <span class="ident">test</span> {
     <span class="kw">use</span> <span class="kw">super</span>::<span class="kw-2">*</span>;
+    <span class="kw">use</span> <span class="kw">crate</span>::<span class="ident">testutils</span>::<span class="ident">fake_socket</span>::<span class="ident">ReadWriteTestSocket</span>;
     <span class="kw">use</span> <span class="ident">futures</span>::{<span class="ident">executor</span>::<span class="ident">block_on</span>, <span class="ident">future</span>::<span class="ident">join</span>};
     <span class="kw">use</span> <span class="ident">libra_crypto</span>::{<span class="ident">test_utils</span>::<span class="ident">TEST_SEED</span>, <span class="ident">traits</span>::<span class="ident">Uniform</span> <span class="kw">as</span> <span class="kw">_</span>};
     <span class="kw">use</span> <span class="ident">memsocket</span>::<span class="ident">MemorySocket</span>;
@@ -1229,6 +1253,28 @@
     <span class="attribute">#[<span class="ident">test</span>]</span>
     <span class="kw">fn</span> <span class="ident">test_handshake_self_fails_mutual_auth</span>() {
         <span class="ident">test_handshake_self_fails</span>(<span class="bool-val">true</span> <span class="comment">/* is_mutual_auth */</span>);
+    }
+
+    <span class="attribute">#[<span class="ident">test</span>]</span>
+    <span class="kw">fn</span> <span class="ident">test_handshake_fragmented_reads</span>() {
+        <span class="comment">// create an in-memory socket for testing</span>
+        <span class="kw">let</span> (<span class="kw-2">mut</span> <span class="ident">dialer_socket</span>, <span class="kw-2">mut</span> <span class="ident">listener_socket</span>) <span class="op">=</span> <span class="ident">ReadWriteTestSocket</span>::<span class="ident">new_pair</span>();
+
+        <span class="comment">// fragment reads</span>
+        <span class="ident">dialer_socket</span>.<span class="ident">set_fragmented_read</span>();
+        <span class="ident">listener_socket</span>.<span class="ident">set_fragmented_read</span>();
+
+        <span class="comment">// get peers</span>
+        <span class="kw">let</span> ((<span class="ident">client</span>, <span class="ident">_client_public_key</span>), (<span class="ident">server</span>, <span class="ident">server_public_key</span>)) <span class="op">=</span> <span class="ident">build_peers</span>(<span class="bool-val">false</span>);
+
+        <span class="comment">// perform the handshake</span>
+        <span class="kw">let</span> (<span class="ident">client_session</span>, <span class="ident">server_session</span>) <span class="op">=</span> <span class="ident">block_on</span>(<span class="ident">join</span>(
+            <span class="ident">client</span>.<span class="ident">upgrade_outbound</span>(<span class="ident">dialer_socket</span>, <span class="ident">server_public_key</span>, <span class="ident">AntiReplayTimestamps</span>::<span class="ident">now</span>),
+            <span class="ident">server</span>.<span class="ident">upgrade_inbound</span>(<span class="ident">listener_socket</span>),
+        ));
+
+        <span class="ident">client_session</span>.<span class="ident">unwrap</span>();
+        <span class="ident">server_session</span>.<span class="ident">unwrap</span>();
     }
 }
 </pre></div>

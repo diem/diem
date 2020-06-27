@@ -30,6 +30,8 @@
 <span id="30">30</span>
 <span id="31">31</span>
 <span id="32">32</span>
+<span id="33">33</span>
+<span id="34">34</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -59,6 +61,8 @@
 <span class="kw">mod</span> <span class="ident">noise</span>;
 <span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;testing&quot;</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
 <span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">noise</span>;
+<span class="attribute">#[<span class="ident">cfg</span>(<span class="ident">any</span>(<span class="ident">test</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;testing&quot;</span>, <span class="ident">feature</span> <span class="op">=</span> <span class="string">&quot;fuzzing&quot;</span>))]</span>
+<span class="kw">pub</span> <span class="kw">mod</span> <span class="ident">testutils</span>;
 
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">DisconnectReason</span> <span class="op">=</span> <span class="ident">peer</span>::<span class="ident">DisconnectReason</span>;
 <span class="kw">pub</span> <span class="kw">type</span> <span class="ident">ConnectivityRequest</span> <span class="op">=</span> <span class="ident">connectivity_manager</span>::<span class="ident">ConnectivityRequest</span>;
