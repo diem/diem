@@ -15,13 +15,14 @@ use move_core_types::{
 };
 use std::convert::TryFrom;
 use transaction_builder::{
-    encode_burn_txn_fees_script, encode_create_testing_account_script, encode_mint_script,
+    encode_burn_txn_fees_script, encode_create_testing_account_script, encode_testnet_mint_script,
 };
 
 #[test]
 fn burn_txn_fees() {
     let mut executor = FakeExecutor::from_genesis_file();
     let sender = Account::new();
+    let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let tc = Account::new_blessed_tc();
     let association = Account::new_association();
 
@@ -35,8 +36,8 @@ fn burn_txn_fees() {
         1,
     ));
 
-    executor.execute_and_apply(tc.signed_script_txn(
-        encode_mint_script(account_config::coin1_tag(), sender.address(), 10_000_000),
+    executor.execute_and_apply(dd.signed_script_txn(
+        encode_testnet_mint_script(account_config::coin1_tag(), *sender.address(), 10_000_000),
         0,
     ));
 
@@ -73,7 +74,7 @@ fn burn_txn_fees() {
     });
 
     let output =
-        executor.execute_and_apply(tc.signed_script_txn(encode_burn_txn_fees_script(coin1_ty), 1));
+        executor.execute_and_apply(tc.signed_script_txn(encode_burn_txn_fees_script(coin1_ty), 0));
 
     let burn_events: Vec<_> = output
         .events()

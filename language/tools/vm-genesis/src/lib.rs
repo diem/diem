@@ -30,6 +30,7 @@ use move_vm_types::{data_store::DataStore, loaded_data::types::FatStructType, va
 use once_cell::sync::Lazy;
 use rand::prelude::*;
 use std::{collections::btree_map::BTreeMap, convert::TryFrom};
+use transaction_builder::encode_create_designated_dealer;
 use vm::access::ModuleAccess;
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
@@ -92,6 +93,9 @@ pub fn encode_genesis_change_set(
     );
     create_and_initialize_validators(&mut genesis_context, &validators);
     reconfigure(&mut genesis_context);
+
+    // XXX/TODO: for testnet only
+    create_and_initialize_testnet_minting(&mut genesis_context, &public_key, &lbr_ty);
 
     let mut interpreter_context = genesis_context.into_data_store();
     publish_stdlib(&mut interpreter_context, stdlib_modules);
@@ -175,6 +179,66 @@ fn create_and_initialize_main_accounts(
     );
 }
 
+fn create_and_initialize_testnet_minting(
+    context: &mut GenesisContext,
+    public_key: &Ed25519PublicKey,
+    lbr_ty: &TypeTag,
+) {
+    let genesis_auth_key = AuthenticationKey::ed25519(public_key);
+    let coin1_tag = account_config::type_tag_for_currency_code(
+        account_config::from_currency_code_string("Coin1").unwrap(),
+    );
+    let coin2_tag = account_config::type_tag_for_currency_code(
+        account_config::from_currency_code_string("Coin2").unwrap(),
+    );
+    let create_dd_script = encode_create_designated_dealer(
+        coin1_tag.clone(),
+        0,
+        account_config::testnet_dd_account_address(),
+        genesis_auth_key.prefix().to_vec(),
+    );
+
+    let add_lbr = transaction_builder::encode_add_currency_to_account_script(lbr_ty.clone());
+    let add_coin2 = transaction_builder::encode_add_currency_to_account_script(coin2_tag.clone());
+
+    let mint_max_coin1 = transaction_builder::encode_tiered_mint_script(
+        coin1_tag,
+        1,
+        account_config::testnet_dd_account_address(),
+        std::u64::MAX / 2,
+        4,
+    );
+
+    let mint_max_coin2 = transaction_builder::encode_tiered_mint_script(
+        coin2_tag,
+        2,
+        account_config::testnet_dd_account_address(),
+        std::u64::MAX / 2,
+        4,
+    );
+
+    // Create the DD account
+    context.set_sender(account_config::treasury_compliance_account_address());
+    context.exec_script(&create_dd_script);
+
+    // add coins
+    context.set_sender(account_config::testnet_dd_account_address());
+    context.exec_script(&add_lbr);
+    context.exec_script(&add_coin2);
+
+    // mint the coins, and mint LBR
+    context.set_sender(account_config::treasury_compliance_account_address());
+    context.exec_script(&mint_max_coin1);
+    context.exec_script(&mint_max_coin2);
+    context.set_sender(account_config::testnet_dd_account_address());
+    context.exec_script(&transaction_builder::encode_mint_lbr_script(
+        std::u64::MAX / 2,
+    ));
+    context.exec_script(
+        &transaction_builder::encode_rotate_authentication_key_script(genesis_auth_key.to_vec()),
+    );
+}
+
 /// Initialize each validator.
 fn create_and_initialize_validators(
     context: &mut GenesisContext,
@@ -239,7 +303,10 @@ fn verify_genesis_write_set(events: &[ContractEvent]) {
     // (1) The genesis tx should emit 1 event: a NewEpochEvent.
     assert_eq!(
         events.len(),
-        1,
+        //1, // This is the proper number of events for mainnet. Once we have a good layering
+        // strategy for mainnet/testnet genesis writesets uncomment this and remove the line
+        // below.
+        15, // XXX/TODO(tzakian). For testnet only!
         "Genesis transaction should emit one event, but found {} events: {:?}",
         events.len(),
         events,

@@ -23,7 +23,7 @@ fn tiered_mint_designated_dealer() {
     executor.execute_and_apply(blessed.signed_script_txn(
         encode_create_designated_dealer(
             account_config::coin1_tag(),
-            0,
+            3,
             *dd.address(),
             dd.auth_key_prefix(),
         ),
@@ -34,7 +34,7 @@ fn tiered_mint_designated_dealer() {
     executor.execute_and_apply(blessed.signed_script_txn(
         encode_tiered_mint(
             account_config::coin1_tag(),
-            1,
+            4,
             *dd.address(),
             mint_amount_one,
             tier_index,
@@ -56,7 +56,7 @@ fn tiered_mint_designated_dealer() {
     executor.execute_and_apply(blessed.signed_script_txn(
         encode_tiered_mint(
             account_config::coin1_tag(),
-            2,
+            5,
             *dd.address(),
             mint_amount_two,
             tier_index,
@@ -75,7 +75,7 @@ fn tiered_mint_designated_dealer() {
     let output = executor.execute_and_apply(blessed.signed_script_txn(
         encode_tiered_mint(
             account_config::coin1_tag(),
-            3,
+            6,
             *dd.address(),
             mint_amount,
             tier_index,
@@ -92,7 +92,7 @@ fn tiered_mint_designated_dealer() {
     let output = &executor.execute_transaction(blessed.signed_script_txn(
         encode_tiered_mint(
             account_config::coin1_tag(),
-            4,
+            7,
             *dd.address(),
             mint_amount_one,
             tier_index,
@@ -106,7 +106,7 @@ fn tiered_mint_designated_dealer() {
 }
 
 #[test]
-fn mint_to_existing() {
+fn mint_to_existing_not_dd() {
     // create a FakeExecutor with a genesis from file
     // We can't run mint test on terraform genesis as we don't have the private key to sign the
     // mint transaction.
@@ -128,28 +128,21 @@ fn mint_to_existing() {
     ));
 
     let mint_amount = 1_000;
-    executor.execute_and_apply(tc.signed_script_txn(
-        encode_mint_script(
+    let output = executor.execute_transaction(tc.signed_script_txn(
+        encode_tiered_mint(
             account_config::coin1_tag(),
-            &receiver.address(),
+            0,
+            *receiver.address(),
             mint_amount,
+            4,
         ),
         0,
     ));
-
-    // check that numbers in stored DB are correct
-    let updated_sender = executor
-        .read_account_resource(&tc)
-        .expect("sender balance must exist");
-    let updated_receiver = executor
-        .read_account_resource(&receiver)
-        .expect("receiver must exist");
-    let updated_receiver_balance = executor
-        .read_balance_resource(&receiver, account::coin1_currency_code())
-        .expect("receiver balance must exist");
-    assert_eq!(mint_amount, updated_receiver_balance.coin());
-    assert_eq!(1, updated_sender.sequence_number());
-    assert_eq!(0, updated_receiver.sequence_number());
+    assert_eq!(
+        output.status().vm_status().major_status,
+        StatusCode::ABORTED
+    );
+    assert_eq!(output.status().vm_status().sub_status, Some(1));
 }
 
 #[test]
@@ -166,10 +159,12 @@ fn mint_to_new_account() {
 
     let mint_amount = TXN_RESERVED;
     let output = executor.execute_transaction(association.signed_script_txn(
-        encode_mint_script(
+        encode_tiered_mint(
             account_config::coin1_tag(),
-            &new_account.address(),
+            0,
+            *new_account.address(),
             mint_amount,
+            4,
         ),
         0,
     ));
@@ -178,7 +173,7 @@ fn mint_to_new_account() {
         output.status().vm_status().major_status,
         StatusCode::ABORTED
     );
-    assert_eq!(output.status().vm_status().sub_status, Some(8000971));
+    assert_eq!(output.status().vm_status().sub_status, Some(1));
 }
 
 #[test]

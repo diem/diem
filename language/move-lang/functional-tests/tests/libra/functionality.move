@@ -120,18 +120,6 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::LibraAccount;
-use 0x1::Coin1::Coin1;
-fun main(account: &signer)  {
-    LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 1000000000 * 1000000 + 1);
-}
-}
-// check: ABORTED
-// check: 11
-
-//! new-transaction
-//! sender: blessed
-script {
     use 0x1::Libra;
     use 0x1::Coin1::Coin1;
     use 0x1::Roles::{Self, TreasuryComplianceRole};

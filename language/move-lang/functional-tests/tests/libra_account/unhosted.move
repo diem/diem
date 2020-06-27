@@ -5,9 +5,11 @@
 //! sender: blessed
 script {
     use 0x1::Coin1::Coin1;
+    use 0x1::Libra;
     use 0x1::LibraAccount;
     fun main(account: &signer) {
-        LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 10001);
+        let coins = Libra::mint<Coin1>(account, 10001);
+        LibraAccount::deposit(account, {{bob}}, coins);
     }
 }
 // TODO: fix account limits

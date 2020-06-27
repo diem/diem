@@ -23,8 +23,9 @@ script {
 script {
 use 0x1::Coin1::Coin1;
 use 0x1::LibraAccount;
+use 0x1::Libra;
 fun main(account: &signer) {
-    LibraAccount::mint_to_address<Coin1>(account, {{otherblessed}}, 1);
+    LibraAccount::deposit(account, {{otherblessed}}, Libra::mint<Coin1>(account, 1));
 }
 }
 // TODO: fix
@@ -65,8 +66,9 @@ script {
 script {
     use 0x1::Coin1::Coin1;
     use 0x1::LibraAccount;
+    use 0x1::Libra;
     fun main(account: &signer) {
-        LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 3);
+        LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1>(account, 3));
     }
     }
 
@@ -158,8 +160,9 @@ script {
 script {
 use 0x1::Coin1::Coin1;
 use 0x1::LibraAccount;
+use 0x1::Libra;
 fun main(account: &signer) {
-    LibraAccount::mint_to_address<Coin1>(account, {{otherblessed}}, 2);
+    LibraAccount::deposit(account, {{otherblessed}}, Libra::mint<Coin1>(account, 2));
 }
 }
 // check: EXECUTED
@@ -198,8 +201,9 @@ script {
 script {
 use 0x1::Coin1::Coin1;
 use 0x1::LibraAccount;
+use 0x1::Libra;
 fun main(account: &signer) {
-    LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 2);
+    LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1>(account, 2));
 }
 }
 // check: EXECUTED
@@ -275,8 +279,9 @@ script {
 script {
     use 0x1::Coin1::Coin1;
     use 0x1::LibraAccount;
+    use 0x1::Libra;
     fun main(account: &signer) {
-        LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 100);
+        LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1>(account, 100));
     }
 }
 // check: EXECUTED
@@ -286,8 +291,9 @@ script {
 script {
     use 0x1::Coin1::Coin1;
     use 0x1::LibraAccount;
+    use 0x1::Libra;
     fun main(account: &signer) {
-        LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 1);
+        LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1>(account, 1));
     }
 }
 // TODO: fix
@@ -341,8 +347,9 @@ script {
 script {
     use 0x1::Coin1::Coin1;
     use 0x1::LibraAccount;
+    use 0x1::Libra;
     fun main(account: &signer) {
-        LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 1);
+        LibraAccount::deposit(account, {{bob}}, Libra::mint<Coin1>(account, 1));
     }
 }
 // TODO: fix

@@ -12,6 +12,8 @@ use 0x1::Libra;
 
 // register dd(1|2) as a preburner
 fun main(account: &signer) {
+    let prev_mcap1 = Libra::market_cap<Coin1>();
+    let prev_mcap2 = Libra::market_cap<Coin2>();
     let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
     LibraAccount::create_designated_dealer<Coin1>(
         account,
@@ -39,8 +41,8 @@ fun main(account: &signer) {
         {{dd2}},
         0,
     );
-    assert(Libra::market_cap<Coin1>() == 10, 7);
-    assert(Libra::market_cap<Coin2>() == 100, 8);
+    assert(Libra::market_cap<Coin1>() - prev_mcap1 == 10, 7);
+    assert(Libra::market_cap<Coin2>() - prev_mcap2 == 100, 8);
     LibraAccount::deposit(account, {{dd1}}, coin1);
     LibraAccount::deposit(account, {{dd2}}, coin2);
     Roles::restore_capability_to_privilege(account, tc_capability);
@@ -94,10 +96,12 @@ use 0x1::Coin1::Coin1;
 use 0x1::Coin2::Coin2;
 
 fun main(account: &signer) {
+    let prev_mcap1 = Libra::market_cap<Coin1>();
+    let prev_mcap2 = Libra::market_cap<Coin2>();
     Libra::burn<Coin1>(account, {{dd1}});
     Libra::burn<Coin2>(account, {{dd2}});
-    assert(Libra::market_cap<Coin1>() == 0, 9);
-    assert(Libra::market_cap<Coin2>() == 0, 10);
+    assert(prev_mcap1 - Libra::market_cap<Coin1>() == 10, 9);
+    assert(prev_mcap2 - Libra::market_cap<Coin2>() == 100, 10);
 }
 }
 // check: EXECUTED

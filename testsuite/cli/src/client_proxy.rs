@@ -22,7 +22,7 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
-        association_address, from_currency_code_string, treasury_compliance_account_address,
+        association_address, from_currency_code_string, testnet_dd_account_address,
         type_tag_for_currency_code, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, LBR_NAME,
     },
     account_state::AccountState,
@@ -107,8 +107,8 @@ pub struct ClientProxy {
     faucet_server: String,
     /// Account used for AssocRoot operations (e.g., adding a new transaction script)
     pub assoc_root_account: Option<AccountData>,
-    /// Account used TreasuryCompliance operations (e.g., minting)
-    pub treasury_compliance_account: Option<AccountData>,
+    /// Account used for "minting" operations
+    pub testnet_designated_dealer_account: Option<AccountData>,
     /// Wallet library managing user accounts.
     wallet: WalletLibrary,
     /// Whether to sync with validator on wallet recovery.
@@ -123,7 +123,7 @@ impl ClientProxy {
     pub fn new(
         url: &str,
         assoc_root_account_file: &str,
-        treasury_compliance_account_file: &str,
+        testnet_designated_dealer_account_file: &str,
         sync_on_wallet_recovery: bool,
         faucet_server: Option<String>,
         mnemonic_file: Option<String>,
@@ -148,19 +148,18 @@ impl ClientProxy {
             )?;
             Some(assoc_root_account_data)
         };
-        let treasury_compliance_account = if treasury_compliance_account_file.is_empty() {
+        let dd_account = if testnet_designated_dealer_account_file.is_empty() {
             None
         } else {
-            let treasury_compliance_account_key =
-                generate_key::load_key(treasury_compliance_account_file);
-            let treasury_compliance_account_data = Self::get_account_data_from_address(
+            let dd_account_key = generate_key::load_key(testnet_designated_dealer_account_file);
+            let dd_account_data = Self::get_account_data_from_address(
                 &mut client,
-                treasury_compliance_account_address(),
+                testnet_dd_account_address(),
                 true,
-                Some(KeyPair::from(treasury_compliance_account_key)),
+                Some(KeyPair::from(dd_account_key)),
                 None,
             )?;
-            Some(treasury_compliance_account_data)
+            Some(dd_account_data)
         };
 
         let faucet_server = match faucet_server {
@@ -183,7 +182,7 @@ impl ClientProxy {
             address_to_ref_id,
             faucet_server,
             assoc_root_account,
-            treasury_compliance_account,
+            testnet_designated_dealer_account: dd_account,
             wallet: Self::get_libra_wallet(mnemonic_file)?,
             sync_on_wallet_recovery,
             temp_files: vec![],
@@ -247,12 +246,12 @@ impl ClientProxy {
                 assoc_root_account.status,
             );
         }
-        if let Some(treasury_compliance_account) = &self.treasury_compliance_account {
+        if let Some(testnet_dd_account) = &self.testnet_designated_dealer_account {
             println!(
-                "TreasuryCompliance account address: {}, sequence_number: {}, status: {:?}",
-                hex::encode(&treasury_compliance_account.address),
-                treasury_compliance_account.sequence_number,
-                treasury_compliance_account.status,
+                "Testnet DD account address: {}, sequence_number: {}, status: {:?}",
+                hex::encode(&testnet_dd_account.address),
+                testnet_dd_account.sequence_number,
+                testnet_dd_account.status,
             );
         }
     }
@@ -341,9 +340,9 @@ impl ClientProxy {
                     return Ok(sequence_number);
                 }
             }
-            if let Some(treasury_compliance_account) = &mut self.treasury_compliance_account {
-                if treasury_compliance_account.address == address {
-                    treasury_compliance_account.sequence_number = sequence_number;
+            if let Some(testnet_dd_account) = &mut self.testnet_designated_dealer_account {
+                if testnet_dd_account.address == address {
+                    testnet_dd_account.sequence_number = sequence_number;
                     return Ok(sequence_number);
                 }
             }
@@ -485,14 +484,14 @@ impl ClientProxy {
             } // else, the account has already been created -- do nothing
         }
 
-        match self.treasury_compliance_account {
+        match self.testnet_designated_dealer_account {
             Some(_) => {
-                let script = transaction_builder::encode_mint_script(
+                let script = transaction_builder::encode_testnet_mint_script(
                     type_tag_for_currency_code(currency_code),
-                    &receiver,
+                    receiver,
                     num_coins,
                 );
-                self.association_transaction_with_local_treasury_compliance_account(
+                self.association_transaction_with_local_testnet_dd_account(
                     TransactionPayload::Script(script),
                     is_blocking,
                 )
@@ -1421,24 +1420,24 @@ impl ClientProxy {
         resp
     }
 
-    fn association_transaction_with_local_treasury_compliance_account(
+    fn association_transaction_with_local_testnet_dd_account(
         &mut self,
         payload: TransactionPayload,
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(
-            self.treasury_compliance_account.is_some(),
-            "No treasury compliance account loaded"
+            self.testnet_designated_dealer_account.is_some(),
+            "No testnet Designated Dealer account loaded"
         );
-        let sender = self.treasury_compliance_account.as_ref().unwrap();
+        let sender = self.testnet_designated_dealer_account.as_ref().unwrap();
         let sender_address = sender.address;
         let txn = self.create_txn_to_submit(payload, sender, None, None, None)?;
-        let mut sender_mut = self.treasury_compliance_account.as_mut().unwrap();
+        let mut sender_mut = self.testnet_designated_dealer_account.as_mut().unwrap();
         let resp = self.client.submit_transaction(Some(&mut sender_mut), txn);
         if is_blocking {
             self.wait_for_transaction(
                 sender_address,
-                self.treasury_compliance_account
+                self.testnet_designated_dealer_account
                     .as_ref()
                     .unwrap()
                     .sequence_number,
@@ -1477,7 +1476,7 @@ impl ClientProxy {
         }
         let sequence_number = body.parse::<u64>()?;
         if is_blocking {
-            self.wait_for_transaction(treasury_compliance_account_address(), sequence_number)?;
+            self.wait_for_transaction(testnet_dd_account_address(), sequence_number)?;
         }
 
         Ok(())

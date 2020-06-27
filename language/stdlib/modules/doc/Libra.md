@@ -1000,12 +1000,6 @@ reference.
     _capability: &<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;
 ): <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
     <a href="#0x1_Libra_assert_is_coin">assert_is_coin</a>&lt;CoinType&gt;();
-    // TODO: temporary measure for testnet only: limit minting <b>to</b> 1B <a href="#0x1_Libra">Libra</a> at a time.
-    // this is <b>to</b> prevent the market cap's total value from hitting u64_max due <b>to</b> excessive
-    // minting. This will not be a problem in the production <a href="#0x1_Libra">Libra</a> system because coins will
-    // be backed with real-world assets, and thus minting will be correspondingly rarer.
-    // * 1000000 here because the unit is microlibra
-    <b>assert</b>(<a href="#0x1_Libra_value">value</a> &lt;= 1000000000 * 1000000, 11);
     <b>let</b> currency_code = <a href="#0x1_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
     // <b>update</b> market cap <b>resource</b> <b>to</b> reflect minting
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());

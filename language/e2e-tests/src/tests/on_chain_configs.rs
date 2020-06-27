@@ -64,7 +64,7 @@ fn updated_limit_allows_txn() {
     // Execute updated dual attestation limit
     let new_micro_lbr_limit = 1_000_011;
     let output = executor.execute_and_apply(
-        blessed.signed_script_txn(encode_update_travel_rule_limit(1, new_micro_lbr_limit), 0),
+        blessed.signed_script_txn(encode_update_travel_rule_limit(3, new_micro_lbr_limit), 0),
     );
     assert_eq!(
         output.status(),
