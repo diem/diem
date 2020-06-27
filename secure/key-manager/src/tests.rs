@@ -397,8 +397,9 @@ fn setup_secure_storage(
         )
         .unwrap();
 
-    let mut c_keypair = test_config.consensus_keypair.unwrap();
-    let c_prikey = c_keypair.take_private().unwrap();
+    let sr_test_config = config.consensus.safety_rules.test.as_ref().unwrap();
+    let c_keypair = sr_test_config.consensus_keypair.as_ref().unwrap();
+    let c_prikey = c_keypair.clone().take_private().unwrap();
     sec_storage
         .set(crate::CONSENSUS_KEY, Value::Ed25519PrivateKey(c_prikey))
         .unwrap();
@@ -475,14 +476,16 @@ fn test_manual_rotation_on_chain() {
 
 fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
     let (node_config, _) = get_test_configs();
-    let test_config = node_config.test.unwrap();
 
+    let test_config = node_config.test.unwrap();
     let account_prikey = test_config
         .operator_keypair
         .unwrap()
         .take_private()
         .unwrap();
-    let genesis_pubkey = test_config
+
+    let sr_test_config = node_config.consensus.safety_rules.test.unwrap();
+    let genesis_pubkey = sr_test_config
         .consensus_keypair
         .unwrap()
         .take_private()

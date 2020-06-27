@@ -7,7 +7,7 @@ use consensus_types::{
     vote_proposal::MaybeSignedVoteProposal,
 };
 use libra_config::{
-    config::{NodeConfig, RemoteService, SafetyRulesService, SecureBackend, WaypointConfig},
+    config::{NodeConfig, RemoteService, SafetyRulesService, SecureBackend},
     utils,
 };
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519Signature};
@@ -33,24 +33,30 @@ impl ProcessClientWrapper {
         let server_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into();
 
         let remote_service = RemoteService { server_address };
-        let mut config = NodeConfig::random();
-
-        let mut test_config = config.test.as_ref().unwrap().clone();
-        let author = config.validator_network.as_ref().unwrap().peer_id();
+        let mut config = NodeConfig::random().consensus.safety_rules;
+        let test_config = config.test.as_mut().unwrap();
+        let author = test_config.author;
         let private_key = test_config
             .consensus_keypair
-            .as_mut()
+            .as_ref()
             .unwrap()
+            .clone()
             .take_private()
             .unwrap();
         let signer = ValidatorSigner::new(author, private_key);
         let waypoint = test_utils::validator_signers_to_waypoint(&[&signer]);
-        config.base.waypoint = WaypointConfig::FromConfig(waypoint);
+        test_config.waypoint = Some(waypoint);
 
-        config.consensus.safety_rules.backend = backend;
-        config.consensus.safety_rules.verify_vote_proposal_signature =
-            verify_vote_proposal_signature;
-        config.consensus.safety_rules.service = SafetyRulesService::SpawnedProcess(remote_service);
+        config.backend = backend;
+        config.verify_vote_proposal_signature = verify_vote_proposal_signature;
+        config.service = SafetyRulesService::SpawnedProcess(remote_service);
+
+        let execution_private_key = test_config
+            .execution_keypair
+            .as_ref()
+            .unwrap()
+            .clone()
+            .take_private();
 
         let safety_rules_manager = SafetyRulesManager::new(&mut config);
         let safety_rules = safety_rules_manager.client();
@@ -59,11 +65,7 @@ impl ProcessClientWrapper {
             signer,
             _safety_rules_manager: safety_rules_manager,
             safety_rules,
-            execution_private_key: test_config
-                .execution_keypair
-                .as_mut()
-                .unwrap()
-                .take_private(),
+            execution_private_key,
         }
     }
 

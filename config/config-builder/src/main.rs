@@ -4,7 +4,7 @@
 #![forbid(unsafe_code)]
 
 use config_builder::{FullNodeConfig, KeyManagerConfig, ValidatorConfig};
-use libra_config::config::{KeyManagerConfig as KMConfig, NodeConfig};
+use libra_config::config::{KeyManagerConfig as KMConfig, NodeConfig, PersistableConfig};
 use libra_network_address::NetworkAddress;
 use std::{convert::TryInto, fs, fs::File, io::Write, net::SocketAddr, path::PathBuf};
 use structopt::StructOpt;
@@ -329,9 +329,14 @@ fn build_safety_rules(args: SafetyRulesArgs) {
     }
 
     let config_builder = safety_rules_common(&args.validator_common);
-    let mut node_config = config_builder.build().expect("ConfigBuilder failed");
-    node_config.set_data_dir(args.validator_common.data_dir);
-    save_node_config(node_config, &args.validator_common.output_dir);
+    let node_config = config_builder.build().expect("ConfigBuilder failed");
+    let mut safety_rules_config = node_config.consensus.safety_rules;
+    safety_rules_config.set_data_dir(args.validator_common.data_dir);
+    let output_dir = &args.validator_common.output_dir;
+    fs::create_dir_all(output_dir).expect("Unable to create output directory");
+    safety_rules_config
+        .save_config(output_dir.join(NODE_CONFIG))
+        .expect("Unable to save config");
 }
 
 fn build_validator(args: ValidatorArgs) {

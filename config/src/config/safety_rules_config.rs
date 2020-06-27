@@ -1,8 +1,14 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::config::SecureBackend;
+use crate::{
+    config::{LoggerConfig, SecureBackend},
+    keys::KeyPair,
+};
+use libra_crypto::{ed25519::Ed25519PrivateKey, Uniform};
 use libra_network_address::NetworkAddress;
+use libra_types::{waypoint::Waypoint, PeerId};
+use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 use std::{
     net::{SocketAddr, ToSocketAddrs},
@@ -13,7 +19,9 @@ use std::{
 #[serde(default, deny_unknown_fields)]
 pub struct SafetyRulesConfig {
     pub backend: SecureBackend,
+    pub logger: LoggerConfig,
     pub service: SafetyRulesService,
+    pub test: Option<SafetyRulesTestConfig>,
     pub verify_vote_proposal_signature: bool,
 }
 
@@ -21,7 +29,9 @@ impl Default for SafetyRulesConfig {
     fn default() -> Self {
         Self {
             backend: SecureBackend::InMemoryStorage,
+            logger: LoggerConfig::default(),
             service: SafetyRulesService::Thread,
+            test: None,
             verify_vote_proposal_signature: true,
         }
     }
@@ -66,5 +76,44 @@ impl RemoteService {
             .expect("server_address invalid")
             .next()
             .expect("server_address invalid")
+    }
+}
+
+#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Clone))]
+pub struct SafetyRulesTestConfig {
+    pub author: PeerId,
+    #[serde(rename = "consensus_private_key")]
+    pub consensus_keypair: Option<KeyPair<Ed25519PrivateKey>>,
+    #[serde(rename = "execution_private_key")]
+    pub execution_keypair: Option<KeyPair<Ed25519PrivateKey>>,
+    pub waypoint: Option<Waypoint>,
+}
+
+#[cfg(not(any(test, feature = "fuzzing")))]
+impl Clone for SafetyRulesTestConfig {
+    fn clone(&self) -> Self {
+        Self::new(self.author)
+    }
+}
+
+impl SafetyRulesTestConfig {
+    pub fn new(author: PeerId) -> Self {
+        Self {
+            author,
+            consensus_keypair: None,
+            execution_keypair: None,
+            waypoint: None,
+        }
+    }
+
+    pub fn random_consensus_key(&mut self, rng: &mut StdRng) {
+        let privkey = Ed25519PrivateKey::generate(rng);
+        self.consensus_keypair = Some(KeyPair::<Ed25519PrivateKey>::load(privkey));
+    }
+
+    pub fn random_execution_key(&mut self, rng: &mut StdRng) {
+        let privkey = Ed25519PrivateKey::generate(rng);
+        self.execution_keypair = Some(KeyPair::<Ed25519PrivateKey>::load(privkey));
     }
 }
