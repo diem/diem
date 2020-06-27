@@ -894,7 +894,7 @@
 <span class="kw">use</span> <span class="ident">libra_logger</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
-    <span class="ident">account_config</span>::{<span class="ident">lbr_type_tag</span>, <span class="ident">treasury_compliance_account_address</span>, <span class="ident">LBR_NAME</span>},
+    <span class="ident">account_config</span>::{<span class="self">self</span>, <span class="ident">treasury_compliance_account_address</span>, <span class="ident">COIN1_NAME</span>},
     <span class="ident">transaction</span>::{
         <span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">helpers</span>::<span class="ident">create_user_txn</span>, <span class="ident">Script</span>, <span class="ident">TransactionPayload</span>,
     },
@@ -1425,7 +1425,7 @@
 
 <span class="kw">const</span> <span class="ident">MAX_GAS_AMOUNT</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1_000_000</span>;
 <span class="kw">const</span> <span class="ident">GAS_UNIT_PRICE</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">0</span>;
-<span class="kw">const</span> <span class="ident">GAS_CURRENCY_CODE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="ident">LBR_NAME</span>;
+<span class="kw">const</span> <span class="ident">GAS_CURRENCY_CODE</span>: <span class="kw-2">&amp;</span><span class="ident">str</span> <span class="op">=</span> <span class="ident">COIN1_NAME</span>;
 <span class="kw">const</span> <span class="ident">TXN_EXPIRATION_SECONDS</span>: <span class="ident">i64</span> <span class="op">=</span> <span class="number">50</span>;
 <span class="kw">const</span> <span class="ident">TXN_MAX_WAIT</span>: <span class="ident">Duration</span> <span class="op">=</span> <span class="ident">Duration</span>::<span class="ident">from_secs</span>(<span class="ident">TXN_EXPIRATION_SECONDS</span> <span class="kw">as</span> <span class="ident">u64</span> <span class="op">+</span> <span class="number">30</span>);
 <span class="kw">const</span> <span class="ident">LIBRA_PER_NEW_ACCOUNT</span>: <span class="ident">u64</span> <span class="op">=</span> <span class="number">1_000_000</span>;
@@ -1454,7 +1454,7 @@
     <span class="kw">let</span> <span class="ident">auth_key_prefix</span> <span class="op">=</span> <span class="ident">faucet_account</span>.<span class="ident">auth_key_prefix</span>();
     <span class="ident">gen_submit_transaction_request</span>(
         <span class="ident">transaction_builder</span>::<span class="ident">encode_mint_script</span>(
-            <span class="ident">lbr_type_tag</span>(),
+            <span class="ident">account_config</span>::<span class="ident">coin1_tag</span>(),
             <span class="kw-2">&amp;</span><span class="ident">receiver</span>,
             <span class="ident">auth_key_prefix</span>,
             <span class="ident">num_coins</span>,
@@ -1470,7 +1470,7 @@
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SignedTransaction</span> {
     <span class="ident">gen_submit_transaction_request</span>(
         <span class="ident">transaction_builder</span>::<span class="ident">encode_transfer_with_metadata_script</span>(
-            <span class="ident">lbr_type_tag</span>(),
+            <span class="ident">account_config</span>::<span class="ident">coin1_tag</span>(),
             <span class="kw-2">*</span><span class="ident">receiver</span>,
             <span class="ident">num_coins</span>,
             <span class="macro">vec</span><span class="macro">!</span>[],
@@ -1489,7 +1489,7 @@
     <span class="kw">let</span> <span class="ident">add_all_currencies</span> <span class="op">=</span> <span class="bool-val">false</span>;
     <span class="ident">gen_submit_transaction_request</span>(
         <span class="ident">transaction_builder</span>::<span class="ident">encode_create_child_vasp_account</span>(
-            <span class="ident">lbr_type_tag</span>(),
+            <span class="ident">account_config</span>::<span class="ident">coin1_tag</span>(),
             <span class="kw-2">*</span><span class="ident">receiver</span>,
             <span class="ident">receiver_auth_key_prefix</span>,
             <span class="ident">add_all_currencies</span>,
@@ -1507,7 +1507,7 @@
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SignedTransaction</span> {
     <span class="ident">gen_submit_transaction_request</span>(
         <span class="ident">transaction_builder</span>::<span class="ident">encode_mint_script</span>(
-            <span class="ident">lbr_type_tag</span>(),
+            <span class="ident">account_config</span>::<span class="ident">coin1_tag</span>(),
             <span class="ident">receiver</span>,
             <span class="ident">receiver_auth_key_prefix</span>,
             <span class="ident">num_coins</span>,

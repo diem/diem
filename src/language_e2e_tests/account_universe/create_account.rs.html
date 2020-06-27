@@ -134,6 +134,9 @@
 <span id="134">134</span>
 <span id="135">135</span>
 <span id="136">136</span>
+<span id="137">137</span>
+<span id="138">138</span>
+<span id="139">139</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -148,6 +151,7 @@
 };
 <span class="kw">use</span> <span class="ident">libra_proptest_helpers</span>::<span class="ident">Index</span>;
 <span class="kw">use</span> <span class="ident">libra_types</span>::{
+    <span class="ident">account_config</span>,
     <span class="ident">transaction</span>::{<span class="ident">SignedTransaction</span>, <span class="ident">TransactionStatus</span>},
     <span class="ident">vm_status</span>::{<span class="ident">StatusCode</span>, <span class="ident">VMStatus</span>},
 };
@@ -179,6 +183,7 @@
             <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">new_account</span>,
             <span class="ident">sender</span>.<span class="ident">sequence_number</span>,
             <span class="self">self</span>.<span class="ident">amount</span>,
+            <span class="ident">account_config</span>::<span class="ident">lbr_type_tag</span>(),
         );
 
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">gas_used</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">create_account_gas_cost</span>();
@@ -237,6 +242,7 @@
             <span class="ident">receiver</span>.<span class="ident">account</span>(),
             <span class="ident">sender</span>.<span class="ident">sequence_number</span>,
             <span class="self">self</span>.<span class="ident">amount</span>,
+            <span class="ident">account_config</span>::<span class="ident">lbr_type_tag</span>(),
         );
 
         <span class="comment">// This transaction should never work, but it will fail differently if there&#39;s not enough</span>
