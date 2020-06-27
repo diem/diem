@@ -437,6 +437,7 @@
 <span id="437">437</span>
 <span id="438">438</span>
 <span id="439">439</span>
+<span id="440">440</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -768,7 +769,8 @@
     <span class="macro">prop_oneof</span><span class="macro">!</span>[
         <span class="comment">// Most transactions should be p2p payments.</span>
         <span class="number">8</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">p2p_strategy</span>(<span class="ident">min</span>, <span class="ident">max</span>),
-        <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">create_account_strategy</span>(<span class="ident">min</span>, <span class="ident">max</span>),
+        <span class="comment">// TODO: resurrecte once we have unhosted wallets</span>
+        <span class="comment">//1 =&gt; create_account_strategy(min, max),</span>
         <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">any</span>::<span class="op">&lt;</span><span class="ident">RotateKeyGen</span><span class="op">&gt;</span>().<span class="ident">prop_map</span>(<span class="ident">RotateKeyGen</span>::<span class="ident">arced</span>),
         <span class="number">1</span> <span class="op">=</span><span class="op">&gt;</span> <span class="ident">bad_txn_strategy</span>(),
     ]
