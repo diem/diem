@@ -85,7 +85,7 @@ pub struct SafetyRulesManager {
 impl SafetyRulesManager {
     pub fn new(config: &mut NodeConfig) -> Self {
         match &config.consensus.safety_rules.service {
-            SafetyRulesService::Process(conf) => return Self::new_process(conf.server_address),
+            SafetyRulesService::Process(conf) => return Self::new_process(conf.server_address()),
             SafetyRulesService::SpawnedProcess(_) => return Self::new_spawned_process(config),
             _ => (),
         };

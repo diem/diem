@@ -30,7 +30,7 @@ pub struct ProcessClientWrapper {
 impl ProcessClientWrapper {
     pub fn new(backend: SecureBackend, verify_vote_proposal_signature: bool) -> Self {
         let server_port = utils::get_available_port();
-        let server_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port);
+        let server_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), server_port).into();
 
         let remote_service = RemoteService { server_address };
         let mut config = NodeConfig::random();

@@ -22,7 +22,7 @@ impl SpawnedProcess {
 
         let service = &config.consensus.safety_rules.service;
         let server_addr = if let SafetyRulesService::SpawnedProcess(process_config) = service {
-            process_config.server_address
+            process_config.server_address()
         } else {
             panic!("Invalid SafeRulesService, expected SpawnedProcess.");
         };
