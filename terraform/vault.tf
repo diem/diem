@@ -74,7 +74,15 @@ resource "aws_ecs_task_definition" "vault" {
       name       = "vault-init",
       image      = "vault:latest",
       entryPoint = ["sh"],
-      command    = ["-c", "sleep 5s && TOKEN=$(vault operator init | grep 'Root Token' | cut -d: -f2) && vault login $TOKEN && vault token create -id=root -policy=root && vault secrets enable -path=secret kv-v2 && vault secrets enable transit"],
+      command    = ["-c", <<-EOT
+        sleep 10s &&
+        TOKEN=$(vault operator init | grep 'Root Token' | cut -d: -f2) &&
+        vault login $TOKEN &&
+        vault token create -id=root -policy=root &&
+        vault secrets enable -path=secret kv-v2 &&
+        vault secrets enable transit
+        EOT
+      ],
       cpu        = 40,
       memory     = 128,
       essential  = false,
