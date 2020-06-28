@@ -1801,7 +1801,6 @@
 <span id="1801">1801</span>
 <span id="1802">1802</span>
 <span id="1803">1803</span>
-<span id="1804">1804</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1827,7 +1826,7 @@
     <span class="ident">access_path</span>::<span class="ident">AccessPath</span>,
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">account_config</span>::{
-        <span class="ident">association_address</span>, <span class="ident">from_currency_code_string</span>, <span class="ident">treasury_compliance_account_address</span>,
+        <span class="ident">association_address</span>, <span class="ident">from_currency_code_string</span>, <span class="ident">testnet_dd_account_address</span>,
         <span class="ident">type_tag_for_currency_code</span>, <span class="ident">ACCOUNT_RECEIVED_EVENT_PATH</span>, <span class="ident">ACCOUNT_SENT_EVENT_PATH</span>, <span class="ident">LBR_NAME</span>,
     },
     <span class="ident">account_state</span>::<span class="ident">AccountState</span>,
@@ -1912,8 +1911,8 @@
     <span class="ident">faucet_server</span>: <span class="ident">String</span>,
     <span class="doccomment">/// Account used for AssocRoot operations (e.g., adding a new transaction script)</span>
     <span class="kw">pub</span> <span class="ident">assoc_root_account</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountData</span><span class="op">&gt;</span>,
-    <span class="doccomment">/// Account used TreasuryCompliance operations (e.g., minting)</span>
-    <span class="kw">pub</span> <span class="ident">treasury_compliance_account</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountData</span><span class="op">&gt;</span>,
+    <span class="doccomment">/// Account used for &quot;minting&quot; operations</span>
+    <span class="kw">pub</span> <span class="ident">testnet_designated_dealer_account</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">AccountData</span><span class="op">&gt;</span>,
     <span class="doccomment">/// Wallet library managing user accounts.</span>
     <span class="ident">wallet</span>: <span class="ident">WalletLibrary</span>,
     <span class="doccomment">/// Whether to sync with validator on wallet recovery.</span>
@@ -1928,7 +1927,7 @@
     <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">new</span>(
         <span class="ident">url</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">assoc_root_account_file</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
-        <span class="ident">treasury_compliance_account_file</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
+        <span class="ident">testnet_designated_dealer_account_file</span>: <span class="kw-2">&amp;</span><span class="ident">str</span>,
         <span class="ident">sync_on_wallet_recovery</span>: <span class="ident">bool</span>,
         <span class="ident">faucet_server</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
         <span class="ident">mnemonic_file</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">String</span><span class="op">&gt;</span>,
@@ -1953,19 +1952,18 @@
             )<span class="question-mark">?</span>;
             <span class="prelude-val">Some</span>(<span class="ident">assoc_root_account_data</span>)
         };
-        <span class="kw">let</span> <span class="ident">treasury_compliance_account</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">treasury_compliance_account_file</span>.<span class="ident">is_empty</span>() {
+        <span class="kw">let</span> <span class="ident">dd_account</span> <span class="op">=</span> <span class="kw">if</span> <span class="ident">testnet_designated_dealer_account_file</span>.<span class="ident">is_empty</span>() {
             <span class="prelude-val">None</span>
         } <span class="kw">else</span> {
-            <span class="kw">let</span> <span class="ident">treasury_compliance_account_key</span> <span class="op">=</span>
-                <span class="ident">generate_key</span>::<span class="ident">load_key</span>(<span class="ident">treasury_compliance_account_file</span>);
-            <span class="kw">let</span> <span class="ident">treasury_compliance_account_data</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">get_account_data_from_address</span>(
+            <span class="kw">let</span> <span class="ident">dd_account_key</span> <span class="op">=</span> <span class="ident">generate_key</span>::<span class="ident">load_key</span>(<span class="ident">testnet_designated_dealer_account_file</span>);
+            <span class="kw">let</span> <span class="ident">dd_account_data</span> <span class="op">=</span> <span class="self">Self</span>::<span class="ident">get_account_data_from_address</span>(
                 <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">client</span>,
-                <span class="ident">treasury_compliance_account_address</span>(),
+                <span class="ident">testnet_dd_account_address</span>(),
                 <span class="bool-val">true</span>,
-                <span class="prelude-val">Some</span>(<span class="ident">KeyPair</span>::<span class="ident">from</span>(<span class="ident">treasury_compliance_account_key</span>)),
+                <span class="prelude-val">Some</span>(<span class="ident">KeyPair</span>::<span class="ident">from</span>(<span class="ident">dd_account_key</span>)),
                 <span class="prelude-val">None</span>,
             )<span class="question-mark">?</span>;
-            <span class="prelude-val">Some</span>(<span class="ident">treasury_compliance_account_data</span>)
+            <span class="prelude-val">Some</span>(<span class="ident">dd_account_data</span>)
         };
 
         <span class="kw">let</span> <span class="ident">faucet_server</span> <span class="op">=</span> <span class="kw">match</span> <span class="ident">faucet_server</span> {
@@ -1988,7 +1986,7 @@
             <span class="ident">address_to_ref_id</span>,
             <span class="ident">faucet_server</span>,
             <span class="ident">assoc_root_account</span>,
-            <span class="ident">treasury_compliance_account</span>,
+            <span class="ident">testnet_designated_dealer_account</span>: <span class="ident">dd_account</span>,
             <span class="ident">wallet</span>: <span class="self">Self</span>::<span class="ident">get_libra_wallet</span>(<span class="ident">mnemonic_file</span>)<span class="question-mark">?</span>,
             <span class="ident">sync_on_wallet_recovery</span>,
             <span class="ident">temp_files</span>: <span class="macro">vec</span><span class="macro">!</span>[],
@@ -2052,12 +2050,12 @@
                 <span class="ident">assoc_root_account</span>.<span class="ident">status</span>,
             );
         }
-        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">treasury_compliance_account</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">treasury_compliance_account</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">testnet_dd_account</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">testnet_designated_dealer_account</span> {
             <span class="macro">println</span><span class="macro">!</span>(
-                <span class="string">&quot;TreasuryCompliance account address: {}, sequence_number: {}, status: {:?}&quot;</span>,
-                <span class="ident">hex</span>::<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="ident">treasury_compliance_account</span>.<span class="ident">address</span>),
-                <span class="ident">treasury_compliance_account</span>.<span class="ident">sequence_number</span>,
-                <span class="ident">treasury_compliance_account</span>.<span class="ident">status</span>,
+                <span class="string">&quot;Testnet DD account address: {}, sequence_number: {}, status: {:?}&quot;</span>,
+                <span class="ident">hex</span>::<span class="ident">encode</span>(<span class="kw-2">&amp;</span><span class="ident">testnet_dd_account</span>.<span class="ident">address</span>),
+                <span class="ident">testnet_dd_account</span>.<span class="ident">sequence_number</span>,
+                <span class="ident">testnet_dd_account</span>.<span class="ident">status</span>,
             );
         }
     }
@@ -2146,9 +2144,9 @@
                     <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">sequence_number</span>);
                 }
             }
-            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">treasury_compliance_account</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">treasury_compliance_account</span> {
-                <span class="kw">if</span> <span class="ident">treasury_compliance_account</span>.<span class="ident">address</span> <span class="op">=</span><span class="op">=</span> <span class="ident">address</span> {
-                    <span class="ident">treasury_compliance_account</span>.<span class="ident">sequence_number</span> <span class="op">=</span> <span class="ident">sequence_number</span>;
+            <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">testnet_dd_account</span>) <span class="op">=</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>.<span class="ident">testnet_designated_dealer_account</span> {
+                <span class="kw">if</span> <span class="ident">testnet_dd_account</span>.<span class="ident">address</span> <span class="op">=</span><span class="op">=</span> <span class="ident">address</span> {
+                    <span class="ident">testnet_dd_account</span>.<span class="ident">sequence_number</span> <span class="op">=</span> <span class="ident">sequence_number</span>;
                     <span class="kw">return</span> <span class="prelude-val">Ok</span>(<span class="ident">sequence_number</span>);
                 }
             }
@@ -2290,14 +2288,14 @@
             } <span class="comment">// else, the account has already been created -- do nothing</span>
         }
 
-        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">treasury_compliance_account</span> {
+        <span class="kw">match</span> <span class="self">self</span>.<span class="ident">testnet_designated_dealer_account</span> {
             <span class="prelude-val">Some</span>(<span class="kw">_</span>) <span class="op">=</span><span class="op">&gt;</span> {
-                <span class="kw">let</span> <span class="ident">script</span> <span class="op">=</span> <span class="ident">transaction_builder</span>::<span class="ident">encode_mint_script</span>(
+                <span class="kw">let</span> <span class="ident">script</span> <span class="op">=</span> <span class="ident">transaction_builder</span>::<span class="ident">encode_testnet_mint_script</span>(
                     <span class="ident">type_tag_for_currency_code</span>(<span class="ident">currency_code</span>),
-                    <span class="kw-2">&amp;</span><span class="ident">receiver</span>,
+                    <span class="ident">receiver</span>,
                     <span class="ident">num_coins</span>,
                 );
-                <span class="self">self</span>.<span class="ident">association_transaction_with_local_treasury_compliance_account</span>(
+                <span class="self">self</span>.<span class="ident">association_transaction_with_local_testnet_dd_account</span>(
                     <span class="ident">TransactionPayload</span>::<span class="ident">Script</span>(<span class="ident">script</span>),
                     <span class="ident">is_blocking</span>,
                 )
@@ -3226,24 +3224,24 @@
         <span class="ident">resp</span>
     }
 
-    <span class="kw">fn</span> <span class="ident">association_transaction_with_local_treasury_compliance_account</span>(
+    <span class="kw">fn</span> <span class="ident">association_transaction_with_local_testnet_dd_account</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">payload</span>: <span class="ident">TransactionPayload</span>,
         <span class="ident">is_blocking</span>: <span class="ident">bool</span>,
     ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
         <span class="macro">ensure</span><span class="macro">!</span>(
-            <span class="self">self</span>.<span class="ident">treasury_compliance_account</span>.<span class="ident">is_some</span>(),
-            <span class="string">&quot;No treasury compliance account loaded&quot;</span>
+            <span class="self">self</span>.<span class="ident">testnet_designated_dealer_account</span>.<span class="ident">is_some</span>(),
+            <span class="string">&quot;No testnet Designated Dealer account loaded&quot;</span>
         );
-        <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">treasury_compliance_account</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="ident">sender</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">testnet_designated_dealer_account</span>.<span class="ident">as_ref</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">sender_address</span> <span class="op">=</span> <span class="ident">sender</span>.<span class="ident">address</span>;
         <span class="kw">let</span> <span class="ident">txn</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">create_txn_to_submit</span>(<span class="ident">payload</span>, <span class="ident">sender</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sender_mut</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">treasury_compliance_account</span>.<span class="ident">as_mut</span>().<span class="ident">unwrap</span>();
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">sender_mut</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">testnet_designated_dealer_account</span>.<span class="ident">as_mut</span>().<span class="ident">unwrap</span>();
         <span class="kw">let</span> <span class="ident">resp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">client</span>.<span class="ident">submit_transaction</span>(<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">sender_mut</span>), <span class="ident">txn</span>);
         <span class="kw">if</span> <span class="ident">is_blocking</span> {
             <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(
                 <span class="ident">sender_address</span>,
-                <span class="self">self</span>.<span class="ident">treasury_compliance_account</span>
+                <span class="self">self</span>.<span class="ident">testnet_designated_dealer_account</span>
                     .<span class="ident">as_ref</span>()
                     .<span class="ident">unwrap</span>()
                     .<span class="ident">sequence_number</span>,
@@ -3282,7 +3280,7 @@
         }
         <span class="kw">let</span> <span class="ident">sequence_number</span> <span class="op">=</span> <span class="ident">body</span>.<span class="ident">parse</span>::<span class="op">&lt;</span><span class="ident">u64</span><span class="op">&gt;</span>()<span class="question-mark">?</span>;
         <span class="kw">if</span> <span class="ident">is_blocking</span> {
-            <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">treasury_compliance_account_address</span>(), <span class="ident">sequence_number</span>)<span class="question-mark">?</span>;
+            <span class="self">self</span>.<span class="ident">wait_for_transaction</span>(<span class="ident">testnet_dd_account_address</span>(), <span class="ident">sequence_number</span>)<span class="question-mark">?</span>;
         }
 
         <span class="prelude-val">Ok</span>(())

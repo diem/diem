@@ -22,6 +22,11 @@
 <span id="22">22</span>
 <span id="23">23</span>
 <span id="24">24</span>
+<span id="25">25</span>
+<span id="26">26</span>
+<span id="27">27</span>
+<span id="28">28</span>
+<span id="29">29</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -46,6 +51,11 @@
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">reserved_vm_address</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccountAddress</span> {
     <span class="ident">AccountAddress</span>::<span class="ident">new</span>([<span class="number">0u8</span>; <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>])
+}
+
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">testnet_dd_account_address</span>() <span class="op">-</span><span class="op">&gt;</span> <span class="ident">AccountAddress</span> {
+    <span class="ident">AccountAddress</span>::<span class="ident">from_hex_literal</span>(<span class="string">&quot;0xDD&quot;</span>)
+        .<span class="ident">expect</span>(<span class="string">&quot;Parsing valid hex literal should always succeed&quot;</span>)
 }
 </pre></div>
 </section><section id="search" class="content hidden"></section><section class="footer"></section><script>window.rootPath = "../../../../";window.currentCrate = "libra_types";</script><script src="../../../../aliases.js"></script><script src="../../../../main.js"></script><script src="../../../../source-script.js"></script><script src="../../../../source-files.js"></script><script defer src="../../../../search-index.js"></script></body></html>
