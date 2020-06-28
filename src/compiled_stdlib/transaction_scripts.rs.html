@@ -297,6 +297,9 @@
 <span id="297">297</span>
 <span id="298">298</span>
 <span id="299">299</span>
+<span id="300">300</span>
+<span id="301">301</span>
+<span id="302">302</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -321,9 +324,9 @@
 <span class="doccomment">/// All of the Move transaction scripts that can be executed on the Libra blockchain</span>
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>, <span class="ident">Copy</span>, <span class="ident">Eq</span>, <span class="ident">PartialEq</span>)]</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">StdlibScript</span> {
-    <span class="ident">AddValidator</span>,
     <span class="ident">AddCurrencyToAccount</span>,
     <span class="ident">AddRecoveryRotationCapability</span>,
+    <span class="ident">AddValidator</span>,
     <span class="ident">Burn</span>,
     <span class="ident">BurnTxnFees</span>,
     <span class="ident">CancelBurn</span>,
@@ -331,6 +334,7 @@
     <span class="ident">CreateDesignatedDealer</span>,
     <span class="ident">CreateParentVaspAccount</span>,
     <span class="ident">CreateRecoveryAddress</span>,
+    <span class="ident">CreateTestingAccount</span>,
     <span class="ident">CreateValidatorAccount</span>,
     <span class="ident">CreateValidatorOperatorAccount</span>,
     <span class="ident">EmptyScript</span>,
@@ -352,13 +356,13 @@
     <span class="ident">SetValidatorConfig</span>,
     <span class="ident">SetValidatorOperator</span>,
     <span class="ident">TieredMint</span>,
-    <span class="ident">UpdateTravelRuleLimit</span>,
     <span class="ident">UnfreezeAccount</span>,
     <span class="ident">UnmintLbr</span>,
-    <span class="ident">UpdateUnhostedWalletLimits</span>,
-    <span class="ident">UpdateLibraVersion</span>,
     <span class="ident">UpdateExchangeRate</span>,
+    <span class="ident">UpdateLibraVersion</span>,
     <span class="ident">UpdateMintingAbility</span>,
+    <span class="ident">UpdateTravelRuleLimit</span>,
+    <span class="ident">UpdateUnhostedWalletLimits</span>,
     <span class="comment">// ...add new scripts here</span>
 }
 
@@ -378,6 +382,7 @@
             <span class="ident">CreateDesignatedDealer</span>,
             <span class="ident">CreateParentVaspAccount</span>,
             <span class="ident">CreateRecoveryAddress</span>,
+            <span class="ident">CreateTestingAccount</span>,
             <span class="ident">CreateValidatorAccount</span>,
             <span class="ident">CreateValidatorOperatorAccount</span>,
             <span class="ident">EmptyScript</span>,
@@ -504,6 +509,7 @@
                 <span class="ident">CreateDesignatedDealer</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_designated_dealer&quot;</span>,
                 <span class="ident">CreateParentVaspAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_parent_vasp_account&quot;</span>,
                 <span class="ident">CreateRecoveryAddress</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_recovery_address&quot;</span>,
+                <span class="ident">CreateTestingAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_testing_account&quot;</span>,
                 <span class="ident">CreateValidatorAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_validator_account&quot;</span>,
                 <span class="ident">CreateValidatorOperatorAccount</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;create_validator_operator_account&quot;</span>,
                 <span class="ident">EmptyScript</span> <span class="op">=</span><span class="op">&gt;</span> <span class="string">&quot;empty_script&quot;</span>,

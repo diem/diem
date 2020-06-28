@@ -871,6 +871,75 @@
 <span id="871">871</span>
 <span id="872">872</span>
 <span id="873">873</span>
+<span id="874">874</span>
+<span id="875">875</span>
+<span id="876">876</span>
+<span id="877">877</span>
+<span id="878">878</span>
+<span id="879">879</span>
+<span id="880">880</span>
+<span id="881">881</span>
+<span id="882">882</span>
+<span id="883">883</span>
+<span id="884">884</span>
+<span id="885">885</span>
+<span id="886">886</span>
+<span id="887">887</span>
+<span id="888">888</span>
+<span id="889">889</span>
+<span id="890">890</span>
+<span id="891">891</span>
+<span id="892">892</span>
+<span id="893">893</span>
+<span id="894">894</span>
+<span id="895">895</span>
+<span id="896">896</span>
+<span id="897">897</span>
+<span id="898">898</span>
+<span id="899">899</span>
+<span id="900">900</span>
+<span id="901">901</span>
+<span id="902">902</span>
+<span id="903">903</span>
+<span id="904">904</span>
+<span id="905">905</span>
+<span id="906">906</span>
+<span id="907">907</span>
+<span id="908">908</span>
+<span id="909">909</span>
+<span id="910">910</span>
+<span id="911">911</span>
+<span id="912">912</span>
+<span id="913">913</span>
+<span id="914">914</span>
+<span id="915">915</span>
+<span id="916">916</span>
+<span id="917">917</span>
+<span id="918">918</span>
+<span id="919">919</span>
+<span id="920">920</span>
+<span id="921">921</span>
+<span id="922">922</span>
+<span id="923">923</span>
+<span id="924">924</span>
+<span id="925">925</span>
+<span id="926">926</span>
+<span id="927">927</span>
+<span id="928">928</span>
+<span id="929">929</span>
+<span id="930">930</span>
+<span id="931">931</span>
+<span id="932">932</span>
+<span id="933">933</span>
+<span id="934">934</span>
+<span id="935">935</span>
+<span id="936">936</span>
+<span id="937">937</span>
+<span id="938">938</span>
+<span id="939">939</span>
+<span id="940">940</span>
+<span id="941">941</span>
+<span id="942">942</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -1136,6 +1205,25 @@
         })
     }
 
+    <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">load_libra_root_account</span>(<span class="kw-2">&amp;</span><span class="self">self</span>, <span class="ident">instance</span>: <span class="kw-2">&amp;</span><span class="ident">Instance</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">AccountData</span><span class="op">&gt;</span> {
+        <span class="kw">let</span> <span class="ident">client</span> <span class="op">=</span> <span class="ident">instance</span>.<span class="ident">json_rpc_client</span>();
+        <span class="kw">let</span> <span class="ident">address</span> <span class="op">=</span> <span class="ident">account_config</span>::<span class="ident">association_address</span>();
+        <span class="kw">let</span> <span class="ident">sequence_number</span> <span class="op">=</span> <span class="ident">query_sequence_numbers</span>(<span class="kw-2">&amp;</span><span class="ident">client</span>, <span class="kw-2">&amp;</span>[<span class="ident">address</span>])
+            .<span class="kw">await</span>
+            .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> {
+                <span class="macro">format_err</span><span class="macro">!</span>(
+                    <span class="string">&quot;query_sequence_numbers on {:?} for libra root account failed: {}&quot;</span>,
+                    <span class="ident">client</span>,
+                    <span class="ident">e</span>
+                )
+            })<span class="question-mark">?</span>[<span class="number">0</span>];
+        <span class="prelude-val">Ok</span>(<span class="ident">AccountData</span> {
+            <span class="ident">address</span>,
+            <span class="ident">key_pair</span>: <span class="self">self</span>.<span class="ident">mint_key_pair</span>.<span class="ident">clone</span>(),
+            <span class="ident">sequence_number</span>,
+        })
+    }
+
     <span class="kw">pub</span> <span class="kw">async</span> <span class="kw">fn</span> <span class="ident">mint_accounts</span>(
         <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
         <span class="ident">req</span>: <span class="kw-2">&amp;</span><span class="ident">EmitJobRequest</span>,
@@ -1150,6 +1238,9 @@
         <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">faucet_account</span> <span class="op">=</span> <span class="self">self</span>
             .<span class="ident">load_faucet_account</span>(<span class="self">self</span>.<span class="ident">pick_mint_instance</span>(<span class="kw-2">&amp;</span><span class="ident">req</span>.<span class="ident">instances</span>))
             .<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">libra_root_account</span> <span class="op">=</span> <span class="self">self</span>
+            .<span class="ident">load_libra_root_account</span>(<span class="self">self</span>.<span class="ident">pick_mint_instance</span>(<span class="kw-2">&amp;</span><span class="ident">req</span>.<span class="ident">instances</span>))
+            .<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="kw">let</span> <span class="ident">mint_txn</span> <span class="op">=</span> <span class="ident">gen_mint_request</span>(
             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">faucet_account</span>,
             <span class="ident">LIBRA_PER_NEW_ACCOUNT</span> <span class="op">*</span> <span class="ident">num_accounts</span> <span class="kw">as</span> <span class="ident">u64</span>,
@@ -1161,12 +1252,21 @@
         )
         .<span class="kw">await</span>
         .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Failed to mint into faucet account: {}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">seed_accounts</span> <span class="op">=</span> <span class="ident">create_seed_accounts</span>(
+            <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">libra_root_account</span>,
+            <span class="ident">req</span>.<span class="ident">instances</span>.<span class="ident">len</span>(),
+            <span class="number">100</span>,
+            <span class="self">self</span>.<span class="ident">pick_mint_client</span>(<span class="kw-2">&amp;</span><span class="ident">req</span>.<span class="ident">instances</span>),
+        )
+        .<span class="kw">await</span>
+        .<span class="ident">map_err</span>(<span class="op">|</span><span class="ident">e</span><span class="op">|</span> <span class="macro">format_err</span><span class="macro">!</span>(<span class="string">&quot;Failed to create seed accounts: {}&quot;</span>, <span class="ident">e</span>))<span class="question-mark">?</span>;
+        <span class="macro">info</span><span class="macro">!</span>(<span class="string">&quot;Completed creating seed accounts&quot;</span>);
         <span class="kw">let</span> <span class="ident">libra_per_seed</span> <span class="op">=</span>
             (<span class="ident">LIBRA_PER_NEW_ACCOUNT</span> <span class="op">*</span> <span class="ident">num_accounts</span> <span class="kw">as</span> <span class="ident">u64</span>) <span class="op">/</span> <span class="ident">req</span>.<span class="ident">instances</span>.<span class="ident">len</span>() <span class="kw">as</span> <span class="ident">u64</span>;
         <span class="comment">// Create seed accounts with which we can create actual accounts concurrently</span>
-        <span class="kw">let</span> <span class="ident">seed_accounts</span> <span class="op">=</span> <span class="ident">mint_to_new_accounts</span>(
+        <span class="ident">mint_to_new_accounts</span>(
             <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">faucet_account</span>,
-            <span class="ident">req</span>.<span class="ident">instances</span>.<span class="ident">len</span>(),
+            <span class="kw-2">&amp;</span><span class="ident">seed_accounts</span>,
             <span class="ident">libra_per_seed</span>,
             <span class="number">100</span>,
             <span class="self">self</span>.<span class="ident">pick_mint_client</span>(<span class="kw-2">&amp;</span><span class="ident">req</span>.<span class="ident">instances</span>),
@@ -1451,14 +1551,8 @@
 
 <span class="kw">fn</span> <span class="ident">gen_mint_request</span>(<span class="ident">faucet_account</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AccountData</span>, <span class="ident">num_coins</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SignedTransaction</span> {
     <span class="kw">let</span> <span class="ident">receiver</span> <span class="op">=</span> <span class="ident">faucet_account</span>.<span class="ident">address</span>;
-    <span class="kw">let</span> <span class="ident">auth_key_prefix</span> <span class="op">=</span> <span class="ident">faucet_account</span>.<span class="ident">auth_key_prefix</span>();
     <span class="ident">gen_submit_transaction_request</span>(
-        <span class="ident">transaction_builder</span>::<span class="ident">encode_mint_script</span>(
-            <span class="ident">account_config</span>::<span class="ident">coin1_tag</span>(),
-            <span class="kw-2">&amp;</span><span class="ident">receiver</span>,
-            <span class="ident">auth_key_prefix</span>,
-            <span class="ident">num_coins</span>,
-        ),
+        <span class="ident">transaction_builder</span>::<span class="ident">encode_mint_script</span>(<span class="ident">account_config</span>::<span class="ident">coin1_tag</span>(), <span class="kw-2">&amp;</span><span class="ident">receiver</span>, <span class="ident">num_coins</span>),
         <span class="ident">faucet_account</span>,
     )
 }
@@ -1499,19 +1593,29 @@
     )
 }
 
+<span class="kw">fn</span> <span class="ident">gen_create_account_txn_request</span>(
+    <span class="ident">sender</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AccountData</span>,
+    <span class="ident">receiver</span>: <span class="kw-2">&amp;</span><span class="ident">AccountAddress</span>,
+    <span class="ident">auth_key_prefix</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SignedTransaction</span> {
+    <span class="ident">gen_submit_transaction_request</span>(
+        <span class="ident">transaction_builder</span>::<span class="ident">encode_create_testing_account_script</span>(
+            <span class="ident">account_config</span>::<span class="ident">coin1_tag</span>(),
+            <span class="kw-2">*</span><span class="ident">receiver</span>,
+            <span class="ident">auth_key_prefix</span>,
+            <span class="bool-val">false</span>,
+        ),
+        <span class="ident">sender</span>,
+    )
+}
+
 <span class="kw">fn</span> <span class="ident">gen_mint_txn_request</span>(
     <span class="ident">sender</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AccountData</span>,
     <span class="ident">receiver</span>: <span class="kw-2">&amp;</span><span class="ident">AccountAddress</span>,
-    <span class="ident">receiver_auth_key_prefix</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
     <span class="ident">num_coins</span>: <span class="ident">u64</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">SignedTransaction</span> {
     <span class="ident">gen_submit_transaction_request</span>(
-        <span class="ident">transaction_builder</span>::<span class="ident">encode_mint_script</span>(
-            <span class="ident">account_config</span>::<span class="ident">coin1_tag</span>(),
-            <span class="ident">receiver</span>,
-            <span class="ident">receiver_auth_key_prefix</span>,
-            <span class="ident">num_coins</span>,
-        ),
+        <span class="ident">transaction_builder</span>::<span class="ident">encode_mint_script</span>(<span class="ident">account_config</span>::<span class="ident">coin1_tag</span>(), <span class="ident">receiver</span>, <span class="ident">num_coins</span>),
         <span class="ident">sender</span>,
     )
 }
@@ -1551,6 +1655,22 @@
         .<span class="ident">collect</span>()
 }
 
+<span class="kw">fn</span> <span class="ident">gen_account_creation_txn_requests</span>(
+    <span class="ident">sending_account</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AccountData</span>,
+    <span class="ident">accounts</span>: <span class="kw-2">&amp;</span>[<span class="ident">AccountData</span>],
+) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SignedTransaction</span><span class="op">&gt;</span> {
+    <span class="ident">accounts</span>
+        .<span class="ident">iter</span>()
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">account</span><span class="op">|</span> {
+            <span class="ident">gen_create_account_txn_request</span>(
+                <span class="ident">sending_account</span>,
+                <span class="kw-2">&amp;</span><span class="ident">account</span>.<span class="ident">address</span>,
+                <span class="ident">account</span>.<span class="ident">auth_key_prefix</span>(),
+            )
+        })
+        .<span class="ident">collect</span>()
+}
+
 <span class="kw">fn</span> <span class="ident">gen_mint_txn_requests</span>(
     <span class="ident">sending_account</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AccountData</span>,
     <span class="ident">accounts</span>: <span class="kw-2">&amp;</span>[<span class="ident">AccountData</span>],
@@ -1558,14 +1678,7 @@
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">SignedTransaction</span><span class="op">&gt;</span> {
     <span class="ident">accounts</span>
         .<span class="ident">iter</span>()
-        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">account</span><span class="op">|</span> {
-            <span class="ident">gen_mint_txn_request</span>(
-                <span class="ident">sending_account</span>,
-                <span class="kw-2">&amp;</span><span class="ident">account</span>.<span class="ident">address</span>,
-                <span class="ident">account</span>.<span class="ident">auth_key_prefix</span>(),
-                <span class="ident">amount</span>,
-            )
-        })
+        .<span class="ident">map</span>(<span class="op">|</span><span class="ident">account</span><span class="op">|</span> <span class="ident">gen_mint_txn_request</span>(<span class="ident">sending_account</span>, <span class="kw-2">&amp;</span><span class="ident">account</span>.<span class="ident">address</span>, <span class="ident">amount</span>))
         .<span class="ident">collect</span>()
 }
 
@@ -1632,11 +1745,10 @@
     <span class="prelude-val">Ok</span>(<span class="ident">accounts</span>)
 }
 
-<span class="doccomment">/// Create `num_new_accounts` by minting libra. Return Vec of created accounts</span>
-<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">mint_to_new_accounts</span>(
-    <span class="ident">source_account</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AccountData</span>,
+<span class="doccomment">/// Create `num_new_accounts`. Return Vec of created accounts</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">create_seed_accounts</span>(
+    <span class="ident">creation_account</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AccountData</span>,
     <span class="ident">num_new_accounts</span>: <span class="ident">usize</span>,
-    <span class="ident">libra_per_new_account</span>: <span class="ident">u64</span>,
     <span class="ident">max_num_accounts_per_batch</span>: <span class="ident">u64</span>,
     <span class="kw-2">mut</span> <span class="ident">client</span>: <span class="ident">JsonRpcAsyncClient</span>,
 ) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span><span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">AccountData</span><span class="op">&gt;</span><span class="op">&gt;</span> {
@@ -1647,12 +1759,38 @@
             <span class="ident">max_num_accounts_per_batch</span> <span class="kw">as</span> <span class="ident">usize</span>,
             <span class="ident">min</span>(<span class="ident">MAX_TXN_BATCH_SIZE</span>, <span class="ident">num_new_accounts</span> <span class="op">-</span> <span class="ident">i</span>),
         ));
-        <span class="kw">let</span> <span class="ident">requests</span> <span class="op">=</span> <span class="ident">gen_mint_txn_requests</span>(<span class="ident">source_account</span>, <span class="kw-2">&amp;</span><span class="ident">batch</span>, <span class="ident">libra_per_new_account</span>);
-        <span class="ident">execute_and_wait_transactions</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">client</span>, <span class="ident">source_account</span>, <span class="ident">requests</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="kw">let</span> <span class="ident">create_requests</span> <span class="op">=</span> <span class="ident">gen_account_creation_txn_requests</span>(<span class="ident">creation_account</span>, <span class="kw-2">&amp;</span><span class="ident">batch</span>);
+        <span class="ident">execute_and_wait_transactions</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">client</span>, <span class="ident">creation_account</span>, <span class="ident">create_requests</span>).<span class="kw">await</span><span class="question-mark">?</span>;
         <span class="ident">i</span> <span class="op">+</span><span class="op">=</span> <span class="ident">batch</span>.<span class="ident">len</span>();
         <span class="ident">accounts</span>.<span class="ident">append</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">batch</span>);
     }
     <span class="prelude-val">Ok</span>(<span class="ident">accounts</span>)
+}
+
+<span class="doccomment">/// Mint `libra_per_new_account` from `minting_account` to each account in `accounts`.</span>
+<span class="kw">async</span> <span class="kw">fn</span> <span class="ident">mint_to_new_accounts</span>(
+    <span class="ident">minting_account</span>: <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">AccountData</span>,
+    <span class="ident">accounts</span>: <span class="kw-2">&amp;</span>[<span class="ident">AccountData</span>],
+    <span class="ident">libra_per_new_account</span>: <span class="ident">u64</span>,
+    <span class="ident">max_num_accounts_per_batch</span>: <span class="ident">u64</span>,
+    <span class="kw-2">mut</span> <span class="ident">client</span>: <span class="ident">JsonRpcAsyncClient</span>,
+) <span class="op">-</span><span class="op">&gt;</span> <span class="prelude-ty">Result</span><span class="op">&lt;</span>()<span class="op">&gt;</span> {
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">left</span> <span class="op">=</span> <span class="ident">accounts</span>;
+    <span class="kw">let</span> <span class="kw-2">mut</span> <span class="ident">i</span> <span class="op">=</span> <span class="number">0</span>;
+    <span class="kw">let</span> <span class="ident">num_accounts</span> <span class="op">=</span> <span class="ident">accounts</span>.<span class="ident">len</span>();
+    <span class="kw">while</span> <span class="op">!</span><span class="ident">left</span>.<span class="ident">is_empty</span>() {
+        <span class="kw">let</span> <span class="ident">batch_size</span> <span class="op">=</span> <span class="ident">OsRng</span>.<span class="ident">gen</span>::<span class="op">&lt;</span><span class="ident">usize</span><span class="op">&gt;</span>()
+            <span class="op">%</span> <span class="ident">min</span>(
+                <span class="ident">max_num_accounts_per_batch</span> <span class="kw">as</span> <span class="ident">usize</span>,
+                <span class="ident">min</span>(<span class="ident">MAX_TXN_BATCH_SIZE</span>, <span class="ident">num_accounts</span> <span class="op">-</span> <span class="ident">i</span>),
+            );
+        <span class="kw">let</span> (<span class="ident">to_batch</span>, <span class="ident">rest</span>) <span class="op">=</span> <span class="ident">left</span>.<span class="ident">split_at</span>(<span class="ident">batch_size</span> <span class="op">+</span> <span class="number">1</span>);
+        <span class="kw">let</span> <span class="ident">mint_requests</span> <span class="op">=</span> <span class="ident">gen_mint_txn_requests</span>(<span class="ident">minting_account</span>, <span class="ident">to_batch</span>, <span class="ident">libra_per_new_account</span>);
+        <span class="ident">execute_and_wait_transactions</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="ident">client</span>, <span class="ident">minting_account</span>, <span class="ident">mint_requests</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+        <span class="ident">i</span> <span class="op">+</span><span class="op">=</span> <span class="ident">to_batch</span>.<span class="ident">len</span>();
+        <span class="ident">left</span> <span class="op">=</span> <span class="ident">rest</span>;
+    }
+    <span class="prelude-val">Ok</span>(())
 }
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Clone</span>)]</span>

@@ -105,25 +105,6 @@
 <span id="105">105</span>
 <span id="106">106</span>
 <span id="107">107</span>
-<span id="108">108</span>
-<span id="109">109</span>
-<span id="110">110</span>
-<span id="111">111</span>
-<span id="112">112</span>
-<span id="113">113</span>
-<span id="114">114</span>
-<span id="115">115</span>
-<span id="116">116</span>
-<span id="117">117</span>
-<span id="118">118</span>
-<span id="119">119</span>
-<span id="120">120</span>
-<span id="121">121</span>
-<span id="122">122</span>
-<span id="123">123</span>
-<span id="124">124</span>
-<span id="125">125</span>
-<span id="126">126</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -136,12 +117,9 @@
     <span class="ident">account_address</span>::<span class="ident">AccountAddress</span>,
     <span class="ident">block_metadata</span>::<span class="ident">BlockMetadata</span>,
     <span class="ident">on_chain_config</span>::{<span class="ident">LibraVersion</span>, <span class="ident">VMPublishingOption</span>},
-    <span class="ident">transaction</span>::{
-        <span class="ident">authenticator</span>::<span class="ident">AuthenticationKey</span>, <span class="ident">ChangeSet</span>, <span class="ident">Script</span>, <span class="ident">Transaction</span>, <span class="ident">TransactionArgument</span>,
-    },
+    <span class="ident">transaction</span>::{<span class="ident">ChangeSet</span>, <span class="ident">Script</span>, <span class="ident">Transaction</span>, <span class="ident">TransactionArgument</span>},
     <span class="ident">write_set</span>::{<span class="ident">WriteOp</span>, <span class="ident">WriteSetMut</span>},
 };
-<span class="kw">use</span> <span class="ident">mirai_annotations</span>::<span class="kw-2">*</span>;
 <span class="kw">use</span> <span class="ident">move_core_types</span>::<span class="ident">language_storage</span>::<span class="ident">TypeTag</span>;
 <span class="kw">use</span> <span class="ident">std</span>::<span class="ident">convert</span>::<span class="ident">TryFrom</span>;
 <span class="kw">use</span> <span class="ident">vm</span>::<span class="ident">access</span>::<span class="ident">ModuleAccess</span>;
@@ -187,26 +165,10 @@
     <span class="ident">Script</span>::<span class="ident">new</span>(<span class="ident">stdlib_script</span>.<span class="ident">compiled_bytes</span>().<span class="ident">into_vec</span>(), <span class="ident">type_args</span>, <span class="ident">args</span>)
 }
 
-<span class="kw">fn</span> <span class="ident">validate_auth_key_prefix</span>(<span class="ident">auth_key_prefix</span>: <span class="kw-2">&amp;</span>[<span class="ident">u8</span>]) {
-    <span class="kw">let</span> <span class="ident">auth_key_prefix_length</span> <span class="op">=</span> <span class="ident">auth_key_prefix</span>.<span class="ident">len</span>();
-    <span class="macro">checked_assume</span><span class="macro">!</span>(
-        <span class="ident">auth_key_prefix_length</span> <span class="op">=</span><span class="op">=</span> <span class="number">0</span>
-            <span class="op">|</span><span class="op">|</span> <span class="ident">auth_key_prefix_length</span> <span class="op">=</span><span class="op">=</span> <span class="ident">AuthenticationKey</span>::<span class="ident">LENGTH</span> <span class="op">-</span> <span class="ident">AccountAddress</span>::<span class="ident">LENGTH</span>,
-        <span class="string">&quot;Bad auth key prefix length {}&quot;</span>,
-        <span class="ident">auth_key_prefix_length</span>
-    );
-}
-
 <span class="comment">// TODO: this should go away once we are no longer using it in tests/testnet</span>
 <span class="doccomment">/// Encode a program creating `amount` coins for sender</span>
-<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">encode_mint_script</span>(
-    <span class="ident">token</span>: <span class="ident">TypeTag</span>,
-    <span class="ident">recipient</span>: <span class="kw-2">&amp;</span><span class="ident">AccountAddress</span>,
-    <span class="ident">auth_key_prefix</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">u8</span><span class="op">&gt;</span>,
-    <span class="ident">amount</span>: <span class="ident">u64</span>,
-) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Script</span> {
-    <span class="ident">validate_auth_key_prefix</span>(<span class="kw-2">&amp;</span><span class="ident">auth_key_prefix</span>);
-    <span class="ident">generated</span>::<span class="ident">encode_mint_script</span>(<span class="ident">token</span>, <span class="kw-2">*</span><span class="ident">recipient</span>, <span class="ident">auth_key_prefix</span>, <span class="ident">amount</span>)
+<span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">encode_mint_script</span>(<span class="ident">token</span>: <span class="ident">TypeTag</span>, <span class="ident">recipient</span>: <span class="kw-2">&amp;</span><span class="ident">AccountAddress</span>, <span class="ident">amount</span>: <span class="ident">u64</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Script</span> {
+    <span class="ident">generated</span>::<span class="ident">encode_mint_script</span>(<span class="ident">token</span>, <span class="kw-2">*</span><span class="ident">recipient</span>, <span class="ident">amount</span>)
 }
 
 <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">encode_modify_publishing_option_script</span>(<span class="ident">config</span>: <span class="ident">VMPublishingOption</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="ident">Script</span> {
