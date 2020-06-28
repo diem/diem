@@ -854,13 +854,15 @@ impl<T: Payload> EventProcessor<T> {
             .insert_vote(vote, &self.epoch_info.verifier);
         match res {
             VoteReceptionResult::NewQuorumCertificate(qc) => {
-                if ts>0 {
+                if ts > 0 {
                     // Note that the block might not be present locally, in which case we cannot calculate
                     // time between block creation and qc
-                    if let Some(time_to_qc) = self.block_store.get_block(block_id).and_then(|block| {
-                        duration_since_epoch()
-                            .checked_sub(Duration::from_micros(block.timestamp_usecs()))
-                    }) {
+                    if let Some(time_to_qc) =
+                        self.block_store.get_block(block_id).and_then(|block| {
+                            duration_since_epoch()
+                                .checked_sub(Duration::from_micros(block.timestamp_usecs()))
+                        })
+                    {
                         counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
                     }
                 }

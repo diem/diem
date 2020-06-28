@@ -356,8 +356,19 @@ impl<T: Payload> BlockStore<T> {
         self.storage
             .save_tree(vec![], vec![qc.clone()])
             .context("Insert block failed when saving quorum")?;
-        self.inner.write().unwrap().insert_quorum_cert(qc.clone());
-        self.inner.write().unwrap().update(qc, &self.validator_verifier.as_ref().unwrap())
+        self.inner
+            .write()
+            .unwrap()
+            .insert_quorum_cert(qc.clone())
+            .expect("Error in update insert QC");
+        if self.validator_verifier.is_some() {
+            self.inner
+                .write()
+                .unwrap()
+                .update(qc, &self.validator_verifier.as_ref().unwrap())
+                .expect("Error in update strong commit");
+        }
+        Ok(())
     }
 
     /// Replace the highest timeout certificate in case the given one has a higher round.
