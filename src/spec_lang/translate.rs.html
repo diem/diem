@@ -7589,7 +7589,7 @@
     <span class="kw">fn</span> <span class="ident">translate_exp_free</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>, <span class="ident">exp</span>: <span class="kw-2">&amp;</span><span class="ident">EA</span>::<span class="ident">Exp</span>) <span class="op">-</span><span class="op">&gt;</span> (<span class="ident">Type</span>, <span class="ident">Exp</span>) {
         <span class="kw">let</span> <span class="ident">tvar</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">fresh_type_var</span>();
         <span class="kw">let</span> <span class="ident">exp</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">translate_exp</span>(<span class="ident">exp</span>, <span class="kw-2">&amp;</span><span class="ident">tvar</span>);
-        (<span class="ident">tvar</span>, <span class="ident">exp</span>)
+        (<span class="self">self</span>.<span class="ident">subs</span>.<span class="ident">specialize</span>(<span class="kw-2">&amp;</span><span class="ident">tvar</span>), <span class="ident">exp</span>)
     }
 
     <span class="doccomment">/// Translates a sequence expression.</span>
