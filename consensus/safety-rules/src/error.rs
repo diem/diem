@@ -1,77 +1,41 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use consensus_types::common::Round;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Debug, Deserialize, Error, PartialEq, Serialize)]
 /// Different reasons for proposal rejection
 pub enum Error {
-    #[error("Timeout round, {0}, is incompatible with last votedx round, {1}")]
-    BadTimeoutLastVotedRound(u64, u64),
-
-    #[error("Timeout round, {0}, is incompatible with preferred round, {1}")]
-    BadTimeoutPreferredRound(u64, u64),
-
     #[error("Provided epoch, {0}, does not match expected epoch, {1}")]
     IncorrectEpoch(u64, u64),
-
-    #[error("Internal error: {:?}", error)]
-    InternalError { error: String },
-
-    #[error("Invalid proposal: {}", {0})]
-    InvalidProposal(String),
-
-    #[error("Unable to verify that the new tree extneds the parent: {:?}", error)]
-    InvalidAccumulatorExtension { error: String },
-
-    #[error("No next_epoch_state specified in the provided Ledger Info")]
-    InvalidLedgerInfo,
-
-    #[error("Invalid QC: {}", {0})]
-    InvalidQuorumCertificate(String),
-
-    #[error("{0} is not set, SafetyRules is not initialized")]
-    NotInitialized(String),
-
-    #[error(
-        "SafetyRules is configured to verify signature but the \
-             vote proposal doesn't carry a signature"
-    )]
-    SignatureNotFound,
-
-    /// This proposal's round is less than round of preferred block.
-    /// Returns the id of the preferred block.
-    #[error(
-        "Proposal's round is lower than round of preferred block at round {:?}",
-        preferred_round
-    )]
-    ProposalRoundLowerThanPreferredBlock { preferred_round: Round },
-
-    /// This proposal is too old - return last_voted_round
-    #[error(
-        "Proposal at round {:?} is not newer than the last vote round {:?}",
-        proposal_round,
-        last_voted_round
-    )]
-    OldProposal {
-        last_voted_round: Round,
-        proposal_round: Round,
-    },
-
-    #[error("Serialization error: {0}")]
-    SerializationError(String),
-
+    #[error("Provided round, {0}, is incompatible with last voted round, {1}")]
+    IncorrectLastVotedRound(u64, u64),
+    #[error("Provided round, {0}, is incompatible with preferred round, {1}")]
+    IncorrectPreferredRound(u64, u64),
+    #[error("Unable to verify that the new tree extneds the parent: {0}")]
+    InvalidAccumulatorExtension(String),
     #[error("Invalid EpochChangeProof: {0}")]
     InvalidEpochChangeProof(String),
+    #[error("Internal error: {0}")]
+    InternalError(String),
+    #[error("No next_epoch_state specified in the provided Ledger Info")]
+    InvalidLedgerInfo,
+    #[error("Invalid proposal: {}", {0})]
+    InvalidProposal(String),
+    #[error("Invalid QC: {}", {0})]
+    InvalidQuorumCertificate(String),
+    #[error("{0} is not set, SafetyRules is not initialized")]
+    NotInitialized(String),
+    #[error("Serialization error: {0}")]
+    SerializationError(String),
+    #[error("Vote proposal missing expected signature")]
+    VoteProposalSignatureNotFound,
 }
 
 impl From<anyhow::Error> for Error {
     fn from(error: anyhow::Error) -> Self {
-        Self::InternalError {
-            error: format!("{}", error),
-        }
+        Self::InternalError(error.to_string())
     }
 }
 
@@ -83,8 +47,6 @@ impl From<lcs::Error> for Error {
 
 impl From<libra_secure_net::Error> for Error {
     fn from(error: libra_secure_net::Error) -> Self {
-        Self::InternalError {
-            error: format!("{}", error),
-        }
+        Self::InternalError(error.to_string())
     }
 }
