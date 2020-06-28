@@ -24,6 +24,8 @@
   </tr>
   <tr>
     {{ template "graph_in_table" (args "creationToCommit" "Avg time since block creation to commit (ms)" "irate(consensus_duration_sum{op='creation_to_commit_s'}[1m])/irate(consensus_duration_count{op='creation_to_commit_s'}[1m])" "ms") }}
+
+    {{ template "graph_in_table" (args "creationToStrongCommit" "Avg time since block creation to strong commit (ms)" "irate(consensus_duration_sum{op='creation_to_strong_commit_s'}[1m])/irate(consensus_duration_count{op='creation_to_strong_commit_s'}[1m])" "ms") }}
   </tr>
 </table>
 

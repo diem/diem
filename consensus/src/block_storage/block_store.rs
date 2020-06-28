@@ -23,6 +23,7 @@ use libra_logger::prelude::*;
 use libra_types::epoch_info::EpochInfo;
 use libra_types::{
     block_info::Round, ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus,
+    validator_verifier::ValidatorVerifier,
 };
 use std::{
     collections::{vec_deque::VecDeque, HashMap},
@@ -40,6 +41,9 @@ pub mod sync_manager;
 
 fn update_counters_for_committed_blocks<T>(blocks_to_commit: &[Arc<ExecutedBlock<T>>]) {
     for block in blocks_to_commit {
+        if block.timestamp_usecs() == 0 {
+            continue;
+        }
         if let Some(time_to_commit) =
             duration_since_epoch().checked_sub(Duration::from_micros(block.timestamp_usecs()))
         {
@@ -91,6 +95,7 @@ pub struct BlockStore<T> {
     /// The persistent storage backing up the in-memory data structure, every write should go
     /// through this before in-memory tree.
     storage: Arc<dyn PersistentLivenessStorage<T>>,
+    validator_verifier: Option<ValidatorVerifier>,
 }
 
 impl<T: Payload> BlockStore<T> {
@@ -99,6 +104,7 @@ impl<T: Payload> BlockStore<T> {
         initial_data: RecoveryData<T>,
         state_computer: Arc<dyn StateComputer<Payload = T>>,
         max_pruned_blocks_in_mem: usize,
+        validator_verifier: Option<ValidatorVerifier>,
     ) -> Self {
         let highest_tc = initial_data.highest_timeout_certificate();
         let (root, root_metadata, blocks, quorum_certs) = initial_data.take();
@@ -115,6 +121,7 @@ impl<T: Payload> BlockStore<T> {
             inner,
             state_computer,
             storage,
+            validator_verifier,
         }
     }
 
@@ -349,7 +356,8 @@ impl<T: Payload> BlockStore<T> {
         self.storage
             .save_tree(vec![], vec![qc.clone()])
             .context("Insert block failed when saving quorum")?;
-        self.inner.write().unwrap().insert_quorum_cert(qc)
+        self.inner.write().unwrap().insert_quorum_cert(qc.clone());
+        self.inner.write().unwrap().update(qc, &self.validator_verifier.as_ref().unwrap())
     }
 
     /// Replace the highest timeout certificate in case the given one has a higher round.

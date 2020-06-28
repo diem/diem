@@ -171,6 +171,7 @@ impl NodeSetup {
             initial_data,
             state_computer,
             10, // max pruned blocks in mem
+            None,
         ));
 
         let time_service = Arc::new(ClockTimeService::new(executor));

@@ -1,14 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::counters;
+use std::cmp::min;
+use crate::{counters, util::time_service::duration_since_epoch};
 use anyhow::bail;
 use consensus_types::{
     executed_block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
 };
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
-use libra_types::{account_address::AccountAddress, block_info::Round};
+use libra_types::{account_address::AccountAddress, block_info::Round, validator_verifier::ValidatorVerifier};
 use mirai_annotations::{checked_verify_eq, precondition};
 use serde::Serialize;
 use std::{
@@ -16,6 +17,7 @@ use std::{
     collections::{vec_deque::VecDeque, HashMap, HashSet},
     fmt::Debug,
     sync::Arc,
+    time::Duration,
 };
 
 /// This structure is a wrapper of [`ExecutedBlock`](crate::consensus_types::block::ExecutedBlock)
@@ -89,8 +91,13 @@ pub struct BlockTree<T> {
     voted_blocks: Vec<HashValue>,
     // The set of endorsers of a block
     id_to_endorsers: HashMap<HashValue, HashSet<AccountAddress>>,
+    // The voting power of endorsers of a block
+    id_to_endorsement: HashMap<HashValue, u64>,
     // genesis id, used for computing strong commit
     genesis_id: HashValue,
+    // The level of strong commit of each block, equals the number of faults can be tolerated with the strong commit
+    // default = 0
+    id_to_strong_commit: HashMap<HashValue, u64>,
 }
 
 impl<T> BlockTree<T>
@@ -126,6 +133,8 @@ where
 
         let voted_blocks = Vec::new();
         let id_to_endorsers = HashMap::new();
+        let id_to_endorsement = HashMap::new();
+        let id_to_strong_commit = HashMap::new();
         let genesis_id = root_id;
 
         BlockTree {
@@ -140,7 +149,9 @@ where
             max_pruned_blocks_in_mem,
             voted_blocks,
             id_to_endorsers,
+            id_to_endorsement,
             genesis_id,
+            id_to_strong_commit,
         }
     }
 
@@ -221,12 +232,26 @@ where
         self.id_to_endorsers.get(block_id).cloned()
     }
 
+    pub(super) fn get_endorsement_for_block(
+        &self,
+        block_id: &HashValue,
+    ) -> Option<u64> {
+        self.id_to_endorsement.get(block_id).cloned()
+    }
+
     pub(super) fn add_endorser(&mut self, block_id: HashValue, account: AccountAddress) {
         let endorser = self
             .id_to_endorsers
             .entry(block_id)
             .or_insert_with(HashSet::new);
         endorser.insert(account);
+    }
+
+    pub(super) fn get_strong_commit_for_block(
+        &self,
+        block_id: &HashValue,
+    ) -> Option<u64> {
+        self.id_to_strong_commit.get(block_id).cloned()
     }
 
     pub(super) fn insert_block(
@@ -288,9 +313,13 @@ where
         if self.highest_commit_cert.commit_info().round() < qc.commit_info().round() {
             self.highest_commit_cert = qc;
         }
+        Ok(())
+    }
 
-        // update the endorsers of all previous blocks.
-        self.update_endorsers(quorumcert)
+    pub(super) fn update(&mut self, quorumcert: QuorumCert, verifier: &ValidatorVerifier) -> anyhow::Result<()> {
+         self.update_endorsers(quorumcert);
+         self.update_endorsement(verifier);
+         self.update_strong_commit(verifier)
     }
 
     /// Find the blocks to prune up to next_root_id (keep next_root_id's block). Any branches not
@@ -592,8 +621,89 @@ where
                 }
             }
         }
-        self.print_endorsers();
+        // self.print_endorsers();
 
+        Ok(())
+    }
+
+    pub(super) fn update_endorsement(&mut self, verifier: &ValidatorVerifier) -> anyhow::Result<()> {
+        let blocks_from_genesis_to_highest_certified = self
+            .path_from_genesis(self.highest_certified_block_id)
+            .unwrap_or_else(Vec::new);
+        for block in &blocks_from_genesis_to_highest_certified {
+            // compute the voting power of endorsers of each block
+            let endorsers = self.id_to_endorsers.get(&block.id()).unwrap();
+            let mut voting_power = 0;
+            for account in endorsers {
+                voting_power += verifier.get_voting_power(account).unwrap();
+            }
+            self.id_to_endorsement.insert(block.id(), voting_power);
+        }
+        Ok(())
+    }
+
+    pub(super) fn update_strong_commit(&mut self, verifier: &ValidatorVerifier) -> anyhow::Result<()> {
+        let blocks_from_genesis_to_highest_certified = self
+            .path_from_genesis(self.highest_certified_block_id)
+            .unwrap_or_else(Vec::new);
+        for block in &blocks_from_genesis_to_highest_certified {
+            let voting_powers = self.id_to_strong_commit.entry(block.id()).or_insert(0);
+            if *voting_powers == verifier.total_voting_power() {
+                continue;
+            }
+            // a block B is strong committed with fault tolerance x iff
+            // a 3-chain B-B'-B'' with consecutive round numbers starts from B
+            // and each of B, B', B'' are endorsed by x+f+1 votes
+            let parent_id = block.parent_id();
+            let mut parent_round = 0;
+            let mut grandparent_id = block.id();
+            let mut parent_endorsement = 0;
+            if let Some(parent_block) = self.get_block(&parent_id) {
+                parent_round = parent_block.round();
+                if parent_round+1 != block.round() {
+                    continue;
+                }
+                grandparent_id = parent_block.parent_id();
+                // parent_endorsement = *self.id_to_endorsement.get(&parent_id).unwrap();
+                if let Some(endorsement) = self.id_to_endorsement.get(&parent_id) {
+                    parent_endorsement = *endorsement;
+                } else {
+                    continue;
+                }
+            }
+            else {
+                continue;
+            }
+            let mut grandparent_endorsement = 0;
+            if let Some(grandparent_block) = self.get_block(&grandparent_id) {
+                if grandparent_block.round()+1 != parent_round {
+                    continue;
+                }
+                // grandparent_endorsement = *self.id_to_endorsement.get(&grandparent_id).unwrap();
+                if let Some(endorsement) = self.id_to_endorsement.get(&grandparent_id) {
+                    grandparent_endorsement = *endorsement;
+                } else {
+                    continue;
+                }
+            }
+            else {
+                continue;
+            }
+            let endorsement = self.id_to_endorsement.get(&block.id()).unwrap();
+            let fault_tolerance = min(min(endorsement, &parent_endorsement), &grandparent_endorsement);
+            self.id_to_strong_commit.insert(grandparent_id, *fault_tolerance);
+            if *fault_tolerance == verifier.total_voting_power() {
+                if block.timestamp_usecs() == 0 {
+                    continue;
+                }
+                if let Some(time_to_strong_commit) =
+                    duration_since_epoch().checked_sub(Duration::from_micros(block.timestamp_usecs()))
+                {
+                    counters::CREATION_TO_STRONG_COMMIT_S.observe_duration(time_to_strong_commit);
+                }
+            }
+        }
+        self.print_strong_commit();
         Ok(())
     }
 
@@ -617,6 +727,50 @@ where
             );
         }
         info!("-------------------------print endorsers end-------------------------");
+    }
+
+    // print the round numbers and voting power of endorsers of blocks from genesis to current highest certified
+    pub fn print_endorsements(&self) {
+        info!("-------------------------print endorsements start-------------------------");
+        // let blocks_from_genesis_to_highest_certified = self
+        //     .path_from_genesis(self.highest_certified_block_id)
+        //     .unwrap_or_else(Vec::new);
+        let last_k_blocks = self
+            .last_k_blocks(self.highest_certified_block_id, 10)
+            .unwrap_or_else(Vec::new);
+        for block in last_k_blocks {
+            let id = block.id();
+            let round = block.round();
+            let endorsements = self.get_endorsement_for_block(&id).unwrap();
+            info!(
+                "block round {}, endorsements voting power {:?}",
+                round,
+                endorsements
+            );
+        }
+        info!("-------------------------print endorsements end-------------------------");
+    }
+
+    // print the round numbers and fault tolerance of blocks being directly strong committed from genesis to current highest certified
+    pub fn print_strong_commit(&self) {
+        info!("-------------------------print strong commit start-------------------------");
+        let blocks_from_genesis_to_highest_certified = self
+            .path_from_genesis(self.highest_certified_block_id)
+            .unwrap_or_else(Vec::new);
+        // let last_k_blocks = self
+        //     .last_k_blocks(self.highest_certified_block_id, 10)
+        //     .unwrap_or_else(Vec::new);
+        for block in blocks_from_genesis_to_highest_certified {
+            let id = block.id();
+            let round = block.round();
+            let strong_commit = self.get_strong_commit_for_block(&id).unwrap();
+            info!(
+                "block round {}, strong commit {:?}",
+                round,
+                strong_commit
+            );
+        }
+        info!("-------------------------print strong commit end-------------------------");
     }
 }
 

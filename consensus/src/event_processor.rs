@@ -839,6 +839,7 @@ impl<T: Payload> EventProcessor<T> {
     async fn add_vote(&mut self, vote: &Vote) -> anyhow::Result<()> {
         debug!("Add vote: {}", vote);
         let block_id = vote.vote_data().proposed().id();
+        let ts = vote.vote_data().proposed().timestamp_usecs();
         // Check if the block already had a QC
         if self
             .block_store
@@ -853,15 +854,16 @@ impl<T: Payload> EventProcessor<T> {
             .insert_vote(vote, &self.epoch_info.verifier);
         match res {
             VoteReceptionResult::NewQuorumCertificate(qc) => {
-                // Note that the block might not be present locally, in which case we cannot calculate
-                // time between block creation and qc
-                if let Some(time_to_qc) = self.block_store.get_block(block_id).and_then(|block| {
-                    duration_since_epoch()
-                        .checked_sub(Duration::from_micros(block.timestamp_usecs()))
-                }) {
-                    counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
+                if ts>0 {
+                    // Note that the block might not be present locally, in which case we cannot calculate
+                    // time between block creation and qc
+                    if let Some(time_to_qc) = self.block_store.get_block(block_id).and_then(|block| {
+                        duration_since_epoch()
+                            .checked_sub(Duration::from_micros(block.timestamp_usecs()))
+                    }) {
+                        counters::CREATION_TO_QC_S.observe_duration(time_to_qc);
+                    }
                 }
-
                 self.new_qc_aggregated(qc, vote.author()).await
             }
             VoteReceptionResult::NewTimeoutCertificate(tc) => self.new_tc_aggregated(tc).await,

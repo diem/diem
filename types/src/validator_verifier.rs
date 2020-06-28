@@ -270,6 +270,11 @@ impl ValidatorVerifier {
     pub fn quorum_voting_power(&self) -> u64 {
         self.quorum_voting_power
     }
+
+    /// Returns total voting power.
+    pub fn total_voting_power(&self) -> u64 {
+        self.total_voting_power
+    }
 }
 
 impl fmt::Display for ValidatorVerifier {

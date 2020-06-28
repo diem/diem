@@ -60,6 +60,7 @@ fn build_empty_store(
         initial_data,
         Arc::new(EmptyStateComputer),
         10, // max pruned blocks in mem
+        None,
     ))
 }
 

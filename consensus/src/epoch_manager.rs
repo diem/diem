@@ -282,6 +282,7 @@ impl<T: Payload> EpochManager<T> {
             recovery_data,
             Arc::clone(&self.state_computer),
             self.config.max_pruned_blocks_in_mem,
+            Some(epoch_info.verifier.clone()),
         ));
 
         info!("Update SafetyRules");
