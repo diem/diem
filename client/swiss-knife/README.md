@@ -4,7 +4,7 @@
 
 `swiss-knife` expects json input from stdin (wherever applicable) and writes json output to stdout. The output json object will always have two fields: `error_message` and `data`. If the operation succeeds, then `data` is set, otherwise `error_message` is set. Only one of them will be set and the other one will be an empty string.
 
-Typical invocation looks like `swiss-knife operation_name < operation_specific_input.json`. This writes the output json to stdout. Run `cargo run --package swiss-knife -- --help` to print all the supported operations.
+Typical invocation looks like `swiss-knife operation_name < operation_specific_input.json`. This writes the output json to stdout. Run `cargo run -p swiss-knife -- --help` to print all the supported operations.
 
 The `sample_inputs` folder contains a list of sample json inputs for various operations
 
@@ -19,7 +19,7 @@ The `sample_inputs` folder contains a list of sample json inputs for various ope
 # Generate a peer_to_peer_transafer raw transaction (https://github.com/libra/libra/blob/1f86705b/language/transaction-builder/src/generated.rs#L447)
 # For the txn_params json schema, look at the `struct TxnParams`
 # For the script_params json schema, look at the `struct MoveScriptParams`
-$ cargo run --package swiss-knife -- generate-raw-txn < sample_inputs/generate_raw_txn_peer_to_peer_transfer.json
+$ cargo run -p swiss-knife -- generate-raw-txn < sample_inputs/generate_raw_txn_peer_to_peer_transfer.json
 {
   "error_message": "",
   "data": {
@@ -29,7 +29,7 @@ $ cargo run --package swiss-knife -- generate-raw-txn < sample_inputs/generate_r
 }
 
 # Generate a signed transaction from the previous raw transaction and signature
-$ cargo run --package swiss-knife -- generate-signed-txn < sample_inputs/generate_signed_txn_peer_to_peer_transfer.json
+$ cargo run -p swiss-knife -- generate-signed-txn < sample_inputs/generate_signed_txn_peer_to_peer_transfer.json
 
 {
   "error_message": "",
@@ -39,7 +39,7 @@ $ cargo run --package swiss-knife -- generate-signed-txn < sample_inputs/generat
 }
 
 # Generate a preburn raw transaction (https://github.com/libra/libra/blob/1f86705b/language/transaction-builder/src/generated.rs#L480)
-$ cargo run --package swiss-knife -- generate-raw-txn < sample_inputs/generate_raw_txn_preburn.json
+$ cargo run -p swiss-knife -- generate-raw-txn < sample_inputs/generate_raw_txn_preburn.json
 {
   "error_message": "",
   "data": {
@@ -49,7 +49,7 @@ $ cargo run --package swiss-knife -- generate-raw-txn < sample_inputs/generate_r
 }
 
 # Generate a signed transaction from the previous raw transaction and signature
-$ cargo run --package swiss-knife -- generate-signed-txn < sample_inputs/generate_signed_txn_preburn.json
+$ cargo run -p swiss-knife -- generate-signed-txn < sample_inputs/generate_signed_txn_preburn.json
 
 {
   "error_message": "",
@@ -63,11 +63,26 @@ $ cargo run --package swiss-knife -- generate-signed-txn < sample_inputs/generat
 
 ## Generate a Ed25519 Keypair
 
-Generate a Ed25519 Keypair and corresponding libra account address and auth key associated with this keypair. seed is an unsigned 64 bit integer.
+Generate a Ed25519 Keypair and corresponding libra account address and auth key associated with this keypair.
+Optionally provide a seed to deterministically generate a Ed25519 Keypair
 
 
 ```shell script
-$ cargo run --package swiss-knife -- generate-test-ed25519-keypair --seed 0
+# Generate a random keypair
+$ cargo run -p swiss-knife -- generate-test-ed25519-keypair
+
+{
+  "error_message": "",
+  "data": {
+    "libra_account_address": "e1b3d22871989e9fd9dc6814b2f4fc41",
+    "libra_auth_key": "5a06116a9801533249b06eeef54db2f1e1b3d22871989e9fd9dc6814b2f4fc41",
+    "private_key": "b2f7f581d6de3c06a822fd6e7e8265fbc00f8401696a5bdc34f5a6d2ff3f922f",
+    "public_key": "edd0f6de342a1e6a7236d6244f23d83eedfcecd059a386c85055701498e77033"
+  }
+}
+
+# Generate a deterministic keypair with the provided u64 seed
+$ cargo run -p swiss-knife -- generate-test-ed25519-keypair --seed 0
 
 {
   "error_message": "",
@@ -83,7 +98,7 @@ $ cargo run --package swiss-knife -- generate-test-ed25519-keypair --seed 0
 ## Sign a payload using a Ed25519 Private Key
 
 ```shell script
-$ cargo run --package swiss-knife -- sign-payload-using-ed25519 < sample_inputs/sign_payload.json
+$ cargo run -p swiss-knife -- sign-payload-using-ed25519 < sample_inputs/sign_payload.json
 
 {
   "error_message": "",
@@ -96,7 +111,7 @@ $ cargo run --package swiss-knife -- sign-payload-using-ed25519 < sample_inputs/
 ## Verify a payload signature using a Ed25519 Public Key
 
 ```shell script
-$ cargo run --package swiss-knife -- verify-ed25519-signature < sample_inputs/verify_signature_payload.json
+$ cargo run -p swiss-knife -- verify-ed25519-signature < sample_inputs/verify_signature_payload.json
 
 {
   "error_message": "",

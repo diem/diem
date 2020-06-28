@@ -28,7 +28,7 @@ enum Command {
     /// Generates a Ed25519Keypair for testing from the given u64 seed.
     GenerateTestEd25519Keypair {
         #[structopt(long)]
-        seed: u64,
+        seed: Option<u64>,
     },
     /// Generates a signature using the provided Ed25519 private key.
     SignPayloadUsingEd25519,
@@ -256,8 +256,8 @@ struct GenerateKeypairResponse {
     pub libra_account_address: String,
 }
 
-fn generate_key_pair(seed: u64) -> GenerateKeypairResponse {
-    let mut rng = StdRng::seed_from_u64(seed);
+fn generate_key_pair(seed: Option<u64>) -> GenerateKeypairResponse {
+    let mut rng = StdRng::seed_from_u64(seed.unwrap_or_else(rand::random));
     let keypair: KeyPair<Ed25519PrivateKey, Ed25519PublicKey> =
         Ed25519PrivateKey::generate(&mut rng).into();
     let libra_auth_key = AuthenticationKey::ed25519(&keypair.public_key);
