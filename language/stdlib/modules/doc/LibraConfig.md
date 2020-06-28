@@ -26,6 +26,7 @@
 -  [Specification](#0x1_LibraConfig_Specification)
     -  [Function `publish_new_config_with_capability`](#0x1_LibraConfig_Specification_publish_new_config_with_capability)
     -  [Function `publish_new_config`](#0x1_LibraConfig_Specification_publish_new_config)
+    -  [Function `reconfigure_`](#0x1_LibraConfig_Specification_reconfigure_)
 
 
 
@@ -589,41 +590,6 @@ Will fail if the account is not association root
 ## Specification
 
 
-Specifications of LibraConfig are very incomplete.  There are just a few
-definitions that are used by RegisteredCurrencies
-
-
-<pre><code>pragma verify = <b>true</b>;
-</code></pre>
-
-
-Spec version of
-<code><a href="#0x1_LibraConfig_get">LibraConfig::get</a>&lt;Config&gt;</code>.
-
-
-<a name="0x1_LibraConfig_spec_get"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraConfig_spec_get">spec_get</a>&lt;Config&gt;(): Config {
-    <b>global</b>&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(0xA550C18).payload
-}
-</code></pre>
-
-
-Spec version of
-<code>LibraConfig::is_published&lt;Config&gt;</code>.
-
-
-<a name="0x1_LibraConfig_spec_is_published"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(addr: address): bool {
-    exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(addr)
-}
-</code></pre>
-
-
-
 <a name="0x1_LibraConfig_Specification_publish_new_config_with_capability"></a>
 
 ### Function `publish_new_config_with_capability`
@@ -634,9 +600,12 @@ Spec version of
 
 
 
+TODO(wrwg): enable
+aborts_if spec_is_published<Config>();
 
-<pre><code><b>ensures</b> <b>old</b>(!<a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(config_account)));
-<b>ensures</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(config_account));
+
+<pre><code><b>ensures</b> <b>old</b>(!<a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;());
+<b>ensures</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;();
 </code></pre>
 
 
@@ -651,7 +620,76 @@ Spec version of
 
 
 
+TODO(wrwg): enable
+aborts_if spec_is_published<Config>();
 
-<pre><code><b>ensures</b> <b>old</b>(!<a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(config_account)));
-<b>ensures</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(config_account));
+
+<pre><code><b>ensures</b> <b>old</b>(!<a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;());
+<b>ensures</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;();
+</code></pre>
+
+
+
+<a name="0x1_LibraConfig_Specification_reconfigure_"></a>
+
+### Function `reconfigure_`
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraConfig_reconfigure_">reconfigure_</a>()
+</code></pre>
+
+
+
+Consider only states for verification where this function does not abort
+for a caller. This prevents that callers need to propagate the abort conditions of this
+function up the call chain. The abort conditions of this function represent
+internal programming errors.
+
+> TODO(wrwg): we should have a convention to distinguish error codes resulting from
+contract program errors and from errors coming from inputs to transaction
+scripts. In most cases, only the later one should be propagated upwards to callers.
+For now, we use the pragma below to simulate this.
+
+
+<pre><code>pragma assume_no_abort_from_here = <b>true</b>;
+</code></pre>
+
+
+
+> TODO(wrwg): We've removed an invariant in RegisteredCurrencies that config is only stored
+Specifications of LibraConfig are very incomplete.  There are just a few
+definitions that are used by RegisteredCurrencies
+
+
+<pre><code>pragma verify = <b>true</b>;
+<a name="0x1_LibraConfig_spec_has_config"></a>
+<b>define</b> <a href="#0x1_LibraConfig_spec_has_config">spec_has_config</a>(): bool {
+    exists&lt;<a href="#0x1_LibraConfig_Configuration">Configuration</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
+}
+</code></pre>
+
+
+Spec version of
+<code><a href="#0x1_LibraConfig_get">LibraConfig::get</a>&lt;Config&gt;</code>.
+
+
+<a name="0x1_LibraConfig_spec_get"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraConfig_spec_get">spec_get</a>&lt;Config&gt;(): Config {
+    <b>global</b>&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()).payload
+}
+</code></pre>
+
+
+Spec version of
+<code>LibraConfig::is_published&lt;Config&gt;</code>.
+
+
+<a name="0x1_LibraConfig_spec_is_published"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(): bool {
+    exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
+}
 </code></pre>

@@ -119,6 +119,78 @@ pub fun Vector::empty<$tv0>(): vector<#0> {
 }
 
 
+pub fun Vector::index_of<$tv0>(v: &vector<#0>, e: &#0): (bool, u64) {
+    var i: u64
+    var len: u64
+    var $t4: u64
+    var $t5: &vector<#0>
+    var $t6: u64
+    var $t7: u64
+    var $t8: u64
+    var $t9: bool
+    var $t10: &vector<#0>
+    var $t11: u64
+    var $t12: &#0
+    var $t13: &#0
+    var $t14: bool
+    var $t15: &vector<#0>
+    var $t16: &#0
+    var $t17: bool
+    var $t18: u64
+    var $t19: u64
+    var $t20: u64
+    var $t21: u64
+    var $t22: &vector<#0>
+    var $t23: &#0
+    var $t24: bool
+    var $t25: u64
+    $t4 := 0
+    i := $t4
+    $t5 := copy(v)
+    $t6 := Vector::length<#0>($t5)
+    len := $t6
+    goto L6
+    L6:
+    $t7 := copy(i)
+    $t8 := copy(len)
+    $t9 := <($t7, $t8)
+    if ($t9) goto L0 else goto L1
+    L1:
+    goto L2
+    L0:
+    $t10 := copy(v)
+    $t11 := copy(i)
+    $t12 := Vector::borrow<#0>($t10, $t11)
+    $t13 := copy(e)
+    $t14 := ==($t12, $t13)
+    if ($t14) goto L3 else goto L4
+    L4:
+    goto L5
+    L3:
+    $t15 := move(v)
+    destroy($t15)
+    $t16 := move(e)
+    destroy($t16)
+    $t17 := true
+    $t18 := copy(i)
+    return ($t17, $t18)
+    L5:
+    $t19 := copy(i)
+    $t20 := 1
+    $t21 := +($t19, $t20)
+    i := $t21
+    goto L6
+    L2:
+    $t22 := move(v)
+    destroy($t22)
+    $t23 := move(e)
+    destroy($t23)
+    $t24 := false
+    $t25 := 0
+    return ($t24, $t25)
+}
+
+
 pub fun Vector::is_empty<$tv0>(v: &vector<#0>): bool {
     var $t1: &vector<#0>
     var $t2: u64
@@ -296,6 +368,22 @@ pub fun Vector::reverse<$tv0>(v: &mut vector<#0>) {
     $t27 := move(v)
     destroy($t27)
     return ()
+}
+
+
+pub fun Vector::singleton<$tv0>(e: #0): vector<#0> {
+    var v: vector<#0>
+    var $t2: vector<#0>
+    var $t3: &mut vector<#0>
+    var $t4: #0
+    var $t5: vector<#0>
+    $t2 := Vector::empty<#0>()
+    v := $t2
+    $t3 := borrow_local(v)
+    $t4 := move(e)
+    Vector::push_back<#0>($t3, $t4)
+    $t5 := move(v)
+    return $t5
 }
 
 

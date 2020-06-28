@@ -1,5 +1,5 @@
-// dep: ../tests/sources/stdlib/modules/Signer.move
-// dep: ../tests/sources/stdlib/modules/vector.move
+// dep: ../../stdlib/modules/Signer.move
+// dep: ../../stdlib/modules/Vector.move
 
 address 0x1 {
 

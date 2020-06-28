@@ -813,9 +813,9 @@ Returns the parent address of a VASP.
 
 
 <pre><code><b>aborts_if</b> !exists&lt;<a href="LibraTimestamp.md#0x1_LibraTimestamp_CurrentTimeMicroseconds">LibraTimestamp::CurrentTimeMicroseconds</a>&gt;(<a href="#0x1_VASP_spec_root_address">spec_root_address</a>());
-<b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_assoc_unix_time">LibraTimestamp::assoc_unix_time</a>() + <a href="#0x1_VASP_spec_cert_lifetime">spec_cert_lifetime</a>() &gt; max_u64();
+<b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() + <a href="#0x1_VASP_spec_cert_lifetime">spec_cert_lifetime</a>() &gt; max_u64();
 <b>ensures</b> parent_vasp.expiration_date
-     == <a href="LibraTimestamp.md#0x1_LibraTimestamp_assoc_unix_time">LibraTimestamp::assoc_unix_time</a>() + <a href="#0x1_VASP_spec_cert_lifetime">spec_cert_lifetime</a>();
+     == <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() + <a href="#0x1_VASP_spec_cert_lifetime">spec_cert_lifetime</a>();
 </code></pre>
 
 
@@ -848,9 +848,9 @@ Returns the parent address of a VASP.
 
 
 
-<pre><code><b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(vasp));
-<b>ensures</b> <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(vasp));
-<b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(vasp)) == 0;
+<pre><code><b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp));
+<b>ensures</b> <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp));
+<b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp)) == 0;
 </code></pre>
 
 
@@ -866,15 +866,15 @@ Returns the parent address of a VASP.
 
 
 
-<pre><code><b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(child));
-<b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent));
-<b>aborts_if</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent)) + 1
+<pre><code><b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child));
+<b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent));
+<b>aborts_if</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent)) + 1
         &gt; max_u64();
-<b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent))
-     == <b>old</b>(<a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent))) + 1;
-<b>ensures</b> <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(child));
-<b>ensures</b> <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(child))
-     == <a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent);
+<b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent))
+     == <b>old</b>(<a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent))) + 1;
+<b>ensures</b> <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child));
+<b>ensures</b> <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child))
+     == <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent);
 </code></pre>
 
 
@@ -890,8 +890,8 @@ Returns the parent address of a VASP.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent_vasp));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent_vasp)).base_url
+<pre><code><b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp)).base_url
      == new_url;
 </code></pre>
 
@@ -908,7 +908,7 @@ Returns the parent address of a VASP.
 
 
 
-<pre><code><b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent_vasp));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(parent_vasp)).compliance_public_key
+<pre><code><b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp)).compliance_public_key
      == new_key;
 </code></pre>

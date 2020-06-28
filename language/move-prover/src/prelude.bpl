@@ -802,6 +802,12 @@ procedure {:inline 1} $AddU64(src1: $Value, src2: $Value) returns (dst: $Value)
     dst := $Integer(i#$Integer(src1) + i#$Integer(src2));
 }
 
+procedure {:inline 1} $AddU64_unchecked(src1: $Value, src2: $Value) returns (dst: $Value)
+{{backend.type_requires}} $IsValidU64(src1) && $IsValidU64(src2);
+{
+    dst := $Integer(i#$Integer(src1) + i#$Integer(src2));
+}
+
 procedure {:inline 1} $AddU128(src1: $Value, src2: $Value) returns (dst: $Value)
 {{backend.type_requires}} $IsValidU128(src1) && $IsValidU128(src2);
 {
@@ -809,6 +815,12 @@ procedure {:inline 1} $AddU128(src1: $Value, src2: $Value) returns (dst: $Value)
         $abort_flag := true;
         return;
     }
+    dst := $Integer(i#$Integer(src1) + i#$Integer(src2));
+}
+
+procedure {:inline 1} $AddU128_unchecked(src1: $Value, src2: $Value) returns (dst: $Value)
+{{backend.type_requires}} $IsValidU128(src1) && $IsValidU128(src2);
+{
     dst := $Integer(i#$Integer(src1) + i#$Integer(src2));
 }
 
@@ -1332,8 +1344,9 @@ ensures res == $LCS_serialize($m, $txn, ta, v);
 ensures $IsValidU8Vector(res);    // result is a legal vector of U8s.
 
 // ==================================================================================
-// Native Signer::get_address
-function $Signer_get_address($m: $Memory, $txn: $Transaction, signer: $Value): $Value
+// Native Signer::spec_address_of
+
+function {:inline} $Signer_spec_address_of($m: $Memory, $txn: $Transaction, signer: $Value): $Value
 {
     // A signer is currently identical to an address.
     signer
@@ -1342,13 +1355,27 @@ function $Signer_get_address($m: $Memory, $txn: $Transaction, signer: $Value): $
 // ==================================================================================
 // FixedPoint32 intrinsic functions
 
-procedure {:inline} $FixedPoint32_multiply_u64(num: $Value, multiplier: $Value) returns (res: $Value);
+procedure $FixedPoint32_multiply_u64(num: $Value, multiplier: $Value) returns (res: $Value);
 ensures $IsValidU64(res);
 
-procedure {:inline} $FixedPoint32_divide_u64(num: $Value, multiplier: $Value) returns (res: $Value);
+procedure $FixedPoint32_divide_u64(num: $Value, multiplier: $Value) returns (res: $Value);
 ensures $IsValidU64(res);
 
-procedure {:inline} $FixedPoint32_create_from_rational(numerator: $Value, denominator: $Value) returns (res: $Value);
+procedure $FixedPoint32_create_from_rational(numerator: $Value, denominator: $Value) returns (res: $Value);
 // The predicate in the following line is equivalent to $FixedPoint32_FixedPoint32_is_well_formed(res),
 // but written this way to avoid the forward declaration.
 ensures $Vector_is_well_formed(res) && $vlen(res) == 1 && $IsValidU64($SelectField(res, 0));
+
+// ==================================================================================
+// Mocked out Event module
+
+procedure {:inline 1} $Event_new_event_handle(t: $TypeValue, signer: $Value) returns (res: $Value) {
+    res := $DefaultValue();
+}
+
+procedure {:inline 1} $Event_publish_generator(account: $Value) {
+}
+
+procedure {:inline 1} $Event_emit_event(t: $TypeValue, handler: $Value, msg: $Value) returns (res: $Value) {
+    res := handler;
+}

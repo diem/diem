@@ -73,6 +73,13 @@ pub const REQUIRES_IF_ABORTS: &str = "requires_if_aborts";
 /// Pragma indicating that the function will run smoke tests
 pub const ALWAYS_ABORTS_TEST_PRAGMA: &str = "always_aborts_test";
 
+/// Pragma indicating that adding u64 or u128 values should not be checked
+/// for overflow.
+pub const ADDITION_OVERFLOW_UNCHECKED_PRAGMA: &str = "addition_overflow_unchecked";
+
+/// Pragma indicating that aborts from this function shall be ignored.
+pub const ASSUME_NO_ABORT_FROM_HERE_PRAGMA: &str = "assume_no_abort_from_here";
+
 // =================================================================================================
 /// # Locations
 

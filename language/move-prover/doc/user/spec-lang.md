@@ -626,3 +626,5 @@ verification success.
 | `aborts_if_is_partial` | Allows a function to abort [under non-specified conditions](#abortsif-condition).
 | `aborts_if_is_strict`  | Disallows a function to abort even if no conditions are specified.
 | `requires_if_aborts`   | Makes a requires condition mandatory to hold even in cases where the function is specified to abort.
+| `addition_overflow_unchecked` | Makes addition of large integers (`u64` and `u128`) unchecked, avoiding the need to specify `aborts_if` for those.
+| `assume_no_abort_from_here` | Assumes that this function, if called from elsewhere, does not abort.

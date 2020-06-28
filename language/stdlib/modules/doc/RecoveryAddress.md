@@ -417,12 +417,12 @@ Returns true if
 
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(recovery_account));
-<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(recovery_account));
+<pre><code><b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
+<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
 <b>aborts_if</b> !<a href="LibraAccount.md#0x1_LibraAccount_spec_holds_own_key_rotation_cap">LibraAccount::spec_holds_own_key_rotation_cap</a>(
-    <a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(recovery_account));
-<b>aborts_if</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(recovery_account));
-<b>ensures</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(recovery_account));
+    <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
+<b>aborts_if</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
+<b>ensures</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
 </code></pre>
 
 
@@ -442,8 +442,8 @@ Returns true if
 <b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover);
 <b>aborts_if</b> len(new_key) != 32;
 <b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_address, to_recover);
-<b>aborts_if</b> !(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(account) == recovery_address
-            || <a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(account) == to_recover);
+<b>aborts_if</b> !(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) == recovery_address
+            || <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) == to_recover);
 <b>ensures</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover).authentication_key == new_key;
 </code></pre>
 
@@ -460,13 +460,13 @@ Returns true if
 
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(to_recover_account));
+<pre><code><b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_recover_account));
 <b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address);
 <b>aborts_if</b> <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(recovery_address)
-       != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(to_recover_account));
+       != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_recover_account));
 <b>aborts_if</b> !<a href="LibraAccount.md#0x1_LibraAccount_spec_holds_own_key_rotation_cap">LibraAccount::spec_holds_own_key_rotation_cap</a>(
-    <a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(to_recover_account));
-<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(to_recover_account));
+    <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_recover_account));
+<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_recover_account));
 <b>ensures</b> <a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)[
-    len(<a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)) - 1].account_address == <a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(to_recover_account);
+    len(<a href="#0x1_RecoveryAddress_spec_get_rotation_caps">spec_get_rotation_caps</a>(recovery_address)) - 1].account_address == <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(to_recover_account);
 </code></pre>

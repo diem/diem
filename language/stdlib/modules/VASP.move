@@ -284,9 +284,9 @@ module VASP {
 
     spec fun recertify_vasp {
         aborts_if !exists<LibraTimestamp::CurrentTimeMicroseconds>(spec_root_address());
-        aborts_if LibraTimestamp::assoc_unix_time() + spec_cert_lifetime() > max_u64();
+        aborts_if LibraTimestamp::spec_now_microseconds() + spec_cert_lifetime() > max_u64();
         ensures parent_vasp.expiration_date
-             == LibraTimestamp::assoc_unix_time() + spec_cert_lifetime();
+             == LibraTimestamp::spec_now_microseconds() + spec_cert_lifetime();
     }
 
     spec fun decertify_vasp {
@@ -295,32 +295,32 @@ module VASP {
     }
 
     spec fun publish_parent_vasp_credential {
-        aborts_if spec_is_vasp(Signer::get_address(vasp));
-        ensures spec_is_parent_vasp(Signer::get_address(vasp));
-        ensures spec_get_num_children(Signer::get_address(vasp)) == 0;
+        aborts_if spec_is_vasp(Signer::spec_address_of(vasp));
+        ensures spec_is_parent_vasp(Signer::spec_address_of(vasp));
+        ensures spec_get_num_children(Signer::spec_address_of(vasp)) == 0;
     }
 
     spec fun publish_child_vasp_credential {
-        aborts_if spec_is_vasp(Signer::get_address(child));
-        aborts_if !spec_is_parent_vasp(Signer::get_address(parent));
-        aborts_if spec_get_num_children(Signer::get_address(parent)) + 1
+        aborts_if spec_is_vasp(Signer::spec_address_of(child));
+        aborts_if !spec_is_parent_vasp(Signer::spec_address_of(parent));
+        aborts_if spec_get_num_children(Signer::spec_address_of(parent)) + 1
                 > max_u64();
-        ensures spec_get_num_children(Signer::get_address(parent))
-             == old(spec_get_num_children(Signer::get_address(parent))) + 1;
-        ensures spec_is_child_vasp(Signer::get_address(child));
-        ensures spec_parent_address(Signer::get_address(child))
-             == Signer::get_address(parent);
+        ensures spec_get_num_children(Signer::spec_address_of(parent))
+             == old(spec_get_num_children(Signer::spec_address_of(parent))) + 1;
+        ensures spec_is_child_vasp(Signer::spec_address_of(child));
+        ensures spec_parent_address(Signer::spec_address_of(child))
+             == Signer::spec_address_of(parent);
     }
 
     spec fun rotate_base_url {
-        aborts_if !spec_is_parent_vasp(Signer::get_address(parent_vasp));
-        ensures global<ParentVASP>(Signer::get_address(parent_vasp)).base_url
+        aborts_if !spec_is_parent_vasp(Signer::spec_address_of(parent_vasp));
+        ensures global<ParentVASP>(Signer::spec_address_of(parent_vasp)).base_url
              == new_url;
     }
 
     spec fun rotate_compliance_public_key {
-        aborts_if !spec_is_parent_vasp(Signer::get_address(parent_vasp));
-        ensures global<ParentVASP>(Signer::get_address(parent_vasp)).compliance_public_key
+        aborts_if !spec_is_parent_vasp(Signer::spec_address_of(parent_vasp));
+        ensures global<ParentVASP>(Signer::spec_address_of(parent_vasp)).compliance_public_key
              == new_key;
     }
 }

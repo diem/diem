@@ -45,6 +45,13 @@ module LibraTimestamp {
         move_to(association, TimeHasStarted{});
     }
 
+    /// Helper functions for tests to reset the time-has-started, and pretend to be in genesis.
+    /// > TODO(wrwg): we should have a capability which only tests can have to be able to call
+    /// > this function.
+    public fun reset_time_has_started_for_test() acquires TimeHasStarted {
+        let TimeHasStarted{} = move_from<TimeHasStarted>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+    }
+
     /// Updates the wall clock time by consensus. Requires VM privilege and will be invoked during block prologue.
     public fun update_global_time(
         account: &signer,
@@ -98,13 +105,18 @@ module LibraTimestamp {
             !exists<TimeHasStarted>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
         }
 
+        /// Specification version of the `Self::is_not_initialized` function.
+        define spec_is_not_initialized(): bool {
+            !root_ctm_initialized() || spec_now_microseconds() == 0
+        }
+
         /// True if the association root account has a CurrentTimeMicroseconds.
         define root_ctm_initialized(): bool {
             exists<CurrentTimeMicroseconds>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
         }
 
         /// Auxiliary function to get the association's Unix time in microseconds.
-        define assoc_unix_time(): u64 {
+        define spec_now_microseconds(): u64 {
             global<CurrentTimeMicroseconds>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()).microseconds
         }
     }
@@ -122,14 +134,14 @@ module LibraTimestamp {
     }
 
     spec module {
-        apply InitializationPersists to *;
+        apply InitializationPersists to * except reset_time_has_started_for_test;
     }
 
     /// ## Global Clock Time Progression
 
     spec schema GlobalWallClockIsMonotonic {
         /// The global wall clock time never decreases.
-        ensures old(root_ctm_initialized()) ==> (old(assoc_unix_time()) <= assoc_unix_time());
+        ensures old(root_ctm_initialized()) ==> (old(spec_now_microseconds()) <= spec_now_microseconds());
     }
     spec module {
         apply GlobalWallClockIsMonotonic to *;
@@ -138,31 +150,31 @@ module LibraTimestamp {
     // **************** FUNCTION SPECIFICATIONS ****************
 
     spec fun initialize {
-        aborts_if Signer::get_address(association) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+        aborts_if Signer::spec_address_of(association) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
         aborts_if root_ctm_initialized();
         ensures root_ctm_initialized();
-        ensures assoc_unix_time() == 0;
+        ensures spec_now_microseconds() == 0;
     }
 
     spec fun set_time_has_started {
-        aborts_if Signer::get_address(association) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+        aborts_if Signer::spec_address_of(association) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
         aborts_if !spec_is_genesis();
         aborts_if !root_ctm_initialized();
-        aborts_if assoc_unix_time() != 0;
+        aborts_if spec_now_microseconds() != 0;
         ensures !spec_is_genesis();
     }
 
     spec fun update_global_time {
-        aborts_if Signer::get_address(account) != CoreAddresses::SPEC_VM_RESERVED_ADDRESS();
+        aborts_if Signer::spec_address_of(account) != CoreAddresses::SPEC_VM_RESERVED_ADDRESS();
         aborts_if !root_ctm_initialized();
-        aborts_if (proposer == CoreAddresses::SPEC_VM_RESERVED_ADDRESS()) && (timestamp != assoc_unix_time());
-        aborts_if (proposer != CoreAddresses::SPEC_VM_RESERVED_ADDRESS()) && !(timestamp > assoc_unix_time());
-        ensures assoc_unix_time() == timestamp;
+        aborts_if (proposer == CoreAddresses::SPEC_VM_RESERVED_ADDRESS()) && (timestamp != spec_now_microseconds());
+        aborts_if (proposer != CoreAddresses::SPEC_VM_RESERVED_ADDRESS()) && !(timestamp > spec_now_microseconds());
+        ensures spec_now_microseconds() == timestamp;
     }
 
     spec fun now_microseconds {
         aborts_if !exists<CurrentTimeMicroseconds>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
-        ensures result == assoc_unix_time();
+        ensures result == spec_now_microseconds();
     }
 
     spec fun is_genesis {
@@ -172,7 +184,7 @@ module LibraTimestamp {
 
     spec fun is_not_initialized {
         aborts_if false;
-        ensures result == !root_ctm_initialized() || assoc_unix_time() == 0;
+        ensures result == spec_is_not_initialized();
     }
 }
 

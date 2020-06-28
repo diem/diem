@@ -9,6 +9,7 @@
 -  [Resource `TimeHasStarted`](#0x1_LibraTimestamp_TimeHasStarted)
 -  [Function `initialize`](#0x1_LibraTimestamp_initialize)
 -  [Function `set_time_has_started`](#0x1_LibraTimestamp_set_time_has_started)
+-  [Function `reset_time_has_started_for_test`](#0x1_LibraTimestamp_reset_time_has_started_for_test)
 -  [Function `update_global_time`](#0x1_LibraTimestamp_update_global_time)
 -  [Function `now_microseconds`](#0x1_LibraTimestamp_now_microseconds)
 -  [Function `is_genesis`](#0x1_LibraTimestamp_is_genesis)
@@ -150,6 +151,33 @@ Marks that time has started and genesis has finished. This can only be called fr
         2
     );
     move_to(association, <a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>{});
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraTimestamp_reset_time_has_started_for_test"></a>
+
+## Function `reset_time_has_started_for_test`
+
+Helper functions for tests to reset the time-has-started, and pretend to be in genesis.
+> TODO(wrwg): we should have a capability which only tests can have to be able to call
+> this function.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_reset_time_has_started_for_test">reset_time_has_started_for_test</a>()
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_reset_time_has_started_for_test">reset_time_has_started_for_test</a>() <b>acquires</b> <a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a> {
+    <b>let</b> <a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>{} = move_from&lt;<a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
 }
 </code></pre>
 
@@ -328,6 +356,19 @@ Specification version of the
 </code></pre>
 
 
+Specification version of the
+<code><a href="#0x1_LibraTimestamp_is_not_initialized">Self::is_not_initialized</a></code> function.
+
+
+<a name="0x1_LibraTimestamp_spec_is_not_initialized"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_is_not_initialized">spec_is_not_initialized</a>(): bool {
+    !<a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>() || <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() == 0
+}
+</code></pre>
+
+
 True if the association root account has a CurrentTimeMicroseconds.
 
 
@@ -343,10 +384,10 @@ True if the association root account has a CurrentTimeMicroseconds.
 Auxiliary function to get the association's Unix time in microseconds.
 
 
-<a name="0x1_LibraTimestamp_assoc_unix_time"></a>
+<a name="0x1_LibraTimestamp_spec_now_microseconds"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_assoc_unix_time">assoc_unix_time</a>(): u64 {
+<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>(): u64 {
     <b>global</b>&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()).microseconds
 }
 </code></pre>
@@ -385,7 +426,7 @@ If the
 
 
 
-<pre><code><b>apply</b> <a href="#0x1_LibraTimestamp_InitializationPersists">InitializationPersists</a> <b>to</b> *;
+<pre><code><b>apply</b> <a href="#0x1_LibraTimestamp_InitializationPersists">InitializationPersists</a> <b>to</b> * <b>except</b> reset_time_has_started_for_test;
 </code></pre>
 
 
@@ -402,7 +443,7 @@ The global wall clock time never decreases.
 
 
 <pre><code><b>schema</b> <a href="#0x1_LibraTimestamp_GlobalWallClockIsMonotonic">GlobalWallClockIsMonotonic</a> {
-    <b>ensures</b> <b>old</b>(<a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>()) ==&gt; (<b>old</b>(<a href="#0x1_LibraTimestamp_assoc_unix_time">assoc_unix_time</a>()) &lt;= <a href="#0x1_LibraTimestamp_assoc_unix_time">assoc_unix_time</a>());
+    <b>ensures</b> <b>old</b>(<a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>()) ==&gt; (<b>old</b>(<a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>()) &lt;= <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>());
 }
 </code></pre>
 
@@ -425,10 +466,10 @@ The global wall clock time never decreases.
 
 
 
-<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(association) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(association) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
 <b>aborts_if</b> <a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>();
 <b>ensures</b> <a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>();
-<b>ensures</b> <a href="#0x1_LibraTimestamp_assoc_unix_time">assoc_unix_time</a>() == 0;
+<b>ensures</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() == 0;
 </code></pre>
 
 
@@ -444,10 +485,10 @@ The global wall clock time never decreases.
 
 
 
-<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(association) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(association) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
 <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_spec_is_genesis">spec_is_genesis</a>();
 <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>();
-<b>aborts_if</b> <a href="#0x1_LibraTimestamp_assoc_unix_time">assoc_unix_time</a>() != 0;
+<b>aborts_if</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() != 0;
 <b>ensures</b> !<a href="#0x1_LibraTimestamp_spec_is_genesis">spec_is_genesis</a>();
 </code></pre>
 
@@ -464,11 +505,11 @@ The global wall clock time never decreases.
 
 
 
-<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>();
+<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>();
 <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>();
-<b>aborts_if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>()) && (timestamp != <a href="#0x1_LibraTimestamp_assoc_unix_time">assoc_unix_time</a>());
-<b>aborts_if</b> (proposer != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>()) && !(timestamp &gt; <a href="#0x1_LibraTimestamp_assoc_unix_time">assoc_unix_time</a>());
-<b>ensures</b> <a href="#0x1_LibraTimestamp_assoc_unix_time">assoc_unix_time</a>() == timestamp;
+<b>aborts_if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>()) && (timestamp != <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>());
+<b>aborts_if</b> (proposer != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>()) && !(timestamp &gt; <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>());
+<b>ensures</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() == timestamp;
 </code></pre>
 
 
@@ -485,7 +526,7 @@ The global wall clock time never decreases.
 
 
 <pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
-<b>ensures</b> result == <a href="#0x1_LibraTimestamp_assoc_unix_time">assoc_unix_time</a>();
+<b>ensures</b> result == <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
 </code></pre>
 
 
@@ -519,5 +560,5 @@ The global wall clock time never decreases.
 
 
 <pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> result == !<a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>() || <a href="#0x1_LibraTimestamp_assoc_unix_time">assoc_unix_time</a>() == 0;
+<b>ensures</b> result == <a href="#0x1_LibraTimestamp_spec_is_not_initialized">spec_is_not_initialized</a>();
 </code></pre>

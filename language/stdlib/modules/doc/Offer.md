@@ -287,9 +287,9 @@ Offer a struct to the account under address
 placing the offer under the signer's address
 
 
-<pre><code><b>aborts_if</b> exists&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(account));
-<b>ensures</b> exists&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(account));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(<a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(account)) == <a href="#0x1_Offer">Offer</a>&lt;Offered&gt; { offered: offered, for: for };
+<pre><code><b>aborts_if</b> exists&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<b>ensures</b> exists&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)) == <a href="#0x1_Offer">Offer</a>&lt;Offered&gt; { offered: offered, for: for };
 </code></pre>
 
 
@@ -312,7 +312,7 @@ Ensures that the offered struct under
 
 
 <pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
-<b>aborts_if</b> !<a href="#0x1_Offer_is_allowed_recipient">is_allowed_recipient</a>&lt;Offered&gt;(offer_address, <a href="Signer.md#0x1_Signer_get_address">Signer::get_address</a>(account));
+<b>aborts_if</b> !<a href="#0x1_Offer_is_allowed_recipient">is_allowed_recipient</a>&lt;Offered&gt;(offer_address, <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
 <b>ensures</b> <b>old</b>(exists&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address)) && !exists&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
 <b>ensures</b> result == <b>old</b>(<b>global</b>&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address).offered);
 </code></pre>

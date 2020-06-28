@@ -3,8 +3,8 @@ error: post-condition does not hold
 
     ┌── tests/sources/functional/resources.move:39:6 ───
     │
- 39 │      ensures exists<R>(Signer::get_address(account));
-    │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 39 │      ensures exists<R>(Signer::spec_address_of(account));
+    │      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
     =     at tests/sources/functional/resources.move:32:5: create_resource_incorrect (entry)
     =     at ../stdlib/modules/Signer.move:13:5: address_of (entry)

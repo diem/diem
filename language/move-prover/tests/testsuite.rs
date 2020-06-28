@@ -16,7 +16,6 @@ use log::{debug, warn};
 
 const STDLIB_FLAGS: &[&str] = &["--dependency=../stdlib/modules"];
 const STDLIB_FLAGS_UNVERIFIED: &[&str] = &["--dependency=../stdlib/modules", "--verify=none"];
-const LEGACY_STDLIB_FLAGS: &[&str] = &["--dependency=tests/sources/stdlib/modules"];
 
 fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     let no_boogie = read_env_var("BOOGIE_EXE").is_empty() || read_env_var("Z3_EXE").is_empty();
@@ -75,12 +74,6 @@ fn get_flags(temp_dir: &Path, path: &Path) -> anyhow::Result<(Vec<String>, Optio
         || path_str.contains("tests/sources/regression/")
     {
         (STDLIB_FLAGS, Some(path.with_extension("exp")), "func_")
-    } else if path_str.contains("tests/sources/stdlib/") {
-        (
-            LEGACY_STDLIB_FLAGS,
-            Some(path.with_extension("exp")),
-            "old_std_",
-        )
     } else {
         return Err(anyhow!(
             "do not know how to run tests for `{}` because it's directory is not configured",
@@ -108,9 +101,9 @@ datatest_stable::harness!(
     // Run tests for the content of our tests directory.
     test_runner,
     "tests/sources",
-    r".*\.move",
+    r".*\.move$",
     // Run tests for the content of the stdlib directory.
     test_runner_stdlib,
     "../stdlib",
-    r".*\.move"
+    r".*\.move$"
 );
