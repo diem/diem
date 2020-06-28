@@ -18,6 +18,7 @@
 -  [Function `get_consensus_pubkey`](#0x1_ValidatorConfig_get_consensus_pubkey)
 -  [Function `get_validator_network_identity_pubkey`](#0x1_ValidatorConfig_get_validator_network_identity_pubkey)
 -  [Function `get_validator_network_address`](#0x1_ValidatorConfig_get_validator_network_address)
+-  [Specification](#0x1_ValidatorConfig_Specification)
 
 
 
@@ -415,3 +416,21 @@
 
 
 </details>
+
+<a name="0x1_ValidatorConfig_Specification"></a>
+
+## Specification
+
+
+
+<pre><code>pragma verify = <b>false</b>;
+<a name="0x1_ValidatorConfig_spec_get_config"></a>
+<b>define</b> <a href="#0x1_ValidatorConfig_spec_get_config">spec_get_config</a>(addr: address): <a href="#0x1_ValidatorConfig_Config">Config</a> {
+    <a href="Option.md#0x1_Option_spec_value_inside">Option::spec_value_inside</a>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
+}
+<a name="0x1_ValidatorConfig_spec_is_valid"></a>
+<b>define</b> <a href="#0x1_ValidatorConfig_spec_is_valid">spec_is_valid</a>(addr: address): bool {
+    exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr) &&
+    <a href="Option.md#0x1_Option_spec_is_some">Option::spec_is_some</a>(<b>global</b>&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config)
+}
+</code></pre>

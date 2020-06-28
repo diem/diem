@@ -969,6 +969,7 @@ impl<'env> ModuleTranslator<'env> {
                 emitln!(self.writer, "L{}:", label.as_usize());
                 if ctx.loop_targets.contains_key(label) {
                     emitln!(self.writer, "assume !$abort_flag;");
+                    emitln!(self.writer, "assume $ExistsTxnSenderAccount($m, $txn);");
                     let targets = &ctx.loop_targets[label];
                     for idx in 0..func_target.get_local_count() {
                         if let Some(ref_proxy_idx) = func_target.get_ref_proxy_index(idx) {

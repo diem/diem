@@ -743,8 +743,7 @@ procedure {:inline 1} $WritebackToReference(src: $Reference, dst: $Reference) re
 }
 
 procedure {:inline 1} $Splice1(idx1: int, src1: $Reference, dst: $Reference) returns (dst': $Reference) {
-    assume l#$Reference(dst) == $Local(idx1);
-    dst' := $Reference(l#$Reference(dst), $ConcatPath(p#$Reference(src1), p#$Reference(dst)), v#$Reference(dst));
+    dst' := $Reference(l#$Reference(src1), $ConcatPath(p#$Reference(src1), p#$Reference(dst)), v#$Reference(dst));
 }
 
 procedure {:inline 1} $CastU8(src: $Value) returns (dst: $Value)

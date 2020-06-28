@@ -149,5 +149,20 @@ module ValidatorConfig {
     public fun get_validator_network_address(config_ref: &Config): &vector<u8> {
         &config_ref.validator_network_address
     }
+
+    // **************** Specifications ****************
+
+    spec module {
+        pragma verify = false;
+
+        define spec_get_config(addr: address): Config {
+            Option::spec_value_inside(global<ValidatorConfig>(addr).config)
+        }
+
+        define spec_is_valid(addr: address): bool {
+            exists<ValidatorConfig>(addr) &&
+            Option::spec_is_some(global<ValidatorConfig>(addr).config)
+        }
+    }
 }
 }
