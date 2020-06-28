@@ -12,7 +12,6 @@ error: post-condition does not hold
  15 │             forall addr: address: exists<Root>(TRACE(addr)) ==> TRACE(addr) == root_address()
     │                                                                 ----------- <redacted>
     │
-    =     at tests/sources/regression/trace200527.move:20:5: assert_sender_is_root (entry)
-    =     at tests/sources/regression/trace200527.move:22:9: assert_sender_is_root
+    =     at tests/sources/regression/trace200527.move:20:5: assert_sender_is_root
     =         $t0 = <redacted>
-    =     at tests/sources/regression/trace200527.move:20:5: assert_sender_is_root (exit)
+    =     at tests/sources/regression/trace200527.move:22:9: assert_sender_is_root

@@ -6,13 +6,12 @@ error: post-condition does not hold
  63 │         invariant spec_addr_is_association(sender());
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/regression/generic_invariant200518.move:24:5: remove_privilege (entry)
-    =     at tests/sources/regression/generic_invariant200518.move:26:57: remove_privilege
+    =     at tests/sources/regression/generic_invariant200518.move:24:5: remove_privilege
     =         addr = <redacted>,
     =         $t1 = <redacted>
-    =     at tests/sources/regression/generic_invariant200518.move:40:5: root_address (entry)
-    =     at tests/sources/regression/generic_invariant200518.move:40:5: root_address (exit)
+    =     at tests/sources/regression/generic_invariant200518.move:26:57: remove_privilege
+    =     at tests/sources/regression/generic_invariant200518.move:40:52: root_address (entry)
     =         result = <redacted>
+    =     at tests/sources/regression/generic_invariant200518.move:40:52: root_address (exit)
     =     at tests/sources/regression/generic_invariant200518.move:26:9: remove_privilege
     =     at tests/sources/regression/generic_invariant200518.move:28:46: remove_privilege
-    =     at tests/sources/regression/generic_invariant200518.move:24:5: remove_privilege (exit)

@@ -6,8 +6,7 @@ error: post-condition does not hold
  29 │         invariant global<SCounter>(0x0).n == spec_count;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/module_invariants.move:51:5: delete_S_incorrect (entry)
-    =     at tests/sources/functional/module_invariants.move:51:5: delete_S_incorrect (exit)
+    =     at tests/sources/functional/module_invariants.move:51:5: delete_S_incorrect
     =         x = <redacted>
 
 error: precondition does not hold at this call
@@ -20,5 +19,5 @@ error: precondition does not hold at this call
  36 │     public fun new_S(): S acquires SCounter {
     │                ----- called function
     │
-    =     at tests/sources/functional/module_invariants.move:60:5: private_calls_public_incorrect (entry)
-    =     at tests/sources/functional/module_invariants.move:36:5: new_S (entry)
+    =     at tests/sources/functional/module_invariants.move:60:5: private_calls_public_incorrect
+    =     at tests/sources/functional/module_invariants.move:40:5: new_S (entry)

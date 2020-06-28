@@ -6,18 +6,17 @@ error: post-condition does not hold
  22 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8(); // should be <=
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/hash_model_invalid.move:11:5: hash_test1 (entry)
-    =     at tests/sources/functional/hash_model_invalid.move:14:13: hash_test1
+    =     at tests/sources/functional/hash_model_invalid.move:11:5: hash_test1
     =         v1 = <redacted>,
     =         v2 = <redacted>,
     =         h1 = <redacted>,
-    =         h2 = <redacted>
+    =         h2 = <redacted>,
+    =         result_1 = <redacted>,
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/hash_model_invalid.move:14:13: hash_test1
     =     at tests/sources/functional/hash_model_invalid.move:13:24: hash_test1
     =     at tests/sources/functional/hash_model_invalid.move:14:24: hash_test1
     =     at tests/sources/functional/hash_model_invalid.move:15:9: hash_test1
-    =         result_1 = <redacted>,
-    =         result_2 = <redacted>
-    =     at tests/sources/functional/hash_model_invalid.move:11:5: hash_test1 (exit)
 
 error: post-condition does not hold
 
@@ -26,15 +25,14 @@ error: post-condition does not hold
  35 │         ensures len(result_1) > 0 ==> result_1[0] < max_u8();
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/hash_model_invalid.move:26:5: hash_test2 (entry)
-    =     at tests/sources/functional/hash_model_invalid.move:29:13: hash_test2
+    =     at tests/sources/functional/hash_model_invalid.move:26:5: hash_test2
     =         v1 = <redacted>,
     =         v2 = <redacted>,
     =         h1 = <redacted>,
-    =         h2 = <redacted>
+    =         h2 = <redacted>,
+    =         result_1 = <redacted>,
+    =         result_2 = <redacted>
+    =     at tests/sources/functional/hash_model_invalid.move:29:13: hash_test2
     =     at tests/sources/functional/hash_model_invalid.move:28:24: hash_test2
     =     at tests/sources/functional/hash_model_invalid.move:29:24: hash_test2
     =     at tests/sources/functional/hash_model_invalid.move:30:9: hash_test2
-    =         result_1 = <redacted>,
-    =         result_2 = <redacted>
-    =     at tests/sources/functional/hash_model_invalid.move:26:5: hash_test2 (exit)

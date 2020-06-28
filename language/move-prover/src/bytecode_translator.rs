@@ -53,6 +53,29 @@ pub struct ModuleTranslator<'env> {
     targets: &'env FunctionTargetsHolder,
 }
 
+/// For each function, we generate multiple entry points.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum FunctionEntryPoint {
+    /// Inlined variant without pre/post conditions. Used by the other two below.
+    Definition,
+    /// Inlined variant with pre conditions and free post conditions. Used by
+    /// callers.
+    Called,
+    /// Verified variant with full pre/post conditions.
+    Verified,
+}
+
+impl FunctionEntryPoint {
+    fn suffix(self) -> &'static str {
+        use FunctionEntryPoint::*;
+        match self {
+            Definition => "_def",
+            Called => "",
+            Verified => "_verify",
+        }
+    }
+}
+
 /// A struct encapsulating information which is threaded through translating the bytecodes of
 /// a single function. This holds information which is relevant across multiple bytecode
 /// instructions, like borrowing information and label offsets.
@@ -509,20 +532,23 @@ impl<'env> ModuleTranslator<'env> {
     fn translate_function(&self, func_target: &FunctionTarget<'_>) {
         if func_target.is_native() {
             if self.options.prover.native_stubs {
-                self.generate_function_sig(func_target, true);
+                self.generate_function_sig(func_target, FunctionEntryPoint::Called);
                 emit!(self.writer, ";");
-                self.generate_function_spec(func_target);
+                self.generate_function_spec(func_target, FunctionEntryPoint::Called);
                 emitln!(self.writer);
             }
             return;
         }
 
-        // generate inline function with function body
-        self.generate_function_sig(func_target, true); // inlined version of function
-        self.generate_function_args_requires_well_formed(func_target);
-        self.generate_function_spec(func_target);
+        // generate definition with function body
+        self.generate_function_sig(func_target, FunctionEntryPoint::Definition);
         self.generate_inline_function_body(func_target);
-        emitln!(self.writer);
+
+        // generate called function with pre and free post conditions.
+        self.generate_function_sig(func_target, FunctionEntryPoint::Called);
+        self.generate_function_args_requires_well_formed(func_target);
+        self.generate_function_spec(func_target, FunctionEntryPoint::Called);
+        self.generate_function_forward_body(func_target, FunctionEntryPoint::Called);
 
         // If the function should not have a `_verify` entry point, stop here.
         if !func_target
@@ -532,37 +558,35 @@ impl<'env> ModuleTranslator<'env> {
             return;
         }
 
-        // generate the _verify version of the function which calls inline version for standalone
-        // verification.
-        self.generate_function_sig(func_target, false); // no inline
+        // generate the verified function with full pre/post conditions.
+        self.generate_function_sig(func_target, FunctionEntryPoint::Verified);
         self.generate_function_args_requires_well_formed(func_target);
-        self.generate_verify_function_body(func_target); // function body just calls inlined version
+        self.generate_function_spec(func_target, FunctionEntryPoint::Verified);
+        self.generate_function_forward_body(func_target, FunctionEntryPoint::Verified);
     }
 
-    /// Return a string for a boogie procedure header.
-    /// if inline = true, add the inline attribute and use the plain function name
-    /// for the procedure name. Also inject pre/post conditions if defined.
-    /// Else, generate the function signature without the ":inline" attribute, and
-    /// append _verify to the function name.
-    fn generate_function_sig(&self, func_target: &FunctionTarget<'_>, inline: bool) {
+    /// Return a string for a boogie procedure header. Use inline attribute and name
+    /// suffix as indicated by `entry_point`.
+    fn generate_function_sig(
+        &self,
+        func_target: &FunctionTarget<'_>,
+        entry_point: FunctionEntryPoint,
+    ) {
         let (args, rets) = self.generate_function_args_and_returns(func_target);
-        if inline {
-            emit!(
-                self.writer,
-                "procedure {{:inline 1}} {} ({}) returns ({})",
-                boogie_function_name(func_target.func_env),
-                args,
-                rets,
-            )
-        } else {
-            emit!(
-                self.writer,
-                "procedure {}_verify ({}) returns ({})",
-                boogie_function_name(func_target.func_env),
-                args,
-                rets
-            )
-        }
+        let inline = match entry_point {
+            FunctionEntryPoint::Definition | FunctionEntryPoint::Called => "{:inline 1}",
+            _ => "",
+        };
+        let suffix = entry_point.suffix();
+        emit!(
+            self.writer,
+            "procedure {} {}{}({}) returns ({})",
+            inline,
+            boogie_function_name(func_target.func_env),
+            suffix,
+            args,
+            rets,
+        )
     }
 
     /// Generate boogie representation of function args and return args.
@@ -622,9 +646,13 @@ impl<'env> ModuleTranslator<'env> {
     }
 
     /// Emit code for the function specification.
-    fn generate_function_spec(&self, func_target: &FunctionTarget<'_>) {
+    fn generate_function_spec(
+        &self,
+        func_target: &FunctionTarget<'_>,
+        entry_point: FunctionEntryPoint,
+    ) {
         SpecTranslator::new(self.writer, func_target.clone(), self.options, true)
-            .translate_conditions();
+            .translate_conditions(entry_point == FunctionEntryPoint::Called);
     }
 
     /// Emit code for spec inside function implementation.
@@ -637,47 +665,53 @@ impl<'env> ModuleTranslator<'env> {
             .translate_conditions_inside_impl(block_id);
     }
 
-    /// Return string for body of verify function, which is just a call to the
-    /// inline version of the function.
-    fn generate_verify_function_body(&self, func_target: &FunctionTarget<'_>) {
+    /// Generate function body for verified or called entry point. This one just calls into the
+    /// defined entrypoint.
+    fn generate_function_forward_body(
+        &self,
+        func_target: &FunctionTarget<'_>,
+        entry_point: FunctionEntryPoint,
+    ) {
         // Set the location to internal so it won't be counted for execution traces
         self.writer
             .set_location(&self.module_env.env.internal_loc());
         emitln!(self.writer, "{");
         self.writer.indent();
 
-        // Generate assumes for top-level verification entry
-        // (a) init prelude specific stuff.
-        emitln!(self.writer, "call $InitVerification();");
+        if entry_point == FunctionEntryPoint::Verified {
+            // Generate assumes for top-level verification entry
+            // (a) init prelude specific stuff.
+            emitln!(self.writer, "call $InitVerification();");
 
-        // (b) assume implicit preconditions.
-        let spec_translator =
-            SpecTranslator::new(self.writer, func_target.clone(), self.options, false);
-        spec_translator.assume_preconditions();
+            // (b) assume implicit preconditions.
+            let spec_translator =
+                SpecTranslator::new(self.writer, func_target.clone(), self.options, false);
+            spec_translator.assume_preconditions();
 
-        // (c) assume reference parameters to be based on the Param(i) Location, ensuring
-        // they are disjoint from all other references. This prevents aliasing and is justified as
-        // follows:
-        // - for mutual references, by their exclusive access in Move.
-        // - for immutable references, by that mutation is not possible, and they are equivalent
-        //   to some given but arbitrary value.
-        for i in 0..func_target.get_parameter_count() {
-            let ty = func_target.get_local_type(i);
-            if ty.is_reference() {
-                let name = func_target
-                    .symbol_pool()
-                    .string(func_target.get_local_name(i));
-                emitln!(
-                    self.writer,
-                    "assume l#$Reference({}) == $Param({});",
-                    name,
-                    i
-                );
-                emitln!(
-                    self.writer,
-                    "assume size#Path(p#$Reference({})) == 0;",
-                    name
-                );
+            // (c) assume reference parameters to be based on the Param(i) Location, ensuring
+            // they are disjoint from all other references. This prevents aliasing and is justified as
+            // follows:
+            // - for mutual references, by their exclusive access in Move.
+            // - for immutable references, by that mutation is not possible, and they are equivalent
+            //   to some given but arbitrary value.
+            for i in 0..func_target.get_parameter_count() {
+                let ty = func_target.get_local_type(i);
+                if ty.is_reference() {
+                    let name = func_target
+                        .symbol_pool()
+                        .string(func_target.get_local_name(i));
+                    emitln!(
+                        self.writer,
+                        "assume l#$Reference({}) == $Param({});",
+                        name,
+                        i
+                    );
+                    emitln!(
+                        self.writer,
+                        "assume size#Path(p#$Reference({})) == 0;",
+                        name
+                    );
+                }
             }
         }
 
@@ -701,16 +735,18 @@ impl<'env> ModuleTranslator<'env> {
         if rets.is_empty() {
             emitln!(
                 self.writer,
-                "call {}({});",
+                "call {}{}({});",
                 boogie_function_name(func_target.func_env),
+                FunctionEntryPoint::Definition.suffix(),
                 args
             )
         } else {
             emitln!(
                 self.writer,
-                "call {} := {}({});",
+                "call {} := {}{}({});",
                 rets,
                 boogie_function_name(func_target.func_env),
+                FunctionEntryPoint::Definition.suffix(),
                 args
             )
         }
@@ -720,7 +756,8 @@ impl<'env> ModuleTranslator<'env> {
     }
 
     /// This generates boogie code for everything after the function signature
-    /// The function body is only generated for the "inline" version of the function.
+    /// The function body is only generated for the `FunctionEntryPoint::Definition`
+    /// version of the function.
     fn generate_inline_function_body(&self, func_target: &FunctionTarget<'_>) {
         // Construct context for bytecode translation.
         let context = BytecodeContext::new(func_target);

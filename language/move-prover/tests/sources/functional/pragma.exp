@@ -11,6 +11,6 @@ error: abort not covered by any of the `aborts_if` clauses
  11 │         abort(1)
     │         -------- abort happened here
     │
-    =     at tests/sources/functional/pragma.move:10:5: always_aborts_with_verify_incorrect (entry)
-    =     at tests/sources/functional/pragma.move:11:9: always_aborts_with_verify_incorrect (ABORTED)
+    =     at tests/sources/functional/pragma.move:10:5: always_aborts_with_verify_incorrect
     =         _c = <redacted>
+    =     at tests/sources/functional/pragma.move:11:9: always_aborts_with_verify_incorrect (ABORTED)
