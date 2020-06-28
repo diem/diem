@@ -6,7 +6,6 @@ error: post-condition does not hold
  53 │          invariant atMostOne();
     │          ^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/address_quant.move:46:5: multiple_copy_incorrect (entry)
-    =     at tests/sources/functional/address_quant.move:47:9: multiple_copy_incorrect
+    =     at tests/sources/functional/address_quant.move:46:5: multiple_copy_incorrect
     =         sndr = <redacted>
-    =     at tests/sources/functional/address_quant.move:46:5: multiple_copy_incorrect (exit)
+    =     at tests/sources/functional/address_quant.move:47:9: multiple_copy_incorrect

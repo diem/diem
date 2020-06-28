@@ -6,10 +6,10 @@ error:  This assertion might not hold.
  45 │             assert x == y;
     │             ^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/specs_in_fun.move:42:5: simple1_incorrect (entry)
-    =     at tests/sources/functional/specs_in_fun.move:43:9: simple1_incorrect
+    =     at tests/sources/functional/specs_in_fun.move:42:5: simple1_incorrect
     =         x = <redacted>,
     =         y = <redacted>
+    =     at tests/sources/functional/specs_in_fun.move:43:9: simple1_incorrect
 
 error:  This assertion might not hold.
 
@@ -18,10 +18,10 @@ error:  This assertion might not hold.
  53 │             assert x == y;
     │             ^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/specs_in_fun.move:49:5: simple2_incorrect (entry)
-    =     at tests/sources/functional/specs_in_fun.move:52:9: simple2_incorrect
+    =     at tests/sources/functional/specs_in_fun.move:49:5: simple2_incorrect
     =         x = <redacted>,
     =         y = <redacted>
+    =     at tests/sources/functional/specs_in_fun.move:52:9: simple2_incorrect
     =     at tests/sources/functional/specs_in_fun.move:51:15: simple2_incorrect
     =     at tests/sources/functional/specs_in_fun.move:53:13: simple2_incorrect
 
@@ -32,7 +32,9 @@ error:  This assertion might not hold.
  60 │             assert x > y;
     │             ^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/specs_in_fun.move:57:5: simple3_incorrect (entry)
+    =     at tests/sources/functional/specs_in_fun.move:57:5: simple3_incorrect
+    =         x = <redacted>,
+    =         y = <redacted>
 
 error:  This assertion might not hold.
 
@@ -41,9 +43,9 @@ error:  This assertion might not hold.
  69 │             assert z > 2*x;
     │             ^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/specs_in_fun.move:64:5: simple4_incorrect (entry)
-    =     at tests/sources/functional/specs_in_fun.move:66:15: simple4_incorrect
+    =     at tests/sources/functional/specs_in_fun.move:64:5: simple4_incorrect
     =         x = <redacted>,
     =         y = <redacted>,
     =         z = <redacted>
+    =     at tests/sources/functional/specs_in_fun.move:66:15: simple4_incorrect
     =     at tests/sources/functional/specs_in_fun.move:68:13: simple4_incorrect

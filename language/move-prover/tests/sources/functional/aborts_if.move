@@ -48,6 +48,7 @@ module TestAbortsIf {
         if (x > y) abort 1
     }
     spec fun abort4_incorrect {
+        pragma aborts_if_is_partial = true;
         aborts_if x <= y;
     }
 

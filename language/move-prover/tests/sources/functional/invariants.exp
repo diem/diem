@@ -6,7 +6,7 @@ error: data invariant does not hold
  16 │         invariant greater_one(x);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/invariants.move:42:5: invalid_R_pack (entry)
+    =     at tests/sources/functional/invariants.move:42:5: invalid_R_pack
 
 error: data invariant does not hold
 
@@ -15,16 +15,14 @@ error: data invariant does not hold
  16 │         invariant greater_one(x);
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/invariants.move:112:5: lifetime_invalid_R (entry)
-    =     at tests/sources/functional/invariants.move:113:13: lifetime_invalid_R
-    =     at tests/sources/functional/invariants.move:114:21: lifetime_invalid_R
+    =     at tests/sources/functional/invariants.move:112:5: lifetime_invalid_R
     =         r = <redacted>,
-    =         r_ref = <redacted>
-    =     at tests/sources/functional/invariants.move:115:26: lifetime_invalid_R
-    =         x_ref = <redacted>
-    =     at tests/sources/functional/invariants.move:116:18: lifetime_invalid_R
     =         r_ref = <redacted>,
     =         x_ref = <redacted>
+    =     at tests/sources/functional/invariants.move:113:13: lifetime_invalid_R
+    =     at tests/sources/functional/invariants.move:114:21: lifetime_invalid_R
+    =     at tests/sources/functional/invariants.move:115:26: lifetime_invalid_R
+    =     at tests/sources/functional/invariants.move:116:18: lifetime_invalid_R
 
 error: data invariant does not hold
 
@@ -33,8 +31,7 @@ error: data invariant does not hold
  150 │         invariant y > 1;
      │         ^^^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/invariants.move:153:5: lifetime_invalid_S_branching (entry)
-     =     at tests/sources/functional/invariants.move:166:11: lifetime_invalid_S_branching
+     =     at tests/sources/functional/invariants.move:153:5: lifetime_invalid_S_branching
      =         cond = <redacted>,
      =         a = <redacted>,
      =         a_ref = <redacted>,
@@ -42,6 +39,7 @@ error: data invariant does not hold
      =         b_ref = <redacted>,
      =         $t5 = <redacted>,
      =         x_ref = <redacted>
+     =     at tests/sources/functional/invariants.move:166:11: lifetime_invalid_S_branching
      =     at tests/sources/functional/invariants.move:154:11: lifetime_invalid_S_branching
      =     at tests/sources/functional/invariants.move:155:21: lifetime_invalid_S_branching
      =     at tests/sources/functional/invariants.move:156:19: lifetime_invalid_S_branching

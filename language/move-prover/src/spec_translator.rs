@@ -355,7 +355,7 @@ impl<'env> SpecTranslator<'env> {
     }
 
     /// Generates boogie for pre/post conditions.
-    pub fn translate_conditions(&self) {
+    pub fn translate_conditions(&self, free_ensures: bool) {
         // Generate pre-conditions
         // For this transaction to be executed, it MUST have had
         // a valid signature for the sender's account. Therefore,
@@ -364,6 +364,7 @@ impl<'env> SpecTranslator<'env> {
         // exists in pre-condition.
         let func_target = self.function_target();
         let spec = func_target.get_spec();
+        let ensures_mod = if free_ensures { "free " } else { "" };
         emitln!(self.writer, "requires $ExistsTxnSenderAccount($m, $txn);");
 
         // Get all aborts_if conditions.
@@ -413,7 +414,7 @@ impl<'env> SpecTranslator<'env> {
                 // No user provided aborts_if and pragma is set for handling this
                 // as s.t. the function must never abort.
                 self.writer.set_location(&func_target.get_loc());
-                emitln!(self.writer, "ensures !$abort_flag;")
+                emitln!(self.writer, "{}ensures !$abort_flag;", ensures_mod);
             }
         } else {
             // Emit `ensures P1 ==> abort_flag; ... ensures PN ==> abort_flag;`. This gives us
@@ -422,7 +423,7 @@ impl<'env> SpecTranslator<'env> {
             for c in &aborts_if {
                 self.writer.set_location(&c.loc);
                 self.set_condition_info(&c.loc, ABORTS_IF_FAILS_MESSAGE, false);
-                emit!(self.writer, "ensures b#$Boolean(old(");
+                emit!(self.writer, "{}ensures b#$Boolean(old(", ensures_mod);
                 self.translate_exp(&c.exp);
                 emitln!(self.writer, ")) ==> $abort_flag;")
             }
@@ -434,7 +435,7 @@ impl<'env> SpecTranslator<'env> {
             // because reporting on (non-covering) aborts_if conditions is misleading.
             if !aborts_if_is_partial {
                 self.writer.set_location(&func_target.get_loc());
-                emit!(self.writer, "ensures $abort_flag ==> (");
+                emit!(self.writer, "{}ensures $abort_flag ==> (", ensures_mod);
                 self.translate_seq(aborts_if.iter(), "\n    || ", |c| {
                     emit!(self.writer, "b#$Boolean(old(");
                     self.translate_exp_parenthesised(&c.exp);
@@ -450,7 +451,7 @@ impl<'env> SpecTranslator<'env> {
         for c in succeeds_if {
             self.writer.set_location(&c.loc);
             self.set_condition_info(&c.loc, SUCCEEDS_IF_FAILS_MESSAGE, false);
-            emit!(self.writer, "ensures b#$Boolean(old(");
+            emit!(self.writer, "{}ensures b#$Boolean(old(", ensures_mod);
             self.translate_exp(&c.exp);
             emitln!(self.writer, ")) ==> !$abort_flag;")
         }
@@ -462,7 +463,11 @@ impl<'env> SpecTranslator<'env> {
             self.translate_seq(ensures.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
                 self.set_condition_info(&cond.loc, ENSURES_FAILS_MESSAGE, false);
-                emit!(self.writer, "ensures !$abort_flag ==> (b#$Boolean(");
+                emit!(
+                    self.writer,
+                    "{}ensures !$abort_flag ==> (b#$Boolean(",
+                    ensures_mod
+                );
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, "));")
             });

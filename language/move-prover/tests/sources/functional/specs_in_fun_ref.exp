@@ -6,11 +6,11 @@ error:  This loop invariant might not be maintained by the loop.
  111 │                 assert x == 0;
      │                 ^^^^^^^^^^^^^^
      │
-     =     at tests/sources/functional/specs_in_fun_ref.move:106:5: simple7 (entry)
-     =     at tests/sources/functional/specs_in_fun_ref.move:117:9: simple7
+     =     at tests/sources/functional/specs_in_fun_ref.move:106:5: simple7
      =         n = <redacted>,
      =         x = <redacted>,
      =         x = <redacted>
+     =     at tests/sources/functional/specs_in_fun_ref.move:117:9: simple7
      =     at tests/sources/functional/specs_in_fun_ref.move:107:13: simple7
      =     at tests/sources/functional/specs_in_fun_ref.move:110:13: simple7
      =     at tests/sources/functional/specs_in_fun_ref.move:109:9: simple7

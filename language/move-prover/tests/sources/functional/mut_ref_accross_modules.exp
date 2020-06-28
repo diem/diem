@@ -6,10 +6,10 @@ error: data invariant does not hold
  21 │         invariant value > 0;
     │         ^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/mut_ref_accross_modules.move:64:5: decrement_invalid (entry)
-    =     at tests/sources/functional/mut_ref_accross_modules.move:65:27: decrement_invalid
+    =     at tests/sources/functional/mut_ref_accross_modules.move:64:5: decrement_invalid
     =         x = <redacted>,
     =         r = <redacted>
+    =     at tests/sources/functional/mut_ref_accross_modules.move:65:27: decrement_invalid
 
 error: post-condition does not hold
 
@@ -18,11 +18,10 @@ error: post-condition does not hold
  30 │         invariant global<TSum>(0x0).sum == spec_sum;
     │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/functional/mut_ref_accross_modules.move:58:5: increment_invalid (entry)
-    =     at tests/sources/functional/mut_ref_accross_modules.move:59:27: increment_invalid
-    =         x = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:58:5: increment_invalid (exit)
+    =     at tests/sources/functional/mut_ref_accross_modules.move:58:5: increment_invalid
+    =         x = <redacted>,
     =         result = <redacted>
+    =     at tests/sources/functional/mut_ref_accross_modules.move:59:27: increment_invalid
 
 error: precondition does not hold at this call
 
@@ -34,8 +33,9 @@ error: precondition does not hold at this call
  51 │     public fun increment(x: &mut T) acquires TSum {
     │                --------- called function
     │
-    =     at tests/sources/functional/mut_ref_accross_modules.move:94:5: private_to_public_caller (entry)
-    =     at tests/sources/functional/mut_ref_accross_modules.move:51:5: increment (entry)
+    =     at tests/sources/functional/mut_ref_accross_modules.move:94:5: private_to_public_caller
+    =         r = <redacted>
+    =     at tests/sources/functional/mut_ref_accross_modules.move:55:5: increment (entry)
 
 error: precondition does not hold at this call
 
@@ -47,5 +47,6 @@ error: precondition does not hold at this call
  51 │     public fun increment(x: &mut T) acquires TSum {
     │                --------- called function
     │
-    =     at tests/sources/functional/mut_ref_accross_modules.move:110:6: private_to_public_caller_invalid_precondition (entry)
-    =     at tests/sources/functional/mut_ref_accross_modules.move:51:5: increment (entry)
+    =     at tests/sources/functional/mut_ref_accross_modules.move:110:6: private_to_public_caller_invalid_precondition
+    =         r = <redacted>
+    =     at tests/sources/functional/mut_ref_accross_modules.move:55:5: increment (entry)
