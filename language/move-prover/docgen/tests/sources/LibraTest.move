@@ -4,7 +4,7 @@ address 0x1 {
 /// resource `Libra::Libra<CoinType>`, representing a coin of given coin type.
 /// The module defines functions operating on coins as well as functionality like
 /// minting and burning of coins.
-module Libra {
+module LibraTest {
     use 0x1::CoreAddresses;
     use 0x1::Event::{Self, EventHandle};
     use 0x1::FixedPoint32::{Self, FixedPoint32};
@@ -297,6 +297,12 @@ module Libra {
         _capability: &MintCapability<CoinType>
     ): Libra<CoinType> acquires CurrencyInfo {
         assert_is_currency<CoinType>();
+        // TODO: temporary measure for testnet only: limit minting to 1B Libra at a time.
+        // this is to prevent the market cap's total value from hitting u64_max due to excessive
+        // minting. This will not be a problem in the production Libra system because coins will
+        // be backed with real-world assets, and thus minting will be correspondingly rarer.
+        // * 1000000 here because the unit is microlibra
+        assert(value <= 1000000000 * 1000000, 11);
         let currency_code = currency_code<CoinType>();
         // update market cap resource to reflect minting
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
@@ -323,6 +329,7 @@ module Libra {
         value: u64;
         aborts_if !spec_is_currency<CoinType>();
         aborts_if !spec_currency_info<CoinType>().can_mint;
+        aborts_if value > 1000000000 * 1000000;
         aborts_if spec_currency_info<CoinType>().total_value + value > max_u128();
     }
     spec schema MintEnsures<CoinType> {

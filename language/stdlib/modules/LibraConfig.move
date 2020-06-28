@@ -165,6 +165,18 @@ module LibraConfig {
 
        emit_reconfiguration_event();
     }
+    spec fun reconfigure_ {
+        /// Consider only states for verification where this function does not abort
+        /// for a caller. This prevents that callers need to propagate the abort conditions of this
+        /// function up the call chain. The abort conditions of this function represent
+        /// internal programming errors.
+        ///
+        /// > TODO(wrwg): we should have a convention to distinguish error codes resulting from
+        /// contract program errors and from errors coming from inputs to transaction
+        /// scripts. In most cases, only the later one should be propagated upwards to callers.
+        /// For now, we use the pragma below to simulate this.
+        pragma assume_no_abort_from_here = true;
+    }
 
     // Emit a reconfiguration event. This function will be invoked by the genesis directly to generate the very first
     // reconfiguration event.
@@ -184,35 +196,43 @@ module LibraConfig {
 
     spec module {
 
+        /// > TODO(wrwg): We've removed an invariant in RegisteredCurrencies that config is only stored
+        //  > at ROOT_ADDRESS. We should bring this back here for all config types.
+
         /// Specifications of LibraConfig are very incomplete.  There are just a few
         /// definitions that are used by RegisteredCurrencies
 
         pragma verify = true;
 
+        define spec_has_config(): bool {
+            exists<Configuration>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
+        }
+
         /// Spec version of `LibraConfig::get<Config>`.
         define spec_get<Config>(): Config {
-            global<LibraConfig<Config>>(0xA550C18).payload
+            global<LibraConfig<Config>>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()).payload
         }
 
         /// Spec version of `LibraConfig::is_published<Config>`.
-        define spec_is_published<Config>(addr: address): bool {
-            exists<LibraConfig<Config>>(addr)
+        define spec_is_published<Config>(): bool {
+            exists<LibraConfig<Config>>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
         }
     }
 
     // check spec_is_published
     spec fun publish_new_config {
-        // aborts_if spec_is_published<Config>();
-        ensures old(!spec_is_published<Config>(Signer::get_address(config_account)));
-        ensures spec_is_published<Config>(Signer::get_address(config_account));
+        /// TODO(wrwg): enable
+        /// aborts_if spec_is_published<Config>();
+        ensures old(!spec_is_published<Config>());
+        ensures spec_is_published<Config>();
     }
 
     spec fun publish_new_config_with_capability {
-        // aborts_if spec_is_published<Config>();
-        ensures old(!spec_is_published<Config>(Signer::get_address(config_account)));
-        ensures spec_is_published<Config>(Signer::get_address(config_account));
+        /// TODO(wrwg): enable
+        /// aborts_if spec_is_published<Config>();
+        ensures old(!spec_is_published<Config>());
+        ensures spec_is_published<Config>();
     }
-
 
 }
 }

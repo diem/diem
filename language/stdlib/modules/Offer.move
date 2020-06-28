@@ -76,9 +76,9 @@ module Offer {
   spec fun create {
     /// Offer a struct to the account under address `for` by
     /// placing the offer under the signer's address
-    aborts_if exists<Offer<Offered>>(Signer::get_address(account));
-    ensures exists<Offer<Offered>>(Signer::get_address(account));
-    ensures global<Offer<Offered>>(Signer::get_address(account)) == Offer<Offered> { offered: offered, for: for };
+    aborts_if exists<Offer<Offered>>(Signer::spec_address_of(account));
+    ensures exists<Offer<Offered>>(Signer::spec_address_of(account));
+    ensures global<Offer<Offered>>(Signer::spec_address_of(account)) == Offer<Offered> { offered: offered, for: for };
   }
 
   // Switch documentation context back to module level.
@@ -102,7 +102,7 @@ module Offer {
     /// cannot redeem the offer.
     /// Ensures that the offered struct under `offer_address` is removed is returned.
     aborts_if !exists<Offer<Offered>>(offer_address);
-    aborts_if !is_allowed_recipient<Offered>(offer_address, Signer::get_address(account));
+    aborts_if !is_allowed_recipient<Offered>(offer_address, Signer::spec_address_of(account));
     ensures old(exists<Offer<Offered>>(offer_address)) && !exists<Offer<Offered>>(offer_address);
     ensures result == old(global<Offer<Offered>>(offer_address).offered);
   }

@@ -3408,7 +3408,7 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
     fn translate_exp_free(&mut self, exp: &EA::Exp) -> (Type, Exp) {
         let tvar = self.fresh_type_var();
         let exp = self.translate_exp(exp, &tvar);
-        (tvar, exp)
+        (self.subs.specialize(&tvar), exp)
     }
 
     /// Translates a sequence expression.

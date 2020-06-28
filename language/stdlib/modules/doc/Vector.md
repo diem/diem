@@ -444,6 +444,18 @@
 ### Module specifications
 
 
+Auxiliary function to check whether a vector contains an element.
+
+
+<a name="0x1_Vector_spec_contains"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_Vector_spec_contains">spec_contains</a>&lt;Element&gt;(v: vector&lt;Element&gt;, e: Element): bool {
+    exists x in v: x == e
+}
+</code></pre>
+
+
 Auxiliary function to check if
 <code>v1</code> is equal to the result of adding
 <code>e</code> at the end of
@@ -474,6 +486,11 @@ Auxiliary function to check if
     len(v) == len(v1) + len(v2) &&
     v[0..len(v1)] == v1 &&
     v[len(v1)..len(v)] == v2
+}
+<a name="0x1_Vector_eq_pop_front"></a>
+<b>define</b> <a href="#0x1_Vector_eq_pop_front">eq_pop_front</a>&lt;Element&gt;(v1: vector&lt;Element&gt;, v2: vector&lt;Element&gt;): bool {
+    len(v1) + 1 == len(v2) &&
+    v1 == v2[1..len(v2)]
 }
 </code></pre>
 

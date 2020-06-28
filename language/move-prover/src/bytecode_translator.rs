@@ -37,6 +37,7 @@ use crate::{
     cli::Options,
     spec_translator::SpecTranslator,
 };
+use spec_lang::env::{ADDITION_OVERFLOW_UNCHECKED_PRAGMA, ASSUME_NO_ABORT_FROM_HERE_PRAGMA};
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,
@@ -1119,7 +1120,12 @@ impl<'env> ModuleTranslator<'env> {
                                 args_str
                             );
                         }
-                        emitln!(self.writer, &propagate_abort());
+                        if callee_env.is_pragma_true(ASSUME_NO_ABORT_FROM_HERE_PRAGMA, || false) {
+                            // Assume that calls to this function do not abort
+                            emitln!(self.writer, "assume $abort_flag == false;");
+                        } else {
+                            emitln!(self.writer, &propagate_abort());
+                        }
                         for s in &dest_type_assumptions {
                             emitln!(self.writer, s);
                         }
@@ -1401,10 +1407,17 @@ impl<'env> ModuleTranslator<'env> {
                         let dest = dests[0];
                         let op1 = srcs[0];
                         let op2 = srcs[1];
+                        let unchecked = if func_target
+                            .is_pragma_true(ADDITION_OVERFLOW_UNCHECKED_PRAGMA, || false)
+                        {
+                            "_unchecked"
+                        } else {
+                            ""
+                        };
                         let add_type = match func_target.get_local_type(dest) {
-                            Type::Primitive(PrimitiveType::U8) => "U8",
-                            Type::Primitive(PrimitiveType::U64) => "U64",
-                            Type::Primitive(PrimitiveType::U128) => "U128",
+                            Type::Primitive(PrimitiveType::U8) => "U8".to_string(),
+                            Type::Primitive(PrimitiveType::U64) => format!("U64{}", unchecked),
+                            Type::Primitive(PrimitiveType::U128) => format!("U128{}", unchecked),
                             _ => unreachable!(),
                         };
                         emitln!(

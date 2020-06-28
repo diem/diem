@@ -17,9 +17,7 @@ use std::{fs::File, io::Read};
 
 const FLAGS: &[&str] = &[
     "--verbose=warn",
-    // This currently points to the legacy stdlib copy in prover tests. Replace this
-    // by real stdlib once we have a good example based on it.
-    "--dependency=../tests/sources/stdlib/modules",
+    "--dependency=../../stdlib/modules",
     "--docgen",
 ];
 

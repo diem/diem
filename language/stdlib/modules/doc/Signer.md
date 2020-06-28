@@ -62,9 +62,12 @@
 ## Specification
 
 
+Specification version of
+<code><a href="#0x1_Signer_address_of">Self::address_of</a></code>.
 
-<a name="0x1_Signer_get_address"></a>
+
+<a name="0x1_Signer_spec_address_of"></a>
 
 
-<pre><code><b>native</b> <b>define</b> <a href="#0x1_Signer_get_address">get_address</a>(account: signer): address;
+<pre><code><b>native</b> <b>define</b> <a href="#0x1_Signer_spec_address_of">spec_address_of</a>(account: signer): address;
 </code></pre>

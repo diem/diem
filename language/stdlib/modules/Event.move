@@ -78,8 +78,37 @@ module Event {
 
     // ****************** SPECIFICATIONS *******************
 
+    spec module {
+        /// Functions of the event module are mocked out using the intrinsic
+        /// pragma. They are implemented in the prover's prelude as no-ops.
+        ///
+        /// Functionality in this module uses GUIDs created from serialization of
+        /// addresses and integers. These constructs are difficult to treat by the
+        /// verifier and the verification problem propagates up to callers of
+        /// those functions. Since events cannot be observed by Move programs,
+        /// mocking out functions of this module does not have effect on other
+        /// verification result.
+        ///
+        /// A specification of the functions is neverthelesse  included in the
+        /// comments of this module and it has been verified.
+        ///
+        /// > TODO(wrwg): We may want to have support by the Move prover to
+        /// > mock out functions for callers but still have them verified
+        /// > standlone.
+        pragma intrinsic = true;
+    }
+
+    /*
+     Specification of non-mocked out version.
+
     /// # Module specifications
     spec module {
+        /// Turn off abortion verification of overflow of large integers (u64 and u128)
+        /// for code in this module. These abortions are unlikely to happen and uninteresting,
+        /// and with this pragma true, callers of this module do not need to reason about
+        /// overflow of internal counters.
+        pragma addition_overflow_unchecked = true;
+
         /// Helper function that returns whether or not an EventHandleGenerator is
         /// initilaized at the given address `addr`.
         define ehg_exists(addr: address): bool {
@@ -149,9 +178,9 @@ module Event {
     spec fun publish_generator {
         /// Creates a new `EventHandleGenerator` with an initial counter 0 and the
         /// signer `account`'s address.
-        aborts_if exists<EventHandleGenerator>(Signer::get_address(account));
-        ensures global<EventHandleGenerator>(Signer::get_address(account))
-                    == EventHandleGenerator { counter: 0, addr: Signer::get_address(account) };
+        aborts_if exists<EventHandleGenerator>(Signer::spec_address_of(account));
+        ensures global<EventHandleGenerator>(Signer::spec_address_of(account))
+                    == EventHandleGenerator { counter: 0, addr: Signer::spec_address_of(account) };
     }
 
     // Switch documentation context back to module level.
@@ -197,7 +226,6 @@ module Event {
     spec fun fresh_guid {
         /// The byte array returned is the concatenation of the serialized
         /// EventHandleGenerator counter and address.
-        aborts_if counter.counter + 1 > max_u64();
         ensures counter.counter == old(counter).counter + 1;
         ensures Vector::eq_append(
                     result,
@@ -240,16 +268,16 @@ module Event {
         apply UniqueEventHandleGUIDs to *;
     }
     spec fun new_event_handle {
-        aborts_if !ehg_exists(Signer::get_address(account));
-        aborts_if get_ehg(Signer::get_address(account)).counter + 1 > max_u64();
-        ensures ehg_exists(Signer::get_address(account));
-        ensures get_ehg(Signer::get_address(account)).counter ==
-                    old(get_ehg(Signer::get_address(account)).counter) + 1;
+        aborts_if !ehg_exists(Signer::spec_address_of(account));
+        aborts_if get_ehg(Signer::spec_address_of(account)).counter + 1 > max_u64();
+        ensures ehg_exists(Signer::spec_address_of(account));
+        ensures get_ehg(Signer::spec_address_of(account)).counter ==
+                    old(get_ehg(Signer::spec_address_of(account)).counter) + 1;
         ensures result.counter == 0;
         ensures Vector::eq_append(
                     result.guid,
-                    old(serialized_ehg_counter(get_ehg(Signer::get_address(account)))),
-                    old(serialized_ehg_addr(get_ehg(Signer::get_address(account))))
+                    old(serialized_ehg_counter(get_ehg(Signer::spec_address_of(account)))),
+                    old(serialized_ehg_addr(get_ehg(Signer::spec_address_of(account))))
                 );
     }
 
@@ -260,7 +288,6 @@ module Event {
         /// The counter in `EventHandle<T>` increases and the event is emitted to the event store.
         ///
         /// > TODO(kkmc): Do we need to specify that the event was sent to the event store?
-        aborts_if handle_ref.counter + 1 > max_u64();
         ensures handle_ref.counter == old(handle_ref.counter) + 1;
         ensures handle_ref.guid == old(handle_ref.guid);
     }
@@ -287,6 +314,7 @@ module Event {
         aborts_if false;
         ensures total_num_of_event_handles<T> == old(total_num_of_event_handles<T>) - 1;
     }
+    */
 }
 
 }
