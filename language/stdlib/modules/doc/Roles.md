@@ -749,7 +749,7 @@ Helper functions
 }
 <a name="0x1_Roles_spec_has_on_chain_config_privilege"></a>
 <b>define</b> <a href="#0x1_Roles_spec_has_on_chain_config_privilege">spec_has_on_chain_config_privilege</a>(account: signer): bool {
-    <a href="#0x1_Roles_spec_has_treasury_compliance_role">spec_has_treasury_compliance_role</a>(account)
+    <a href="#0x1_Roles_spec_has_libra_root_role">spec_has_libra_root_role</a>(account)
 }
 </code></pre>
 

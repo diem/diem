@@ -279,7 +279,7 @@ module Roles {
         }
 
         define spec_has_on_chain_config_privilege(account: signer): bool {
-            spec_has_treasury_compliance_role(account)
+            spec_has_libra_root_role(account)
         }
     }
 

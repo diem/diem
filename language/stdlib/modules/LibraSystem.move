@@ -10,7 +10,7 @@ module LibraSystem {
     use 0x1::Signer;
     use 0x1::ValidatorConfig;
     use 0x1::Vector;
-    use 0x1::Roles::{has_libra_root_role};
+    use 0x1::Roles::{Self, has_libra_root_role};
 
     struct ValidatorInfo {
         addr: address,
@@ -187,14 +187,27 @@ module LibraSystem {
         };
 
         let i = 0;
-        while (i < size) {
+        while ({
+            spec {
+                assert i <= size;
+                assert forall j in 0..i: validators[j].addr != addr;
+            };
+            (i < size)
+        })
+        {
             let validator_info_ref = Vector::borrow(validators, i);
             if (validator_info_ref.addr == addr) {
+                spec {
+                    assert validators[i].addr == addr;
+                };
                 return Option::some(i)
             };
             i = i + 1;
         };
-
+        spec {
+            assert i == size;
+            assert forall j in 0..size: validators[j].addr != addr;
+        };
         return Option::none()
     }
 
@@ -222,5 +235,150 @@ module LibraSystem {
         Option::is_some(&get_validator_index_(validators_vec_ref, addr))
     }
 
+    // **************** Specifications ****************
+
+    /// # Module specifications
+
+    spec module {
+
+        pragma verify = true, aborts_if_is_strict = true;
+
+        /// Returns the validator set stored under association address.
+        define spec_get_validator_set(): vector<ValidatorInfo> {
+            LibraConfig::spec_get<LibraSystem>().validators
+        }
+
+        /// Returns true if there is a validator with address `addr`
+        /// in the validator set.
+        define spec_is_validator(addr: address): bool {
+            exists v in spec_get_validator_set(): v.addr == addr
+        }
+
+        /// Returns true if the given validator vector is a set,
+        /// meaning that all the validators have unique addresses.
+        define spec_validators_is_set(v: vector<ValidatorInfo>): bool {
+            forall ii: u64, jj: u64 where
+                0 <= ii && ii < len(v) && 0 <= jj && jj < len(v) && ii != jj:
+                    v[ii].addr != v[jj].addr
+        }
+    }
+
+    /// ## Validator set is indeed a set
+    spec schema ValidatorsHaveUniqueAddresses {
+        invariant module spec_validators_is_set(spec_get_validator_set());
+    }
+
+    spec module {
+        apply ValidatorsHaveUniqueAddresses to public *;
+    }
+
+    /// # Specifications for individual functions
+
+    spec fun initialize_validator_set {
+        aborts_if !Roles::spec_has_on_chain_config_privilege(config_account);
+        aborts_if Signer::spec_address_of(config_account)
+            != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+        aborts_if LibraConfig::spec_is_published<LibraSystem>();
+        aborts_if exists<CapabilityHolder>(Signer::spec_address_of(config_account));
+        ensures exists<CapabilityHolder>(Signer::spec_address_of(config_account));
+        ensures LibraConfig::spec_is_published<LibraSystem>();
+        ensures len(spec_get_validator_set()) == 0;
+    }
+
+    spec fun set_validator_set {
+        pragma assume_no_abort_from_here = true;
+        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        aborts_if !exists<CapabilityHolder>(
+            CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()
+        );
+        ensures LibraConfig::spec_get<LibraSystem>() == value;
+    }
+
+    spec fun add_validator {
+        aborts_if !Roles::spec_has_libra_root_role(lr_account);
+        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        aborts_if spec_is_validator(account_address);
+        aborts_if !ValidatorConfig::spec_is_valid(account_address);
+        aborts_if !exists<CapabilityHolder>(
+            CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()
+        );
+        ensures spec_is_validator(account_address);
+    }
+
+    spec fun remove_validator {
+        aborts_if !Roles::spec_has_libra_root_role(lr_account);
+        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        aborts_if !spec_is_validator(account_address);
+        aborts_if !exists<CapabilityHolder>(
+            CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()
+        );
+        ensures !spec_is_validator(account_address);
+    }
+
+    spec fun update_and_reconfigure {
+        /// > TODO(emmazzz): turn verify on when we are able to
+        /// > verify loop invariants.
+        pragma verify = false;
+        requires spec_validators_is_set(spec_get_validator_set());
+        aborts_if !Roles::spec_has_libra_root_role(lr_account);
+        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+    }
+
+    spec fun get_validator_set {
+        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        ensures result == LibraConfig::spec_get<LibraSystem>();
+    }
+
+    spec fun is_validator {
+        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        ensures result == spec_is_validator(addr);
+    }
+
+    spec fun get_validator_config {
+        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        aborts_if !spec_is_validator(addr);
+    }
+
+    spec fun validator_set_size {
+        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        ensures result == len(spec_get_validator_set());
+    }
+
+    spec fun get_ith_validator_address {
+        aborts_if i >= len(spec_get_validator_set());
+        aborts_if !LibraConfig::spec_is_published<LibraSystem>();
+        ensures result == spec_get_validator_set()[i].addr;
+    }
+
+    spec fun get_validator_index_ {
+        pragma opaque = true;
+        requires module spec_validators_is_set(validators);
+        aborts_if false;
+        ensures Option::spec_is_none(result) ==
+            (forall v in validators: v.addr != addr);
+        ensures Option::spec_is_some(result) ==>
+            validators[Option::spec_value_inside(result)].addr == addr;
+        ensures Option::spec_is_some(result) ==>
+            (forall j in 0..len(validators) where j != Option::spec_value_inside(result):
+                validators[j].addr != addr);
+    }
+
+    spec fun update_ith_validator_info_ {
+        aborts_if i < len(validators) &&
+            !ValidatorConfig::spec_is_valid(validators[i].addr);
+        ensures i < len(validators) ==> validators[i].config ==
+             ValidatorConfig::spec_get_config(validators[i].addr);
+        ensures i < len(validators) ==>
+            result == (old(validators[i].config) !=
+                ValidatorConfig::spec_get_config(validators[i].addr));
+    }
+
+    spec fun is_validator_ {
+        pragma opaque = true;
+        aborts_if false;
+        requires module spec_validators_is_set(validators_vec_ref);
+        ensures result == (exists v in validators_vec_ref: v.addr == addr);
+        ensures spec_validators_is_set(validators_vec_ref);
+    }
 }
 }
