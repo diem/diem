@@ -327,7 +327,7 @@ fn test_sign_timeout(safety_rules: &Callback) {
 
     // Verify cannot sign round older rounds now
     let actual_err = safety_rules.sign_timeout(&timeout).unwrap_err();
-    let expected_err = Error::BadTimeoutLastVotedRound(timeout.round(), timeout.round() + 1);
+    let expected_err = Error::IncorrectLastVotedRound(timeout.round(), timeout.round() + 1);
     assert_eq!(actual_err, expected_err);
 
     // Verify cannot sign last_voted_round < vote < preferred_round
@@ -335,7 +335,7 @@ fn test_sign_timeout(safety_rules: &Callback) {
     let preferred_round = p4.block().quorum_cert().parent_block().round();
     let ptimeout = Timeout::new(timeout.epoch(), preferred_round - 1);
     let actual_err = safety_rules.sign_timeout(&ptimeout).unwrap_err();
-    let expected_err = Error::BadTimeoutPreferredRound(ptimeout.round(), preferred_round);
+    let expected_err = Error::IncorrectPreferredRound(ptimeout.round(), preferred_round);
     assert_eq!(actual_err, expected_err);
 
     // Verify cannot sign for different epoch
@@ -392,10 +392,7 @@ fn test_voting(safety_rules: &Callback) {
 
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b2),
-        Err(Error::OldProposal {
-            last_voted_round: 4,
-            proposal_round: 3,
-        })
+        Err(Error::IncorrectLastVotedRound(3, 4))
     );
 
     vote = safety_rules.construct_and_sign_vote(&a3).unwrap();
@@ -409,15 +406,12 @@ fn test_voting(safety_rules: &Callback) {
 
     assert_eq!(
         safety_rules.construct_and_sign_vote(&a4),
-        Err(Error::OldProposal {
-            last_voted_round: 7,
-            proposal_round: 7,
-        })
+        Err(Error::IncorrectLastVotedRound(7, 7))
     );
 
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b4),
-        Err(Error::ProposalRoundLowerThanPreferredBlock { preferred_round: 4 })
+        Err(Error::IncorrectPreferredRound(3, 4))
     );
 }
 
@@ -511,13 +505,7 @@ fn test_sign_old_proposal(safety_rules: &Callback) {
     let err = safety_rules
         .sign_proposal(a1.block().block_data().clone())
         .unwrap_err();
-    assert_eq!(
-        err,
-        Error::OldProposal {
-            last_voted_round: 0,
-            proposal_round: 0,
-        }
-    );
+    assert_eq!(err, Error::IncorrectLastVotedRound(0, 0));
 }
 
 fn test_sign_proposal_with_bad_signer(safety_rules: &Callback) {
@@ -607,10 +595,7 @@ fn test_sign_proposal_with_early_preferred_round(safety_rules: &Callback) {
     let err = safety_rules
         .sign_proposal(a5.block().block_data().clone())
         .unwrap_err();
-    assert_eq!(
-        err,
-        Error::ProposalRoundLowerThanPreferredBlock { preferred_round: 2 }
-    );
+    assert_eq!(err, Error::IncorrectPreferredRound(0, 2));
 }
 
 fn test_uninitialized_signer(safety_rules: &Callback) {
@@ -623,7 +608,7 @@ fn test_uninitialized_signer(safety_rules: &Callback) {
 
     let a1 = test_utils::make_proposal_with_qc(round + 1, genesis_qc, &signer, key.as_ref());
     let err = safety_rules.construct_and_sign_vote(&a1).unwrap_err();
-    assert_eq!(err, Error::NotInitialized("epoch_state".into()));
+    assert_eq!(err, Error::NotInitialized("validator_signer".into()));
     let err = safety_rules
         .sign_proposal(a1.block().block_data().clone())
         .unwrap_err();
@@ -768,12 +753,7 @@ fn test_key_not_in_store(safety_rules: &Callback) {
         .ledger_info_with_sigs
         .push(a2.block().quorum_cert().ledger_info().clone());
     let err = safety_rules.initialize(&proof).unwrap_err();
-    assert_eq!(
-        err,
-        Error::InternalError {
-            error: "Validator key not found".into()
-        }
-    );
+    assert_eq!(err, Error::InternalError("Validator key not found".into()));
 
     let state = safety_rules.consensus_state().unwrap();
     assert_eq!(state.in_validator_set(), false);
