@@ -1,0 +1,10 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/rust:stretch
+    branches:
+      ignore: gh-pages
+    steps:
+      - checkout
+      - run: echo This is a no op, that should only run on prs.
