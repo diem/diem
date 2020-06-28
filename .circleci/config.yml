@@ -257,7 +257,7 @@ jobs:
       - restore_cargo_package_cache
       - run:
           name: Build release
-          command: RUST_BACKTRACE=1 cargo build -j 8 --release
+          command: RUST_BACKTRACE=1 cargo build -j 12 --release
       - build_teardown
   run-e2e-test:
     executor: build-executor
@@ -331,7 +331,7 @@ jobs:
       - run:
           name: Run all unit tests
           command: |
-            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 8 --unit
+            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 12 --unit
   run-crypto-unit-test:
     executor: audit-executor
     description: Run crypto unit tests without formally verified crypto, to insulate against a curve25519 "default" backend regression
@@ -373,7 +373,8 @@ jobs:
           command: |
             cargo audit --deny-warnings \
               --ignore RUSTSEC-2018-0015 \
-              --ignore RUSTSEC-2019-0031
+              --ignore RUSTSEC-2019-0031 \
+              --ignore RUSTSEC-2020-0016
       - build_teardown
   code-coverage:
     description: Run code coverage
