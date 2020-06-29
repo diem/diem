@@ -8,4 +8,4 @@ module M {
     }
 }
 
-// check: CONTRAINT_KIND_MISMATCH
+// check: CONSTRAINT_KIND_MISMATCH

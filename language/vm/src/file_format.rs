@@ -27,7 +27,10 @@
 //! those structs translate to tables and table specifications.
 
 use crate::{
-    access::ModuleAccess, check_bounds::BoundsChecker, errors::VMResult, internals::ModuleIndex,
+    access::ModuleAccess,
+    check_bounds::BoundsChecker,
+    errors::{PartialVMError, PartialVMResult},
+    internals::ModuleIndex,
     IndexKind, SignatureTokenKind,
 };
 use mirai_annotations::*;
@@ -35,7 +38,7 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::{IdentStr, Identifier},
     language_storage::ModuleId,
-    vm_status::{StatusCode, VMStatus},
+    vm_status::StatusCode,
 };
 use num_variants::NumVariants;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -351,10 +354,10 @@ pub struct StructDefinition {
 }
 
 impl StructDefinition {
-    pub fn declared_field_count(&self) -> Result<MemberCount, VMStatus> {
+    pub fn declared_field_count(&self) -> PartialVMResult<MemberCount> {
         match &self.field_information {
             // TODO we might want a more informative error here
-            StructFieldInformation::Native => Err(VMStatus::new(StatusCode::LINKER_ERROR)
+            StructFieldInformation::Native => Err(PartialVMError::new(StatusCode::LINKER_ERROR)
                 .with_message("Looking for field in native structure".to_string())),
             StructFieldInformation::Declared(fields) => Ok(fields.len() as u16),
         }
@@ -1375,7 +1378,7 @@ impl CompiledScriptMut {
     /// Converts this instance into `CompiledScript` after verifying it for basic internal
     /// consistency. This includes bounds checks but no others.
     #[allow(deprecated)]
-    pub fn freeze(self) -> VMResult<CompiledScript> {
+    pub fn freeze(self) -> PartialVMResult<CompiledScript> {
         let (info, fake_module) = self.into_module();
         Ok(fake_module.freeze()?.into_script(info))
     }
@@ -1686,7 +1689,8 @@ impl CompiledModuleMut {
 
     /// Converts this instance into `CompiledModule` after verifying it for basic internal
     /// consistency. This includes bounds checks but no others.
-    pub fn freeze(self) -> VMResult<CompiledModule> {
+    pub fn freeze(self) -> PartialVMResult<CompiledModule> {
+        // Impossible to access self_id for location as it might not be safe due to bounds failing
         BoundsChecker::verify(&self)?;
         Ok(CompiledModule(self))
     }

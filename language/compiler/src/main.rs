@@ -8,9 +8,7 @@ use bytecode_verifier::{verify_module, verify_script, DependencyChecker};
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use compiler::{util, Compiler};
 use ir_to_bytecode::parser::{parse_module, parse_script};
-use libra_types::{
-    access_path::AccessPath, account_address::AccountAddress, account_config, vm_status::VMStatus,
-};
+use libra_types::{access_path::AccessPath, account_address::AccountAddress, account_config};
 use std::{
     convert::TryFrom,
     fs,
@@ -18,7 +16,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use structopt::StructOpt;
-use vm::file_format::CompiledModule;
+use vm::{errors::VMError, file_format::CompiledModule};
 
 #[derive(Debug, StructOpt)]
 #[structopt(name = "IR Compiler", about = "Move IR to bytecode compiler.")]
@@ -49,7 +47,7 @@ struct Args {
     pub output_source_maps: bool,
 }
 
-fn print_error_and_exit(verification_error: &VMStatus) -> ! {
+fn print_error_and_exit(verification_error: &VMError) -> ! {
     println!("Verification failed:");
     println!("{:?}", verification_error);
     std::process::exit(1);

@@ -319,32 +319,33 @@ where
         .map(|t| get_account_sequence_number(smp.db.as_ref(), t.sender()))
         .collect::<Vec<_>>();
 
-    let transactions: Vec<_> =
-        transactions
-            .into_iter()
-            .enumerate()
-            .filter_map(|(idx, t)| {
-                if let Ok(sequence_number) = seq_numbers[idx] {
-                    if t.sequence_number() >= sequence_number {
-                        return Some((t, sequence_number));
-                    } else {
-                        statuses.push((
-                            MempoolStatus::new(MempoolStatusCode::VmError),
-                            Some(VMStatus::new(SEQUENCE_NUMBER_TOO_OLD)),
-                        ));
-                    }
+    let transactions: Vec<_> = transactions
+        .into_iter()
+        .enumerate()
+        .filter_map(|(idx, t)| {
+            if let Ok(sequence_number) = seq_numbers[idx] {
+                if t.sequence_number() >= sequence_number {
+                    return Some((t, sequence_number));
                 } else {
-                    // failed to get transaction
                     statuses.push((
                         MempoolStatus::new(MempoolStatusCode::VmError),
-                        Some(VMStatus::new(RESOURCE_DOES_NOT_EXIST).with_message(
-                            "[shared mempool] failed to get account state".to_string(),
-                        )),
+                        Some(VMStatus::new(SEQUENCE_NUMBER_TOO_OLD, None, None)),
                     ));
                 }
-                None
-            })
-            .collect();
+            } else {
+                // failed to get transaction
+                statuses.push((
+                    MempoolStatus::new(MempoolStatusCode::VmError),
+                    Some(VMStatus::new(
+                        RESOURCE_DOES_NOT_EXIST,
+                        None,
+                        Some("[shared mempool] failed to get account state".to_string()),
+                    )),
+                ));
+            }
+            None
+        })
+        .collect();
 
     let validation_results = transactions
         .iter()

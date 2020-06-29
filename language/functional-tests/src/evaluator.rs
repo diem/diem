@@ -22,7 +22,7 @@ use libra_types::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
         SignedTransaction, Transaction as LibraTransaction, TransactionOutput, TransactionStatus,
     },
-    vm_status::{StatusCode, VMStatus},
+    vm_status::StatusCode,
 };
 use mirai_annotations::checked_verify;
 use move_core_types::{
@@ -35,6 +35,7 @@ use std::{
     time::Duration,
 };
 use vm::{
+    errors::{Location, VMError},
     file_format::{CompiledModule, CompiledScript},
     views::ModuleView,
 };
@@ -242,7 +243,7 @@ fn fetch_dependency(exec: &mut FakeExecutor, ident: ModuleId) -> Option<Compiled
 pub fn verify_script(
     script: CompiledScript,
     deps: &[CompiledModule],
-) -> std::result::Result<CompiledScript, VMStatus> {
+) -> std::result::Result<CompiledScript, VMError> {
     bytecode_verifier::verify_script(&script)?;
     DependencyChecker::verify_script(&script, deps)?;
     Ok(script)
@@ -252,7 +253,7 @@ pub fn verify_script(
 pub fn verify_module(
     module: CompiledModule,
     deps: &[CompiledModule],
-) -> std::result::Result<CompiledModule, VMStatus> {
+) -> std::result::Result<CompiledModule, VMError> {
     bytecode_verifier::verify_module(&module)?;
     DependencyChecker::verify_module(&module, deps)?;
     Ok(module)
@@ -400,7 +401,8 @@ fn run_transaction(
 fn serialize_and_deserialize_script(script: &CompiledScript) -> Result<()> {
     let mut script_blob = vec![];
     script.serialize(&mut script_blob)?;
-    let deserialized_script = CompiledScript::deserialize(&script_blob)?;
+    let deserialized_script = CompiledScript::deserialize(&script_blob)
+        .map_err(|e| e.finish(Location::Undefined).into_vm_status())?;
 
     if *script != deserialized_script {
         return Err(ErrorKind::Other(
@@ -416,7 +418,8 @@ fn serialize_and_deserialize_script(script: &CompiledScript) -> Result<()> {
 fn serialize_and_deserialize_module(module: &CompiledModule) -> Result<()> {
     let mut module_blob = vec![];
     module.serialize(&mut module_blob)?;
-    let deserialized_module = CompiledModule::deserialize(&module_blob)?;
+    let deserialized_module = CompiledModule::deserialize(&module_blob)
+        .map_err(|e| e.finish(Location::Undefined).into_vm_status())?;
 
     if *module != deserialized_module {
         return Err(ErrorKind::Other(
@@ -478,7 +481,7 @@ fn eval_transaction<TComp: Compiler>(
             let compiled_script = match verify_script(compiled_script, &deps) {
                 Ok(script) => script,
                 Err(err) => {
-                    let err: Error = ErrorKind::VerificationError(err).into();
+                    let err: Error = ErrorKind::VerificationError(err.into_vm_status()).into();
                     log.append(EvaluationOutput::Error(Box::new(err)));
                     return Ok(Status::Failure);
                 }
@@ -516,7 +519,7 @@ fn eval_transaction<TComp: Compiler>(
             let compiled_module = match verify_module(compiled_module, &deps) {
                 Ok(module) => module,
                 Err(err) => {
-                    let err: Error = ErrorKind::VerificationError(err).into();
+                    let err: Error = ErrorKind::VerificationError(err.into_vm_status()).into();
                     log.append(EvaluationOutput::Error(Box::new(err)));
                     return Ok(Status::Failure);
                 }

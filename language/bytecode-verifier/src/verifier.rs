@@ -8,10 +8,10 @@ use crate::{
     resources::ResourceTransitiveChecker, signature::SignatureChecker,
     struct_defs::RecursiveStructDefChecker,
 };
-use libra_types::vm_status::{StatusCode, VMStatus};
+use libra_types::vm_status::StatusCode;
 use vm::{
     access::ScriptAccess,
-    errors::VMResult,
+    errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{CompiledModule, CompiledScript, SignatureToken},
 };
 
@@ -49,6 +49,10 @@ pub fn verify_script(script: &CompiledScript) -> VMResult<()> {
 
 /// This function checks the extra requirements on the signature of the main function of a script.
 pub fn verify_main_signature(script: &CompiledScript) -> VMResult<()> {
+    verify_main_signature_impl(script).map_err(|e| e.finish(Location::Script))
+}
+
+fn verify_main_signature_impl(script: &CompiledScript) -> PartialVMResult<()> {
     fn is_valid_arg_type(idx: usize, arg_type: &SignatureToken) -> bool {
         use SignatureToken as S;
         match arg_type {
@@ -83,7 +87,9 @@ pub fn verify_main_signature(script: &CompiledScript) -> VMResult<()> {
     let arguments = script.signature_at(script.as_inner().parameters);
     for (idx, arg_type) in arguments.0.iter().enumerate() {
         if !is_valid_arg_type(idx, arg_type) {
-            return Err(VMStatus::new(StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE));
+            return Err(PartialVMError::new(
+                StatusCode::INVALID_MAIN_FUNCTION_SIGNATURE,
+            ));
         }
     }
     Ok(())

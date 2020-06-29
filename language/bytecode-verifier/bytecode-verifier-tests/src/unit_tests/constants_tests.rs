@@ -209,7 +209,7 @@ fn error(type_: SignatureToken, data: Vec<u8>, code: StatusCode) {
     assert!(
         constants::verify_module(&module_mut.freeze().unwrap())
             .unwrap_err()
-            .major_status
+            .major_status()
             == code
     )
 }

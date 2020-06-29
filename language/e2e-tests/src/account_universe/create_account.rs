@@ -114,11 +114,13 @@ impl AUTransactionGen for CreateExistingAccountGen {
             sender.sequence_number += 1;
             gas_used = sender.create_existing_account_gas_cost();
             sender.balance -= gas_used * gas_price;
-            TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(777_777))
+            TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED, Some(777_777), None))
         } else {
             // Not enough gas to get past the prologue.
             TransactionStatus::Discard(VMStatus::new(
                 StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
+                None,
+                None,
             ))
         };
 

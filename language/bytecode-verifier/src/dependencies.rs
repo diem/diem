@@ -3,15 +3,15 @@
 
 //! This module contains the public APIs supported by the bytecode verifier.
 use crate::binary_views::BinaryIndexedView;
-use libra_types::vm_status::{StatusCode, VMStatus};
+use libra_types::vm_status::StatusCode;
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
 use std::collections::{BTreeMap, HashMap};
 use vm::{
     access::{ModuleAccess, ScriptAccess},
-    errors::{append_err_info, verification_error, VMResult},
+    errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         CompiledModule, CompiledScript, FunctionHandle, FunctionHandleIndex, ModuleHandle,
-        ModuleHandleIndex, SignatureToken, StructHandle, StructHandleIndex,
+        ModuleHandleIndex, SignatureToken, StructHandle, StructHandleIndex, TableIndex,
     },
     IndexKind,
 };
@@ -31,6 +31,14 @@ impl<'a> DependencyChecker<'a> {
         module: &'a CompiledModule,
         dependencies: impl IntoIterator<Item = &'a CompiledModule>,
     ) -> VMResult<()> {
+        Self::verify_module_impl(module, dependencies)
+            .map_err(|e| e.finish(Location::Module(module.self_id())))
+    }
+
+    pub fn verify_module_impl(
+        module: &'a CompiledModule,
+        dependencies: impl IntoIterator<Item = &'a CompiledModule>,
+    ) -> PartialVMResult<()> {
         let module_id = module.self_id();
         let mut dependency_map = BTreeMap::new();
         for dependency in dependencies {
@@ -58,6 +66,13 @@ impl<'a> DependencyChecker<'a> {
         script: &'a CompiledScript,
         dependencies: impl IntoIterator<Item = &'a CompiledModule>,
     ) -> VMResult<()> {
+        Self::verify_script_impl(script, dependencies).map_err(|e| e.finish(Location::Script))
+    }
+
+    pub fn verify_script_impl(
+        script: &'a CompiledScript,
+        dependencies: impl IntoIterator<Item = &'a CompiledModule>,
+    ) -> PartialVMResult<()> {
         let mut dependency_map = BTreeMap::new();
         for dependency in dependencies {
             let dependency_id = dependency.self_id();
@@ -104,16 +119,16 @@ impl<'a> DependencyChecker<'a> {
         &self,
         module_handles: &[ModuleHandle],
         self_module: Option<ModuleHandleIndex>,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         for (idx, module_handle) in module_handles.iter().enumerate() {
             let module_id = self.resolver.module_id_for_handle(module_handle);
             if Some(ModuleHandleIndex(idx as u16)) != self_module
                 && !self.dependency_map.contains_key(&module_id)
             {
                 return Err(verification_error(
-                    IndexKind::ModuleHandle,
-                    idx,
                     StatusCode::MISSING_DEPENDENCY,
+                    IndexKind::ModuleHandle,
+                    idx as TableIndex,
                 ));
             }
         }
@@ -124,7 +139,7 @@ impl<'a> DependencyChecker<'a> {
         &self,
         struct_handles: &[StructHandle],
         self_module: Option<ModuleHandleIndex>,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         for (idx, struct_handle) in struct_handles.iter().enumerate() {
             if Some(struct_handle.module) == self_module {
                 continue;
@@ -145,17 +160,17 @@ impl<'a> DependencyChecker<'a> {
                         || struct_handle.type_parameters != def_handle.type_parameters
                     {
                         return Err(verification_error(
-                            IndexKind::StructHandle,
-                            idx,
                             StatusCode::TYPE_MISMATCH,
+                            IndexKind::StructHandle,
+                            idx as TableIndex,
                         ));
                     }
                 }
                 None => {
                     return Err(verification_error(
-                        IndexKind::StructHandle,
-                        idx,
                         StatusCode::LOOKUP_FAILED,
+                        IndexKind::StructHandle,
+                        idx as TableIndex,
                     ))
                 }
             }
@@ -167,7 +182,7 @@ impl<'a> DependencyChecker<'a> {
         &self,
         function_handles: &[FunctionHandle],
         self_module: Option<ModuleHandleIndex>,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         for (idx, function_handle) in function_handles.iter().enumerate() {
             if Some(function_handle.module) == self_module {
                 continue;
@@ -187,9 +202,9 @@ impl<'a> DependencyChecker<'a> {
                     // same type parameter constraints
                     if function_handle.type_parameters != def_handle.type_parameters {
                         return Err(verification_error(
-                            IndexKind::FunctionHandle,
-                            idx,
                             StatusCode::TYPE_MISMATCH,
+                            IndexKind::FunctionHandle,
+                            idx as TableIndex,
                         ));
                     }
                     // same parameters
@@ -198,9 +213,9 @@ impl<'a> DependencyChecker<'a> {
                         Some(module) => module.signature_at(def_handle.parameters),
                         None => {
                             return Err(verification_error(
-                                IndexKind::FunctionHandle,
-                                idx,
                                 StatusCode::LOOKUP_FAILED,
+                                IndexKind::FunctionHandle,
+                                idx as TableIndex,
                             ))
                         }
                     };
@@ -209,7 +224,7 @@ impl<'a> DependencyChecker<'a> {
                         &def_params.0,
                         owner_module,
                     )
-                    .map_err(|err| append_err_info(err, IndexKind::FunctionHandle, idx))?;
+                    .map_err(|e| e.at_index(IndexKind::FunctionHandle, idx as TableIndex))?;
 
                     // same return_
                     let handle_return = self.resolver.signature_at(function_handle.return_);
@@ -217,9 +232,9 @@ impl<'a> DependencyChecker<'a> {
                         Some(module) => module.signature_at(def_handle.return_),
                         None => {
                             return Err(verification_error(
-                                IndexKind::FunctionHandle,
-                                idx,
                                 StatusCode::LOOKUP_FAILED,
+                                IndexKind::FunctionHandle,
+                                idx as TableIndex,
                             ))
                         }
                     };
@@ -228,13 +243,13 @@ impl<'a> DependencyChecker<'a> {
                         &def_return.0,
                         owner_module,
                     )
-                    .map_err(|err| append_err_info(err, IndexKind::FunctionHandle, idx))?;
+                    .map_err(|e| e.at_index(IndexKind::FunctionHandle, idx as TableIndex))?;
                 }
                 None => {
                     return Err(verification_error(
-                        IndexKind::FunctionHandle,
-                        idx,
                         StatusCode::LOOKUP_FAILED,
+                        IndexKind::FunctionHandle,
+                        idx as TableIndex,
                     ));
                 }
             }
@@ -247,9 +262,9 @@ impl<'a> DependencyChecker<'a> {
         handle_sig: &[SignatureToken],
         def_sig: &[SignatureToken],
         def_module: &CompiledModule,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         if handle_sig.len() != def_sig.len() {
-            return Err(VMStatus::new(StatusCode::TYPE_MISMATCH));
+            return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH));
         }
         for (handle_type, def_type) in handle_sig.iter().zip(def_sig) {
             self.compare_types(handle_type, def_type, def_module)?;
@@ -262,7 +277,7 @@ impl<'a> DependencyChecker<'a> {
         handle_type: &SignatureToken,
         def_type: &SignatureToken,
         def_module: &CompiledModule,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         match (handle_type, def_type) {
             (SignatureToken::Bool, SignatureToken::Bool)
             | (SignatureToken::U8, SignatureToken::U8)
@@ -289,12 +304,12 @@ impl<'a> DependencyChecker<'a> {
             }
             (SignatureToken::TypeParameter(idx1), SignatureToken::TypeParameter(idx2)) => {
                 if idx1 != idx2 {
-                    Err(VMStatus::new(StatusCode::TYPE_MISMATCH))
+                    Err(PartialVMError::new(StatusCode::TYPE_MISMATCH))
                 } else {
                     Ok(())
                 }
             }
-            _ => Err(VMStatus::new(StatusCode::TYPE_MISMATCH)),
+            _ => Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)),
         }
     }
 
@@ -303,7 +318,7 @@ impl<'a> DependencyChecker<'a> {
         idx1: StructHandleIndex,
         idx2: StructHandleIndex,
         def_module: &CompiledModule,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         // grab ModuleId and struct name for the module being verified
         let struct_handle = self.resolver.struct_handle_at(idx1);
         let module_handle = self.resolver.module_handle_at(struct_handle.module);
@@ -317,7 +332,7 @@ impl<'a> DependencyChecker<'a> {
         let def_struct_name = def_module.identifier_at(def_struct_handle.name);
 
         if module_id != def_module_id || struct_name != def_struct_name {
-            Err(VMStatus::new(StatusCode::TYPE_MISMATCH))
+            Err(PartialVMError::new(StatusCode::TYPE_MISMATCH))
         } else {
             Ok(())
         }

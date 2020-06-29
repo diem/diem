@@ -28,6 +28,7 @@ use libra_vm::LibraVM;
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
     language_storage::TypeTag,
+    vm_status::VMStatus,
 };
 use move_vm_types::{gas_schedule::CostStrategy, values::Value};
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -35,7 +36,6 @@ use std::{fs, io::Write, panic, thread};
 use utils::module_generation::generate_module;
 use vm::{
     access::ModuleAccess,
-    errors::VMResult,
     file_format::{
         CompiledModule, CompiledModuleMut, FunctionDefinitionIndex, Kind, SignatureToken,
         StructHandleIndex,
@@ -54,7 +54,7 @@ fn run_verifier(module: CompiledModule) -> Result<CompiledModule, String> {
 }
 
 /// This function runs a verified module in the VM runtime
-fn run_vm(module: CompiledModule) -> VMResult<()> {
+fn run_vm(module: CompiledModule) -> Result<(), VMStatus> {
     // By convention the 0'th index function definition is the entrypoint to the module (i.e. that
     // will contain only simply-typed arguments).
     let entry_idx = FunctionDefinitionIndex::new(0);
@@ -94,7 +94,7 @@ fn execute_function_in_module<S: StateView>(
     ty_args: Vec<TypeTag>,
     args: Vec<Value>,
     state_view: &S,
-) -> VMResult<()> {
+) -> Result<(), VMStatus> {
     let module_id = module.self_id();
     let entry_name = {
         let entry_func_idx = module.function_def_at(idx).function;
@@ -108,23 +108,25 @@ fn execute_function_in_module<S: StateView>(
         let internals = libra_vm.internals();
 
         let gas_schedule = internals.gas_schedule()?;
-        internals.with_txn_data_cache(state_view, |mut txn_context| {
-            let sender = AccountAddress::random();
-            let mut mod_blob = vec![];
-            module
-                .serialize(&mut mod_blob)
-                .expect("Module serialization error");
-            let mut cost_strategy = CostStrategy::system(gas_schedule, GasUnits::new(0));
-            txn_context.publish_module(mod_blob, sender, &mut cost_strategy)?;
-            txn_context.execute_function(
-                &module_id,
-                &entry_name,
-                ty_args,
-                args,
-                sender,
-                &mut cost_strategy,
-            )
-        })
+        internals
+            .with_txn_data_cache(state_view, |mut txn_context| {
+                let sender = AccountAddress::random();
+                let mut mod_blob = vec![];
+                module
+                    .serialize(&mut mod_blob)
+                    .expect("Module serialization error");
+                let mut cost_strategy = CostStrategy::system(gas_schedule, GasUnits::new(0));
+                txn_context.publish_module(mod_blob, sender, &mut cost_strategy)?;
+                txn_context.execute_function(
+                    &module_id,
+                    &entry_name,
+                    ty_args,
+                    args,
+                    sender,
+                    &mut cost_strategy,
+                )
+            })
+            .map_err(|e| e.into_vm_status())
     }
 }
 

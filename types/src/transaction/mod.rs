@@ -552,7 +552,9 @@ impl TransactionStatus {
             TransactionStatus::Discard(vm_status) | TransactionStatus::Keep(vm_status) => {
                 vm_status.clone()
             }
-            TransactionStatus::Retry => VMStatus::new(StatusCode::UNKNOWN_VALIDATION_STATUS),
+            TransactionStatus::Retry => {
+                VMStatus::new(StatusCode::UNKNOWN_VALIDATION_STATUS, None, None)
+            }
         }
     }
 

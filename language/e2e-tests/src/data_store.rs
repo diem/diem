@@ -121,7 +121,11 @@ impl RemoteCache for FakeDataStore {
         RemoteStorage::new(self).get_module(module_id)
     }
 
-    fn get_resource(&self, address: &AccountAddress, tag: &TypeTag) -> VMResult<Option<Vec<u8>>> {
+    fn get_resource(
+        &self,
+        address: &AccountAddress,
+        tag: &TypeTag,
+    ) -> PartialVMResult<Option<Vec<u8>>> {
         RemoteStorage::new(self).get_resource(address, tag)
     }
 }

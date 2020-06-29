@@ -42,12 +42,11 @@ enum MockVMTransaction {
 }
 
 pub static KEEP_STATUS: Lazy<TransactionStatus> =
-    Lazy::new(|| TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)));
+    Lazy::new(|| TransactionStatus::Keep(VMStatus::executed()));
 
 // We use 10 as the assertion error code for insufficient balance within the Libra coin contract.
-pub static DISCARD_STATUS: Lazy<TransactionStatus> = Lazy::new(|| {
-    TransactionStatus::Discard(VMStatus::new(StatusCode::ABORTED).with_sub_status(10))
-});
+pub static DISCARD_STATUS: Lazy<TransactionStatus> =
+    Lazy::new(|| TransactionStatus::Discard(VMStatus::new(StatusCode::ABORTED, Some(10), None)));
 
 pub struct MockVM;
 
@@ -140,7 +139,7 @@ impl VMExecutor for MockVM {
                         write_set,
                         events,
                         0,
-                        TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
+                        TransactionStatus::Keep(VMStatus::executed()),
                     ));
                 }
                 MockVMTransaction::Reconfiguration => {

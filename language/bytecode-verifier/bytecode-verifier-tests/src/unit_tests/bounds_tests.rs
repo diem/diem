@@ -200,7 +200,7 @@ proptest! {
         module.address_identifiers = address_identifiers;
 
         prop_assert_eq!(
-            BoundsChecker::verify(&module).map_err(|e| e.major_status),
+            BoundsChecker::verify(&module).map_err(|e| e.major_status()),
             Err(StatusCode::NO_MODULE_HANDLES)
         );
     }

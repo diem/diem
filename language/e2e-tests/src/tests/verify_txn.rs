@@ -49,7 +49,7 @@ fn verify_signature() {
     assert_prologue_parity!(
         executor.verify_transaction(signed_txn.clone()).status(),
         executor.execute_transaction(signed_txn).status(),
-        VMStatus::new(StatusCode::INVALID_SIGNATURE)
+        VMStatus::new(StatusCode::INVALID_SIGNATURE, None, None)
     );
 }
 
@@ -78,7 +78,7 @@ fn verify_reserved_sender() {
     assert_prologue_parity!(
         executor.verify_transaction(signed_txn.clone()).status(),
         executor.execute_transaction(signed_txn).status(),
-        VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST)
+        VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST, None, None)
     );
 }
 
@@ -130,7 +130,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::INVALID_AUTH_KEY)
+        VMStatus::new(StatusCode::INVALID_AUTH_KEY, None, None)
     );
 
     // Create a new transaction that has a old sequence number.
@@ -146,7 +146,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_OLD)
+        VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_OLD, None, None)
     );
 
     // Create a new transaction that has a too new sequence number.
@@ -163,7 +163,7 @@ fn verify_simple_payment() {
         executor.verify_transaction(txn.clone()).status() => None,
         executor.execute_transaction(txn).status() =>
         TransactionStatus::Discard(VMStatus::new(
-                StatusCode::SEQUENCE_NUMBER_TOO_NEW
+                StatusCode::SEQUENCE_NUMBER_TOO_NEW, None, None
         ))
     );
 
@@ -180,7 +180,11 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE)
+        VMStatus::new(
+            StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
+            None,
+            None
+        )
     );
 
     // XXX TZ: TransactionExpired
@@ -202,7 +206,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST)
+        VMStatus::new(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST, None, None)
     );
 
     // RejectedWriteSet is tested in `verify_rejected_write_set`
@@ -226,7 +230,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND)
+        VMStatus::new(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND, None, None)
     );
 
     // Note: We can't test this at the moment since MIN_PRICE_PER_GAS_UNIT is set to 0 for
@@ -257,7 +261,11 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS)
+        VMStatus::new(
+            StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS,
+            None,
+            None
+        )
     );
 
     let txn = sender.account().create_signed_txn_with_args(
@@ -272,7 +280,11 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS)
+        VMStatus::new(
+            StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS,
+            None,
+            None
+        )
     );
 
     let txn = sender.account().create_signed_txn_with_args(
@@ -287,7 +299,11 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND)
+        VMStatus::new(
+            StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND,
+            None,
+            None
+        )
     );
 
     let txn = sender.account().create_signed_txn_with_args(
@@ -302,7 +318,7 @@ fn verify_simple_payment() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE)
+        VMStatus::new(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE, None, None)
     );
 
     // Create a new transaction that swaps the two arguments.
@@ -321,10 +337,11 @@ fn verify_simple_payment() {
     );
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(
-            VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("argument length mismatch: expected 5 got 3".to_string())
-        )
+        &TransactionStatus::Keep(VMStatus::new(
+            StatusCode::TYPE_MISMATCH,
+            None,
+            Some("argument length mismatch: expected 5 got 3".to_string())
+        ))
     );
 
     // Create a new transaction that has no argument.
@@ -340,10 +357,11 @@ fn verify_simple_payment() {
 
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(
-            VMStatus::new(StatusCode::TYPE_MISMATCH)
-                .with_message("argument length mismatch: expected 5 got 1".to_string())
-        )
+        &TransactionStatus::Keep(VMStatus::new(
+            StatusCode::TYPE_MISMATCH,
+            None,
+            Some("argument length mismatch: expected 5 got 1".to_string())
+        ))
     );
 }
 
@@ -370,7 +388,7 @@ pub fn test_whitelist() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::UNKNOWN_SCRIPT)
+        VMStatus::new(StatusCode::UNKNOWN_SCRIPT, None, None)
     );
 }
 
@@ -442,7 +460,7 @@ pub fn test_publish_from_libra_root() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::INVALID_MODULE_PUBLISHER)
+        VMStatus::new(StatusCode::INVALID_MODULE_PUBLISHER, None, None)
     );
 }
 
@@ -481,7 +499,7 @@ pub fn test_no_publishing_libra_root_sender() {
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
 }
 
@@ -575,7 +593,7 @@ pub fn test_open_publishing() {
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
 }
 

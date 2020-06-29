@@ -12,12 +12,12 @@ use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
     language_storage::{ModuleId, TypeTag},
-    vm_status::{StatusCode, VMStatus},
+    vm_status::StatusCode,
 };
 use move_vm_types::{data_store::DataStore, gas_schedule::CostStrategy, values::Value};
 use vm::{
     access::ModuleAccess,
-    errors::{verification_error, vm_status, Location, VMResult},
+    errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::SignatureToken,
     CompiledModule, IndexKind,
 };
@@ -54,7 +54,7 @@ impl VMRuntime {
             Ok(module) => module,
             Err(err) => {
                 warn!("[VM] module deserialization failed {:?}", err);
-                return Err(err);
+                return Err(err.finish(Location::Undefined));
             }
         };
 
@@ -63,20 +63,20 @@ impl VMRuntime {
         // publish a module under anyone's account.
         if compiled_module.address() != &sender {
             return Err(verification_error(
-                IndexKind::AddressIdentifier,
-                compiled_module.self_handle_idx().0 as usize,
                 StatusCode::MODULE_ADDRESS_DOES_NOT_MATCH_SENDER,
-            ));
+                IndexKind::AddressIdentifier,
+                compiled_module.self_handle_idx().0,
+            )
+            .finish(Location::Undefined));
         }
 
         // Make sure that there is not already a module with this name published
         // under the transaction sender's account.
         let module_id = compiled_module.self_id();
         if data_store.exists_module(&module_id) {
-            return Err(vm_status(
-                Location::default(),
-                StatusCode::DUPLICATE_MODULE_NAME,
-            ));
+            return Err(
+                PartialVMError::new(StatusCode::DUPLICATE_MODULE_NAME).finish(Location::Undefined)
+            );
         };
 
         // perform bytecode and loading verification
@@ -111,7 +111,7 @@ impl VMRuntime {
         if first_param_opt.map_or(false, |sig| is_signer_reference(sig)) {
             args.insert(0, Value::transaction_argument_signer_reference(sender))
         }
-        check_args(&args)?;
+        check_args(&args).map_err(|e| e.finish(Location::Script))?;
 
         // run the script
         Interpreter::entrypoint(
@@ -140,7 +140,7 @@ impl VMRuntime {
                 .load_function(function_name, module, &ty_args, data_store)?;
 
         // check the arguments provided are of restricted types
-        check_args(&args)?;
+        check_args(&args).map_err(|e| e.finish(Location::Module(module.clone())))?;
 
         // run the function
         Interpreter::entrypoint(
@@ -156,10 +156,10 @@ impl VMRuntime {
 
 /// Check that the transaction arguments are acceptable by the VM.
 /// Constants are the only arguments allowed.
-fn check_args(args: &[Value]) -> VMResult<()> {
+fn check_args(args: &[Value]) -> PartialVMResult<()> {
     for val in args {
         if !val.is_constant_or_signer_ref() {
-            return Err(VMStatus::new(StatusCode::TYPE_MISMATCH)
+            return Err(PartialVMError::new(StatusCode::TYPE_MISMATCH)
                 .with_message("VM argument types are restricted".to_string()));
         }
     }

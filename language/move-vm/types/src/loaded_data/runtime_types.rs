@@ -1,9 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::vm_status::{StatusCode, VMStatus};
+use libra_types::vm_status::StatusCode;
 use move_core_types::{identifier::Identifier, language_storage::ModuleId};
-use vm::errors::VMResult;
+use vm::errors::{PartialVMError, PartialVMResult};
 
 use crate::loaded_data::types::FatType;
 use vm::file_format::{Kind, StructDefinitionIndex};
@@ -35,17 +35,19 @@ pub enum Type {
 }
 
 impl Type {
-    pub fn subst(&self, ty_args: &[Type]) -> VMResult<Type> {
+    pub fn subst(&self, ty_args: &[Type]) -> PartialVMResult<Type> {
         let res = match self {
             Type::TyParam(idx) => match ty_args.get(*idx) {
                 Some(ty) => ty.clone(),
                 None => {
-                    return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                        .with_message(format!(
-                            "type substitution failed: index out of bounds -- len {} got {}",
-                            ty_args.len(),
-                            idx
-                        )));
+                    return Err(
+                        PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(format!(
+                                "type substitution failed: index out of bounds -- len {} got {}",
+                                ty_args.len(),
+                                idx
+                            )),
+                    );
                 }
             },
             Type::Bool => Type::Bool,
@@ -71,5 +73,5 @@ impl Type {
 }
 
 pub trait TypeConverter {
-    fn type_to_fat_type(&self, type_: &Type) -> VMResult<FatType>;
+    fn type_to_fat_type(&self, type_: &Type) -> PartialVMResult<FatType>;
 }

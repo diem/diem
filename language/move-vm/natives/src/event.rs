@@ -8,13 +8,13 @@ use move_vm_types::{
     values::Value,
 };
 use std::collections::VecDeque;
-use vm::errors::VMResult;
+use vm::errors::PartialVMResult;
 
 pub fn native_emit_event(
     context: &mut impl NativeContext,
     mut ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(arguments.len() == 3);
 

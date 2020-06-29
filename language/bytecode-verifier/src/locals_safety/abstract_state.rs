@@ -5,7 +5,11 @@
 
 use crate::absint::{AbstractDomain, JoinResult};
 use mirai_annotations::{checked_precondition, checked_verify};
-use vm::file_format::{Kind, LocalIndex};
+use move_core_types::vm_status::StatusCode;
+use vm::{
+    errors::PartialVMError,
+    file_format::{CodeOffset, FunctionDefinitionIndex, Kind, LocalIndex},
+};
 
 /// LocalState represents the current assignment state of a local
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -23,6 +27,7 @@ use LocalState::*;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct AbstractState {
+    current_function: Option<FunctionDefinitionIndex>,
     local_kinds: Vec<Kind>,
     local_states: Vec<LocalState>,
 }
@@ -45,6 +50,7 @@ impl AbstractState {
             .collect();
 
         Self {
+            current_function: function_view.index(),
             local_states,
             local_kinds,
         }
@@ -75,9 +81,18 @@ impl AbstractState {
         self.local_states[idx as usize] = Unavailable
     }
 
+    pub fn error(&self, status: StatusCode, offset: CodeOffset) -> PartialVMError {
+        PartialVMError::new(status).at_code_offset(
+            self.current_function.unwrap_or(FunctionDefinitionIndex(0)),
+            offset,
+        )
+    }
+
     fn join_(&self, other: &Self) -> Self {
+        checked_precondition!(self.current_function == other.current_function);
         checked_precondition!(self.local_kinds.len() == other.local_kinds.len());
         checked_precondition!(self.local_states.len() == other.local_states.len());
+        let current_function = self.current_function;
         let local_kinds = self.local_kinds.clone();
         let local_states = self
             .local_states
@@ -109,6 +124,7 @@ impl AbstractState {
             .collect();
 
         Self {
+            current_function,
             local_states,
             local_kinds,
         }

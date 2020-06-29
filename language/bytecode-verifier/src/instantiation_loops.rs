@@ -12,7 +12,7 @@
 //! instances. We do reject recursive functions that create a new type upon each call but do
 //! terminate eventually.
 
-use libra_types::vm_status::{StatusCode, VMStatus};
+use libra_types::vm_status::StatusCode;
 use petgraph::{
     algo::tarjan_scc,
     graph::{EdgeIndex, NodeIndex},
@@ -22,7 +22,7 @@ use petgraph::{
 use std::collections::{hash_map, HashMap, HashSet};
 use vm::{
     access::ModuleAccess,
-    errors::VMResult,
+    errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         Bytecode, CompiledModule, FunctionDefinition, FunctionDefinitionIndex, FunctionHandleIndex,
         SignatureIndex, SignatureToken, TypeParameterIndex,
@@ -85,6 +85,10 @@ impl<'a> InstantiationLoopChecker<'a> {
     }
 
     pub fn verify_module(module: &'a CompiledModule) -> VMResult<()> {
+        Self::verify_module_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))
+    }
+
+    fn verify_module_impl(module: &'a CompiledModule) -> PartialVMResult<()> {
         let mut checker = Self::new(module);
         checker.build_graph();
         let mut components = checker.find_non_trivial_components();
@@ -111,7 +115,7 @@ impl<'a> InstantiationLoopChecker<'a> {
                     "edges with constructors: [{}], nodes: [{}]",
                     msg_edges, msg_nodes
                 );
-                Err(VMStatus::new(StatusCode::LOOP_IN_INSTANTIATION_GRAPH).with_message(msg))
+                Err(PartialVMError::new(StatusCode::LOOP_IN_INSTANTIATION_GRAPH).with_message(msg))
             }
         }
     }

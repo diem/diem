@@ -29,7 +29,7 @@ fn failed_transaction_cleanup_test() {
 
     // TYPE_MISMATCH should be kept and charged.
     let out1 = libra_vm.failed_transaction_cleanup(
-        VMStatus::new(StatusCode::TYPE_MISMATCH),
+        VMStatus::new(StatusCode::TYPE_MISMATCH, None, None),
         gas_left,
         &txn_data,
         &mut data_cache,
@@ -45,7 +45,7 @@ fn failed_transaction_cleanup_test() {
 
     // OUT_OF_BOUNDS_INDEX should be discarded and not charged.
     let out2 = libra_vm.failed_transaction_cleanup(
-        VMStatus::new(StatusCode::OUT_OF_BOUNDS_INDEX),
+        VMStatus::new(StatusCode::OUT_OF_BOUNDS_INDEX, None, None),
         gas_left,
         &txn_data,
         &mut data_cache,

@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::vm_status::{sub_status::NFE_LCS_SERIALIZATION_FAILURE, StatusCode, VMStatus};
+use libra_types::vm_status::{sub_status::NFE_LCS_SERIALIZATION_FAILURE, StatusCode};
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
@@ -9,14 +9,14 @@ use move_vm_types::{
     values::{values_impl::Reference, Value},
 };
 use std::collections::VecDeque;
-use vm::errors::VMResult;
+use vm::errors::{PartialVMError, PartialVMResult};
 
 /// Rust implementation of Move's `native public fun to_bytes<T>(&T): vector<u8>`
 pub fn native_to_bytes(
     context: &mut impl NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 1);
 
@@ -29,7 +29,7 @@ pub fn native_to_bytes(
         .read_ref()?
         .simple_serialize_fat(&arg_type)
         .ok_or_else(|| {
-            VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+            PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
                 .with_sub_status(NFE_LCS_SERIALIZATION_FAILURE)
         })?;
     // cost is proportional to the size of the serialized value

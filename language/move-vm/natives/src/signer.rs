@@ -8,13 +8,13 @@ use move_vm_types::{
     values::{values_impl::SignerRef, Value},
 };
 use std::collections::VecDeque;
-use vm::errors::VMResult;
+use vm::errors::PartialVMResult;
 
 pub fn native_borrow_address(
     context: &impl NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 

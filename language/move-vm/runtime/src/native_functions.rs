@@ -13,7 +13,7 @@ use move_vm_types::{
     values::Value,
 };
 use std::{collections::VecDeque, fmt::Write};
-use vm::errors::VMResult;
+use vm::errors::PartialVMResult;
 
 // The set of native functions the VM supports.
 // The functions can line in any crate linked in but the VM declares them here.
@@ -83,7 +83,7 @@ impl NativeFunction {
         ctx: &mut impl NativeContext,
         t: Vec<Type>,
         v: VecDeque<Value>,
-    ) -> VMResult<NativeResult> {
+    ) -> PartialVMResult<NativeResult> {
         match self {
             Self::HashSha2_256 => hash::native_sha2_256(ctx, t, v),
             Self::HashSha3_256 => hash::native_sha3_256(ctx, t, v),
@@ -133,7 +133,7 @@ impl<'a> FunctionContext<'a> {
 }
 
 impl<'a> NativeContext for FunctionContext<'a> {
-    fn print_stack_trace<B: Write>(&self, buf: &mut B) -> VMResult<()> {
+    fn print_stack_trace<B: Write>(&self, buf: &mut B) -> PartialVMResult<()> {
         self.interpreter
             .debug_print_stack_trace(buf, &self.resolver)
     }
@@ -142,18 +142,24 @@ impl<'a> NativeContext for FunctionContext<'a> {
         self.cost_strategy.cost_table()
     }
 
-    fn save_event(&mut self, guid: Vec<u8>, seq_num: u64, ty: Type, val: Value) -> VMResult<()> {
+    fn save_event(
+        &mut self,
+        guid: Vec<u8>,
+        seq_num: u64,
+        ty: Type,
+        val: Value,
+    ) -> PartialVMResult<()> {
         Ok(self.data_store.emit_event(guid, seq_num, ty, val))
     }
 
-    fn convert_to_fat_types(&self, types: Vec<Type>) -> VMResult<Vec<FatType>> {
+    fn convert_to_fat_types(&self, types: Vec<Type>) -> PartialVMResult<Vec<FatType>> {
         types
             .iter()
             .map(|ty| self.resolver.type_to_fat_type(ty))
-            .collect()
+            .collect::<PartialVMResult<_>>()
     }
 
-    fn is_resource(&self, ty: &Type) -> VMResult<bool> {
+    fn is_resource(&self, ty: &Type) -> PartialVMResult<bool> {
         self.resolver.is_resource(ty)
     }
 }

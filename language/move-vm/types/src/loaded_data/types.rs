@@ -2,17 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Loaded representation for runtime types.
 
-use libra_types::{
-    account_address::AccountAddress,
-    vm_status::{StatusCode, VMStatus},
-};
+use libra_types::{account_address::AccountAddress, vm_status::StatusCode};
 use move_core_types::{
     identifier::Identifier,
     language_storage::{StructTag, TypeTag},
     value::{MoveKind, MoveKindInfo, MoveStructLayout, MoveTypeLayout},
 };
 use std::{convert::TryInto, fmt::Write};
-use vm::errors::VMResult;
+use vm::errors::{PartialVMError, PartialVMResult};
 
 use libra_types::access_path::AccessPath;
 use serde::{Deserialize, Serialize};
@@ -53,11 +50,11 @@ pub enum FatType {
 }
 
 impl FatStructType {
-    pub fn resource_path(&self) -> VMResult<Vec<u8>> {
+    pub fn resource_path(&self) -> PartialVMResult<Vec<u8>> {
         Ok(AccessPath::resource_access_vec(&self.struct_tag()?))
     }
 
-    pub fn subst(&self, ty_args: &[FatType]) -> VMResult<FatStructType> {
+    pub fn subst(&self, ty_args: &[FatType]) -> PartialVMResult<FatStructType> {
         Ok(Self {
             address: self.address,
             module: self.module.clone(),
@@ -67,21 +64,21 @@ impl FatStructType {
                 .ty_args
                 .iter()
                 .map(|ty| ty.subst(ty_args))
-                .collect::<VMResult<_>>()?,
+                .collect::<PartialVMResult<_>>()?,
             layout: self
                 .layout
                 .iter()
                 .map(|ty| ty.subst(ty_args))
-                .collect::<VMResult<_>>()?,
+                .collect::<PartialVMResult<_>>()?,
         })
     }
 
-    pub fn struct_tag(&self) -> VMResult<StructTag> {
+    pub fn struct_tag(&self) -> PartialVMResult<StructTag> {
         let ty_args = self
             .ty_args
             .iter()
             .map(|ty| ty.type_tag())
-            .collect::<VMResult<Vec<_>>>()?;
+            .collect::<PartialVMResult<Vec<_>>>()?;
         Ok(StructTag {
             address: self.address,
             module: self.module.clone(),
@@ -90,7 +87,7 @@ impl FatStructType {
         })
     }
 
-    pub fn debug_print<B: Write>(&self, buf: &mut B) -> VMResult<()> {
+    pub fn debug_print<B: Write>(&self, buf: &mut B) -> PartialVMResult<()> {
         debug_write!(buf, "{}::{}", self.module, self.name)?;
         let mut it = self.ty_args.iter();
         if let Some(ty) = it.next() {
@@ -107,12 +104,12 @@ impl FatStructType {
 
     pub fn layout_and_kind_info(
         &self,
-    ) -> VMResult<((MoveKind, Vec<MoveKindInfo>), MoveStructLayout)> {
+    ) -> PartialVMResult<((MoveKind, Vec<MoveKindInfo>), MoveStructLayout)> {
         let res = self
             .layout
             .iter()
             .map(FatType::layout_and_kind_info)
-            .collect::<VMResult<Vec<_>>>()?;
+            .collect::<PartialVMResult<Vec<_>>>()?;
         let mut field_kinds = vec![];
         let mut field_layouts = vec![];
         for (k, l) in res {
@@ -134,19 +131,21 @@ impl FatStructType {
 }
 
 impl FatType {
-    pub fn subst(&self, ty_args: &[FatType]) -> VMResult<FatType> {
+    pub fn subst(&self, ty_args: &[FatType]) -> PartialVMResult<FatType> {
         use FatType::*;
 
         let res = match self {
             TyParam(idx) => match ty_args.get(*idx) {
                 Some(ty) => ty.clone(),
                 None => {
-                    return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                        .with_message(format!(
+                    return Err(
+                        PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(format!(
                             "fat type substitution failed: index out of bounds -- len {} got {}",
                             ty_args.len(),
                             idx
-                        )));
+                        )),
+                    );
                 }
             },
 
@@ -166,7 +165,7 @@ impl FatType {
         Ok(res)
     }
 
-    pub fn type_tag(&self) -> VMResult<TypeTag> {
+    pub fn type_tag(&self) -> PartialVMResult<TypeTag> {
         use FatType::*;
 
         let res = match self {
@@ -180,15 +179,17 @@ impl FatType {
             Struct(struct_ty) => TypeTag::Struct(struct_ty.struct_tag()?),
 
             Reference(_) | MutableReference(_) | TyParam(_) => {
-                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("cannot derive type tag for {:?}", self)))
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(format!("cannot derive type tag for {:?}", self)),
+                )
             }
         };
 
         Ok(res)
     }
 
-    pub fn layout_and_kind_info(&self) -> VMResult<(MoveKindInfo, MoveTypeLayout)> {
+    pub fn layout_and_kind_info(&self) -> PartialVMResult<(MoveKindInfo, MoveTypeLayout)> {
         use FatType as F;
         use MoveKindInfo as K;
         use MoveTypeLayout as L;
@@ -215,13 +216,15 @@ impl FatType {
             }
 
             F::Reference(_) | F::MutableReference(_) | F::TyParam(_) => {
-                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("cannot derive type layout for {:?}", self)))
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(format!("cannot derive type layout for {:?}", self)),
+                )
             }
         })
     }
 
-    pub fn is_resource(&self) -> VMResult<bool> {
+    pub fn is_resource(&self) -> PartialVMResult<bool> {
         use FatType::*;
 
         match self {
@@ -234,12 +237,15 @@ impl FatType {
             //
             // Therefore `is_resource` should only be called upon types outside the cache, in which
             // case it will always succeed. (Internal invariant violation otherwise.)
-            TyParam(_) => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                .with_message("cannot check if a type parameter is a resource or not".to_string())),
+            TyParam(_) => Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                    "cannot check if a type parameter is a resource or not".to_string(),
+                ),
+            ),
         }
     }
 
-    pub fn debug_print<B: Write>(&self, buf: &mut B) -> VMResult<()> {
+    pub fn debug_print<B: Write>(&self, buf: &mut B) -> PartialVMResult<()> {
         use FatType::*;
 
         match self {
@@ -263,8 +269,10 @@ impl FatType {
                 debug_write!(buf, "&mut ")?;
                 ty.debug_print(buf)
             }
-            TyParam(_) => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                .with_message("cannot print out uninstantiated type params".to_string())),
+            TyParam(_) => Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("cannot print out uninstantiated type params".to_string()),
+            ),
         }
     }
 }
@@ -339,20 +347,20 @@ pub mod prop {
 }
 
 impl TryInto<MoveStructLayout> for &FatStructType {
-    type Error = VMStatus;
+    type Error = PartialVMError;
 
     fn try_into(self) -> Result<MoveStructLayout, Self::Error> {
         Ok(MoveStructLayout::new(
             self.layout
                 .iter()
                 .map(|ty| ty.try_into())
-                .collect::<VMResult<Vec<_>>>()?,
+                .collect::<PartialVMResult<Vec<_>>>()?,
         ))
     }
 }
 
 impl TryInto<MoveTypeLayout> for &FatType {
-    type Error = VMStatus;
+    type Error = PartialVMError;
 
     fn try_into(self) -> Result<MoveTypeLayout, Self::Error> {
         Ok(match self {
@@ -366,11 +374,11 @@ impl TryInto<MoveTypeLayout> for &FatType {
                 s.layout
                     .iter()
                     .map(|ty| ty.try_into())
-                    .collect::<VMResult<Vec<_>>>()?,
+                    .collect::<PartialVMResult<Vec<_>>>()?,
             )),
             FatType::Signer => MoveTypeLayout::Signer,
 
-            _ => return Err(VMStatus::new(StatusCode::ABORT_TYPE_MISMATCH_ERROR)),
+            _ => return Err(PartialVMError::new(StatusCode::ABORT_TYPE_MISMATCH_ERROR)),
         })
     }
 }

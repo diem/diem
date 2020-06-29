@@ -13,7 +13,7 @@ fn malformed_simple() {
     let mut binary = vec![];
     let mut res = CompiledScript::deserialize(&binary);
     assert_eq!(
-        res.expect_err("Expected malformed binary").major_status,
+        res.expect_err("Expected malformed binary").major_status(),
         StatusCode::BAD_MAGIC
     );
 
@@ -21,7 +21,7 @@ fn malformed_simple() {
     binary = vec![0u8, 0u8, 0u8];
     res = CompiledScript::deserialize(&binary);
     assert_eq!(
-        res.expect_err("Expected malformed binary").major_status,
+        res.expect_err("Expected malformed binary").major_status(),
         StatusCode::BAD_MAGIC
     );
 
@@ -29,7 +29,7 @@ fn malformed_simple() {
     binary = vec![0u8; 15];
     res = CompiledScript::deserialize(&binary);
     assert_eq!(
-        res.expect_err("Expected bad magic").major_status,
+        res.expect_err("Expected bad magic").major_status(),
         StatusCode::BAD_MAGIC
     );
 
@@ -37,7 +37,7 @@ fn malformed_simple() {
     binary = BinaryConstants::LIBRA_MAGIC.to_vec();
     res = CompiledScript::deserialize(&binary);
     assert_eq!(
-        res.expect_err("Expected malformed binary").major_status,
+        res.expect_err("Expected malformed binary").major_status(),
         StatusCode::MALFORMED
     );
 
@@ -49,7 +49,7 @@ fn malformed_simple() {
     binary.push(0); // rest of binary ;)
     res = CompiledScript::deserialize(&binary);
     assert_eq!(
-        res.expect_err("Expected unknown version").major_status,
+        res.expect_err("Expected unknown version").major_status(),
         StatusCode::UNKNOWN_VERSION
     );
 
@@ -61,7 +61,7 @@ fn malformed_simple() {
     binary.push(0); // rest of binary ;)
     let res1 = CompiledModule::deserialize(&binary);
     assert_eq!(
-        res1.expect_err("Expected unknown version").major_status,
+        res1.expect_err("Expected unknown version").major_status(),
         StatusCode::UNKNOWN_VERSION
     );
 }

@@ -8,7 +8,7 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     on_chain_config::ConfigStorage,
-    vm_status::{StatusCode, VMStatus},
+    vm_status::StatusCode,
     write_set::{WriteOp, WriteSet},
 };
 use move_core_types::{
@@ -95,7 +95,11 @@ impl<'block> RemoteCache for StateViewCache<'block> {
         RemoteStorage::new(self).get_module(module_id)
     }
 
-    fn get_resource(&self, address: &AccountAddress, tag: &TypeTag) -> VMResult<Option<Vec<u8>>> {
+    fn get_resource(
+        &self,
+        address: &AccountAddress,
+        tag: &TypeTag,
+    ) -> PartialVMResult<Option<Vec<u8>>> {
         RemoteStorage::new(self).get_resource(address, tag)
     }
 }
@@ -114,10 +118,10 @@ impl<'a, S: StateView> RemoteStorage<'a, S> {
         Self(state_store)
     }
 
-    pub fn get(&self, access_path: &AccessPath) -> VMResult<Option<Vec<u8>>> {
+    pub fn get(&self, access_path: &AccessPath) -> PartialVMResult<Option<Vec<u8>>> {
         self.0
             .get(access_path)
-            .map_err(|_| VMStatus::new(StatusCode::STORAGE_ERROR))
+            .map_err(|_| PartialVMError::new(StatusCode::STORAGE_ERROR))
     }
 }
 
@@ -125,13 +129,17 @@ impl<'a, S: StateView> RemoteCache for RemoteStorage<'a, S> {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>> {
         // REVIEW: cache this?
         let ap = AccessPath::from(module_id);
-        self.get(&ap)
+        self.get(&ap).map_err(|e| e.finish(Location::Undefined))
     }
 
-    fn get_resource(&self, address: &AccountAddress, tag: &TypeTag) -> VMResult<Option<Vec<u8>>> {
+    fn get_resource(
+        &self,
+        address: &AccountAddress,
+        tag: &TypeTag,
+    ) -> PartialVMResult<Option<Vec<u8>>> {
         let struct_tag = match tag {
             TypeTag::Struct(struct_tag) => struct_tag.clone(),
-            _ => return Err(VMStatus::new(StatusCode::VALUE_DESERIALIZATION_ERROR)),
+            _ => return Err(PartialVMError::new(StatusCode::VALUE_DESERIALIZATION_ERROR)),
         };
         let ap = create_access_path(*address, struct_tag);
         self.get(&ap)

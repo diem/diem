@@ -3,6 +3,7 @@
 
 #![allow(clippy::unit_arg)]
 
+use crate::account_address::AccountAddress;
 use anyhow::Result;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
@@ -106,86 +107,78 @@ impl std::error::Error for VMStatus {}
 
 impl VMStatus {
     /// Create a new VM status with major status `major_status`.
-    pub fn new(major_status: StatusCode) -> Self {
+    pub fn new(major_status: StatusCode, sub_status: Option<u64>, message: Option<String>) -> Self {
         Self {
             major_status,
-            sub_status: None,
-            message: None,
+            sub_status,
+            message,
         }
     }
 
-    /// Adds a sub status to the VM status.
-    pub fn with_sub_status(mut self, sub_status: u64) -> Self {
-        self.sub_status = Some(sub_status);
-        self
-    }
-
-    /// Adds a message to the VM status.
-    pub fn with_message(mut self, message: String) -> Self {
-        self.message = Some(message);
-        self
-    }
-
-    /// Append the message `message` to the message field of the VM status, and insert a seperator
-    /// if the original message is non-empty.
-    pub fn append_message_with_separator(mut self, separator: char, message: String) -> Self {
-        if let Some(ref mut msg) = self.message {
-            if !msg.is_empty() {
-                msg.push(separator);
-            }
-            msg.push_str(&message);
-        } else {
-            self.message = Some(message);
-        }
-        self
+    pub fn executed() -> Self {
+        Self::new(StatusCode::EXECUTED, None, None)
     }
 
     /// Return the status type for this VMStatus. This is solely determined by the `major_status`
     /// field.
     pub fn status_type(&self) -> StatusType {
-        let major_status_number: u64 = self.major_status.into();
-        if major_status_number >= VALIDATION_STATUS_MIN_CODE
-            && major_status_number <= VALIDATION_STATUS_MAX_CODE
-        {
-            return StatusType::Validation;
-        }
-
-        if major_status_number >= VERIFICATION_STATUS_MIN_CODE
-            && major_status_number <= VERIFICATION_STATUS_MAX_CODE
-        {
-            return StatusType::Verification;
-        }
-
-        if major_status_number >= INVARIANT_VIOLATION_STATUS_MIN_CODE
-            && major_status_number <= INVARIANT_VIOLATION_STATUS_MAX_CODE
-        {
-            return StatusType::InvariantViolation;
-        }
-
-        if major_status_number >= DESERIALIZATION_STATUS_MIN_CODE
-            && major_status_number <= DESERIALIZATION_STATUS_MAX_CODE
-        {
-            return StatusType::Deserialization;
-        }
-
-        if major_status_number >= EXECUTION_STATUS_MIN_CODE
-            && major_status_number <= EXECUTION_STATUS_MAX_CODE
-        {
-            return StatusType::Execution;
-        }
-
-        StatusType::Unknown
+        self.major_status.status_type()
     }
 
     /// Determine if the VMStatus has status type `status_type`.
     pub fn is(&self, status_type: StatusType) -> bool {
         self.status_type() == status_type
     }
+}
 
-    /// Append two VMStatuses together. The major status is kept from the caller.
-    pub fn append(self, other: Self) -> Self {
-        let msg = format!("{}", other);
-        self.append_message_with_separator('\n', msg)
+/// Error codes that can be emitted by the prologue. These have special significance to the VM when
+/// they are raised during the prologue. However, they can also be raised by user code during
+/// execution of a transaction script. They have no significance to the VM in that case.
+pub const EACCOUNT_FROZEN: u64 = 0; // sending account is frozen
+pub const EBAD_ACCOUNT_AUTHENTICATION_KEY: u64 = 1; // auth key in transaction is invalid
+pub const ESEQUENCE_NUMBER_TOO_OLD: u64 = 2; // transaction sequence number is too old
+pub const ESEQUENCE_NUMBER_TOO_NEW: u64 = 3; // transaction sequence number is too new
+pub const EACCOUNT_DOES_NOT_EXIST: u64 = 4; // transaction sender's account does not exist
+pub const ECANT_PAY_GAS_DEPOSIT: u64 = 5; // insufficient balance to pay for gas deposit
+pub const ETRANSACTION_EXPIRED: u64 = 6; // transaction expiration time exceeds block time.
+
+/// Generic error codes. These codes don't have any special meaning for the VM, but they are useful
+/// conventions for debugging
+pub const EINSUFFICIENT_BALANCE: u64 = 10; // withdrawing more than an account contains
+pub const EINSUFFICIENT_PRIVILEGES: u64 = 11; // user lacks the credentials to do something
+
+pub const EASSERT_ERROR: u64 = 42; // catch-all error code for assert failures
+
+// FUTURE: At the moment we can't pass transaction metadata or the signed transaction due to
+// restrictions in the two places that this function is called. We therefore just pass through what
+// we need at the moment---the sender address---but we may want/need to pass more data later on.
+pub fn convert_prologue_runtime_error(err: VMStatus, txn_sender: &AccountAddress) -> VMStatus {
+    if err.major_status == StatusCode::ABORTED {
+        let mut message = None;
+        let new_major_status = match err.sub_status {
+            Some(EACCOUNT_FROZEN) => StatusCode::SENDING_ACCOUNT_FROZEN,
+            // Invalid authentication key
+            Some(EBAD_ACCOUNT_AUTHENTICATION_KEY) => StatusCode::INVALID_AUTH_KEY,
+            // Sequence number too old
+            Some(ESEQUENCE_NUMBER_TOO_OLD) => StatusCode::SEQUENCE_NUMBER_TOO_OLD,
+            // Sequence number too new
+            Some(ESEQUENCE_NUMBER_TOO_NEW) => StatusCode::SEQUENCE_NUMBER_TOO_NEW,
+            // Sequence number too new
+            Some(EACCOUNT_DOES_NOT_EXIST) => {
+                message = Some(format!("sender address: {}", txn_sender));
+                StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
+            }
+            // Can't pay for transaction gas deposit/fee
+            Some(ECANT_PAY_GAS_DEPOSIT) => StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
+            Some(ETRANSACTION_EXPIRED) => StatusCode::TRANSACTION_EXPIRED,
+
+            sub_status => {
+                return VMStatus::new(err.major_status, sub_status, err.message);
+            }
+        };
+        VMStatus::new(new_major_status, None, message)
+    } else {
+        err
     }
 }
 
@@ -371,7 +364,7 @@ pub enum StatusCode {
     DUPLICATE_ACQUIRES_RESOURCE_ANNOTATION_ERROR = 1072,
     INVALID_ACQUIRES_RESOURCE_ANNOTATION_ERROR = 1073,
     GLOBAL_REFERENCE_ERROR = 1074,
-    CONTRAINT_KIND_MISMATCH = 1075,
+    CONSTRAINT_KIND_MISMATCH = 1075,
     NUMBER_OF_TYPE_ARGUMENTS_MISMATCH = 1076,
     LOOP_IN_INSTANTIATION_GRAPH = 1077,
     UNUSED_LOCALS_SIGNATURE = 1078,
@@ -473,6 +466,44 @@ pub enum StatusCode {
     // this is std::u64::MAX, but we can't pattern match on that, so put the hardcoded value in
     UNKNOWN_STATUS = 18446744073709551615,
 }
+}
+
+impl StatusCode {
+    /// Return the status type for this status code
+    pub fn status_type(self) -> StatusType {
+        let major_status_number: u64 = self.into();
+        if major_status_number >= VALIDATION_STATUS_MIN_CODE
+            && major_status_number <= VALIDATION_STATUS_MAX_CODE
+        {
+            return StatusType::Validation;
+        }
+
+        if major_status_number >= VERIFICATION_STATUS_MIN_CODE
+            && major_status_number <= VERIFICATION_STATUS_MAX_CODE
+        {
+            return StatusType::Verification;
+        }
+
+        if major_status_number >= INVARIANT_VIOLATION_STATUS_MIN_CODE
+            && major_status_number <= INVARIANT_VIOLATION_STATUS_MAX_CODE
+        {
+            return StatusType::InvariantViolation;
+        }
+
+        if major_status_number >= DESERIALIZATION_STATUS_MIN_CODE
+            && major_status_number <= DESERIALIZATION_STATUS_MAX_CODE
+        {
+            return StatusType::Deserialization;
+        }
+
+        if major_status_number >= EXECUTION_STATUS_MIN_CODE
+            && major_status_number <= EXECUTION_STATUS_MAX_CODE
+        {
+            return StatusType::Execution;
+        }
+
+        StatusType::Unknown
+    }
 }
 
 // TODO(#1307)

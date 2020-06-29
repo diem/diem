@@ -26,7 +26,7 @@ use libra_types::{
         TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
         VMValidatorResult,
     },
-    vm_status::{sub_status, StatusCode, VMStatus},
+    vm_status::{convert_prologue_runtime_error, sub_status, StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use move_core_types::{
@@ -51,7 +51,6 @@ use std::{
     convert::TryFrom,
     sync::Arc,
 };
-use vm::errors::{convert_prologue_runtime_error, VMResult};
 
 /// Any transation sent from an account with a role id below this cutoff will be priorited over
 /// other transactions.
@@ -72,8 +71,11 @@ macro_rules! gas_schedule {
             .as_ref()
             .map(|config| &config.gas_schedule)
             .ok_or_else(|| {
-                VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
-                    .with_sub_status(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND)
+                VMStatus::new(
+                    StatusCode::VM_STARTUP_FAILURE,
+                    Some(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND),
+                    None,
+                )
             })
     };
 }
@@ -109,10 +111,10 @@ impl LibraVM {
         self.load_configs_impl(&RemoteStorage::new(state))
     }
 
-    fn on_chain_config(&self) -> VMResult<&VMConfig> {
+    fn on_chain_config(&self) -> Result<&VMConfig, VMStatus> {
         self.on_chain_config
             .as_ref()
-            .ok_or_else(|| VMStatus::new(StatusCode::VM_STARTUP_FAILURE))
+            .ok_or_else(|| VMStatus::new(StatusCode::VM_STARTUP_FAILURE, None, None))
     }
 
     fn load_configs_impl<S: ConfigStorage>(&mut self, data_cache: &S) {
@@ -120,18 +122,21 @@ impl LibraVM {
         self.version = LibraVersion::fetch_config(data_cache);
     }
 
-    pub fn get_gas_schedule(&self) -> VMResult<&CostTable> {
+    pub fn get_gas_schedule(&self) -> Result<&CostTable, VMStatus> {
         gas_schedule!(self)
     }
 
-    pub fn get_libra_version(&self) -> VMResult<LibraVersion> {
+    pub fn get_libra_version(&self) -> Result<LibraVersion, VMStatus> {
         self.version.clone().ok_or_else(|| {
-            VMStatus::new(StatusCode::VM_STARTUP_FAILURE)
-                .with_sub_status(sub_status::VSF_LIBRA_VERSION_NOT_FOUND)
+            VMStatus::new(
+                StatusCode::VM_STARTUP_FAILURE,
+                Some(sub_status::VSF_LIBRA_VERSION_NOT_FOUND),
+                None,
+            )
         })
     }
 
-    fn check_gas(&self, txn: &SignedTransaction) -> VMResult<()> {
+    fn check_gas(&self, txn: &SignedTransaction) -> Result<(), VMStatus> {
         let gas_constants = &self.get_gas_schedule()?.gas_constants;
         let raw_bytes_len = AbstractMemorySize::new(txn.raw_txn_bytes_len() as GasCarrier);
         // The transaction is too large.
@@ -146,9 +151,11 @@ impl LibraVM {
                 raw_bytes_len.get(),
                 gas_constants.max_transaction_size_in_bytes
             );
-            return Err(
-                VMStatus::new(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE).with_message(error_str)
-            );
+            return Err(VMStatus::new(
+                StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE,
+                None,
+                Some(error_str),
+            ));
         }
 
         // Check is performed on `txn.raw_txn_bytes_len()` which is the same as
@@ -169,10 +176,11 @@ impl LibraVM {
                 gas_constants.maximum_number_of_gas_units.get(),
                 txn.max_gas_amount()
             );
-            return Err(
-                VMStatus::new(StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND)
-                    .with_message(error_str),
-            );
+            return Err(VMStatus::new(
+                StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND,
+                None,
+                Some(error_str),
+            ));
         }
 
         // The submitted transactions max gas units needs to be at least enough to cover the
@@ -190,10 +198,11 @@ impl LibraVM {
                 min_txn_fee.get(),
                 txn.max_gas_amount()
             );
-            return Err(
-                VMStatus::new(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS)
-                    .with_message(error_str),
-            );
+            return Err(VMStatus::new(
+                StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS,
+                None,
+                Some(error_str),
+            ));
         }
 
         // The submitted gas price is less than the minimum gas unit price set by the VM.
@@ -212,9 +221,11 @@ impl LibraVM {
                 gas_constants.min_price_per_gas_unit.get(),
                 txn.gas_unit_price()
             );
-            return Err(
-                VMStatus::new(StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND).with_message(error_str)
-            );
+            return Err(VMStatus::new(
+                StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND,
+                None,
+                Some(error_str),
+            ));
         }
 
         // The submitted gas price is greater than the maximum gas unit price set by the VM.
@@ -229,9 +240,11 @@ impl LibraVM {
                 gas_constants.max_price_per_gas_unit.get(),
                 txn.gas_unit_price()
             );
-            return Err(
-                VMStatus::new(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND).with_message(error_str)
-            );
+            return Err(VMStatus::new(
+                StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND,
+                None,
+                Some(error_str),
+            ));
         }
         Ok(())
     }
@@ -242,7 +255,7 @@ impl LibraVM {
         script: &Script,
         txn_data: TransactionMetadata,
         account_currency_symbol: &IdentStr,
-    ) -> VMResult<VerifiedTransactionPayload> {
+    ) -> Result<VerifiedTransactionPayload, VMStatus> {
         let mut cost_strategy = CostStrategy::system(self.get_gas_schedule()?, GasUnits::new(0));
         let mut session = self.move_vm.new_session(remote_cache);
         if !self
@@ -251,7 +264,7 @@ impl LibraVM {
             .is_allowed_script(&script.code())
         {
             warn!("[VM] Custom scripts not allowed: {:?}", &script.code());
-            return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT));
+            return Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT, None, None));
         };
         self.run_prologue(
             &mut session,
@@ -272,14 +285,18 @@ impl LibraVM {
         module: &Module,
         txn_data: TransactionMetadata,
         account_currency_symbol: &IdentStr,
-    ) -> VMResult<VerifiedTransactionPayload> {
+    ) -> Result<VerifiedTransactionPayload, VMStatus> {
         let mut cost_strategy = CostStrategy::system(self.get_gas_schedule()?, GasUnits::new(0));
         let mut session = self.move_vm.new_session(remote_cache);
         if !&self.on_chain_config()?.publishing_option.is_open()
             && !can_publish_modules(txn_data.sender(), remote_cache)
         {
             warn!("[VM] Custom modules not allowed");
-            return Err(VMStatus::new(StatusCode::INVALID_MODULE_PUBLISHER));
+            return Err(VMStatus::new(
+                StatusCode::INVALID_MODULE_PUBLISHER,
+                None,
+                None,
+            ));
         };
         self.run_prologue(
             &mut session,
@@ -295,7 +312,7 @@ impl LibraVM {
         remote_cache: &StateViewCache,
         _change_set: &ChangeSet,
         txn_data: &TransactionMetadata,
-    ) -> VMResult<()> {
+    ) -> Result<(), VMStatus> {
         let mut session = self.move_vm.new_session(remote_cache);
         self.run_writeset_prologue(&mut session, &txn_data)?;
         Ok(())
@@ -306,7 +323,7 @@ impl LibraVM {
         transaction: &SignatureCheckedTransaction,
         remote_cache: &StateViewCache,
         account_currency_symbol: &IdentStr,
-    ) -> VMResult<VerifiedTransactionPayload> {
+    ) -> Result<VerifiedTransactionPayload, VMStatus> {
         self.check_gas(transaction)?;
         let txn_data = TransactionMetadata::new(transaction);
         match transaction.payload() {
@@ -316,7 +333,9 @@ impl LibraVM {
             TransactionPayload::Module(module) => {
                 self.verify_module(remote_cache, module, txn_data, account_currency_symbol)
             }
-            TransactionPayload::WriteSet(_) => Err(VMStatus::new(StatusCode::UNREACHABLE)),
+            TransactionPayload::WriteSet(_) => {
+                Err(VMStatus::new(StatusCode::UNREACHABLE, None, None))
+            }
         }
     }
 
@@ -325,7 +344,7 @@ impl LibraVM {
         transaction: &SignatureCheckedTransaction,
         remote_cache: &StateViewCache,
         account_currency_symbol: &IdentStr,
-    ) -> VMResult<()> {
+    ) -> Result<(), VMStatus> {
         let txn_data = TransactionMetadata::new(transaction);
         match transaction.payload() {
             TransactionPayload::Script(script) => {
@@ -356,7 +375,7 @@ impl LibraVM {
         let mut cost_strategy = CostStrategy::transaction(gas_schedule, txn_data.max_gas_amount());
         let mut session = self.move_vm.new_session(remote_cache);
 
-        macro_rules! unwrap_or_fail {
+        macro_rules! unwrap_or_fail_status {
             ($res: expr) => {
                 match $res {
                     Ok(x) => x,
@@ -373,11 +392,16 @@ impl LibraVM {
                 }
             };
         }
+        macro_rules! unwrap_or_fail {
+            ($res: expr) => {
+                unwrap_or_fail_status!($res.map_err(|e| e.into_vm_status()))
+            };
+        }
 
         match payload {
             VerifiedTransactionPayload::Module(m) => {
                 unwrap_or_fail!(cost_strategy.charge_intrinsic_gas(txn_data.transaction_size()));
-                let module_address = if unwrap_or_fail!(self.on_chain_config())
+                let module_address = if unwrap_or_fail_status!(self.on_chain_config())
                     .publishing_option
                     .is_open()
                 {
@@ -405,18 +429,18 @@ impl LibraVM {
         }
 
         let mut cost_strategy = CostStrategy::system(gas_schedule, cost_strategy.remaining_gas());
-        unwrap_or_fail!(self.run_success_epilogue(
+        unwrap_or_fail_status!(self.run_success_epilogue(
             &mut session,
             &mut cost_strategy,
             txn_data,
             account_currency_symbol,
         ));
-        unwrap_or_fail!(get_transaction_output(
+        unwrap_or_fail_status!(get_transaction_output(
             &mut self.ap_cache,
             session,
             &cost_strategy,
             txn_data,
-            VMStatus::new(StatusCode::EXECUTED),
+            VMStatus::executed()
         ))
     }
 
@@ -469,7 +493,7 @@ impl LibraVM {
         let txn_data = TransactionMetadata::new(txn);
         let account_currency_symbol =
             account_config::from_currency_code_string(txn.gas_currency_code())
-                .map_err(|_| VMStatus::new(StatusCode::INVALID_GAS_SPECIFIER));
+                .map_err(|_| VMStatus::new(StatusCode::INVALID_GAS_SPECIFIER, None, None));
         let verified_payload = account_currency_symbol.clone().and_then(|currency_code| {
             let _timer = TXN_VERIFICATION_SECONDS.start_timer();
             self.verify_user_transaction_impl(txn, remote_cache, &currency_code)
@@ -497,13 +521,13 @@ impl LibraVM {
         &self,
         remote_cache: &StateViewCache<'_>,
         write_set: &WriteSet,
-    ) -> VMResult<()> {
+    ) -> Result<(), VMStatus> {
         // All Move executions satisfy the read-before-write property. Thus we need to read each
         // access path that the write set is going to update.
         for (ap, _) in write_set.iter() {
             remote_cache
                 .get(ap)
-                .map_err(|_| VMStatus::new(StatusCode::STORAGE_ERROR))?;
+                .map_err(|_| VMStatus::new(StatusCode::STORAGE_ERROR, None, None))?;
         }
         Ok(())
     }
@@ -512,7 +536,7 @@ impl LibraVM {
         &mut self,
         remote_cache: &mut StateViewCache<'_>,
         change_set: ChangeSet,
-    ) -> VMResult<TransactionOutput> {
+    ) -> Result<TransactionOutput, VMStatus> {
         let (write_set, events) = change_set.into_inner();
         self.read_writeset(remote_cache, &write_set)?;
         remote_cache.push_write_set(&write_set);
@@ -521,7 +545,7 @@ impl LibraVM {
             write_set,
             events,
             0,
-            VMStatus::new(StatusCode::EXECUTED).into(),
+            VMStatus::executed().into(),
         ))
     }
 
@@ -529,7 +553,7 @@ impl LibraVM {
         &mut self,
         remote_cache: &mut StateViewCache<'_>,
         block_metadata: BlockMetadata,
-    ) -> VMResult<TransactionOutput> {
+    ) -> Result<TransactionOutput, VMStatus> {
         // TODO: How should we setup the metadata here? A couple of thoughts here:
         // 1. We might make the txn_data to be poisoned so that reading anything will result in a panic.
         // 2. The most important consideration is figuring out the sender address.  Having a notion of a
@@ -542,7 +566,9 @@ impl LibraVM {
 
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::transaction(&gas_schedule, txn_data.max_gas_amount());
-        cost_strategy.charge_intrinsic_gas(txn_data.transaction_size())?;
+        cost_strategy
+            .charge_intrinsic_gas(txn_data.transaction_size())
+            .map_err(|e| e.into_vm_status())?;
         let mut session = self.move_vm.new_session(remote_cache);
 
         if let Ok((round, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {
@@ -553,16 +579,18 @@ impl LibraVM {
                 Value::vector_address(previous_vote),
                 Value::address(proposer),
             ];
-            session.execute_function(
-                &LIBRA_BLOCK_MODULE,
-                &BLOCK_PROLOGUE,
-                vec![],
-                args,
-                txn_data.sender,
-                &mut cost_strategy,
-            )?
+            session
+                .execute_function(
+                    &LIBRA_BLOCK_MODULE,
+                    &BLOCK_PROLOGUE,
+                    vec![],
+                    args,
+                    txn_data.sender,
+                    &mut cost_strategy,
+                )
+                .map_err(|e| e.into_vm_status())?
         } else {
-            return Err(VMStatus::new(StatusCode::MALFORMED));
+            return Err(VMStatus::new(StatusCode::MALFORMED, None, None));
         };
 
         get_transaction_output(
@@ -570,7 +598,7 @@ impl LibraVM {
             session,
             &cost_strategy,
             &txn_data,
-            VMStatus::new(StatusCode::EXECUTED),
+            VMStatus::executed(),
         )
         .map(|output| {
             remote_cache.push_write_set(output.write_set());
@@ -582,12 +610,14 @@ impl LibraVM {
         &mut self,
         remote_cache: &mut StateViewCache<'_>,
         txn: SignedTransaction,
-    ) -> VMResult<TransactionOutput> {
+    ) -> Result<TransactionOutput, VMStatus> {
         let txn = match txn.check_signature() {
             Ok(t) => t,
             _ => {
                 return Ok(discard_error_output(VMStatus::new(
                     StatusCode::INVALID_SIGNATURE,
+                    None,
+                    None,
                 )))
             }
         };
@@ -596,7 +626,11 @@ impl LibraVM {
             change_set
         } else {
             error!("[libra_vm] UNREACHABLE");
-            return Ok(discard_error_output(VMStatus::new(StatusCode::UNREACHABLE)));
+            return Ok(discard_error_output(VMStatus::new(
+                StatusCode::UNREACHABLE,
+                None,
+                None,
+            )));
         };
 
         let txn_data = TransactionMetadata::new(&txn);
@@ -611,16 +645,18 @@ impl LibraVM {
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
 
-        session.execute_function(
-            &account_config::ACCOUNT_MODULE,
-            &BUMP_SEQUENCE_NUMBER_NAME,
-            vec![],
-            vec![Value::transaction_argument_signer_reference(
+        session
+            .execute_function(
+                &account_config::ACCOUNT_MODULE,
+                &BUMP_SEQUENCE_NUMBER_NAME,
+                vec![],
+                vec![Value::transaction_argument_signer_reference(
+                    txn_data.sender,
+                )],
                 txn_data.sender,
-            )],
-            txn_data.sender,
-            &mut cost_strategy,
-        )?;
+                &mut cost_strategy,
+            )
+            .map_err(|e| e.into_vm_status())?;
 
         // Emit the reconfiguration event
         self.run_writeset_epilogue(&mut session, change_set, &txn_data)?;
@@ -629,7 +665,7 @@ impl LibraVM {
             return Ok(discard_error_output(e));
         };
 
-        let effects = session.finish()?;
+        let effects = session.finish().map_err(|e| e.into_vm_status())?;
         let (epilogue_writeset, epilogue_events) =
             txn_effects_to_writeset_and_events_cached(&mut self.ap_cache, effects)?;
 
@@ -648,6 +684,8 @@ impl LibraVM {
         {
             return Ok(discard_error_output(VMStatus::new(
                 StatusCode::INVALID_WRITE_SET,
+                None,
+                None,
             )));
         }
         if !epilogue_events
@@ -664,6 +702,8 @@ impl LibraVM {
         {
             return Ok(discard_error_output(VMStatus::new(
                 StatusCode::INVALID_WRITE_SET,
+                None,
+                None,
             )));
         }
 
@@ -675,7 +715,7 @@ impl LibraVM {
                 .collect(),
         )
         .freeze()
-        .map_err(|_| VMStatus::new(StatusCode::INVALID_WRITE_SET))?;
+        .map_err(|_| VMStatus::new(StatusCode::INVALID_WRITE_SET, None, None))?;
         let events = change_set
             .events()
             .iter()
@@ -687,7 +727,7 @@ impl LibraVM {
             write_set,
             events,
             0,
-            TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
+            TransactionStatus::Keep(VMStatus::executed()),
         ))
     }
 
@@ -699,7 +739,7 @@ impl LibraVM {
         cost_strategy: &mut CostStrategy,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
-    ) -> VMResult<()> {
+    ) -> Result<(), VMStatus> {
         let gas_currency_ty =
             account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
         let txn_sequence_number = txn_data.sequence_number();
@@ -724,7 +764,7 @@ impl LibraVM {
                 txn_data.sender,
                 cost_strategy,
             )
-            .map_err(|err| convert_prologue_runtime_error(&err, &txn_data.sender))
+            .map_err(|e| convert_prologue_runtime_error(e.into_vm_status(), &txn_data.sender))
     }
 
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
@@ -735,7 +775,7 @@ impl LibraVM {
         cost_strategy: &mut CostStrategy,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
-    ) -> VMResult<()> {
+    ) -> Result<(), VMStatus> {
         let gas_currency_ty =
             account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
         let txn_sequence_number = txn_data.sequence_number();
@@ -743,20 +783,22 @@ impl LibraVM {
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let gas_remaining = cost_strategy.remaining_gas().get();
         let _timer = TXN_EPILOGUE_SECONDS.start_timer();
-        session.execute_function(
-            &account_config::ACCOUNT_MODULE,
-            &SUCCESS_EPILOGUE_NAME,
-            vec![gas_currency_ty],
-            vec![
-                Value::transaction_argument_signer_reference(txn_data.sender),
-                Value::u64(txn_sequence_number),
-                Value::u64(txn_gas_price),
-                Value::u64(txn_max_gas_units),
-                Value::u64(gas_remaining),
-            ],
-            txn_data.sender,
-            cost_strategy,
-        )
+        session
+            .execute_function(
+                &account_config::ACCOUNT_MODULE,
+                &SUCCESS_EPILOGUE_NAME,
+                vec![gas_currency_ty],
+                vec![
+                    Value::transaction_argument_signer_reference(txn_data.sender),
+                    Value::u64(txn_sequence_number),
+                    Value::u64(txn_gas_price),
+                    Value::u64(txn_max_gas_units),
+                    Value::u64(gas_remaining),
+                ],
+                txn_data.sender,
+                cost_strategy,
+            )
+            .map_err(|e| e.into_vm_status())
     }
 
     /// Run the failure epilogue of a transaction by calling into `FAILURE_EPILOGUE_NAME` function
@@ -767,7 +809,7 @@ impl LibraVM {
         cost_strategy: &mut CostStrategy,
         txn_data: &TransactionMetadata,
         account_currency_symbol: &IdentStr,
-    ) -> VMResult<()> {
+    ) -> Result<(), VMStatus> {
         let gas_currency_ty =
             account_config::type_tag_for_currency_code(account_currency_symbol.to_owned());
         let txn_sequence_number = txn_data.sequence_number();
@@ -775,20 +817,22 @@ impl LibraVM {
         let txn_max_gas_units = txn_data.max_gas_amount().get();
         let gas_remaining = cost_strategy.remaining_gas().get();
         let _timer = TXN_EPILOGUE_SECONDS.start_timer();
-        session.execute_function(
-            &account_config::ACCOUNT_MODULE,
-            &FAILURE_EPILOGUE_NAME,
-            vec![gas_currency_ty],
-            vec![
-                Value::transaction_argument_signer_reference(txn_data.sender),
-                Value::u64(txn_sequence_number),
-                Value::u64(txn_gas_price),
-                Value::u64(txn_max_gas_units),
-                Value::u64(gas_remaining),
-            ],
-            txn_data.sender,
-            cost_strategy,
-        )
+        session
+            .execute_function(
+                &account_config::ACCOUNT_MODULE,
+                &FAILURE_EPILOGUE_NAME,
+                vec![gas_currency_ty],
+                vec![
+                    Value::transaction_argument_signer_reference(txn_data.sender),
+                    Value::u64(txn_sequence_number),
+                    Value::u64(txn_gas_price),
+                    Value::u64(txn_max_gas_units),
+                    Value::u64(gas_remaining),
+                ],
+                txn_data.sender,
+                cost_strategy,
+            )
+            .map_err(|e| e.into_vm_status())
     }
 
     /// Run the prologue of a transaction by calling into `PROLOGUE_NAME` function stored
@@ -797,7 +841,7 @@ impl LibraVM {
         &self,
         session: &mut Session<R>,
         txn_data: &TransactionMetadata,
-    ) -> VMResult<()> {
+    ) -> Result<(), VMStatus> {
         let txn_sequence_number = txn_data.sequence_number();
         let txn_public_key = txn_data.authentication_key_preimage().to_vec();
         let gas_schedule = zero_cost_schedule();
@@ -816,7 +860,7 @@ impl LibraVM {
                 txn_data.sender,
                 &mut cost_strategy,
             )
-            .map_err(|err| convert_prologue_runtime_error(&err, &txn_data.sender))
+            .map_err(|e| convert_prologue_runtime_error(e.into_vm_status(), &txn_data.sender))
     }
 
     /// Run the epilogue of a transaction by calling into `WRITESET_EPILOGUE_NAME` function stored
@@ -826,31 +870,33 @@ impl LibraVM {
         session: &mut Session<R>,
         change_set: &ChangeSet,
         txn_data: &TransactionMetadata,
-    ) -> VMResult<()> {
-        let change_set_bytes =
-            lcs::to_bytes(change_set).map_err(|_| VMStatus::new(StatusCode::INVALID_DATA))?;
+    ) -> Result<(), VMStatus> {
+        let change_set_bytes = lcs::to_bytes(change_set)
+            .map_err(|_| VMStatus::new(StatusCode::INVALID_DATA, None, None))?;
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
 
         let _timer = TXN_EPILOGUE_SECONDS.start_timer();
-        session.execute_function(
-            &LIBRA_WRITESET_MANAGER_MODULE,
-            &WRITESET_EPILOGUE_NAME,
-            vec![],
-            vec![
-                Value::transaction_argument_signer_reference(txn_data.sender),
-                Value::vector_u8(change_set_bytes),
-            ],
-            txn_data.sender,
-            &mut cost_strategy,
-        )
+        session
+            .execute_function(
+                &LIBRA_WRITESET_MANAGER_MODULE,
+                &WRITESET_EPILOGUE_NAME,
+                vec![],
+                vec![
+                    Value::transaction_argument_signer_reference(txn_data.sender),
+                    Value::vector_u8(change_set_bytes),
+                ],
+                txn_data.sender,
+                &mut cost_strategy,
+            )
+            .map_err(|e| e.into_vm_status())
     }
 
     fn execute_block_impl(
         &mut self,
         transactions: Vec<Transaction>,
         state_view: &dyn StateView,
-    ) -> VMResult<Vec<TransactionOutput>> {
+    ) -> Result<Vec<TransactionOutput>, VMStatus> {
         let count = transactions.len();
         let mut result = vec![];
         let blocks = chunk_block_transactions(transactions);
@@ -899,7 +945,7 @@ impl LibraVM {
         txn_block: Vec<SignedTransaction>,
         data_cache: &mut StateViewCache<'_>,
         state_view: &dyn StateView,
-    ) -> VMResult<Vec<TransactionOutput>> {
+    ) -> Result<Vec<TransactionOutput>, VMStatus> {
         self.load_configs_impl(data_cache);
         let signature_verified_block: Vec<Result<SignatureCheckedTransaction, VMStatus>>;
         {
@@ -908,7 +954,7 @@ impl LibraVM {
                 .into_par_iter()
                 .map(|txn| {
                     txn.check_signature()
-                        .map_err(|_| VMStatus::new(StatusCode::INVALID_SIGNATURE))
+                        .map_err(|_| VMStatus::new(StatusCode::INVALID_SIGNATURE, None, None))
                 })
                 .collect();
         }
@@ -978,7 +1024,7 @@ impl VMValidator for LibraVM {
                 Ok(code) => code,
                 Err(_) => {
                     return VMValidatorResult::new(
-                        Some(VMStatus::new(StatusCode::INVALID_GAS_SPECIFIER)),
+                        Some(VMStatus::new(StatusCode::INVALID_GAS_SPECIFIER, None, None)),
                         gas_price,
                         false,
                     )
@@ -990,7 +1036,7 @@ impl VMValidator for LibraVM {
             t
         } else {
             return VMValidatorResult::new(
-                Some(VMStatus::new(StatusCode::INVALID_SIGNATURE)),
+                Some(VMStatus::new(StatusCode::INVALID_SIGNATURE, None, None)),
                 gas_price,
                 false,
             );
@@ -1014,7 +1060,7 @@ impl VMValidator for LibraVM {
                     None
                 } else {
                     Some(convert_prologue_runtime_error(
-                        &err,
+                        err,
                         &signature_verified_txn.sender(),
                     ))
                 }
@@ -1044,7 +1090,7 @@ impl VMExecutor for LibraVM {
     fn execute_block(
         transactions: Vec<Transaction>,
         state_view: &dyn StateView,
-    ) -> VMResult<Vec<TransactionOutput>> {
+    ) -> Result<Vec<TransactionOutput>, VMStatus> {
         let mut vm = LibraVM::new();
         vm.execute_block_impl(transactions, state_view)
     }
@@ -1061,12 +1107,12 @@ impl<'a> LibraVMInternals<'a> {
     }
 
     /// Returns the internal gas schedule if it has been loaded, or an error if it hasn't.
-    pub fn gas_schedule(self) -> VMResult<&'a CostTable> {
+    pub fn gas_schedule(self) -> Result<&'a CostTable, VMStatus> {
         self.0.get_gas_schedule()
     }
 
     /// Returns the version of Move Runtime.
-    pub fn libra_version(self) -> VMResult<LibraVersion> {
+    pub fn libra_version(self) -> Result<LibraVersion, VMStatus> {
         self.0.get_libra_version()
     }
 
@@ -1109,16 +1155,19 @@ fn normalize_gas_price(
     gas_price: u64,
     currency_code: &IdentStr,
     remote_cache: &StateViewCache,
-) -> VMResult<u64> {
+) -> Result<u64, VMStatus> {
     let currency_info_path =
         account_config::CurrencyInfoResource::resource_path_for(currency_code.to_owned());
     if let Ok(Some(blob)) = remote_cache.get(&currency_info_path) {
         let x = lcs::from_bytes::<account_config::CurrencyInfoResource>(&blob)
-            .map_err(|_| VMStatus::new(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))?;
+            .map_err(|_| VMStatus::new(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST, None, None))?;
         Ok(x.convert_to_lbr(gas_price))
     } else {
-        Err(VMStatus::new(StatusCode::MISSING_DATA)
-            .with_message("Cannot find curency info in gas price normalization".to_string()))
+        Err(VMStatus::new(
+            StatusCode::MISSING_DATA,
+            None,
+            Some("Cannot find curency info in gas price normalization".to_owned()),
+        ))
     }
 }
 
@@ -1246,7 +1295,7 @@ impl BTreeAccessPathCache {
 pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
     ap_cache: &mut C,
     effects: TransactionEffects,
-) -> VMResult<(WriteSet, Vec<ContractEvent>)> {
+) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
     //println!("effects");
     // TODO: Cache access path computations if necessary.
     let mut ops = vec![];
@@ -1255,15 +1304,21 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
         for (ty_tag, val_opt) in vals {
             let struct_tag = match ty_tag {
                 TypeTag::Struct(struct_tag) => struct_tag,
-                _ => return Err(VMStatus::new(StatusCode::VALUE_SERIALIZATION_ERROR)),
+                _ => {
+                    return Err(VMStatus::new(
+                        StatusCode::VALUE_SERIALIZATION_ERROR,
+                        None,
+                        None,
+                    ))
+                }
             };
             let ap = ap_cache.get_resource_path(addr, struct_tag);
             let op = match val_opt {
                 None => WriteOp::Deletion,
                 Some((ty_layout, val)) => {
-                    let blob = val
-                        .simple_serialize(&ty_layout)
-                        .ok_or_else(|| VMStatus::new(StatusCode::VALUE_SERIALIZATION_ERROR))?;
+                    let blob = val.simple_serialize(&ty_layout).ok_or_else(|| {
+                        VMStatus::new(StatusCode::VALUE_SERIALIZATION_ERROR, None, None)
+                    })?;
 
                     WriteOp::Value(blob)
                 }
@@ -1278,7 +1333,7 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
 
     let ws = WriteSetMut::new(ops)
         .freeze()
-        .map_err(|_| VMStatus::new(StatusCode::DATA_FORMAT_ERROR))?;
+        .map_err(|_| VMStatus::new(StatusCode::DATA_FORMAT_ERROR, None, None))?;
 
     let events = effects
         .events
@@ -1286,12 +1341,12 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
         .map(|(guid, seq_num, ty_tag, ty_layout, val)| {
             let msg = val
                 .simple_serialize(&ty_layout)
-                .ok_or_else(|| VMStatus::new(StatusCode::DATA_FORMAT_ERROR))?;
+                .ok_or_else(|| VMStatus::new(StatusCode::DATA_FORMAT_ERROR, None, None))?;
             let key = EventKey::try_from(guid.as_slice())
-                .map_err(|_| VMStatus::new(StatusCode::EVENT_KEY_MISMATCH))?;
+                .map_err(|_| VMStatus::new(StatusCode::EVENT_KEY_MISMATCH, None, None))?;
             Ok(ContractEvent::new(key, seq_num, ty_tag, msg))
         })
-        .collect::<VMResult<Vec<_>>>()?;
+        .collect::<Result<Vec<_>, VMStatus>>()?;
 
     Ok((ws, events))
 }
@@ -1302,13 +1357,13 @@ fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(
     cost_strategy: &CostStrategy,
     txn_data: &TransactionMetadata,
     status: VMStatus,
-) -> VMResult<TransactionOutput> {
+) -> Result<TransactionOutput, VMStatus> {
     let gas_used: u64 = txn_data
         .max_gas_amount()
         .sub(cost_strategy.remaining_gas())
         .get();
 
-    let effects = session.finish()?;
+    let effects = session.finish().map_err(|e| e.into_vm_status())?;
     let (write_set, events) = txn_effects_to_writeset_and_events_cached(ap_cache, effects)?;
 
     TXN_TOTAL_GAS_USAGE.observe(gas_used as f64);
@@ -1322,7 +1377,7 @@ fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(
 
 pub fn txn_effects_to_writeset_and_events(
     effects: TransactionEffects,
-) -> VMResult<(WriteSet, Vec<ContractEvent>)> {
+) -> Result<(WriteSet, Vec<ContractEvent>), VMStatus> {
     txn_effects_to_writeset_and_events_cached(&mut (), effects)
 }
 

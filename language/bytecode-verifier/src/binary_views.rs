@@ -5,11 +5,10 @@ use crate::control_flow_graph::VMControlFlowGraph;
 use libra_types::vm_status::StatusCode;
 use move_core_types::{
     account_address::AccountAddress, identifier::IdentStr, language_storage::ModuleId,
-    vm_status::VMStatus,
 };
 use vm::{
     access::{ModuleAccess, ScriptAccess},
-    errors::VMResult,
+    errors::{PartialVMError, PartialVMResult},
     file_format::{
         AddressIdentifierIndex, CodeUnit, CompiledScript, Constant, ConstantPoolIndex, FieldHandle,
         FieldHandleIndex, FieldInstantiation, FieldInstantiationIndex, FunctionDefinition,
@@ -26,6 +25,7 @@ use vm::{
 // `CompiledScript`.
 // Operations that are not allowed for `CompiledScript` return an error.
 // A typical use of a `BinaryIndexedView` is while resolving indexes in bytecodes.
+#[derive(Clone, Copy)]
 pub(crate) enum BinaryIndexedView<'a> {
     Module(&'a CompiledModule),
     Script(&'a CompiledScript),
@@ -91,11 +91,11 @@ impl<'a> BinaryIndexedView<'a> {
         }
     }
 
-    pub(crate) fn field_handle_at(&self, idx: FieldHandleIndex) -> VMResult<&FieldHandle> {
+    pub(crate) fn field_handle_at(&self, idx: FieldHandleIndex) -> PartialVMResult<&FieldHandle> {
         match self {
             BinaryIndexedView::Module(module) => Ok(module.field_handle_at(idx)),
             BinaryIndexedView::Script(_) => {
-                Err(VMStatus::new(StatusCode::INVALID_OPERATION_IN_SCRIPT))
+                Err(PartialVMError::new(StatusCode::INVALID_OPERATION_IN_SCRIPT))
             }
         }
     }
@@ -103,11 +103,11 @@ impl<'a> BinaryIndexedView<'a> {
     pub(crate) fn struct_instantiation_at(
         &self,
         idx: StructDefInstantiationIndex,
-    ) -> VMResult<&StructDefInstantiation> {
+    ) -> PartialVMResult<&StructDefInstantiation> {
         match self {
             BinaryIndexedView::Module(module) => Ok(module.struct_instantiation_at(idx)),
             BinaryIndexedView::Script(_) => {
-                Err(VMStatus::new(StatusCode::INVALID_OPERATION_IN_SCRIPT))
+                Err(PartialVMError::new(StatusCode::INVALID_OPERATION_IN_SCRIPT))
             }
         }
     }
@@ -115,20 +115,23 @@ impl<'a> BinaryIndexedView<'a> {
     pub(crate) fn field_instantiation_at(
         &self,
         idx: FieldInstantiationIndex,
-    ) -> VMResult<&FieldInstantiation> {
+    ) -> PartialVMResult<&FieldInstantiation> {
         match self {
             BinaryIndexedView::Module(module) => Ok(module.field_instantiation_at(idx)),
             BinaryIndexedView::Script(_) => {
-                Err(VMStatus::new(StatusCode::INVALID_OPERATION_IN_SCRIPT))
+                Err(PartialVMError::new(StatusCode::INVALID_OPERATION_IN_SCRIPT))
             }
         }
     }
 
-    pub(crate) fn struct_def_at(&self, idx: StructDefinitionIndex) -> VMResult<&StructDefinition> {
+    pub(crate) fn struct_def_at(
+        &self,
+        idx: StructDefinitionIndex,
+    ) -> PartialVMResult<&StructDefinition> {
         match self {
             BinaryIndexedView::Module(module) => Ok(module.struct_def_at(idx)),
             BinaryIndexedView::Script(_) => {
-                Err(VMStatus::new(StatusCode::INVALID_OPERATION_IN_SCRIPT))
+                Err(PartialVMError::new(StatusCode::INVALID_OPERATION_IN_SCRIPT))
             }
         }
     }
@@ -136,11 +139,11 @@ impl<'a> BinaryIndexedView<'a> {
     pub(crate) fn function_def_at(
         &self,
         idx: FunctionDefinitionIndex,
-    ) -> VMResult<&FunctionDefinition> {
+    ) -> PartialVMResult<&FunctionDefinition> {
         match self {
             BinaryIndexedView::Module(module) => Ok(module.function_def_at(idx)),
             BinaryIndexedView::Script(_) => {
-                Err(VMStatus::new(StatusCode::INVALID_OPERATION_IN_SCRIPT))
+                Err(PartialVMError::new(StatusCode::INVALID_OPERATION_IN_SCRIPT))
             }
         }
     }
@@ -206,6 +209,7 @@ const EMPTY_SIGNATURE: &Signature = &Signature(vec![]);
 // A `FunctionView` is created for all module functions except native functions.
 // It is also created for a script.
 pub(crate) struct FunctionView<'a> {
+    index: Option<FunctionDefinitionIndex>,
     code: &'a CodeUnit,
     parameters: &'a Signature,
     return_: &'a Signature,
@@ -218,10 +222,12 @@ impl<'a> FunctionView<'a> {
     // Creates a `FunctionView` for a module function.
     pub(crate) fn function(
         module: &'a CompiledModule,
+        index: FunctionDefinitionIndex,
         code: &'a CodeUnit,
         function_handle: &'a FunctionHandle,
     ) -> Self {
         Self {
+            index: Some(index),
             code,
             parameters: module.signature_at(function_handle.parameters),
             return_: module.signature_at(function_handle.return_),
@@ -238,6 +244,7 @@ impl<'a> FunctionView<'a> {
         let locals = script.signature_at(code.locals);
         let type_parameters = &script.as_inner().type_parameters;
         Self {
+            index: None,
             code,
             parameters,
             return_: EMPTY_SIGNATURE,
@@ -245,6 +252,10 @@ impl<'a> FunctionView<'a> {
             type_parameters,
             cfg: VMControlFlowGraph::new(&code.code),
         }
+    }
+
+    pub(crate) fn index(&self) -> Option<FunctionDefinitionIndex> {
+        self.index
     }
 
     pub(crate) fn code(&self) -> &CodeUnit {

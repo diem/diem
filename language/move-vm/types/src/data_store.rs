@@ -6,7 +6,10 @@ use crate::{
     values::{GlobalValue, Value},
 };
 use move_core_types::{account_address::AccountAddress, language_storage::ModuleId};
-use vm::{errors::VMResult, file_format::CompiledModule};
+use vm::{
+    errors::{PartialVMResult, VMResult},
+    file_format::CompiledModule,
+};
 
 /// Provide an implementation for bytecodes related to data with a given data store.
 ///
@@ -20,22 +23,26 @@ pub trait DataStore {
     // ---
 
     /// Publish a resource.
-    fn publish_resource(&mut self, addr: AccountAddress, ty: Type, gv: GlobalValue)
-        -> VMResult<()>;
+    fn publish_resource(
+        &mut self,
+        addr: AccountAddress,
+        ty: Type,
+        gv: GlobalValue,
+    ) -> PartialVMResult<()>;
 
     /// Get a reference to a resource.
     fn borrow_resource(
         &mut self,
         addr: AccountAddress,
         ty: &Type,
-    ) -> VMResult<Option<&GlobalValue>>;
+    ) -> PartialVMResult<Option<&GlobalValue>>;
 
     /// Transfer ownership of a resource to the VM.
     fn move_resource_from(
         &mut self,
         addr: AccountAddress,
         ty: &Type,
-    ) -> VMResult<Option<GlobalValue>>;
+    ) -> PartialVMResult<Option<GlobalValue>>;
 
     /// Get the serialized format of a `CompiledModule` given a `ModuleId`.
     fn load_module(&self, module: &ModuleId) -> VMResult<CompiledModule>;

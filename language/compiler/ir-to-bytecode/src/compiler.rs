@@ -23,6 +23,7 @@ use std::{
 };
 use vm::{
     access::ModuleAccess,
+    errors::Location as VMErrorLocation,
     file_format::{
         Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledModuleMut, CompiledScript,
         CompiledScriptMut, Constant, FieldDefinition, FunctionDefinition, FunctionSignature, Kind,
@@ -461,7 +462,9 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     };
     compiled_script
         .freeze()
-        .map_err(|err| InternalCompilerError::BoundsCheckErrors(err).into())
+        .map_err(|e| {
+            InternalCompilerError::BoundsCheckErrors(e.finish(VMErrorLocation::Undefined)).into()
+        })
         .map(|frozen_script| (frozen_script, source_map))
 }
 
@@ -546,7 +549,9 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
     };
     compiled_module
         .freeze()
-        .map_err(|err| InternalCompilerError::BoundsCheckErrors(err).into())
+        .map_err(|e| {
+            InternalCompilerError::BoundsCheckErrors(e.finish(VMErrorLocation::Undefined)).into()
+        })
         .map(|frozen_module| (frozen_module, source_map))
 }
 

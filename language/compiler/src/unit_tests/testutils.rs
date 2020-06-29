@@ -8,9 +8,10 @@ use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
     parser::{parse_module, parse_script},
 };
-use libra_types::{account_address::AccountAddress, vm_status::VMStatus};
+use libra_types::account_address::AccountAddress;
 use vm::{
     access::ScriptAccess,
+    errors::{Location, VMError},
     file_format::{CompiledModule, CompiledScript},
 };
 
@@ -33,13 +34,14 @@ macro_rules! instr_count {
 fn compile_script_string_impl(
     code: &str,
     deps: Vec<CompiledModule>,
-) -> Result<(CompiledScript, Option<VMStatus>)> {
+) -> Result<(CompiledScript, Option<VMError>)> {
     let parsed_script = parse_script("file_name", code).unwrap();
     let compiled_script = compile_script(None, parsed_script, &deps)?.0;
 
     let mut serialized_script = Vec::<u8>::new();
     compiled_script.serialize(&mut serialized_script)?;
-    let deserialized_script = CompiledScript::deserialize(&serialized_script)?;
+    let deserialized_script = CompiledScript::deserialize(&serialized_script)
+        .map_err(|e| e.finish(Location::Undefined).into_vm_status())?;
     assert_eq!(compiled_script, deserialized_script);
 
     // Always return a CompiledScript because some callers explicitly care about unverified
@@ -84,14 +86,15 @@ pub fn compile_script_string_and_assert_error(
 fn compile_module_string_impl(
     code: &str,
     deps: Vec<CompiledModule>,
-) -> Result<(CompiledModule, Option<VMStatus>)> {
+) -> Result<(CompiledModule, Option<VMError>)> {
     let address = AccountAddress::ZERO;
     let module = parse_module("file_name", code).unwrap();
     let compiled_module = compile_module(address, module, &deps)?.0;
 
     let mut serialized_module = Vec::<u8>::new();
     compiled_module.serialize(&mut serialized_module)?;
-    let deserialized_module = CompiledModule::deserialize(&serialized_module)?;
+    let deserialized_module = CompiledModule::deserialize(&serialized_module)
+        .map_err(|e| e.finish(Location::Undefined).into_vm_status())?;
     assert_eq!(compiled_module, deserialized_module);
 
     // Always return a CompiledModule because some callers explicitly care about unverified

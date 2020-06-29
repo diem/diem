@@ -106,14 +106,14 @@ fn duplicate_module() {
     // first tx should succeed
     assert!(transaction_status_eq(
         &output1.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
+        &TransactionStatus::Keep(VMStatus::executed()),
     ));
 
     // second one should fail because it tries to re-publish a module named M
     let output2 = executor.execute_transaction(txn2);
     assert!(transaction_status_eq(
         &output2.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::DUPLICATE_MODULE_NAME)),
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::DUPLICATE_MODULE_NAME, None, None)),
     ));
 }
 
@@ -146,7 +146,7 @@ pub fn test_publishing_no_modules_non_whitelist_script() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::INVALID_MODULE_PUBLISHER)
+        VMStatus::new(StatusCode::INVALID_MODULE_PUBLISHER, None, None)
     );
 }
 
@@ -178,7 +178,7 @@ pub fn test_publishing_no_modules_non_whitelist_script_proper_sender() {
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
 }
 
@@ -210,7 +210,7 @@ pub fn test_publishing_no_modules_proper_sender() {
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
 }
 
@@ -244,7 +244,7 @@ pub fn test_publishing_no_modules_core_code_sender() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::INVALID_MODULE_PUBLISHER)
+        VMStatus::new(StatusCode::INVALID_MODULE_PUBLISHER, None, None)
     );
 }
 
@@ -276,7 +276,7 @@ pub fn test_publishing_no_modules_invalid_sender() {
     assert_prologue_parity!(
         executor.verify_transaction(txn.clone()).status(),
         executor.execute_transaction(txn).status(),
-        VMStatus::new(StatusCode::INVALID_MODULE_PUBLISHER)
+        VMStatus::new(StatusCode::INVALID_MODULE_PUBLISHER, None, None)
     );
 }
 
@@ -308,6 +308,6 @@ pub fn test_publishing_allow_modules() {
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
         executor.execute_transaction(txn).status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
 }

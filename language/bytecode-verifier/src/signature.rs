@@ -5,10 +5,10 @@
 //! parameters, locals, and fields of structs are well-formed. References can only occur at the
 //! top-level in all tokens.  Additionally, references cannot occur at all in field types.
 use crate::binary_views::BinaryIndexedView;
-use libra_types::vm_status::{StatusCode, VMStatus};
+use libra_types::vm_status::StatusCode;
 use vm::{
     access::{ModuleAccess, ScriptAccess},
-    errors::{append_err_info, VMResult},
+    errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         Bytecode, CodeUnit, CompiledModule, CompiledScript, FunctionDefinition, FunctionHandle,
         Kind, Signature, SignatureIndex, SignatureToken, StructDefinition, StructFieldInformation,
@@ -23,6 +23,10 @@ pub struct SignatureChecker<'a> {
 
 impl<'a> SignatureChecker<'a> {
     pub fn verify_module(module: &'a CompiledModule) -> VMResult<()> {
+        Self::verify_module_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))
+    }
+
+    fn verify_module_impl(module: &'a CompiledModule) -> PartialVMResult<()> {
         let sig_check = Self {
             resolver: BinaryIndexedView::Module(module),
         };
@@ -32,7 +36,11 @@ impl<'a> SignatureChecker<'a> {
         sig_check.verify_code_units(module.function_defs())
     }
 
-    pub fn verify_script(script: &'a CompiledScript) -> VMResult<()> {
+    pub fn verify_script(module: &'a CompiledScript) -> VMResult<()> {
+        Self::verify_script_impl(module).map_err(|e| e.finish(Location::Script))
+    }
+
+    fn verify_script_impl(script: &'a CompiledScript) -> PartialVMResult<()> {
         let sig_check = Self {
             resolver: BinaryIndexedView::Script(script),
         };
@@ -41,17 +49,20 @@ impl<'a> SignatureChecker<'a> {
         sig_check.verify_code(script.code(), &script.as_inner().type_parameters)
     }
 
-    fn verify_signature_pool(&self, signatures: &[Signature]) -> VMResult<()> {
+    fn verify_signature_pool(&self, signatures: &[Signature]) -> PartialVMResult<()> {
         for i in 0..signatures.len() {
             self.check_signature(SignatureIndex::new(i as TableIndex))?
         }
         Ok(())
     }
 
-    fn verify_function_signatures(&self, function_handles: &[FunctionHandle]) -> VMResult<()> {
-        let err_handler = |err, idx| {
-            let err = append_err_info(err, IndexKind::Signature, idx);
-            append_err_info(err, IndexKind::FunctionHandle, idx)
+    fn verify_function_signatures(
+        &self,
+        function_handles: &[FunctionHandle],
+    ) -> PartialVMResult<()> {
+        let err_handler = |err: PartialVMError, idx| {
+            err.at_index(IndexKind::Signature, idx as TableIndex)
+                .at_index(IndexKind::FunctionHandle, idx as TableIndex)
         };
 
         for (idx, fh) in function_handles.iter().enumerate() {
@@ -69,7 +80,7 @@ impl<'a> SignatureChecker<'a> {
         Ok(())
     }
 
-    fn verify_fields(&self, struct_defs: &[StructDefinition]) -> VMResult<()> {
+    fn verify_fields(&self, struct_defs: &[StructDefinition]) -> PartialVMResult<()> {
         for (struct_def_idx, struct_def) in struct_defs.iter().enumerate() {
             let fields = match &struct_def.field_information {
                 StructFieldInformation::Native => continue,
@@ -77,10 +88,9 @@ impl<'a> SignatureChecker<'a> {
             };
             let struct_handle = self.resolver.struct_handle_at(struct_def.struct_handle);
             // Update the type parameter kinds to the struct being checked
-            let err_handler = |err, idx| {
-                let err = VMStatus::new(StatusCode::INVALID_FIELD_DEF).append(err);
-                let err = append_err_info(err, IndexKind::FieldDefinition, idx);
-                append_err_info(err, IndexKind::StructDefinition, struct_def_idx)
+            let err_handler = |err: PartialVMError, idx| {
+                err.at_index(IndexKind::FieldDefinition, idx as TableIndex)
+                    .at_index(IndexKind::StructDefinition, struct_def_idx as TableIndex)
             };
             for (field_offset, field_def) in fields.iter().enumerate() {
                 self.check_signature_token(&field_def.signature.0)
@@ -95,7 +105,7 @@ impl<'a> SignatureChecker<'a> {
         Ok(())
     }
 
-    fn verify_code_units(&self, function_defs: &[FunctionDefinition]) -> VMResult<()> {
+    fn verify_code_units(&self, function_defs: &[FunctionDefinition]) -> PartialVMResult<()> {
         for (func_def_idx, func_def) in function_defs.iter().enumerate() {
             // skip native functions
             let code = match &func_def.code {
@@ -105,14 +115,14 @@ impl<'a> SignatureChecker<'a> {
             let func_handle = self.resolver.function_handle_at(func_def.function);
             self.verify_code(code, &func_handle.type_parameters)
                 .map_err(|err| {
-                    let err = append_err_info(err, IndexKind::Signature, code.locals.0 as usize);
-                    append_err_info(err, IndexKind::FunctionDefinition, func_def_idx)
+                    err.at_index(IndexKind::Signature, code.locals.0)
+                        .at_index(IndexKind::FunctionDefinition, func_def_idx as TableIndex)
                 })?
         }
         Ok(())
     }
 
-    fn verify_code(&self, code: &CodeUnit, type_parameters: &[Kind]) -> VMResult<()> {
+    fn verify_code(&self, code: &CodeUnit, type_parameters: &[Kind]) -> PartialVMResult<()> {
         self.check_signature(code.locals)?;
         self.check_instantiation(code.locals, type_parameters)?;
 
@@ -159,7 +169,7 @@ impl<'a> SignatureChecker<'a> {
 
     /// Checks if the given type is well defined in the given context.
     /// References are only permitted at the top level.
-    fn check_signature(&self, idx: SignatureIndex) -> VMResult<()> {
+    fn check_signature(&self, idx: SignatureIndex) -> PartialVMResult<()> {
         for token in &self.resolver.signature_at(idx).0 {
             match token {
                 SignatureToken::Reference(inner) | SignatureToken::MutableReference(inner) => {
@@ -173,7 +183,7 @@ impl<'a> SignatureChecker<'a> {
 
     /// Checks if the given types are well defined in the given context.
     /// No references are permitted.
-    fn check_signature_tokens(&self, tys: &[SignatureToken]) -> VMResult<()> {
+    fn check_signature_tokens(&self, tys: &[SignatureToken]) -> PartialVMResult<()> {
         for ty in tys {
             self.check_signature_token(ty)?
         }
@@ -182,14 +192,14 @@ impl<'a> SignatureChecker<'a> {
 
     /// Checks if the given type is well defined in the given context.
     /// No references are permitted.
-    fn check_signature_token(&self, ty: &SignatureToken) -> VMResult<()> {
+    fn check_signature_token(&self, ty: &SignatureToken) -> PartialVMResult<()> {
         use SignatureToken::*;
         match ty {
             U8 | U64 | U128 | Bool | Address | Signer | Struct(_) | TypeParameter(_) => Ok(()),
             Reference(_) | MutableReference(_) => {
                 // TODO: Prop tests expect us to NOT check the inner types.
                 // Revisit this once we rework prop tests.
-                Err(VMStatus::new(StatusCode::INVALID_SIGNATURE_TOKEN)
+                Err(PartialVMError::new(StatusCode::INVALID_SIGNATURE_TOKEN)
                     .with_message("reference not allowed".to_string()))
             }
             Vector(ty) => self.check_signature_token(ty),
@@ -197,14 +207,14 @@ impl<'a> SignatureChecker<'a> {
         }
     }
 
-    fn check_instantiation(&self, idx: SignatureIndex, kinds: &[Kind]) -> VMResult<()> {
+    fn check_instantiation(&self, idx: SignatureIndex, kinds: &[Kind]) -> PartialVMResult<()> {
         for ty in &self.resolver.signature_at(idx).0 {
             self.check_type_instantiation(ty, kinds)?
         }
         Ok(())
     }
 
-    fn check_type_instantiation(&self, ty: &SignatureToken, kinds: &[Kind]) -> VMResult<()> {
+    fn check_type_instantiation(&self, ty: &SignatureToken, kinds: &[Kind]) -> PartialVMResult<()> {
         match ty {
             SignatureToken::StructInstantiation(idx, type_arguments) => {
                 // Check that the instantiation satisfies the `idx` struct's constraints
@@ -225,18 +235,17 @@ impl<'a> SignatureChecker<'a> {
         type_arguments: &[SignatureToken],
         scope_kinds: &[Kind],
         global_kinds: &[Kind],
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         let kinds = type_arguments
             .iter()
             .map(|ty| self.resolver.kind(ty, global_kinds));
         for ((c, k), ty) in scope_kinds.iter().zip(kinds).zip(type_arguments) {
             if !k.is_sub_kind_of(*c) {
-                return Err(
-                    VMStatus::new(StatusCode::CONTRAINT_KIND_MISMATCH).with_message(format!(
+                return Err(PartialVMError::new(StatusCode::CONSTRAINT_KIND_MISMATCH)
+                    .with_message(format!(
                         "expected kind {:?} got type actual {:?} with incompatible kind {:?}",
                         c, ty, k
-                    )),
-                );
+                    )));
             }
         }
         Ok(())

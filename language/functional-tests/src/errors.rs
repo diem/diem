@@ -14,6 +14,7 @@ pub enum ErrorKind {
     DiscardedTransaction(TransactionOutput),
     #[error("the checker has failed to match the directives against the output")]
     CheckerFailure,
+    // TODO replace VMStatus with VMError
     #[error("VerificationError({0:?})")]
     VerificationError(VMStatus),
     #[error("other error: {0}")]
