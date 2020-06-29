@@ -657,10 +657,6 @@ where
             .path_from_genesis(self.highest_certified_block_id)
             .unwrap_or_else(Vec::new);
         for block in &blocks_from_genesis_to_highest_certified {
-            let voting_powers = self.id_to_strong_commit.entry(block.id()).or_insert(0);
-            if *voting_powers == verifier.total_voting_power() {
-                continue;
-            }
             // a block B is strong committed with fault tolerance x iff
             // a 3-chain B-B'-B'' with consecutive round numbers starts from B
             // and each of B, B', B'' are endorsed by x+f+1 votes
@@ -684,6 +680,7 @@ where
                 continue;
             }
             let grandparent_endorsement;
+            let grandparent_timestamp;
             if let Some(grandparent_block) = self.get_block(&grandparent_id) {
                 if grandparent_block.round() + 1 != parent_round {
                     continue;
@@ -691,10 +688,22 @@ where
                 // grandparent_endorsement = *self.id_to_endorsement.get(&grandparent_id).unwrap();
                 if let Some(endorsement) = self.id_to_endorsement.get(&grandparent_id) {
                     grandparent_endorsement = *endorsement;
+                    grandparent_timestamp = grandparent_block.timestamp_usecs();
                 } else {
                     continue;
                 }
             } else {
+                continue;
+            }
+
+            if grandparent_timestamp == 0 {
+                continue;
+            }
+
+            let previous_voting_powers =
+                *self.id_to_strong_commit.entry(grandparent_id).or_insert(0);
+            // the block has already been strong committed
+            if previous_voting_powers >= verifier.total_voting_power() {
                 continue;
             }
             let endorsement = self.id_to_endorsement.get(&block.id()).unwrap();
@@ -704,12 +713,22 @@ where
             );
             self.id_to_strong_commit
                 .insert(grandparent_id, *voting_powers);
-            if *voting_powers == verifier.total_voting_power() {
-                if block.timestamp_usecs() == 0 {
-                    continue;
+            let half_voting_power =
+                (verifier.total_voting_power() + verifier.quorum_voting_power()) / 2;
+            info!("half_voting_power {:?}", half_voting_power);
+            if previous_voting_powers < half_voting_power && *voting_powers >= half_voting_power {
+                if let Some(time_to_half_strong_commit) =
+                    duration_since_epoch().checked_sub(Duration::from_micros(grandparent_timestamp))
+                {
+                    counters::CREATION_TO_HALF_STRONG_COMMIT_S
+                        .observe_duration(time_to_half_strong_commit);
                 }
-                if let Some(time_to_strong_commit) = duration_since_epoch()
-                    .checked_sub(Duration::from_micros(block.timestamp_usecs()))
+            }
+            if previous_voting_powers < verifier.total_voting_power()
+                && *voting_powers >= verifier.total_voting_power()
+            {
+                if let Some(time_to_strong_commit) =
+                    duration_since_epoch().checked_sub(Duration::from_micros(grandparent_timestamp))
                 {
                     counters::CREATION_TO_STRONG_COMMIT_S.observe_duration(time_to_strong_commit);
                 }
@@ -775,7 +794,7 @@ where
         for block in last_k_blocks {
             let id = block.id();
             let round = block.round();
-            let strong_commit = self.get_strong_commit_for_block(&id).unwrap();
+            let strong_commit = self.get_strong_commit_for_block(&id).unwrap_or(0);
             info!("block round {}, strong commit {:?}", round, strong_commit);
         }
         info!("-------------------------print strong commit end-------------------------");
