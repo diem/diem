@@ -8,7 +8,7 @@ use crate::{
     experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
-    tx_emitter::{execute_and_wait_transactions, EmitJobRequest},
+    tx_emitter::{execute_and_wait_transactions, AccountData, EmitJobRequest},
 };
 use anyhow::format_err;
 use async_trait::async_trait;
@@ -76,7 +76,7 @@ async fn update_batch_instance(
     updated_instance: &[Instance],
     updated_tag: String,
 ) -> anyhow::Result<()> {
-    let deadline = Instant::now() + Duration::new(2 * 60, 0);
+    let deadline = Instant::now() + Duration::from_secs(2 * 60);
 
     info!("Stop Existing instances.");
     let futures: Vec<_> = updated_instance.iter().map(Instance::stop).collect();
@@ -101,6 +101,9 @@ async fn update_batch_instance(
         .map(|instance| instance.wait_json_rpc(deadline))
         .collect();
     try_join_all(futures).await?;
+
+    // Add a timeout to have wait for validators back to healthy mode.
+    // TODO: Replace this with a blocking health check.
     time::delay_for(Duration::from_secs(20)).await;
     Ok(())
 }
@@ -144,19 +147,25 @@ impl Experiment for ValidatorVersioning {
             vec![],
         ));
 
-        let txn1 = create_user_txn(
-            &account_1.key_pair,
-            txn_payload.clone(),
-            account_1.address,
-            account_1.sequence_number,
-            123456,
-            0,
-            LBR_NAME.to_owned(),
-            10,
-        )
-        .map_err(|e| format_err!("Failed to create signed transaction: {}", e))?;
+        // Generate a transaction that uses the new feature defined in #4416. In the future we would
+        // replace this transaction with transactions that causes real behavioral change in
+        // validator software.
+        let txn_gen = |account: &mut AccountData| {
+            account.sequence_number += 1;
+            create_user_txn(
+                &account.key_pair,
+                txn_payload.clone(),
+                account.address,
+                account.sequence_number,
+                123456,
+                0,
+                LBR_NAME.to_owned(),
+                10,
+            )
+            .map_err(|e| format_err!("Failed to create signed transaction: {}", e))
+        };
 
-        account_1.sequence_number += 1;
+        let txn1 = txn_gen(&mut account_1)?;
 
         execute_and_wait_transactions(&mut full_node_client, &mut account_1, vec![txn1.clone()])
             .await?;
@@ -165,18 +174,7 @@ impl Experiment for ValidatorVersioning {
         update_batch_instance(context, &self.second_batch, self.updated_image_tag.clone()).await?;
 
         info!("4. Send a transaction to make sure this feature is still not activated.");
-        let txn2 = create_user_txn(
-            &account_1.key_pair,
-            txn_payload.clone(),
-            account_1.address,
-            account_1.sequence_number,
-            123456,
-            0,
-            LBR_NAME.to_owned(),
-            10,
-        )
-        .map_err(|e| format_err!("Failed to create signed transaction: {}", e))?;
-
+        let txn2 = txn_gen(&mut account_1)?;
         account_1.sequence_number += 1;
         execute_and_wait_transactions(&mut full_node_client, &mut account_1, vec![txn2.clone()])
             .await?;
@@ -206,17 +204,7 @@ impl Experiment for ValidatorVersioning {
         .await?;
 
         info!("6. Send a transaction to make sure it passes the full node mempool but will not be committed by updated validators.");
-        let txn3 = create_user_txn(
-            &account_1.key_pair,
-            txn_payload,
-            account_1.address,
-            account_1.sequence_number,
-            123456,
-            0,
-            LBR_NAME.to_owned(),
-            10,
-        )
-        .map_err(|e| format_err!("Failed to create signed transaction: {}", e))?;
+        let txn3 = txn_gen(&mut account_1)?;
 
         full_node_client
             .submit_transaction(txn3.clone())
