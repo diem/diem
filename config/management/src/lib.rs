@@ -38,6 +38,8 @@ pub mod constants {
     pub const TXN_EXPIRATION_SECS: u64 = 3600;
 }
 
+// TODO(joshlind): sanitize and standardize all the names passed as arguments to these. For example,
+// all owner and operator names should be lowercased, no spaces etc.
 #[derive(Debug, StructOpt)]
 #[structopt(about = "Tool used to manage Libra Validators")]
 pub enum Command {
@@ -279,7 +281,6 @@ pub mod tests {
     use super::*;
     use crate::storage_helper::StorageHelper;
     use libra_secure_storage::{CryptoStorage, KVStorage};
-    use libra_types::account_address::AccountAddress;
     use std::{
         fs::File,
         io::{Read, Write},
@@ -306,8 +307,6 @@ pub mod tests {
 
         // Step 1) Define and upload the layout specifying which identities have which roles. This
         // is uploaded to the common namespace.
-
-        // Note: owners are irrelevant currently
         let layout_text = "\
             operators = [\"operator_alice_shared\", \"operator_bob_shared\", \"operator_carol_shared\"]\n\
             owners = [\"alice_shared\", \"bob_shared\", \"carol_shared\"]\n\
@@ -356,9 +355,11 @@ pub mod tests {
                 .operator_key(ns, &((*ns).to_string() + shared))
                 .unwrap();
 
+            let owner_name: String = (*ns).chars().skip(9).collect(); // Remove "operator_" prefix
+            let owner_name = owner_name + shared;
             helper
                 .validator_config(
-                    AccountAddress::random(),
+                    owner_name,
                     "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                     "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                     ns,
@@ -422,7 +423,7 @@ pub mod tests {
 
         let local_txn = helper
             .validator_config(
-                AccountAddress::random(),
+                "owner_name".into(),
                 "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                 "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                 local_ns,

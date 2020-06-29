@@ -13,11 +13,11 @@ use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
     account_address,
-    account_address::AccountAddress,
     transaction::{RawTransaction, SignedTransaction, Transaction},
 };
 use std::time::Duration;
 use structopt::StructOpt;
+use vm_genesis::get_account_address_from_name;
 
 #[derive(Debug, StructOpt)]
 pub struct ValidatorOperator {
@@ -37,8 +37,7 @@ impl ValidatorOperator {
             .public_key;
 
         // Create the transaction script that sets the validator operator for the owner
-        // TODO(joshlind): use the operator_name to derive the operator account address
-        let operator_account = AccountAddress::random();
+        let operator_account = get_account_address_from_name(&self.operator_name);
         let set_operator_script =
             transaction_builder::encode_set_validator_operator_script(operator_account);
 

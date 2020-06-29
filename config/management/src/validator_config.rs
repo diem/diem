@@ -16,17 +16,17 @@ use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
-    account_address::{self, AccountAddress},
+    account_address,
     transaction::{RawTransaction, SignedTransaction, Transaction},
 };
 use std::{convert::TryFrom, time::Duration};
 use structopt::StructOpt;
+use vm_genesis::get_account_address_from_name;
 
-// TODO(davidiw) add operator_address, since that will eventually be the identity producing this.
 #[derive(Debug, StructOpt)]
 pub struct ValidatorConfig {
     #[structopt(long)]
-    owner_address: AccountAddress,
+    owner_name: String,
     #[structopt(long)]
     validator_address: NetworkAddress,
     #[structopt(long)]
@@ -63,14 +63,10 @@ impl ValidatorConfig {
 
         // Step 2) Generate transaction
 
-        // TODO(davidiw): This is currently not supported
-        // let sender = self.owner_address;
-        let sender = account_address::from_public_key(&operator_key);
-
         // TODO(philiphayes): remove network identity pubkey field from struct when
         // transition complete
         let script = transaction_builder::encode_set_validator_config_script(
-            sender,
+            get_account_address_from_name(&self.owner_name),
             consensus_key.to_bytes().to_vec(),
             validator_network_key.to_bytes(),
             raw_validator_address.into(),
@@ -83,7 +79,7 @@ impl ValidatorConfig {
         let sequence_number = 0;
         let expiration_time = RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS;
         let raw_transaction = RawTransaction::new_script(
-            sender,
+            account_address::from_public_key(&operator_key),
             sequence_number,
             script,
             constants::MAX_GAS_AMOUNT,

@@ -10,7 +10,6 @@ use libra_config::config::{
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use libra_temppath::TempPath;
-use libra_types::account_address;
 use std::path::{Path, PathBuf};
 
 const ASSOCIATION_NS: &str = "association";
@@ -104,12 +103,11 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         let remote_ns = index.to_string() + OPERATOR_SHARED_NS;
         self.storage_helper.initialize(local_ns.clone());
 
-        let operator_key = self
+        let _ = self
             .storage_helper
             .operator_key(&local_ns, &remote_ns)
             .unwrap();
 
-        let validator_account = account_address::from_public_key(&operator_key);
         let mut config = self.template.clone_for_template();
         config.randomize_ports();
 
@@ -131,7 +129,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 
         self.storage_helper
             .validator_config(
-                validator_account,
+                index.to_string() + OWNER_SHARED_NS,
                 validator_network_address,
                 fullnode_network_address,
                 &local_ns,

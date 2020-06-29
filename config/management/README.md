@@ -146,12 +146,13 @@ cargo run -p libra-management -- \
     --remote 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN;namespace=NAME'
 ```
 * For each, validator managed by an operator, the operator will upload a signed
-  validator-config. The namespace in GitHub correlates to the owner namespace
-  (note: the owner address is irrelevant in this run):
+  validator-config. The owner corresponds to the name of the validator owner (as
+  registered in the shared Github). The namespace in GitHub correlates to the
+  owner namespace:
 ```
 cargo run -p libra-management -- \
     validator-config \
-    --owner-address 00000000000000000000000000000000 \
+    --owner-name OWNER_NAME \
     --validator-address '/dns/DNS/tcp/PORT' \
     --fullnode-address '/dns/DNS/tcp/PORT' \
     --local 'backend=vault;server=URL;token=PATH_TO_VAULT_TOKEN' \

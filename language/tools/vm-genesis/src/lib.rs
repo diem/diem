@@ -448,7 +448,7 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
 // mappings from validator owner/operator names to account addresses.
 // TODO(joshlind): Update me once we've settled on a concrete hashing strategy from string name to
 // account address. For now, we use the default hasher and a seeded random number generator.
-pub fn get_account_address_from_name(name: &String) -> AccountAddress {
+pub fn get_account_address_from_name(name: &str) -> AccountAddress {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     name.hash(&mut hasher);
     let seed = hasher.finish();
