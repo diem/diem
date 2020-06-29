@@ -435,19 +435,15 @@ impl SubmissionWorker {
             let requests = self.gen_requests();
             let num_requests = requests.len();
             let start_time = Instant::now();
+            let wait_util = start_time + wait;
             let mut tx_offset_time = 0u64;
             for request in requests {
                 let cur_time = Instant::now();
-                let wait_util = cur_time + wait;
                 tx_offset_time += (cur_time - start_time).as_millis() as u64;
                 self.stats.submitted.fetch_add(1, Ordering::Relaxed);
                 let resp = self.client.submit_transaction(request).await;
                 if let Err(e) = resp {
                     warn!("[{:?}] Failed to submit request: {:?}", self.client, e);
-                }
-                let now = Instant::now();
-                if wait_util > now {
-                    time::delay_for(wait_util - now).await;
                 }
             }
             if self.params.wait_committed {
@@ -492,6 +488,10 @@ impl SubmissionWorker {
                         .latencies
                         .record_data_point(latency, num_requests as u64);
                 }
+            }
+            let now = Instant::now();
+            if wait_util > now {
+                time::delay_for(wait_util - now).await;
             }
         }
         self.accounts

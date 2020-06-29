@@ -41,6 +41,9 @@ impl ExperimentSuite {
             PerformanceBenchmarkParams::new_nodes_down(10).build(cluster),
         ));
         experiments.push(Box::new(
+            PerformanceBenchmarkParams::new_fixed_tps(0, 10).build(cluster),
+        ));
+        experiments.push(Box::new(
             PerformanceBenchmarkThreeRegionSimulationParams {}.build(cluster),
         ));
         experiments.push(Box::new(
@@ -56,6 +59,9 @@ impl ExperimentSuite {
         ));
         experiments.push(Box::new(
             PerformanceBenchmarkParams::new_nodes_down(10).build(cluster),
+        ));
+        experiments.push(Box::new(
+            PerformanceBenchmarkParams::new_fixed_tps(0, 10).build(cluster),
         ));
         experiments.push(Box::new(
             PerformanceBenchmarkThreeRegionSimulationParams {}.build(cluster),
