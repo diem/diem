@@ -61,9 +61,7 @@
 //! ## Log macro bridge
 //!
 //! Crate owners are not required to rewrite their code right away to support new structured logging.
-//! Importing logger crate will automatically emit structured logging on every log(debug!, info!, etc) macro invocation, unless no_struct_log feature was enabled on this crate.
-//!
-//! Note: Only enable 'no_struct_log' on leaf binary crates, never on library, as it might disable structured logging for other crates, due to how cargo handles features at this moment.
+//! Importing logger crate will automatically emit structured logging on every log(debug!, info!, etc) macro invocation.
 //!
 //! So
 //! ```pseudo
@@ -201,15 +199,6 @@ macro_rules! warn {
 }
 
 #[macro_export]
-#[cfg(feature = "no_struct_log")]
-macro_rules! struct_log_enabled {
-    ($level:expr) => {
-        false
-    };
-}
-
-#[macro_export]
-#[cfg(not(feature = "no_struct_log"))]
 macro_rules! struct_log_enabled {
     ($level:expr) => {
         $crate::struct_logger_enabled($level)
@@ -217,13 +206,6 @@ macro_rules! struct_log_enabled {
 }
 
 #[macro_export]
-#[cfg(feature = "no_struct_log")]
-macro_rules! struct_log {
-    ($($arg:tt)+) => {};
-}
-
-#[macro_export]
-#[cfg(not(feature = "no_struct_log"))]
 macro_rules! struct_log {
     ($($arg:tt)+) => {
         let mut entry = $crate::StructuredLogEntry::new_unnamed();

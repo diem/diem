@@ -3,7 +3,7 @@
 
 use std::{
     collections::HashSet,
-    env, process,
+    env, fmt, process,
     time::{Duration, Instant},
 };
 
@@ -214,9 +214,9 @@ async fn handle_cluster_test_runner_commands(
             .await?;
         info!(
             "{}Experiment Result: {}{}",
-            style::Bold,
+            Bold {},
             runner.report,
-            style::Reset
+            Reset {}
         );
     } else if args.emit_tx {
         emit_tx(&runner.cluster, &args).await?;
@@ -630,11 +630,11 @@ impl ClusterTestRunner {
 
         info!(
             "{}Starting experiment {}{}{}{}",
-            style::Bold,
+            Bold {},
             color::Fg(color::Blue),
-            experiment,
+            experiment.to_string(),
             color::Fg(color::Reset),
-            style::Reset
+            Reset {}
         );
 
         let deadline = Instant::now() + experiment.deadline();
@@ -644,8 +644,8 @@ impl ClusterTestRunner {
 
         info!(
             "{}Experiment finished, waiting until all affected validators recover{}",
-            style::Bold,
-            style::Reset
+            Bold {},
+            Reset {}
         );
 
         self.wait_until_all_healthy(deadline).await?;
@@ -757,5 +757,33 @@ impl ClusterTestRunner {
             .find_instance_by_pod(pod)
             .ok_or_else(|| format_err!("Can not find instance with pod {}", pod))?;
         instance.exec(cmd).await
+    }
+}
+
+struct Bold {}
+
+struct Reset {}
+
+impl fmt::Debug for Bold {
+    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Ok(())
+    }
+}
+
+impl fmt::Display for Bold {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", style::Bold)
+    }
+}
+
+impl fmt::Debug for Reset {
+    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Ok(())
+    }
+}
+
+impl fmt::Display for Reset {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", style::Reset)
     }
 }
