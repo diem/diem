@@ -40,6 +40,7 @@ use network_simple_onchain_discovery::{
 use std::{
     clone::Clone,
     collections::{HashMap, HashSet},
+    mem,
     sync::{Arc, RwLock},
 };
 use subscription_service::ReconfigSubscription;
@@ -292,7 +293,14 @@ impl NetworkBuilder {
     /// permissioned.
     pub fn add_connectivity_manager(&mut self) -> &mut Self {
         let trusted_peers = self.trusted_peers.clone();
-        let seed_peers = self.seed_peers.clone();
+        let seed_addrs = self.seed_peers.clone();
+
+        // TODO(philiphayes): temporary. refactor builder api
+        let seed_pubkey_sets = {
+            let mut trusted_peers = self.trusted_peers.write().unwrap();
+            mem::replace(&mut *trusted_peers, HashMap::new())
+        };
+
         let max_connection_delay_ms = self.max_connection_delay_ms;
         let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
@@ -305,7 +313,8 @@ impl NetworkBuilder {
         self.connectivity_manager_builder = Some(ConnectivityManagerBuilder::create(
             self.network_context(),
             trusted_peers,
-            seed_peers,
+            seed_addrs,
+            seed_pubkey_sets,
             connectivity_check_interval_ms,
             // TODO:  move this into a config
             2, // Legacy hardcoded value,

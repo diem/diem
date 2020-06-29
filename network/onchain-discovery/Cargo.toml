@@ -41,4 +41,4 @@ storage-service = { path = "../../storage/storage-service", version = "0.1.0" }
 vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
 
 [features]
-fuzzing = ["libradb/fuzzing"]
+fuzzing = ["libradb/fuzzing", "libra-config/fuzzing"]
