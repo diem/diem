@@ -165,7 +165,6 @@ impl StorageHelper {
         command.operator_key()
     }
 
-    #[cfg(test)]
     pub fn owner_key(&self, local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
@@ -207,6 +206,35 @@ impl StorageHelper {
 
         let command = Command::from_iter(args.split_whitespace());
         command.set_layout()
+    }
+
+    pub fn set_operator(
+        &self,
+        operator_name: &str,
+        local_ns: &str,
+        remote_ns: &str,
+    ) -> Result<Transaction, Error> {
+        let args = format!(
+            "
+                management
+                set-operator
+                --operator-name {operator_name}
+                --local backend={backend};\
+                    path={path};\
+                    namespace={local_ns}
+                --remote backend={backend};\
+                    path={path};\
+                    namespace={remote_ns}\
+            ",
+            operator_name = operator_name,
+            backend = crate::secure_backend::DISK,
+            path = self.path_string(),
+            local_ns = local_ns,
+            remote_ns = remote_ns,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.set_operator()
     }
 
     pub fn validator_config(

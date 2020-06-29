@@ -11,7 +11,7 @@ use libra_secure_storage::KVStorage;
 use libra_types::transaction::{Transaction, TransactionPayload};
 use std::{fs::File, io::Write, path::PathBuf};
 use structopt::StructOpt;
-use vm_genesis::OperatorRegistration;
+use vm_genesis::{OperatorAssignment, OperatorRegistration};
 
 #[derive(Debug, StructOpt)]
 pub struct Genesis {
@@ -25,12 +25,12 @@ impl Genesis {
     pub fn execute(self) -> Result<Transaction, Error> {
         let layout = self.layout()?;
         let association_key = self.association(&layout)?;
-        let owner_names = layout.owners.clone();
+        let operator_assignments = self.operator_assignments(&layout)?;
         let operator_registrations = self.operator_registrations(&layout)?;
 
         let genesis = vm_genesis::encode_genesis_transaction(
             association_key,
-            owner_names,
+            &operator_assignments,
             &operator_registrations,
             Some(libra_types::on_chain_config::VMPublishingOption::Open),
         );
@@ -82,6 +82,38 @@ impl Genesis {
             .map_err(|e| Error::RemoteStorageReadError(constants::LAYOUT, e.to_string()))
     }
 
+    /// Produces a set of OperatorAssignments from the remote storage.
+    pub fn operator_assignments(&self, layout: &Layout) -> Result<Vec<OperatorAssignment>, Error> {
+        let mut operator_assignments = Vec::new();
+
+        for owner in layout.owners.iter() {
+            let owner_config = self.backend.backend.clone();
+            let owner_config = owner_config.set_namespace(owner.into());
+
+            let owner_storage = owner_config.create_storage(RemoteStorage)?;
+
+            let txn = owner_storage
+                .get(constants::VALIDATOR_OPERATOR)
+                .map_err(|e| {
+                    Error::RemoteStorageReadError(constants::VALIDATOR_OPERATOR, e.to_string())
+                })?
+                .value;
+            let txn = txn.transaction().unwrap();
+            let txn = txn.as_signed_user_txn().unwrap().payload();
+            let txn = if let TransactionPayload::Script(script) = txn {
+                script.clone()
+            } else {
+                return Err(Error::UnexpectedError(
+                    "Found invalid operator assignment".into(),
+                ));
+            };
+
+            operator_assignments.push((owner.into(), txn));
+        }
+
+        Ok(operator_assignments)
+    }
+
     /// Produces a set of OperatorRegistrations from the remote storage.
     pub fn operator_registrations(
         &self,
@@ -113,10 +145,12 @@ impl Genesis {
             let txn = if let TransactionPayload::Script(script) = txn {
                 script.clone()
             } else {
-                return Err(Error::UnexpectedError("Found invalid registration".into()));
+                return Err(Error::UnexpectedError(
+                    "Found invalid validator registration".into(),
+                ));
             };
 
-            operator_registrations.push((operator_key, txn));
+            operator_registrations.push((operator.into(), operator_key, txn));
         }
 
         Ok(operator_registrations)

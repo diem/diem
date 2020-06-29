@@ -10,6 +10,7 @@ mod key;
 mod layout;
 mod secure_backend;
 mod validator_config;
+mod validator_operator;
 mod verify;
 mod waypoint;
 
@@ -29,6 +30,7 @@ pub mod constants {
     pub const COMMON_NS: &str = "common";
     pub const LAYOUT: &str = "layout";
     pub const VALIDATOR_CONFIG: &str = "validator_config";
+    pub const VALIDATOR_OPERATOR: &str = "validator_operator";
 
     pub const GAS_UNIT_PRICE: u64 = 0;
     pub const MAX_GAS_AMOUNT: u64 = 1_000_000;
@@ -57,6 +59,8 @@ pub enum Command {
     SubmitTransaction(crate::json_rpc::SubmitTransaction),
     #[structopt(about = "Submits a Layout doc to a shared storage")]
     SetLayout(SetLayout),
+    #[structopt(about = "Sets the validator operator chosen by the owner")]
+    SetOperator(crate::validator_operator::ValidatorOperator),
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
     ValidatorConfig(crate::validator_config::ValidatorConfig),
     #[structopt(about = "Verifies and prints the current configuration state")]
@@ -73,6 +77,7 @@ pub enum CommandName {
     OwnerKey,
     ReadAccountState,
     SetLayout,
+    SetOperator,
     SubmitTransaction,
     ValidatorConfig,
     Verify,
@@ -89,6 +94,7 @@ impl From<&Command> for CommandName {
             Command::OwnerKey(_) => CommandName::OwnerKey,
             Command::ReadAccountState(_) => CommandName::ReadAccountState,
             Command::SetLayout(_) => CommandName::SetLayout,
+            Command::SetOperator(_) => CommandName::SetOperator,
             Command::SubmitTransaction(_) => CommandName::SubmitTransaction,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::Verify(_) => CommandName::Verify,
@@ -107,6 +113,7 @@ impl std::fmt::Display for CommandName {
             CommandName::OwnerKey => "owner-key",
             CommandName::ReadAccountState => "read-account-state",
             CommandName::SetLayout => "set-layout",
+            CommandName::SetOperator => "set-operator",
             CommandName::SubmitTransaction => "submit-transaction",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::Verify => "verify",
@@ -126,6 +133,7 @@ impl Command {
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
             Command::ReadAccountState(_) => format!("{:?}", self.read_account_state().unwrap()),
             Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
+            Command::SetOperator(_) => format!("{:?}", self.set_operator().unwrap()),
             Command::SubmitTransaction(_) => self
                 .submit_transaction()
                 .map(|_| "success!")
@@ -189,6 +197,13 @@ impl Command {
         match self {
             Command::SetLayout(set_layout) => set_layout.execute(),
             _ => Err(self.unexpected_command(CommandName::SetLayout)),
+        }
+    }
+
+    pub fn set_operator(self) -> Result<Transaction, Error> {
+        match self {
+            Command::SetOperator(set_operator) => set_operator.execute(),
+            _ => Err(self.unexpected_command(CommandName::SetOperator)),
         }
     }
 
@@ -275,23 +290,27 @@ pub mod tests {
         let helper = StorageHelper::new();
 
         // Each identity works in their own namespace
-        // Alice, Bob, and Carol are operators, implicitly mapped 1:1 with owners.
+        // Owner_Alice, Owner_Bob, and Owner_Carol are owners.
+        // Operator_Alice, Operator_Bob and Operator_Carol are operators.
         // Dave is the association.
         // Each user will upload their contents to *_ns + "shared"
         // Common is used by the technical staff for coordination.
-        let alice_ns = "alice";
-        let bob_ns = "bob";
-        let carol_ns = "carol";
+        let owner_alice_ns = "alice";
+        let owner_bob_ns = "bob";
+        let owner_carol_ns = "carol";
+        let operator_alice_ns = "operator_alice";
+        let operator_bob_ns = "operator_bob";
+        let operator_carol_ns = "operator_carol";
         let dave_ns = "dave";
         let shared = "_shared";
 
         // Step 1) Define and upload the layout specifying which identities have which roles. This
-        // is uplaoded to the common namespace.
+        // is uploaded to the common namespace.
 
         // Note: owners are irrelevant currently
         let layout_text = "\
-            operators = [\"alice_shared\", \"bob_shared\", \"carol_shared\"]\n\
-            owners = []\n\
+            operators = [\"operator_alice_shared\", \"operator_bob_shared\", \"operator_carol_shared\"]\n\
+            owners = [\"alice_shared\", \"bob_shared\", \"carol_shared\"]\n\
             association = [\"dave_shared\"]\n\
         ";
 
@@ -316,9 +335,24 @@ pub mod tests {
             .association_key(dave_ns, &(dave_ns.to_string() + shared))
             .unwrap();
 
-        // Step 3) Upload each operators key and then a signed transaction:
+        // Step 3) Upload each owner key and then a signed set operator transaction:
+        for ns in [owner_alice_ns, owner_bob_ns, owner_carol_ns].iter() {
+            helper.initialize((*ns).to_string());
+            helper
+                .owner_key(ns, &((*ns).to_string() + shared))
+                .unwrap();
 
-        for ns in [alice_ns, bob_ns, carol_ns].iter() {
+            helper
+                .set_operator(
+                    &format!("operator_{}", (*ns).to_string()),
+                    ns,
+                    &((*ns).to_string() + shared),
+                )
+                .unwrap();
+        }
+
+        // Step 4) Upload each operators key and then a signed transaction:
+        for ns in [operator_alice_ns, operator_bob_ns, operator_carol_ns].iter() {
             helper.initialize((*ns).to_string());
             helper
                 .operator_key(ns, &((*ns).to_string() + shared))
@@ -335,8 +369,7 @@ pub mod tests {
                 .unwrap();
         }
 
-        // Step 4) Produce genesis
-
+        // Step 5) Produce genesis
         let genesis_path = libra_temppath::TempPath::new();
         genesis_path.create_as_file().unwrap();
         helper.genesis(genesis_path.path()).unwrap();

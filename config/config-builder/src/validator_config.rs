@@ -143,12 +143,12 @@ impl ValidatorConfig {
         // present at genesis time.
         let nodes_in_genesis = self.num_nodes_in_genesis.unwrap_or(self.num_nodes);
 
-        let owner_names = (0..self.num_nodes).map(|i| i.to_string()).collect();
+        let operator_assignments = vm_genesis::operator_assignments(&nodes[..nodes_in_genesis]);
         let operator_registrations = vm_genesis::operator_registrations(&nodes[..nodes_in_genesis]);
 
         let genesis = vm_genesis::encode_genesis_transaction(
             faucet_key.public_key(),
-            owner_names,
+            &operator_assignments,
             &operator_registrations,
             self.template
                 .test

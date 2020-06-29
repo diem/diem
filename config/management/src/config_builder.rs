@@ -13,9 +13,12 @@ use libra_temppath::TempPath;
 use libra_types::account_address;
 use std::path::{Path, PathBuf};
 
-const SHARED: &str = "_shared";
-const ASSOCIATION: &str = "association";
-const ASSOCIATION_SHARED: &str = "association_shared";
+const ASSOCIATION_NS: &str = "association";
+const ASSOCIATION_SHARED_NS: &str = "association_shared";
+const OPERATOR_NS: &str = "_operator";
+const OPERATOR_SHARED_NS: &str = "_operator_shared";
+const OWNER_NS: &str = "_owner";
+const OWNER_SHARED_NS: &str = "_owner_shared";
 
 pub struct ValidatorBuilder<T: AsRef<Path>> {
     storage_helper: StorageHelper,
@@ -51,9 +54,12 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
     /// Association uploads the validator layout to shared storage.
     fn create_layout(&self) {
         let mut layout = Layout::default();
-        layout.association = vec![ASSOCIATION_SHARED.into()];
+        layout.association = vec![ASSOCIATION_SHARED_NS.into()];
+        layout.owners = (0..self.num_validators)
+            .map(|i| (i.to_string() + OWNER_SHARED_NS))
+            .collect();
         layout.operators = (0..self.num_validators)
-            .map(|v| (v.to_string() + SHARED))
+            .map(|i| (i.to_string() + OPERATOR_SHARED_NS))
             .collect();
 
         let mut common_storage = self
@@ -67,21 +73,41 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 
     /// Association initializes its account and key.
     fn create_association(&self) {
-        self.storage_helper.initialize(ASSOCIATION.into());
+        self.storage_helper.initialize(ASSOCIATION_NS.into());
         self.storage_helper
-            .association_key(ASSOCIATION, ASSOCIATION_SHARED)
+            .association_key(ASSOCIATION_NS, ASSOCIATION_SHARED_NS)
+            .unwrap();
+    }
+
+    /// Generate owner keys locally, upload to shared storage and set owner operator.
+    /// Note, we assume that owner i chooses operator i to operate the validator.
+    fn initialize_validator_owner(&self, owner_index: usize) {
+        let local_ns = owner_index.to_string() + OWNER_NS;
+        let remote_ns = owner_index.to_string() + OWNER_SHARED_NS;
+
+        self.storage_helper.initialize(local_ns.clone());
+        self.storage_helper
+            .owner_key(&local_ns, &remote_ns)
+            .unwrap();
+
+        let operator_name = owner_index.to_string() + OPERATOR_SHARED_NS;
+        self.storage_helper
+            .set_operator(&operator_name, &local_ns, &remote_ns)
             .unwrap();
     }
 
     /// Operators upload their keys to shared storage
     /// Operators initialize their validator endpoint and full node endpoint
     /// Operators upload their validator_config to shared storage
-    fn initialize_validator_config(&self, index: usize) -> NodeConfig {
-        let ns = index.to_string();
-        let ns_shared = ns.clone() + SHARED;
-        self.storage_helper.initialize(ns.clone());
+    fn initialize_validator_operator_and_config(&self, index: usize) -> NodeConfig {
+        let local_ns = index.to_string() + OPERATOR_NS;
+        let remote_ns = index.to_string() + OPERATOR_SHARED_NS;
+        self.storage_helper.initialize(local_ns.clone());
 
-        let operator_key = self.storage_helper.operator_key(&ns, &ns_shared).unwrap();
+        let operator_key = self
+            .storage_helper
+            .operator_key(&local_ns, &remote_ns)
+            .unwrap();
 
         let validator_account = account_address::from_public_key(&operator_key);
         let mut config = self.template.clone_for_template();
@@ -92,7 +118,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         validator_network.identity = Identity::from_storage(
             libra_global_constants::VALIDATOR_NETWORK_KEY.into(),
             libra_global_constants::OPERATOR_ACCOUNT.into(),
-            self.secure_backend(&ns, "validator"),
+            self.secure_backend(&local_ns, "validator"),
         );
 
         let fullnode_network = &mut config.full_node_networks[0];
@@ -100,7 +126,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         fullnode_network.identity = Identity::from_storage(
             libra_global_constants::FULLNODE_NETWORK_KEY.into(),
             libra_global_constants::OPERATOR_ACCOUNT.into(),
-            self.secure_backend(&ns, "full_node"),
+            self.secure_backend(&local_ns, "full_node"),
         );
 
         self.storage_helper
@@ -108,8 +134,8 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
                 validator_account,
                 validator_network_address,
                 fullnode_network_address,
-                &ns,
-                &ns_shared,
+                &local_ns,
+                &remote_ns,
             )
             .unwrap();
         config
@@ -144,23 +170,33 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 
 impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
     fn build_swarm(&self) -> anyhow::Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
+        // Initialize layout and association
         self.create_layout();
         self.create_association();
-        let faucet_key = self
+        let association_key = self
             .storage_helper
-            .storage(ASSOCIATION.into())
+            .storage(ASSOCIATION_NS.into())
             .export_private_key(libra_global_constants::ASSOCIATION_KEY)
             .unwrap();
+
+        // Initialize validator owners and operators
+        for owner_index in 0..self.num_validators {
+            self.initialize_validator_owner(owner_index);
+        }
+
         let mut configs: Vec<_> = (0..self.num_validators)
-            .map(|i| self.initialize_validator_config(i))
+            .map(|i| self.initialize_validator_operator_and_config(i))
             .collect();
+
+        // Create genesis and verify waypoint
         self.storage_helper
             .create_waypoint(constants::COMMON_NS)
             .unwrap();
         for (i, config) in configs.iter_mut().enumerate() {
             self.finish_validator_config(i, config);
         }
-        Ok((configs, faucet_key))
+
+        Ok((configs, association_key))
     }
 }
 
