@@ -12,9 +12,4 @@ cargo build --release -p libra-management -p libra-node -p cli -p config-builder
 rm -rf target/release/{build,deps,incremental}
 
 STRIP_DIR=${STRIP_DIR:-/libra/target}
-strip "$STRIP_DIR/release/config-builder"
-strip "$STRIP_DIR/release/cli"
-strip "$STRIP_DIR/release/db-backup"
-strip "$STRIP_DIR/release/db-bootstrapper"
-strip "$STRIP_DIR/release/db-restore"
-strip "$STRIP_DIR/release/libra-management"
+find "$STRIP_DIR/release" -maxdepth 1 -executable -type f | xargs strip
