@@ -67,6 +67,8 @@ impl<'r, 'l, R: RemoteCache> Session<'r, 'l, R> {
     }
 
     pub fn finish(self) -> VMResult<TransactionEffects> {
-        self.data_cache.into_effects()
+        self.data_cache
+            .into_effects()
+            .map_err(|e| e.finish(Location::Undefined))
     }
 }

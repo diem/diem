@@ -85,7 +85,7 @@ fn tiered_mint_designated_dealer() {
     ));
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
 
     // -------------- invalid tier index
@@ -102,7 +102,7 @@ fn tiered_mint_designated_dealer() {
     ));
     assert!(transaction_status_eq(
         &output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(3))
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED, Some(3), None))
     ));
 }
 

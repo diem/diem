@@ -9,13 +9,13 @@ use move_vm_types::{
     values::{Value, Vector, VectorRef},
 };
 use std::collections::VecDeque;
-use vm::errors::VMResult;
+use vm::errors::PartialVMResult;
 
 pub fn native_empty(
     context: &impl NativeContext,
     ty_args: Vec<Type>,
     args: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.is_empty());
 
@@ -27,7 +27,7 @@ pub fn native_length(
     context: &impl NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 1);
 
@@ -43,7 +43,7 @@ pub fn native_push_back(
     context: &impl NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 2);
 
@@ -64,7 +64,7 @@ pub fn native_borrow(
     context: &impl NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 2);
 
@@ -80,7 +80,7 @@ pub fn native_pop(
     context: &impl NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 1);
 
@@ -95,7 +95,7 @@ pub fn native_destroy_empty(
     context: &impl NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 1);
 
@@ -110,7 +110,7 @@ pub fn native_swap(
     context: &impl NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 3);
 

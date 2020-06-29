@@ -76,7 +76,7 @@ fn verify_and_execute_writeset() {
     let output = executor.execute_transaction(writeset_txn.clone());
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
     assert!(executor
         .verify_transaction(writeset_txn.clone())
@@ -103,11 +103,15 @@ fn verify_and_execute_writeset() {
     let output = executor.execute_transaction(writeset_txn.clone());
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_OLD))
+        &TransactionStatus::Discard(VMStatus::new(
+            StatusCode::SEQUENCE_NUMBER_TOO_OLD,
+            None,
+            None
+        ))
     );
     assert_eq!(
         executor.verify_transaction(writeset_txn).status().unwrap(),
-        VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_OLD)
+        VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_OLD, None, None)
     );
 
     // (3) Cannot apply the writeset with future sequence number.
@@ -154,7 +158,7 @@ fn bad_writesets() {
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_AUTH_KEY))
+        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_AUTH_KEY, None, None))
     );
 
     // (2) The WriteSet contains a reconfiguration event, will be dropped.
@@ -171,7 +175,7 @@ fn bad_writesets() {
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_WRITE_SET))
+        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_WRITE_SET, None, None))
     );
 
     // (3) The WriteSet attempts to change LibraWriteSetManager, will be dropped.
@@ -201,7 +205,7 @@ fn bad_writesets() {
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_WRITE_SET))
+        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_WRITE_SET, None, None))
     );
 
     // (4) The WriteSet attempts to change libra root AccountResource, will be dropped.
@@ -231,7 +235,7 @@ fn bad_writesets() {
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_WRITE_SET))
+        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_WRITE_SET, None, None))
     );
 }
 
@@ -269,7 +273,7 @@ fn transfer_and_execute_writeset() {
     let output = executor.execute_transaction(writeset_txn.clone());
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
     assert!(executor.verify_transaction(writeset_txn).status().is_none());
 
@@ -299,7 +303,7 @@ fn transfer_and_execute_writeset() {
     let output = executor.execute_transaction(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
 
     executor.apply_write_set(output.write_set());

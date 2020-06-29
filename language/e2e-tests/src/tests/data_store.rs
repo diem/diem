@@ -74,7 +74,7 @@ fn move_from_across_blocks() {
         .expect("Must execute transactions");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
     assert_eq!(
         output[1].status().vm_status().major_status,
@@ -122,7 +122,7 @@ fn borrow_after_move() {
         .expect("Must execute transactions");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
     assert_eq!(
         output[1].status().vm_status().major_status,
@@ -170,7 +170,7 @@ fn change_after_move() {
         .expect("Must execute transactions");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
     assert_eq!(
         output[1].status().vm_status().major_status,

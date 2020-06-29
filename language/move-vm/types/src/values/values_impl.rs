@@ -7,7 +7,7 @@ use crate::{
 };
 use libra_types::{
     account_address::AccountAddress,
-    vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode, VMStatus},
+    vm_status::{sub_status::NFE_VECTOR_ERROR_BASE, StatusCode},
 };
 use move_core_types::{
     gas_schedule::{
@@ -317,11 +317,13 @@ impl Value {
  *
  **************************************************************************************/
 
-fn take_unique_ownership<T: Debug>(r: Rc<RefCell<T>>) -> VMResult<T> {
+fn take_unique_ownership<T: Debug>(r: Rc<RefCell<T>>) -> PartialVMResult<T> {
     match Rc::try_unwrap(r) {
         Ok(cell) => Ok(cell.into_inner()),
-        Err(r) => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-            .with_message(format!("moving value {:?} with dangling references", r))),
+        Err(r) => Err(
+            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message(format!("moving value {:?} with dangling references", r)),
+        ),
     }
 }
 
@@ -352,22 +354,17 @@ impl ContainerRef {
  *
  **************************************************************************************/
 trait VMValueRef<T> {
-    fn value_ref(&self) -> VMResult<&T>;
+    fn value_ref(&self) -> PartialVMResult<&T>;
 }
 
 macro_rules! impl_vm_value_ref {
     ($ty: ty, $tc: ident) => {
         impl VMValueRef<$ty> for ValueImpl {
-            fn value_ref(&self) -> VMResult<&$ty> {
+            fn value_ref(&self) -> PartialVMResult<&$ty> {
                 match self {
                     ValueImpl::$tc(x) => Ok(x),
-                    _ => Err(
-                        VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
-                            "cannot take {:?} as &{}",
-                            self,
-                            stringify!($ty)
-                        )),
-                    ),
+                    _ => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                        .with_message(format!("cannot take {:?} as &{}", self, stringify!($ty)))),
                 }
             }
         }
@@ -381,7 +378,7 @@ impl_vm_value_ref!(bool, Bool);
 impl_vm_value_ref!(AccountAddress, Address);
 
 impl ValueImpl {
-    fn as_value_ref<T>(&self) -> VMResult<&T>
+    fn as_value_ref<T>(&self) -> PartialVMResult<&T>
     where
         Self: VMValueRef<T>,
     {
@@ -399,7 +396,7 @@ impl ValueImpl {
  *
  **************************************************************************************/
 impl ValueImpl {
-    fn copy_value(&self) -> VMResult<Self> {
+    fn copy_value(&self) -> PartialVMResult<Self> {
         use ValueImpl::*;
 
         Ok(match self {
@@ -422,14 +419,20 @@ impl ValueImpl {
 }
 
 impl Container {
-    fn copy_value(&self) -> VMResult<Self> {
+    fn copy_value(&self) -> PartialVMResult<Self> {
         use Container::*;
 
         Ok(match self {
-            General(v) => General(v.iter().map(|x| x.copy_value()).collect::<VMResult<_>>()?),
+            General(v) => General(
+                v.iter()
+                    .map(|x| x.copy_value())
+                    .collect::<PartialVMResult<_>>()?,
+            ),
             Resource(_) => {
-                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message("copying a resource".to_string()))
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message("copying a resource".to_string()),
+                )
             }
             U8(v) => U8(v.clone()),
             U64(v) => U64(v.clone()),
@@ -462,7 +465,7 @@ impl ContainerRef {
 }
 
 impl Value {
-    pub fn copy_value(&self) -> VMResult<Self> {
+    pub fn copy_value(&self) -> PartialVMResult<Self> {
         Ok(Self(self.0.copy_value()?))
     }
 }
@@ -485,7 +488,7 @@ impl Value {
  **************************************************************************************/
 
 impl ValueImpl {
-    fn equals(&self, other: &Self) -> VMResult<bool> {
+    fn equals(&self, other: &Self) -> PartialVMResult<bool> {
         use ValueImpl::*;
 
         let res = match (self, other) {
@@ -501,7 +504,7 @@ impl ValueImpl {
             (IndexedRef(l), IndexedRef(r)) => l.equals(r)?,
 
             _ => {
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                     .with_message(format!("cannot compare values: {:?}, {:?}", self, other)))
             }
         };
@@ -511,46 +514,48 @@ impl ValueImpl {
 }
 
 impl Container {
-    fn equals(&self, other: &Self) -> VMResult<bool> {
+    fn equals(&self, other: &Self) -> PartialVMResult<bool> {
         use Container::*;
 
-        let res =
-            match (self, other) {
-                (Resource(l), Resource(r)) | (General(l), General(r)) => {
-                    if l.len() != r.len() {
+        let res = match (self, other) {
+            (Resource(l), Resource(r)) | (General(l), General(r)) => {
+                if l.len() != r.len() {
+                    return Ok(false);
+                }
+                for (v1, v2) in l.iter().zip(r.iter()) {
+                    if !v1.equals(v2)? {
                         return Ok(false);
                     }
-                    for (v1, v2) in l.iter().zip(r.iter()) {
-                        if !v1.equals(v2)? {
-                            return Ok(false);
-                        }
-                    }
-                    true
                 }
-                (U8(l), U8(r)) => l == r,
-                (U64(l), U64(r)) => l == r,
-                (U128(l), U128(r)) => l == r,
-                (Bool(l), Bool(r)) => l == r,
-                (Address(l), Address(r)) => l == r,
-                _ => {
-                    return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(
-                        format!("cannot compare container values: {:?}, {:?}", self, other),
-                    ))
-                }
-            };
+                true
+            }
+            (U8(l), U8(r)) => l == r,
+            (U64(l), U64(r)) => l == r,
+            (U128(l), U128(r)) => l == r,
+            (Bool(l), Bool(r)) => l == r,
+            (Address(l), Address(r)) => l == r,
+            _ => {
+                return Err(
+                    PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                        "cannot compare container values: {:?}, {:?}",
+                        self, other
+                    )),
+                )
+            }
+        };
 
         Ok(res)
     }
 }
 
 impl ContainerRef {
-    fn equals(&self, other: &Self) -> VMResult<bool> {
+    fn equals(&self, other: &Self) -> PartialVMResult<bool> {
         self.borrow().equals(&*other.borrow())
     }
 }
 
 impl IndexedRef {
-    fn equals(&self, other: &Self) -> VMResult<bool> {
+    fn equals(&self, other: &Self) -> PartialVMResult<bool> {
         use Container::*;
 
         let res = match (
@@ -606,7 +611,7 @@ impl IndexedRef {
 
             // All other combinations are illegal.
             _ => {
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                     .with_message(format!("cannot compare references {:?}, {:?}", self, other)))
             }
         };
@@ -615,7 +620,7 @@ impl IndexedRef {
 }
 
 impl Value {
-    pub fn equals(&self, other: &Self) -> VMResult<bool> {
+    pub fn equals(&self, other: &Self) -> PartialVMResult<bool> {
         self.0.equals(&other.0)
     }
 }
@@ -629,13 +634,13 @@ impl Value {
  **************************************************************************************/
 
 impl ContainerRef {
-    fn read_ref(self) -> VMResult<Value> {
+    fn read_ref(self) -> PartialVMResult<Value> {
         Ok(Value(ValueImpl::new_container(self.borrow().copy_value()?)))
     }
 }
 
 impl IndexedRef {
-    fn read_ref(self) -> VMResult<Value> {
+    fn read_ref(self) -> PartialVMResult<Value> {
         use Container::*;
 
         let res = match &*self.container_ref.borrow() {
@@ -652,7 +657,7 @@ impl IndexedRef {
 }
 
 impl ReferenceImpl {
-    fn read_ref(self) -> VMResult<Value> {
+    fn read_ref(self) -> PartialVMResult<Value> {
         match self {
             Self::ContainerRef(r) => r.read_ref(),
             Self::IndexedRef(r) => r.read_ref(),
@@ -661,13 +666,13 @@ impl ReferenceImpl {
 }
 
 impl StructRef {
-    pub fn read_ref(self) -> VMResult<Value> {
+    pub fn read_ref(self) -> PartialVMResult<Value> {
         self.0.read_ref()
     }
 }
 
 impl Reference {
-    pub fn read_ref(self) -> VMResult<Value> {
+    pub fn read_ref(self) -> PartialVMResult<Value> {
         self.0.read_ref()
     }
 }
@@ -681,22 +686,25 @@ impl Reference {
  **************************************************************************************/
 
 impl ContainerRef {
-    fn write_ref(self, v: Value) -> VMResult<()> {
+    fn write_ref(self, v: Value) -> PartialVMResult<()> {
         match v.0 {
             ValueImpl::Container(r) => {
                 let mut v = self.borrow_mut();
                 if v.is_resource() {
-                    return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                        .with_message(
-                            "resource implicitly destroyed via ContainerRef::write_ref".to_string(),
-                        ));
+                    return Err(
+                        PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(
+                                "resource implicitly destroyed via ContainerRef::write_ref"
+                                    .to_string(),
+                            ),
+                    );
                 }
                 *v = take_unique_ownership(r)?
                 // TODO: can we simply take the Rc?
             }
             _ => {
                 return Err(
-                    VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                    PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
                         "cannot write value {:?} to container ref {:?}",
                         v, self
                     )),
@@ -708,14 +716,14 @@ impl ContainerRef {
 }
 
 impl IndexedRef {
-    fn write_ref(self, x: Value) -> VMResult<()> {
+    fn write_ref(self, x: Value) -> PartialVMResult<()> {
         match &x.0 {
             ValueImpl::IndexedRef(_)
             | ValueImpl::ContainerRef(_)
             | ValueImpl::Invalid
             | ValueImpl::Container(_) => {
                 return Err(
-                    VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                    PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
                         "cannot write value {:?} to indexed ref {:?}",
                         x, self
                     )),
@@ -728,10 +736,13 @@ impl IndexedRef {
             (Container::Resource(v), _) | (Container::General(v), _) => {
                 // TODO: do we need to check this for Container::General?
                 if v[self.idx].is_resource() {
-                    return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                        .with_message(
-                            "resource implicitly destroyed via IndexedRef::write_ref".to_string(),
-                        ));
+                    return Err(
+                        PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(
+                                "resource implicitly destroyed via IndexedRef::write_ref"
+                                    .to_string(),
+                            ),
+                    );
                 }
                 v[self.idx] = x.0;
             }
@@ -741,7 +752,7 @@ impl IndexedRef {
             (Container::Bool(v), ValueImpl::Bool(x)) => v[self.idx] = *x,
             _ => {
                 return Err(
-                    VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                    PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
                         "cannot write value {:?} to indexed ref {:?}",
                         x, self
                     )),
@@ -753,7 +764,7 @@ impl IndexedRef {
 }
 
 impl ReferenceImpl {
-    fn write_ref(self, x: Value) -> VMResult<()> {
+    fn write_ref(self, x: Value) -> PartialVMResult<()> {
         match self {
             Self::ContainerRef(r) => r.write_ref(x),
             Self::IndexedRef(r) => r.write_ref(x),
@@ -762,7 +773,7 @@ impl ReferenceImpl {
 }
 
 impl Reference {
-    pub fn write_ref(self, x: Value) -> VMResult<()> {
+    pub fn write_ref(self, x: Value) -> PartialVMResult<()> {
         self.0.write_ref(x)
     }
 }
@@ -777,16 +788,18 @@ impl Reference {
  **************************************************************************************/
 
 impl ContainerRef {
-    fn borrow_elem(&self, idx: usize) -> VMResult<ValueImpl> {
+    fn borrow_elem(&self, idx: usize) -> PartialVMResult<ValueImpl> {
         let r = self.borrow();
 
         if idx >= r.len() {
             return Err(
-                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(format!(
-                    "index out of bounds when borrowing container element: got: {}, len: {}",
-                    idx,
-                    r.len()
-                )),
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                    format!(
+                        "index out of bounds when borrowing container element: got: {}, len: {}",
+                        idx,
+                        r.len()
+                    ),
+                ),
             );
         }
 
@@ -824,13 +837,13 @@ impl ContainerRef {
 }
 
 impl StructRef {
-    pub fn borrow_field(&self, idx: usize) -> VMResult<Value> {
+    pub fn borrow_field(&self, idx: usize) -> PartialVMResult<Value> {
         Ok(Value(self.0.borrow_elem(idx)?))
     }
 }
 
 impl Locals {
-    pub fn borrow_loc(&self, idx: usize) -> VMResult<Value> {
+    pub fn borrow_loc(&self, idx: usize) -> PartialVMResult<Value> {
         // TODO: this is very similar to SharedContainer::borrow_elem. Find a way to
         // reuse that code?
 
@@ -838,11 +851,13 @@ impl Locals {
 
         if idx >= r.len() {
             return Err(
-                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(format!(
-                    "index out of bounds when borrowing local: got: {}, len: {}",
-                    idx,
-                    r.len()
-                )),
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                    format!(
+                        "index out of bounds when borrowing local: got: {}, len: {}",
+                        idx,
+                        r.len()
+                    ),
+                ),
             );
         }
 
@@ -861,26 +876,26 @@ impl Locals {
                     idx,
                 }))),
 
-                ValueImpl::ContainerRef(_) | ValueImpl::Invalid | ValueImpl::IndexedRef(_) => {
-                    Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                        .with_message(format!("cannot borrow local {:?}", &v[idx])))
-                }
+                ValueImpl::ContainerRef(_) | ValueImpl::Invalid | ValueImpl::IndexedRef(_) => Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(format!("cannot borrow local {:?}", &v[idx])),
+                ),
             },
             Container::Resource(_)
             | Container::U8(_)
             | Container::U64(_)
             | Container::U128(_)
             | Container::Address(_)
-            | Container::Bool(_) => {
-                Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("bad container for locals: {:?}", &*r)))
-            }
+            | Container::Bool(_) => Err(PartialVMError::new(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            )
+            .with_message(format!("bad container for locals: {:?}", &*r))),
         }
     }
 }
 
 impl SignerRef {
-    pub fn borrow_signer(&self) -> VMResult<Value> {
+    pub fn borrow_signer(&self) -> PartialVMResult<Value> {
         Ok(Value(self.0.borrow_elem(0)?))
     }
 }
@@ -899,15 +914,17 @@ impl Locals {
         ))))
     }
 
-    pub fn check_resources_for_return(&self) -> VMResult<()> {
+    pub fn check_resources_for_return(&self) -> PartialVMResult<()> {
         match &*self.0.borrow() {
             Container::General(vals) => {
                 for v in vals {
                     if v.is_resource() {
-                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                            .with_message(
-                                "resource implicitly destroyed when returnining".to_string(),
-                            ));
+                        return Err(PartialVMError::new(
+                            StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                        )
+                        .with_message(
+                            "resource implicitly destroyed when returnining".to_string(),
+                        ));
                     }
                 }
                 Ok(())
@@ -922,7 +939,7 @@ impl Locals {
         }
     }
 
-    pub fn copy_loc(&self, idx: usize) -> VMResult<Value> {
+    pub fn copy_loc(&self, idx: usize) -> PartialVMResult<Value> {
         let r = self.0.borrow();
         let v = match &*r {
             Container::General(v) => v,
@@ -936,22 +953,20 @@ impl Locals {
         };
 
         match v.get(idx) {
-            Some(ValueImpl::Invalid) => {
-                Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("cannot copy invalid value at index {}", idx)))
-            }
+            Some(ValueImpl::Invalid) => Err(PartialVMError::new(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            )
+            .with_message(format!("cannot copy invalid value at index {}", idx))),
             Some(v) => Ok(Value(v.copy_value()?)),
             None => Err(
-                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
-                    "local index out of bounds: got {}, len: {}",
-                    idx,
-                    v.len()
-                )),
+                PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
+                    format!("local index out of bounds: got {}, len: {}", idx, v.len()),
+                ),
             ),
         }
     }
 
-    fn swap_loc(&mut self, idx: usize, x: Value) -> VMResult<Value> {
+    fn swap_loc(&mut self, idx: usize, x: Value) -> PartialVMResult<Value> {
         let mut r = self.0.borrow_mut();
         let v = match &mut *r {
             Container::General(v) => v,
@@ -968,38 +983,38 @@ impl Locals {
             Some(v) => {
                 if let ValueImpl::Container(r) = v {
                     if Rc::strong_count(r) > 1 {
-                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                            .with_message(
-                                "moving container with dangling references".to_string(),
-                            ));
+                        return Err(PartialVMError::new(
+                            StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+                        )
+                        .with_message("moving container with dangling references".to_string()));
                     }
                 }
                 Ok(Value(std::mem::replace(v, x.0)))
             }
             None => Err(
-                VMStatus::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(format!(
-                    "local index out of bounds: got {}, len: {}",
-                    idx,
-                    v.len()
-                )),
+                PartialVMError::new(StatusCode::VERIFIER_INVARIANT_VIOLATION).with_message(
+                    format!("local index out of bounds: got {}, len: {}", idx, v.len()),
+                ),
             ),
         }
     }
 
-    pub fn move_loc(&mut self, idx: usize) -> VMResult<Value> {
+    pub fn move_loc(&mut self, idx: usize) -> PartialVMResult<Value> {
         match self.swap_loc(idx, Value(ValueImpl::Invalid))? {
-            Value(ValueImpl::Invalid) => {
-                Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("cannot move invalid value at index {}", idx)))
-            }
+            Value(ValueImpl::Invalid) => Err(PartialVMError::new(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            )
+            .with_message(format!("cannot move invalid value at index {}", idx))),
             v => Ok(v),
         }
     }
 
-    pub fn store_loc(&mut self, idx: usize, x: Value) -> VMResult<()> {
+    pub fn store_loc(&mut self, idx: usize, x: Value) -> PartialVMResult<()> {
         if self.swap_loc(idx, x)?.0.is_resource() {
-            return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                .with_message("resource implicitly destroyed via store_loc".to_string()));
+            return Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message("resource implicitly destroyed via store_loc".to_string()),
+            );
         }
         Ok(())
     }
@@ -1101,22 +1116,17 @@ impl Value {
  *
  **************************************************************************************/
 pub trait VMValueCast<T> {
-    fn cast(self) -> VMResult<T>;
+    fn cast(self) -> PartialVMResult<T>;
 }
 
 macro_rules! impl_vm_value_cast {
     ($ty: ty, $tc: ident) => {
         impl VMValueCast<$ty> for Value {
-            fn cast(self) -> VMResult<$ty> {
+            fn cast(self) -> PartialVMResult<$ty> {
                 match self.0 {
                     ValueImpl::$tc(x) => Ok(x),
-                    v => Err(
-                        VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
-                            "cannot cast {:?} to {}",
-                            v,
-                            stringify!($ty)
-                        )),
-                    ),
+                    v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                        .with_message(format!("cannot cast {:?} to {}", v, stringify!($ty)))),
                 }
             }
         }
@@ -1132,40 +1142,40 @@ impl_vm_value_cast!(ContainerRef, ContainerRef);
 impl_vm_value_cast!(IndexedRef, IndexedRef);
 
 impl VMValueCast<IntegerValue> for Value {
-    fn cast(self) -> VMResult<IntegerValue> {
+    fn cast(self) -> PartialVMResult<IntegerValue> {
         match self.0 {
             ValueImpl::U8(x) => Ok(IntegerValue::U8(x)),
             ValueImpl::U64(x) => Ok(IntegerValue::U64(x)),
             ValueImpl::U128(x) => Ok(IntegerValue::U128(x)),
-            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to integer", v,))),
         }
     }
 }
 
 impl VMValueCast<Reference> for Value {
-    fn cast(self) -> VMResult<Reference> {
+    fn cast(self) -> PartialVMResult<Reference> {
         match self.0 {
             ValueImpl::ContainerRef(r) => Ok(Reference(ReferenceImpl::ContainerRef(r))),
             ValueImpl::IndexedRef(r) => Ok(Reference(ReferenceImpl::IndexedRef(r))),
-            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to reference", v,))),
         }
     }
 }
 
 impl VMValueCast<Container> for Value {
-    fn cast(self) -> VMResult<Container> {
+    fn cast(self) -> PartialVMResult<Container> {
         match self.0 {
             ValueImpl::Container(r) => take_unique_ownership(r),
-            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to container", v,))),
         }
     }
 }
 
 impl VMValueCast<Vec<Value>> for Value {
-    fn cast(self) -> VMResult<Vec<Value>> {
+    fn cast(self) -> PartialVMResult<Vec<Value>> {
         match self.0 {
             ValueImpl::Container(r) => Ok(match take_unique_ownership(r)? {
                 Container::Resource(vs) | Container::General(vs) => {
@@ -1177,74 +1187,74 @@ impl VMValueCast<Vec<Value>> for Value {
                 Container::Bool(vs) => vs.into_iter().map(Value::bool).collect(),
                 Container::Address(vs) => vs.into_iter().map(Value::address).collect(),
             }),
-            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to vector of values", v,))),
         }
     }
 }
 
 impl VMValueCast<Struct> for Value {
-    fn cast(self) -> VMResult<Struct> {
+    fn cast(self) -> PartialVMResult<Struct> {
         match self.0 {
             ValueImpl::Container(r) => Ok(Struct(take_unique_ownership(r)?)),
-            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to struct", v,))),
         }
     }
 }
 
 impl VMValueCast<StructRef> for Value {
-    fn cast(self) -> VMResult<StructRef> {
+    fn cast(self) -> PartialVMResult<StructRef> {
         Ok(StructRef(VMValueCast::cast(self)?))
     }
 }
 
 impl VMValueCast<Vec<u8>> for Value {
-    fn cast(self) -> VMResult<Vec<u8>> {
+    fn cast(self) -> PartialVMResult<Vec<u8>> {
         match self.0 {
             ValueImpl::Container(r) => match take_unique_ownership(r)? {
                 Container::U8(v) => Ok(v),
-                v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                     .with_message(format!("cannot cast {:?} to vector<u8>", v,))),
             },
-            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to vector<u8>", v,))),
         }
     }
 }
 
 impl VMValueCast<SignerRef> for Value {
-    fn cast(self) -> VMResult<SignerRef> {
+    fn cast(self) -> PartialVMResult<SignerRef> {
         match self.0 {
             ValueImpl::ContainerRef(r) => Ok(SignerRef(r)),
-            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to Signer reference", v,))),
         }
     }
 }
 
 impl VMValueCast<VectorRef> for Value {
-    fn cast(self) -> VMResult<VectorRef> {
+    fn cast(self) -> PartialVMResult<VectorRef> {
         match self.0 {
             ValueImpl::ContainerRef(r) => Ok(VectorRef(r)),
-            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to vector reference", v,))),
         }
     }
 }
 
 impl VMValueCast<Vector> for Value {
-    fn cast(self) -> VMResult<Vector> {
+    fn cast(self) -> PartialVMResult<Vector> {
         match self.0 {
             ValueImpl::Container(c) => Ok(Vector(c)),
-            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to vector", v,))),
         }
     }
 }
 
 impl Value {
-    pub fn value_as<T>(self) -> VMResult<T>
+    pub fn value_as<T>(self) -> PartialVMResult<T>
     where
         Self: VMValueCast<T>,
     {
@@ -1253,37 +1263,37 @@ impl Value {
 }
 
 impl VMValueCast<u8> for IntegerValue {
-    fn cast(self) -> VMResult<u8> {
+    fn cast(self) -> PartialVMResult<u8> {
         match self {
             Self::U8(x) => Ok(x),
-            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to u8", v,))),
         }
     }
 }
 
 impl VMValueCast<u64> for IntegerValue {
-    fn cast(self) -> VMResult<u64> {
+    fn cast(self) -> PartialVMResult<u64> {
         match self {
             Self::U64(x) => Ok(x),
-            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to u64", v,))),
         }
     }
 }
 
 impl VMValueCast<u128> for IntegerValue {
-    fn cast(self) -> VMResult<u128> {
+    fn cast(self) -> PartialVMResult<u128> {
         match self {
             Self::U128(x) => Ok(x),
-            v => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            v => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot cast {:?} to u128", v,))),
         }
     }
 }
 
 impl IntegerValue {
-    pub fn value_as<T>(self) -> VMResult<T>
+    pub fn value_as<T>(self) -> PartialVMResult<T>
     where
         Self: VMValueCast<T>,
     {
@@ -1299,7 +1309,7 @@ impl IntegerValue {
  *
  **************************************************************************************/
 impl IntegerValue {
-    pub fn add_checked(self, other: Self) -> VMResult<Self> {
+    pub fn add_checked(self, other: Self) -> PartialVMResult<Self> {
         use IntegerValue::*;
         let res = match (self, other) {
             (U8(l), U8(r)) => u8::checked_add(l, r).map(IntegerValue::U8),
@@ -1307,13 +1317,13 @@ impl IntegerValue {
             (U128(l), U128(r)) => u128::checked_add(l, r).map(IntegerValue::U128),
             (l, r) => {
                 let msg = format!("Cannot add {:?} and {:?}", l, r);
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         };
-        res.ok_or_else(|| VMStatus::new(StatusCode::ARITHMETIC_ERROR))
+        res.ok_or_else(|| PartialVMError::new(StatusCode::ARITHMETIC_ERROR))
     }
 
-    pub fn sub_checked(self, other: Self) -> VMResult<Self> {
+    pub fn sub_checked(self, other: Self) -> PartialVMResult<Self> {
         use IntegerValue::*;
         let res = match (self, other) {
             (U8(l), U8(r)) => u8::checked_sub(l, r).map(IntegerValue::U8),
@@ -1321,13 +1331,13 @@ impl IntegerValue {
             (U128(l), U128(r)) => u128::checked_sub(l, r).map(IntegerValue::U128),
             (l, r) => {
                 let msg = format!("Cannot sub {:?} from {:?}", r, l);
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         };
-        res.ok_or_else(|| VMStatus::new(StatusCode::ARITHMETIC_ERROR))
+        res.ok_or_else(|| PartialVMError::new(StatusCode::ARITHMETIC_ERROR))
     }
 
-    pub fn mul_checked(self, other: Self) -> VMResult<Self> {
+    pub fn mul_checked(self, other: Self) -> PartialVMResult<Self> {
         use IntegerValue::*;
         let res = match (self, other) {
             (U8(l), U8(r)) => u8::checked_mul(l, r).map(IntegerValue::U8),
@@ -1335,13 +1345,13 @@ impl IntegerValue {
             (U128(l), U128(r)) => u128::checked_mul(l, r).map(IntegerValue::U128),
             (l, r) => {
                 let msg = format!("Cannot mul {:?} and {:?}", l, r);
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         };
-        res.ok_or_else(|| VMStatus::new(StatusCode::ARITHMETIC_ERROR))
+        res.ok_or_else(|| PartialVMError::new(StatusCode::ARITHMETIC_ERROR))
     }
 
-    pub fn div_checked(self, other: Self) -> VMResult<Self> {
+    pub fn div_checked(self, other: Self) -> PartialVMResult<Self> {
         use IntegerValue::*;
         let res = match (self, other) {
             (U8(l), U8(r)) => u8::checked_div(l, r).map(IntegerValue::U8),
@@ -1349,13 +1359,13 @@ impl IntegerValue {
             (U128(l), U128(r)) => u128::checked_div(l, r).map(IntegerValue::U128),
             (l, r) => {
                 let msg = format!("Cannot div {:?} by {:?}", l, r);
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         };
-        res.ok_or_else(|| VMStatus::new(StatusCode::ARITHMETIC_ERROR))
+        res.ok_or_else(|| PartialVMError::new(StatusCode::ARITHMETIC_ERROR))
     }
 
-    pub fn rem_checked(self, other: Self) -> VMResult<Self> {
+    pub fn rem_checked(self, other: Self) -> PartialVMResult<Self> {
         use IntegerValue::*;
         let res = match (self, other) {
             (U8(l), U8(r)) => u8::checked_rem(l, r).map(IntegerValue::U8),
@@ -1363,13 +1373,13 @@ impl IntegerValue {
             (U128(l), U128(r)) => u128::checked_rem(l, r).map(IntegerValue::U128),
             (l, r) => {
                 let msg = format!("Cannot rem {:?} by {:?}", l, r);
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         };
-        res.ok_or_else(|| VMStatus::new(StatusCode::ARITHMETIC_ERROR))
+        res.ok_or_else(|| PartialVMError::new(StatusCode::ARITHMETIC_ERROR))
     }
 
-    pub fn bit_or(self, other: Self) -> VMResult<Self> {
+    pub fn bit_or(self, other: Self) -> PartialVMResult<Self> {
         use IntegerValue::*;
         Ok(match (self, other) {
             (U8(l), U8(r)) => IntegerValue::U8(l | r),
@@ -1377,12 +1387,12 @@ impl IntegerValue {
             (U128(l), U128(r)) => IntegerValue::U128(l | r),
             (l, r) => {
                 let msg = format!("Cannot bit_or {:?} and {:?}", l, r);
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         })
     }
 
-    pub fn bit_and(self, other: Self) -> VMResult<Self> {
+    pub fn bit_and(self, other: Self) -> PartialVMResult<Self> {
         use IntegerValue::*;
         Ok(match (self, other) {
             (U8(l), U8(r)) => IntegerValue::U8(l & r),
@@ -1390,12 +1400,12 @@ impl IntegerValue {
             (U128(l), U128(r)) => IntegerValue::U128(l & r),
             (l, r) => {
                 let msg = format!("Cannot bit_and {:?} and {:?}", l, r);
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         })
     }
 
-    pub fn bit_xor(self, other: Self) -> VMResult<Self> {
+    pub fn bit_xor(self, other: Self) -> PartialVMResult<Self> {
         use IntegerValue::*;
         Ok(match (self, other) {
             (U8(l), U8(r)) => IntegerValue::U8(l ^ r),
@@ -1403,62 +1413,62 @@ impl IntegerValue {
             (U128(l), U128(r)) => IntegerValue::U128(l ^ r),
             (l, r) => {
                 let msg = format!("Cannot bit_xor {:?} and {:?}", l, r);
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         })
     }
 
-    pub fn shl_checked(self, n_bits: u8) -> VMResult<Self> {
+    pub fn shl_checked(self, n_bits: u8) -> PartialVMResult<Self> {
         use IntegerValue::*;
 
         Ok(match self {
             U8(x) => {
                 if n_bits >= 8 {
-                    return Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR));
+                    return Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR));
                 }
                 IntegerValue::U8(x << n_bits)
             }
             U64(x) => {
                 if n_bits >= 64 {
-                    return Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR));
+                    return Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR));
                 }
                 IntegerValue::U64(x << n_bits)
             }
             U128(x) => {
                 if n_bits >= 128 {
-                    return Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR));
+                    return Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR));
                 }
                 IntegerValue::U128(x << n_bits)
             }
         })
     }
 
-    pub fn shr_checked(self, n_bits: u8) -> VMResult<Self> {
+    pub fn shr_checked(self, n_bits: u8) -> PartialVMResult<Self> {
         use IntegerValue::*;
 
         Ok(match self {
             U8(x) => {
                 if n_bits >= 8 {
-                    return Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR));
+                    return Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR));
                 }
                 IntegerValue::U8(x >> n_bits)
             }
             U64(x) => {
                 if n_bits >= 64 {
-                    return Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR));
+                    return Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR));
                 }
                 IntegerValue::U64(x >> n_bits)
             }
             U128(x) => {
                 if n_bits >= 128 {
-                    return Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR));
+                    return Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR));
                 }
                 IntegerValue::U128(x >> n_bits)
             }
         })
     }
 
-    pub fn lt(self, other: Self) -> VMResult<bool> {
+    pub fn lt(self, other: Self) -> PartialVMResult<bool> {
         use IntegerValue::*;
 
         Ok(match (self, other) {
@@ -1470,12 +1480,12 @@ impl IntegerValue {
                     "Cannot compare {:?} and {:?}: incompatible integer types",
                     l, r
                 );
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         })
     }
 
-    pub fn le(self, other: Self) -> VMResult<bool> {
+    pub fn le(self, other: Self) -> PartialVMResult<bool> {
         use IntegerValue::*;
 
         Ok(match (self, other) {
@@ -1487,12 +1497,12 @@ impl IntegerValue {
                     "Cannot compare {:?} and {:?}: incompatible integer types",
                     l, r
                 );
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         })
     }
 
-    pub fn gt(self, other: Self) -> VMResult<bool> {
+    pub fn gt(self, other: Self) -> PartialVMResult<bool> {
         use IntegerValue::*;
 
         Ok(match (self, other) {
@@ -1504,12 +1514,12 @@ impl IntegerValue {
                     "Cannot compare {:?} and {:?}: incompatible integer types",
                     l, r
                 );
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         })
     }
 
-    pub fn ge(self, other: Self) -> VMResult<bool> {
+    pub fn ge(self, other: Self) -> PartialVMResult<bool> {
         use IntegerValue::*;
 
         Ok(match (self, other) {
@@ -1521,7 +1531,7 @@ impl IntegerValue {
                     "Cannot compare {:?} and {:?}: incompatible integer types",
                     l, r
                 );
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(msg));
             }
         })
     }
@@ -1538,14 +1548,14 @@ impl IntegerValue {
 }
 
 impl IntegerValue {
-    pub fn cast_u8(self) -> VMResult<u8> {
+    pub fn cast_u8(self) -> PartialVMResult<u8> {
         use IntegerValue::*;
 
         match self {
             U8(x) => Ok(x),
             U64(x) => {
                 if x > (std::u8::MAX as u64) {
-                    Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR)
+                    Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR)
                         .with_message(format!("Cannot cast u64({}) to u8", x)))
                 } else {
                     Ok(x as u8)
@@ -1553,7 +1563,7 @@ impl IntegerValue {
             }
             U128(x) => {
                 if x > (std::u8::MAX as u128) {
-                    Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR)
+                    Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR)
                         .with_message(format!("Cannot cast u128({}) to u8", x)))
                 } else {
                     Ok(x as u8)
@@ -1562,7 +1572,7 @@ impl IntegerValue {
         }
     }
 
-    pub fn cast_u64(self) -> VMResult<u64> {
+    pub fn cast_u64(self) -> PartialVMResult<u64> {
         use IntegerValue::*;
 
         match self {
@@ -1570,7 +1580,7 @@ impl IntegerValue {
             U64(x) => Ok(x),
             U128(x) => {
                 if x > (std::u64::MAX as u128) {
-                    Err(VMStatus::new(StatusCode::ARITHMETIC_ERROR)
+                    Err(PartialVMError::new(StatusCode::ARITHMETIC_ERROR)
                         .with_message(format!("Cannot cast u128({}) to u64", x)))
                 } else {
                     Ok(x as u64)
@@ -1579,7 +1589,7 @@ impl IntegerValue {
         }
     }
 
-    pub fn cast_u128(self) -> VMResult<u128> {
+    pub fn cast_u128(self) -> PartialVMResult<u128> {
         use IntegerValue::*;
 
         Ok(match self {
@@ -1608,7 +1618,11 @@ pub const INDEX_OUT_OF_BOUNDS: u64 = NFE_VECTOR_ERROR_BASE + 1;
 pub const POP_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 2;
 pub const DESTROY_NON_EMPTY_VEC: u64 = NFE_VECTOR_ERROR_BASE + 3;
 
-fn check_elem_layout(context: &impl NativeContext, ty: &Type, v: &Container) -> VMResult<()> {
+fn check_elem_layout(
+    context: &impl NativeContext,
+    ty: &Type,
+    v: &Container,
+) -> PartialVMResult<()> {
     let is_resource = context.is_resource(ty)?;
 
     match (ty, v) {
@@ -1634,10 +1648,10 @@ fn check_elem_layout(context: &impl NativeContext, ty: &Type, v: &Container) -> 
             Ok(())
         }
 
-        (Type::Reference(_), _) | (Type::MutableReference(_), _) | (Type::TyParam(_), _) => {
-            Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                .with_message(format!("invalid type param for vector: {:?}", ty)))
-        }
+        (Type::Reference(_), _) | (Type::MutableReference(_), _) | (Type::TyParam(_), _) => Err(
+            PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                .with_message(format!("invalid type param for vector: {:?}", ty)),
+        ),
 
         (Type::U8, _)
         | (Type::U64, _)
@@ -1647,7 +1661,7 @@ fn check_elem_layout(context: &impl NativeContext, ty: &Type, v: &Container) -> 
         | (Type::Signer, _)
         | (Type::Vector(_), _)
         | (Type::Struct(_), _)
-        | (Type::StructInstantiation(_, _), _) => Err(VMStatus::new(
+        | (Type::StructInstantiation(_, _), _) => Err(PartialVMError::new(
             StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
         )
         .with_message(format!(
@@ -1658,7 +1672,7 @@ fn check_elem_layout(context: &impl NativeContext, ty: &Type, v: &Container) -> 
 }
 
 impl VectorRef {
-    pub fn len(&self, type_param: &Type, context: &impl NativeContext) -> VMResult<Value> {
+    pub fn len(&self, type_param: &Type, context: &impl NativeContext) -> PartialVMResult<Value> {
         let v = self.0.borrow();
         check_elem_layout(context, type_param, &*v)?;
 
@@ -1678,7 +1692,7 @@ impl VectorRef {
         e: Value,
         type_param: &Type,
         context: &impl NativeContext,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         let mut v = self.0.borrow_mut();
         check_elem_layout(context, type_param, &*v)?;
 
@@ -1699,13 +1713,13 @@ impl VectorRef {
         cost: GasUnits<GasCarrier>,
         type_param: &Type,
         context: &impl NativeContext,
-    ) -> VMResult<NativeResult> {
+    ) -> PartialVMResult<NativeResult> {
         let v = self.0.borrow();
         check_elem_layout(context, type_param, &*v)?;
         if idx >= v.len() {
             return Ok(NativeResult::err(
                 cost,
-                VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
                     .with_sub_status(INDEX_OUT_OF_BOUNDS),
             ));
         }
@@ -1720,7 +1734,7 @@ impl VectorRef {
         cost: GasUnits<GasCarrier>,
         type_param: &Type,
         context: &impl NativeContext,
-    ) -> VMResult<NativeResult> {
+    ) -> PartialVMResult<NativeResult> {
         let mut v = self.0.borrow_mut();
         check_elem_layout(context, type_param, &*v)?;
 
@@ -1728,7 +1742,8 @@ impl VectorRef {
             () => {
                 return Ok(NativeResult::err(
                     cost,
-                    VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR).with_sub_status(POP_EMPTY_VEC),
+                    PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                        .with_sub_status(POP_EMPTY_VEC),
                 ));
             };
         }
@@ -1771,7 +1786,7 @@ impl VectorRef {
         cost: GasUnits<GasCarrier>,
         type_param: &Type,
         context: &impl NativeContext,
-    ) -> VMResult<NativeResult> {
+    ) -> PartialVMResult<NativeResult> {
         let mut v = self.0.borrow_mut();
         check_elem_layout(context, type_param, &*v)?;
 
@@ -1780,7 +1795,7 @@ impl VectorRef {
                 if idx1 >= $v.len() || idx2 >= $v.len() {
                     return Ok(NativeResult::err(
                         cost,
-                        VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                        PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
                             .with_sub_status(INDEX_OUT_OF_BOUNDS),
                     ));
                 }
@@ -1806,7 +1821,7 @@ impl Vector {
         cost: GasUnits<GasCarrier>,
         type_param: &Type,
         context: &impl NativeContext,
-    ) -> VMResult<NativeResult> {
+    ) -> PartialVMResult<NativeResult> {
         let container = match type_param {
             Type::U8 => Value::vector_u8(iter::empty::<u8>()),
             Type::U64 => Value::vector_u64(iter::empty::<u64>()),
@@ -1825,8 +1840,10 @@ impl Vector {
             }
 
             Type::Reference(_) | Type::MutableReference(_) | Type::TyParam(_) => {
-                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message(format!("invalid type param for vector: {:?}", type_param)))
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message(format!("invalid type param for vector: {:?}", type_param)),
+                )
             }
         };
 
@@ -1838,7 +1855,7 @@ impl Vector {
         cost: GasUnits<GasCarrier>,
         type_param: &Type,
         context: &impl NativeContext,
-    ) -> VMResult<NativeResult> {
+    ) -> PartialVMResult<NativeResult> {
         let v = self.0.borrow();
         check_elem_layout(context, type_param, &*v)?;
 
@@ -1857,7 +1874,7 @@ impl Vector {
         } else {
             Ok(NativeResult::err(
                 cost,
-                VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
                     .with_sub_status(DESTROY_NON_EMPTY_VEC),
             ))
         }
@@ -1967,17 +1984,17 @@ impl Struct {
         })
     }
 
-    pub fn unpack(self) -> VMResult<impl Iterator<Item = Value>> {
+    pub fn unpack(self) -> PartialVMResult<impl Iterator<Item = Value>> {
         match self.0 {
             Container::Resource(v) | Container::General(v) => Ok(v.into_iter().map(Value)),
             Container::U8(_)
             | Container::U64(_)
             | Container::U128(_)
             | Container::Bool(_)
-            | Container::Address(_) => {
-                Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message("not a struct".to_string()))
-            }
+            | Container::Address(_) => Err(PartialVMError::new(
+                StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR,
+            )
+            .with_message("not a struct".to_string())),
         }
     }
 }
@@ -1992,7 +2009,7 @@ impl Struct {
  *
  **************************************************************************************/
 impl GlobalValue {
-    pub fn new(v: Value) -> VMResult<Self> {
+    pub fn new(v: Value) -> PartialVMResult<Self> {
         match v.0 {
             ValueImpl::Container(container) => {
                 // TODO: check strong count?
@@ -2001,38 +2018,40 @@ impl GlobalValue {
                     container,
                 })
             }
-            v => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                .with_message(format!("cannot create global ref from {:?}", v))),
+            v => Err(
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                    .with_message(format!("cannot create global ref from {:?}", v)),
+            ),
         }
     }
 
-    pub fn borrow_global(&self) -> VMResult<Value> {
+    pub fn borrow_global(&self) -> PartialVMResult<Value> {
         Ok(Value(ValueImpl::ContainerRef(ContainerRef::Global {
             status: Rc::clone(&self.status),
             container: Rc::clone(&self.container),
         })))
     }
 
-    pub fn mark_dirty(&self) -> VMResult<()> {
+    pub fn mark_dirty(&self) -> PartialVMResult<()> {
         *self.status.borrow_mut() = GlobalDataStatus::Dirty;
         Ok(())
     }
 
-    pub fn is_clean(&self) -> VMResult<bool> {
+    pub fn is_clean(&self) -> PartialVMResult<bool> {
         match &*self.status.borrow() {
             GlobalDataStatus::Clean => Ok(true),
             _ => Ok(false),
         }
     }
 
-    pub fn is_dirty(&self) -> VMResult<bool> {
+    pub fn is_dirty(&self) -> PartialVMResult<bool> {
         match &*self.status.borrow() {
             GlobalDataStatus::Dirty => Ok(true),
             _ => Ok(false),
         }
     }
 
-    pub fn into_owned_struct(self) -> VMResult<Struct> {
+    pub fn into_owned_struct(self) -> PartialVMResult<Struct> {
         Ok(Struct(take_unique_ownership(self.container)?))
     }
 }
@@ -2151,7 +2170,11 @@ pub mod debug {
     use super::*;
     use std::fmt::Write;
 
-    fn print_value_impl<B: Write>(buf: &mut B, ty: &FatType, val: &ValueImpl) -> VMResult<()> {
+    fn print_value_impl<B: Write>(
+        buf: &mut B,
+        ty: &FatType,
+        val: &ValueImpl,
+    ) -> PartialVMResult<()> {
         match (ty, val) {
             (FatType::U8, ValueImpl::U8(x)) => debug_write!(buf, "{}u8", x),
             (FatType::U64, ValueImpl::U64(x)) => debug_write!(buf, "{}u64", x),
@@ -2187,12 +2210,16 @@ pub mod debug {
 
             (_, ValueImpl::Invalid) => debug_write!(buf, "(invalid)"),
 
-            _ => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+            _ => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                 .with_message(format!("cannot print value {:?} as type {:?}", val, ty))),
         }
     }
 
-    fn print_vector<B: Write>(buf: &mut B, elem_ty: &FatType, v: &Container) -> VMResult<()> {
+    fn print_vector<B: Write>(
+        buf: &mut B,
+        elem_ty: &FatType,
+        v: &Container,
+    ) -> PartialVMResult<()> {
         macro_rules! print_vector {
             ($v: expr, $suffix: expr) => {{
                 let suffix = &$suffix;
@@ -2230,7 +2257,7 @@ pub mod debug {
             }
 
             _ => Err(
-                VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
                     "cannot print container {:?} as vector with element type {:?}",
                     v, elem_ty
                 )),
@@ -2242,18 +2269,18 @@ pub mod debug {
         buf: &mut B,
         struct_ty: &FatStructType,
         s: &Container,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         let v = match s {
             Container::Resource(v) | Container::General(v) => v,
             _ => {
-                return Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR)
+                return Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
                     .with_message(format!("invalid container {:?} as struct", s)))
             }
         };
         let layout = &struct_ty.layout;
         if layout.len() != v.len() {
             return Err(
-                VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
                     "cannot print container {:?} as struct type {:?}, expected {} fields, got {}",
                     v,
                     struct_ty,
@@ -2278,12 +2305,12 @@ pub mod debug {
         buf: &mut B,
         val_ty: &FatType,
         r: &ContainerRef,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         match val_ty {
             FatType::Vector(elem_ty) => print_vector(buf, elem_ty, &*r.borrow()),
             FatType::Struct(struct_ty) => print_struct(buf, struct_ty, &*r.borrow()),
             _ => Err(
-                VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
+                PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(format!(
                     "cannot print container {:?} as type {:?}",
                     &*r.borrow(),
                     val_ty
@@ -2292,13 +2319,19 @@ pub mod debug {
         }
     }
 
-    fn print_indexed_ref<B: Write>(buf: &mut B, val_ty: &FatType, r: &IndexedRef) -> VMResult<()> {
+    fn print_indexed_ref<B: Write>(
+        buf: &mut B,
+        val_ty: &FatType,
+        r: &IndexedRef,
+    ) -> PartialVMResult<()> {
         macro_rules! print_vector_elem {
             ($v: expr, $idx: expr, $suffix: expr) => {
                 match $v.get($idx) {
                     Some(x) => debug_write!(buf, "{}{}", x, $suffix),
-                    None => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                        .with_message("ref index out of bounds".to_string())),
+                    None => Err(
+                        PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message("ref index out of bounds".to_string()),
+                    ),
                 }
             };
         }
@@ -2321,27 +2354,36 @@ pub mod debug {
             | (FatType::Bool, Container::General(v))
             | (FatType::Address, Container::General(v)) => match v.get(idx) {
                 Some(val) => print_value_impl(buf, val_ty, val),
-                None => Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message("ref index out of bounds".to_string())),
+                None => Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message("ref index out of bounds".to_string()),
+                ),
             },
 
-            (_, container) => Err(VMStatus::new(StatusCode::INTERNAL_TYPE_ERROR).with_message(
-                format!(
+            (_, container) => Err(PartialVMError::new(StatusCode::INTERNAL_TYPE_ERROR)
+                .with_message(format!(
                     "cannot print element {} of container {:?} as {:?}",
                     idx, container, val_ty
-                ),
-            )),
+                ))),
         }
     }
 
-    pub fn print_reference<B: Write>(buf: &mut B, val_ty: &FatType, r: &Reference) -> VMResult<()> {
+    pub fn print_reference<B: Write>(
+        buf: &mut B,
+        val_ty: &FatType,
+        r: &Reference,
+    ) -> PartialVMResult<()> {
         match &r.0 {
             ReferenceImpl::ContainerRef(r) => print_container_ref(buf, val_ty, r),
             ReferenceImpl::IndexedRef(r) => print_indexed_ref(buf, val_ty, r),
         }
     }
 
-    pub fn print_locals<B: Write>(buf: &mut B, tys: &[FatType], locals: &Locals) -> VMResult<()> {
+    pub fn print_locals<B: Write>(
+        buf: &mut B,
+        tys: &[FatType],
+        locals: &Locals,
+    ) -> PartialVMResult<()> {
         match &*locals.0.borrow() {
             Container::General(v) => {
                 // TODO: The number of spaces in the indent is currently hard coded.
@@ -2395,7 +2437,7 @@ use serde::{
 };
 
 impl Value {
-    pub fn simple_deserialize_fat(blob: &[u8], ty: &FatType) -> VMResult<Value> {
+    pub fn simple_deserialize_fat(blob: &[u8], ty: &FatType) -> PartialVMResult<Value> {
         let (kind_info, layout) = ty.layout_and_kind_info()?;
         Self::simple_deserialize(blob, &kind_info, &layout)
     }
@@ -2409,9 +2451,9 @@ impl Value {
         blob: &[u8],
         kind_info: &MoveKindInfo,
         layout: &MoveTypeLayout,
-    ) -> VMResult<Value> {
+    ) -> PartialVMResult<Value> {
         lcs::from_bytes_seed(SeedWrapper { kind_info, layout }, blob)
-            .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
+            .map_err(|e| PartialVMError::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
     }
 
     pub fn simple_serialize(&self, layout: &MoveTypeLayout) -> Option<Vec<u8>> {
@@ -2424,7 +2466,7 @@ impl Value {
 }
 
 impl Struct {
-    pub fn simple_deserialize_fat(blob: &[u8], ty: &FatStructType) -> VMResult<Struct> {
+    pub fn simple_deserialize_fat(blob: &[u8], ty: &FatStructType) -> PartialVMResult<Struct> {
         let ((is_resource, field_kinds), struct_layout) = ty.layout_and_kind_info()?;
         lcs::from_bytes_seed(
             SeedWrapper {
@@ -2433,7 +2475,7 @@ impl Struct {
             },
             blob,
         )
-        .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
+        .map_err(|e| PartialVMError::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
     }
 
     pub fn simple_serialize_fat(&self, ty: &FatStructType) -> Option<Vec<u8>> {
@@ -2450,7 +2492,7 @@ impl Struct {
         is_resource: bool,
         field_kinds: &[MoveKindInfo],
         layout: &MoveStructLayout,
-    ) -> VMResult<Struct> {
+    ) -> PartialVMResult<Struct> {
         lcs::from_bytes_seed(
             SeedWrapper {
                 kind_info: (MoveKind::from_bool(is_resource), field_kinds),
@@ -2458,7 +2500,7 @@ impl Struct {
             },
             blob,
         )
-        .map_err(|e| VMStatus::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
+        .map_err(|e| PartialVMError::new(StatusCode::INVALID_DATA).with_message(e.to_string()))
     }
 
     pub fn simple_serialize(&self, layout: &MoveStructLayout) -> Option<Vec<u8>> {
@@ -2477,7 +2519,7 @@ struct AnnotatedValue<'a, 'b, T1, T2> {
 
 fn invariant_violation<S: serde::Serializer>(message: String) -> S::Error {
     S::Error::custom(
-        VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(message),
+        PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(message),
     )
 }
 
@@ -2644,10 +2686,12 @@ impl<'d> serde::de::DeserializeSeed<'d> for SeedWrapper<&MoveKindInfo, &MoveType
             }
 
             _ => Err(D::Error::custom(
-                VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(format!(
-                    "cannot deserialize as ({:?}, {:?})",
-                    self.kind_info, self.layout
-                )),
+                PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR).with_message(
+                    format!(
+                        "cannot deserialize as ({:?}, {:?})",
+                        self.kind_info, self.layout
+                    ),
+                ),
             )),
         }
     }

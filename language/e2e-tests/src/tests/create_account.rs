@@ -6,11 +6,7 @@ use crate::{
     common_transactions::create_account_txn,
     executor::FakeExecutor,
 };
-use libra_types::{
-    account_config,
-    transaction::TransactionStatus,
-    vm_status::{StatusCode, VMStatus},
-};
+use libra_types::{account_config, transaction::TransactionStatus, vm_status::VMStatus};
 
 #[test]
 fn create_account() {
@@ -33,7 +29,7 @@ fn create_account() {
     let output = executor.execute_transaction(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
     executor.apply_write_set(output.write_set());
 

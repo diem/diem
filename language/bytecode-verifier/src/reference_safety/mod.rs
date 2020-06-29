@@ -14,14 +14,13 @@ use crate::{
     binary_views::{BinaryIndexedView, FunctionView},
 };
 use abstract_state::{AbstractState, AbstractValue};
-use libra_types::vm_status::VMStatus;
 use mirai_annotations::*;
 use std::collections::{BTreeSet, HashMap};
 use vm::{
-    errors::VMResult,
+    errors::{PartialVMError, PartialVMResult},
     file_format::{
-        Bytecode, FunctionDefinitionIndex, FunctionHandle, IdentifierIndex, SignatureToken,
-        StructDefinition, StructFieldInformation,
+        Bytecode, CodeOffset, FunctionDefinitionIndex, FunctionHandle, IdentifierIndex,
+        SignatureToken, StructDefinition, StructFieldInformation,
     },
 };
 
@@ -51,7 +50,7 @@ pub(crate) fn verify<'a>(
     resolver: &'a BinaryIndexedView<'a>,
     function_view: &FunctionView,
     name_def_map: &'a HashMap<IdentifierIndex, FunctionDefinitionIndex>,
-) -> VMResult<()> {
+) -> PartialVMResult<()> {
     let initial_state = AbstractState::new(function_view);
 
     let mut verifier = ReferenceSafetyAnalysis::new(resolver, function_view, name_def_map);
@@ -70,9 +69,9 @@ pub(crate) fn verify<'a>(
 fn call(
     verifier: &mut ReferenceSafetyAnalysis,
     state: &mut AbstractState,
-    offset: usize,
+    offset: CodeOffset,
     function_handle: &FunctionHandle,
-) -> VMResult<()> {
+) -> PartialVMResult<()> {
     let parameters = verifier.resolver.signature_at(function_handle.parameters);
     let arguments = parameters
         .0
@@ -128,8 +127,8 @@ fn execute_inner(
     verifier: &mut ReferenceSafetyAnalysis,
     state: &mut AbstractState,
     bytecode: &Bytecode,
-    offset: usize,
-) -> VMResult<()> {
+    offset: CodeOffset,
+) -> PartialVMResult<()> {
     match bytecode {
         Bytecode::Pop => state.release_value(verifier.stack.pop().unwrap()),
 
@@ -331,14 +330,14 @@ fn execute_inner(
 
 impl<'a> TransferFunctions for ReferenceSafetyAnalysis<'a> {
     type State = AbstractState;
-    type AnalysisError = VMStatus;
+    type AnalysisError = PartialVMError;
 
     fn execute(
         &mut self,
         state: &mut Self::State,
         bytecode: &Bytecode,
-        index: usize,
-        last_index: usize,
+        index: CodeOffset,
+        last_index: CodeOffset,
     ) -> Result<(), Self::AnalysisError> {
         execute_inner(self, state, bytecode, index)?;
         if index == last_index {

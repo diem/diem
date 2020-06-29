@@ -8,7 +8,7 @@ use move_core_types::{
     identifier::Identifier,
     language_storage::{ModuleId, TypeTag},
     value::MoveTypeLayout,
-    vm_status::{StatusCode, VMStatus},
+    vm_status::StatusCode,
 };
 use move_vm_types::{
     data_store::DataStore,
@@ -23,7 +23,11 @@ use vm::{errors::*, file_format::CompiledModule};
 /// Can be used to define a "fake" implementation of the remote cache.
 pub trait RemoteCache {
     fn get_module(&self, module_id: &ModuleId) -> VMResult<Option<Vec<u8>>>;
-    fn get_resource(&self, address: &AccountAddress, tag: &TypeTag) -> VMResult<Option<Vec<u8>>>;
+    fn get_resource(
+        &self,
+        address: &AccountAddress,
+        tag: &TypeTag,
+    ) -> PartialVMResult<Option<Vec<u8>>>;
 }
 
 pub struct AccountDataCache {
@@ -85,7 +89,7 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
     /// published modules.
     ///
     /// Gives all proper guarantees on lifetime of global data as well.
-    pub(crate) fn into_effects(self) -> VMResult<TransactionEffects> {
+    pub(crate) fn into_effects(self) -> PartialVMResult<TransactionEffects> {
         let mut modules = vec![];
         let mut resources = vec![];
         for (addr, account_cache) in self.account_map {
@@ -146,7 +150,11 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
     // Retrieve data from the local cache or loads it from the remote cache into the local cache.
     // All operations on the global data are based on this API and they all load the data
     // into the cache.
-    fn load_data(&mut self, addr: AccountAddress, ty: &Type) -> VMResult<&mut Option<GlobalValue>> {
+    fn load_data(
+        &mut self,
+        addr: AccountAddress,
+        ty: &Type,
+    ) -> PartialVMResult<&mut Option<GlobalValue>> {
         let account_cache = Self::get_mut_or_insert_with(&mut self.account_map, &addr, || {
             (addr, AccountDataCache::new())
         });
@@ -155,7 +163,7 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
             let ty_tag = self.loader.type_to_type_tag(ty)?;
 
             let blob = self.remote.get_resource(&addr, &ty_tag)?.ok_or_else(|| {
-                VMStatus::new(StatusCode::MISSING_DATA)
+                PartialVMError::new(StatusCode::MISSING_DATA)
                     .with_message(format!("Cannot find resource of type {}", ty_tag))
             })?;
 
@@ -173,7 +181,12 @@ impl<'r, 'l, R: RemoteCache> TransactionDataCache<'r, 'l, R> {
 
 // `DataStore` implementation for the `TransactionDataCache`
 impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
-    fn publish_resource(&mut self, addr: AccountAddress, ty: Type, g: GlobalValue) -> VMResult<()> {
+    fn publish_resource(
+        &mut self,
+        addr: AccountAddress,
+        ty: Type,
+        g: GlobalValue,
+    ) -> PartialVMResult<()> {
         let account_cache = Self::get_mut_or_insert_with(&mut self.account_map, &addr, || {
             (addr, AccountDataCache::new())
         });
@@ -187,7 +200,7 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
         &mut self,
         addr: AccountAddress,
         ty: &Type,
-    ) -> VMResult<Option<&GlobalValue>> {
+    ) -> PartialVMResult<Option<&GlobalValue>> {
         Ok(self.load_data(addr, ty)?.as_ref())
     }
 
@@ -195,7 +208,7 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
         &mut self,
         addr: AccountAddress,
         ty: &Type,
-    ) -> VMResult<Option<GlobalValue>> {
+    ) -> PartialVMResult<Option<GlobalValue>> {
         // .take() means that the entry is removed from the data map -- this marks the
         // access path for deletion.
         Ok(self.load_data(addr, ty)?.take())
@@ -208,12 +221,15 @@ impl<'r, 'l, C: RemoteCache> DataStore for TransactionDataCache<'r, 'l, C> {
                 return Ok(m.clone());
             }
         }
-        if let Some(bytes) = self.remote.get_module(module_id)? {
-            return CompiledModule::deserialize(&bytes)
-                .map_err(|_| VMStatus::new(StatusCode::CODE_DESERIALIZATION_ERROR));
+        match self.remote.get_module(module_id)? {
+            Some(bytes) => CompiledModule::deserialize(&bytes).map_err(|_| {
+                PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
+                    .finish(Location::Undefined)
+            }),
+            None => Err(PartialVMError::new(StatusCode::LINKER_ERROR)
+                .with_message(format!("Cannot find {:?} in data cache", module_id))
+                .finish(Location::Undefined)),
         }
-        Err(VMStatus::new(StatusCode::LINKER_ERROR)
-            .with_message(format!("Cannot find {:?} in data cache", module_id)))
     }
 
     fn publish_module(&mut self, blob: Vec<u8>, module: CompiledModule) -> VMResult<()> {

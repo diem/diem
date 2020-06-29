@@ -6,7 +6,7 @@ use crate::{
     control_flow_graph::{BlockId, ControlFlowGraph},
 };
 use std::collections::HashMap;
-use vm::file_format::Bytecode;
+use vm::file_format::{Bytecode, CodeOffset};
 
 /// Trait for finite-height abstract domains. Infinite height domains would require a more complex
 /// trait with widening and a partial order.
@@ -65,8 +65,8 @@ pub(crate) trait TransferFunctions {
         &mut self,
         pre: &mut Self::State,
         instr: &Bytecode,
-        index: usize,
-        last_index: usize,
+        index: CodeOffset,
+        last_index: CodeOffset,
     ) -> Result<(), Self::AnalysisError>;
 }
 
@@ -154,7 +154,7 @@ pub(crate) trait AbstractInterpreter: TransferFunctions {
         let block_end = function_view.cfg().block_end(block_id);
         for offset in function_view.cfg().instr_indexes(block_id) {
             let instr = &function_view.code().code[offset as usize];
-            self.execute(&mut state_acc, instr, offset as usize, block_end as usize)?
+            self.execute(&mut state_acc, instr, offset, block_end)?
         }
         Ok(state_acc)
     }

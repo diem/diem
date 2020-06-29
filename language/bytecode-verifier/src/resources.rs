@@ -6,8 +6,8 @@
 use libra_types::vm_status::StatusCode;
 use vm::{
     access::ModuleAccess,
-    errors::{verification_error, VMResult},
-    file_format::{CompiledModule, Kind, SignatureToken, StructFieldInformation},
+    errors::{verification_error, Location, PartialVMResult, VMResult},
+    file_format::{CompiledModule, Kind, SignatureToken, StructFieldInformation, TableIndex},
     IndexKind,
 };
 
@@ -17,6 +17,10 @@ pub struct ResourceTransitiveChecker<'a> {
 
 impl<'a> ResourceTransitiveChecker<'a> {
     pub fn verify_module(module: &'a CompiledModule) -> VMResult<()> {
+        Self::verify_module_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))
+    }
+
+    fn verify_module_impl(module: &'a CompiledModule) -> PartialVMResult<()> {
         let checker = Self { module };
         for (idx, struct_def) in checker.module.struct_defs().iter().enumerate() {
             let sh = checker.module.struct_handle_at(struct_def.struct_handle);
@@ -30,9 +34,9 @@ impl<'a> ResourceTransitiveChecker<'a> {
             for field in fields {
                 if checker.contains_nominal_resource(&field.signature.0, &sh.type_parameters) {
                     return Err(verification_error(
-                        IndexKind::StructDefinition,
-                        idx,
                         StatusCode::INVALID_RESOURCE_FIELD,
+                        IndexKind::StructDefinition,
+                        idx as TableIndex,
                     ));
                 }
             }

@@ -49,10 +49,12 @@ impl AUTransactionGen for RotateKeyGen {
                 self.new_keypair.public_key.clone(),
             );
 
-            TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+            TransactionStatus::Keep(VMStatus::executed())
         } else {
             TransactionStatus::Discard(VMStatus::new(
                 StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
+                None,
+                None,
             ))
         };
 

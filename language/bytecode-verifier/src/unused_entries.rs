@@ -1,11 +1,11 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::vm_status::{StatusCode, VMStatus};
+use libra_types::vm_status::StatusCode;
 use vm::{
     access::ModuleAccess,
-    errors::verification_error,
-    file_format::{Bytecode, CompiledModule},
+    errors::{verification_error, PartialVMError},
+    file_format::{Bytecode, CompiledModule, TableIndex},
     IndexKind,
 };
 
@@ -58,23 +58,23 @@ impl<'a> UnusedEntryChecker<'a> {
         }
     }
 
-    fn collect_errors<'b, F>(pool: &'b [bool], f: F) -> impl Iterator<Item = VMStatus> + 'b
+    fn collect_errors<'b, F>(pool: &'b [bool], f: F) -> impl Iterator<Item = PartialVMError> + 'b
     where
-        F: Fn(usize) -> VMStatus + 'b,
+        F: Fn(usize) -> PartialVMError + 'b,
     {
         pool.iter()
             .enumerate()
             .filter_map(move |(idx, visited)| if *visited { None } else { Some(f(idx)) })
     }
 
-    pub fn verify(mut self) -> Vec<VMStatus> {
+    pub fn verify(mut self) -> Vec<PartialVMError> {
         self.traverse_function_defs();
 
         Self::collect_errors(&self.signatures, |idx| {
             verification_error(
-                IndexKind::Signature,
-                idx,
                 StatusCode::UNUSED_LOCALS_SIGNATURE,
+                IndexKind::Signature,
+                idx as TableIndex,
             )
         })
         .collect()

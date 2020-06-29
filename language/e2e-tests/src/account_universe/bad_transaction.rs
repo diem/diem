@@ -58,9 +58,17 @@ impl AUTransactionGen for SequenceNumberMismatchGen {
             txn,
             (
                 if seq >= sender.sequence_number {
-                    TransactionStatus::Discard(VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_NEW))
+                    TransactionStatus::Discard(VMStatus::new(
+                        StatusCode::SEQUENCE_NUMBER_TOO_NEW,
+                        None,
+                        None,
+                    ))
                 } else {
-                    TransactionStatus::Discard(VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_OLD))
+                    TransactionStatus::Discard(VMStatus::new(
+                        StatusCode::SEQUENCE_NUMBER_TOO_OLD,
+                        None,
+                        None,
+                    ))
                 },
                 0,
             ),
@@ -106,22 +114,32 @@ impl AUTransactionGen for InsufficientBalanceGen {
                 if max_gas_unit > default_constants.maximum_number_of_gas_units.get() {
                     TransactionStatus::Discard(VMStatus::new(
                         StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND,
+                        None,
+                        None,
                     ))
                 } else if max_gas_unit < min_cost {
                     TransactionStatus::Discard(VMStatus::new(
                         StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS,
+                        None,
+                        None,
                     ))
                 } else if self.gas_unit_price > default_constants.max_price_per_gas_unit.get() {
                     TransactionStatus::Discard(VMStatus::new(
                         StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND,
+                        None,
+                        None,
                     ))
                 } else if self.gas_unit_price < default_constants.min_price_per_gas_unit.get() {
                     TransactionStatus::Discard(VMStatus::new(
                         StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND,
+                        None,
+                        None,
                     ))
                 } else {
                     TransactionStatus::Discard(VMStatus::new(
                         StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
+                        None,
+                        None,
                     ))
                 },
                 0,
@@ -167,7 +185,7 @@ impl AUTransactionGen for InvalidAuthkeyGen {
         (
             txn,
             (
-                TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_AUTH_KEY)),
+                TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_AUTH_KEY, None, None)),
                 0,
             ),
         )

@@ -18,6 +18,7 @@ use std::{
     convert::TryInto,
     fmt::{Display, Formatter},
 };
+use vm::errors::{Location, PartialVMError};
 
 pub use cached_access_path_table::update_mapping;
 use move_vm_types::loaded_data::types::{FatStructType, FatType};
@@ -71,14 +72,19 @@ impl<'a> MoveValueAnnotator<'a> {
         blob: &[u8],
     ) -> Result<AnnotatedMoveStruct> {
         let ty = resource_vec_to_type_tag(&access_path.path)?;
-        let struct_def = (&ty).try_into()?;
+        let struct_def = (&ty)
+            .try_into()
+            .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())?;
         let move_struct = MoveStruct::simple_deserialize(blob, &struct_def)?;
         self.annotate_struct(&move_struct, &ty)
     }
 
     pub fn view_contract_event(&self, event: &ContractEvent) -> Result<AnnotatedMoveValue> {
         let ty = self.cache.resolve_type(event.type_tag())?;
-        let move_ty = (&ty).try_into()?;
+        let move_ty = (&ty)
+            .try_into()
+            .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())?;
+
         let move_value = MoveValue::simple_deserialize(event.event_data(), &move_ty)?;
         self.annotate_value(&move_value, &ty)
     }
@@ -87,9 +93,15 @@ impl<'a> MoveValueAnnotator<'a> {
         let mut output = BTreeMap::new();
         for (k, v) in state.iter() {
             let ty = resource_vec_to_type_tag(k.as_slice())?;
-            let struct_def = (&ty).try_into()?;
+            let struct_def = (&ty)
+                .try_into()
+                .map_err(|e: PartialVMError| e.finish(Location::Undefined).into_vm_status())?;
             let move_struct = MoveStruct::simple_deserialize(v.as_slice(), &struct_def)?;
-            output.insert(ty.struct_tag()?, self.annotate_struct(&move_struct, &ty)?);
+            output.insert(
+                ty.struct_tag()
+                    .map_err(|e| e.finish(Location::Undefined).into_vm_status())?,
+                self.annotate_struct(&move_struct, &ty)?,
+            );
         }
         Ok(AnnotatedAccountStateBlob(output))
     }
@@ -99,7 +111,9 @@ impl<'a> MoveValueAnnotator<'a> {
         move_struct: &MoveStruct,
         ty: &FatStructType,
     ) -> Result<AnnotatedMoveStruct> {
-        let struct_tag = ty.struct_tag()?;
+        let struct_tag = ty
+            .struct_tag()
+            .map_err(|e| e.finish(Location::Undefined).into_vm_status())?;
         let field_names = self.cache.get_field_names(ty)?;
         let mut annotated_fields = vec![];
         for (ty, v) in ty.layout.iter().zip(move_struct.fields().iter()) {

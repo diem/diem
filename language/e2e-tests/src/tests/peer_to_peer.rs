@@ -38,7 +38,7 @@ fn single_peer_to_peer_with_event() {
     let output = executor.execute_transaction(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
 
     executor.apply_write_set(output.write_set());
@@ -134,7 +134,7 @@ fn single_peer_to_peer_with_padding() {
     let output = executor.execute_transaction(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+        &TransactionStatus::Keep(VMStatus::executed())
     );
 
     executor.apply_write_set(output.write_set());
@@ -179,7 +179,7 @@ fn few_peer_to_peer_with_event() {
     for (idx, txn_output) in output.iter().enumerate() {
         assert_eq!(
             txn_output.status(),
-            &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+            &TransactionStatus::Keep(VMStatus::executed())
         );
 
         // check events
@@ -250,7 +250,7 @@ fn zero_amount_peer_to_peer() {
     // Error code 7 means that the transaction was a zero-amount one.
     assert!(transaction_status_eq(
         &output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(2))
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED, Some(2), None))
     ));
 }
 
@@ -435,7 +435,7 @@ fn cycle_peer_to_peer() {
     for txn_output in &output {
         assert_eq!(
             txn_output.status(),
-            &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+            &TransactionStatus::Keep(VMStatus::executed())
         );
     }
     assert_eq!(accounts.len(), output.len());
@@ -479,7 +479,7 @@ fn cycle_peer_to_peer_multi_block() {
         for txn_output in &output {
             assert_eq!(
                 txn_output.status(),
-                &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+                &TransactionStatus::Keep(VMStatus::executed())
             );
         }
         assert_eq!(cycle, output.len());
@@ -525,7 +525,7 @@ fn one_to_many_peer_to_peer() {
         for txn_output in &output {
             assert_eq!(
                 txn_output.status(),
-                &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+                &TransactionStatus::Keep(VMStatus::executed())
             );
         }
         assert_eq!(cycle - 1, output.len());
@@ -571,7 +571,7 @@ fn many_to_one_peer_to_peer() {
         for txn_output in &output {
             assert_eq!(
                 txn_output.status(),
-                &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
+                &TransactionStatus::Keep(VMStatus::executed())
             );
         }
         assert_eq!(cycle - 1, output.len());

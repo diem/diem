@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_crypto::{ed25519, traits::*};
-use libra_types::vm_status::{StatusCode, VMStatus};
+use libra_types::vm_status::StatusCode;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
@@ -10,7 +10,7 @@ use move_vm_types::{
     values::Value,
 };
 use std::{collections::VecDeque, convert::TryFrom};
-use vm::errors::VMResult;
+use vm::errors::{PartialVMError, PartialVMResult};
 
 /// Starting error code number
 const DEFAULT_ERROR_CODE: u64 = 0x0ED2_5519;
@@ -19,7 +19,7 @@ pub fn native_ed25519_publickey_validation(
     context: &impl NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 1);
 
@@ -41,7 +41,7 @@ pub fn native_ed25519_signature_verification(
     context: &impl NativeContext,
     _ty_args: Vec<Type>,
     mut arguments: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(_ty_args.is_empty());
     debug_assert!(arguments.len() == 3);
 
@@ -60,7 +60,7 @@ pub fn native_ed25519_signature_verification(
         Err(_) => {
             return Ok(NativeResult::err(
                 cost,
-                VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
                     .with_sub_status(DEFAULT_ERROR_CODE),
             ));
         }
@@ -70,7 +70,7 @@ pub fn native_ed25519_signature_verification(
         Err(_) => {
             return Ok(NativeResult::err(
                 cost,
-                VMStatus::new(StatusCode::NATIVE_FUNCTION_ERROR)
+                PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
                     .with_sub_status(DEFAULT_ERROR_CODE),
             ));
         }

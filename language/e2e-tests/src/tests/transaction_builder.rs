@@ -65,7 +65,11 @@ fn freeze_unfreeze_account() {
     let output = &executor.execute_transaction(txn.clone());
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::new(StatusCode::SENDING_ACCOUNT_FROZEN)),
+        &TransactionStatus::Discard(VMStatus::new(
+            StatusCode::SENDING_ACCOUNT_FROZEN,
+            None,
+            None
+        )),
     );
 
     // Execute unfreeze on account
@@ -76,7 +80,7 @@ fn freeze_unfreeze_account() {
     let output = &executor.execute_transaction(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
+        &TransactionStatus::Keep(VMStatus::executed()),
     );
 }
 

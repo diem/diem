@@ -7,4 +7,4 @@ main() {
     Event.destroy_handle<Libra.Libra<LBR.LBR>>(move(handle));
     return;
 }
-// check: CONTRAINT_KIND_MISMATCH
+// check: CONSTRAINT_KIND_MISMATCH

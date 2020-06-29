@@ -10,7 +10,7 @@ use move_vm_types::{
     values::Value,
 };
 use std::collections::VecDeque;
-use vm::errors::VMResult;
+use vm::errors::PartialVMResult;
 
 #[allow(unused_mut)]
 #[allow(unused_variables)]
@@ -18,7 +18,7 @@ pub fn native_print(
     context: &mut impl NativeContext,
     ty_args: Vec<Type>,
     mut args: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.len() == 1);
     debug_assert!(args.len() == 1);
 
@@ -42,7 +42,7 @@ pub fn native_print_stack_trace(
     context: &mut impl NativeContext,
     ty_args: Vec<Type>,
     args: VecDeque<Value>,
-) -> VMResult<NativeResult> {
+) -> PartialVMResult<NativeResult> {
     debug_assert!(ty_args.is_empty());
     debug_assert!(args.is_empty());
 

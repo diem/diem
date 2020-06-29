@@ -13,17 +13,17 @@ use crate::{
     binary_views::{BinaryIndexedView, FunctionView},
 };
 use abstract_state::{AbstractState, LocalState};
-use libra_types::vm_status::{StatusCode, VMStatus};
+use libra_types::vm_status::StatusCode;
 use mirai_annotations::*;
 use vm::{
-    errors::{err_at_offset, VMResult},
-    file_format::{Bytecode, Kind},
+    errors::{PartialVMError, PartialVMResult},
+    file_format::{Bytecode, CodeOffset, Kind},
 };
 
 pub(crate) fn verify<'a>(
     resolver: &BinaryIndexedView,
     function_view: &'a FunctionView<'a>,
-) -> VMResult<()> {
+) -> PartialVMResult<()> {
     let initial_state = AbstractState::new(resolver, function_view);
     let inv_map = LocalsSafetyAnalysis().analyze_function(initial_state, &function_view);
     // Report all the join failures
@@ -37,23 +37,24 @@ pub(crate) fn verify<'a>(
     Ok(())
 }
 
-fn execute_inner(state: &mut AbstractState, bytecode: &Bytecode, offset: usize) -> VMResult<()> {
+fn execute_inner(
+    state: &mut AbstractState,
+    bytecode: &Bytecode,
+    offset: CodeOffset,
+) -> PartialVMResult<()> {
     match bytecode {
         Bytecode::StLoc(idx) => match (state.local_state(*idx), state.local_kind(*idx)) {
             (LocalState::MaybeResourceful, _)
             | (LocalState::Available, Kind::Resource)
             | (LocalState::Available, Kind::All) => {
-                return Err(err_at_offset(
-                    StatusCode::STLOC_UNSAFE_TO_DESTROY_ERROR,
-                    offset,
-                ))
+                return Err(state.error(StatusCode::STLOC_UNSAFE_TO_DESTROY_ERROR, offset))
             }
             _ => state.set_available(*idx),
         },
 
         Bytecode::MoveLoc(idx) => match state.local_state(*idx) {
             LocalState::MaybeResourceful | LocalState::Unavailable => {
-                return Err(err_at_offset(StatusCode::MOVELOC_UNAVAILABLE_ERROR, offset))
+                return Err(state.error(StatusCode::MOVELOC_UNAVAILABLE_ERROR, offset))
             }
             LocalState::Available => state.set_unavailable(*idx),
         },
@@ -61,13 +62,10 @@ fn execute_inner(state: &mut AbstractState, bytecode: &Bytecode, offset: usize) 
         Bytecode::CopyLoc(idx) => match state.local_state(*idx) {
             LocalState::MaybeResourceful => {
                 // checked in type checking
-                return Err(err_at_offset(
-                    StatusCode::VERIFIER_INVARIANT_VIOLATION,
-                    offset,
-                ));
+                return Err(state.error(StatusCode::VERIFIER_INVARIANT_VIOLATION, offset));
             }
             LocalState::Unavailable => {
-                return Err(err_at_offset(StatusCode::COPYLOC_UNAVAILABLE_ERROR, offset))
+                return Err(state.error(StatusCode::COPYLOC_UNAVAILABLE_ERROR, offset))
             }
             LocalState::Available => (),
         },
@@ -75,10 +73,7 @@ fn execute_inner(state: &mut AbstractState, bytecode: &Bytecode, offset: usize) 
         Bytecode::MutBorrowLoc(idx) | Bytecode::ImmBorrowLoc(idx) => {
             match state.local_state(*idx) {
                 LocalState::Unavailable | LocalState::MaybeResourceful => {
-                    return Err(err_at_offset(
-                        StatusCode::BORROWLOC_UNAVAILABLE_ERROR,
-                        offset,
-                    ))
+                    return Err(state.error(StatusCode::BORROWLOC_UNAVAILABLE_ERROR, offset))
                 }
                 LocalState::Available => (),
             }
@@ -93,10 +88,7 @@ fn execute_inner(state: &mut AbstractState, bytecode: &Bytecode, offset: usize) 
                     (LocalState::MaybeResourceful, _)
                     | (LocalState::Available, Kind::Resource)
                     | (LocalState::Available, Kind::All) => {
-                        return Err(err_at_offset(
-                            StatusCode::UNSAFE_RET_UNUSED_RESOURCES,
-                            offset,
-                        ))
+                        return Err(state.error(StatusCode::UNSAFE_RET_UNUSED_RESOURCES, offset))
                     }
                     _ => (),
                 }
@@ -168,14 +160,14 @@ struct LocalsSafetyAnalysis();
 
 impl TransferFunctions for LocalsSafetyAnalysis {
     type State = AbstractState;
-    type AnalysisError = VMStatus;
+    type AnalysisError = PartialVMError;
 
     fn execute(
         &mut self,
         state: &mut Self::State,
         bytecode: &Bytecode,
-        index: usize,
-        _last_index: usize,
+        index: CodeOffset,
+        _last_index: CodeOffset,
     ) -> Result<(), Self::AnalysisError> {
         execute_inner(state, bytecode, index)
     }

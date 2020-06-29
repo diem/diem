@@ -8,39 +8,54 @@ use crate::binary_views::BinaryIndexedView;
 use libra_types::vm_status::StatusCode;
 use vm::{
     access::ModuleAccess,
-    errors::{err_at_offset, VMResult},
+    errors::{Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
-        Bytecode, CodeUnit, CompiledModule, CompiledScript, FieldHandleIndex, FunctionHandleIndex,
-        StructDefinitionIndex,
+        Bytecode, CodeOffset, CodeUnit, CompiledModule, CompiledScript, FieldHandleIndex,
+        FunctionDefinitionIndex, FunctionHandleIndex, StructDefinitionIndex, TableIndex,
     },
 };
 
 pub struct InstructionConsistency<'a> {
     resolver: BinaryIndexedView<'a>,
+    current_function: Option<FunctionDefinitionIndex>,
 }
 
 impl<'a> InstructionConsistency<'a> {
     pub fn verify_module(module: &'a CompiledModule) -> VMResult<()> {
-        let checker = Self {
-            resolver: BinaryIndexedView::Module(module),
-        };
-        for func_def in module.function_defs() {
+        Self::verify_module_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))
+    }
+
+    fn verify_module_impl(module: &'a CompiledModule) -> PartialVMResult<()> {
+        let resolver = BinaryIndexedView::Module(module);
+
+        for (idx, func_def) in module.function_defs().iter().enumerate() {
             match &func_def.code {
                 None => (),
-                Some(code) => checker.check_instructions(code)?,
+                Some(code) => {
+                    let checker = Self {
+                        resolver,
+                        current_function: Some(FunctionDefinitionIndex(idx as TableIndex)),
+                    };
+                    checker.check_instructions(code)?
+                }
             }
         }
         Ok(())
     }
 
-    pub fn verify_script(script: &'a CompiledScript) -> VMResult<()> {
+    pub fn verify_script(module: &'a CompiledScript) -> VMResult<()> {
+        Self::verify_script_impl(module).map_err(|e| e.finish(Location::Script))
+    }
+
+    pub fn verify_script_impl(script: &'a CompiledScript) -> PartialVMResult<()> {
         let checker = Self {
             resolver: BinaryIndexedView::Script(script),
+            current_function: None,
         };
         checker.check_instructions(&script.as_inner().code)
     }
 
-    fn check_instructions(&self, code: &CodeUnit) -> VMResult<()> {
+    fn check_instructions(&self, code: &CodeUnit) -> PartialVMResult<()> {
         for (offset, instr) in code.code.iter().enumerate() {
             match instr {
                 Bytecode::MutBorrowField(field_handle_index) => {
@@ -130,9 +145,13 @@ impl<'a> InstructionConsistency<'a> {
         offset: usize,
         field_handle_index: FieldHandleIndex,
         generic: bool,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         let field_handle = self.resolver.field_handle_at(field_handle_index)?;
         self.check_type_op(offset, field_handle.owner, generic)
+    }
+
+    fn current_function(&self) -> FunctionDefinitionIndex {
+        self.current_function.unwrap_or(FunctionDefinitionIndex(0))
     }
 
     fn check_type_op(
@@ -140,14 +159,14 @@ impl<'a> InstructionConsistency<'a> {
         offset: usize,
         struct_def_index: StructDefinitionIndex,
         generic: bool,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         let struct_def = self.resolver.struct_def_at(struct_def_index)?;
         let struct_handle = self.resolver.struct_handle_at(struct_def.struct_handle);
         if struct_handle.type_parameters.is_empty() == generic {
-            return Err(err_at_offset(
-                StatusCode::GENERIC_MEMBER_OPCODE_MISMATCH,
-                offset,
-            ));
+            return Err(
+                PartialVMError::new(StatusCode::GENERIC_MEMBER_OPCODE_MISMATCH)
+                    .at_code_offset(self.current_function(), offset as CodeOffset),
+            );
         }
         Ok(())
     }
@@ -157,13 +176,13 @@ impl<'a> InstructionConsistency<'a> {
         offset: usize,
         func_handle_index: FunctionHandleIndex,
         generic: bool,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         let function_handle = self.resolver.function_handle_at(func_handle_index);
         if function_handle.type_parameters.is_empty() == generic {
-            return Err(err_at_offset(
-                StatusCode::GENERIC_MEMBER_OPCODE_MISMATCH,
-                offset,
-            ));
+            return Err(
+                PartialVMError::new(StatusCode::GENERIC_MEMBER_OPCODE_MISMATCH)
+                    .at_code_offset(self.current_function(), offset as CodeOffset),
+            );
         }
         Ok(())
     }

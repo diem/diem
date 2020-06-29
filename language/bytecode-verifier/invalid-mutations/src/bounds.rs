@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_proptest_helpers::pick_slice_idxs;
-use libra_types::vm_status::{StatusCode, VMStatus};
+use libra_types::vm_status::StatusCode;
 use proptest::{
     prelude::*,
     sample::{self, Index as PropIndex},
 };
 use std::collections::BTreeMap;
 use vm::{
-    errors::{append_err_info, bounds_error},
+    errors::{bounds_error, PartialVMError},
     file_format::{
         AddressIdentifierIndex, CompiledModule, CompiledModuleMut, FunctionHandleIndex,
         IdentifierIndex, ModuleHandleIndex, SignatureIndex, StructDefinitionIndex,
@@ -179,7 +179,7 @@ impl ApplyOutOfBoundsContext {
         }
     }
 
-    pub fn apply(mut self) -> (CompiledModuleMut, Vec<VMStatus>) {
+    pub fn apply(mut self) -> (CompiledModuleMut, Vec<PartialVMError>) {
         // This is a map from (source kind, dest kind) to the actual mutations -- this is done to
         // figure out how many mutations to do for a particular pair, which is required for
         // pick_slice_idxs below.
@@ -210,7 +210,7 @@ impl ApplyOutOfBoundsContext {
         src_kind: IndexKind,
         dst_kind: IndexKind,
         mutations: Vec<OutOfBoundsMutation>,
-    ) -> Vec<VMStatus> {
+    ) -> Vec<PartialVMError> {
         let src_count = match src_kind {
             IndexKind::Signature => self.sig_structs.len(),
             // For the other sorts it's always possible to change an index.
@@ -248,16 +248,16 @@ impl ApplyOutOfBoundsContext {
         dst_kind: IndexKind,
         dst_count: usize,
         new_idx: TableIndex,
-    ) -> Option<VMStatus> {
+    ) -> Option<PartialVMError> {
         use IndexKind::*;
 
         // These are default values, but some of the match arms below mutate them.
         let mut src_idx = src_idx;
         let err = bounds_error(
-            dst_kind,
-            new_idx as usize,
-            dst_count,
             StatusCode::INDEX_OUT_OF_BOUNDS,
+            dst_kind,
+            new_idx,
+            dst_count,
         );
 
         // A dynamic type system would be able to express this next block of code far more
@@ -312,7 +312,7 @@ impl ApplyOutOfBoundsContext {
             _ => panic!("Invalid pointer kind: {:?} -> {:?}", src_kind, dst_kind),
         }
 
-        Some(append_err_info(err, src_kind, src_idx))
+        Some(err.at_index(src_kind, src_idx as TableIndex))
     }
 
     /// Returns the indexes of locals signatures that contain struct handles inside them.

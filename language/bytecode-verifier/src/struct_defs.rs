@@ -4,12 +4,12 @@
 //! This module provides a checker for verifing that struct definitions in a module are not
 //! recursive. Since the module dependency graph is acylic by construction, applying this checker to
 //! each module in isolation guarantees that there is no structural recursion globally.
-use libra_types::vm_status::{StatusCode, VMStatus};
+use libra_types::vm_status::StatusCode;
 use petgraph::{algo::toposort, graphmap::DiGraphMap};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::{
     access::ModuleAccess,
-    errors::{verification_error, VMResult},
+    errors::{verification_error, Location, PartialVMError, PartialVMResult, VMResult},
     file_format::{
         CompiledModule, SignatureToken, StructDefinitionIndex, StructHandleIndex, TableIndex,
     },
@@ -24,6 +24,10 @@ pub struct RecursiveStructDefChecker<'a> {
 
 impl<'a> RecursiveStructDefChecker<'a> {
     pub fn verify_module(module: &'a CompiledModule) -> VMResult<()> {
+        Self::verify_module_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))
+    }
+
+    fn verify_module_impl(module: &'a CompiledModule) -> PartialVMResult<()> {
         let checker = Self { module };
         let graph = StructDefGraphBuilder::new(checker.module).build()?;
 
@@ -32,9 +36,9 @@ impl<'a> RecursiveStructDefChecker<'a> {
         match toposort(&graph, None) {
             Ok(_) => Ok(()),
             Err(cycle) => Err(verification_error(
-                IndexKind::StructDefinition,
-                cycle.node_id().into_index(),
                 StatusCode::RECURSIVE_STRUCT_DEFINITION,
+                IndexKind::StructDefinition,
+                cycle.node_id().into_index() as TableIndex,
             )),
         }
     }
@@ -64,7 +68,7 @@ impl<'a> StructDefGraphBuilder<'a> {
         }
     }
 
-    fn build(self) -> VMResult<DiGraphMap<StructDefinitionIndex, ()>> {
+    fn build(self) -> PartialVMResult<DiGraphMap<StructDefinitionIndex, ()>> {
         let mut neighbors = BTreeMap::new();
         for idx in 0..self.module.struct_defs().len() {
             let sd_idx = StructDefinitionIndex::new(idx as TableIndex);
@@ -81,7 +85,7 @@ impl<'a> StructDefGraphBuilder<'a> {
         &self,
         neighbors: &mut BTreeMap<StructDefinitionIndex, BTreeSet<StructDefinitionIndex>>,
         idx: StructDefinitionIndex,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         let struct_def = self.module.struct_def_at(idx);
         let struct_def = StructDefinitionView::new(self.module, struct_def);
         // The fields iterator is an option in the case of native structs. Flatten makes an empty
@@ -97,13 +101,15 @@ impl<'a> StructDefGraphBuilder<'a> {
         neighbors: &mut BTreeMap<StructDefinitionIndex, BTreeSet<StructDefinitionIndex>>,
         cur_idx: StructDefinitionIndex,
         token: &SignatureToken,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         use SignatureToken as T;
         Ok(match token {
             T::Bool | T::U8 | T::U64 | T::U128 | T::Address | T::Signer | T::TypeParameter(_) => (),
             T::Reference(_) | T::MutableReference(_) => {
-                return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                    .with_message("Reference field when checking recursive structs".to_owned()))
+                return Err(
+                    PartialVMError::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                        .with_message("Reference field when checking recursive structs".to_owned()),
+                )
             }
             T::Vector(inner) => self.add_signature_token(neighbors, cur_idx, inner)?,
             T::Struct(sh_idx) => {

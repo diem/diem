@@ -14,12 +14,13 @@ use crate::{
 };
 use libra_types::vm_status::StatusCode;
 use vm::{
-    errors::{err_at_offset, VMResult},
-    file_format::{Bytecode, CodeUnit, Signature, StructFieldInformation},
+    errors::{PartialVMError, PartialVMResult},
+    file_format::{Bytecode, CodeUnit, FunctionDefinitionIndex, Signature, StructFieldInformation},
 };
 
 pub(crate) struct StackUsageVerifier<'a> {
     resolver: &'a BinaryIndexedView<'a>,
+    current_function: Option<FunctionDefinitionIndex>,
     code: &'a CodeUnit,
     return_: &'a Signature,
 }
@@ -28,9 +29,10 @@ impl<'a> StackUsageVerifier<'a> {
     pub(crate) fn verify(
         resolver: &'a BinaryIndexedView<'a>,
         function_view: &'a FunctionView,
-    ) -> VMResult<()> {
+    ) -> PartialVMResult<()> {
         let verifier = Self {
             resolver,
+            current_function: function_view.index(),
             code: function_view.code(),
             return_: function_view.return_(),
         };
@@ -41,7 +43,7 @@ impl<'a> StackUsageVerifier<'a> {
         Ok(())
     }
 
-    fn verify_block(&self, block_id: BlockId, cfg: &dyn ControlFlowGraph) -> VMResult<()> {
+    fn verify_block(&self, block_id: BlockId, cfg: &dyn ControlFlowGraph) -> PartialVMResult<()> {
         let code = &self.code.code;
         let mut stack_size_increment = 0;
         let block_start = cfg.block_start(block_id);
@@ -50,10 +52,10 @@ impl<'a> StackUsageVerifier<'a> {
             // Check that the stack height is sufficient to accomodate the number
             // of pops this instruction does
             if stack_size_increment < num_pops {
-                return Err(err_at_offset(
-                    StatusCode::NEGATIVE_STACK_SIZE_WITHIN_BLOCK,
-                    block_start as usize,
-                ));
+                return Err(
+                    PartialVMError::new(StatusCode::NEGATIVE_STACK_SIZE_WITHIN_BLOCK)
+                        .at_code_offset(self.current_function(), block_start),
+                );
             }
             stack_size_increment -= num_pops;
             stack_size_increment += num_pushes;
@@ -62,17 +64,17 @@ impl<'a> StackUsageVerifier<'a> {
         if stack_size_increment == 0 {
             Ok(())
         } else {
-            Err(err_at_offset(
-                StatusCode::POSITIVE_STACK_SIZE_AT_BLOCK_END,
-                block_start as usize,
-            ))
+            Err(
+                PartialVMError::new(StatusCode::POSITIVE_STACK_SIZE_AT_BLOCK_END)
+                    .at_code_offset(self.current_function(), block_start),
+            )
         }
     }
 
     /// The effect of an instruction is a tuple where the first element
     /// is the number of pops it does, and the second element is the number
     /// of pushes it does
-    fn instruction_effect(&self, instruction: &Bytecode) -> VMResult<(u32, u32)> {
+    fn instruction_effect(&self, instruction: &Bytecode) -> PartialVMResult<(u32, u32)> {
         Ok(match instruction {
             // Instructions that pop, but don't push
             Bytecode::Pop
@@ -202,5 +204,9 @@ impl<'a> StackUsageVerifier<'a> {
                 (1, field_count as u32)
             }
         })
+    }
+
+    fn current_function(&self) -> FunctionDefinitionIndex {
+        self.current_function.unwrap_or(FunctionDefinitionIndex(0))
     }
 }

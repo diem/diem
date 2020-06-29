@@ -259,10 +259,7 @@ pub fn txn_one_account_result(
             sender.sequence_number += 1;
             sender.sent_events_count += 1;
             sender.balance -= to_deduct;
-            (
-                TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED)),
-                true,
-            )
+            (TransactionStatus::Keep(VMStatus::executed()), true)
         }
         (true, true, false) => {
             // Enough gas to pass validation and to do the transfer, but not enough to succeed
@@ -271,7 +268,7 @@ pub fn txn_one_account_result(
             sender.sequence_number += 1;
             sender.balance -= gas_used * gas_price;
             (
-                TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(6)),
+                TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED, Some(6), None)),
                 false,
             )
         }
@@ -282,7 +279,7 @@ pub fn txn_one_account_result(
             sender.sequence_number += 1;
             sender.balance -= low_gas_used * gas_price;
             (
-                TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(10)),
+                TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED, Some(10), None)),
                 false,
             )
         }
@@ -291,6 +288,8 @@ pub fn txn_one_account_result(
             (
                 TransactionStatus::Discard(VMStatus::new(
                     StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
+                    None,
+                    None,
                 )),
                 false,
             )

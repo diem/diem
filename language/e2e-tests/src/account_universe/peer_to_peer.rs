@@ -66,7 +66,7 @@ impl AUTransactionGen for P2PTransferGen {
                 receiver.balance += self.amount;
                 receiver.received_events_count += 1;
 
-                status = TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED));
+                status = TransactionStatus::Keep(VMStatus::executed());
                 gas_used = sender.peer_to_peer_gas_cost();
             }
             (true, true, false) => {
@@ -79,8 +79,7 @@ impl AUTransactionGen for P2PTransferGen {
                 // 6 means the balance was insufficient while trying to deduct gas costs in the
                 // epilogue.
                 // TODO: define these values in a central location
-                status =
-                    TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(6));
+                status = TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED, Some(6), None));
             }
             (true, false, _) => {
                 // Enough to pass validation but not to do the transfer. The transaction will be run
@@ -89,13 +88,14 @@ impl AUTransactionGen for P2PTransferGen {
                 gas_used = sender.peer_to_peer_too_low_gas_cost();
                 sender.balance -= gas_used * txn.gas_unit_price();
                 // 10 means the balance was insufficient while trying to transfer.
-                status =
-                    TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(5));
+                status = TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED, Some(5), None));
             }
             (false, _, _) => {
                 // Not enough gas to pass validation. Nothing will happen.
                 status = TransactionStatus::Discard(VMStatus::new(
                     StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
+                    None,
+                    None,
                 ));
             }
         }
