@@ -162,6 +162,12 @@ pub struct BackendOptions {
     pub bench_repeat: usize,
     /// Whether to use the sequence theory as the internal representation for $Vector type.
     pub vector_using_sequences: bool,
+    /// A seed for the prover.
+    pub random_seed: usize,
+    /// The number of cores to use for parallel processing of verification conditions.
+    pub proc_cores: usize,
+    /// A (soft) timeout for the solver, per verification condition, in seconds.
+    pub vc_timeout: usize,
 }
 
 impl Default for BackendOptions {
@@ -183,6 +189,9 @@ impl Default for BackendOptions {
             func_inline: "{:inline}".to_owned(),
             serialize_bound: 4,
             vector_using_sequences: false,
+            random_seed: 0,
+            proc_cores: 1,
+            vc_timeout: 40,
         }
     }
 }
@@ -266,6 +275,35 @@ impl Options {
                     .long("trace")
                     .short("t")
                     .help("enables automatic tracing of expressions in prover errors")
+            )
+            .arg(
+                Arg::with_name("seed")
+                    .long("seed")
+                    .short("s")
+                    .takes_value(true)
+                    .value_name("NUMBER")
+                    .validator(is_number)
+                    .help("sets a random seed for the prover (default 0)")
+            )
+            .arg(
+                Arg::with_name("cores")
+                    .long("cores")
+                    .takes_value(true)
+                    .value_name("NUMBER")
+                    .validator(is_number)
+                    .help("sets the number of cores to use. \
+                     NOTE: multiple cores may currently lead to scrambled model \
+                     output from boogie (default 1)")
+            )
+            .arg(
+                Arg::with_name("timeout")
+                    .long("timeout")
+                    .short("T")
+                    .takes_value(true)
+                    .value_name("NUMBER")
+                    .validator(is_number)
+                    .help("sets a timeout (in seconds) for each \
+                             individual verification condition (default 40)")
             )
             .arg(
                 Arg::with_name("docgen")
@@ -381,6 +419,15 @@ impl Options {
         if matches.is_present("trace") {
             options.prover.debug_trace = true;
         }
+        if matches.is_present("seed") {
+            options.backend.random_seed = matches.value_of("seed").unwrap().parse::<usize>()?;
+        }
+        if matches.is_present("timeout") {
+            options.backend.vc_timeout = matches.value_of("timeout").unwrap().parse::<usize>()?;
+        }
+        if matches.is_present("cores") {
+            options.backend.proc_cores = matches.value_of("cores").unwrap().parse::<usize>()?;
+        }
         if matches.is_present("print-config") {
             println!("{}", toml::to_string(&options).unwrap());
             Err(anyhow!("exiting"))
@@ -429,8 +476,28 @@ impl Options {
         if self.backend.use_array_theory {
             add(&["-useArrayTheory"]);
         }
+        add(&[&format!(
+            "-vcsCores:{}",
+            if self.prover.stable_test_output {
+                // Do not use multiple cores if stable test output is requested.
+                // Error messages may appear in non-deterministic order otherwise.
+                1
+            } else {
+                self.backend.proc_cores
+            }
+        )]);
+        if self.backend.vc_timeout != 0 {
+            add(&[&format!(
+                "-proverOpt:O:timeout={}",
+                self.backend.vc_timeout * 1000
+            )]);
+        }
         add(&["-proverOpt:O:smt.QI.EAGER_THRESHOLD=100"]);
         add(&["-proverOpt:O:smt.QI.LAZY_THRESHOLD=100"]);
+        add(&[&format!(
+            "-proverOpt:O:smt.random_seed={}",
+            self.backend.random_seed
+        )]);
         // TODO: see what we can make out of these flags.
         //add(&["-proverOpt:O:smt.QI.PROFILE=true"]);
         //add(&["-proverOpt:O:trace=true"]);

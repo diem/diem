@@ -274,11 +274,11 @@ function {{backend.func_inline}} $RemoveIndexValueArray(a: $ValueArray, i: int):
 
 function {{backend.func_inline}} $ConcatValueArray(a1: $ValueArray, a2: $ValueArray): $ValueArray {
     (
-        var l1, l2 := l#$ValueArray(a1), l#$ValueArray(a2);
+        var l1, m1, l2, m2 := l#$ValueArray(a1), v#$ValueArray(a1), l#$ValueArray(a2), v#$ValueArray(a2);
         $ValueArray(
             (lambda i: int ::
                 if i >= 0 && i < l1 + l2 then
-                    if i < l1 then v#$ValueArray(a1)[i] else v#$ValueArray(a2)[i - l1]
+                    if i < l1 then m1[i] else m2[i - l1]
                 else
                     $DefaultValue()),
             l1 + l2)
@@ -1290,22 +1290,42 @@ procedure {:inline 1} $Signer_borrow_address(signer: $Value) returns (res: $Valu
     res := signer;
 }
 
-// TODO: implement the below methods
 // ==================================================================================
 // Native signature
 
-// TODO: implement the below methods. See issue #4666.
+// Signature related functionality is handled via uninterpreted functions. This is sound
+// currently because we verify every code path based on signature verification with
+// an arbitrary interpretation.
+
+function $Signature_spec_ed25519_validate_pubkey($m: $Memory, $txn: $Transaction, public_key: $Value): $Value;
+function $Signature_spec_ed25519_verify($m: $Memory, $txn: $Transaction,
+                                        signature: $Value, public_key: $Value, message: $Value): $Value;
+function $Signature_spec_ed25519_threshold_verify($m: $Memory, $txn: $Transaction,
+                                                  bitmap: $Value, signature: $Value,
+                                                  public_key: $Value, message: $Value): $Value;
+
+axiom (forall $m: $Memory, $txn: $Transaction, public_key: $Value ::
+        is#$Boolean($Signature_spec_ed25519_validate_pubkey($m, $txn, public_key)));
+
+axiom (forall $m: $Memory, $txn: $Transaction, signature, public_key, message: $Value ::
+        is#$Boolean($Signature_spec_ed25519_verify($m, $txn, signature, public_key, message)));
+
+axiom (forall $m: $Memory, $txn: $Transaction, bitmap, signature, public_key, message: $Value ::
+        is#$Boolean($Signature_spec_ed25519_threshold_verify($m, $txn, bitmap, signature, public_key, message)));
+
 
 procedure {:inline 1} $Signature_ed25519_validate_pubkey(public_key: $Value) returns (res: $Value) {
-    res := $Boolean(true);
+    res := $Signature_spec_ed25519_validate_pubkey($m, $txn, public_key);
 }
 
-procedure {:inline 1} $Signature_ed25519_verify(signature: $Value, public_key: $Value, message: $Value) returns (res: $Value) {
-    res := $Boolean(true);
+procedure {:inline 1} $Signature_ed25519_verify(
+        signature: $Value, public_key: $Value, message: $Value) returns (res: $Value) {
+    res := $Signature_spec_ed25519_verify($m, $txn, signature, public_key, message);
 }
 
-procedure {:inline 1} Signature_ed25519_threshold_verify(bitmap: $Value, signature: $Value, public_key: $Value, message: $Value) returns (res: $Value) {
-    assert false; // Signature_ed25519_threshold_verify not implemented
+procedure {:inline 1} Signature_ed25519_threshold_verify(
+        bitmap: $Value, signature: $Value, public_key: $Value, message: $Value) returns (res: $Value) {
+    res := $Signature_spec_ed25519_threshold_verify($m, $txn, bitmap, signature, public_key, message);
 }
 
 // ==================================================================================
@@ -1351,20 +1371,6 @@ function {:inline} $Signer_spec_address_of($m: $Memory, $txn: $Transaction, sign
     // A signer is currently identical to an address.
     signer
 }
-
-// ==================================================================================
-// FixedPoint32 intrinsic functions
-
-procedure $FixedPoint32_multiply_u64(num: $Value, multiplier: $Value) returns (res: $Value);
-ensures $IsValidU64(res);
-
-procedure $FixedPoint32_divide_u64(num: $Value, multiplier: $Value) returns (res: $Value);
-ensures $IsValidU64(res);
-
-procedure $FixedPoint32_create_from_rational(numerator: $Value, denominator: $Value) returns (res: $Value);
-// The predicate in the following line is equivalent to $FixedPoint32_FixedPoint32_is_well_formed(res),
-// but written this way to avoid the forward declaration.
-ensures $Vector_is_well_formed(res) && $vlen(res) == 1 && $IsValidU64($SelectField(res, 0));
 
 // ==================================================================================
 // Mocked out Event module

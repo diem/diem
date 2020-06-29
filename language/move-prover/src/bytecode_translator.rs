@@ -582,13 +582,14 @@ impl<'env> ModuleTranslator<'env> {
     ) {
         let (args, rets) = self.generate_function_args_and_returns(func_target);
         let inline = match entry_point {
-            FunctionEntryPoint::Definition | FunctionEntryPoint::Called => "{:inline 1}",
+            FunctionEntryPoint::Definition | FunctionEntryPoint::Called => "{:inline 1} ",
             _ => "",
         };
         let suffix = entry_point.suffix();
+        self.writer.set_location(&func_target.get_loc());
         emit!(
             self.writer,
-            "procedure {} {}{}({}) returns ({})",
+            "procedure {}{}{}({}) returns ({})",
             inline,
             boogie_function_name(func_target.func_env),
             suffix,
@@ -1041,7 +1042,7 @@ impl<'env> ModuleTranslator<'env> {
                     Constant::U128(num) => format!("$Integer({})", num),
                     Constant::Address(val) => format!("$Address({})", val),
                     Constant::TxnSenderAddress => "$TxnSender($txn)".to_string(),
-                    Constant::ByteArray(val) => boogie_byte_blob(val),
+                    Constant::ByteArray(val) => boogie_byte_blob(self.options, val),
                 };
                 emitln!(self.writer, "$tmp := {};", value);
                 emitln!(self.writer, &update_and_track_local(*idx, "$tmp"));

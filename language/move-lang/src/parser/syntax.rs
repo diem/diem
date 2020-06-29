@@ -1872,7 +1872,7 @@ fn parse_invariant<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
 }
 
 // Parse a specification function.
-//     SpecFunction = "define" <SpecFunctionSignature> "{" <Sequence> "}"
+//     SpecFunction = "define" <SpecFunctionSignature> ( "{" <Sequence> "}" | ";" )
 //                  | "native" "define" <SpecFunctionSignature> ";"
 //     SpecFunctionSignature =
 //         <Identifier> <OptionalTypeParameters> "(" Comma<Parameter> ")" ":" <Type>
@@ -1896,13 +1896,14 @@ fn parse_spec_function<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMe
     let return_type = parse_type(tokens)?;
 
     let body_start_loc = tokens.start_loc();
-    let body_ = if native_opt.is_some() {
+    let no_body = tokens.peek() != Tok::LBrace;
+    let (uninterpreted, body_) = if native_opt.is_some() || no_body {
         consume_token(tokens, Tok::Semicolon)?;
-        FunctionBody_::Native
+        (native_opt.is_none(), FunctionBody_::Native)
     } else {
         consume_token(tokens, Tok::LBrace)?;
         let seq = parse_sequence(tokens)?;
-        FunctionBody_::Defined(seq)
+        (false, FunctionBody_::Defined(seq))
     };
     let body = spanned(
         tokens.file_name(),
@@ -1923,6 +1924,7 @@ fn parse_spec_function<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMe
         tokens.previous_end_loc(),
         SpecBlockMember_::Function {
             signature,
+            uninterpreted,
             name,
             body,
         },

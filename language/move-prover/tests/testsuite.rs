@@ -14,6 +14,7 @@ use test_utils::{baseline_test::verify_or_update_baseline, extract_test_directiv
 #[allow(unused_imports)]
 use log::{debug, warn};
 
+const ENV_FLAGS: &str = "MVP_TEST_FLAGS";
 const STDLIB_FLAGS: &[&str] = &["--dependency=../stdlib/modules"];
 const STDLIB_FLAGS_UNVERIFIED: &[&str] = &["--dependency=../stdlib/modules", "--verify=none"];
 
@@ -30,6 +31,8 @@ fn test_runner(path: &Path) -> datatest_stable::Result<()> {
     args.extend(flags);
     args.push("--verbose=warn".to_owned());
     args.push(path.to_string_lossy().to_string());
+
+    args.extend(shell_words::split(&read_env_var(ENV_FLAGS))?);
 
     let mut options = Options::create_from_args(&args)?;
     options.setup_logging_for_test();

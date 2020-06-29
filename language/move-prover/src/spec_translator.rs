@@ -265,7 +265,7 @@ impl<'env> SpecTranslator<'env> {
                 .display(self.module_env().symbol_pool())
         );
         for (id, fun) in self.module_env().get_spec_funs() {
-            if fun.body.is_none() {
+            if fun.body.is_none() && !fun.uninterpreted {
                 // This function is native and expected to be found in the prelude.
                 continue;
             }
@@ -303,24 +303,57 @@ impl<'env> SpecTranslator<'env> {
                 vec!["$m: $Memory, $txn: $Transaction".to_string()]
             };
             self.writer.set_location(&fun.loc);
-            emitln!(
+            let boogie_name = boogie_spec_fun_name(&self.module_env(), *id);
+            let param_list = state_params
+                .into_iter()
+                .chain(spec_var_params)
+                .chain(type_params)
+                .chain(params)
+                .join(", ");
+            emit!(
                 self.writer,
-                "function {{:inline}} {}({}): {} {{",
-                boogie_spec_fun_name(&self.module_env(), *id),
-                state_params
-                    .into_iter()
-                    .chain(spec_var_params)
-                    .chain(type_params)
-                    .chain(params)
-                    .join(", "),
+                "function {{:inline}} {}({}): {}",
+                boogie_name,
+                param_list,
                 result_type
             );
-            self.writer.indent();
-            self.translate_exp(fun.body.as_ref().unwrap());
-            emitln!(self.writer);
-            self.writer.unindent();
-            emitln!(self.writer, "}");
-            emitln!(self.writer);
+            if fun.uninterpreted {
+                // Uninterpreted function has no body.
+                emitln!(self.writer, ";");
+                // Emit axiom about return type.
+                let call = format!(
+                    "{}({})",
+                    boogie_name,
+                    fun.type_params
+                        .iter()
+                        .enumerate()
+                        .map(|(i, _)| format!("$tv{}", i))
+                        .chain(fun.params.iter().map(|(n, _)| {
+                            format!("{}", n.display(self.module_env().symbol_pool()))
+                        }))
+                        .join(", ")
+                );
+                let type_check = boogie_well_formed_expr(
+                    self.module_env().env,
+                    &call,
+                    &fun.result_type,
+                    WellFormedMode::WithInvariant,
+                );
+                emitln!(
+                    self.writer,
+                    "axiom (forall {} :: {});",
+                    param_list,
+                    type_check
+                );
+            } else {
+                emitln!(self.writer, " {");
+                self.writer.indent();
+                self.translate_exp(fun.body.as_ref().unwrap());
+                emitln!(self.writer);
+                self.writer.unindent();
+                emitln!(self.writer, "}");
+                emitln!(self.writer);
+            }
         }
     }
 }
@@ -365,7 +398,6 @@ impl<'env> SpecTranslator<'env> {
         let func_target = self.function_target();
         let spec = func_target.get_spec();
         let ensures_mod = if free_ensures { "free " } else { "" };
-        emitln!(self.writer, "requires $ExistsTxnSenderAccount($m, $txn);");
 
         // Get all aborts_if conditions.
         let aborts_if = spec.filter_kind(ConditionKind::AbortsIf).collect_vec();
@@ -506,7 +538,6 @@ impl<'env> SpecTranslator<'env> {
     /// entry point of a function.
     pub fn assume_preconditions(&self) {
         emitln!(self.writer, "assume $Memory__is_well_formed($m);");
-        emitln!(self.writer, "assume $ExistsTxnSenderAccount($m, $txn);");
         let func_target = self.function_target();
         // Assume requires.
         let requires = func_target
@@ -1054,7 +1085,7 @@ impl<'env> SpecTranslator<'env> {
             Value::Address(addr) => emit!(self.writer, "$Address({})", addr),
             Value::Number(val) => emit!(self.writer, "$Integer({})", val),
             Value::Bool(val) => emit!(self.writer, "$Boolean({})", val),
-            Value::ByteArray(val) => emit!(self.writer, &boogie_byte_blob(val)),
+            Value::ByteArray(val) => emit!(self.writer, &boogie_byte_blob(self.options, val)),
         }
     }
 
@@ -1194,6 +1225,7 @@ impl<'env> SpecTranslator<'env> {
                  parameter of `all` or `any`",
             ),
             Operation::Update => self.translate_primitive_call("$update_vector_by_value", args),
+            Operation::Concat => self.translate_primitive_call("$append_vector", args),
             Operation::Old => self.translate_old(args),
             Operation::Trace => self.trace_value(node_id, TraceItem::Explicit, || {
                 self.translate_exp(&args[0])

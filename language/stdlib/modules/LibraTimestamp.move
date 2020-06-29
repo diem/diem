@@ -87,11 +87,6 @@ module LibraTimestamp {
        !exists<CurrentTimeMicroseconds>(CoreAddresses::LIBRA_ROOT_ADDRESS()) || now_microseconds() == 0
     }
 
-    /// Helper function which aborts if not in genesis.
-    public fun assert_is_genesis() {
-        assert(is_genesis(), 0);
-    }
-
     // **************** GLOBAL SPECIFICATION ****************
 
     /// # Module specification

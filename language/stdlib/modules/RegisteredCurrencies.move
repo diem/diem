@@ -4,7 +4,7 @@ address 0x1 {
 module RegisteredCurrencies {
     use 0x1::CoreAddresses;
     use 0x1::LibraConfig;
-    use 0x1::LibraTimestamp::{assert_is_genesis, spec_is_genesis};
+    use 0x1::LibraTimestamp::{is_genesis, spec_is_genesis};
     use 0x1::Signer;
     use 0x1::Vector;
 
@@ -24,7 +24,7 @@ module RegisteredCurrencies {
     public fun initialize(
         config_account: &signer,
     ): RegistrationCapability {
-        assert_is_genesis();
+        assert(is_genesis(), 0);
 
         assert(
             Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),

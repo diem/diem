@@ -17,11 +17,11 @@ humans, not for the automated test infrastructure).
 attempt to prove each function in the file. Unlike `cargo run`, `cargo test` can detect various directives
 in comments in the move source:
 
-- The line `// dep: <path-to-file>` indicates a dependency of this test which is automatically added to the set
-  of sources. The path provided is relative to the root of the crate.
 - The line `// flag: <flag>` provides a flag to the Prover (see `cargo run -- --help` for  available flags). For
   example, use  `// flag: --verify=public` to restrict verification to public functions (by default, tests use
   `--verify=all`, or `// flag: --boogie=-noVerify` to turn off Boogie verification.
+- You can also pass flags to test using the env variable `MVP_TEST_FLAGS`. This is a string like provided on
+  the command line to the move prover which can contain multiple flgs.
 - The line `// no-boogie-test` instructs the test driver to not attempt to run boogie at all. This is to support
   negative tests where translation to boogie actually fails.
 
@@ -38,6 +38,15 @@ Lastly, if the environment variables such as `BOOGIE_EXE` and `Z3_EXE` are not d
 partially test Prover without invoking Boogie (e.g., only testing the translation to Boogie). The
 instruction on how to set the environment variables can be found in `../scripts/README.md`.
 
+## Debugging Long Running Tests
+
+By default, the prover uses a timeout of 60 seconds, which can be changed by the `-T=<seconds>` flag. Healthy tests
+should never take that long to finish. To avoid flakes in continuous integration, you should test your tests to
+be able to pass at least with `-T=30`. To do so use
+
+```shell script
+MVP_TEST_FLAGS="-T=30" cargo test -p move-prover
+```
 
 ## Code coverage
 

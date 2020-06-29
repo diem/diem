@@ -521,6 +521,17 @@ impl<'env> Translator<'env> {
                     result_type: vector_t.clone(),
                 },
             );
+            add_builtin(
+                self,
+                self.builtin_fun_symbol("concat"),
+                SpecFunEntry {
+                    loc: loc.clone(),
+                    oper: Operation::Concat,
+                    type_params: vec![param_t.clone()],
+                    arg_types: vec![vector_t.clone(), vector_t.clone()],
+                    result_type: vector_t.clone(),
+                },
+            );
 
             // Ranges
             add_builtin(
@@ -959,8 +970,11 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             let loc = self.parent.env.to_loc(&member.loc);
             match &member.value {
                 Function {
-                    name, signature, ..
-                } => self.decl_ana_spec_fun(&loc, name, signature),
+                    uninterpreted,
+                    name,
+                    signature,
+                    ..
+                } => self.decl_ana_spec_fun(&loc, *uninterpreted, name, signature),
                 Variable {
                     is_global: true,
                     name,
@@ -979,6 +993,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
     fn decl_ana_spec_fun(
         &mut self,
         loc: &Loc,
+        uninterpreted: bool,
         name: &PA::FunctionName,
         signature: &EA::FunctionSignature,
     ) {
@@ -1013,6 +1028,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             params,
             result_type,
             used_spec_vars: BTreeSet::new(),
+            uninterpreted,
             is_pure: true,
             body: None,
         };
@@ -2450,8 +2466,9 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         let body = if self.spec_funs[fun_idx].body.is_some() {
             std::mem::replace(&mut self.spec_funs[fun_idx].body, None).unwrap()
         } else {
-            // Native function: assume it is impure. We need a modifier to declare otherwise
-            self.spec_funs[fun_idx].is_pure = false;
+            // No body: assume it is impure unless uninterpreted.
+            // We need a modifier to declare otherwise
+            self.spec_funs[fun_idx].is_pure = self.spec_funs[fun_idx].uninterpreted;
             return;
         };
 

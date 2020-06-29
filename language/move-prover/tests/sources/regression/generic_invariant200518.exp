@@ -10,14 +10,13 @@ error: post-condition does not hold
     =         sender = <redacted>,
     =         addr = <redacted>,
     =         $t2 = <redacted>
-    =     at ../stdlib/modules/Signer.move:15:5: address_of (entry)
-    =         s = <redacted>,
-    =         result = <redacted>
-    =     at ../stdlib/modules/Signer.move:13:5: address_of
+    =     at ../stdlib/modules/Signer.move:13:5: address_of (entry)
     =     at ../stdlib/modules/Signer.move:10:23: borrow_address
     =     at ../stdlib/modules/Signer.move:14:9: address_of
+    =         s = <redacted>,
+    =         result = <redacted>
     =     at tests/sources/regression/generic_invariant200518.move:25:24: remove_privilege
-    =     at tests/sources/regression/generic_invariant200518.move:39:52: root_address (entry)
+    =     at tests/sources/regression/generic_invariant200518.move:39:5: root_address
     =         result = <redacted>
     =     at tests/sources/regression/generic_invariant200518.move:25:9: remove_privilege
     =     at tests/sources/regression/generic_invariant200518.move:27:46: remove_privilege

@@ -25,6 +25,8 @@
 -  [Function `is_unlimited_account`](#0x1_AccountLimits_is_unlimited_account)
 -  [Function `has_limits_published`](#0x1_AccountLimits_has_limits_published)
 -  [Function `current_time`](#0x1_AccountLimits_current_time)
+-  [Specification](#0x1_AccountLimits_Specification)
+    -  [Function `update_deposit_limits`](#0x1_AccountLimits_Specification_update_deposit_limits)
 
 
 
@@ -741,3 +743,33 @@ Return whether the
 
 
 </details>
+
+<a name="0x1_AccountLimits_Specification"></a>
+
+## Specification
+
+
+<a name="0x1_AccountLimits_Specification_update_deposit_limits"></a>
+
+### Function `update_deposit_limits`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_deposit_limits">update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>): bool
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>false</b>;
+pragma opaque = <b>true</b>;
+<b>ensures</b> result == <a href="#0x1_AccountLimits_spec_update_deposit_limits">spec_update_deposit_limits</a>&lt;CoinType&gt;(amount, addr);
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_spec_update_deposit_limits"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_AccountLimits_spec_update_deposit_limits">spec_update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, addr: address): bool;
+</code></pre>

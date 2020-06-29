@@ -75,7 +75,7 @@ module Roles {
     public fun grant_root_association_role(
         association: &signer,
     ) {
-        LibraTimestamp::assert_is_genesis();
+        assert(LibraTimestamp::is_genesis(), 0);
         let owner_address = Signer::address_of(association);
         assert(owner_address == CoreAddresses::LIBRA_ROOT_ADDRESS(), 0);
         // Grant the role to the association root account
@@ -89,7 +89,7 @@ module Roles {
         treasury_compliance_account: &signer,
         lr_account: &signer,
     ) acquires RoleId {
-        LibraTimestamp::assert_is_genesis();
+        assert(LibraTimestamp::is_genesis(), 0);
         assert(has_libra_root_role(lr_account), 999);
         let owner_address = Signer::address_of(treasury_compliance_account);
         assert(owner_address == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), 0);

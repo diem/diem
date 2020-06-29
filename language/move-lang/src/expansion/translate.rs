@@ -810,6 +810,7 @@ fn spec_member(
         }
         PM::Function {
             name,
+            uninterpreted,
             signature,
             body,
         } => {
@@ -818,6 +819,7 @@ fn spec_member(
             let signature = function_signature(context, signature);
             context.set_to_outer_scope(old_aliases);
             EM::Function {
+                uninterpreted,
                 name,
                 signature,
                 body,

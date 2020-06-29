@@ -20,4 +20,4 @@ error: precondition does not hold at this call
     │                ----- called function
     │
     =     at tests/sources/functional/module_invariants.move:60:5: private_calls_public_incorrect
-    =     at tests/sources/functional/module_invariants.move:40:5: new_S (entry)
+    =     at tests/sources/functional/module_invariants.move:36:5: new_S (entry)

@@ -9,13 +9,11 @@ error: post-condition does not hold
     =     at tests/sources/functional/return_values.move:29:5: one_two_wrapper_incorrect
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
-    =     at tests/sources/functional/return_values.move:4:5: one_two (entry)
+    =     at tests/sources/functional/return_values.move:2:5: one_two
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
-    =     at tests/sources/functional/return_values.move:2:5: one_two
     =     at tests/sources/functional/return_values.move:3:9: one_two
-    =     at tests/sources/functional/return_values.move:4:5: one_two (exit)
-    =     at tests/sources/functional/return_values.move:2:16: one_two
+    =     at tests/sources/functional/return_values.move:2:5: one_two (exit)
     =     at tests/sources/functional/return_values.move:30:9: one_two_wrapper_incorrect
 
 error: post-condition does not hold
@@ -28,11 +26,9 @@ error: post-condition does not hold
     =     at tests/sources/functional/return_values.move:55:5: true_one_wrapper_incorrect
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
-    =     at tests/sources/functional/return_values.move:40:5: true_one (entry)
+    =     at tests/sources/functional/return_values.move:38:5: true_one
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
-    =     at tests/sources/functional/return_values.move:38:5: true_one
     =     at tests/sources/functional/return_values.move:39:9: true_one
-    =     at tests/sources/functional/return_values.move:40:5: true_one (exit)
-    =     at tests/sources/functional/return_values.move:38:16: true_one
+    =     at tests/sources/functional/return_values.move:38:5: true_one (exit)
     =     at tests/sources/functional/return_values.move:56:9: true_one_wrapper_incorrect
