@@ -356,7 +356,6 @@ pub fn encode_create_validator_account_script(
 
 /// Create a validator operator account at `new_validator_address` with `auth_key_prefix`.
 pub fn encode_create_validator_operator_account_script(
-    token: TypeTag,
     new_account_address: AccountAddress,
     auth_key_prefix: Vec<u8>,
 ) -> Script {
@@ -374,10 +373,10 @@ pub fn encode_create_validator_operator_account_script(
             105, 108, 105, 116, 121, 95, 116, 111, 95, 112, 114, 105, 118, 105, 108, 101, 103, 101,
             33, 99, 114, 101, 97, 116, 101, 95, 118, 97, 108, 105, 100, 97, 116, 111, 114, 95, 111,
             112, 101, 114, 97, 116, 111, 114, 95, 97, 99, 99, 111, 117, 110, 116, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 5, 6, 12, 10, 0, 56, 0, 12, 3, 10, 0, 14, 3, 10, 1,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 5, 6, 12, 10, 0, 56, 0, 12, 3, 10, 0, 14, 3, 10, 1,
             11, 2, 17, 2, 11, 0, 11, 3, 56, 1, 2,
         ],
-        vec![token],
+        vec![],
         vec![
             TransactionArgument::Address(new_account_address),
             TransactionArgument::U8Vector(auth_key_prefix),
