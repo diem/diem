@@ -283,19 +283,23 @@ fn create_and_initialize_owners_operators(
 
     // Set the validator config for each validator and add to the validator set
     for (operator_name, _, registration) in operator_registrations {
-        let operator_account = get_account_address_from_name(&operator_name);
+        let operator_account = get_account_address_from_name(operator_name);
         context.set_sender(operator_account);
         context.exec_script(registration);
+    }
 
-        // Add validator to the set
+    // Add each validator to the validator set
+    for (owner_name, _) in operator_assignments {
         context.set_sender(account_config::association_address());
+
+        let owner_account = get_account_address_from_name(owner_name);
         context.exec(
             "LibraSystem",
             "add_validator",
             vec![],
             vec![
                 Value::transaction_argument_signer_reference(account_config::association_address()),
-                Value::address(operator_account),
+                Value::address(owner_account),
             ],
         );
     }

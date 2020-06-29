@@ -177,7 +177,7 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
             .export_private_key(libra_global_constants::ASSOCIATION_KEY)
             .unwrap();
 
-        // Initialize validator owners and operators
+        // Initialize validator owners and set operators
         for owner_index in 0..self.num_validators {
             self.initialize_validator_owner(owner_index);
         }

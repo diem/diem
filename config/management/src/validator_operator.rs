@@ -41,13 +41,23 @@ impl ValidatorOperator {
         let set_operator_script =
             transaction_builder::encode_set_validator_operator_script(operator_account);
 
+        // If a remote backend is specified, fetch the owner name from the shared repository
+        // and use to derive an account address. Otherwise, derive the address from the public key.
+        // TODO(joshlind): see if there's a better way to get access to the owner account here!
+        let owner_account = if let Some(remote_config) = self.backends.remote.clone() {
+            let owner_name = remote_config.get_namespace()?;
+            get_account_address_from_name(&owner_name)
+        } else {
+            account_address::from_public_key(&owner_key)
+        };
+
         // Create and sign the set operator transaction
         // TODO(joshlind): In genesis the sequence number is irrelevant. After genesis we need to
         // obtain the current sequence number by querying the blockchain.
         let sequence_number = 0;
         let expiration_time = RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS;
         let raw_transaction = RawTransaction::new_script(
-            account_address::from_public_key(&owner_key),
+            owner_account,
             sequence_number,
             set_operator_script,
             constants::MAX_GAS_AMOUNT,

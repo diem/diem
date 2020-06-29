@@ -54,6 +54,13 @@ impl SecureBackend {
         self.parameters.insert(Self::NAMESPACE.into(), namespace);
         self
     }
+
+    pub fn get_namespace(self) -> Result<String, Error> {
+        match self.parameters.get(Self::NAMESPACE) {
+            Some(namespace) => Ok(namespace.clone()),
+            _ => Err(Error::RemoteStorageMissingNamespace),
+        }
+    }
 }
 
 impl FromStr for SecureBackend {

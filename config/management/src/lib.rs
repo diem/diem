@@ -336,24 +336,24 @@ pub mod tests {
 
         // Step 3) Upload each owner key and then a signed set operator transaction:
         for ns in [owner_alice_ns, owner_bob_ns, owner_carol_ns].iter() {
-            helper.initialize((*ns).to_string());
-            helper.owner_key(ns, &((*ns).to_string() + shared)).unwrap();
+            let ns = (*ns).to_string();
+            let ns_shared = (*ns).to_string() + shared;
+
+            helper.initialize(ns.clone());
+            helper.owner_key(&ns, &ns_shared).unwrap();
 
             helper
-                .set_operator(
-                    &format!("operator_{}", (*ns).to_string()),
-                    ns,
-                    &((*ns).to_string() + shared),
-                )
+                .set_operator(&format!("operator_{}", ns_shared), &ns, &ns_shared)
                 .unwrap();
         }
 
         // Step 4) Upload each operators key and then a signed validator config transaction:
         for ns in [operator_alice_ns, operator_bob_ns, operator_carol_ns].iter() {
-            helper.initialize((*ns).to_string());
-            helper
-                .operator_key(ns, &((*ns).to_string() + shared))
-                .unwrap();
+            let ns = (*ns).to_string();
+            let ns_shared = (*ns).to_string() + shared;
+
+            helper.initialize(ns.clone());
+            helper.operator_key(&ns, &ns_shared).unwrap();
 
             let owner_name: String = (*ns).chars().skip(9).collect(); // Remove "operator_" prefix
             let owner_name = owner_name + shared;
@@ -362,8 +362,8 @@ pub mod tests {
                     owner_name,
                     "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                     "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
-                    ns,
-                    &((*ns).to_string() + shared),
+                    &ns,
+                    &ns_shared,
                 )
                 .unwrap();
         }

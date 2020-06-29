@@ -39,21 +39,19 @@ impl ValidatorConfig {
     pub fn execute(self) -> Result<Transaction, Error> {
         let mut local_storage = self.backends.local.create_storage(LocalStorage)?;
 
-        // Step 1) Retrieve keys from local storage
+        // Step 1) Retrieve keys from local storage and construct addresses
         let consensus_key = ed25519_from_storage(CONSENSUS_KEY, &local_storage)?;
         let fullnode_network_key = x25519_from_storage(FULLNODE_NETWORK_KEY, &local_storage)?;
         let validator_network_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, &local_storage)?;
         let operator_key = ed25519_from_storage(OPERATOR_KEY, &local_storage)?;
 
         // append ln-noise-ik and ln-handshake protocols to base network addresses
-
         let validator_address = self
             .validator_address
             .clone()
             .append_prod_protos(validator_network_key, HANDSHAKE_VERSION);
         let raw_validator_address = RawNetworkAddress::try_from(&validator_address)
             .map_err(|e| Error::UnexpectedError(format!("(raw_validator_address) {}", e)))?;
-
         let fullnode_address = self
             .fullnode_address
             .clone()
@@ -61,7 +59,7 @@ impl ValidatorConfig {
         let raw_fullnode_address = RawNetworkAddress::try_from(&fullnode_address)
             .map_err(|e| Error::UnexpectedError(format!("(raw_fullnode_address) {}", e)))?;
 
-        // Step 2) Generate transaction
+        // Step 2) Generate validator config transaction and sign
 
         // TODO(philiphayes): remove network identity pubkey field from struct when
         // transition complete
@@ -74,12 +72,22 @@ impl ValidatorConfig {
             raw_fullnode_address.into(),
         );
 
+        // If a remote backend is specified, fetch the operator name from the shared repository
+        // and use to derive an account address. Otherwise, derive the address from the public key.
+        // TODO(joshlind): see if there's a better way to get access to the operator account here!
+        let operator_account = if let Some(remote_config) = self.backends.remote.clone() {
+            let operator_name = remote_config.get_namespace()?;
+            get_account_address_from_name(&operator_name)
+        } else {
+            account_address::from_public_key(&operator_key)
+        };
+
         // TODO(davidiw): In genesis this is irrelevant -- afterward we need to obtain the
         // current sequence number by querying the blockchain.
         let sequence_number = 0;
         let expiration_time = RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS;
         let raw_transaction = RawTransaction::new_script(
-            account_address::from_public_key(&operator_key),
+            operator_account,
             sequence_number,
             script,
             constants::MAX_GAS_AMOUNT,
@@ -96,7 +104,6 @@ impl ValidatorConfig {
         let txn = Transaction::UserTransaction(signed_txn);
 
         // Step 3) Submit to remote storage
-
         if let Some(remote_config) = self.backends.remote {
             let mut remote_storage = remote_config.create_storage(RemoteStorage)?;
             let txn = Value::Transaction(txn.clone());
