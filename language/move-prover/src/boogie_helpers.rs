@@ -3,6 +3,7 @@
 
 //! Helpers for emitting Boogie code.
 
+use crate::cli::Options;
 use itertools::Itertools;
 use spec_lang::{
     env::{
@@ -322,10 +323,21 @@ pub fn boogie_global_declarator(
     }
 }
 
-pub fn boogie_byte_blob(val: &[u8]) -> String {
-    let mut res = "$mk_vector()".to_string();
-    for b in val {
-        res = format!("$push_back_vector({}, $Integer({}))", res, b);
+pub fn boogie_byte_blob(options: &Options, val: &[u8]) -> String {
+    if options.backend.vector_using_sequences {
+        // Use concatenation.
+        let mut res = "$mk_vector()".to_string();
+        for b in val {
+            res = format!("$push_back_vector({}, $Integer({}))", res, b);
+        }
+        res
+    } else {
+        // Repeated push backs very expensive in map representation, so construct the value
+        // array directly.
+        let mut ctor_expr = "$MapConstValue($DefaultValue())".to_owned();
+        for (i, b) in val.iter().enumerate() {
+            ctor_expr = format!("{}[{} := $Integer({})]", ctor_expr, i, *b);
+        }
+        format!("$Vector($ValueArray({}, {}))", ctor_expr, val.len())
     }
-    res
 }

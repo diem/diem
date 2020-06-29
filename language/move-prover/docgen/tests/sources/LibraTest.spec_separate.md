@@ -723,7 +723,7 @@ config, and publishes the
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTest_initialize">initialize</a>(
     config_account: &signer,
 ) {
-    <a href="#0x1_LibraTimestamp_assert_is_genesis">LibraTimestamp::assert_is_genesis</a>();
+    <b>assert</b>(<a href="#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
     // Operational constraint
     <b>assert</b>(
         <a href="#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),

@@ -11,6 +11,7 @@
 -  [Function `initialize`](#0x1_DualAttestationLimit_initialize)
 -  [Function `get_cur_microlibra_limit`](#0x1_DualAttestationLimit_get_cur_microlibra_limit)
 -  [Function `set_microlibra_limit`](#0x1_DualAttestationLimit_set_microlibra_limit)
+-  [Specification](#0x1_DualAttestationLimit_Specification)
 
 
 
@@ -120,6 +121,7 @@ Travel rule limit set during genesis
     lr_account: &signer,
     tc_account: &signer,
 ) {
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
     <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 1);
     <b>let</b> cap = <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>&lt;<a href="#0x1_DualAttestationLimit">DualAttestationLimit</a>&gt;(
         lr_account,
@@ -194,3 +196,44 @@ Travel rule limit set during genesis
 
 
 </details>
+
+<a name="0x1_DualAttestationLimit_Specification"></a>
+
+## Specification
+
+
+
+<pre><code>pragma verify = <b>true</b>;
+</code></pre>
+
+
+Helper function to determine whether the DualAttestationLimit is published.
+
+
+<a name="0x1_DualAttestationLimit_spec_is_published"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_DualAttestationLimit_spec_is_published">spec_is_published</a>(): bool {
+    <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_DualAttestationLimit">DualAttestationLimit</a>&gt;()
+}
+</code></pre>
+
+
+Mirrors
+<code><a href="#0x1_DualAttestationLimit_get_cur_microlibra_limit">Self::get_cur_microlibra_limit</a></code>.
+
+
+<a name="0x1_DualAttestationLimit_spec_get_cur_microlibra_limit"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_DualAttestationLimit_spec_get_cur_microlibra_limit">spec_get_cur_microlibra_limit</a>(): u64 {
+    <a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_DualAttestationLimit">DualAttestationLimit</a>&gt;().micro_lbr_limit
+}
+</code></pre>
+
+
+After genesis, the DualAttestationLimit is always published.
+
+
+<pre><code><b>invariant</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>() ==&gt; <a href="#0x1_DualAttestationLimit_spec_is_published">spec_is_published</a>();
+</code></pre>

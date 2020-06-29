@@ -95,7 +95,7 @@ Initializes this module. Can only be called from genesis.
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(
     config_account: &signer,
 ): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> {
-    assert_is_genesis();
+    <b>assert</b>(is_genesis(), 0);
 
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),

@@ -14,7 +14,6 @@
 -  [Function `now_microseconds`](#0x1_LibraTimestamp_now_microseconds)
 -  [Function `is_genesis`](#0x1_LibraTimestamp_is_genesis)
 -  [Function `is_not_initialized`](#0x1_LibraTimestamp_is_not_initialized)
--  [Function `assert_is_genesis`](#0x1_LibraTimestamp_assert_is_genesis)
 -  [Specification](#0x1_LibraTimestamp_Specification)
     -  [Module specification](#0x1_LibraTimestamp_@Module_specification)
         -  [Persistence of Initialization](#0x1_LibraTimestamp_@Persistence_of_Initialization)
@@ -294,31 +293,6 @@ Helper function to determine whether the CurrentTime has been initialized.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_is_not_initialized">is_not_initialized</a>(): bool <b>acquires</b> <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
    !exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) || <a href="#0x1_LibraTimestamp_now_microseconds">now_microseconds</a>() == 0
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraTimestamp_assert_is_genesis"></a>
-
-## Function `assert_is_genesis`
-
-Helper function which aborts if not in genesis.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_assert_is_genesis">assert_is_genesis</a>()
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_assert_is_genesis">assert_is_genesis</a>() {
-    <b>assert</b>(<a href="#0x1_LibraTimestamp_is_genesis">is_genesis</a>(), 0);
 }
 </code></pre>
 

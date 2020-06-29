@@ -196,7 +196,7 @@ module LibraTest {
     public fun initialize(
         config_account: &signer,
     ) {
-        LibraTimestamp::assert_is_genesis();
+        assert(LibraTimestamp::is_genesis(), 0);
         // Operational constraint
         assert(
             Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),

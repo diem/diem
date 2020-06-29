@@ -244,6 +244,7 @@ pub enum SpecBlockMember_ {
         exp: Exp,
     },
     Function {
+        uninterpreted: bool,
         name: FunctionName,
         signature: FunctionSignature,
         body: FunctionBody,
@@ -915,11 +916,14 @@ impl AstDebug for SpecBlockMember_ {
                 exp.ast_debug(w);
             }
             SpecBlockMember_::Function {
+                uninterpreted,
                 signature,
                 name,
                 body,
             } => {
-                if let FunctionBody_::Native = &body.value {
+                if *uninterpreted {
+                    w.write("uninterpreted ");
+                } else if let FunctionBody_::Native = &body.value {
                     w.write("native ");
                 }
                 w.write("fun ");

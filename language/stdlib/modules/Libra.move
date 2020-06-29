@@ -196,7 +196,7 @@ module Libra {
     public fun initialize(
         config_account: &signer,
     ) {
-        LibraTimestamp::assert_is_genesis();
+        assert(LibraTimestamp::is_genesis(), 0);
         // Operational constraint
         assert(
             Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
@@ -249,8 +249,6 @@ module Libra {
         include MintAbortsIf<CoinType>;
         include MintEnsures<CoinType>;
     }
-
-
 
     /// Burns the coins currently held in the `Preburn` resource held under `preburn_address`.
     /// Calls to this functions will fail if the `account` does not have a
@@ -845,6 +843,14 @@ module Libra {
         /// Returns currency information.
         define spec_currency_info<CoinType>(): CurrencyInfo<CoinType> {
             global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS())
+        }
+
+        /// Specification version of `Self::approx_lbr_for_value`.
+        define spec_approx_lbr_for_value<CoinType>(value: num):  num {
+            FixedPoint32::spec_multiply_u64(
+                value,
+                global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS()).to_lbr_exchange_rate
+            )
         }
     }
 

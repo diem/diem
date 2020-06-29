@@ -40,6 +40,7 @@ pub struct SpecFunDecl {
     pub result_type: Type,
     pub used_spec_vars: BTreeSet<(ModuleId, SpecVarId)>,
     pub is_pure: bool,
+    pub uninterpreted: bool,
     pub body: Option<Exp>,
 }
 
@@ -326,6 +327,7 @@ pub enum Operation {
     Old,
     Trace,
     Update,
+    Concat,
     Sender,
     MaxU8,
     MaxU64,

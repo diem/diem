@@ -84,6 +84,16 @@ module AccountLimits {
             borrow_global_mut<Window<CoinType>>(addr),
         )
     }
+    spec fun update_deposit_limits {
+        /// > TODO(wrwg): this is currently abstracted as uninterpreted function
+        /// > because of termination issue. Need to investigate why.
+        pragma verify = false;
+        pragma opaque = true;
+        ensures result == spec_update_deposit_limits<CoinType>(amount, addr);
+    }
+    spec module {
+        define spec_update_deposit_limits<CoinType>(amount: u64, addr: address): bool;
+    }
 
     /// Determine if withdrawing `amount` of `CoinType` coins from
     /// the account at `addr` would violate the account limits for that account.
