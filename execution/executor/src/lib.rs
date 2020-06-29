@@ -8,14 +8,18 @@ mod executor_test;
 #[cfg(test)]
 mod mock_vm;
 mod speculation_cache;
+mod types;
 
 pub mod db_bootstrapper;
 
+use crate::{
+    speculation_cache::SpeculationCache,
+    types::{ProcessedVMOutput, TransactionData},
+};
 use anyhow::{bail, ensure, format_err, Result};
 use debug_interface::prelude::*;
 use executor_types::{
-    BlockExecutor, ChunkExecutor, Error, ExecutedTrees, ProcessedVMOutput, ProofReader,
-    StateComputeResult, TransactionData,
+    BlockExecutor, ChunkExecutor, Error, ExecutedTrees, ProofReader, StateComputeResult,
 };
 use libra_crypto::{
     hash::{CryptoHash, EventAccumulatorHasher, TransactionAccumulatorHasher},
@@ -41,7 +45,6 @@ use libra_types::{
 use libra_vm::VMExecutor;
 use once_cell::sync::Lazy;
 use scratchpad::SparseMerkleTree;
-use speculation_cache::SpeculationCache;
 use std::{
     collections::{hash_map, HashMap, HashSet},
     convert::TryFrom,
