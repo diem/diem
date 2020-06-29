@@ -2,15 +2,22 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    change_set::ChangeSet, ledger_store::LedgerStore, state_store::StateStore,
+    change_set::ChangeSet,
+    ledger_store::{Accumulator as TransactionAccumulator, LedgerStore},
+    schema::transaction_accumulator::TransactionAccumulatorSchema,
+    state_store::StateStore,
     transaction_store::TransactionStore,
 };
-use anyhow::{ensure, Result};
+use anyhow::{anyhow, ensure, Result};
 use jellyfish_merkle::{restore::JellyfishMerkleRestore, TreeReader, TreeWriter};
 use libra_crypto::HashValue;
-use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::Version};
+use libra_types::{
+    ledger_info::LedgerInfoWithSignatures,
+    proof::definition::LeafCount,
+    transaction::{TransactionListWithProof, Version},
+};
 use schemadb::DB;
-use std::sync::Arc;
+use std::{borrow::Borrow, sync::Arc};
 
 /// Provides functionalities for LibraDB data restore.
 #[derive(Clone)]
@@ -64,5 +71,61 @@ impl RestoreHandler {
         self.ledger_store
             .set_latest_ledger_info(ledger_infos.last().unwrap().clone());
         Ok(())
+    }
+
+    pub fn save_transactions(
+        &self,
+        txn_list_with_proof: &TransactionListWithProof,
+        ledger_info: &LedgerInfoWithSignatures,
+        save_left_siblings: bool,
+    ) -> Result<()> {
+        // TODO: check signatures
+        let first_version = txn_list_with_proof
+            .first_transaction_version
+            .ok_or_else(|| anyhow!("Transaction list is empty."))?;
+
+        if save_left_siblings {
+            let mut cs = ChangeSet::new();
+            let (left_sibling_positions, _) = TransactionAccumulator::get_range_proof_positions(
+                self.ledger_store.borrow(),
+                ledger_info.ledger_info().version() + 1,
+                txn_list_with_proof.first_transaction_version,
+                txn_list_with_proof.transactions.len() as LeafCount,
+            )?;
+
+            ensure!(
+                left_sibling_positions.len() == txn_list_with_proof.proof.left_siblings().len(),
+                "Number of left siblings not expected. Expected: {}, actual: {}",
+                left_sibling_positions.len(),
+                txn_list_with_proof.proof.left_siblings().len(),
+            );
+
+            left_sibling_positions
+                .iter()
+                .zip(txn_list_with_proof.proof.left_siblings())
+                .map(|(p, h)| {
+                    if self.db.get::<TransactionAccumulatorSchema>(&p)?.is_none() {
+                        cs.batch.put::<TransactionAccumulatorSchema>(p, h)?;
+                    }
+                    Ok(())
+                })
+                .collect::<Result<Vec<_>>>()?;
+            self.db.write_schemas(cs.batch)?;
+        }
+
+        let mut cs = ChangeSet::new();
+        let mut version = first_version;
+        for txn in &txn_list_with_proof.transactions {
+            self.transaction_store
+                .put_transaction(version, txn, &mut cs)?;
+            version += 1;
+        }
+        self.ledger_store.put_transaction_infos(
+            first_version,
+            txn_list_with_proof.proof.transaction_infos(),
+            &mut cs,
+        )?;
+
+        self.db.write_schemas(cs.batch)
     }
 }

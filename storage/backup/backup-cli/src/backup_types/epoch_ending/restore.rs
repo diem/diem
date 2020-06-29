@@ -15,7 +15,7 @@ use tokio::io::AsyncReadExt;
 
 #[derive(StructOpt)]
 pub struct EpochEndingRestoreOpt {
-    #[structopt(long = "state-manifest")]
+    #[structopt(long = "epoch-ending-manifest")]
     pub manifest_handle: FileHandle,
 }
 

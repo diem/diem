@@ -93,4 +93,28 @@ impl BackupServiceClient {
         ))
         .await
     }
+
+    pub async fn get_transactions(
+        &self,
+        start_version: Version,
+        num_transactions: usize,
+    ) -> Result<impl AsyncRead> {
+        self.get(&format!(
+            "transactions/{}/{}",
+            start_version, num_transactions
+        ))
+        .await
+    }
+
+    pub async fn get_transaction_range_proof(
+        &self,
+        first_version: Version,
+        last_version: Version,
+    ) -> Result<impl AsyncRead> {
+        self.get(&format!(
+            "transaction_range_proof/{}/{}",
+            first_version, last_version,
+        ))
+        .await
+    }
 }

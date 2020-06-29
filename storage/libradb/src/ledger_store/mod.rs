@@ -222,8 +222,7 @@ impl LedgerStore {
 
     /// Gets an iterator that yields `num_transaction_infos` transaction infos starting from
     /// `start_version`.
-    #[cfg(test)]
-    fn get_transaction_info_iter(
+    pub fn get_transaction_info_iter(
         &self,
         start_version: Version,
         num_transaction_infos: usize,
@@ -350,7 +349,7 @@ impl LedgerStore {
     }
 }
 
-type Accumulator = MerkleAccumulator<LedgerStore, TransactionAccumulatorHasher>;
+pub(crate) type Accumulator = MerkleAccumulator<LedgerStore, TransactionAccumulatorHasher>;
 
 impl HashReader for LedgerStore {
     fn get(&self, position: Position) -> Result<HashValue> {
