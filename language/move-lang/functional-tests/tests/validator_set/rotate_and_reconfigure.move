@@ -1,6 +1,6 @@
-// Make sure bob can rotate his key locally, as
-// well as call an update to change his
-// key in the validator set and induce reconfiguration.
+// Make sure bob can rotate his key locally.
+// An association may trigger bulk update to incorporate
+// bob's key key into the validator set.
 
 //! account: bob, 1000000, 0, validator
 
