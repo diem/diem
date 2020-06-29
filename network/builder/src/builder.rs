@@ -89,14 +89,12 @@ pub struct NetworkBuilder {
     network_context: Arc<NetworkContext>,
     // TODO(philiphayes): better support multiple listening addrs
     listen_address: NetworkAddress,
-    advertised_address: Option<NetworkAddress>,
     seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
     authentication_mode: Option<AuthenticationMode>,
     channel_size: usize,
     direct_send_protocols: Vec<ProtocolId>,
     rpc_protocols: Vec<ProtocolId>,
-    discovery_interval_ms: u64,
     upstream_handlers:
         HashMap<ProtocolId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
     connection_event_handlers: Vec<conn_notifs_channel::Sender>,
@@ -146,7 +144,6 @@ impl NetworkBuilder {
             chain_id,
             network_context: Arc::new(NetworkContext::new(network_id, role, peer_id)),
             listen_address,
-            advertised_address: None,
             seed_peers: HashMap::new(),
             trusted_peers: Arc::new(RwLock::new(HashMap::new())),
             authentication_mode: None,
@@ -159,7 +156,6 @@ impl NetworkBuilder {
             pm_reqs_rx,
             connection_reqs_tx,
             connection_reqs_rx,
-            discovery_interval_ms: constants::DISCOVERY_INTERVAL_MS,
             connectivity_check_interval_ms: constants::CONNECTIVITY_CHECK_INTERNAL_MS,
             max_concurrent_network_reqs: constants::MAX_CONCURRENT_NETWORK_REQS,
             max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
@@ -241,10 +237,10 @@ impl NetworkBuilder {
 
         match &config.discovery_method {
             DiscoveryMethod::Gossip(gossip_config) => {
-                network_builder
-                    .advertised_address(gossip_config.advertised_address.clone())
-                    .discovery_interval_ms(gossip_config.discovery_interval_ms)
-                    .add_gossip_discovery();
+                network_builder.add_gossip_discovery(
+                    gossip_config.advertised_address.clone(),
+                    gossip_config.discovery_interval_ms,
+                );
                 // HACK: gossip relies on on-chain discovery for the eligible peers update.
                 if role == RoleType::Validator {
                     network_builder.add_configuration_change_listener(role);
@@ -277,12 +273,6 @@ impl NetworkBuilder {
         self
     }
 
-    /// Set an address to advertise, if different from the listen address
-    pub fn advertised_address(&mut self, advertised_address: NetworkAddress) -> &mut Self {
-        self.advertised_address = Some(advertised_address);
-        self
-    }
-
     /// Set trusted peers.
     pub fn trusted_peers(
         &mut self,
@@ -295,12 +285,6 @@ impl NetworkBuilder {
     /// Set seed peers to bootstrap discovery
     pub fn seed_peers(&mut self, seed_peers: HashMap<PeerId, Vec<NetworkAddress>>) -> &mut Self {
         self.seed_peers = seed_peers;
-        self
-    }
-
-    /// Set discovery ticker interval
-    pub fn discovery_interval_ms(&mut self, discovery_interval_ms: u64) -> &mut Self {
-        self.discovery_interval_ms = discovery_interval_ms;
         self
     }
 
@@ -471,7 +455,11 @@ impl NetworkBuilder {
     ///
     /// This is for testing purposes only and should not be used in production networks.
     // TODO:  remove the pub qualifier
-    pub fn add_gossip_discovery(&mut self) -> &mut Self {
+    pub fn add_gossip_discovery(
+        &mut self,
+        advertised_address: NetworkAddress,
+        discovery_interval_ms: u64,
+    ) -> &mut Self {
         let conn_mgr_reqs_tx = self
             .conn_mgr_reqs_tx()
             .expect("ConnectivityManager not enabled");
@@ -490,10 +478,6 @@ impl NetworkBuilder {
         // TODO(philiphayes): in network_builder setup, only bind the channels.
         // wait until PeerManager is running to actual setup gossip discovery.
 
-        let advertised_address = self
-            .advertised_address
-            .clone()
-            .unwrap_or_else(|| self.listen_address.clone());
         let authentication_mode = self
             .authentication_mode
             .as_ref()
@@ -502,7 +486,6 @@ impl NetworkBuilder {
         let advertised_address = advertised_address.append_prod_protos(pubkey, HANDSHAKE_VERSION);
 
         let addrs = vec![advertised_address];
-        let discovery_interval_ms = self.discovery_interval_ms;
 
         self.discovery_builder = Some(DiscoveryBuilder::create(
             self.network_context(),
