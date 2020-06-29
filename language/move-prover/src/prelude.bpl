@@ -1370,7 +1370,6 @@ ensures $Vector_is_well_formed(res) && $vlen(res) == 1 && $IsValidU64($SelectFie
 // Mocked out Event module
 
 procedure {:inline 1} $Event_new_event_handle(t: $TypeValue, signer: $Value) returns (res: $Value) {
-    res := $DefaultValue();
 }
 
 procedure {:inline 1} $Event_publish_generator(account: $Value) {
