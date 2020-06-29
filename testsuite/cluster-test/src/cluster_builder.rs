@@ -23,7 +23,7 @@ pub struct ClusterBuilderParams {
     #[structopt(long, default_value = "1")]
     pub fullnodes_per_validator: u32,
     #[structopt(long, use_delimiter = true, default_value = "")]
-    pub cfg: Vec<String>,
+    cfg: Vec<String>,
     #[structopt(long, parse(try_from_str), default_value = "30")]
     pub num_validators: u32,
     #[structopt(long)]
@@ -34,6 +34,18 @@ pub struct ClusterBuilderParams {
         default_value = "vault"
     )]
     pub lsr_backend: String,
+}
+
+impl ClusterBuilderParams {
+    pub fn cfg_overrides(&self) -> Vec<String> {
+        // Default overrides
+        let mut overrides = vec!["prune_window=50000".to_string()];
+
+        // overrides from the command line
+        overrides.extend(self.cfg.iter().cloned());
+
+        overrides
+    }
 }
 
 pub struct ClusterBuilder {
@@ -91,7 +103,7 @@ impl ClusterBuilder {
                 params.enable_lsr,
                 &params.lsr_backend,
                 current_tag,
-                params.cfg.as_slice(),
+                &params.cfg_overrides(),
                 true,
             )
             .await
