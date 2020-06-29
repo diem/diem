@@ -50,119 +50,45 @@
 <span id="50">50</span>
 <span id="51">51</span>
 <span id="52">52</span>
-<span id="53">53</span>
-<span id="54">54</span>
-<span id="55">55</span>
-<span id="56">56</span>
-<span id="57">57</span>
-<span id="58">58</span>
-<span id="59">59</span>
-<span id="60">60</span>
-<span id="61">61</span>
-<span id="62">62</span>
-<span id="63">63</span>
-<span id="64">64</span>
-<span id="65">65</span>
-<span id="66">66</span>
-<span id="67">67</span>
-<span id="68">68</span>
-<span id="69">69</span>
-<span id="70">70</span>
-<span id="71">71</span>
-<span id="72">72</span>
-<span id="73">73</span>
-<span id="74">74</span>
-<span id="75">75</span>
-<span id="76">76</span>
-<span id="77">77</span>
-<span id="78">78</span>
-<span id="79">79</span>
-<span id="80">80</span>
-<span id="81">81</span>
-<span id="82">82</span>
-<span id="83">83</span>
-<span id="84">84</span>
-<span id="85">85</span>
-<span id="86">86</span>
-<span id="87">87</span>
-<span id="88">88</span>
-<span id="89">89</span>
-<span id="90">90</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
 
-<span class="kw">use</span> <span class="ident">consensus_types</span>::<span class="ident">common</span>::<span class="ident">Round</span>;
 <span class="kw">use</span> <span class="ident">serde</span>::{<span class="ident">Deserialize</span>, <span class="ident">Serialize</span>};
 <span class="kw">use</span> <span class="ident">thiserror</span>::<span class="ident">Error</span>;
 
 <span class="attribute">#[<span class="ident">derive</span>(<span class="ident">Debug</span>, <span class="ident">Deserialize</span>, <span class="ident">Error</span>, <span class="ident">PartialEq</span>, <span class="ident">Serialize</span>)]</span>
 <span class="doccomment">/// Different reasons for proposal rejection</span>
 <span class="kw">pub</span> <span class="kw">enum</span> <span class="ident">Error</span> {
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Timeout round, {0}, is incompatible with last votedx round, {1}&quot;</span>)]</span>
-    <span class="ident">BadTimeoutLastVotedRound</span>(<span class="ident">u64</span>, <span class="ident">u64</span>),
-
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Timeout round, {0}, is incompatible with preferred round, {1}&quot;</span>)]</span>
-    <span class="ident">BadTimeoutPreferredRound</span>(<span class="ident">u64</span>, <span class="ident">u64</span>),
-
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Provided epoch, {0}, does not match expected epoch, {1}&quot;</span>)]</span>
     <span class="ident">IncorrectEpoch</span>(<span class="ident">u64</span>, <span class="ident">u64</span>),
-
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Internal error: {:?}&quot;</span>, <span class="ident">error</span>)]</span>
-    <span class="ident">InternalError</span> { <span class="ident">error</span>: <span class="ident">String</span> },
-
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Invalid proposal: {}&quot;</span>, {<span class="number">0</span>})]</span>
-    <span class="ident">InvalidProposal</span>(<span class="ident">String</span>),
-
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Unable to verify that the new tree extneds the parent: {:?}&quot;</span>, <span class="ident">error</span>)]</span>
-    <span class="ident">InvalidAccumulatorExtension</span> { <span class="ident">error</span>: <span class="ident">String</span> },
-
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;No next_epoch_state specified in the provided Ledger Info&quot;</span>)]</span>
-    <span class="ident">InvalidLedgerInfo</span>,
-
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Invalid QC: {}&quot;</span>, {<span class="number">0</span>})]</span>
-    <span class="ident">InvalidQuorumCertificate</span>(<span class="ident">String</span>),
-
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;{0} is not set, SafetyRules is not initialized&quot;</span>)]</span>
-    <span class="ident">NotInitialized</span>(<span class="ident">String</span>),
-
-    <span class="attribute">#[<span class="ident">error</span>(
-        <span class="string">&quot;SafetyRules is configured to verify signature but the \
-             vote proposal doesn&#39;t carry a signature&quot;</span>
-    )]</span>
-    <span class="ident">SignatureNotFound</span>,
-
-    <span class="doccomment">/// This proposal&#39;s round is less than round of preferred block.</span>
-    <span class="doccomment">/// Returns the id of the preferred block.</span>
-    <span class="attribute">#[<span class="ident">error</span>(
-        <span class="string">&quot;Proposal&#39;s round is lower than round of preferred block at round {:?}&quot;</span>,
-        <span class="ident">preferred_round</span>
-    )]</span>
-    <span class="ident">ProposalRoundLowerThanPreferredBlock</span> { <span class="ident">preferred_round</span>: <span class="ident">Round</span> },
-
-    <span class="doccomment">/// This proposal is too old - return last_voted_round</span>
-    <span class="attribute">#[<span class="ident">error</span>(
-        <span class="string">&quot;Proposal at round {:?} is not newer than the last vote round {:?}&quot;</span>,
-        <span class="ident">proposal_round</span>,
-        <span class="ident">last_voted_round</span>
-    )]</span>
-    <span class="ident">OldProposal</span> {
-        <span class="ident">last_voted_round</span>: <span class="ident">Round</span>,
-        <span class="ident">proposal_round</span>: <span class="ident">Round</span>,
-    },
-
-    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Serialization error: {0}&quot;</span>)]</span>
-    <span class="ident">SerializationError</span>(<span class="ident">String</span>),
-
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Provided round, {0}, is incompatible with last voted round, {1}&quot;</span>)]</span>
+    <span class="ident">IncorrectLastVotedRound</span>(<span class="ident">u64</span>, <span class="ident">u64</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Provided round, {0}, is incompatible with preferred round, {1}&quot;</span>)]</span>
+    <span class="ident">IncorrectPreferredRound</span>(<span class="ident">u64</span>, <span class="ident">u64</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Unable to verify that the new tree extneds the parent: {0}&quot;</span>)]</span>
+    <span class="ident">InvalidAccumulatorExtension</span>(<span class="ident">String</span>),
     <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Invalid EpochChangeProof: {0}&quot;</span>)]</span>
     <span class="ident">InvalidEpochChangeProof</span>(<span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Internal error: {0}&quot;</span>)]</span>
+    <span class="ident">InternalError</span>(<span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;No next_epoch_state specified in the provided Ledger Info&quot;</span>)]</span>
+    <span class="ident">InvalidLedgerInfo</span>,
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Invalid proposal: {}&quot;</span>, {<span class="number">0</span>})]</span>
+    <span class="ident">InvalidProposal</span>(<span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Invalid QC: {}&quot;</span>, {<span class="number">0</span>})]</span>
+    <span class="ident">InvalidQuorumCertificate</span>(<span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;{0} is not set, SafetyRules is not initialized&quot;</span>)]</span>
+    <span class="ident">NotInitialized</span>(<span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Serialization error: {0}&quot;</span>)]</span>
+    <span class="ident">SerializationError</span>(<span class="ident">String</span>),
+    <span class="attribute">#[<span class="ident">error</span>(<span class="string">&quot;Vote proposal missing expected signature&quot;</span>)]</span>
+    <span class="ident">VoteProposalSignatureNotFound</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">anyhow</span>::<span class="ident">Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">anyhow</span>::<span class="ident">Error</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>::<span class="ident">InternalError</span> {
-            <span class="ident">error</span>: <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
-        }
+        <span class="self">Self</span>::<span class="ident">InternalError</span>(<span class="ident">error</span>.<span class="ident">to_string</span>())
     }
 }
 
@@ -174,9 +100,7 @@
 
 <span class="kw">impl</span> <span class="ident">From</span><span class="op">&lt;</span><span class="ident">libra_secure_net</span>::<span class="ident">Error</span><span class="op">&gt;</span> <span class="kw">for</span> <span class="ident">Error</span> {
     <span class="kw">fn</span> <span class="ident">from</span>(<span class="ident">error</span>: <span class="ident">libra_secure_net</span>::<span class="ident">Error</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="self">Self</span> {
-        <span class="self">Self</span>::<span class="ident">InternalError</span> {
-            <span class="ident">error</span>: <span class="macro">format</span><span class="macro">!</span>(<span class="string">&quot;{}&quot;</span>, <span class="ident">error</span>),
-        }
+        <span class="self">Self</span>::<span class="ident">InternalError</span>(<span class="ident">error</span>.<span class="ident">to_string</span>())
     }
 }
 </pre></div>
