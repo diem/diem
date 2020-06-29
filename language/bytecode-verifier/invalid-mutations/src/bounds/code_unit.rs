@@ -315,20 +315,6 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                         StructDefInstantiationIndex,
                         MoveFromGeneric
                     ),
-                    MoveToSender(_) => struct_bytecode!(
-                        struct_defs_len,
-                        bytecode_idx,
-                        offset,
-                        StructDefinitionIndex,
-                        MoveToSender
-                    ),
-                    MoveToSenderGeneric(_) => struct_bytecode!(
-                        struct_inst_len,
-                        bytecode_idx,
-                        offset,
-                        StructDefInstantiationIndex,
-                        MoveToSenderGeneric
-                    ),
                     MoveTo(_) => struct_bytecode!(
                         struct_defs_len,
                         bytecode_idx,
@@ -361,7 +347,7 @@ impl<'a> ApplyCodeUnitBoundsContext<'a> {
                     FreezeRef | Pop | Ret | LdU8(_) | LdU64(_) | LdU128(_) | CastU8 | CastU64
                     | CastU128 | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub | Mul | Mod
                     | Div | BitOr | BitAnd | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt
-                    | Gt | Le | Ge | Abort | GetTxnSenderAddress | Nop => {
+                    | Gt | Le | Ge | Abort | Nop => {
                         panic!("Bytecode has no internal index: {:?}", code[bytecode_idx])
                     }
                 };
@@ -397,8 +383,6 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
         | ImmBorrowGlobalGeneric(_)
         | MoveFrom(_)
         | MoveFromGeneric(_)
-        | MoveToSender(_)
-        | MoveToSenderGeneric(_)
         | MoveTo(_)
         | MoveToGeneric(_)
         | BrTrue(_)
@@ -414,7 +398,6 @@ fn is_interesting(bytecode: &Bytecode) -> bool {
         // bytecode gets added.
         FreezeRef | Pop | Ret | LdU8(_) | LdU64(_) | LdU128(_) | CastU8 | CastU64 | CastU128
         | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub | Mul | Mod | Div | BitOr | BitAnd
-        | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Abort
-        | GetTxnSenderAddress | Nop => false,
+        | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt | Gt | Le | Ge | Abort | Nop => false,
     }
 }

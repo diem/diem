@@ -79,7 +79,6 @@ pub enum Constant {
     U128(u128),
     Address(BigUint),
     ByteArray(Vec<u8>),
-    TxnSenderAddress,
 }
 
 /// An operation -- target of a call. This contains user functions, builtin functions, and
@@ -94,7 +93,6 @@ pub enum Operation {
     Unpack(ModuleId, StructId, Vec<Type>),
 
     // Resources
-    MoveToSender(ModuleId, StructId, Vec<Type>),
     MoveTo(ModuleId, StructId, Vec<Type>),
     MoveFrom(ModuleId, StructId, Vec<Type>),
     Exists(ModuleId, StructId, Vec<Type>),
@@ -546,9 +544,6 @@ impl<'env> fmt::Display for OperationDisplay<'env> {
             MoveTo(mid, sid, targs) => {
                 write!(f, "move_to<{}>", self.struct_str(*mid, *sid, targs))?;
             }
-            MoveToSender(mid, sid, targs) => {
-                write!(f, "move_to_sender<{}>", self.struct_str(*mid, *sid, targs))?;
-            }
             MoveFrom(mid, sid, targs) => {
                 write!(f, "move_from<{}>", self.struct_str(*mid, *sid, targs))?;
             }
@@ -639,7 +634,6 @@ impl fmt::Display for Constant {
             U128(x) => write!(f, "{}", x)?,
             Address(x) => write!(f, "0x{}", x.to_str_radix(16))?,
             ByteArray(x) => write!(f, "{:?}", x)?,
-            TxnSenderAddress => write!(f, "txn_sender")?,
         }
         Ok(())
     }

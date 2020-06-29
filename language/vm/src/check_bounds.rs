@@ -294,7 +294,7 @@ impl<'a> BoundsChecker<'a> {
                     }
                 }
                 Pack(idx) | Unpack(idx) | Exists(idx) | ImmBorrowGlobal(idx)
-                | MutBorrowGlobal(idx) | MoveFrom(idx) | MoveToSender(idx) | MoveTo(idx) => {
+                | MutBorrowGlobal(idx) | MoveFrom(idx) | MoveTo(idx) => {
                     check_code_unit_bounds_impl(&self.module.struct_defs, bytecode_offset, *idx)?
                 }
                 PackGeneric(idx)
@@ -303,8 +303,7 @@ impl<'a> BoundsChecker<'a> {
                 | ImmBorrowGlobalGeneric(idx)
                 | MutBorrowGlobalGeneric(idx)
                 | MoveFromGeneric(idx)
-                | MoveToGeneric(idx)
-                | MoveToSenderGeneric(idx) => {
+                | MoveToGeneric(idx) => {
                     check_code_unit_bounds_impl(
                         &self.module.struct_def_instantiations,
                         bytecode_offset,
@@ -358,7 +357,7 @@ impl<'a> BoundsChecker<'a> {
                 FreezeRef | Pop | Ret | LdU8(_) | LdU64(_) | LdU128(_) | CastU8 | CastU64
                 | CastU128 | LdTrue | LdFalse | ReadRef | WriteRef | Add | Sub | Mul | Mod
                 | Div | BitOr | BitAnd | Xor | Shl | Shr | Or | And | Not | Eq | Neq | Lt | Gt
-                | Le | Ge | Abort | GetTxnSenderAddress | Nop => (),
+                | Le | Ge | Abort | Nop => (),
             }
         }
         Ok(())

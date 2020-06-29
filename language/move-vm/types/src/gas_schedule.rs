@@ -159,20 +159,11 @@ pub fn zero_cost_schedule() -> CostTable {
     // about the actual gas for instructions.  The only thing we care about is having an entry
     // in the gas schedule for each instruction.
     let instrs = vec![
-        (
-            MoveToSender(StructDefinitionIndex::new(0)),
-            GasCost::new(0, 0),
-        ),
-        (
-            MoveToSenderGeneric(StructDefInstantiationIndex::new(0)),
-            GasCost::new(0, 0),
-        ),
         (MoveTo(StructDefinitionIndex::new(0)), GasCost::new(0, 0)),
         (
             MoveToGeneric(StructDefInstantiationIndex::new(0)),
             GasCost::new(0, 0),
         ),
-        (GetTxnSenderAddress, GasCost::new(0, 0)),
         (MoveFrom(StructDefinitionIndex::new(0)), GasCost::new(0, 0)),
         (
             MoveFromGeneric(StructDefInstantiationIndex::new(0)),

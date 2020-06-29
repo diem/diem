@@ -95,8 +95,6 @@ pub enum Tok {
     SucceedsIf,
     Synthetic,
     True,
-    /// Transaction sender in the specification language
-    TxnSender,
     U8,
     U64,
     U128,
@@ -450,7 +448,6 @@ fn get_name_token(name: &str) -> Tok {
         "succeeds_if" => Tok::SucceedsIf,
         "synthetic" => Tok::Synthetic,
         "true" => Tok::True,
-        "txn_sender" => Tok::TxnSender,
         "u8" => Tok::U8,
         "u64" => Tok::U64,
         "u128" => Tok::U128,

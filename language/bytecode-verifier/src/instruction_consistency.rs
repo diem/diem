@@ -96,13 +96,6 @@ impl<'a> InstructionConsistency<'a> {
                     let struct_inst = self.module.struct_instantiation_at(*idx);
                     self.check_type_op(offset, struct_inst.def, /* generic */ true)?;
                 }
-                Bytecode::MoveToSender(idx) => {
-                    self.check_type_op(offset, *idx, /* generic */ false)?;
-                }
-                Bytecode::MoveToSenderGeneric(idx) => {
-                    let struct_inst = self.module.struct_instantiation_at(*idx);
-                    self.check_type_op(offset, struct_inst.def, /* generic */ true)?;
-                }
                 Bytecode::MoveTo(idx) => {
                     self.check_type_op(offset, *idx, /* generic */ false)?;
                 }

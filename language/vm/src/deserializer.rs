@@ -1223,7 +1223,7 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
             Opcodes::LE => Bytecode::Le,
             Opcodes::GE => Bytecode::Ge,
             Opcodes::ABORT => Bytecode::Abort,
-            Opcodes::GET_TXN_SENDER => Bytecode::GetTxnSenderAddress,
+            Opcodes::NOP => Bytecode::Nop,
             Opcodes::EXISTS => Bytecode::Exists(load_struct_def_index(cursor)?),
             Opcodes::EXISTS_GENERIC => Bytecode::ExistsGeneric(load_struct_def_inst_index(cursor)?),
             Opcodes::MUT_BORROW_GLOBAL => Bytecode::MutBorrowGlobal(load_struct_def_index(cursor)?),
@@ -1238,16 +1238,11 @@ fn load_code(cursor: &mut Cursor<&[u8]>, code: &mut Vec<Bytecode>) -> BinaryLoad
             Opcodes::MOVE_FROM_GENERIC => {
                 Bytecode::MoveFromGeneric(load_struct_def_inst_index(cursor)?)
             }
-            Opcodes::MOVE_TO_SENDER => Bytecode::MoveToSender(load_struct_def_index(cursor)?),
-            Opcodes::MOVE_TO_SENDER_GENERIC => {
-                Bytecode::MoveToSenderGeneric(load_struct_def_inst_index(cursor)?)
-            }
             Opcodes::MOVE_TO => Bytecode::MoveTo(load_struct_def_index(cursor)?),
             Opcodes::MOVE_TO_GENERIC => {
                 Bytecode::MoveToGeneric(load_struct_def_inst_index(cursor)?)
             }
             Opcodes::FREEZE_REF => Bytecode::FreezeRef,
-            Opcodes::NOP => Bytecode::Nop,
         };
         code.push(bytecode);
     }
@@ -1368,12 +1363,12 @@ impl Opcodes {
             0x25 => Ok(Opcodes::LE),
             0x26 => Ok(Opcodes::GE),
             0x27 => Ok(Opcodes::ABORT),
-            0x28 => Ok(Opcodes::GET_TXN_SENDER),
+            0x28 => Ok(Opcodes::NOP),
             0x29 => Ok(Opcodes::EXISTS),
             0x2A => Ok(Opcodes::MUT_BORROW_GLOBAL),
             0x2B => Ok(Opcodes::IMM_BORROW_GLOBAL),
             0x2C => Ok(Opcodes::MOVE_FROM),
-            0x2D => Ok(Opcodes::MOVE_TO_SENDER),
+            0x2D => Ok(Opcodes::MOVE_TO),
             0x2E => Ok(Opcodes::FREEZE_REF),
             0x2F => Ok(Opcodes::SHL),
             0x30 => Ok(Opcodes::SHR),
@@ -1391,10 +1386,7 @@ impl Opcodes {
             0x3C => Ok(Opcodes::MUT_BORROW_GLOBAL_GENERIC),
             0x3D => Ok(Opcodes::IMM_BORROW_GLOBAL_GENERIC),
             0x3E => Ok(Opcodes::MOVE_FROM_GENERIC),
-            0x3F => Ok(Opcodes::MOVE_TO_SENDER_GENERIC),
-            0x40 => Ok(Opcodes::NOP),
-            0x41 => Ok(Opcodes::MOVE_TO),
-            0x42 => Ok(Opcodes::MOVE_TO_GENERIC),
+            0x3F => Ok(Opcodes::MOVE_TO_GENERIC),
             _ => Err(VMStatus::new(StatusCode::UNKNOWN_OPCODE)),
         }
     }

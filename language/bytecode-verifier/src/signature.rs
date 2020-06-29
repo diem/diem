@@ -125,7 +125,7 @@ impl<'a> SignatureChecker<'a> {
                     | UnpackGeneric(idx)
                     | ExistsGeneric(idx)
                     | MoveFromGeneric(idx)
-                    | MoveToSenderGeneric(idx)
+                    | MoveToGeneric(idx)
                     | ImmBorrowGlobalGeneric(idx)
                     | MutBorrowGlobalGeneric(idx) => {
                         let struct_inst = self.module.struct_instantiation_at(*idx);

@@ -603,14 +603,11 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                     struct_idx, name, ty_params
                 ))
             }
-            Bytecode::MoveToSender(struct_idx) => {
+            Bytecode::MoveTo(struct_idx) => {
                 let (name, ty_params) = self.struct_type_info(*struct_idx, &Signature(vec![]))?;
-                Ok(format!(
-                    "MoveToSender[{}]({}{})",
-                    struct_idx, name, ty_params
-                ))
+                Ok(format!("MoveTo[{}]({}{})", struct_idx, name, ty_params))
             }
-            Bytecode::MoveToSenderGeneric(struct_idx) => {
+            Bytecode::MoveToGeneric(struct_idx) => {
                 let struct_inst = self
                     .source_mapper
                     .bytecode
@@ -621,7 +618,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
                     .signature_at(struct_inst.type_parameters);
                 let (name, ty_params) = self.struct_type_info(struct_inst.def, type_params)?;
                 Ok(format!(
-                    "MoveToSenderGeneric[{}]({}{})",
+                    "MoveToGeneric[{}]({}{})",
                     struct_idx, name, ty_params
                 ))
             }

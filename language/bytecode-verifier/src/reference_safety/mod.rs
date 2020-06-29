@@ -252,11 +252,7 @@ fn execute_inner(
         | Bytecode::Exists(_)
         | Bytecode::ExistsGeneric(_) => (),
 
-        Bytecode::BrTrue(_)
-        | Bytecode::BrFalse(_)
-        | Bytecode::Abort
-        | Bytecode::MoveToSender(_)
-        | Bytecode::MoveToSenderGeneric(_) => {
+        Bytecode::BrTrue(_) | Bytecode::BrFalse(_) | Bytecode::Abort => {
             checked_verify!(verifier.stack.pop().unwrap().is_value());
         }
         Bytecode::MoveTo(_) | Bytecode::MoveToGeneric(_) => {
@@ -272,9 +268,6 @@ fn execute_inner(
         Bytecode::LdU8(_) => verifier.stack.push(state.value_for(&SignatureToken::U8)),
         Bytecode::LdU64(_) => verifier.stack.push(state.value_for(&SignatureToken::U64)),
         Bytecode::LdU128(_) => verifier.stack.push(state.value_for(&SignatureToken::U128)),
-        Bytecode::GetTxnSenderAddress => verifier
-            .stack
-            .push(state.value_for(&SignatureToken::Address)),
         Bytecode::LdConst(idx) => {
             let signature = &verifier.module().constant_at(*idx).type_;
             verifier.stack.push(state.value_for(signature))

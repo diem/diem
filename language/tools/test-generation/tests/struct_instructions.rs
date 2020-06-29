@@ -230,41 +230,45 @@ fn bytecode_movefrom_no_address_on_stack() {
 }
 
 #[test]
-fn bytecode_movetosender() {
+fn bytecode_moveto() {
     let module: CompiledModuleMut = generate_module_with_struct(true);
     let mut state1 =
         AbstractState::from_locals(module, HashMap::new(), vec![], vec![], CallGraph::new(0));
+    state1.stack_push(AbstractValue::new_reference(
+        SignatureToken::Reference(Box::new(SignatureToken::Signer)),
+        Kind::Copyable,
+    ));
     state1.stack_push(create_struct_value(&state1.module.module).0);
-    let (state2, _) = common::run_instruction(
-        Bytecode::MoveToSender(StructDefinitionIndex::new(0)),
-        state1,
-    );
+    let (state2, _) =
+        common::run_instruction(Bytecode::MoveTo(StructDefinitionIndex::new(0)), state1);
     assert_eq!(state2.stack_len(), 0, "stack type postcondition not met");
 }
 
 #[test]
 #[should_panic]
-fn bytecode_movetosender_struct_is_not_resource() {
+fn bytecode_moveto_struct_is_not_resource() {
     let module: CompiledModuleMut = generate_module_with_struct(false);
     let mut state1 =
         AbstractState::from_locals(module, HashMap::new(), vec![], vec![], CallGraph::new(0));
+    state1.stack_push(AbstractValue::new_reference(
+        SignatureToken::Reference(Box::new(SignatureToken::Signer)),
+        Kind::Copyable,
+    ));
     state1.stack_push(create_struct_value(&state1.module.module).0);
-    common::run_instruction(
-        Bytecode::MoveToSender(StructDefinitionIndex::new(0)),
-        state1,
-    );
+    common::run_instruction(Bytecode::MoveTo(StructDefinitionIndex::new(0)), state1);
 }
 
 #[test]
 #[should_panic]
-fn bytecode_movetosender_no_struct_on_stack() {
+fn bytecode_moveto_no_struct_on_stack() {
     let module: CompiledModuleMut = generate_module_with_struct(true);
-    let state1 =
+    let mut state1 =
         AbstractState::from_locals(module, HashMap::new(), vec![], vec![], CallGraph::new(0));
-    common::run_instruction(
-        Bytecode::MoveToSender(StructDefinitionIndex::new(0)),
-        state1,
-    );
+    state1.stack_push(AbstractValue::new_reference(
+        SignatureToken::Reference(Box::new(SignatureToken::Signer)),
+        Kind::Copyable,
+    ));
+    common::run_instruction(Bytecode::MoveTo(StructDefinitionIndex::new(0)), state1);
 }
 
 #[test]

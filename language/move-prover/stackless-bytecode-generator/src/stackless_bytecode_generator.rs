@@ -994,35 +994,6 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                 ));
             }
 
-            MoveBytecode::MoveToSender(idx) => {
-                let value_operand_index = self.temp_stack.pop().unwrap();
-                self.code.push(mk_call(
-                    Operation::MoveToSender(
-                        self.func_env.module_env.get_id(),
-                        self.func_env.module_env.get_struct_id(*idx),
-                        vec![],
-                    ),
-                    vec![],
-                    vec![value_operand_index],
-                ));
-            }
-
-            MoveBytecode::MoveToSenderGeneric(idx) => {
-                let struct_instantiation = self.module.struct_instantiation_at(*idx);
-                let value_operand_index = self.temp_stack.pop().unwrap();
-                self.code.push(mk_call(
-                    Operation::MoveToSender(
-                        self.func_env.module_env.get_id(),
-                        self.func_env
-                            .module_env
-                            .get_struct_id(struct_instantiation.def),
-                        self.get_type_params(struct_instantiation.type_parameters),
-                    ),
-                    vec![],
-                    vec![value_operand_index],
-                ));
-            }
-
             MoveBytecode::MoveTo(idx) => {
                 let value_operand_index = self.temp_stack.pop().unwrap();
                 let signer_operand_index = self.temp_stack.pop().unwrap();
@@ -1052,19 +1023,6 @@ impl<'a> StacklessBytecodeGenerator<'a> {
                     vec![],
                     vec![value_operand_index, signer_operand_index],
                 ));
-            }
-
-            MoveBytecode::GetTxnSenderAddress => {
-                let temp_index = self.temp_count;
-                self.temp_stack.push(temp_index);
-                self.local_types
-                    .push(Type::Primitive(PrimitiveType::Address));
-                self.code.push(Bytecode::Load(
-                    attr_id,
-                    temp_index,
-                    Constant::TxnSenderAddress,
-                ));
-                self.temp_count += 1;
             }
 
             MoveBytecode::Nop => self.code.push(Bytecode::Nop(attr_id)),

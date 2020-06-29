@@ -47,7 +47,7 @@ impl<'a> UnusedEntryChecker<'a> {
                     | MutBorrowGlobalGeneric(idx)
                     | ImmBorrowGlobalGeneric(idx)
                     | ExistsGeneric(idx)
-                    | MoveToSenderGeneric(idx)
+                    | MoveToGeneric(idx)
                     | MoveFromGeneric(idx) => {
                         let struct_inst = self.module.struct_instantiation_at(*idx);
                         self.signatures[struct_inst.type_parameters.0 as usize] = true;
