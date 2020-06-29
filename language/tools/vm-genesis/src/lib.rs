@@ -203,7 +203,7 @@ fn create_and_initialize_testnet_minting(
 
     let mint_max_coin1 = transaction_builder::encode_tiered_mint_script(
         coin1_tag,
-        1,
+        0,
         account_config::testnet_dd_account_address(),
         std::u64::MAX / 2,
         4,
@@ -211,7 +211,7 @@ fn create_and_initialize_testnet_minting(
 
     let mint_max_coin2 = transaction_builder::encode_tiered_mint_script(
         coin2_tag,
-        2,
+        0,
         account_config::testnet_dd_account_address(),
         std::u64::MAX / 2,
         4,
