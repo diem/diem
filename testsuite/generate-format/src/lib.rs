@@ -12,10 +12,14 @@ use structopt::{clap::arg_enum, StructOpt};
 mod consensus;
 /// Libra transactions.
 mod libra;
+/// Analyze Serde formats to detect certain patterns.
+mod linter;
 /// Move ABI.
 mod move_abi;
 /// Network messages.
 mod network;
+
+pub use linter::lint_lcs_format;
 
 arg_enum! {
 #[derive(Debug, StructOpt, Clone, Copy)]
