@@ -11,11 +11,8 @@ use libra_secure_storage::KVStorage;
 use libra_types::transaction::{Transaction, TransactionPayload};
 use std::{fs::File, io::Write, path::PathBuf};
 use structopt::StructOpt;
-use vm_genesis::ValidatorRegistration;
+use vm_genesis::OperatorRegistration;
 
-// TODO(davidiw) add operator_address, since that will eventually be the identity producing this.
-/// Note, it is implicitly expected that the storage supports
-/// a namespace but one has not been set.
 #[derive(Debug, StructOpt)]
 pub struct Genesis {
     #[structopt(flatten)]
@@ -28,11 +25,13 @@ impl Genesis {
     pub fn execute(self) -> Result<Transaction, Error> {
         let layout = self.layout()?;
         let association_key = self.association(&layout)?;
-        let validators = self.validators(&layout)?;
+        let owner_names = layout.owners.clone();
+        let operator_registrations = self.operator_registrations(&layout)?;
 
-        let genesis = vm_genesis::encode_genesis_transaction_with_validator(
+        let genesis = vm_genesis::encode_genesis_transaction(
             association_key,
-            &validators,
+            owner_names,
+            &operator_registrations,
             Some(libra_types::on_chain_config::VMPublishingOption::Open),
         );
 
@@ -83,23 +82,27 @@ impl Genesis {
             .map_err(|e| Error::RemoteStorageReadError(constants::LAYOUT, e.to_string()))
     }
 
-    /// Produces a set of ValidatorRegistration from the remote storage.
-    pub fn validators(&self, layout: &Layout) -> Result<Vec<ValidatorRegistration>, Error> {
-        let mut validators = Vec::new();
+    /// Produces a set of OperatorRegistrations from the remote storage.
+    pub fn operator_registrations(
+        &self,
+        layout: &Layout,
+    ) -> Result<Vec<OperatorRegistration>, Error> {
+        let mut operator_registrations = Vec::new();
+
         for operator in layout.operators.iter() {
-            let validator_config = self.backend.backend.clone();
-            let validator_config = validator_config.set_namespace(operator.into());
+            let operator_config = self.backend.backend.clone();
+            let operator_config = operator_config.set_namespace(operator.into());
 
-            let validator_storage = validator_config.create_storage(RemoteStorage)?;
+            let operator_storage = operator_config.create_storage(RemoteStorage)?;
 
-            let key = validator_storage
+            let operator_key = operator_storage
                 .get(OPERATOR_KEY)
                 .map_err(|e| Error::RemoteStorageReadError(OPERATOR_KEY, e.to_string()))?
                 .value
                 .ed25519_public_key()
                 .map_err(|e| Error::RemoteStorageReadError(OPERATOR_KEY, e.to_string()))?;
 
-            let txn = validator_storage
+            let txn = operator_storage
                 .get(constants::VALIDATOR_CONFIG)
                 .map_err(|e| {
                     Error::RemoteStorageReadError(constants::VALIDATOR_CONFIG, e.to_string())
@@ -113,9 +116,9 @@ impl Genesis {
                 return Err(Error::UnexpectedError("Found invalid registration".into()));
             };
 
-            validators.push((key, txn));
+            operator_registrations.push((operator_key, txn));
         }
 
-        Ok(validators)
+        Ok(operator_registrations)
     }
 }

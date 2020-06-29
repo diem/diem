@@ -25,7 +25,10 @@ use libra_types::{
     transaction::{authenticator::AuthenticationKey, ChangeSet, Script, Transaction},
 };
 use libra_vm::data_cache::StateViewCache;
-use move_core_types::language_storage::{StructTag, TypeTag};
+use move_core_types::{
+    account_address::AccountAddress,
+    language_storage::{StructTag, TypeTag},
+};
 use move_vm_types::{data_store::DataStore, loaded_data::types::FatStructType, values::Value};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
@@ -45,25 +48,31 @@ pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::
     (private_key, public_key)
 });
 
-pub type ValidatorRegistration = (Ed25519PublicKey, Script);
+pub type OperatorRegistration = (Ed25519PublicKey, Script);
 
-pub fn encode_genesis_transaction_with_validator(
+pub fn encode_genesis_transaction(
     public_key: Ed25519PublicKey,
-    validators: &[ValidatorRegistration],
+    owner_names: Vec<String>,
+    operator_registrations: &[OperatorRegistration],
     vm_publishing_option: Option<VMPublishingOption>,
 ) -> Transaction {
-    encode_genesis_transaction(
-        public_key,
-        validators,
-        stdlib_modules(StdLibOptions::Compiled), // Must use compiled stdlib
-        vm_publishing_option
-            .unwrap_or_else(|| VMPublishingOption::Locked(StdlibScript::whitelist())),
+    Transaction::WaypointWriteSet(
+        encode_genesis_change_set(
+            &public_key,
+            owner_names,
+            operator_registrations,
+            stdlib_modules(StdLibOptions::Compiled), // Must use compiled stdlib
+            vm_publishing_option
+                .unwrap_or_else(|| VMPublishingOption::Locked(StdlibScript::whitelist())),
+        )
+        .0,
     )
 }
 
 pub fn encode_genesis_change_set(
     public_key: &Ed25519PublicKey,
-    validators: &[ValidatorRegistration],
+    owner_names: Vec<String>,
+    operator_registrations: &[OperatorRegistration],
     stdlib_modules: &[VerifiedModule],
     vm_publishing_option: VMPublishingOption,
 ) -> (ChangeSet, BTreeMap<Vec<u8>, FatStructType>) {
@@ -91,7 +100,11 @@ pub fn encode_genesis_change_set(
         vm_publishing_option,
         &lbr_ty,
     );
-    create_and_initialize_validators(&mut genesis_context, &validators);
+    create_and_initialize_owners_operators(
+        &mut genesis_context,
+        owner_names,
+        &operator_registrations,
+    );
     reconfigure(&mut genesis_context);
 
     // XXX/TODO: for testnet only
@@ -112,24 +125,7 @@ pub fn encode_genesis_change_set(
     )
 }
 
-pub fn encode_genesis_transaction(
-    public_key: Ed25519PublicKey,
-    validators: &[ValidatorRegistration],
-    stdlib_modules: &[VerifiedModule],
-    vm_publishing_option: VMPublishingOption,
-) -> Transaction {
-    Transaction::WaypointWriteSet(
-        encode_genesis_change_set(
-            &public_key,
-            validators,
-            stdlib_modules,
-            vm_publishing_option,
-        )
-        .0,
-    )
-}
-
-/// Create an initialize Association and Core Code accounts.
+/// Create and initialize Association and Core Code accounts.
 fn create_and_initialize_main_accounts(
     context: &mut GenesisContext,
     public_key: &Ed25519PublicKey,
@@ -239,23 +235,44 @@ fn create_and_initialize_testnet_minting(
     );
 }
 
-/// Initialize each validator.
-fn create_and_initialize_validators(
+/// Creates and initializes each validator owner and validator operator.
+fn create_and_initialize_owners_operators(
     context: &mut GenesisContext,
-    validators: &[ValidatorRegistration],
+    owner_names: Vec<String>,
+    operator_registrations: &[OperatorRegistration],
 ) {
-    for (account_key, registration) in validators {
+    // Create accounts for each validator owner
+    for _owner_name in owner_names {
         context.set_sender(account_config::association_address());
 
-        let auth_key = AuthenticationKey::ed25519(&account_key);
-        let account = auth_key.derived_address();
-        let create_script = transaction_builder::encode_create_validator_account(
-            account,
-            auth_key.prefix().to_vec(),
+        // TODO(joshlind): use the owner_name to derive a unique and deterministic account address
+        // For now, we use a random auth key and account below:
+        let owner_auth_key = AuthenticationKey::random();
+        let owner_account = AccountAddress::random();
+        let create_owner_script = transaction_builder::encode_create_validator_account_script(
+            owner_account,
+            owner_auth_key.prefix().to_vec(),
         );
-        context.exec_script(&create_script);
 
-        // Set config for the validator
+        context.exec_script(&create_owner_script);
+    }
+
+    // Create accounts for each validator operator, and set the validator config
+    for (operator_key, registration) in operator_registrations {
+        context.set_sender(account_config::association_address());
+
+        let token = TypeTag::Signer;
+        let auth_key = AuthenticationKey::ed25519(&operator_key);
+        let account = auth_key.derived_address();
+        let create_operator_script =
+            transaction_builder::encode_create_validator_operator_account_script(
+                token,
+                account,
+                auth_key.prefix().to_vec(),
+            );
+        context.exec_script(&create_operator_script);
+
+        // Set the validator config
         context.set_sender(account);
         context.exec_script(registration);
 
@@ -337,7 +354,8 @@ pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) ->
 
     encode_genesis_change_set(
         &GENESIS_KEYPAIR.1,
-        &validator_registrations(&swarm.nodes),
+        owner_names(&swarm.nodes),
+        &operator_registrations(&swarm.nodes),
         stdlib_modules,
         VMPublishingOption::Open,
     )
@@ -351,14 +369,21 @@ pub fn generate_genesis_type_mapping() -> BTreeMap<Vec<u8>, FatStructType> {
 
     encode_genesis_change_set(
         &GENESIS_KEYPAIR.1,
-        &validator_registrations(&swarm.nodes),
+        owner_names(&swarm.nodes),
+        &operator_registrations(&swarm.nodes),
         stdlib_modules,
         VMPublishingOption::Open,
     )
     .1
 }
 
-pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegistration> {
+/// Generates an artificial set of validator owner names using the indices of each node
+/// configuration as the owner name (used for testing only).
+pub fn owner_names(node_configs: &[NodeConfig]) -> Vec<String> {
+    (0..node_configs.len()).map(|i| i.to_string()).collect()
+}
+
+pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegistration> {
     node_configs
         .iter()
         .map(|n| {
