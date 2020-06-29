@@ -83,7 +83,7 @@ fn mock_db() -> MockLibraDB {
         all_txns.extend(txns_to_commit.iter().map(|txn_to_commit| {
             (
                 txn_to_commit.transaction().clone(),
-                txn_to_commit.major_status(),
+                txn_to_commit.transaction_status().clone(),
             )
         }));
     }
@@ -389,7 +389,7 @@ fn test_get_transactions() {
                 .collect::<Vec<_>>();
 
             assert_eq!(expected_events.len(), view.events.len());
-            assert_eq!(status, &view.vm_status);
+            assert_eq!(status.major_status, view.vm_status);
 
             for (i, event_view) in view.events.iter().enumerate() {
                 let expected_event = expected_events.get(i).expect("Expected event didn't find");
@@ -472,7 +472,7 @@ fn test_get_account_transaction() {
             assert_eq!(tx_view.events.len(), expected_events.len());
 
             // check VM major status
-            assert_eq!(&tx_view.vm_status, expected_status);
+            assert_eq!(&tx_view.vm_status, &expected_status.major_status);
 
             for (i, event_view) in tx_view.events.iter().enumerate() {
                 let expected_event = expected_events.get(i).expect("Expected event didn't find");

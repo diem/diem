@@ -782,6 +782,42 @@ A Libra account.
 ---
 
 
+## VMStatusSourceContext - type
+
+### Attributes
+
+<table>
+  <tr>
+   <td><strong>Name</strong>
+   </td>
+   <td><strong>Type</strong>
+   </td>
+   <td><strong>Description</strong>
+   </td>
+  </tr>
+  <tr>
+   <td>scope
+   </td>
+   <td>string
+   </td>
+   <td>String of hexAddress::moduleName for assertion/abort errors thrown from modules. "Script" if thrown from a script. Empty if no context is available.
+   </td>
+  </tr>
+  <tr>
+  <td>code
+  </td>
+  <td>u64
+  </td>
+  <td>Only set when "scope" is non-empty. Set to null otherwise, or if no source error code is available.
+  </td>
+  </tr>
+</table>
+
+##
+
+---
+
+
 
 ## Transaction - type
 
@@ -823,7 +859,7 @@ A transaction on the blockchain.
    </td>
    <td>Object
    </td>
-   <td>Metadata for this transaction. Possible types are <a href="#BlockMetadataTransaction---type">BlockMetadataTransaction</a>, <a href="#WriteSetTransaction---type">WriteSetTransaction</a>, <a href="#UserTransaction---type">UserTransaction</a>, <a href="#UnknownTransaction---type">UnknownTransaction</a>. You should use the "type" field  to distinguish the type of the Object. (e.g., if "type" field is "user", this is a <a href="#UserTransaction---type">UserTransaction</a> object)
+   <td>Metadata for this transaction. Possible types are <a href="#blockmetadatatransaction---type">BlockMetadataTransaction</a>, <a href="#writesettransaction---type">WriteSetTransaction</a>, <a href="#usertransaction---type">UserTransaction</a>, <a href="#unknowntransaction---type">UnknownTransaction</a>. You should use the "type" field  to distinguish the type of the Object. (e.g., if "type" field is "user", this is a <a href="#usertransaction---type">UserTransaction</a> object)
    </td>
   </tr>
   <tr>
@@ -831,8 +867,15 @@ A transaction on the blockchain.
    </td>
    <td>u64
    </td>
-   <td>S<a href="https://github.com/libra/libra/blob/master/types/src/vm_error.rs#L256">tatus code</a> representing the result of the VM processing this transaction.
-   </td>
+   <td>The execution status of the transaction</td>
+  </tr>
+  <tr>
+  <td>vm_status_source_context
+  </td>
+  <td><a href="#vmstatussourcecontext---type">VMStatusSourceContext</a>
+  </td>
+  <td>Additional source-context for user-thrown errors. Set to null if no additional context is available.
+  </td>
   </tr>
   <tr>
    <td>gas_used

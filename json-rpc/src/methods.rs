@@ -192,7 +192,10 @@ async fn get_transactions(
             hash: tx.hash().to_string(),
             transaction: tx.into(),
             events,
-            vm_status: info.major_status(),
+            vm_status: info.transaction_status().major_status,
+            // TODO(tzakian): once the VMStatus has been updated with the source info field, have
+            // this be info.transaction_status().source_info().map(VMStatusSourceContextView::from)
+            vm_status_source_context: Some(info.transaction_status().into()),
             gas_used: info.gas_used(),
         });
     }
@@ -235,7 +238,14 @@ async fn get_account_transaction(
             hash: tx.transaction.hash().to_string(),
             transaction: tx.transaction.into(),
             events,
-            vm_status: tx.proof.transaction_info().major_status(),
+            vm_status: tx
+                .proof
+                .transaction_info()
+                .transaction_status()
+                .major_status,
+            // TODO(tzakian): once the VMStatus has been updated with the source info field, have
+            // this be tx.proof.transaction_info.transaction_status().source_info().map(VMStatusSourceContextView::from)
+            vm_status_source_context: Some(tx.proof.transaction_info().transaction_status().into()),
             gas_used: tx.proof.transaction_info().gas_used(),
         }))
     } else {

@@ -688,10 +688,9 @@ pub struct TransactionInfo {
     /// The amount of gas used.
     gas_used: u64,
 
-    /// The major status. This will provide the general error class. Note that this is not
-    /// particularly high fidelity in the presence of sub statuses but, the major status does
-    /// determine whether or not the transaction is applied to the global state or not.
-    major_status: StatusCode,
+    /// The transaction status. This will provide the general error class along with any additional
+    /// location information about the error.
+    transaction_status: VMStatus,
 }
 
 impl TransactionInfo {
@@ -702,14 +701,14 @@ impl TransactionInfo {
         state_root_hash: HashValue,
         event_root_hash: HashValue,
         gas_used: u64,
-        major_status: StatusCode,
+        transaction_status: VMStatus,
     ) -> TransactionInfo {
         TransactionInfo {
             transaction_hash,
             state_root_hash,
             event_root_hash,
             gas_used,
-            major_status,
+            transaction_status,
         }
     }
 
@@ -735,8 +734,8 @@ impl TransactionInfo {
         self.gas_used
     }
 
-    pub fn major_status(&self) -> StatusCode {
-        self.major_status
+    pub fn transaction_status(&self) -> &VMStatus {
+        &self.transaction_status
     }
 }
 
@@ -744,8 +743,8 @@ impl Display for TransactionInfo {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(
             f,
-            "TransactionInfo: [txn_hash: {}, state_root_hash: {}, event_root_hash: {}, gas_used: {}, major_status: {:?}]",
-            self.transaction_hash(), self.state_root_hash(), self.event_root_hash(), self.gas_used(), self.major_status(),
+            "TransactionInfo: [txn_hash: {}, state_root_hash: {}, event_root_hash: {}, gas_used: {}, transaction_status: {:?}]",
+            self.transaction_hash(), self.state_root_hash(), self.event_root_hash(), self.gas_used(), self.transaction_status(),
         )
     }
 }
@@ -756,7 +755,7 @@ pub struct TransactionToCommit {
     account_states: HashMap<AccountAddress, AccountStateBlob>,
     events: Vec<ContractEvent>,
     gas_used: u64,
-    major_status: StatusCode,
+    transaction_status: VMStatus,
 }
 
 impl TransactionToCommit {
@@ -765,14 +764,14 @@ impl TransactionToCommit {
         account_states: HashMap<AccountAddress, AccountStateBlob>,
         events: Vec<ContractEvent>,
         gas_used: u64,
-        major_status: StatusCode,
+        transaction_status: VMStatus,
     ) -> Self {
         TransactionToCommit {
             transaction,
             account_states,
             events,
             gas_used,
-            major_status,
+            transaction_status,
         }
     }
 
@@ -792,8 +791,8 @@ impl TransactionToCommit {
         self.gas_used
     }
 
-    pub fn major_status(&self) -> StatusCode {
-        self.major_status
+    pub fn transaction_status(&self) -> &VMStatus {
+        &self.transaction_status
     }
 }
 

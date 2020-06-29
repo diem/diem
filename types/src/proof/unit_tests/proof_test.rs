@@ -13,7 +13,7 @@ use crate::{
         TransactionAccumulatorInternalNode, TransactionAccumulatorProof, TransactionInfoWithProof,
     },
     transaction::{RawTransaction, Script, Transaction, TransactionInfo},
-    vm_status::StatusCode,
+    vm_status::{StatusCode, VMStatus},
 };
 use libra_crypto::{
     ed25519::Ed25519PrivateKey,
@@ -262,7 +262,7 @@ fn test_verify_transaction() {
         state_root1_hash,
         event_root1_hash,
         /* gas_used = */ 0,
-        /* major_status = */ StatusCode::EXECUTED,
+        /* transaction_status = */ VMStatus::new(StatusCode::EXECUTED),
     );
     let txn_info1_hash = txn_info1.hash();
 
@@ -294,7 +294,7 @@ fn test_verify_transaction() {
         state_root1_hash,
         event_root1_hash,
         /* gas_used = */ 0,
-        /* major_status = */ StatusCode::EXECUTED,
+        /* transaction_status = */ VMStatus::new(StatusCode::EXECUTED),
     );
     let proof = TransactionInfoWithProof::new(ledger_info_to_transaction_info_proof, fake_txn_info);
     assert!(proof.verify(&ledger_info, 1).is_err());
@@ -372,7 +372,7 @@ fn test_verify_account_state_and_event() {
         state_root_hash,
         event_root_hash,
         /* gas_used = */ 0,
-        /* major_status = */ StatusCode::EXECUTED,
+        /* transaction_status = */ VMStatus::new(StatusCode::EXECUTED),
     );
     let txn_info2_hash = txn_info2.hash();
 

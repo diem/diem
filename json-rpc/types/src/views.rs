@@ -15,7 +15,7 @@ use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
     transaction::{Transaction, TransactionArgument, TransactionPayload},
-    vm_status::StatusCode,
+    vm_status::{StatusCode, VMStatus},
 };
 use move_core_types::{
     identifier::Identifier,
@@ -314,12 +314,36 @@ impl From<&Vec<u8>> for BytesView {
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+pub struct VMStatusSourceContextView {
+    pub scope: String,
+    pub code: Option<u64>,
+}
+
+// TODO(tzakian): Once the VMStatus is updated with a sub-field, have this be a `From` on that.
+impl From<&VMStatus> for VMStatusSourceContextView {
+    fn from(_status: &VMStatus) -> Self {
+        let (scope, code) = ("".to_string(), None);
+        // Once the VMStatus refactor lands
+        //let context = match status.info {
+        //    None => "".to_string(),
+        //    Some(module_id, status) => {
+        //        let error_context = module_id.map(|x| format!("{}::{}", x.address(), x.name()))
+        //            .unwrap_or_else(|| "Script".to_string());
+        //        (error_context, Some(status))
+        //    }
+        //};
+        Self { scope, code }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct TransactionView {
     pub version: u64,
     pub transaction: TransactionDataView,
     pub hash: String,
     pub events: Vec<EventView>,
     pub vm_status: StatusCode,
+    pub vm_status_source_context: Option<VMStatusSourceContextView>,
     pub gas_used: u64,
 }
 

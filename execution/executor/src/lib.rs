@@ -245,7 +245,7 @@ where
                         state_tree.root_hash(),
                         event_tree.root_hash(),
                         vm_output.gas_used(),
-                        status.major_status,
+                        status.clone(),
                     );
 
                     let real_txn_info_hash = txn_info.hash();
@@ -548,7 +548,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
                 txn_data.state_root_hash(),
                 txn_data.event_root_hash(),
                 txn_data.gas_used(),
-                txn_data.status().vm_status().major_status,
+                txn_data.status().vm_status().clone(),
             );
             ensure!(
                 txn_info == generated_txn_info,
@@ -560,7 +560,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
                 txn_data.account_blobs().clone(),
                 txn_data.events().to_vec(),
                 txn_data.gas_used(),
-                txn_data.status().vm_status().major_status,
+                txn_data.status().vm_status().clone(),
             ));
             reconfig_events.append(&mut Self::extract_reconfig_events(
                 txn_data.events().to_vec(),
@@ -735,7 +735,7 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
                     txn_data.account_blobs().clone(),
                     txn_data.events().to_vec(),
                     txn_data.gas_used(),
-                    txn_data.status().vm_status().major_status,
+                    txn_data.status().vm_status().clone(),
                 ));
             }
         }

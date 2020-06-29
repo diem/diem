@@ -13,8 +13,11 @@ use libra_crypto::hash::CryptoHash;
 use libra_temppath::TempPath;
 #[allow(unused_imports)]
 use libra_types::{
-    account_config::AccountResource, contract_event::ContractEvent, ledger_info::LedgerInfo,
-    proof::SparseMerkleLeafNode, vm_status::StatusCode,
+    account_config::AccountResource,
+    contract_event::ContractEvent,
+    ledger_info::LedgerInfo,
+    proof::SparseMerkleLeafNode,
+    vm_status::{StatusCode, VMStatus},
 };
 use proptest::prelude::*;
 use std::collections::HashMap;
@@ -410,7 +413,7 @@ fn test_get_latest_tree_state() {
         HashValue::random(),
         HashValue::random(),
         0,
-        StatusCode::UNKNOWN_STATUS,
+        VMStatus::new(StatusCode::UNKNOWN_STATUS),
     );
     put_transaction_info(&db, 0, &txn_info);
     let bootstrapped = db.get_latest_tree_state().unwrap();
