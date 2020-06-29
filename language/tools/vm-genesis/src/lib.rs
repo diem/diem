@@ -35,6 +35,7 @@ use rand::prelude::*;
 use std::{collections::btree_map::BTreeMap, convert::TryFrom};
 use transaction_builder::encode_create_designated_dealer;
 use vm::access::ModuleAccess;
+use std::hash::{Hash, Hasher};
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];
@@ -245,13 +246,11 @@ fn create_and_initialize_owners_operators(
     operator_registrations: &[OperatorRegistration],
 ) {
     // Create accounts for each validator owner
-    for (_owner_name, _) in operator_assignments {
+    for (owner_name, _) in operator_assignments {
         context.set_sender(account_config::association_address());
 
-        // TODO(joshlind): use the owner_name to derive a unique and deterministic account address
-        // For now, we use a random auth key and account below:
         let owner_auth_key = AuthenticationKey::random();
-        let owner_account = AccountAddress::random();
+        let owner_account = get_account_address_from_name(owner_name);
         let create_owner_script = transaction_builder::encode_create_validator_account_script(
             owner_account,
             owner_auth_key.prefix().to_vec(),
@@ -260,14 +259,12 @@ fn create_and_initialize_owners_operators(
     }
 
     // Create accounts for each validator operator
-    for (_operator_name, operator_key, _) in operator_registrations {
+    for (operator_name, operator_key, _) in operator_registrations {
         context.set_sender(account_config::association_address());
 
-        // TODO(joshlind): use the operator_name to derive a unique and deterministic account
-        // address. For now, we use a derived account below:
         let token = TypeTag::Signer;
         let auth_key = AuthenticationKey::ed25519(&operator_key);
-        let operator_account = auth_key.derived_address();
+        let operator_account = get_account_address_from_name(&operator_name);
         let create_operator_script =
             transaction_builder::encode_create_validator_operator_account_script(
                 token,
@@ -278,20 +275,15 @@ fn create_and_initialize_owners_operators(
     }
 
     // Set the validator operator for each validator owner
-    for (_owner_name, assignment) in operator_assignments {
-        // TODO(joshlind): use the owner_name to derive a unique and deterministic account address
-        // For now, we use a random account below:
-        let owner_account = AccountAddress::random();
+    for (owner_name, assignment) in operator_assignments {
+        let owner_account = get_account_address_from_name(owner_name);
         context.set_sender(owner_account);
         context.exec_script(assignment);
     }
 
     // Set the validator config for each validator and add to the validator set
-    for (_operator_name, operator_key, registration) in operator_registrations {
-        // TODO(joshlind): use the operator_name to derive a unique and deterministic account
-        // address. For now, we use a random account below:
-        let auth_key = AuthenticationKey::ed25519(&operator_key);
-        let operator_account = auth_key.derived_address();
+    for (operator_name, _, registration) in operator_registrations {
+        let operator_account = get_account_address_from_name(&operator_name);
         context.set_sender(operator_account);
         context.exec_script(registration);
 
@@ -450,4 +442,19 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
             (operator_name, operator_key, script)
         })
         .collect::<Vec<_>>()
+}
+
+// Returns a deterministic AccountAddress using a given name. This is useful for creating
+// mappings from validator owner/operator names to account addresses.
+// TODO(joshlind): Update me once we've settled on a concrete hashing strategy from string name to
+// account address. For now, we use the default hasher and a seeded random number generator.
+pub fn get_account_address_from_name(name: &String) -> AccountAddress {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    name.hash(&mut hasher);
+    let seed = hasher.finish();
+
+    let mut rng = StdRng::seed_from_u64(seed);
+    let private_key = Ed25519PrivateKey::generate(&mut rng);
+    let auth_key = AuthenticationKey::ed25519(&private_key.public_key());
+    auth_key.derived_address()
 }

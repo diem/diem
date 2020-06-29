@@ -338,9 +338,7 @@ pub mod tests {
         // Step 3) Upload each owner key and then a signed set operator transaction:
         for ns in [owner_alice_ns, owner_bob_ns, owner_carol_ns].iter() {
             helper.initialize((*ns).to_string());
-            helper
-                .owner_key(ns, &((*ns).to_string() + shared))
-                .unwrap();
+            helper.owner_key(ns, &((*ns).to_string() + shared)).unwrap();
 
             helper
                 .set_operator(
@@ -351,7 +349,7 @@ pub mod tests {
                 .unwrap();
         }
 
-        // Step 4) Upload each operators key and then a signed transaction:
+        // Step 4) Upload each operators key and then a signed validator config transaction:
         for ns in [operator_alice_ns, operator_bob_ns, operator_carol_ns].iter() {
             helper.initialize((*ns).to_string());
             helper
