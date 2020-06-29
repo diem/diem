@@ -23,7 +23,7 @@ fn tiered_mint_designated_dealer() {
     executor.execute_and_apply(blessed.signed_script_txn(
         encode_create_designated_dealer(
             account_config::coin1_tag(),
-            3,
+            0,
             *dd.address(),
             dd.auth_key_prefix(),
         ),
@@ -34,7 +34,7 @@ fn tiered_mint_designated_dealer() {
     executor.execute_and_apply(blessed.signed_script_txn(
         encode_tiered_mint(
             account_config::coin1_tag(),
-            4,
+            1,
             *dd.address(),
             mint_amount_one,
             tier_index,
@@ -56,7 +56,7 @@ fn tiered_mint_designated_dealer() {
     executor.execute_and_apply(blessed.signed_script_txn(
         encode_tiered_mint(
             account_config::coin1_tag(),
-            5,
+            2,
             *dd.address(),
             mint_amount_two,
             tier_index,
@@ -75,7 +75,7 @@ fn tiered_mint_designated_dealer() {
     let output = executor.execute_and_apply(blessed.signed_script_txn(
         encode_tiered_mint(
             account_config::coin1_tag(),
-            6,
+            3,
             *dd.address(),
             mint_amount,
             tier_index,
@@ -92,7 +92,7 @@ fn tiered_mint_designated_dealer() {
     let output = &executor.execute_transaction(blessed.signed_script_txn(
         encode_tiered_mint(
             account_config::coin1_tag(),
-            7,
+            4,
             *dd.address(),
             mint_amount_one,
             tier_index,
