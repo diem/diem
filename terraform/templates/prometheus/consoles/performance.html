@@ -47,9 +47,13 @@
   <tr>
     {{ template "graph_in_table" (args "creationToCommit" "Avg time since block creation to commit (ms)" "irate(consensus_duration_sum{op='creation_to_commit_s'}[1m])/irate(consensus_duration_count{op='creation_to_commit_s'}[1m])" "ms") }}
 
-    {{ template "graph_in_table" (args "creationToStrongCommit" "Avg time since block creation to strong commit with x=2f (ms)" "irate(consensus_duration_sum{op='creation_to_strong_commit_s'}[1m])/irate(consensus_duration_count{op='creation_to_strong_commit_s'}[1m])" "ms") }}
+    {{ template "graph_in_table" (args "creationToStrongCommit1" "Avg time since block creation to strong commit with x=1.25f (ms)" "irate(consensus_duration_sum{op='creation_to_strong_commit_1_s'}[1m])/irate(consensus_duration_count{op='creation_to_strong_commit_1_s'}[1m])" "ms") }}
 
-    {{ template "graph_in_table" (args "creationToHalfStrongCommit" "Avg time since block creation to strong commit with x=1.5f (ms)" "irate(consensus_duration_sum{op='creation_to_half_strong_commit_s'}[1m])/irate(consensus_duration_count{op='creation_to_half_strong_commit_s'}[1m])" "ms") }}
+    {{ template "graph_in_table" (args "creationToStrongCommit2" "Avg time since block creation to strong commit with x=1.5f (ms)" "irate(consensus_duration_sum{op='creation_to_strong_commit_2_s'}[1m])/irate(consensus_duration_count{op='creation_to_strong_commit_2_s'}[1m])" "ms") }}
+
+    {{ template "graph_in_table" (args "creationToStrongCommit3" "Avg time since block creation to strong commit with x=1.75f (ms)" "irate(consensus_duration_sum{op='creation_to_strong_commit_3_s'}[1m])/irate(consensus_duration_count{op='creation_to_strong_commit_3_s'}[1m])" "ms") }}
+
+    {{ template "graph_in_table" (args "creationToStrongCommit4" "Avg time since block creation to strong commit with x=2f (ms)" "irate(consensus_duration_sum{op='creation_to_strong_commit_4_s'}[1m])/irate(consensus_duration_count{op='creation_to_strong_commit_4_s'}[1m])" "ms") }}
 
     {{ template "graph_in_table" (args "creationToQC" "Avg time since block creation to QC (ms)" "irate(consensus_duration_sum{op='creation_to_qc_s'}[1m])/irate(consensus_duration_count{op='creation_to_qc_s'}[1m])" "ms") }}
   </tr>
