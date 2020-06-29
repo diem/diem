@@ -37,7 +37,9 @@ use crate::{
     cli::Options,
     spec_translator::SpecTranslator,
 };
-use spec_lang::env::{ADDITION_OVERFLOW_UNCHECKED_PRAGMA, ASSUME_NO_ABORT_FROM_HERE_PRAGMA};
+use spec_lang::env::{
+    ADDITION_OVERFLOW_UNCHECKED_PRAGMA, ASSUME_NO_ABORT_FROM_HERE_PRAGMA, OPAQUE_PRAGMA,
+};
 
 pub struct BoogieTranslator<'env> {
     env: &'env GlobalEnv,
@@ -545,10 +547,16 @@ impl<'env> ModuleTranslator<'env> {
         self.generate_inline_function_body(func_target);
 
         // generate called function with pre and free post conditions.
+        let opaque = func_target.is_pragma_true(OPAQUE_PRAGMA, || false);
         self.generate_function_sig(func_target, FunctionEntryPoint::Called);
+        if opaque {
+            emit!(self.writer, ";");
+        }
         self.generate_function_args_requires_well_formed(func_target);
         self.generate_function_spec(func_target, FunctionEntryPoint::Called);
-        self.generate_function_forward_body(func_target, FunctionEntryPoint::Called);
+        if !opaque {
+            self.generate_function_forward_body(func_target, FunctionEntryPoint::Called);
+        }
 
         // If the function should not have a `_verify` entry point, stop here.
         if !func_target

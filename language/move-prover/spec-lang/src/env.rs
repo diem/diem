@@ -60,6 +60,10 @@ pub const VERIFY_PRAGMA: &str = "verify";
 /// instead treated to be like a native function.
 pub const INTRINSIC_PRAGMA: &str = "intrinsic";
 
+/// Pragma indicating whether implementation of function should be ignored and
+/// instead interpreted by its pre and post conditions only.
+pub const OPAQUE_PRAGMA: &str = "opaque";
+
 /// Pragma indicating whether aborts_if specification should be considered partial.
 pub const ABORTS_IF_IS_PARTIAL_PRAGMA: &str = "aborts_if_is_partial";
 
