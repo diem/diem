@@ -25,6 +25,7 @@ use std::{
     time::{Duration, Instant},
 };
 use structopt::StructOpt;
+use tokio::time;
 use transaction_builder::{
     encode_transfer_with_metadata_script, encode_update_libra_version_script,
 };
@@ -100,6 +101,7 @@ async fn update_batch_instance(
         .map(|instance| instance.wait_json_rpc(deadline))
         .collect();
     try_join_all(futures).await?;
+    time::delay_for(Duration::from_secs(20)).await;
     Ok(())
 }
 
