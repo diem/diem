@@ -17,9 +17,10 @@
 #[cfg(test)]
 mod test;
 
+use crate::types::ProcessedVMOutput;
 use anyhow::{format_err, Result};
 use consensus_types::block::Block;
-use executor_types::{Error, ExecutedTrees, ProcessedVMOutput};
+use executor_types::{Error, ExecutedTrees};
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
 use libra_logger::prelude::*;
 use libra_types::{ledger_info::LedgerInfo, transaction::Transaction};
