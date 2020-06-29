@@ -632,6 +632,26 @@
 <span id="632">632</span>
 <span id="633">633</span>
 <span id="634">634</span>
+<span id="635">635</span>
+<span id="636">636</span>
+<span id="637">637</span>
+<span id="638">638</span>
+<span id="639">639</span>
+<span id="640">640</span>
+<span id="641">641</span>
+<span id="642">642</span>
+<span id="643">643</span>
+<span id="644">644</span>
+<span id="645">645</span>
+<span id="646">646</span>
+<span id="647">647</span>
+<span id="648">648</span>
+<span id="649">649</span>
+<span id="650">650</span>
+<span id="651">651</span>
+<span id="652">652</span>
+<span id="653">653</span>
+<span id="654">654</span>
 </pre><div class="example-wrap"><pre class="rust ">
 <span class="comment">// Copyright (c) The Libra Core Contributors</span>
 <span class="comment">// SPDX-License-Identifier: Apache-2.0</span>
@@ -666,7 +686,7 @@
     },
     <span class="ident">protocols</span>::{
         <span class="ident">discovery</span>::{<span class="self">self</span>, <span class="ident">builder</span>::<span class="ident">DiscoveryBuilder</span>},
-        <span class="ident">health_checker</span>::{<span class="self">self</span>, <span class="ident">HealthChecker</span>},
+        <span class="ident">health_checker</span>::{<span class="self">self</span>, <span class="ident">builder</span>::<span class="ident">HealthCheckerBuilder</span>},
         <span class="ident">network</span>::{<span class="ident">NewNetworkEvents</span>, <span class="ident">NewNetworkSender</span>},
         <span class="ident">wire</span>::<span class="ident">handshake</span>::<span class="ident">v1</span>::<span class="ident">SupportedProtocols</span>,
     },
@@ -738,9 +758,6 @@
     <span class="ident">direct_send_protocols</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ProtocolId</span><span class="op">&gt;</span>,
     <span class="ident">rpc_protocols</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">ProtocolId</span><span class="op">&gt;</span>,
     <span class="ident">discovery_interval_ms</span>: <span class="ident">u64</span>,
-    <span class="ident">ping_interval_ms</span>: <span class="ident">u64</span>,
-    <span class="ident">ping_timeout_ms</span>: <span class="ident">u64</span>,
-    <span class="ident">ping_failures_tolerated</span>: <span class="ident">u64</span>,
     <span class="ident">upstream_handlers</span>:
         <span class="ident">HashMap</span><span class="op">&lt;</span><span class="ident">ProtocolId</span>, <span class="ident">libra_channel</span>::<span class="ident">Sender</span><span class="op">&lt;</span>(<span class="ident">PeerId</span>, <span class="ident">ProtocolId</span>), <span class="ident">PeerManagerNotification</span><span class="op">&gt;</span><span class="op">&gt;</span>,
     <span class="ident">connection_event_handlers</span>: <span class="ident">Vec</span><span class="op">&lt;</span><span class="ident">conn_notifs_channel</span>::<span class="ident">Sender</span><span class="op">&gt;</span>,
@@ -757,6 +774,7 @@
     <span class="ident">max_fullnode_connections</span>: <span class="ident">usize</span>,
 
     <span class="ident">discovery_builder</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">DiscoveryBuilder</span><span class="op">&gt;</span>,
+    <span class="ident">health_checker_builder</span>: <span class="prelude-ty">Option</span><span class="op">&lt;</span><span class="ident">HealthCheckerBuilder</span><span class="op">&gt;</span>,
 }
 
 <span class="kw">impl</span> <span class="ident">NetworkBuilder</span> {
@@ -801,15 +819,13 @@
             <span class="ident">connection_reqs_rx</span>,
             <span class="ident">conn_mgr_reqs_tx</span>: <span class="prelude-val">None</span>,
             <span class="ident">discovery_interval_ms</span>: <span class="ident">constants</span>::<span class="ident">DISCOVERY_INTERVAL_MS</span>,
-            <span class="ident">ping_interval_ms</span>: <span class="ident">constants</span>::<span class="ident">PING_INTERVAL_MS</span>,
-            <span class="ident">ping_timeout_ms</span>: <span class="ident">constants</span>::<span class="ident">PING_TIMEOUT_MS</span>,
-            <span class="ident">ping_failures_tolerated</span>: <span class="ident">constants</span>::<span class="ident">PING_FAILURES_TOLERATED</span>,
             <span class="ident">connectivity_check_interval_ms</span>: <span class="ident">constants</span>::<span class="ident">CONNECTIVITY_CHECK_INTERNAL_MS</span>,
             <span class="ident">max_concurrent_network_reqs</span>: <span class="ident">constants</span>::<span class="ident">MAX_CONCURRENT_NETWORK_REQS</span>,
             <span class="ident">max_concurrent_network_notifs</span>: <span class="ident">constants</span>::<span class="ident">MAX_CONCURRENT_NETWORK_NOTIFS</span>,
             <span class="ident">max_connection_delay_ms</span>: <span class="ident">constants</span>::<span class="ident">MAX_CONNECTION_DELAY_MS</span>,
             <span class="ident">max_fullnode_connections</span>: <span class="ident">constants</span>::<span class="ident">MAX_FULLNODE_CONNECTIONS</span>,
             <span class="ident">discovery_builder</span>: <span class="prelude-val">None</span>,
+            <span class="ident">health_checker_builder</span>: <span class="prelude-val">None</span>,
         }
     }
 
@@ -837,7 +853,12 @@
             <span class="ident">peer_id</span>,
             <span class="ident">config</span>.<span class="ident">listen_address</span>.<span class="ident">clone</span>(),
         );
-        <span class="ident">network_builder</span>.<span class="ident">add_connection_monitoring</span>();
+        <span class="ident">network_builder</span>.<span class="ident">add_connection_monitoring</span>(
+            <span class="comment">// TODO: Move these values into NetworkConfig</span>
+            <span class="ident">constants</span>::<span class="ident">PING_INTERVAL_MS</span>,
+            <span class="ident">constants</span>::<span class="ident">PING_TIMEOUT_MS</span>,
+            <span class="ident">constants</span>::<span class="ident">PING_FAILURES_TOLERATED</span>,
+        );
 
         <span class="comment">// Sanity check seed peer addresses.</span>
         <span class="ident">config</span>
@@ -1121,25 +1142,44 @@
         <span class="self">self</span>
     }
 
-    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_connection_monitoring</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+    <span class="doccomment">/// Add a HealthChecker to the network.</span>
+    <span class="kw">pub</span> <span class="kw">fn</span> <span class="ident">add_connection_monitoring</span>(
+        <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>,
+        <span class="ident">ping_interval_ms</span>: <span class="ident">u64</span>,
+        <span class="ident">ping_timeout_ms</span>: <span class="ident">u64</span>,
+        <span class="ident">ping_failures_tolerated</span>: <span class="ident">u64</span>,
+    ) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
         <span class="comment">// Initialize and start HealthChecker.</span>
         <span class="kw">let</span> (<span class="ident">hc_network_tx</span>, <span class="ident">hc_network_rx</span>) <span class="op">=</span>
             <span class="self">self</span>.<span class="ident">add_protocol_handler</span>(<span class="ident">health_checker</span>::<span class="ident">network_endpoint_config</span>());
-        <span class="kw">let</span> <span class="ident">ping_interval_ms</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ping_interval_ms</span>;
-        <span class="kw">let</span> <span class="ident">ping_timeout_ms</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ping_timeout_ms</span>;
-        <span class="kw">let</span> <span class="ident">ping_failures_tolerated</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">ping_failures_tolerated</span>;
-        <span class="kw">let</span> <span class="ident">health_checker</span> <span class="op">=</span> <span class="self">self</span>.<span class="ident">executor</span>.<span class="ident">enter</span>(<span class="op">|</span><span class="op">|</span> {
-            <span class="ident">HealthChecker</span>::<span class="ident">new</span>(
-                <span class="self">self</span>.<span class="ident">network_context</span>.<span class="ident">clone</span>(),
-                <span class="ident">interval</span>(<span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="ident">ping_interval_ms</span>)).<span class="ident">fuse</span>(),
-                <span class="ident">hc_network_tx</span>,
-                <span class="ident">hc_network_rx</span>,
-                <span class="ident">Duration</span>::<span class="ident">from_millis</span>(<span class="ident">ping_timeout_ms</span>),
-                <span class="ident">ping_failures_tolerated</span>,
-            )
-        });
-        <span class="self">self</span>.<span class="ident">executor</span>.<span class="ident">spawn</span>(<span class="ident">health_checker</span>.<span class="ident">start</span>());
-        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} Started health checker&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
+
+        <span class="self">self</span>.<span class="ident">health_checker_builder</span> <span class="op">=</span> <span class="prelude-val">Some</span>(<span class="ident">HealthCheckerBuilder</span>::<span class="ident">create</span>(
+            <span class="self">self</span>.<span class="ident">network_context</span>(),
+            <span class="ident">ping_interval_ms</span>,
+            <span class="ident">ping_timeout_ms</span>,
+            <span class="ident">ping_failures_tolerated</span>,
+            <span class="ident">hc_network_tx</span>,
+            <span class="ident">hc_network_rx</span>,
+        ));
+        <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} Created health checker&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
+        <span class="self">self</span>.<span class="ident">build_connection_monitoring</span>()
+    }
+
+    <span class="doccomment">/// Build the HealthChecker, if it has been added.</span>
+    <span class="kw">fn</span> <span class="ident">build_connection_monitoring</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">health_checker</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">health_checker_builder</span>.<span class="ident">as_mut</span>() {
+            <span class="ident">health_checker</span>.<span class="ident">build</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">executor</span>);
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} Built health checker&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
+        };
+        <span class="self">self</span>.<span class="ident">start_connection_monitoring</span>()
+    }
+
+    <span class="doccomment">/// Star the built HealthChecker.</span>
+    <span class="kw">fn</span> <span class="ident">start_connection_monitoring</span>(<span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">self</span>) <span class="op">-</span><span class="op">&gt;</span> <span class="kw-2">&amp;</span><span class="kw-2">mut</span> <span class="self">Self</span> {
+        <span class="kw">if</span> <span class="kw">let</span> <span class="prelude-val">Some</span>(<span class="ident">health_checker</span>) <span class="op">=</span> <span class="self">self</span>.<span class="ident">health_checker_builder</span>.<span class="ident">as_mut</span>() {
+            <span class="ident">health_checker</span>.<span class="ident">start</span>(<span class="kw-2">&amp;</span><span class="self">self</span>.<span class="ident">executor</span>);
+            <span class="macro">debug</span><span class="macro">!</span>(<span class="string">&quot;{} Started health checker&quot;</span>, <span class="self">self</span>.<span class="ident">network_context</span>);
+        };
         <span class="self">self</span>
     }
 
