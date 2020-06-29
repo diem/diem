@@ -36,6 +36,7 @@ proptest! {
             .get_backup_handler()
             .get_transaction_iter(0, cur_ver as usize)
             .unwrap()
+            .map(|res| Ok(res?.0))
             .collect::<Result<Vec<_>>>()
             .unwrap();
         prop_assert_eq!(actual, expected);

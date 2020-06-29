@@ -114,6 +114,7 @@ fn list_txns(db: &LibraDB) {
             "TXN {}: {}",
             v,
             tx.expect("Unable to read TX")
+                .0
                 .format_for_client(get_transaction_name)
         );
     }
