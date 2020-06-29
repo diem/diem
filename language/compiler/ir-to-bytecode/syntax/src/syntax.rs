@@ -1396,10 +1396,6 @@ fn parse_storage_location<'input>(
 
             StorageLocation::Ret(i)
         }
-        Tok::TxnSender => {
-            tokens.advance()?;
-            StorageLocation::TxnSenderAddress
-        }
         Tok::AccountAddressValue => StorageLocation::Address(parse_account_address(tokens)?),
         Tok::Global => {
             consume_token(tokens, Tok::Global)?;

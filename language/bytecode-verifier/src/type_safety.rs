@@ -354,35 +354,6 @@ fn move_from(
     Ok(())
 }
 
-fn move_to_sender(
-    verifier: &mut TypeSafetyChecker,
-    offset: usize,
-    struct_def: &StructDefinition,
-    type_args: &Signature,
-) -> VMResult<()> {
-    if !verifier
-        .module
-        .struct_handle_at(struct_def.struct_handle)
-        .is_nominal_resource
-    {
-        return Err(err_at_offset(
-            StatusCode::MOVETOSENDER_NO_RESOURCE_ERROR,
-            offset,
-        ));
-    }
-
-    let struct_type = materialize_type(struct_def.struct_handle, type_args);
-    let operand = verifier.stack.pop().unwrap();
-    if operand != struct_type {
-        Err(err_at_offset(
-            StatusCode::MOVETOSENDER_TYPE_MISMATCH_ERROR,
-            offset,
-        ))
-    } else {
-        Ok(())
-    }
-}
-
 fn move_to(
     verifier: &mut TypeSafetyChecker,
     offset: usize,
@@ -798,18 +769,6 @@ fn verify_instr(
             move_from(verifier, offset, struct_inst.def, type_args)?
         }
 
-        Bytecode::MoveToSender(idx) => {
-            let struct_def = verifier.module.struct_def_at(*idx);
-            move_to_sender(verifier, offset, struct_def, &Signature(vec![]))?
-        }
-
-        Bytecode::MoveToSenderGeneric(idx) => {
-            let struct_inst = verifier.module.struct_instantiation_at(*idx);
-            let struct_def = verifier.module.struct_def_at(struct_inst.def);
-            let type_args = &verifier.module.signature_at(struct_inst.type_parameters);
-            move_to_sender(verifier, offset, struct_def, type_args)?
-        }
-
         Bytecode::MoveTo(idx) => {
             let struct_def = verifier.module.struct_def_at(*idx);
             move_to(verifier, offset, struct_def, &Signature(vec![]))?
@@ -820,10 +779,6 @@ fn verify_instr(
             let struct_def = verifier.module.struct_def_at(struct_inst.def);
             let type_args = &verifier.module.signature_at(struct_inst.type_parameters);
             move_to(verifier, offset, struct_def, type_args)?
-        }
-
-        Bytecode::GetTxnSenderAddress => {
-            verifier.stack.push(ST::Address);
         }
     };
     Ok(())

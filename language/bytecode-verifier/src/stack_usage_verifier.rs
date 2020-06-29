@@ -86,8 +86,6 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::BrTrue(_)
             | Bytecode::BrFalse(_)
             | Bytecode::Abort
-            | Bytecode::MoveToSender(_)
-            | Bytecode::MoveToSenderGeneric(_)
             | Bytecode::StLoc(_) => (1, 0),
 
             // Instructions that push, but don't pop
@@ -100,8 +98,7 @@ impl<'a> StackUsageVerifier<'a> {
             | Bytecode::CopyLoc(_)
             | Bytecode::MoveLoc(_)
             | Bytecode::MutBorrowLoc(_)
-            | Bytecode::ImmBorrowLoc(_)
-            | Bytecode::GetTxnSenderAddress => (0, 1),
+            | Bytecode::ImmBorrowLoc(_) => (0, 1),
 
             // Instructions that pop and push once
             Bytecode::Not

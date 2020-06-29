@@ -1041,7 +1041,6 @@ impl<'env> ModuleTranslator<'env> {
                     Constant::U64(num) => format!("$Integer({})", num),
                     Constant::U128(num) => format!("$Integer({})", num),
                     Constant::Address(val) => format!("$Address({})", val),
-                    Constant::TxnSenderAddress => "$TxnSender($txn)".to_string(),
                     Constant::ByteArray(val) => boogie_byte_blob(self.options, val),
                 };
                 emitln!(self.writer, "$tmp := {};", value);
@@ -1384,18 +1383,6 @@ impl<'env> ModuleTranslator<'env> {
                             resource_type,
                             str_local(value),
                             str_local(signer),
-                        );
-                        emitln!(self.writer, &propagate_abort());
-                    }
-                    MoveToSender(mid, sid, type_actuals) => {
-                        let value = srcs[0];
-                        let resource_type =
-                            boogie_struct_type_value(self.module_env.env, *mid, *sid, type_actuals);
-                        emitln!(
-                            self.writer,
-                            "call $MoveToSender({}, {});",
-                            resource_type,
-                            str_local(value),
                         );
                         emitln!(self.writer, &propagate_abort());
                     }

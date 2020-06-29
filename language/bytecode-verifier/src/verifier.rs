@@ -97,7 +97,7 @@ impl VerifiedScript {
     /// - Convert the script into a module and run all the usual verification performed on a module
     /// - Check the signature of the main function of the script
     ///
-    /// This approach works because critical operations such as MoveFrom, MoveToSender, and
+    /// This approach works because critical operations such as MoveFrom, MoveTo, and
     /// BorrowGlobal that are not allowed in the script function take a StructDefinitionIndex as an
     /// argument. Since the module constructed from a script is guaranteed to have an empty vector
     /// of struct definitions, the bounds checker will catch any occurrences of these illegal

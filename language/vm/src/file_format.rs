@@ -1116,12 +1116,10 @@ pub enum Bytecode {
     ///
     /// ```..., errorcode -> ...```
     Abort,
-    /// Get the sender address from the transaction and pushes it on the stack.
+    /// No operation.
     ///
-    /// Stack transition:
-    ///
-    /// ```... -> ..., address_value```
-    GetTxnSenderAddress,
+    /// Stack transition: none
+    Nop,
     /// Returns whether or not a given address has an object of type StructDefinitionIndex
     /// published already
     ///
@@ -1138,14 +1136,6 @@ pub enum Bytecode {
     /// ```..., address_value -> ..., value```
     MoveFrom(StructDefinitionIndex),
     MoveFromGeneric(StructDefInstantiationIndex),
-    /// Move the instance at the top of the stack to the address of the sender.
-    /// Abort execution if an object of type StructDefinitionIndex already exists in address.
-    ///
-    /// Stack transition:
-    ///
-    /// ```..., value -> ...```
-    MoveToSender(StructDefinitionIndex),
-    MoveToSenderGeneric(StructDefInstantiationIndex),
     /// Move the instance at the top of the stack to the address of the `Signer` on the stack below
     /// it
     /// Abort execution if an object of type StructDefinitionIndex already exists in address.
@@ -1167,10 +1157,6 @@ pub enum Bytecode {
     ///
     /// ```..., u64_value(1), u64_value(2) -> ..., u64_value```
     Shr,
-    /// No operation.
-    ///
-    /// Stack transition: none
-    Nop,
 }
 
 pub const NUMBER_OF_NATIVE_FUNCTIONS: usize = 17;
@@ -1234,16 +1220,13 @@ impl ::std::fmt::Debug for Bytecode {
             Bytecode::Le => write!(f, "Le"),
             Bytecode::Ge => write!(f, "Ge"),
             Bytecode::Abort => write!(f, "Abort"),
-            Bytecode::GetTxnSenderAddress => write!(f, "GetTxnSenderAddress"),
+            Bytecode::Nop => write!(f, "Nop"),
             Bytecode::Exists(a) => write!(f, "Exists({:?})", a),
             Bytecode::ExistsGeneric(a) => write!(f, "ExistsGeneric({:?})", a),
             Bytecode::MoveFrom(a) => write!(f, "MoveFrom({:?})", a),
             Bytecode::MoveFromGeneric(a) => write!(f, "MoveFromGeneric({:?})", a),
-            Bytecode::MoveToSender(a) => write!(f, "MoveToSender({:?})", a),
-            Bytecode::MoveToSenderGeneric(a) => write!(f, "MoveToSenderGeneric({:?})", a),
             Bytecode::MoveTo(a) => write!(f, "MoveTo({:?})", a),
             Bytecode::MoveToGeneric(a) => write!(f, "MoveToGeneric({:?})", a),
-            Bytecode::Nop => write!(f, "Nop"),
         }
     }
 }

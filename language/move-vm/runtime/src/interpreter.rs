@@ -990,13 +990,6 @@ impl Frame {
                             .operand_stack
                             .push(Value::bool(!lhs.equals(&rhs)?))?;
                     }
-                    Bytecode::GetTxnSenderAddress => {
-                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                            .with_message(
-                                "GetTxnSenderAddress is deprecated and will be removed soon"
-                                    .to_string(),
-                            ));
-                    }
                     Bytecode::MutBorrowGlobal(sd_idx) | Bytecode::ImmBorrowGlobal(sd_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
                         let size = interpreter.global_data_op(
@@ -1071,18 +1064,6 @@ impl Frame {
                         // TODO: Have this calculate before pulling in the data based upon
                         // the size of the data that we are about to read in.
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_FROM_GENERIC, size)?;
-                    }
-                    Bytecode::MoveToSender(_) => {
-                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                            .with_message(
-                                "MoveToSender is deprecated and will be removed soon".to_string(),
-                            ));
-                    }
-                    Bytecode::MoveToSenderGeneric(_) => {
-                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
-                            .with_message(
-                                "MoveToSender is deprecated and will be removed soon".to_string(),
-                            ));
                     }
                     Bytecode::MoveTo(sd_idx) => {
                         let resource = interpreter.operand_stack.pop_as::<Struct>()?;

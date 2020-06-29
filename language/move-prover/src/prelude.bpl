@@ -618,11 +618,6 @@ procedure {:inline 1} $MoveTo(ta: $TypeValue, v: $Value, signer: $Value)
     call $MoveToRaw(ta, a#$Address(addr), v);
 }
 
-procedure {:inline 1} $MoveToSender(ta: $TypeValue, v: $Value)
-{
-    call $MoveToRaw(ta, sender#$Transaction($txn), v);
-}
-
 procedure {:inline 1} $MoveFrom(address: $Value, ta: $TypeValue) returns (dst: $Value)
 {{backend.type_requires}} is#$Address(address);
 {

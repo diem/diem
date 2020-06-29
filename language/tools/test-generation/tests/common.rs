@@ -36,8 +36,8 @@ pub fn run_instruction(
             | Bytecode::MutBorrowGlobalGeneric(_)
             | Bytecode::ImmBorrowGlobal(_)
             | Bytecode::ImmBorrowGlobalGeneric(_)
-            | Bytecode::MoveToSender(_)
-            | Bytecode::MoveToSenderGeneric(_) => {
+            | Bytecode::MoveTo(_)
+            | Bytecode::MoveToGeneric(_) => {
                 let len = summary.preconditions.len();
                 summary.preconditions[..(len - 1)]
                     .iter()

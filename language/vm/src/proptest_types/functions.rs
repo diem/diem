@@ -437,8 +437,6 @@ enum BytecodeGen {
     ImmBorrowGlobalGeneric(PropIndex),
     MoveFrom(PropIndex),
     MoveFromGeneric(PropIndex),
-    MoveToSender(PropIndex),
-    MoveToSenderGeneric(PropIndex),
     MoveTo(PropIndex),
     MoveToGeneric(PropIndex),
     BrTrue(PropIndex),
@@ -478,8 +476,6 @@ impl BytecodeGen {
             any::<PropIndex>().prop_map(MutBorrowGlobalGeneric),
             any::<PropIndex>().prop_map(MoveFrom),
             any::<PropIndex>().prop_map(MoveFromGeneric),
-            any::<PropIndex>().prop_map(MoveToSender),
-            any::<PropIndex>().prop_map(MoveToSenderGeneric),
             any::<PropIndex>().prop_map(MoveTo),
             any::<PropIndex>().prop_map(MoveToGeneric),
             any::<PropIndex>().prop_map(BrTrue),
@@ -561,10 +557,6 @@ impl BytecodeGen {
                 idx.index(state.struct_defs_len) as TableIndex,
             )),
             BytecodeGen::MoveFromGeneric(_idx) => return None,
-            BytecodeGen::MoveToSender(idx) => Bytecode::MoveToSender(StructDefinitionIndex(
-                idx.index(state.struct_defs_len) as TableIndex,
-            )),
-            BytecodeGen::MoveToSenderGeneric(_idx) => return None,
             BytecodeGen::MoveTo(idx) => Bytecode::MoveTo(StructDefinitionIndex(
                 idx.index(state.struct_defs_len) as TableIndex,
             )),
@@ -658,7 +650,6 @@ impl BytecodeGen {
             Le,
             Ge,
             Abort,
-            GetTxnSenderAddress,
         ];
         select(JUST_BYTECODES)
     }

@@ -212,10 +212,6 @@ impl<'a> BytecodeGenerator<'a> {
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Gt)),
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Le)),
             (StackEffect::Sub, BytecodeType::NoArg(Bytecode::Ge)),
-            (
-                StackEffect::Add,
-                BytecodeType::NoArg(Bytecode::GetTxnSenderAddress),
-            ),
             (StackEffect::Nop, BytecodeType::StructIndex(Bytecode::Pack)),
             (
                 StackEffect::Nop,
@@ -247,11 +243,11 @@ impl<'a> BytecodeGenerator<'a> {
             ),
             (
                 StackEffect::Sub,
-                BytecodeType::StructIndex(Bytecode::MoveToSender),
+                BytecodeType::StructIndex(Bytecode::MoveTo),
             ),
             (
                 StackEffect::Sub,
-                BytecodeType::StructInstantiationIndex(Bytecode::MoveToSenderGeneric),
+                BytecodeType::StructInstantiationIndex(Bytecode::MoveToGeneric),
             ),
             (
                 StackEffect::Nop,

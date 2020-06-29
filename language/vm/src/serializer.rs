@@ -793,7 +793,7 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
         Bytecode::Le => binary.push(Opcodes::LE as u8),
         Bytecode::Ge => binary.push(Opcodes::GE as u8),
         Bytecode::Abort => binary.push(Opcodes::ABORT as u8),
-        Bytecode::GetTxnSenderAddress => binary.push(Opcodes::GET_TXN_SENDER as u8),
+        Bytecode::Nop => binary.push(Opcodes::NOP as u8),
         Bytecode::Exists(class_idx) => {
             binary.push(Opcodes::EXISTS as u8)?;
             serialize_struct_def_index(binary, class_idx)
@@ -808,10 +808,6 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
         }
         Bytecode::MoveFrom(class_idx) => {
             binary.push(Opcodes::MOVE_FROM as u8)?;
-            serialize_struct_def_index(binary, class_idx)
-        }
-        Bytecode::MoveToSender(class_idx) => {
-            binary.push(Opcodes::MOVE_TO_SENDER as u8)?;
             serialize_struct_def_index(binary, class_idx)
         }
         Bytecode::MoveTo(class_idx) => {
@@ -834,15 +830,10 @@ fn serialize_instruction_inner(binary: &mut BinaryData, opcode: &Bytecode) -> Re
             binary.push(Opcodes::MOVE_FROM_GENERIC as u8)?;
             serialize_struct_def_inst_index(binary, class_idx)
         }
-        Bytecode::MoveToSenderGeneric(class_idx) => {
-            binary.push(Opcodes::MOVE_TO_SENDER_GENERIC as u8)?;
-            serialize_struct_def_inst_index(binary, class_idx)
-        }
         Bytecode::MoveToGeneric(class_idx) => {
             binary.push(Opcodes::MOVE_TO_GENERIC as u8)?;
             serialize_struct_def_inst_index(binary, class_idx)
         }
-        Bytecode::Nop => binary.push(Opcodes::NOP as u8),
     };
     res?;
     Ok(())

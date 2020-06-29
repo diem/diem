@@ -33,8 +33,6 @@ pub enum StorageLocation {
         base: Box<StorageLocation>,
         fields_and_indices: Vec<FieldOrIndex>,
     },
-    /// Sender address for the current transaction
-    TxnSenderAddress,
     /// Account address constant
     Address(AccountAddress),
     /// The ith return value of the current procedure

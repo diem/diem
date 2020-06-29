@@ -292,12 +292,6 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
                 SignatureToken::Bool
             ))]),
         },
-        Bytecode::GetTxnSenderAddress => Summary {
-            preconditions: vec![],
-            effects: Effects::NoTyParams(vec![state_stack_push!(AbstractValue::new_primitive(
-                SignatureToken::Address,
-            ))]),
-        },
         Bytecode::Pack(i) => Summary {
             preconditions: vec![state_stack_satisfies_struct_signature!(i)],
             effects: Effects::NoTyParams(vec![
@@ -500,22 +494,6 @@ pub fn instruction_summary(instruction: Bytecode, exact: bool) -> Summary {
                 state_create_struct_from_inst!(i),
                 state_stack_push_register!(),
             ]),
-        },
-        Bytecode::MoveToSender(i) => Summary {
-            preconditions: vec![
-                state_struct_is_resource!(i),
-                state_stack_has_struct!(i),
-                state_memory_safe!(None),
-            ],
-            effects: Effects::NoTyParams(vec![state_stack_pop!()]),
-        },
-        Bytecode::MoveToSenderGeneric(i) => Summary {
-            preconditions: vec![
-                state_struct_inst_is_resource!(i),
-                state_stack_has_struct_inst!(i),
-                state_memory_safe!(None),
-            ],
-            effects: Effects::NoTyParams(vec![state_stack_pop!()]),
         },
         Bytecode::MoveTo(i) => Summary {
             preconditions: vec![
