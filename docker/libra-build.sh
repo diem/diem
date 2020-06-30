@@ -4,7 +4,11 @@
 set -e
 
 DOCKERFILE=$1
-TAG=$2
+if [ -z "$LIBRA_BUILD_TAG" ]; then
+  TAGS="--tag $2"
+else
+  TAGS="--tag $2 --tag $LIBRA_BUILD_TAG"
+fi
 
 RESTORE='\001\033[0m\002'
 BLUE='\001\033[01;34m\002'
@@ -68,7 +72,7 @@ if [ "$1" = "--incremental" ]; then
 fi
 
 for _ in seq 1 2; do
-  if docker build -f $DOCKERFILE $DIR/.. --tag $TAG \
+  if docker build -f $DOCKERFILE $DIR/.. $TAGS \
     --build-arg GIT_REV="$(git rev-parse HEAD)" \
     --build-arg GIT_UPSTREAM="$(git merge-base HEAD origin/master)" \
     --build-arg BUILD_DATE="$(date -u +'%Y-%m-%dT%H:%M:%SZ')" \

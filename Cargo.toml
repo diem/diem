@@ -163,7 +163,6 @@ default-members = [
 
 [profile.release]
 debug = true
-lto = 'thin'
 
 [profile.bench]
 debug = true

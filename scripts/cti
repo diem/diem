@@ -11,6 +11,7 @@ PR=""
 WORKSPACE=""
 ENV=""
 REPORT=""
+LOCAL_BUILD=""
 EXIT_CODE=0
 # Default timeout is 30 mins
 TIMEOUT_SECS=1800
@@ -141,6 +142,10 @@ while (( "$#" )); do
       PR=$2
       shift 2
       ;;
+    -L|--local-build)
+      LOCAL_BUILD="yes"
+      shift 1
+      ;;
     --timeout-secs)
       TIMEOUT_SECS=$2
       shift 2
@@ -179,12 +184,13 @@ while (( "$#" )); do
   esac
 done
 
-if [ -z "$PR" ] && [ -z "$TAG" ]
+if [ -z "$PR" ] && [ -z "$TAG" ] && [ -z "$LOCAL_BUILD" ]
 then
-      echo "No PR or tag specified"
+      echo "No PR or tag or --local-build specified"
       echo "Usage:"
-      echo "cti [--pr <PR>|--master|--tag <TAG>] [--workspace <WORKSPACE>] [-E <env>] [--timeout-secs <timeout_in_seconds>] <cluster test arguments>"
+      echo "cti [--pr <PR>|--master|--tag <TAG>|--local-build] [--workspace <WORKSPACE>] [-E <env>] [--timeout-secs <timeout_in_seconds>] <cluster test arguments>"
       echo
+      echo "--local-build - Build image locally"
       echo "--pr <PR>: Build image from pull request #<PR>"
       echo "-M|--master: Use latest image available in CI"
       echo "-T|--tag <TAG>: Use image with tag TAG"
@@ -203,10 +209,15 @@ then
 fi
 
 if [ -z "$TAG" ]; then
+  if [ -z "$LOCAL_BUILD" ]; then
     aws codebuild list-projects >/dev/null || (echo "Failed to access codebuild, try awsmfa?"; exit 1)
     ./docker/build-aws.sh --build-all-cti --version pull/$PR
     TAG=dev_${USER}_pull_${PR}
     echo "**TIP Use cti -T $TAG <...> to restart this run with same tag without rebuilding it"
+  else
+    TAG="dev_$(whoami)_$(git rev-parse --short HEAD)"
+    TAG=$TAG ./docker/build-push-local.sh
+  fi
 fi
 
 CLUSTER_TEST_TAG=${CLUSTER_TEST_TAG:-${TAG}}
