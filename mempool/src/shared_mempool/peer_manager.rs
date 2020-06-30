@@ -23,7 +23,6 @@ pub(crate) struct PeerSyncState {
 pub(crate) struct PeerManager {
     upstream_config: UpstreamConfig,
     peer_info: Mutex<PeerInfo>,
-    min_broadcast_recipient_count: usize,
 }
 
 #[derive(Clone)]
@@ -47,11 +46,10 @@ impl BroadcastInfo {
 }
 
 impl PeerManager {
-    pub fn new(upstream_config: UpstreamConfig, min_broadcast_recipient_count: usize) -> Self {
+    pub fn new(upstream_config: UpstreamConfig) -> Self {
         Self {
             upstream_config,
             peer_info: Mutex::new(PeerInfo::new()),
-            min_broadcast_recipient_count,
         }
     }
 
@@ -191,16 +189,13 @@ impl PeerManager {
             return true;
         }
 
-        let no_live_primaries = self
+        // checks whether this is fallback peer that is alive
+        self
             .peer_info
             .lock()
             .expect("failed to acquire peer info lock")
             .iter()
-            .find(|(peer, state)| self.is_primary_upstream_peer(*peer) && state.is_alive)
-            .is_none();
-
-        // for fallback peers, broadcast if k-policy is on
-        // TODO change from sending to k fallback peers instead of sending to all fallback peers
-        no_live_primaries && self.min_broadcast_recipient_count > 0
+            .find(|(peer, state)| self.is_upstream_peer(*peer) && state.is_alive)
+            .is_none()
     }
 }

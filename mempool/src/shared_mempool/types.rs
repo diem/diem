@@ -37,8 +37,6 @@ use subscription_service::ReconfigSubscription;
 use tokio::runtime::Handle;
 use vm_validator::vm_validator::TransactionValidation;
 
-pub(crate) const DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT: usize = 0;
-
 /// Struct that owns all dependencies required by shared mempool routines
 #[derive(Clone)]
 pub(crate) struct SharedMempool<V>

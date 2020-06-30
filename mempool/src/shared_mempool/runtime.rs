@@ -7,7 +7,7 @@ use crate::{
     shared_mempool::{
         coordinator::{coordinator, gc_coordinator},
         peer_manager::PeerManager,
-        types::{SharedMempool, SharedMempoolNotification, DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT},
+        types::{SharedMempool, SharedMempoolNotification},
     },
     CommitNotification, ConsensusRequest, SubmissionStatus,
 };
@@ -52,10 +52,6 @@ pub(crate) fn start_shared_mempool<V>(
     let upstream_config = config.upstream.clone();
     let peer_manager = Arc::new(PeerManager::new(
         upstream_config,
-        config
-            .mempool
-            .shared_mempool_min_broadcast_recipient_count
-            .unwrap_or(DEFAULT_MIN_BROADCAST_RECIPIENT_COUNT),
     ));
 
     let mut all_network_events = vec![];
