@@ -562,12 +562,12 @@ jobs:
               export BRANCH=$TARGET_BRANCH
               export GIT_REV=$(git rev-parse --short=8 HEAD)
               echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-              docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n init
-              docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n mint
-              docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n safety-rules
-              docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n validator
-              docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n validator-dynamic
-              docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n cluster-test
+              docker/update_or_build.sh -p -b ${BRANCH} -g ${pr_num} -n init
+              docker/update_or_build.sh -p -b ${BRANCH} -g ${pr_num} -n mint
+              docker/update_or_build.sh -p -b ${BRANCH} -g ${pr_num} -n safety-rules
+              docker/update_or_build.sh -p -b ${BRANCH} -g ${pr_num} -n validator
+              docker/update_or_build.sh -p -b ${BRANCH} -g ${pr_num} -n validator-dynamic
+              docker/update_or_build.sh -p -b ${BRANCH} -g ${pr_num} -n cluster-test
             else
               echo Targeting branch $TARGET_BRANCH will not publish docker images.
             fi
@@ -584,15 +584,21 @@ jobs:
           name: pull pre images (or build if not pullable) and push release docker images
           command: |
             set -x
+            export commit_message=$( git log -1 --pretty=%B )
+            export pr_num=`echo "$commit_message" | tail -2 | head -1 | sed 's/Closes: #//'`
+            if [ -z $pr_num ]; then
+              echo "Did not find pull request num in commit message. -\\_(O_o)_/-";
+              exit 1
+            fi
             export BRANCH=${CIRCLE_BRANCH}
             export GIT_REV=$(git rev-parse --short=8 HEAD)
             echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n init
-            docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n mint
-            docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n safety-rules
-            docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n validator
-            docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n validator-dynamic
-            docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n cluster-test
+            docker/update_or_build.sh -b ${BRANCH} -g ${pr_num} -n init
+            docker/update_or_build.sh -b ${BRANCH} -g ${pr_num} -n mint
+            docker/update_or_build.sh -b ${BRANCH} -g ${pr_num} -n safety-rules
+            docker/update_or_build.sh -b ${BRANCH} -g ${pr_num} -n validator
+            docker/update_or_build.sh -b ${BRANCH} -g ${pr_num} -n validator-dynamic
+            docker/update_or_build.sh -b ${BRANCH} -g ${pr_num} -n cluster-test
 
 workflows:
   commit-workflow:
