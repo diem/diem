@@ -2,6 +2,7 @@
 
 module Test {
     use 0x1::LCS;
+    use 0x1::Signer;
     use 0x1::Vector;
 
     spec module {
@@ -55,14 +56,14 @@ module Test {
         ensures result.counter == 0;
     }
 
-    public fun create(fresh_address: address, auth_key_prefix: vector<u8>) : vector<u8> {
+    public fun create(sender: &signer, fresh_address: address, auth_key_prefix: vector<u8>) : vector<u8> {
         let generator = EventHandleGenerator{counter: 0};
         let authentication_key = auth_key_prefix;
         Vector::append(&mut authentication_key, LCS::to_bytes(&fresh_address));
         assert(Vector::length(&authentication_key) == 32, 12);
 
 
-        move_to_sender<T>(T{
+        move_to<T>(sender, T{
             received_events: new_event_handle_impl<Event1>(&mut generator, fresh_address),
             sent_events: new_event_handle_impl<Event2>(&mut generator, fresh_address)
         });
@@ -76,16 +77,16 @@ module Test {
         // The next two aborts_if and ensures are correct. However, if they are removed, verification terminates
         // with the expected result.
         aborts_if len(LCS::serialize(fresh_address)) + len(auth_key_prefix) != 32;
-        aborts_if exists<T>(sender());
+        aborts_if exists<T>(Signer::spec_address_of(sender));
         ensures eq_append(result, auth_key_prefix, LCS::serialize(fresh_address));
 
         // These two ensures are wrong and should produce an error. Instead, the solver hangs without bounding
         // serialization result size. To reproduce, set --serialize-bound=0 to remove any bound.
-        ensures eq_append(global<T>(sender()).received_events.guid, LCS::serialize(2), LCS::serialize(fresh_address));
-        ensures eq_append(global<T>(sender()).sent_events.guid, LCS::serialize(3), LCS::serialize(fresh_address));
+        ensures eq_append(global<T>(Signer::spec_address_of(sender)).received_events.guid, LCS::serialize(2), LCS::serialize(fresh_address));
+        ensures eq_append(global<T>(Signer::spec_address_of(sender)).sent_events.guid, LCS::serialize(3), LCS::serialize(fresh_address));
 
         // Correct version of the above ensures:
-        //ensures eq_append(global<T>(sender()).received_events.guid, LCS::serialize(0), LCS::serialize(fresh_address));
-        //ensures eq_append(global<T>(sender()).sent_events.guid, LCS::serialize(1), LCS::serialize(fresh_address));
+        //ensures eq_append(global<T>(Signer::spec_address_of(sender)).received_events.guid, LCS::serialize(0), LCS::serialize(fresh_address));
+        //ensures eq_append(global<T>(Signer::spec_address_of(sender)).sent_events.guid, LCS::serialize(1), LCS::serialize(fresh_address));
     }
 }

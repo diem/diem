@@ -1,7 +1,7 @@
 address 0x1 {
 
 module TestTransaction {
-    use 0x1::Transaction;
+    use 0x1::Signer;
 
     spec module {
         pragma verify = true;
@@ -12,18 +12,18 @@ module TestTransaction {
         value: u128,
     }
 
-    fun check_sender1() {
-        assert(Transaction::sender() == 0xdeadbeef, 1);
+    fun check_sender1(sender: &signer) {
+        assert(Signer::address_of(sender) == 0xdeadbeef, 1);
     }
     spec fun check_sender1 {
-        aborts_if sender() != 0xdeadbeef;
+        aborts_if Signer::spec_address_of(sender) != 0xdeadbeef;
     }
 
-    fun check_sender2() acquires T {
-	borrow_global<T>(Transaction::sender());
+    fun check_sender2(sender: &signer) acquires T {
+	borrow_global<T>(Signer::address_of(sender));
     }
     spec fun check_sender2 {
-        aborts_if !exists<T>(sender());
+        aborts_if !exists<T>(Signer::spec_address_of(sender));
     }
 }
 
