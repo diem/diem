@@ -74,7 +74,7 @@ if [ "$pulled" != "0" ]; then
   #push our tagged prebuild image if this is a prebuild.  Usually means this is called from bors' auto branch.
   if [ $PREBUILD == "true" ]; then
      echo pushing libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV}
-     #docker push libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV}
+     docker push libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV}
   fi
 fi
 
@@ -83,5 +83,5 @@ if [ $PREBUILD != "true" ]; then
   echo retagging libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV} as libra/test:libra_${tag_name}_${BRANCH}_${GIT_REV}
   docker tag libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV} libra/test:libra_${tag_name}_${BRANCH}_${GIT_REV}
   echo pushing libra/test:libra_${tag_name}_${BRANCH}_${GIT_REV}
-  #docker push libra/test:libra_${tag_name}_${BRANCH}_${GIT_REV}
+  docker push libra/test:libra_${tag_name}_${BRANCH}_${GIT_REV}
 fi

@@ -561,6 +561,7 @@ jobs:
             if [[ $TARGET_BRANCH =~ $TARGET_BRANCH_PATTERN ]]; then
               export BRANCH=$TARGET_BRANCH
               export GIT_REV=$(git rev-parse --short=8 HEAD)
+              echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
               docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n init
               docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n mint
               docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n safety-rules
@@ -585,6 +586,7 @@ jobs:
             set -x
             export BRANCH=${CIRCLE_BRANCH}
             export GIT_REV=$(git rev-parse --short=8 HEAD)
+            echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
             docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n init
             docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n mint
             docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n safety-rules
