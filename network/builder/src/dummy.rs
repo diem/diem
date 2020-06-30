@@ -166,7 +166,7 @@ pub fn setup_network() -> DummyNetwork {
     );
     let (listener_sender, mut listener_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
-    network_builder.build(runtime.handle().clone());
+    network_builder.build(runtime.handle().clone()).start();
     let listener_addr = network_builder.listen_address();
 
     let authentication_mode = AuthenticationMode::Mutual(dialer_identity_private_key);
@@ -203,7 +203,7 @@ pub fn setup_network() -> DummyNetwork {
     );
     let (dialer_sender, mut dialer_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
-    network_builder.build(runtime.handle().clone());
+    network_builder.build(runtime.handle().clone()).start();
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();

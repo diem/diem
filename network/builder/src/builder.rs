@@ -216,8 +216,6 @@ impl NetworkBuilder {
             .build_gossip_discovery()
             .build_connectivity_manager()
             .build_connection_monitoring()
-            // TODO:  move start out of build.
-            .start()
     }
 
     /// Start the built Networking components.
