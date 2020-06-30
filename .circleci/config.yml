@@ -546,10 +546,7 @@ jobs:
       - run:
           name: should pre build docker images (targeting a release branch)?
           command: |
-            #BEFORE MERGE
-            set -x
-            #export TARGET_BRANCH_PATTERN='^v[0-9]+-release$'
-            export TARGET_BRANCH_PATTERN='^circle-docker$'
+            export TARGET_BRANCH_PATTERN='^v[0-9]+-release$'
             export commit_message=$( git log -1 --pretty=%B )
             export pr_num=`echo "$commit_message" | tail -2 | head -1 | sed 's/Closes: #//'`
             if [ -z $pr_num ]; then
@@ -558,15 +555,15 @@ jobs:
             fi
             curl -o /tmp/pr https://api.github.com/repos/libra/libra/pulls/${pr_num}
             export TARGET_BRANCH=$( cat /tmp/pr | jq ".base .ref" | sed 's/"//g' )
-            if [[ $TARGET_BRANCH =~ $TARGET_BRANCH_PATTERN ]]; then
+            if [[ $TARGET_BRANCH =~ $TARGET_BRANCH_PATTERN ]] || [[ $TARGET_BRANCH == "circle-docker" ]]; then
               export BRANCH=$TARGET_BRANCH
               echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-              docker/update_or_build.sh -p -b ${BRANCH} -n init
-              docker/update_or_build.sh -p -b ${BRANCH} -n mint
-              docker/update_or_build.sh -p -b ${BRANCH} -n safety-rules
-              docker/update_or_build.sh -p -b ${BRANCH} -n validator
-              docker/update_or_build.sh -p -b ${BRANCH} -n validator-dynamic
-              docker/update_or_build.sh -p -b ${BRANCH} -n cluster-test
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n init
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n mint
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n safety-rules
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n validator
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n validator-dynamic
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n cluster-test
             else
               echo Targeting branch $TARGET_BRANCH will not publish docker images.
             fi
@@ -585,52 +582,97 @@ jobs:
             set -x
             export BRANCH=${CIRCLE_BRANCH}
             echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker/update_or_build.sh -b ${BRANCH} -n init
-            docker/update_or_build.sh -b ${BRANCH} -n mint
-            docker/update_or_build.sh -b ${BRANCH} -n safety-rules
-            docker/update_or_build.sh -b ${BRANCH} -n validator
-            docker/update_or_build.sh -b ${BRANCH} -n validator-dynamic
-            docker/update_or_build.sh -b ${BRANCH} -n cluster-test
+            docker/update_or_build.sh -u -b ${BRANCH} -n init
+            docker/update_or_build.sh -u -b ${BRANCH} -n mint
+            docker/update_or_build.sh -u -b ${BRANCH} -n safety-rules
+            docker/update_or_build.sh -u -b ${BRANCH} -n validator
+            docker/update_or_build.sh -u -b ${BRANCH} -n validator-dynamic
+            docker/update_or_build.sh -u -b ${BRANCH} -n cluster-test
 
 workflows:
   commit-workflow:
     jobs:
-      - lint-docker
-      #- terraform
-      #- prefetch-crates
-      #- lint:
-      #    requires:
-      #      - prefetch-crates
-      #- build-dev:
-      #    requires:
-      #      - prefetch-crates
-      #- build-release:
-      #    requires:
-      #      - prefetch-crates
-      #- run-e2e-test:
-      #    requires:
-      #      - prefetch-crates
-      #- run-unit-test:
-      #    requires:
-      #      - prefetch-crates
-      #- run-crypto-unit-test:
-      #    requires:
-      #      - prefetch-crates
-      #- build-docs:
-      #    requires:
-      #      - lint
-      #- deploy-docs:
-      #    requires:
-      #      - build-docs
-      #    filters:
-      #      branches:
-      #        only: master
-      #- check-breaking-change:
-      #    requires:
-      #      - prefetch-crates
-      #    filters:
-      #      branches:
-      #        only: master
+      - lint-docker:
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+      - terraform:
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+      - prefetch-crates
+      - lint:
+          requires:
+            - prefetch-crates
+      - build-dev:
+          requires:
+            - prefetch-crates
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - circle-docker
+      - build-release:
+          requires:
+            - prefetch-crates
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - circle-docker
+      - run-e2e-test:
+          requires:
+            - prefetch-crates
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - circle-docker
+      - run-unit-test:
+          requires:
+            - prefetch-crates
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - circle-docker
+      - run-crypto-unit-test:
+          requires:
+            - prefetch-crates
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - circle-docker
+      - build-docs:
+          requires:
+            - lint
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - circle-docker
+      - deploy-docs:
+          requires:
+            - build-docs
+          filters:
+            branches:
+              only: master
+      - check-breaking-change:
+          requires:
+            - prefetch-crates
+          filters:
+            branches:
+              only: master
       - docker-pre-publish:
           filters:
             branches:
