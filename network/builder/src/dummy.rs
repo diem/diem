@@ -31,7 +31,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
-    sync::Arc,
+    sync::{Arc, RwLock},
     time::Duration,
 };
 use tokio::runtime::Runtime;
@@ -137,6 +137,7 @@ pub fn setup_network() -> DummyNetwork {
     ]
     .into_iter()
     .collect();
+    let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
     let authentication_mode = AuthenticationMode::Mutual(listener_identity_private_key);
 
@@ -149,6 +150,7 @@ pub fn setup_network() -> DummyNetwork {
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
         chain_id,
+        trusted_peers.clone(),
         network_context,
         listener_addr,
         authentication_mode,
@@ -157,6 +159,7 @@ pub fn setup_network() -> DummyNetwork {
     network_builder.add_connectivity_manager(
         HashMap::new(),
         seed_pubkeys.clone(),
+        trusted_peers,
         constants::MAX_FULLNODE_CONNECTIONS,
         constants::MAX_CONNECTION_DELAY_MS,
         constants::CONNECTIVITY_CHECK_INTERNAL_MS,
@@ -180,9 +183,12 @@ pub fn setup_network() -> DummyNetwork {
         dialer_peer_id,
     ));
 
+    let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
+
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
         chain_id,
+        trusted_peers.clone(),
         network_context,
         dialer_addr,
         authentication_mode,
@@ -191,6 +197,7 @@ pub fn setup_network() -> DummyNetwork {
     network_builder.add_connectivity_manager(
         seed_addrs,
         seed_pubkeys,
+        trusted_peers,
         constants::MAX_FULLNODE_CONNECTIONS,
         constants::MAX_CONNECTION_DELAY_MS,
         constants::CONNECTIVITY_CHECK_INTERNAL_MS,

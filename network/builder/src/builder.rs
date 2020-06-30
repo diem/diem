@@ -64,7 +64,6 @@ pub struct NetworkBuilder {
     state: State,
     executor: Handle,
     network_context: Arc<NetworkContext>,
-    trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
 
     configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
     connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
@@ -72,35 +71,35 @@ pub struct NetworkBuilder {
     health_checker_builder: Option<HealthCheckerBuilder>,
     peer_manager_builder: PeerManagerBuilder,
 
+    // (StateSync) ReconfigSubscriptions required by internal Network components.
     reconfig_subscriptions: Vec<ReconfigSubscription>,
 }
 
 impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
+    // TODO:  Remove `pub`.  NetworkBuilder should only be created thorugh `::create()`
     pub fn new(
         executor: Handle,
         chain_id: ChainId,
+        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
         network_context: Arc<NetworkContext>,
         listen_address: NetworkAddress,
         authentication_mode: AuthenticationMode,
         max_frame_size: usize,
     ) -> NetworkBuilder {
-        // TODO: Pass network_context in as a constructed object.
-        let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
-
         // A network cannot exist without a PeerManager
         // TODO:  construct this in create and pass it to new() as a parameter. The complication is manual construction of NetworkBuilder in various tests.
         let peer_manager_builder = PeerManagerBuilder::create(
             chain_id,
             network_context.clone(),
             listen_address,
-            trusted_peers.clone(),
+            trusted_peers,
             authentication_mode,
-            // TODO:  move to a config
+            // TODO: Encode this value in NetworkConfig
             constants::NETWORK_CHANNEL_SIZE,
-            // TODO:  Move to a config
+            // TODO: Encode this value in NetworkConfig
             constants::MAX_CONCURRENT_NETWORK_REQS,
-            // TODO:  Move to a config
+            // TODO: Encode this value in NetworkConfig
             constants::MAX_CONCURRENT_NETWORK_NOTIFS,
             max_frame_size,
         );
@@ -109,7 +108,6 @@ impl NetworkBuilder {
             state: State::CREATED,
             executor,
             network_context,
-            trusted_peers,
             configuration_change_listener_builder: None,
             connectivity_manager_builder: None,
             discovery_builder: None,
@@ -119,6 +117,7 @@ impl NetworkBuilder {
         }
     }
 
+    /// Create a new NetworkBuilder based on the provided configuration.
     pub fn create(
         chain_id: ChainId,
         role: RoleType,
@@ -147,9 +146,12 @@ impl NetworkBuilder {
             peer_id,
         ));
 
+        let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
+
         let mut network_builder = NetworkBuilder::new(
             runtime.handle().clone(),
             chain_id,
+            trusted_peers.clone(),
             network_context,
             config.listen_address.clone(),
             authentication_mode,
@@ -157,9 +159,11 @@ impl NetworkBuilder {
         );
 
         network_builder.add_connection_monitoring(
-            // TODO: Move these values into NetworkConfig
+            // TODO: Encode this value in NetworkConfig
             constants::PING_INTERVAL_MS,
+            // TODO: Encode this value in NetworkConfig
             constants::PING_TIMEOUT_MS,
+            // TODO: Encode this value in NetworkConfig
             constants::PING_FAILURES_TOLERATED,
         );
 
@@ -186,6 +190,7 @@ impl NetworkBuilder {
             network_builder.add_connectivity_manager(
                 config.seed_addrs.clone(),
                 config.seed_pubkeys.clone(), // TODO: this should be encoded in network config
+                trusted_peers,
                 constants::MAX_FULLNODE_CONNECTIONS,
                 // TODO: this should be encoded in network_config
                 constants::MAX_CONNECTION_DELAY_MS,
@@ -194,10 +199,12 @@ impl NetworkBuilder {
             );
         }
 
+        // Setup the discovery mechanisms
         match &config.discovery_method {
             DiscoveryMethod::Gossip(gossip_config) => {
                 network_builder.add_gossip_discovery(gossip_config.clone(), pubkey);
                 // HACK: gossip relies on on-chain discovery for the eligible peers update.
+                // TODO:  it should be safe to enable the configuraction_change_listener always.
                 if role == RoleType::Validator {
                     network_builder.add_configuration_change_listener(role);
                 }
@@ -243,14 +250,14 @@ impl NetworkBuilder {
         self.network_context.clone()
     }
 
-    pub fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
+    fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
         match self.connectivity_manager_builder.as_ref() {
             Some(conn_mgr_builder) => Some(conn_mgr_builder.conn_mgr_reqs_tx()),
             None => None,
         }
     }
 
-    pub fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {
+    fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {
         self.peer_manager_builder.add_connection_event_listener()
     }
 
@@ -281,12 +288,12 @@ impl NetworkBuilder {
         &mut self,
         seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
         mut seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
+        trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
         max_fullnode_connections: usize,
         max_connection_delay_ms: u64,
         connectivity_check_interval_ms: u64,
         channel_size: usize,
     ) -> &mut Self {
-        let trusted_peers = self.trusted_peers.clone();
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
         let connection_limit = if let RoleType::FullNode = self.network_context.role() {
             Some(max_fullnode_connections)
