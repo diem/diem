@@ -122,6 +122,8 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         network_configs.push((RoleType::Validator, network_config));
     }
 
+    let mut network_builders = Vec::new();
+
     // Instantiate every network and collect the requisite endpoints for state_sync, mempool, and consensus.
     for (role, network_config) in network_configs {
         // Perform common instantiation steps
@@ -162,20 +164,33 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
         reconfig_subscriptions.append(network_builder.reconfig_subscriptions());
 
-        // Start the network and cache the runtime so it does not go out of scope.
-        // TODO:  move all 'start' commands to a second phase at the end of setup_environment.  Target is to have one pass to wire the pieces together and a second pass to start processing in an appropriate order.
+        network_builders.push(network_builder);
+    }
+
+    // Build the configured networks.
+    for network_builder in &mut network_builders {
+        debug!(
+            "Creating runtime for {:?}",
+            network_builder.network_context()
+        );
         let runtime = Builder::new()
             .thread_name("network-")
             .threaded_scheduler()
             .enable_all()
             .build()
             .expect("Failed to start runtime. Won't be able to start networking.");
-        network_builder.build(runtime.handle().clone()).start();
+        network_builder.build(runtime.handle().clone());
         network_runtimes.push(runtime);
         debug!(
-            "Network started for peer_id: {:?}",
+            "Network Built for network_context: {:?}",
             network_builder.network_context()
         );
+    }
+
+    // Start the configured networks.
+    // TODO:  Collect all component starts at the end of this function
+    for network_builder in &mut network_builders {
+        network_builder.start();
     }
 
     // TODO set up on-chain discovery network based on UpstreamConfig.fallback_network
