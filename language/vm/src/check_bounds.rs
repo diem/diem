@@ -19,51 +19,49 @@ pub struct BoundsChecker<'a> {
 }
 
 impl<'a> BoundsChecker<'a> {
-    pub fn new(module: &'a CompiledModuleMut) -> Self {
-        Self { module }
-    }
-
-    pub fn verify(self) -> VMResult<()> {
+    pub fn verify(module: &'a CompiledModuleMut) -> VMResult<()> {
+        let bounds_check = Self { module };
         // TODO: this will not be true once we change CompiledScript and remove the
         // FunctionDefinition for `main`
-        if self.module.module_handles.is_empty() {
+        if bounds_check.module.module_handles.is_empty() {
             let status =
                 verification_error(IndexKind::ModuleHandle, 0, StatusCode::NO_MODULE_HANDLES);
             return Err(status);
         }
 
-        for signature in &self.module.signatures {
-            self.check_signature(signature)?
+        for signature in &bounds_check.module.signatures {
+            bounds_check.check_signature(signature)?
         }
-        for constant in &self.module.constant_pool {
-            self.check_constant(constant)?
+        for constant in &bounds_check.module.constant_pool {
+            bounds_check.check_constant(constant)?
         }
-        for module_handle in &self.module.module_handles {
-            self.check_module_handle(module_handle)?
+        for module_handle in &bounds_check.module.module_handles {
+            bounds_check.check_module_handle(module_handle)?
         }
-        for struct_handle in &self.module.struct_handles {
-            self.check_struct_handle(struct_handle)?
+        for struct_handle in &bounds_check.module.struct_handles {
+            bounds_check.check_struct_handle(struct_handle)?
         }
-        for function_handle in &self.module.function_handles {
-            self.check_function_handle(function_handle)?
+        for function_handle in &bounds_check.module.function_handles {
+            bounds_check.check_function_handle(function_handle)?
         }
-        for field_handle in &self.module.field_handles {
-            self.check_field_handle(field_handle)?
+        for field_handle in &bounds_check.module.field_handles {
+            bounds_check.check_field_handle(field_handle)?
         }
-        for struct_instantiation in &self.module.struct_def_instantiations {
-            self.check_struct_instantiation(struct_instantiation)?
+        for struct_instantiation in &bounds_check.module.struct_def_instantiations {
+            bounds_check.check_struct_instantiation(struct_instantiation)?
         }
-        for function_instantiation in &self.module.function_instantiations {
-            self.check_function_instantiation(function_instantiation)?
+        for function_instantiation in &bounds_check.module.function_instantiations {
+            bounds_check.check_function_instantiation(function_instantiation)?
         }
-        for field_instantiation in &self.module.field_instantiations {
-            self.check_field_instantiation(field_instantiation)?
+        for field_instantiation in &bounds_check.module.field_instantiations {
+            bounds_check.check_field_instantiation(field_instantiation)?
         }
-        for struct_def in &self.module.struct_defs {
-            self.check_struct_def(struct_def)?
+        for struct_def in &bounds_check.module.struct_defs {
+            bounds_check.check_struct_def(struct_def)?
         }
-        for (function_def_idx, function_def) in self.module.function_defs.iter().enumerate() {
-            self.check_function_def(function_def_idx, function_def)?
+        for (function_def_idx, function_def) in bounds_check.module.function_defs.iter().enumerate()
+        {
+            bounds_check.check_function_def(function_def_idx, function_def)?
         }
         Ok(())
     }

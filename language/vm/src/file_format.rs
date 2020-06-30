@@ -1704,7 +1704,7 @@ impl CompiledModuleMut {
     /// Converts this instance into `CompiledModule` after verifying it for basic internal
     /// consistency. This includes bounds checks but no others.
     pub fn freeze(self) -> VMResult<CompiledModule> {
-        BoundsChecker::new(&self).verify()?;
+        BoundsChecker::verify(&self)?;
         Ok(CompiledModule(self))
     }
 }
