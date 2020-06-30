@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use bytecode_verifier::control_flow;
-use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use libra_types::vm_status::StatusCode;
 use vm::{
     access::ModuleAccess,
@@ -71,15 +70,4 @@ fn valid_fallthrough_abort() {
     let module = file_format::dummy_procedure_module(vec![Bytecode::LdU64(7), Bytecode::Abort]);
     let result = verify_module(&module);
     assert!(result.is_ok());
-}
-
-//**************************************************************************************************
-// Std Lib
-//**************************************************************************************************
-
-#[test]
-fn stdlib() {
-    for module in stdlib_modules(StdLibOptions::Compiled) {
-        verify_module(module.as_inner()).unwrap()
-    }
 }
