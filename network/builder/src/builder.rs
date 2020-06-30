@@ -65,8 +65,6 @@ pub struct NetworkBuilder {
     executor: Handle,
     network_context: Arc<NetworkContext>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
-    seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
-    seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
     channel_size: usize,
     connectivity_check_interval_ms: u64,
     max_connection_delay_ms: u64,
@@ -117,8 +115,6 @@ impl NetworkBuilder {
             executor,
             network_context,
             trusted_peers,
-            seed_addrs: HashMap::new(),
-            seed_pubkeys: HashMap::new(),
             channel_size: constants::NETWORK_CHANNEL_SIZE,
             connectivity_check_interval_ms: constants::CONNECTIVITY_CHECK_INTERNAL_MS,
             max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
@@ -198,7 +194,8 @@ impl NetworkBuilder {
             || config.discovery_method != DiscoveryMethod::None
             || !config.seed_addrs.is_empty()
         {
-            network_builder.add_connectivity_manager();
+            network_builder
+                .add_connectivity_manager(config.seed_addrs.clone(), config.seed_pubkeys.clone());
         }
 
         match &config.discovery_method {
@@ -250,23 +247,6 @@ impl NetworkBuilder {
         self.network_context.clone()
     }
 
-    /// Set additional public keys for seed peers to bootstrap discovery.
-    // TODO: remove this function
-    pub fn seed_pubkeys(
-        &mut self,
-        seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
-    ) -> &mut Self {
-        self.seed_pubkeys = seed_pubkeys;
-        self
-    }
-
-    /// Set addresses of seed peers to bootstrap discovery
-    // TODO: remove this function
-    pub fn seed_addrs(&mut self, seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>) -> &mut Self {
-        self.seed_addrs = seed_addrs;
-        self
-    }
-
     /// Set connectivity check ticker interval
     // TODO: remove this function
     pub fn connectivity_check_interval_ms(
@@ -311,11 +291,12 @@ impl NetworkBuilder {
     ///
     /// Note: a connectivity manager should only be added if the network is
     /// permissioned.
-    pub fn add_connectivity_manager(&mut self) -> &mut Self {
+    pub fn add_connectivity_manager(
+        &mut self,
+        seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
+        mut seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
+    ) -> &mut Self {
         let trusted_peers = self.trusted_peers.clone();
-        let seed_addrs = self.seed_addrs.clone();
-        let mut seed_pubkeys = self.seed_pubkeys.clone();
-
         let max_connection_delay_ms = self.max_connection_delay_ms;
         let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
