@@ -1,8 +1,9 @@
 address 0x1 {
 
-module TraceBug {
-    use 0x1::Transaction;
+// TODO: After changing this test to stop using Transaction::Sender(), it no longer
+// reproduces the bug that it was intended to demonstrate. This should be investigated.
 
+module TraceBug {
     resource struct Root { }
 
     spec module {
@@ -17,9 +18,9 @@ module TraceBug {
         define root_address(): address { 0xA550C18 }
     }
 
-    public fun assert_sender_is_root() {
+    public fun assert_sender_is_root(sender: address) {
         // Here we abort if the sender does not have Root privilege.
-        assert(exists<Root>(Transaction::sender()), 1001);
+        assert(exists<Root>(sender), 1001);
     }
     spec fun assert_sender_is_root {
         // The following two conditions usually come from invariants, but we have expanded them here for
@@ -28,7 +29,7 @@ module TraceBug {
         ensures only_root_addr_has_root_privilege();
 
         // Here we state that from the invariant it follows that the sender has root address.
-        ensures sender() == root_address();
+        ensures sender == root_address();
     }
 }
 }

@@ -3,15 +3,21 @@ error: post-condition does not hold
 
     ┌── tests/sources/regression/generic_invariant200518.move:63:9 ───
     │
- 63 │         invariant spec_addr_is_association(sender());
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 63 │         invariant spec_addr_is_association(Signer::spec_address_of(sender));
+    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     │
-    =     at tests/sources/regression/generic_invariant200518.move:24:5: remove_privilege
+    =     at tests/sources/regression/generic_invariant200518.move:23:5: remove_privilege
+    =         sender = <redacted>,
     =         addr = <redacted>,
-    =         $t1 = <redacted>
-    =     at tests/sources/regression/generic_invariant200518.move:28:9: remove_privilege
-    =     at tests/sources/regression/generic_invariant200518.move:40:52: root_address (entry)
+    =         $t2 = <redacted>
+    =     at ../stdlib/modules/Signer.move:15:5: address_of (entry)
+    =         s = <redacted>,
     =         result = <redacted>
-    =     at tests/sources/regression/generic_invariant200518.move:40:52: root_address (exit)
-    =     at tests/sources/regression/generic_invariant200518.move:26:9: remove_privilege
-    =     at tests/sources/regression/generic_invariant200518.move:28:46: remove_privilege
+    =     at ../stdlib/modules/Signer.move:13:5: address_of
+    =     at ../stdlib/modules/Signer.move:10:23: borrow_address
+    =     at ../stdlib/modules/Signer.move:14:9: address_of
+    =     at tests/sources/regression/generic_invariant200518.move:25:24: remove_privilege
+    =     at tests/sources/regression/generic_invariant200518.move:39:52: root_address (entry)
+    =         result = <redacted>
+    =     at tests/sources/regression/generic_invariant200518.move:25:9: remove_privilege
+    =     at tests/sources/regression/generic_invariant200518.move:27:46: remove_privilege

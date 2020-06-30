@@ -1,29 +1,28 @@
 address 0x1 {
 
 module GenericBug {
-    use 0x1::Transaction;
+    use 0x1::Signer;
 
     resource struct PrivilegedCapability<Privilege> { }
 
     struct T { }
 
-    public fun initialize() {
-        let sender = Transaction::sender();
-        assert(sender == root_address(), 1000);
-        move_to_sender(PrivilegedCapability<T>{ });
+    public fun initialize(sender: &signer) {
+        assert(Signer::address_of(sender) == root_address(), 1000);
+        move_to(sender, PrivilegedCapability<T>{ });
     }
 
     // Publish a specific privilege under the sending account.
-    public fun apply_for_privilege<Privilege>() {
-        if (exists<PrivilegedCapability<Privilege>>(Transaction::sender())) return;
-        move_to_sender(PrivilegedCapability<Privilege>{ });
+    public fun apply_for_privilege<Privilege>(sender: &signer) {
+        if (exists<PrivilegedCapability<Privilege>>(Signer::address_of(sender))) return;
+        move_to(sender, PrivilegedCapability<Privilege>{ });
     }
 
     // Remove the `Privilege` from the address at `addr`. The sender must
     // be the root association account.
-    public fun remove_privilege<Privilege>(addr: address)
+    public fun remove_privilege<Privilege>(sender: &signer, addr: address)
     acquires PrivilegedCapability {
-        assert(Transaction::sender() == root_address(), 1001);
+        assert(Signer::address_of(sender) == root_address(), 1001);
         //assert(exists<PrivilegedCapability<Privilege>>(addr), 1004);
         PrivilegedCapability<Privilege>{ } = move_from<PrivilegedCapability<Privilege>>(addr);
     }
@@ -31,9 +30,9 @@ module GenericBug {
     // **FIXED** BUG: Without this, the prover is [was] happy.
     // With this function, it reports an invariant violation.
     // However, the invariant violation is there in any case, because
-    // remove_privilege<T>(addr) is defined.
-    //public  fun stupid_root() acquires PrivilegedCapability {
-    //     remove_privilege<T>(root_address());
+    // remove_privilege<T>(sender, addr) is defined.
+    //public  fun stupid_root(sender: &signer) acquires PrivilegedCapability {
+    //     remove_privilege<T>(sender, root_address());
     //}
 
     // The address at which the root account will be published.
@@ -60,11 +59,12 @@ module GenericBug {
     // To demo, I added "stupid_root" above, which actually removes the privilege, and that
     // causes a violation if commented in.
     spec schema RootAddressIsAssociationAddress {
-        invariant spec_addr_is_association(sender());
+        sender: &signer;
+        invariant spec_addr_is_association(Signer::spec_address_of(sender));
     }
     spec module {
         apply RootAddressIsAssociationAddress to *<Privilege>, *
-            except addr_is_association, assert_addr_is_association;
+            except root_address;
     }
 }
 }

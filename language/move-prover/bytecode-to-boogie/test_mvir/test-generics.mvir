@@ -9,14 +9,14 @@ module TestGenerics {
          v: vector<E>
     }
 
-    public move2(x1: u64, x2: u64) {
+    public move2(account: &signer, x1: u64, x2: u64) {
         let v: vector<u64>;
         let r: Self.R;
         v = Vector.empty<u64>();
         Vector.push_back<u64>(&mut v, move(x1));
         Vector.push_back<u64>(&mut v, move(x2));
         r = R{ v: move(v) };
-        move_to_sender<R>(move(r));
+        move_to<R>(account, move(r));
         return;
     }
 
