@@ -17,7 +17,7 @@ COMPAT_CLUSTER_PREFIX = "compat-"
 TEMP_OBJ_PATH = "lock_obj.txt"
 
 
-def get_task_defs(workspace: str) -> dict:
+def get_task_defs(workspace: str, num_validators: int, num_fullnodes: int) -> dict:
     """
     Builds a dictionary of:
         family -> current_task_def
@@ -32,40 +32,21 @@ def get_task_defs(workspace: str) -> dict:
     """
     ret = {}
     print("Fetching ECS tasks")
-    ecs_tasks = execute_cmd_with_json_output(
-        ["aws", "ecs", "list-tasks", "--cluster", workspace, "--no-paginate"],
-        err="could not get the list of ecs tasks",
-    )
-    for task_arn in ecs_tasks.get("taskArns"):
-        tasks = execute_cmd_with_json_output(
-            [
-                "aws",
-                "ecs",
-                "describe-tasks",
-                "--cluster",
-                workspace,
-                "--task",
-                task_arn,
-            ],
-            err=f"could not get details of task {task_arn}",
-        )
-        task_def_arn = tasks.get("tasks")[0].get("taskDefinitionArn")
-        if "validator" not in task_def_arn and "fullnode" not in task_def_arn:
-            print(f"Skipping task {task_def_arn}")
-            continue
-
-        print(f"Fetching task definition for {task_def_arn}")
+    def_fams = []
+    def_fams += [f"{workspace}-validator-{i}" for i in range(num_validators)]
+    def_fams += [f"{workspace}-fullnode-{i}" for i in range(num_fullnodes)]
+    for fam in def_fams:
+        print(f"Fetching task definition for {fam}")
         task_def = execute_cmd_with_json_output(
             [
                 "aws",
                 "ecs",
                 "describe-task-definition",
                 "--task-definition",
-                task_def_arn,
+                fam,
             ],
-            err=f"could not get task definition for {task_def_arn}",
+            err=f"could not get task definition for {fam}",
         )
-
         key = task_def.get("taskDefinition").get("family")
         ret[key] = task_def.get("taskDefinition")
         # put the tags separately
