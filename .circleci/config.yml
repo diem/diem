@@ -552,7 +552,7 @@ jobs:
             export TARGET_BRANCH_PATTERN='^circle-docker$'
             export commit_message=$( git log -1 --pretty=%B )
             export pr_num=`echo "$commit_message" | tail -2 | head -1 | sed 's/Closes: #//'`
-            if [ -z $pr ]; then
+            if [ -z $pr_num ]; then
               echo "Did not find pull request num in commit message. -\\_(O_o)_/-";
               circleci step halt;
             fi
@@ -565,10 +565,16 @@ jobs:
               circleci step halt;
             fi
             echo 'export TARGET_BRANCH=$TARGET_BRANCH' >> $BASH_ENV;
+            echo 'export TARGET_BRANCH=$TARGET_BRANCH' >> /tmp/branch_info;
       - run:
           name: build and push pre-release docker images
           command: |
+            set -x
             export BRANCH=$TARGET_BRANCH
+            echo Branch $BRANCH
+            source /tmp/branch_info
+            export BRANCH=$TARGET_BRANCH
+            echo Branch $BRANCH
             export GIT_REV=$(git rev-parse --short=8 HEAD)
             docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n init
             docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n mint
@@ -588,7 +594,8 @@ jobs:
       - run:
           name: pull pre images (or build if not pullable) and push release docker images
           command: |
-            export BRANCH=$TARGET_BRANCH
+            set -x
+            export BRANCH=${CIRCLE_BRANCH}
             export GIT_REV=$(git rev-parse --short=8 HEAD)
             docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n init
             docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n mint
