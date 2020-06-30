@@ -57,7 +57,7 @@ if [ $NAME == "validator" ]; then
 fi
 
 #if a prebuild, always -1, else if "docker pull" failed build the image.
-if [ "$pulled" != "0" ]; then
+if [ "$PULLED" != "0" ]; then
   docker/$NAME/build.sh
   if [ $NAME == "cluster-test" ]; then
     echo retagging cluster-test as libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV}
