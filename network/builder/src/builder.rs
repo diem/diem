@@ -11,7 +11,7 @@
 //! long as the latter is in its trusted peers set.
 use channel::{self, message_queues::QueueStyle};
 use libra_config::{
-    config::{DiscoveryMethod, NetworkConfig, RoleType, HANDSHAKE_VERSION},
+    config::{DiscoveryMethod, GossipConfig, NetworkConfig, RoleType, HANDSHAKE_VERSION},
     network_id::{NetworkContext, NetworkId},
 };
 use libra_crypto::x25519;
@@ -196,11 +196,7 @@ impl NetworkBuilder {
 
         match &config.discovery_method {
             DiscoveryMethod::Gossip(gossip_config) => {
-                network_builder.add_gossip_discovery(
-                    gossip_config.advertised_address.clone(),
-                    gossip_config.discovery_interval_ms,
-                    pubkey,
-                );
+                network_builder.add_gossip_discovery(gossip_config.clone(), pubkey);
                 // HACK: gossip relies on on-chain discovery for the eligible peers update.
                 if role == RoleType::Validator {
                     network_builder.add_configuration_change_listener(role);
@@ -394,8 +390,7 @@ impl NetworkBuilder {
     // TODO:  remove the pub qualifier
     pub fn add_gossip_discovery(
         &mut self,
-        advertised_address: NetworkAddress,
-        discovery_interval_ms: u64,
+        gossip_config: GossipConfig,
         pubkey: x25519::PublicKey,
     ) -> &mut Self {
         let conn_mgr_reqs_tx = self
@@ -416,14 +411,16 @@ impl NetworkBuilder {
         // TODO(philiphayes): in network_builder setup, only bind the channels.
         // wait until PeerManager is running to actual setup gossip discovery.
 
-        let advertised_address = advertised_address.append_prod_protos(pubkey, HANDSHAKE_VERSION);
+        let advertised_address = gossip_config
+            .advertised_address
+            .append_prod_protos(pubkey, HANDSHAKE_VERSION);
 
         let addrs = vec![advertised_address];
 
         self.discovery_builder = Some(GossipDiscoveryBuilder::create(
             self.network_context(),
             addrs,
-            discovery_interval_ms,
+            gossip_config.discovery_interval_ms,
             discovery_network_tx,
             discovery_network_rx,
             conn_mgr_reqs_tx,
