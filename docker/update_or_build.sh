@@ -9,25 +9,22 @@ function usage {
   echo "-g the GIT_HASH of the form: short=8"
   echo "-b the branch we're building on, or the branch we're targeting if a prebuild"
   echo "-n name, one of init, mint, validator, validator-dynamic, safety-rules, cluster-test"
+  echo "should be called from the root folder of the libra project, and must have it's .git history"
 }
 
 
 PREBUILD=false;
 NAME=
-GIT_REV=
 BRANCH=
 
 #parse args
-while getopts "pg:b:n:" arg; do
+while getopts "pb:n:" arg; do
   case $arg in
     p)
       PREBUILD="true"
       ;;
     n)
       NAME=$OPTARG
-      ;;
-    g)
-      GIT_REV=$OPTARG
       ;;
     b)
       BRANCH=$OPTARG
@@ -39,19 +36,17 @@ while getopts "pg:b:n:" arg; do
   esac
 done
 
-echo Branch $BRANCH
-echo Git rev $GIT_REV
-echo Name $NAME
+GIT_REV=$(git rev-parse --short=8 HEAD)
 
 [ "$BRANCH" != "" ] || { echo "-b branch must be set"; usage; exit 99; }
-[ "$GIT_REV" != "" ] || { echo "-g githash must be set"; usage; exit 99; }
+[ "$GIT_REV" != "" ] || { echo "Could not determine git revision, aborting"; usage; exit 99; }
 [ "$NAME" != "" ] || { echo "-n name must be set"; usage; exit 99; }
 
 PULLED="-1"
 
 #If not a prebuild *attempt* to pull the previously built image.
 if [ $PREBUILD != "true" ]; then
-  docker pull libra/test:libra_$NAME_pre_$BRANCH_$GIT_REV
+  docker pull libra/test:libra_${NAME}_pre_${BRANCH}_${GIT_REV}
   export PULLED=$?
 fi
 

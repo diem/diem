@@ -560,14 +560,13 @@ jobs:
             export TARGET_BRANCH=$( cat /tmp/pr | jq ".base .ref" | sed 's/"//g' )
             if [[ $TARGET_BRANCH =~ $TARGET_BRANCH_PATTERN ]]; then
               export BRANCH=$TARGET_BRANCH
-              export GIT_REV=$(git rev-parse --short=8 HEAD)
               echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-              docker/update_or_build.sh -p -b ${BRANCH} -g ${pr_num} -n init
-              docker/update_or_build.sh -p -b ${BRANCH} -g ${pr_num} -n mint
-              docker/update_or_build.sh -p -b ${BRANCH} -g ${pr_num} -n safety-rules
-              docker/update_or_build.sh -p -b ${BRANCH} -g ${pr_num} -n validator
-              docker/update_or_build.sh -p -b ${BRANCH} -g ${pr_num} -n validator-dynamic
-              docker/update_or_build.sh -p -b ${BRANCH} -g ${pr_num} -n cluster-test
+              docker/update_or_build.sh -p -b ${BRANCH} -n init
+              docker/update_or_build.sh -p -b ${BRANCH} -n mint
+              docker/update_or_build.sh -p -b ${BRANCH} -n safety-rules
+              docker/update_or_build.sh -p -b ${BRANCH} -n validator
+              docker/update_or_build.sh -p -b ${BRANCH} -n validator-dynamic
+              docker/update_or_build.sh -p -b ${BRANCH} -n cluster-test
             else
               echo Targeting branch $TARGET_BRANCH will not publish docker images.
             fi
@@ -584,61 +583,54 @@ jobs:
           name: pull pre images (or build if not pullable) and push release docker images
           command: |
             set -x
-            export commit_message=$( git log -1 --pretty=%B )
-            export pr_num=`echo "$commit_message" | tail -2 | head -1 | sed 's/Closes: #//'`
-            if [ -z $pr_num ]; then
-              echo "Did not find pull request num in commit message. -\\_(O_o)_/-";
-              exit 1
-            fi
             export BRANCH=${CIRCLE_BRANCH}
-            export GIT_REV=$(git rev-parse --short=8 HEAD)
             echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker/update_or_build.sh -b ${BRANCH} -g ${pr_num} -n init
-            docker/update_or_build.sh -b ${BRANCH} -g ${pr_num} -n mint
-            docker/update_or_build.sh -b ${BRANCH} -g ${pr_num} -n safety-rules
-            docker/update_or_build.sh -b ${BRANCH} -g ${pr_num} -n validator
-            docker/update_or_build.sh -b ${BRANCH} -g ${pr_num} -n validator-dynamic
-            docker/update_or_build.sh -b ${BRANCH} -g ${pr_num} -n cluster-test
+            docker/update_or_build.sh -b ${BRANCH} -n init
+            docker/update_or_build.sh -b ${BRANCH} -n mint
+            docker/update_or_build.sh -b ${BRANCH} -n safety-rules
+            docker/update_or_build.sh -b ${BRANCH} -n validator
+            docker/update_or_build.sh -b ${BRANCH} -n validator-dynamic
+            docker/update_or_build.sh -b ${BRANCH} -n cluster-test
 
 workflows:
   commit-workflow:
     jobs:
       - lint-docker
-      - terraform
-      - prefetch-crates
-      - lint:
-          requires:
-            - prefetch-crates
-      - build-dev:
-          requires:
-            - prefetch-crates
-      - build-release:
-          requires:
-            - prefetch-crates
-      - run-e2e-test:
-          requires:
-            - prefetch-crates
-      - run-unit-test:
-          requires:
-            - prefetch-crates
-      - run-crypto-unit-test:
-          requires:
-            - prefetch-crates
-      - build-docs:
-          requires:
-            - lint
-      - deploy-docs:
-          requires:
-            - build-docs
-          filters:
-            branches:
-              only: master
-      - check-breaking-change:
-          requires:
-            - prefetch-crates
-          filters:
-            branches:
-              only: master
+      #- terraform
+      #- prefetch-crates
+      #- lint:
+      #    requires:
+      #      - prefetch-crates
+      #- build-dev:
+      #    requires:
+      #      - prefetch-crates
+      #- build-release:
+      #    requires:
+      #      - prefetch-crates
+      #- run-e2e-test:
+      #    requires:
+      #      - prefetch-crates
+      #- run-unit-test:
+      #    requires:
+      #      - prefetch-crates
+      #- run-crypto-unit-test:
+      #    requires:
+      #      - prefetch-crates
+      #- build-docs:
+      #    requires:
+      #      - lint
+      #- deploy-docs:
+      #    requires:
+      #      - build-docs
+      #    filters:
+      #      branches:
+      #        only: master
+      #- check-breaking-change:
+      #    requires:
+      #      - prefetch-crates
+      #    filters:
+      #      branches:
+      #        only: master
       - docker-pre-publish:
           filters:
             branches:
