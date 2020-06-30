@@ -39,17 +39,13 @@
     <a href="LibraAccount.md#0x1_LibraAccount_grant_association_privileges">LibraAccount::grant_association_privileges</a>(lr_account);
     <a href="Roles.md#0x1_Roles_grant_treasury_compliance_role">Roles::grant_treasury_compliance_role</a>(tc_account, lr_account);
 
-    <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(lr_account);
-
     // <a href="Event.md#0x1_Event">Event</a> and On-chain config setup
-    <a href="LibraConfig.md#0x1_LibraConfig_initialize">LibraConfig::initialize</a>(
-        lr_account,
-    );
+    <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(lr_account);
+    <a href="LibraConfig.md#0x1_LibraConfig_initialize">LibraConfig::initialize</a>(lr_account);
 
-    // Currency setup
-    <a href="Libra.md#0x1_Libra_initialize">Libra::initialize</a>(
-        lr_account,
-    );
+    // Currency and <a href="VASP.md#0x1_VASP">VASP</a> setup
+    <a href="Libra.md#0x1_Libra_initialize">Libra::initialize</a>(lr_account);
+    <a href="VASP.md#0x1_VASP_initialize">VASP::initialize</a>(lr_account);
 
     // Currency setup
     <b>let</b> (coin1_mint_cap, coin1_burn_cap) = <a href="Coin1.md#0x1_Coin1_initialize">Coin1::initialize</a>(
@@ -88,8 +84,6 @@
         coin2_mint_cap,
         coin2_burn_cap,
     );
-    <a href="AccountLimits.md#0x1_AccountLimits_publish_unrestricted_limits">AccountLimits::publish_unrestricted_limits</a>(tc_account);
-    <a href="AccountLimits.md#0x1_AccountLimits_certify_limits_definition">AccountLimits::certify_limits_definition</a>(tc_account, tc_addr);
 
     <a href="LibraTransactionTimeout.md#0x1_LibraTransactionTimeout_initialize">LibraTransactionTimeout::initialize</a>(lr_account);
     <a href="LibraSystem.md#0x1_LibraSystem_initialize_validator_set">LibraSystem::initialize_validator_set</a>(

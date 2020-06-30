@@ -125,6 +125,9 @@ module LibraAccount {
         unfrozen_address: address,
     }
 
+    const PARENT_VASP_CURRENCY_LIMITS_DNE: u64 = 0;
+    const NOT_GENESIS: u64 = 0;
+
     /// Grants `AccountFreezing` and `AccountUnfreezing` privileges to the calling `account`.
     /// Aborts if the `account` does not have the correct role (association root).
     /// TODO: This is legacy code. The VM looks for this published Privilege. It should disappear
@@ -137,15 +140,32 @@ module LibraAccount {
         lr_account: &signer,
     ) {
         // Operational constraint, not a privilege constraint.
+        assert(LibraTimestamp::is_genesis(), NOT_GENESIS);
         assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 0);
+        let limits_cap = AccountLimits::grant_calling_capability(lr_account);
+        AccountLimits::initialize(lr_account, &limits_cap);
         move_to(
             lr_account,
             AccountOperationsCapability {
-                limits_cap: AccountLimits::grant_calling_capability(lr_account),
+                limits_cap,
                 freeze_event_handle: Event::new_event_handle(lr_account),
                 unfreeze_event_handle: Event::new_event_handle(lr_account),
             }
         );
+    }
+
+    /// Returns whether we should track and record limits for the `payer` or `payee` account.
+    /// Depending on the `is_withdrawal` flag passed in we determine whether the
+    /// `payer` or `payee` account is being queried. `VASP->any` and
+    /// `any->VASP` transfers are tracked in the VASP.
+    fun should_track_limits_for_account(payer: address, payee: address, is_withdrawal: bool): bool {
+        let is_intra_vasp_transfer = VASP::is_vasp(payer) && VASP::is_vasp(payee) &&
+            VASP::parent_address(payer) == VASP::parent_address(payee);
+        if (is_withdrawal) {
+            VASP::is_vasp(payer) && !is_intra_vasp_transfer
+        } else {
+            VASP::is_vasp(payee) && !is_intra_vasp_transfer
+        }
     }
 
     /// Use `cap` to mint `amount_lbr` LBR by withdrawing the appropriate quantity of reserve assets
@@ -234,16 +254,17 @@ module LibraAccount {
         };
 
         // Ensure that this deposit is compliant with the account limits on
-        // this account.
-        let _ = borrow_global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        /*assert(
-            AccountLimits::update_deposit_limits<Token>(
-                deposit_value,
-                payee,
-                &borrow_global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).limits_cap
-            ),
-            9
-        );*/
+        // this account. Tracked if the payee is a VASP. Dont' track intra-vasp transfers.
+        if (should_track_limits_for_account(payer, payee, false)) {
+            assert(
+                AccountLimits::update_deposit_limits<Token>(
+                    deposit_value,
+                    VASP::parent_address(payee),
+                    &borrow_global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).limits_cap
+                ),
+                9
+            )
+        };
 
         // Deposit the `to_deposit` coin
         Libra::deposit(&mut borrow_global_mut<Balance<Token>>(payee).coin, to_deposit);
@@ -290,19 +311,21 @@ module LibraAccount {
 
     // Helper to withdraw `amount` from the given account balance and return the withdrawn Libra<Token>
     fun withdraw_from_balance<Token>(
-        _addr: address,
+        payer: address,
+        payee: address,
         balance: &mut Balance<Token>,
         amount: u64
     ): Libra<Token> acquires AccountOperationsCapability {
         // Make sure that this withdrawal is compliant with the limits on
-        // the account.
-        let _  = borrow_global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        /*let can_withdraw = AccountLimits::update_withdrawal_limits<Token>(
-            amount,
-            addr,
-            &borrow_global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).limits_cap
-        );
-        assert(can_withdraw, 11);*/
+        // the account if it's a inter-VASP transfer,
+        if (should_track_limits_for_account(payer, payee, true)) {
+            let can_withdraw = AccountLimits::update_withdrawal_limits<Token>(
+                    amount,
+                    VASP::parent_address(payer),
+                    &borrow_global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).limits_cap
+            );
+            assert(can_withdraw, 11);
+        };
         Libra::withdraw(&mut balance.coin, amount)
     }
 
@@ -326,7 +349,7 @@ module LibraAccount {
                 metadata
             },
         );
-        withdraw_from_balance<Token>(payer, account_balance, amount)
+        withdraw_from_balance<Token>(payer, payee, account_balance, amount)
     }
 
     /// Withdraw `amount` `Libra<Token>`'s from `cap.address` and send them to the `Preburn`
@@ -616,8 +639,11 @@ module LibraAccount {
         balance_for(borrow_global<Balance<Token>>(addr))
     }
 
-    // Add a balance of `Token` type to the sending account.
+    /// Add a balance of `Token` type to the sending account.
+    /// If the account is a VASP account, it must have (or be able to publish)
+    /// a limits definition and window.
     public fun add_currency<Token>(account: &signer) {
+        assert(VASP::try_allow_currency<Token>(account), PARENT_VASP_CURRENCY_LIMITS_DNE);
         move_to(account, Balance<Token>{ coin: Libra::zero<Token>() })
     }
 
@@ -785,7 +811,12 @@ module LibraAccount {
         if (transaction_fee_amount > 0) {
             let sender_balance = borrow_global_mut<Balance<Token>>(sender);
             TransactionFee::pay_fee(
-                withdraw_from_balance(sender, sender_balance, transaction_fee_amount)
+                withdraw_from_balance(
+                    sender,
+                    CoreAddresses::LIBRA_ROOT_ADDRESS(),
+                    sender_balance,
+                    transaction_fee_amount
+                )
             )
         }
     }

@@ -24,6 +24,7 @@ pub enum StdlibScript {
     AddCurrencyToAccount,
     AddRecoveryRotationCapability,
     AddValidator,
+    AllowCurrencyForVasp,
     Burn,
     BurnTxnFees,
     CancelBurn,
@@ -35,7 +36,6 @@ pub enum StdlibScript {
     CreateValidatorAccount,
     CreateValidatorOperatorAccount,
     FreezeAccount,
-    TestnetMint,
     MintLbr,
     ModifyPublishingOption,
     PeerToPeerWithMetadata,
@@ -49,16 +49,18 @@ pub enum StdlibScript {
     RotateBaseUrl,
     RotateCompliancePublicKey,
     RotateSharedEd2551PublicKey,
+    SetAccountLimitWindowCurrentHoldings,
     SetValidatorConfig,
     SetValidatorOperator,
+    TestnetMint,
     TieredMint,
     UnfreezeAccount,
     UnmintLbr,
+    UpdateAccountLimitDefinition,
     UpdateExchangeRate,
     UpdateLibraVersion,
     UpdateMintingAbility,
     UpdateTravelRuleLimit,
-    UpdateUnhostedWalletLimits,
     // ...add new scripts here
 }
 
@@ -68,9 +70,10 @@ impl StdlibScript {
     pub fn all() -> Vec<Self> {
         use StdlibScript::*;
         vec![
-            AddValidator,
             AddCurrencyToAccount,
             AddRecoveryRotationCapability,
+            AddValidator,
+            AllowCurrencyForVasp,
             Burn,
             BurnTxnFees,
             CancelBurn,
@@ -82,7 +85,6 @@ impl StdlibScript {
             CreateValidatorAccount,
             CreateValidatorOperatorAccount,
             FreezeAccount,
-            TestnetMint,
             MintLbr,
             ModifyPublishingOption,
             PeerToPeerWithMetadata,
@@ -96,16 +98,19 @@ impl StdlibScript {
             RotateBaseUrl,
             RotateCompliancePublicKey,
             RotateSharedEd2551PublicKey,
+            SetAccountLimitWindowCurrentHoldings,
             SetValidatorConfig,
             SetValidatorOperator,
+            TestnetMint,
             TieredMint,
-            UpdateTravelRuleLimit,
             UnfreezeAccount,
             UnmintLbr,
-            UpdateUnhostedWalletLimits,
-            UpdateLibraVersion,
+            UpdateAccountLimitDefinition,
             UpdateExchangeRate,
-            UpdateMintingAbility, // ...add new scripts here
+            UpdateLibraVersion,
+            UpdateMintingAbility,
+            UpdateTravelRuleLimit,
+            // ...add new scripts here
         ]
     }
 
@@ -195,6 +200,7 @@ impl fmt::Display for StdlibScript {
             "{}",
             match self {
                 AddValidator => "add_validator",
+                AllowCurrencyForVasp => "allow_currency_for_vasp",
                 AddCurrencyToAccount => "add_currency_to_account",
                 AddRecoveryRotationCapability => "add_recovery_rotation_capability",
                 Burn => "burn",
@@ -223,13 +229,14 @@ impl fmt::Display for StdlibScript {
                 RotateBaseUrl => "rotate_base_url",
                 RotateCompliancePublicKey => "rotate_compliance_public_key",
                 RotateSharedEd2551PublicKey => "rotate_shared_ed25519_public_key",
+                SetAccountLimitWindowCurrentHoldings => "set_account_limit_window_current_holdings",
                 SetValidatorConfig => "set_validator_config",
                 SetValidatorOperator => "set_validator_operator",
                 TieredMint => "tiered_mint",
                 UpdateTravelRuleLimit => "update_travel_rule_limit",
                 UnfreezeAccount => "unfreeze_account",
                 UnmintLbr => "unmint_lbr",
-                UpdateUnhostedWalletLimits => "update_unhosted_wallet_limits",
+                UpdateAccountLimitDefinition => "update_account_limit_definition",
                 UpdateLibraVersion => "update_libra_version",
                 UpdateExchangeRate => "update_exchange_rate",
                 UpdateMintingAbility => "update_minting_ability",

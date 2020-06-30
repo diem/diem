@@ -16,8 +16,8 @@ use libra_types::{
     },
     event::EventHandle,
     transaction::{
-        authenticator::AuthenticationKey, RawTransaction, Script, SignedTransaction,
-        TransactionArgument, TransactionPayload,
+        authenticator::AuthenticationKey, ChangeSet, Module, RawTransaction, Script,
+        SignedTransaction, TransactionArgument, TransactionPayload,
     },
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
@@ -378,11 +378,97 @@ impl Account {
             Duration::from_secs(DEFAULT_EXPIRATION_TIME),
         )
     }
+
+    pub fn transaction(&self) -> TransactionBuilder {
+        TransactionBuilder::new(self.clone())
+    }
 }
 
 impl Default for Account {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+pub struct TransactionBuilder {
+    pub sender: Account,
+    pub sequence_number: Option<u64>,
+    pub program: Option<TransactionPayload>,
+    pub max_gas_amount: Option<u64>,
+    pub gas_unit_price: Option<u64>,
+    pub gas_currency_code: Option<String>,
+    pub ttl: Option<Duration>,
+}
+
+impl TransactionBuilder {
+    pub fn new(sender: Account) -> Self {
+        Self {
+            sender,
+            sequence_number: None,
+            program: None,
+            max_gas_amount: None,
+            gas_unit_price: None,
+            gas_currency_code: None,
+            ttl: None,
+        }
+    }
+
+    pub fn sequence_number(mut self, sequence_number: u64) -> Self {
+        self.sequence_number = Some(sequence_number);
+        self
+    }
+
+    pub fn script(mut self, s: Script) -> Self {
+        self.program = Some(TransactionPayload::Script(s));
+        self
+    }
+
+    pub fn module(mut self, m: Module) -> Self {
+        self.program = Some(TransactionPayload::Module(m));
+        self
+    }
+
+    pub fn write_set(mut self, w: ChangeSet) -> Self {
+        self.program = Some(TransactionPayload::WriteSet(w));
+        self
+    }
+
+    pub fn max_gas_amount(mut self, max_gas_amount: u64) -> Self {
+        self.max_gas_amount = Some(max_gas_amount);
+        self
+    }
+
+    pub fn gas_unit_price(mut self, gas_unit_price: u64) -> Self {
+        self.gas_unit_price = Some(gas_unit_price);
+        self
+    }
+
+    pub fn gas_currency_code(mut self, gas_currency_code: &str) -> Self {
+        self.gas_currency_code = Some(gas_currency_code.to_string());
+        self
+    }
+
+    pub fn ttl(mut self, ttl: u64) -> Self {
+        self.ttl = Some(Duration::from_secs(ttl));
+        self
+    }
+
+    pub fn sign(self) -> SignedTransaction {
+        RawTransaction::new(
+            *self.sender.address(),
+            self.sequence_number.expect("sequence number not set"),
+            self.program.expect("transaction payload not set"),
+            self.max_gas_amount
+                .unwrap_or_else(|| gas_costs::TXN_RESERVED * 2),
+            self.gas_unit_price.unwrap_or(0),
+            self.gas_currency_code
+                .unwrap_or_else(|| LBR_NAME.to_owned()),
+            self.ttl
+                .unwrap_or_else(|| Duration::from_secs(DEFAULT_EXPIRATION_TIME)),
+        )
+        .sign(&self.sender.privkey, self.sender.pubkey)
+        .unwrap()
+        .into_inner()
     }
 }
 

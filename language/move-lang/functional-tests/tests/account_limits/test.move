@@ -35,25 +35,16 @@ fun main(account: &signer) {
 // chec: ABORTED
 // chec: 10047
 
-//! new-transaction
-//! sender: bob
-script {
-    use 0x1::AccountLimits;
-    fun main(account: &signer) {
-        AccountLimits::publish_unrestricted_limits(account)
-    }
-}
-// check: EXECUTED
-
 // ----- Blessed updates max_inflow for unhosted wallet
 
 //! new-transaction
 //! sender: blessed
 script {
     use 0x1::AccountLimits;
+    use 0x1::CoreAddresses;
+    use 0x1::LBR::LBR;
     fun main(tc_account: &signer) {
-        let new_max_total_flow = 2;
-        AccountLimits::update_limits_definition(tc_account, new_max_total_flow, 0);
+        AccountLimits::update_limits_definition<LBR>(tc_account, CoreAddresses::LIBRA_ROOT_ADDRESS(), 2, 2, 0);
     }
 }
 
@@ -83,50 +74,12 @@ script {
 //! sender: blessed
 script {
     use 0x1::AccountLimits;
+    use 0x1::CoreAddresses;
+    use 0x1::LBR::LBR;
     fun main(tc_account: &signer) {
-        let new_max_total_flow = 1000;
-        AccountLimits::update_limits_definition(tc_account, new_max_total_flow, 1000);
+        AccountLimits::update_limits_definition<LBR>(tc_account, CoreAddresses::LIBRA_ROOT_ADDRESS(), 1000, 1000, 1000);
     }
 }
-
-//! new-transaction
-//! sender: blessed
-script {
-    use 0x1::AccountLimits;
-    fun main(account: &signer) {
-        AccountLimits::certify_limits_definition(account, {{bob}});
-    }
-}
-// check: EXECUTED
-
-//! new-transaction
-script {
-    use 0x1::AccountLimits;
-    fun main(account: &signer) {
-        AccountLimits::decertify_limits_definition(account, {{bob}});
-    }
-}
-// check: ABORTED
-
-//! new-transaction
-//! sender: blessed
-script {
-    use 0x1::AccountLimits;
-    fun main(account: &signer) {
-        AccountLimits::decertify_limits_definition(account, {{blessed}});
-    }
-}
-// check: EXECUTED
-
-//! new-transaction
-//! sender: blessed
-script {
-    use 0x1::AccountLimits;
-    fun main(account: &signer) {
-        AccountLimits::unpublish_limits_definition(account);
-    }
-}
-// check: EXECUTED
 
 //! new-transaction
 //! sender: bob
@@ -171,19 +124,6 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: blessed
-script {
-    use 0x1::AccountLimits;
-    // Publish our own limits definition for testing! Make sure we are
-    // exercising the unrestricted limits check.
-    fun main(account: &signer) {
-        AccountLimits::publish_unrestricted_limits(account);
-        AccountLimits::certify_limits_definition(account, {{blessed}});
-    }
-}
-// check: EXECUTED
-
-//! new-transaction
 //! sender: moneybags
 script {
 use 0x1::Coin1::Coin1;
@@ -210,16 +150,6 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: blessed
-script {
-    use 0x1::AccountLimits;
-    fun main(account: &signer) {
-        AccountLimits::decertify_limits_definition(account, {{blessed}});
-    }
-}
-// check: EXECUTED
-
-//! new-transaction
 //! sender: bob
 script {
     use 0x1::LibraAccount;
@@ -233,24 +163,6 @@ script {
 // TODO: fix
 // chec: ABORTED
 // chec: 1
-
-//! new-transaction
-//! sender: blessed
-script {
-    use 0x1::AccountLimits;
-    // Publish our own limits definition for testing!
-    fun main(account: &signer) {
-        AccountLimits::unpublish_limits_definition(account);
-        AccountLimits::publish_limits_definition(
-            account,
-            100,
-            200,
-            40000,
-        );
-        AccountLimits::certify_limits_definition(account, {{blessed}});
-    }
-}
-// check: EXECUTED
 
 //! block-prologue
 //! proposer: validatorvivian
@@ -299,16 +211,6 @@ script {
 // check: 11
 
 //! new-transaction
-//! sender: blessed
-script {
-    use 0x1::AccountLimits;
-    fun main(account: &signer) {
-        AccountLimits::decertify_limits_definition(account, {{blessed}});
-    }
-}
-// check: EXECUTED
-
-//! new-transaction
 //! sender: bob
 script {
     use 0x1::LibraAccount;
@@ -337,19 +239,3 @@ script {
 // TODO: fix
 // chec: ABORTED
 // chec: 1
-
-//! new-transaction
-//! sender: blessed
-script {
-    use 0x1::AccountLimits;
-    fun main(account: &signer) {
-        // AccountLimits::update_limits_definition(
-        AccountLimits::update_limits_definition(
-            account,
-            100,
-            200,
-        );
-        AccountLimits::certify_limits_definition(account, {{blessed}});
-    }
-}
-// check: EXECUTED
