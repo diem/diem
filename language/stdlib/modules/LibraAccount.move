@@ -25,8 +25,6 @@ module LibraAccount {
     use 0x1::DualAttestationLimit;
     use 0x1::Roles::{Self, has_libra_root_role, has_treasury_compliance_role};
 
-    // resource struct AccountFreezing {}
-    // resource struct AccountUnfreezing {}
     resource struct PublishModule {}
 
     /// Every Libra account has a LibraAccount resource
@@ -129,13 +127,17 @@ module LibraAccount {
 
     const PARENT_VASP_CURRENCY_LIMITS_DNE: u64 = 0;
     const NOT_GENESIS: u64 = 0;
+    const ACCOUNT_NOT_LIBRA_ROOT: u64 = 1;
 
-    /// Grants `AccountFreezing` and `AccountUnfreezing` privileges to the calling `account`.
-    /// Aborts if the `account` does not have the correct role (association root).
-    /// TODO: This is legacy code. The VM looks for this published Privilege. It should disappear
-    /// soon.
-    public fun grant_association_privileges(account: &signer) {
-        Roles::add_privilege_to_account_association_root_role(account, PublishModule{});
+    /// Grants the ability to publish modules to the libra root account. The VM
+    /// will look for this resource to determine whether the sending account can publish modules.
+    /// Aborts if the `account` does not have the correct role (libra root).
+    public fun grant_module_publishing_privilege(account: &signer) {
+        // This is also an operational constraint since the VM will look for
+        // this specific address and publish these modules under the core code
+        // address.
+        assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), ACCOUNT_NOT_LIBRA_ROOT);
+        move_to(account, PublishModule{});
     }
 
     /// Initialize this module. This is only callable from genesis.

@@ -16,7 +16,7 @@
 -  [Struct `FreezingPrivilege`](#0x1_LibraAccount_FreezingPrivilege)
 -  [Struct `FreezeAccountEvent`](#0x1_LibraAccount_FreezeAccountEvent)
 -  [Struct `UnfreezeAccountEvent`](#0x1_LibraAccount_UnfreezeAccountEvent)
--  [Function `grant_association_privileges`](#0x1_LibraAccount_grant_association_privileges)
+-  [Function `grant_module_publishing_privilege`](#0x1_LibraAccount_grant_module_publishing_privilege)
 -  [Function `initialize`](#0x1_LibraAccount_initialize)
 -  [Function `should_track_limits_for_account`](#0x1_LibraAccount_should_track_limits_for_account)
 -  [Function `staple_lbr`](#0x1_LibraAccount_staple_lbr)
@@ -555,21 +555,17 @@ Message for unfreeze account events
 
 </details>
 
-<a name="0x1_LibraAccount_grant_association_privileges"></a>
+<a name="0x1_LibraAccount_grant_module_publishing_privilege"></a>
 
-## Function `grant_association_privileges`
+## Function `grant_module_publishing_privilege`
 
-Grants
-<code>AccountFreezing</code> and
-<code>AccountUnfreezing</code> privileges to the calling
-<code>account</code>.
+Grants the ability to publish modules to the libra root account. The VM
+will look for this resource to determine whether the sending account can publish modules.
 Aborts if the
-<code>account</code> does not have the correct role (association root).
-TODO: This is legacy code. The VM looks for this published Privilege. It should disappear
-soon.
+<code>account</code> does not have the correct role (libra root).
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_grant_association_privileges">grant_association_privileges</a>(account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_grant_module_publishing_privilege">grant_module_publishing_privilege</a>(account: &signer)
 </code></pre>
 
 
@@ -578,8 +574,12 @@ soon.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_grant_association_privileges">grant_association_privileges</a>(account: &signer) {
-    <a href="Roles.md#0x1_Roles_add_privilege_to_account_association_root_role">Roles::add_privilege_to_account_association_root_role</a>(account, <a href="#0x1_LibraAccount_PublishModule">PublishModule</a>{});
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_grant_module_publishing_privilege">grant_module_publishing_privilege</a>(account: &signer) {
+    // This is also an operational constraint since the VM will look for
+    // this specific address and publish these modules under the core code
+    // address.
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), ACCOUNT_NOT_LIBRA_ROOT);
+    move_to(account, <a href="#0x1_LibraAccount_PublishModule">PublishModule</a>{});
 }
 </code></pre>
 

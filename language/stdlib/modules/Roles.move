@@ -20,48 +20,19 @@ module Roles {
     // Role ID constants
     ///////////////////////////////////////////////////////////////////////////
 
-    // TODO: Change these to constants once the source language has them
-    fun LIBRA_ROOT_ROLE_ID(): u64 { 0 }
-    fun TREASURY_COMPLIANCE_ROLE_ID(): u64 { 1 }
-    fun DESIGNATED_DEALER_ROLE_ID(): u64 { 2 }
-    fun VALIDATOR_ROLE_ID(): u64 { 3 }
-    fun VALIDATOR_OPERATOR_ROLE_ID(): u64 { 4 }
-    fun PARENT_VASP_ROLE_ID(): u64 { 5 }
-    fun CHILD_VASP_ROLE_ID(): u64 { 6 }
-    fun UNHOSTED_ROLE_ID(): u64 { 7 }
+    const LIBRA_ROOT_ROLE_ID: u64 = 0;
+    const TREASURY_COMPLIANCE_ROLE_ID: u64 = 1;
+    const DESIGNATED_DEALER_ROLE_ID: u64 = 2;
+    const VALIDATOR_ROLE_ID: u64 = 3;
+    const VALIDATOR_OPERATOR_ROLE_ID: u64 = 4;
+    const PARENT_VASP_ROLE_ID: u64 = 5;
+    const CHILD_VASP_ROLE_ID: u64 = 6;
+    const UNHOSTED_ROLE_ID: u64 = 7;
 
     /// The roleId contains the role id for the account. This is only moved
     /// to an account as a top-level resource, and is otherwise immovable.
     resource struct RoleId {
         role_id: u64,
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Privileges
-    ///////////////////////////////////////////////////////////////////////////
-
-
-    /// TODO: This is a legacy that will disappear soon when Tim removes a dependency
-    /// of the VM on the ModulePublish privilege.
-    /// The internal representation of of a privilege. We wrap every
-    /// privilege witness resource here to avoid having to write extractors/restorers
-    /// for each privilege, but can instead write this generically.
-    resource struct Privilege<Priv: resource>  {
-        witness: Priv,
-        is_extracted: bool,
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
-    // Privilege Granting
-    ///////////////////////////////////////////////////////////////////////////
-
-    /// TODO: This is here because the VM expects to find a ModulePublish privilege
-    /// published.
-    public fun add_privilege_to_account_association_root_role<Priv: resource>(account: &signer, witness: Priv)
-    acquires RoleId {
-        let account_role = borrow_global<RoleId>(Signer::address_of(account));
-        assert(account_role.role_id == LIBRA_ROOT_ROLE_ID(), 0);
-        move_to(account, Privilege<Priv>{ witness, is_extracted: false })
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -79,7 +50,7 @@ module Roles {
         let owner_address = Signer::address_of(association);
         assert(owner_address == CoreAddresses::LIBRA_ROOT_ADDRESS(), 0);
         // Grant the role to the association root account
-        move_to(association, RoleId { role_id: LIBRA_ROOT_ROLE_ID() });
+        move_to(association, RoleId { role_id: LIBRA_ROOT_ROLE_ID });
     }
 
     /// NB: currency-related privileges are defined in the `Libra` module.
@@ -94,7 +65,7 @@ module Roles {
         let owner_address = Signer::address_of(treasury_compliance_account);
         assert(owner_address == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), 0);
         // Grant the TC role to the treasury_compliance_account
-        move_to(treasury_compliance_account, RoleId { role_id: TREASURY_COMPLIANCE_ROLE_ID() });
+        move_to(treasury_compliance_account, RoleId { role_id: TREASURY_COMPLIANCE_ROLE_ID });
     }
 
     /// Generic new role creation (for role ids != LIBRA_ROOT_ROLE_ID
@@ -111,8 +82,8 @@ module Roles {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID(), 0);
-        move_to(new_account, RoleId { role_id: DESIGNATED_DEALER_ROLE_ID() });
+        assert(calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID, 0);
+        move_to(new_account, RoleId { role_id: DESIGNATED_DEALER_ROLE_ID });
     }
 
     /// Publish a Validator `RoleId` under `new_account`.
@@ -124,8 +95,8 @@ module Roles {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID(), 0);
-        move_to(new_account, RoleId { role_id: VALIDATOR_ROLE_ID() });
+        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID, 0);
+        move_to(new_account, RoleId { role_id: VALIDATOR_ROLE_ID });
     }
 
     /// Publish a ValidatorOperator `RoleId` under `new_account`.
@@ -137,8 +108,8 @@ module Roles {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID(), 0);
-        move_to(new_account, RoleId { role_id: VALIDATOR_OPERATOR_ROLE_ID() });
+        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID, 0);
+        move_to(new_account, RoleId { role_id: VALIDATOR_OPERATOR_ROLE_ID });
     }
 
     /// Publish a ParentVASP `RoleId` under `new_account`.
@@ -150,8 +121,8 @@ module Roles {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID(), 0);
-        move_to(new_account, RoleId { role_id: PARENT_VASP_ROLE_ID() });
+        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID, 0);
+        move_to(new_account, RoleId { role_id: PARENT_VASP_ROLE_ID });
     }
 
     /// Publish a ChildVASP `RoleId` under `new_account`.
@@ -163,8 +134,8 @@ module Roles {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(calling_role.role_id == PARENT_VASP_ROLE_ID(), 0);
-        move_to(new_account, RoleId { role_id: CHILD_VASP_ROLE_ID() });
+        assert(calling_role.role_id == PARENT_VASP_ROLE_ID, 0);
+        move_to(new_account, RoleId { role_id: CHILD_VASP_ROLE_ID });
     }
 
     /// Publish an Unhosted `RoleId` under `new_account`.
@@ -173,7 +144,7 @@ module Roles {
     public fun new_unhosted_role(_creating_account: &signer, new_account: &signer) {
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        move_to(new_account, RoleId { role_id: UNHOSTED_ROLE_ID() });
+        move_to(new_account, RoleId { role_id: UNHOSTED_ROLE_ID });
     }
 
     ///  ## privilege-checking functions for roles ##
@@ -193,35 +164,35 @@ module Roles {
     }
 
     public fun has_libra_root_role(account: &signer): bool acquires RoleId {
-        has_role(account, LIBRA_ROOT_ROLE_ID())
+        has_role(account, LIBRA_ROOT_ROLE_ID)
     }
 
     public fun has_treasury_compliance_role(account: &signer): bool acquires RoleId {
-        has_role(account, TREASURY_COMPLIANCE_ROLE_ID())
+        has_role(account, TREASURY_COMPLIANCE_ROLE_ID)
     }
 
     public fun has_designated_dealer_role(account: &signer): bool acquires RoleId {
-        has_role(account, DESIGNATED_DEALER_ROLE_ID())
+        has_role(account, DESIGNATED_DEALER_ROLE_ID)
     }
 
     public fun has_validator_role(account: &signer): bool acquires RoleId {
-        has_role(account, VALIDATOR_ROLE_ID())
+        has_role(account, VALIDATOR_ROLE_ID)
     }
 
     public fun has_validator_operator_role(account: &signer): bool acquires RoleId {
-        has_role(account, VALIDATOR_OPERATOR_ROLE_ID())
+        has_role(account, VALIDATOR_OPERATOR_ROLE_ID)
     }
 
     public fun has_parent_VASP_role(account: &signer): bool acquires RoleId {
-        has_role(account, PARENT_VASP_ROLE_ID())
+        has_role(account, PARENT_VASP_ROLE_ID)
     }
 
     public fun has_child_VASP_role(account: &signer): bool acquires RoleId {
-        has_role(account, CHILD_VASP_ROLE_ID())
+        has_role(account, CHILD_VASP_ROLE_ID)
     }
 
     public fun has_unhosted_role(account: &signer): bool acquires RoleId {
-        has_role(account, UNHOSTED_ROLE_ID())
+        has_role(account, UNHOSTED_ROLE_ID)
     }
 
     public fun has_register_new_currency_privilege(account: &signer): bool acquires RoleId {

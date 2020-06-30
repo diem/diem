@@ -556,61 +556,6 @@ impl AccountRoleSpecifier {
         Value::struct_(Struct::pack(vec![Value::u64(self.id())], true))
     }
 
-    pub fn role_type_to_value(&self) -> Value {
-        Value::struct_(Struct::pack(
-            vec![
-                Value::struct_(Struct::pack(vec![Value::bool(false)], true)),
-                Value::bool(false),
-            ],
-            true,
-        ))
-    }
-
-    fn struct_identifier(&self) -> Identifier {
-        Identifier::new(match self {
-            Self::AssocRoot => "AssociationRootRole",
-            Self::TreasuryCompliance => "TreasuryComplianceRole",
-            Self::DesignatedDealer => "DesignatedDealerRole",
-            Self::Validator => "ValidatorRole",
-            Self::ValidatorOperator => "ValidatorOperatorRole",
-            Self::ParentVASP => "ParentVASPRole",
-            Self::ChildVASP => "ChildVASPRole",
-            Self::Unhosted => "UnhostedRole",
-        })
-        .unwrap()
-    }
-
-    pub fn role_type_type_(&self) -> FatStructType {
-        let struct_name = self.struct_identifier();
-        let privilege_name = Identifier::new("Privilege").unwrap();
-        let role_witness_st = FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: RoleId::module_identifier(),
-            name: struct_name,
-            is_resource: true,
-            ty_args: vec![],
-            layout: vec![FatType::Bool],
-        };
-        FatStructType {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: RoleId::module_identifier(),
-            name: privilege_name,
-            is_resource: true,
-            ty_args: vec![FatType::Struct(Box::new(role_witness_st.clone()))],
-            layout: vec![FatType::Struct(Box::new(role_witness_st)), FatType::Bool],
-        }
-    }
-
-    pub fn role_type_struct_tag(&self) -> StructTag {
-        let struct_name = self.struct_identifier();
-        StructTag {
-            address: account_config::CORE_CODE_ADDRESS,
-            module: RoleId::module_identifier(),
-            name: struct_name,
-            type_params: vec![],
-        }
-    }
-
     pub fn role_id_struct_tag() -> StructTag {
         StructTag {
             address: account_config::CORE_CODE_ADDRESS,
@@ -915,7 +860,7 @@ impl AccountData {
     }
 
     /// Creates and returns the top-level resources to be published under the account
-    pub fn to_value(&self) -> (Value, Vec<(Identifier, Value)>, Value, Value, Value) {
+    pub fn to_value(&self) -> (Value, Vec<(Identifier, Value)>, Value, Value) {
         // TODO: publish some concept of Account
         let balances: Vec<_> = self
             .balances
@@ -924,7 +869,6 @@ impl AccountData {
             .collect();
         let event_generator = self.event_generator.to_value();
         let role_id = self.account_role.account_specifier.to_value();
-        let role_type = self.account_role.account_specifier.role_type_to_value();
         let account = Value::struct_(Struct::pack(
             vec![
                 // TODO: this needs to compute the auth key instead
@@ -950,7 +894,7 @@ impl AccountData {
             ],
             true,
         ));
-        (account, balances, event_generator, role_id, role_type)
+        (account, balances, event_generator, role_id)
     }
 
     /// Returns the AccessPath that describes the Account resource instance.
@@ -977,8 +921,7 @@ impl AccountData {
     /// Creates a writeset that contains the account data and can be patched to the storage
     /// directly.
     pub fn to_writeset(&self) -> WriteSet {
-        let (account_blob, balance_blobs, event_generator_blob, role_id_blob, role_type_blob) =
-            self.to_value();
+        let (account_blob, balance_blobs, event_generator_blob, role_id_blob) = self.to_value();
         let mut write_set = Vec::new();
         let account = account_blob
             .value_as::<Struct>()
@@ -1004,17 +947,6 @@ impl AccountData {
             self.account
                 .make_access_path(AccountRoleSpecifier::role_id_struct_tag()),
             WriteOp::Value(role_id),
-        ));
-
-        let role_type = role_type_blob
-            .value_as::<Struct>()
-            .unwrap()
-            .simple_serialize(&self.account_role.account_specifier.role_type_type_())
-            .unwrap();
-        write_set.push((
-            self.account
-                .make_access_path(self.account_role.account_specifier.role_type_struct_tag()),
-            WriteOp::Value(role_type),
         ));
 
         let event_generator = event_generator_blob
