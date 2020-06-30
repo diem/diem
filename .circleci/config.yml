@@ -536,92 +536,152 @@ jobs:
             gh-pages --dotfiles --message "[skip ci] documentation update" --dist target/doc
 
   ######################################################################################################
+  # Publish docker artifacts for prs targeting release branches built in "auto" by bors                #
+  ######################################################################################################
+  docker-pre-publish:
+    executor: docker-executor
+    description: publish docker images
+    steps:
+      - checkout
+      - run:
+          name: should pre build docker images (targeting a release branch)?
+          command: |
+            export RELEASE_BRANCH_PATTERN='^v[0-9]+-release$'
+            export TEST_BRANCH_PATTERN="^testflow[0-9]+$"
+            export commit_message=$( git log -1 --pretty=%B )
+            export pr_num=`echo "$commit_message" | tail -2 | head -1 | sed 's/Closes: #//'`
+            if [ -z $pr_num ]; then
+              echo "Did not find pull request num in commit message. -\\_(O_o)_/-";
+              exit 1
+            fi
+            curl -o /tmp/pr https://api.github.com/repos/libra/libra/pulls/${pr_num}
+            export TARGET_BRANCH=$( cat /tmp/pr | jq ".base .ref" | sed 's/"//g' )
+            if [[ $TARGET_BRANCH =~ $RELEASE_BRANCH_PATTERN ]] || [[ $TARGET_BRANCH =~ $TEST_BRANCH_PATTERN ]]; then
+              export BRANCH=$TARGET_BRANCH
+              echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n client
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n init
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n mint
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n safety-rules
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n tools
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n validator-dynamic
+              docker/update_or_build.sh -u -p -b ${BRANCH} -n cluster-test
+              #build but don't publish
+              docker/update_or_build.sh -p -b ${BRANCH} -n validator
+            else
+              echo Targeting branch $TARGET_BRANCH will not publish docker images.
+            fi
+
+  ######################################################################################################
   # Docker Builds:                                                                                     #
   ######################################################################################################
-
   docker-publish:
     executor: docker-executor
     description: publish docker images
     steps:
       - checkout
       - run:
-          name: use validator to build shared layers (compile)
+          name: pull pre images (or build if not pullable) and push release docker images
           command: |
-            docker build --target builder -f docker/validator/Dockerfile . --tag local_build
-      - run:
-          name: build init
-          command: |
-            docker/init/build.sh
-      - run:
-          name: build mint
-          command: |
-            docker/mint/build.sh
-      - run:
-          name: build safety-rules
-          command: |
-            docker/safety-rules/build.sh
-      - run:
-          name: build validators
-          command: |
-            docker/validator/build.sh
-            docker/validator-dynamic/build.sh
-      - run:
-          name: view images
-          command: |
-            docker images
-      - run:
-          name: push release docker images
-          command: |
-            export BRANCH=$CIRCLE_BRANCH
-            export GIT_REV=$(git rev-parse --short=8 HEAD)
-            docker tag libra_init libra/test:libra_init_$BRANCH_$GIT_REV
-            docker tag libra_mint libra/test:libra_mint_$BRANCH_$GIT_REV
-            docker tag libra_safety_rules libra/test:libra_safety_rules_$BRANCH_$GIT_REV
-            docker tag libra_e2e libra/test:libra_e2e_$BRANCH_$GIT_REV
-            docker tag libra_validator_dynamic libra/test:libra_validator_dynamic_$BRANCH_$GIT_REV
+            set -x
+            export BRANCH=${CIRCLE_BRANCH}
             echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            docker push libra/test:libra_init_$BRANCH_$GIT_REV
-            docker push libra/test:libra_mint_$BRANCH_$GIT_REV
-            docker push libra/test:libra_safety_rules_$BRANCH_$GIT_REV
-            docker push libra/test:libra_e2e_$BRANCH_$GIT_REV
-            docker push libra/test:libra_validator_dynamic_$BRANCH_$GIT_REV
-      - run:
-          name: build cluster-test
-          command: |
-            docker/cluster-test/build.sh
-      - run:
-          name: build cluster-test
-          command: |
-            docker tag cluster-test libra/test:cluster-test_$BRANCH_$GITHASH
-            #echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            #docker push libra/test:cluster-test_$BRANCH_$GITHASH
+            docker/update_or_build.sh -u -b ${BRANCH} -n client
+            docker/update_or_build.sh -u -b ${BRANCH} -n init
+            docker/update_or_build.sh -u -b ${BRANCH} -n mint
+            docker/update_or_build.sh -u -b ${BRANCH} -n safety-rules
+            docker/update_or_build.sh -u -b ${BRANCH} -n tools
+            docker/update_or_build.sh -u -b ${BRANCH} -n validator-dynamic
+            docker/update_or_build.sh -u -b ${BRANCH} -n cluster-test
+
 workflows:
   commit-workflow:
     jobs:
-      - lint-docker
-      - terraform
+      - lint-docker:
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - /^testflow[\d]+$/
+                - /^v[\d]+-release$/
+      - terraform:
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - /^testflow[\d]+$/
+                - /^v[\d]+-release$/
       - prefetch-crates
       - lint:
           requires:
             - prefetch-crates
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - /^testflow[\d]+$/
+                - /^v[\d]+-release$/
       - build-dev:
           requires:
             - prefetch-crates
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - /^testflow[\d]+$/
+                - /^v[\d]+-release$/
       - build-release:
           requires:
             - prefetch-crates
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - /^testflow[\d]+$/
+                - /^v[\d]+-release$/
       - run-e2e-test:
           requires:
             - prefetch-crates
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - /^testflow[\d]+$/
+                - /^v[\d]+-release$/
       - run-unit-test:
           requires:
             - prefetch-crates
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - /^testflow[\d]+$/
+                - /^v[\d]+-release$/
       - run-crypto-unit-test:
           requires:
             - prefetch-crates
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - master
+                - /^testflow[\d]+$/
+                - /^v[\d]+-release$/
       - build-docs:
           requires:
             - lint
+          filters:
+            branches:
+              ignore:
+                - gh-pages
+                - /^testflow[\d]+$/
+                - /^v[\d]+-release$/
       - deploy-docs:
           requires:
             - build-docs
@@ -634,10 +694,17 @@ workflows:
           filters:
             branches:
               only: master
+      - docker-pre-publish:
+          filters:
+            branches:
+              only:
+                - auto
       - docker-publish:
           filters:
             branches:
-              only: circle-docker
+              only:
+                - /^testflow[\d]+$/
+                - /^v[\d]+-release$/
 
   scheduled-workflow:
     triggers:
