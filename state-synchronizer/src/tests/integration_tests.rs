@@ -372,7 +372,6 @@ impl SynchronizerEnv {
                 self.peer_ids[new_peer_idx],
             ));
             let mut network_builder = NetworkBuilder::new(
-                self.runtime.handle().clone(),
                 ChainId::default(),
                 trusted_peers.clone(),
                 network_context,
@@ -400,7 +399,7 @@ impl SynchronizerEnv {
 
             let (sender, events) =
                 network_builder.add_protocol_handler(crate::network::network_endpoint_config());
-            network_builder.build();
+            network_builder.build(self.runtime.handle().clone());
             let peer_addr = network_builder.listen_address();
             self.peer_addresses.push(peer_addr);
             network_handles.push((network_id, sender, events));
