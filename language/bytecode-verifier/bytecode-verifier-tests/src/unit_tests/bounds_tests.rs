@@ -168,8 +168,7 @@ proptest! {
             oob_context.apply()
         };
 
-        let bounds_checker = BoundsChecker::new(&module);
-        let actual_violations = bounds_checker.verify();
+        let actual_violations = BoundsChecker::verify(&module);
         prop_assert_eq!(expected_violations.is_empty(), actual_violations.is_ok());
     }
 
@@ -184,8 +183,7 @@ proptest! {
             context.apply()
         };
 
-        let bounds_checker = BoundsChecker::new(&module);
-        let actual_violations = bounds_checker.verify();
+        let actual_violations = BoundsChecker::verify(&module);
 
         prop_assert_eq!(expected_violations.is_empty(), actual_violations.is_ok());
     }
@@ -201,9 +199,8 @@ proptest! {
         module.identifiers = identifiers;
         module.address_identifiers = address_identifiers;
 
-        let bounds_checker = BoundsChecker::new(&module);
         prop_assert_eq!(
-            bounds_checker.verify().map_err(|e| e.major_status),
+            BoundsChecker::verify(&module).map_err(|e| e.major_status),
             Err(StatusCode::NO_MODULE_HANDLES)
         );
     }
