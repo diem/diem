@@ -28,6 +28,10 @@ pub enum Error {
     RemoteStorageWriteError(&'static str, String),
     #[error("Remote storage unavailable, please check your configuration: {0}")]
     RemoteStorageUnavailable(String),
+    #[error("Unable to read file, {0}, error {1}")]
+    UnableToReadFile(String, String),
+    #[error("Unable to parse file, {0}, error {1}")]
+    UnableToParseFile(String, String),
     #[error("Unexpected command, expected {0}, found {1}")]
     UnexpectedCommand(CommandName, CommandName),
     #[error("Unexpected error: {0}")]

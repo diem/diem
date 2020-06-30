@@ -7,7 +7,7 @@ use crate::{
 };
 use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;

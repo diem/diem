@@ -3,23 +3,18 @@
 
 use cli::client_proxy::ClientProxy;
 use debug_interface::{libra_trace, NodeDebugClient};
-use libra_config::config::{
-    KeyManagerConfig, NodeConfig, OnDiskStorageConfig, RoleType, SecureBackend, TestConfig,
-};
-use libra_crypto::{
-    ed25519::Ed25519PrivateKey, hash::CryptoHash, traits::ValidCryptoMaterialStringExt, PrivateKey,
-    SigningKey, Uniform,
-};
+use libra_config::config::{KeyManagerConfig, NodeConfig, OnDiskStorageConfig, SecureBackend};
+use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, PrivateKey, SigningKey, Uniform};
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_key_manager::libra_interface::{JsonRpcLibraInterface, LibraInterface};
-use libra_logger::prelude::*;
+use libra_management::config_builder::FullnodeType;
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{treasury_compliance_account_address, LBR_NAME},
+    account_config::{association_address, testnet_dd_account_address, COIN1_NAME},
     ledger_info::LedgerInfo,
     transaction::authenticator::AuthenticationKey,
     waypoint::Waypoint,
@@ -42,7 +37,8 @@ const KEY_MANAGER_BIN: &str = "libra-key-manager";
 
 struct TestEnvironment {
     validator_swarm: LibraSwarm,
-    full_node_swarm: Option<LibraSwarm>,
+    vfn_swarm: Option<LibraSwarm>,
+    public_fn_swarm: Option<LibraSwarm>,
     faucet_key: (Ed25519PrivateKey, String),
     mnemonic_file: TempPath,
 }
@@ -50,20 +46,11 @@ struct TestEnvironment {
 impl TestEnvironment {
     fn new(num_validators: usize) -> Self {
         ::libra_logger::Logger::new().init();
-        let mut template = NodeConfig::default();
-        template.test = Some(TestConfig::open_module());
+        let mut template = NodeConfig::default_for_validator();
         template.state_sync.chunk_limit = 5;
-        template.consensus.safety_rules.backend =
-            SecureBackend::OnDiskStorage(OnDiskStorageConfig::default());
 
-        let validator_swarm = LibraSwarm::configure_swarm(
-            num_validators,
-            RoleType::Validator,
-            None,
-            Some(template),
-            None,
-        )
-        .unwrap();
+        let validator_swarm =
+            LibraSwarm::configure_validator_swarm(num_validators, None, Some(template)).unwrap();
 
         let mnemonic_file = libra_temppath::TempPath::new();
         mnemonic_file
@@ -80,49 +67,35 @@ impl TestEnvironment {
 
         Self {
             validator_swarm,
-            full_node_swarm: None,
+            vfn_swarm: None,
+            public_fn_swarm: None,
             faucet_key: (key, key_path),
             mnemonic_file,
         }
     }
 
-    fn setup_full_node_swarm(&mut self, num_full_nodes: usize) {
-        self.full_node_swarm = Some(
-            LibraSwarm::configure_swarm(
-                num_full_nodes,
-                RoleType::FullNode,
+    fn setup_vfn_swarm(&mut self) {
+        self.vfn_swarm = Some(
+            LibraSwarm::configure_fn_swarm(
                 None,
                 None,
-                Some(String::from(
-                    self.validator_swarm
-                        .dir
-                        .as_ref()
-                        .join("0")
-                        .to_str()
-                        .expect("Failed to convert std::fs::Path to String"),
-                )),
+                &self.validator_swarm.config,
+                FullnodeType::ValidatorFullnode,
             )
             .unwrap(),
         );
     }
 
-    fn launch_swarm(&mut self, role: RoleType) {
-        let swarm = match role {
-            RoleType::Validator => &mut self.validator_swarm,
-            RoleType::FullNode => self.full_node_swarm.as_mut().unwrap(),
-        };
-        let num_attempts = 5;
-        for _ in 0..num_attempts {
-            match swarm.launch_attempt(role, false) {
-                Ok(_) => {
-                    return;
-                }
-                Err(err) => {
-                    error!("Error launching swarm: {}", err);
-                }
-            }
-        }
-        panic!("Max out {} attempts to launch test swarm", num_attempts);
+    fn setup_public_fn_swarm(&mut self, num_nodes: usize) {
+        self.public_fn_swarm = Some(
+            LibraSwarm::configure_fn_swarm(
+                None,
+                None,
+                &self.validator_swarm.config,
+                FullnodeType::PublicFullnode(num_nodes),
+            )
+            .unwrap(),
+        )
     }
 
     fn get_json_rpc_client(&self, port: u16, waypoint: Option<Waypoint>) -> ClientProxy {
@@ -148,13 +121,18 @@ impl TestEnvironment {
         .unwrap()
     }
 
-    fn get_validator_ac_client(
+    fn get_client(
         &self,
+        swarm: &LibraSwarm,
         node_index: usize,
         waypoint: Option<Waypoint>,
     ) -> ClientProxy {
-        let port = self.validator_swarm.get_client_port(node_index);
+        let port = swarm.get_client_port(node_index);
         self.get_json_rpc_client(port, waypoint)
+    }
+
+    fn get_validator_client(&self, node_index: usize, waypoint: Option<Waypoint>) -> ClientProxy {
+        self.get_client(&self.validator_swarm, node_index, waypoint)
     }
 
     fn get_validator_debug_interface_client(&self, node_index: usize) -> NodeDebugClient {
@@ -171,20 +149,24 @@ impl TestEnvironment {
             .collect()
     }
 
-    fn get_full_node_ac_client(
-        &self,
-        node_index: usize,
-        waypoint: Option<Waypoint>,
-    ) -> ClientProxy {
-        match &self.full_node_swarm {
-            Some(swarm) => {
-                let port = swarm.get_client_port(node_index);
-                self.get_json_rpc_client(port, waypoint)
-            }
-            None => {
-                panic!("Full Node swarm is not initialized");
-            }
-        }
+    fn get_vfn_client(&self, node_index: usize, waypoint: Option<Waypoint>) -> ClientProxy {
+        self.get_client(
+            self.vfn_swarm
+                .as_ref()
+                .expect("Vfn swarm is not initialized"),
+            node_index,
+            waypoint,
+        )
+    }
+
+    fn get_public_fn_client(&self, node_index: usize, waypoint: Option<Waypoint>) -> ClientProxy {
+        self.get_client(
+            self.public_fn_swarm
+                .as_ref()
+                .expect("Public fn swarm is not initialized"),
+            node_index,
+            waypoint,
+        )
     }
 
     fn get_validator(&self, node_index: usize) -> Option<&LibraNode> {
@@ -241,41 +223,41 @@ fn setup_swarm_and_client_proxy(
     client_port_index: usize,
 ) -> (TestEnvironment, ClientProxy) {
     let mut env = TestEnvironment::new(num_nodes);
-    env.launch_swarm(RoleType::Validator);
-    let ac_client = env.get_validator_ac_client(client_port_index, None);
+    env.validator_swarm.launch();
+    let ac_client = env.get_validator_client(client_port_index, None);
     (env, ac_client)
 }
 
 fn test_smoke_script(mut client_proxy: ClientProxy) {
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "10", "LBR"], true)
+        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(10.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "1", "1", "LBR"], true)
+        .mint_coins(&["mintb", "1", "1", "Coin1"], true)
         .unwrap();
     client_proxy
-        .transfer_coins(&["tb", "0", "1", "3", "LBR"], true)
+        .transfer_coins(&["tb", "0", "1", "3", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(7.0, "LBR".to_string())],
+        vec![(7.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(4.0, "LBR".to_string())],
+        vec![(4.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "2", "15", "LBR"], true)
+        .mint_coins(&["mintb", "2", "15", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(15.0, "LBR".to_string())],
+        vec![(15.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "2"]).unwrap()
     ));
 }
@@ -285,16 +267,16 @@ fn test_execute_custom_module_and_script() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "50", "LBR"], true)
+        .mint_coins(&["mintb", "0", "50", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(50.0, "LBR".to_string())],
+        vec![(50.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
 
     let recipient_address = client_proxy.create_next_account(false).unwrap().address;
     client_proxy
-        .mint_coins(&["mintb", "1", "1", "LBR"], true)
+        .mint_coins(&["mintb", "1", "1", "Coin1"], true)
         .unwrap();
 
     let (sender_account, _) = client_proxy
@@ -355,11 +337,11 @@ fn test_execute_custom_module_and_script() {
         .unwrap();
 
     assert!(compare_balances(
-        vec![(49.999_990, "LBR".to_string())],
+        vec![(49.999_990, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(1.000_010, "LBR".to_string())],
+        vec![(1.000_010, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
 }
@@ -378,7 +360,7 @@ fn smoke_test_single_node_block_metadata() {
     // just need an address to get the latest version
     let address = AccountAddress::from_hex_literal("0xA550C18").unwrap();
     // this script does 4 transactions
-    test_smoke_script(swarm.get_validator_ac_client(0, None));
+    test_smoke_script(swarm.get_validator_client(0, None));
     let (_state, version) = client_proxy
         .get_latest_account_state(&["q", &address.to_string()])
         .unwrap();
@@ -400,26 +382,26 @@ fn test_concurrent_transfers_single_node() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "100", "LBR"], true)
+        .mint_coins(&["mintb", "0", "100", "Coin1"], true)
         .unwrap();
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "1", "10", "LBR"], true)
+        .mint_coins(&["mintb", "1", "10", "Coin1"], true)
         .unwrap();
     for _ in 0..20 {
         client_proxy
-            .transfer_coins(&["t", "0", "1", "1", "LBR"], false)
+            .transfer_coins(&["t", "0", "1", "1", "Coin1"], false)
             .unwrap();
     }
     client_proxy
-        .transfer_coins(&["tb", "0", "1", "1", "LBR"], true)
+        .transfer_coins(&["tb", "0", "1", "1", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(79.0, "LBR".to_string())],
+        vec![(79.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(31.0, "LBR".to_string())],
+        vec![(31.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
 }
@@ -430,17 +412,17 @@ fn test_trace() {
     let mut debug_client = swarm.get_validator_debug_interface_client(0);
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "100", "LBR"], true)
+        .mint_coins(&["mintb", "0", "100", "Coin1"], true)
         .unwrap();
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "1", "10", "LBR"], true)
+        .mint_coins(&["mintb", "1", "10", "Coin1"], true)
         .unwrap();
     client_proxy
-        .transfer_coins(&["t", "0", "1", "1", "LBR"], false)
+        .transfer_coins(&["t", "0", "1", "1", "Coin1"], false)
         .unwrap();
     let events = debug_client.get_events().expect("Failed to get events");
-    let txn_node = format!("txn::{}::{}", treasury_compliance_account_address(), 1);
+    let txn_node = format!("txn::{}::{}", testnet_dd_account_address(), 1);
     println!("Tracing {}", txn_node);
     libra_trace::trace_node(&events[..], &txn_node);
 }
@@ -461,46 +443,43 @@ fn test_basic_restartability() {
     client_proxy.create_next_account(false).unwrap();
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mb", "0", "100", "LBR"], true)
+        .mint_coins(&["mb", "0", "100", "Coin1"], true)
         .unwrap();
     client_proxy
-        .mint_coins(&["mb", "1", "10", "LBR"], true)
+        .mint_coins(&["mb", "1", "10", "Coin1"], true)
         .unwrap();
     client_proxy
-        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(90.0, "LBR".to_string())],
+        vec![(90.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(20.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
     let peer_to_restart = 0;
     // restart node
     env.validator_swarm.kill_node(peer_to_restart);
-    assert!(env
-        .validator_swarm
-        .add_node(peer_to_restart, RoleType::Validator, false)
-        .is_ok());
+    assert!(env.validator_swarm.add_node(peer_to_restart, false).is_ok());
     assert!(compare_balances(
-        vec![(90.0, "LBR".to_string())],
+        vec![(90.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(20.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy
-        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(80.0, "LBR".to_string())],
+        vec![(80.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(30.0, "LBR".to_string())],
+        vec![(30.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
 }
@@ -511,20 +490,20 @@ fn test_startup_sync_state() {
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_1
-        .mint_coins(&["mb", "0", "100", "LBR"], true)
+        .mint_coins(&["mb", "0", "100", "Coin1"], true)
         .unwrap();
     client_proxy_1
-        .mint_coins(&["mb", "1", "10", "LBR"], true)
+        .mint_coins(&["mb", "1", "10", "Coin1"], true)
         .unwrap();
     client_proxy_1
-        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(90.0, "LBR".to_string())],
+        vec![(90.0, "Coin1".to_string())],
         client_proxy_1.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(20.0, "Coin1".to_string())],
         client_proxy_1.get_balances(&["b", "1"]).unwrap()
     ));
     let peer_to_stop = 0;
@@ -546,38 +525,35 @@ fn test_startup_sync_state() {
     // behind consensus db and forcing a state sync
     // during a node startup
     fs::remove_dir_all(state_db_path).unwrap();
-    assert!(env
-        .validator_swarm
-        .add_node(peer_to_stop, RoleType::Validator, false)
-        .is_ok());
+    assert!(env.validator_swarm.add_node(peer_to_stop, false).is_ok());
     // create the client for the restarted node
     let accounts = client_proxy_1.copy_all_accounts();
-    let mut client_proxy_0 = env.get_validator_ac_client(0, None);
+    let mut client_proxy_0 = env.get_validator_client(0, None);
     let sender_address = accounts[0].address;
     client_proxy_0.set_accounts(accounts);
     client_proxy_0
         .wait_for_transaction(sender_address, 1)
         .unwrap();
     assert!(compare_balances(
-        vec![(90.0, "LBR".to_string())],
+        vec![(90.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(20.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy_1
-        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
     client_proxy_0
         .wait_for_transaction(sender_address, 2)
         .unwrap();
     assert!(compare_balances(
-        vec![(80.0, "LBR".to_string())],
+        vec![(80.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(30.0, "LBR".to_string())],
+        vec![(30.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "1"]).unwrap()
     ));
 }
@@ -588,20 +564,20 @@ fn test_startup_sync_state_with_empty_consensus_db() {
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_1
-        .mint_coins(&["mb", "0", "100", "LBR"], true)
+        .mint_coins(&["mb", "0", "100", "Coin1"], true)
         .unwrap();
     client_proxy_1
-        .mint_coins(&["mb", "1", "10", "LBR"], true)
+        .mint_coins(&["mb", "1", "10", "Coin1"], true)
         .unwrap();
     client_proxy_1
-        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(90.0, "LBR".to_string())],
+        vec![(90.0, "Coin1".to_string())],
         client_proxy_1.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(20.0, "Coin1".to_string())],
         client_proxy_1.get_balances(&["b", "1"]).unwrap()
     ));
     let peer_to_stop = 0;
@@ -620,38 +596,35 @@ fn test_startup_sync_state_with_empty_consensus_db() {
     assert!(consensus_db_path.as_path().exists());
     // Delete the consensus db to simulate consensus db is nuked
     fs::remove_dir_all(consensus_db_path).unwrap();
-    assert!(env
-        .validator_swarm
-        .add_node(peer_to_stop, RoleType::Validator, false)
-        .is_ok());
+    assert!(env.validator_swarm.add_node(peer_to_stop, false).is_ok());
     // create the client for the restarted node
     let accounts = client_proxy_1.copy_all_accounts();
-    let mut client_proxy_0 = env.get_validator_ac_client(0, None);
+    let mut client_proxy_0 = env.get_validator_client(0, None);
     let sender_address = accounts[0].address;
     client_proxy_0.set_accounts(accounts);
     client_proxy_0
         .wait_for_transaction(sender_address, 1)
         .unwrap();
     assert!(compare_balances(
-        vec![(90.0, "LBR".to_string())],
+        vec![(90.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(20.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy_1
-        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
     client_proxy_0
         .wait_for_transaction(sender_address, 2)
         .unwrap();
     assert!(compare_balances(
-        vec![(80.0, "LBR".to_string())],
+        vec![(80.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(30.0, "LBR".to_string())],
+        vec![(30.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "1"]).unwrap()
     ));
 }
@@ -667,20 +640,20 @@ fn test_basic_state_synchronization() {
     client_proxy.create_next_account(false).unwrap();
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mb", "0", "100", "LBR"], true)
+        .mint_coins(&["mb", "0", "100", "Coin1"], true)
         .unwrap();
     client_proxy
-        .mint_coins(&["mb", "1", "10", "LBR"], true)
+        .mint_coins(&["mb", "1", "10", "Coin1"], true)
         .unwrap();
     client_proxy
-        .transfer_coins(&["tb", "0", "1", "10", "LBR"], true)
+        .transfer_coins(&["tb", "0", "1", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(90.0, "LBR".to_string())],
+        vec![(90.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(20.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
 
@@ -689,35 +662,32 @@ fn test_basic_state_synchronization() {
     env.validator_swarm.kill_node(node_to_restart);
     // All these are executed while one node is down
     assert!(compare_balances(
-        vec![(90.0, "LBR".to_string())],
+        vec![(90.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(20.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
     client_proxy
-        .transfer_coins(&["tb", "0", "1", "1", "LBR"], true)
+        .transfer_coins(&["tb", "0", "1", "1", "Coin1"], true)
         .unwrap();
 
     // Reconnect and synchronize the state
-    assert!(env
-        .validator_swarm
-        .add_node(node_to_restart, RoleType::Validator, false)
-        .is_ok());
+    assert!(env.validator_swarm.add_node(node_to_restart, false).is_ok());
 
     // Wait for all the nodes to catch up
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
 
     // Connect to the newly recovered node and verify its state
-    let mut client_proxy2 = env.get_validator_ac_client(node_to_restart, None);
+    let mut client_proxy2 = env.get_validator_client(node_to_restart, None);
     client_proxy2.set_accounts(client_proxy.copy_all_accounts());
     assert!(compare_balances(
-        vec![(89.0, "LBR".to_string())],
+        vec![(89.0, "Coin1".to_string())],
         client_proxy2.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(21.0, "LBR".to_string())],
+        vec![(21.0, "Coin1".to_string())],
         client_proxy2.get_balances(&["b", "1"]).unwrap()
     ));
 
@@ -725,37 +695,34 @@ fn test_basic_state_synchronization() {
     env.validator_swarm.kill_node(node_to_restart);
     // All these are executed while one node is down
     assert!(compare_balances(
-        vec![(89.0, "LBR".to_string())],
+        vec![(89.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(21.0, "LBR".to_string())],
+        vec![(21.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "1"]).unwrap()
     ));
     for _ in 0..10 {
         client_proxy
-            .transfer_coins(&["tb", "0", "1", "1", "LBR"], true)
+            .transfer_coins(&["tb", "0", "1", "1", "Coin1"], true)
             .unwrap();
     }
 
     // Reconnect and synchronize the state
-    assert!(env
-        .validator_swarm
-        .add_node(node_to_restart, RoleType::Validator, false)
-        .is_ok());
+    assert!(env.validator_swarm.add_node(node_to_restart, false).is_ok());
 
     // Wait for all the nodes to catch up
     assert!(env.validator_swarm.wait_for_all_nodes_to_catchup());
 
     // Connect to the newly recovered node and verify its state
-    let mut client_proxy2 = env.get_validator_ac_client(node_to_restart, None);
+    let mut client_proxy2 = env.get_validator_client(node_to_restart, None);
     client_proxy2.set_accounts(client_proxy.copy_all_accounts());
     assert!(compare_balances(
-        vec![(79.0, "LBR".to_string())],
+        vec![(79.0, "Coin1".to_string())],
         client_proxy2.get_balances(&["b", "0"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(31.0, "LBR".to_string())],
+        vec![(31.0, "Coin1".to_string())],
         client_proxy2.get_balances(&["b", "1"]).unwrap()
     ));
 }
@@ -783,7 +750,7 @@ fn test_external_transaction_signer() {
     // mint to the sender address
     client_proxy
         .mint_coins(
-            &["mintb", &format!("{}", sender_auth_key), "10", "LBR"],
+            &["mintb", &format!("{}", sender_auth_key), "10", "Coin1"],
             true,
         )
         .unwrap();
@@ -794,7 +761,7 @@ fn test_external_transaction_signer() {
                 "mintb",
                 &format!("{}", receiver_auth_key.unwrap()),
                 "1",
-                "LBR",
+                "Coin1",
             ],
             true,
         )
@@ -805,7 +772,7 @@ fn test_external_transaction_signer() {
         .get_sequence_number(&["sequence", &format!("{}", sender_address)])
         .unwrap();
 
-    let currency_code = LBR_NAME;
+    let currency_code = COIN1_NAME;
 
     let unsigned_txn = client_proxy
         .prepare_transfer_coins(
@@ -892,20 +859,24 @@ fn test_external_transaction_signer() {
 fn test_full_node_basic_flow() {
     // launch environment of 4 validator nodes and 2 full nodes
     let mut env = TestEnvironment::new(4);
-    env.setup_full_node_swarm(2);
-    env.launch_swarm(RoleType::Validator);
-    env.launch_swarm(RoleType::FullNode);
+    env.setup_vfn_swarm();
+    env.setup_public_fn_swarm(2);
+    env.validator_swarm.launch();
+    env.vfn_swarm.as_mut().unwrap().launch();
+    env.public_fn_swarm.as_mut().unwrap().launch();
 
     // execute smoke script
-    test_smoke_script(env.get_validator_ac_client(0, None));
+    test_smoke_script(env.get_validator_client(0, None));
 
     // read state from full node client
-    let mut validator_ac_client = env.get_validator_ac_client(1, None);
-    let mut full_node_client = env.get_full_node_ac_client(1, None);
-    let mut full_node_client_2 = env.get_full_node_ac_client(0, None);
+    let mut validator_ac_client = env.get_validator_client(1, None);
+    let mut full_node_client = env.get_vfn_client(1, None);
+    let mut full_node_client_2 = env.get_public_fn_client(0, None);
 
     // ensure the client has up-to-date sequence number after test_smoke_script(3 minting)
-    let sender_account = treasury_compliance_account_address();
+    //let sender_account = treasury_compliance_account_address();
+    let sender_account = testnet_dd_account_address();
+    let creation_account = association_address();
     full_node_client
         .wait_for_transaction(sender_account, 3)
         .unwrap();
@@ -932,16 +903,21 @@ fn test_full_node_basic_flow() {
     full_node_client_2.create_next_account(false).unwrap();
 
     let sequence_reset = format!("sequence {} true", sender_account);
+    let creation_sequence_reset = format!("sequence {} true", creation_account);
     let sequence_reset_command: Vec<_> = sequence_reset.split(' ').collect();
+    let creation_sequence_reset_command: Vec<_> = creation_sequence_reset.split(' ').collect();
     full_node_client
         .get_sequence_number(&sequence_reset_command)
         .unwrap();
     full_node_client
-        .mint_coins(&["mintb", "3", "10", "LBR"], true)
+        .get_sequence_number(&creation_sequence_reset_command)
+        .unwrap();
+    full_node_client
+        .mint_coins(&["mintb", "3", "10", "Coin1"], true)
         .expect("Fail to mint!");
 
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(10.0, "Coin1".to_string())],
         full_node_client.get_balances(&["b", "3"]).unwrap()
     ));
     let sequence = full_node_client
@@ -951,7 +927,7 @@ fn test_full_node_basic_flow() {
         .wait_for_transaction(sender_account, sequence)
         .unwrap();
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(10.0, "Coin1".to_string())],
         validator_ac_client.get_balances(&["b", "3"]).unwrap()
     ));
 
@@ -962,6 +938,12 @@ fn test_full_node_basic_flow() {
     full_node_client
         .get_sequence_number(&sequence_reset_command)
         .unwrap();
+    validator_ac_client
+        .get_sequence_number(&creation_sequence_reset_command)
+        .unwrap();
+    full_node_client
+        .get_sequence_number(&creation_sequence_reset_command)
+        .unwrap();
 
     // mint from validator and check both nodes have correct balance
     validator_ac_client.create_next_account(false).unwrap();
@@ -969,7 +951,7 @@ fn test_full_node_basic_flow() {
     full_node_client_2.create_next_account(false).unwrap();
 
     validator_ac_client
-        .mint_coins(&["mintb", "4", "10", "LBR"], true)
+        .mint_coins(&["mintb", "4", "10", "Coin1"], true)
         .unwrap();
     let sequence = validator_ac_client
         .get_sequence_number(&sequence_reset_command)
@@ -979,30 +961,30 @@ fn test_full_node_basic_flow() {
         .unwrap();
 
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(10.0, "Coin1".to_string())],
         validator_ac_client.get_balances(&["b", "4"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(10.0, "Coin1".to_string())],
         full_node_client.get_balances(&["b", "4"]).unwrap()
     ));
 
     // minting again on validator doesn't cause error since client sequence has been updated
     validator_ac_client
-        .mint_coins(&["mintb", "4", "10", "LBR"], true)
+        .mint_coins(&["mintb", "4", "10", "Coin1"], true)
         .unwrap();
 
     // test transferring balance from 0 to 1 through full node proxy
     full_node_client
-        .transfer_coins(&["tb", "3", "4", "10", "LBR"], true)
+        .transfer_coins(&["tb", "3", "4", "10", "Coin1"], true)
         .unwrap();
 
     assert!(compare_balances(
-        vec![(0.0, "LBR".to_string())],
+        vec![(0.0, "Coin1".to_string())],
         full_node_client.get_balances(&["b", "3"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(30.0, "LBR".to_string())],
+        vec![(30.0, "Coin1".to_string())],
         validator_ac_client.get_balances(&["b", "4"]).unwrap()
     ));
 
@@ -1013,11 +995,11 @@ fn test_full_node_basic_flow() {
         .wait_for_transaction(account3, sequence)
         .unwrap();
     assert!(compare_balances(
-        vec![(0.0, "LBR".to_string())],
+        vec![(0.0, "Coin1".to_string())],
         full_node_client_2.get_balances(&["b", "3"]).unwrap()
     ));
     assert!(compare_balances(
-        vec![(30.0, "LBR".to_string())],
+        vec![(30.0, "Coin1".to_string())],
         full_node_client_2.get_balances(&["b", "4"]).unwrap()
     ));
 }
@@ -1025,36 +1007,24 @@ fn test_full_node_basic_flow() {
 #[test]
 fn test_e2e_reconfiguration() {
     let (env, mut client_proxy_1) = setup_swarm_and_client_proxy(3, 1);
-    // retrieving the 0-th validator private key
-    let config_path = env.validator_swarm.config.config_files.get(0).unwrap();
-    let config = NodeConfig::load(&config_path).unwrap();
-    let operator_private_str = config
-        .test
-        .unwrap()
-        .operator_keypair
-        .unwrap()
-        .take_private()
-        .unwrap()
-        .to_encoded_string()
-        .unwrap();
 
     // the client connected to the removed validator
-    let mut client_proxy_0 = env.get_validator_ac_client(0, None);
+    let mut client_proxy_0 = env.get_validator_client(0, None);
     client_proxy_1.create_next_account(false).unwrap();
     client_proxy_0.set_accounts(client_proxy_1.copy_all_accounts());
     client_proxy_1
-        .mint_coins(&["mintb", "0", "10", "LBR"], true)
+        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(10.0, "Coin1".to_string())],
         client_proxy_1.get_balances(&["b", "0"]).unwrap()
     ));
     // wait for the mint txn in node 0
     client_proxy_0
-        .wait_for_transaction(treasury_compliance_account_address(), 1)
+        .wait_for_transaction(testnet_dd_account_address(), 1)
         .unwrap();
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(10.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
     ));
     let peer_id = env
@@ -1064,31 +1034,31 @@ fn test_e2e_reconfiguration() {
         .unwrap()
         .to_string();
     client_proxy_1
-        .remove_validator(&["remove_validator", &peer_id, &operator_private_str], true)
+        .remove_validator(&["remove_validator", &peer_id], true)
         .unwrap();
     // mint another 10 coins after remove node 0
     client_proxy_1
-        .mint_coins(&["mintb", "0", "10", "LBR"], true)
+        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(20.0, "Coin1".to_string())],
         client_proxy_1.get_balances(&["b", "0"]).unwrap()
     ));
     // client connected to removed validator can not see the update
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(10.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
     ));
     // Add the node back
     client_proxy_1
-        .add_validator(&["add_validator", &peer_id, &operator_private_str], true)
+        .add_validator(&["add_validator", &peer_id], true)
         .unwrap();
     // Wait for it catches up, mint1 + mint2 => seq == 2
     client_proxy_0
-        .wait_for_transaction(treasury_compliance_account_address(), 2)
+        .wait_for_transaction(testnet_dd_account_address(), 2)
         .unwrap();
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(20.0, "Coin1".to_string())],
         client_proxy_0.get_balances(&["b", "0"]).unwrap()
     ));
 }
@@ -1099,10 +1069,10 @@ fn test_e2e_modify_publishing_option() {
     client_proxy.create_next_account(false).unwrap();
 
     client_proxy
-        .mint_coins(&["mintb", "0", "10", "LBR"], true)
+        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(10.0, "LBR".to_string())],
+        vec![(10.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     let script_path = workspace_builder::workspace_root()
@@ -1137,10 +1107,10 @@ fn test_e2e_modify_publishing_option() {
 
     // mint another 10 coins after restart
     client_proxy
-        .mint_coins(&["mintb", "0", "10", "LBR"], true)
+        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(20.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
 
@@ -1165,22 +1135,10 @@ fn test_e2e_modify_publishing_option() {
 #[test]
 fn test_client_waypoints() {
     let (env, mut client_proxy) = setup_swarm_and_client_proxy(3, 1);
-    // retrieving the 0-th validator private key
-    let config_path = env.validator_swarm.config.config_files.get(0).unwrap();
-    let config = NodeConfig::load(&config_path).unwrap();
-    let operator_private_str = config
-        .test
-        .unwrap()
-        .operator_keypair
-        .unwrap()
-        .take_private()
-        .unwrap()
-        .to_encoded_string()
-        .unwrap();
     // Make sure some txns are committed
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "10", "LBR"], true)
+        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
 
     // Create the waypoint for the initial epoch
@@ -1192,7 +1150,7 @@ fn test_client_waypoints() {
         .expect("Failed to generate waypoint from genesis LI");
 
     // Start another client with the genesis waypoint and make sure it successfully connects
-    let mut client_with_waypoint = env.get_validator_ac_client(0, Some(genesis_waypoint));
+    let mut client_with_waypoint = env.get_validator_client(0, Some(genesis_waypoint));
     client_with_waypoint.test_trusted_connection().unwrap();
     assert_eq!(
         client_with_waypoint.latest_epoch_change_li().unwrap(),
@@ -1207,13 +1165,13 @@ fn test_client_waypoints() {
         .unwrap()
         .to_string();
     client_proxy
-        .remove_validator(&["remove_validator", &peer_id, &operator_private_str], true)
+        .remove_validator(&["remove_validator", &peer_id], true)
         .unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "10", "LBR"], true)
+        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
     assert!(compare_balances(
-        vec![(20.0, "LBR".to_string())],
+        vec![(20.0, "Coin1".to_string())],
         client_proxy.get_balances(&["b", "0"]).unwrap()
     ));
     let epoch_1_li = client_proxy
@@ -1225,7 +1183,7 @@ fn test_client_waypoints() {
         .expect("Failed to generate waypoint from end of epoch 1");
 
     // Start a client with the waypoint for end of epoch 1 and make sure it successfully connects
-    client_with_waypoint = env.get_validator_ac_client(1, Some(epoch_1_waypoint));
+    client_with_waypoint = env.get_validator_client(1, Some(epoch_1_waypoint));
     client_with_waypoint.test_trusted_connection().unwrap();
     assert_eq!(
         client_with_waypoint.latest_epoch_change_li().unwrap(),
@@ -1235,7 +1193,7 @@ fn test_client_waypoints() {
     // Verify that a client with the wrong waypoint is not going to be able to connect to the chain.
     let bad_li = LedgerInfo::mock_genesis(None);
     let bad_waypoint = Waypoint::new_epoch_boundary(&bad_li).unwrap();
-    let mut client_with_bad_waypoint = env.get_validator_ac_client(1, Some(bad_waypoint));
+    let mut client_with_bad_waypoint = env.get_validator_client(1, Some(bad_waypoint));
     assert!(client_with_bad_waypoint.test_trusted_connection().is_err());
 }
 
@@ -1244,7 +1202,7 @@ fn test_malformed_script() {
     let (_swarm, mut client_proxy) = setup_swarm_and_client_proxy(1, 0);
     client_proxy.create_next_account(false).unwrap();
     client_proxy
-        .mint_coins(&["mintb", "0", "100", "LBR"], true)
+        .mint_coins(&["mintb", "0", "100", "Coin1"], true)
         .unwrap();
 
     let script_path = workspace_builder::workspace_root()
@@ -1267,7 +1225,7 @@ fn test_malformed_script() {
 
     // Previous transaction should not choke the system.
     client_proxy
-        .mint_coins(&["mintb", "0", "10", "LBR"], true)
+        .mint_coins(&["mintb", "0", "10", "Coin1"], true)
         .unwrap();
 }
 
@@ -1275,12 +1233,12 @@ fn test_malformed_script() {
 #[ignore]
 fn test_key_manager_consensus_rotation() {
     // Create and launch a local validator swarm of 2 nodes.
-    let mut swarm = TestEnvironment::new(2);
-    swarm.launch_swarm(RoleType::Validator);
+    let mut env = TestEnvironment::new(2);
+    env.validator_swarm.launch();
 
     // Create a node config for the key manager by extracting the first node config in the swarm.
     // TODO(joshlind): see if we can refactor TestEnvironment to clean this up.
-    let node_config_path = swarm.validator_swarm.config.config_files.get(0).unwrap();
+    let node_config_path = env.validator_swarm.config.config_files.get(0).unwrap();
     let node_config = NodeConfig::load(&node_config_path).unwrap();
     let json_rpc_endpoint = format!("http://127.0.0.1:{}", node_config.rpc.address.port());
 
@@ -1294,7 +1252,7 @@ fn test_key_manager_consensus_rotation() {
     key_manager_config.secure_backend = SecureBackend::OnDiskStorage(on_disk_storage_config);
 
     // Save the key manager config to disk
-    let key_manager_config_path = node_config_path.with_file_name("key_manager.config.toml");
+    let key_manager_config_path = node_config_path.with_file_name("key_manager.yaml");
     key_manager_config.save(&key_manager_config_path).unwrap();
 
     // Bootstrap secure storage by initializing the keys required by the key manager.

@@ -23,7 +23,7 @@ use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
 use libra_logger::{debug, error, info};
 use libra_state_view::StateView;
-use libra_types::{account_address::AccountAddress, vm_error::StatusCode};
+use libra_types::{account_address::AccountAddress, vm_status::StatusCode};
 use libra_vm::LibraVM;
 use move_core_types::{
     gas_schedule::{GasAlgebra, GasUnits},
@@ -43,16 +43,17 @@ use vm::{
 };
 
 /// This function calls the Bytecode verifier to test it
-fn run_verifier(module: CompiledModule) -> Result<VerifiedModule, String> {
+fn run_verifier(module: CompiledModule) -> Result<CompiledModule, String> {
     let verifier_panic = panic::catch_unwind(|| {
-        VerifiedModule::new(module.clone())
+        VerifiedModule::new(module)
+            .map(|verified_module| verified_module.into_inner())
             .map_err(|err| format!("Module verification failed: {:#?}", err))
     });
     verifier_panic.unwrap_or_else(|err| Err(format!("Verifier panic: {:#?}", err)))
 }
 
 /// This function runs a verified module in the VM runtime
-fn run_vm(module: VerifiedModule) -> VMResult<()> {
+fn run_vm(module: CompiledModule) -> VMResult<()> {
     // By convention the 0'th index function definition is the entrypoint to the module (i.e. that
     // will contain only simply-typed arguments).
     let entry_idx = FunctionDefinitionIndex::new(0);
@@ -87,13 +88,13 @@ fn run_vm(module: VerifiedModule) -> VMResult<()> {
 
 /// Execute the first function in a module
 fn execute_function_in_module(
-    module: VerifiedModule,
+    module: CompiledModule,
     idx: FunctionDefinitionIndex,
     ty_args: Vec<TypeTag>,
     args: Vec<Value>,
     state_view: &dyn StateView,
 ) -> VMResult<()> {
-    let module_id = module.as_inner().self_id();
+    let module_id = module.self_id();
     let entry_name = {
         let entry_func_idx = module.function_def_at(idx).function;
         let entry_name_idx = module.function_handle_at(entry_func_idx).name;
@@ -108,14 +109,19 @@ fn execute_function_in_module(
 
         let gas_schedule = internals.gas_schedule()?;
         internals.with_txn_data_cache(state_view, |mut txn_context| {
+            let sender = AccountAddress::random();
+            let mut mod_blob = vec![];
+            module
+                .serialize(&mut mod_blob)
+                .expect("Module serialization error");
             let mut cost_strategy = CostStrategy::system(gas_schedule, GasUnits::new(0));
-            move_vm.cache_module(module.clone(), &mut txn_context)?;
+            move_vm.publish_module(mod_blob, sender, &mut txn_context, &mut cost_strategy)?;
             move_vm.execute_function(
                 &module_id,
                 &entry_name,
                 ty_args,
                 args,
-                AccountAddress::ZERO,
+                sender,
                 &mut txn_context,
                 &mut cost_strategy,
             )
@@ -263,9 +269,7 @@ pub fn bytecode_generation(
                 let uid = rng.gen::<u64>();
                 output_error_case(module.clone(), output_path.clone(), uid, tid);
                 if EXECUTE_UNVERIFIED_MODULE {
-                    Some(VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(
-                        module.clone(),
-                    ))
+                    Some(module.clone())
                 } else {
                     None
                 }

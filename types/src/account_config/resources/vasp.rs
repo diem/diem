@@ -13,6 +13,7 @@ pub struct ParentVASP {
     base_url: String,
     expiration_date: u64,
     compliance_public_key: Vec<u8>,
+    num_children: u64,
 }
 
 impl ParentVASP {
@@ -30,6 +31,10 @@ impl ParentVASP {
 
     pub fn compliance_public_key(&self) -> &[u8] {
         &self.compliance_public_key
+    }
+
+    pub fn num_children(&self) -> u64 {
+        self.num_children
     }
 }
 

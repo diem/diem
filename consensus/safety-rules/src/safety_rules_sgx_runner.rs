@@ -109,6 +109,7 @@ impl UsercallExtension for LSRCoreService {
 }
 
 fn test_connect() {
+    /* lwg: this takes some time for enclave to setup port */
     thread::sleep(std::time::Duration::from_secs(5));
     println!("trying to connect ... {}", line!());
     let mut stream = TcpStream::connect(LSR_CORE_ADDRESS).unwrap();
@@ -132,8 +133,6 @@ fn run_server(file: String) -> Result<(), ()> {
     println!("lwg:running enclave...{}", line!());
     let enclave = enclave_builder.build(&mut device).unwrap();
     println!("lwg:running enclave...{}", line!());
-
-
     enclave.run().map_err(|e| {
         eprintln!("Error in running enclave {}", e);
     })

@@ -42,6 +42,10 @@ use libra_logger::{prelude::*, StructuredLogEntry};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use num_variants::NumVariants;
+use rand::{
+    prelude::{SeedableRng, SmallRng},
+    seq::SliceRandom,
+};
 use serde::Serialize;
 use std::{
     cmp::min,
@@ -52,12 +56,13 @@ use std::{
 };
 use tokio::time;
 
+pub mod builder;
 #[cfg(test)]
 mod test;
 
 /// The ConnectivityManager actor.
 pub struct ConnectivityManager<TTicker, TBackoff> {
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     /// Nodes which are eligible to join the network.
     eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
     /// PeerId and address of remote peers to which this peer is connected.
@@ -85,6 +90,10 @@ pub struct ConnectivityManager<TTicker, TBackoff> {
     /// A local counter incremented on receiving an incoming message. Printing this in debugging
     /// allows for easy debugging.
     event_id: u32,
+    /// A way to limit the number of connected peers by outgoing dials.
+    connection_limit: Option<usize>,
+    /// Random for shuffling which peers will be dialed
+    rng: SmallRng,
 }
 
 /// Different sources for peer addresses, ordered by priority (Onchain=highest,
@@ -110,11 +119,12 @@ pub enum ConnectivityRequest {
 }
 
 /// The set of `NetworkAddress`'s for all peers.
+#[derive(Serialize)]
 struct PeerAddresses(HashMap<PeerId, Addresses>);
 
 /// A set of `NetworkAddress`'s for a single peer, bucketed by DiscoverySource in
 /// priority order.
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Serialize)]
 struct Addresses([Vec<NetworkAddress>; DiscoverySource::NUM_VARIANTS]);
 
 #[derive(Debug)]
@@ -142,7 +152,7 @@ where
 {
     /// Creates a new instance of the [`ConnectivityManager`] actor.
     pub fn new(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         eligible: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
         seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
         ticker: TTicker,
@@ -151,6 +161,7 @@ where
         requests_rx: channel::Receiver<ConnectivityRequest>,
         backoff_strategy: TBackoff,
         max_delay_ms: u64,
+        connection_limit: Option<usize>,
     ) -> Self {
         {
             // Reconcile the keysets eligible is only used to allow us to dial the remote peer
@@ -201,6 +212,8 @@ where
             backoff_strategy,
             max_delay_ms,
             event_id: 0,
+            connection_limit,
+            rng: SmallRng::from_entropy(),
         }
     }
 
@@ -338,26 +351,26 @@ where
             })
             .collect();
 
-        // We tune max delay depending on the number of peers to which we're not connected. This
-        // ensures that if we're disconnected from a large fraction of peers, we keep the retry
-        // window smaller.
-        let max_delay = Duration::from_millis(
-            (self.max_delay_ms as f64
-                * (1.0
-                    - ((self.dial_queue.len() + to_connect.len()) as f64
-                        / eligible
-                            .iter()
-                            .filter(|(peer_id, _)| self.peer_addresses.0.contains_key(&peer_id))
-                            .count() as f64))) as u64,
-        );
+        // Limit the number of dialed connections from a Full Node
+        // This does not limit the number of incoming connections
+        // It enforces that a full node cannot have more outgoing connections than `connection_limit`
+        // including in flight dials.
+        let to_connect_size = if let Some(conn_limit) = self.connection_limit {
+            min(
+                conn_limit - self.connected.len() - self.dial_queue.len(),
+                to_connect.len(),
+            )
+        } else {
+            to_connect.len()
+        };
 
         // The initial dial state; it has zero dial delay and uses the first
         // address.
         let init_dial_state = DialState::new(self.backoff_strategy.clone());
 
-        for (p, addrs) in to_connect.into_iter() {
+        for (p, addrs) in to_connect.choose_multiple(&mut self.rng, to_connect_size) {
             let mut connction_reqs_tx = self.connection_reqs_tx.clone();
-            let peer_id = *p;
+            let peer_id = **p;
             let dial_state = self
                 .dial_states
                 .entry(peer_id)
@@ -371,7 +384,8 @@ where
             // Using the DialState's backoff strategy, compute the delay until
             // the next dial attempt for this peer.
             let now = Instant::now();
-            let dial_delay = dial_state.next_backoff_delay(max_delay);
+            let dial_delay =
+                dial_state.next_backoff_delay(Duration::from_millis(self.max_delay_ms));
             let f_delay = time::delay_for(dial_delay);
 
             let (cancel_tx, cancel_rx) = oneshot::channel();
@@ -501,7 +515,7 @@ where
 
     fn handle_control_notification(&mut self, notif: peer_manager::ConnectionNotification) {
         match notif {
-            peer_manager::ConnectionNotification::NewPeer(peer_id, addr) => {
+            peer_manager::ConnectionNotification::NewPeer(peer_id, addr, _context) => {
                 self.connected.insert(peer_id, addr);
                 // Cancel possible queued dial to this peer.
                 self.dial_states.remove(&peer_id);
@@ -528,7 +542,7 @@ where
 }
 
 fn log_dial_result(
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     peer_id: PeerId,
     addr: NetworkAddress,
     dial_result: DialResult,

@@ -37,8 +37,10 @@ pub use self::{
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ConfigID(&'static str, &'static str);
 
+const CONFIG_ADDRESS_STR: &str = "0xA550C18";
+
 pub fn config_address() -> AccountAddress {
-    AccountAddress::from_hex_literal("0xF1A95").expect("failed to get address")
+    AccountAddress::from_hex_literal(CONFIG_ADDRESS_STR).expect("failed to get address")
 }
 
 impl ConfigID {
@@ -96,7 +98,7 @@ pub trait ConfigStorage {
 /// that is stored in storage as a serialized byte array
 pub trait OnChainConfig: Send + Sync + DeserializeOwned {
     // association_address
-    const ADDRESS: &'static str = "0xF1A95";
+    const ADDRESS: &'static str = CONFIG_ADDRESS_STR;
     const IDENTIFIER: &'static str;
     const CONFIG_ID: ConfigID = ConfigID(Self::ADDRESS, Self::IDENTIFIER);
 

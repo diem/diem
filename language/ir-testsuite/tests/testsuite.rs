@@ -15,16 +15,19 @@ use ir_to_bytecode::{
 use libra_types::account_address::AccountAddress;
 use move_ir_types::ast;
 use std::path::Path;
+use vm::CompiledModule;
 
 struct IRCompiler {
-    deps: Vec<VerifiedModule>,
+    deps: Vec<CompiledModule>,
 }
 
 impl IRCompiler {
     fn new(stdlib_modules: Vec<VerifiedModule>) -> Self {
-        IRCompiler {
-            deps: stdlib_modules,
-        }
+        let deps = stdlib_modules
+            .into_iter()
+            .map(|verified_module| verified_module.into_inner())
+            .collect();
+        IRCompiler { deps }
     }
 }
 
@@ -44,9 +47,7 @@ impl Compiler for IRCompiler {
             ast::ScriptOrModule::Module(parsed_module) => {
                 log(format!("{}", &parsed_module));
                 let module = compile_module(address, parsed_module, &self.deps)?.0;
-                let verified =
-                    VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(module.clone());
-                self.deps.push(verified);
+                self.deps.push(module.clone());
                 ScriptOrModule::Module(module)
             }
         })

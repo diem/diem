@@ -111,3 +111,15 @@ fn build_global_config_6() {
     let default = config.accounts.get("bob").unwrap();
     assert_eq!(default.balance(IdentStr::new("Coin1").unwrap()), 51);
 }
+
+#[rustfmt::skip]
+#[test]
+fn build_global_config_7() {
+    let config = parse_and_build_config(r"
+        //! account: bob, 0, 0, address
+    ").unwrap();
+
+    assert_eq!(config.accounts.len(), 1);
+    assert_eq!(config.addresses.len(), 1);
+    assert!(config.addresses.contains_key("bob"));
+}

@@ -3,10 +3,11 @@
 
 use crate::{ConsensusState, Error, SafetyRules, TSafetyRules};
 use consensus_types::{
-    block::Block, block_data::BlockData, quorum_cert::QuorumCert, timeout::Timeout, vote::Vote,
-    vote_proposal::VoteProposal,
+    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote,
+    vote_proposal::MaybeSignedVoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
+use libra_logger::warn;
 use libra_types::epoch_change::EpochChangeProof;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, RwLock};
@@ -15,8 +16,7 @@ use std::sync::{Arc, RwLock};
 pub enum SafetyRulesInput {
     ConsensusState,
     Initialize(Box<EpochChangeProof>),
-    Update(Box<QuorumCert>),
-    ConstructAndSignVote(Box<VoteProposal>),
+    ConstructAndSignVote(Box<MaybeSignedVoteProposal>),
     SignProposal(Box<BlockData>),
     SignTimeout(Box<Timeout>),
 }
@@ -34,22 +34,36 @@ impl SerializerService {
         let input = lcs::from_bytes(&input_message)?;
 
         let output = match input {
-            SafetyRulesInput::ConsensusState => lcs::to_bytes(&self.internal.consensus_state()),
-            SafetyRulesInput::Initialize(li) => lcs::to_bytes(&self.internal.initialize(&li)),
-            SafetyRulesInput::Update(qc) => lcs::to_bytes(&self.internal.update(&qc)),
-            SafetyRulesInput::ConstructAndSignVote(vote_proposal) => {
-                lcs::to_bytes(&self.internal.construct_and_sign_vote(&vote_proposal))
+            SafetyRulesInput::ConsensusState => {
+                log_and_serialize(self.internal.consensus_state(), "ConsensusState")
             }
+            SafetyRulesInput::Initialize(li) => {
+                log_and_serialize(self.internal.initialize(&li), "Initialize")
+            }
+            SafetyRulesInput::ConstructAndSignVote(vote_proposal) => log_and_serialize(
+                self.internal.construct_and_sign_vote(&vote_proposal),
+                "ConstructAndSignVote",
+            ),
             SafetyRulesInput::SignProposal(block_data) => {
-                lcs::to_bytes(&self.internal.sign_proposal(*block_data))
+                log_and_serialize(self.internal.sign_proposal(*block_data), "SignProposal")
             }
             SafetyRulesInput::SignTimeout(timeout) => {
-                lcs::to_bytes(&self.internal.sign_timeout(&timeout))
+                log_and_serialize(self.internal.sign_timeout(&timeout), "SignTimeout")
             }
         };
 
         Ok(output?)
     }
+}
+
+fn log_and_serialize<T: Serialize>(
+    response: Result<T, Error>,
+    from: &'static str,
+) -> Result<Vec<u8>, lcs::Error> {
+    if let Err(e) = &response {
+        warn!("[SafetyRules] {} failed: {}", from, e);
+    }
+    lcs::to_bytes(&response)
 }
 
 pub struct SerializerClient {
@@ -82,12 +96,10 @@ impl TSafetyRules for SerializerClient {
         lcs::from_bytes(&response)?
     }
 
-    fn update(&mut self, qc: &QuorumCert) -> Result<(), Error> {
-        let response = self.request(SafetyRulesInput::Update(Box::new(qc.clone())))?;
-        lcs::from_bytes(&response)?
-    }
-
-    fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error> {
+    fn construct_and_sign_vote(
+        &mut self,
+        vote_proposal: &MaybeSignedVoteProposal,
+    ) -> Result<Vote, Error> {
         let response = self.request(SafetyRulesInput::ConstructAndSignVote(Box::new(
             vote_proposal.clone(),
         )))?;

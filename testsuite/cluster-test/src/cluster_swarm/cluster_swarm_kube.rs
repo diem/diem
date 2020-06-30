@@ -21,15 +21,15 @@ use crate::{cluster_swarm::ClusterSwarm, instance::Instance};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
 use crate::instance::{
+    ApplicationConfig::{Fullnode, Validator, Vault, LSR},
     InstanceConfig,
-    InstanceConfig::{Fullnode, Validator, Vault, LSR},
 };
 use itertools::Itertools;
 use k8s_openapi::api::batch::v1::Job;
 use kube::api::ListParams;
 use libra_config::config::DEFAULT_JSON_RPC_PORT;
 use reqwest::Client as HttpClient;
-use std::{collections::HashSet, process::Command};
+use std::{collections::HashSet, convert::TryFrom, process::Command};
 
 const DEFAULT_NAMESPACE: &str = "default";
 
@@ -41,7 +41,7 @@ const ERROR_NOT_FOUND: u16 = 404;
 #[derive(Clone)]
 pub struct ClusterSwarmKube {
     client: Client,
-    node_map: Arc<Mutex<HashMap<InstanceConfig, String>>>,
+    node_map: Arc<Mutex<HashMap<String, KubeNode>>>,
     http_client: HttpClient,
 }
 
@@ -54,9 +54,9 @@ impl ClusterSwarmKube {
             .spawn()?;
         libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(2000, 60), || {
             Box::pin(async move {
-                info!("Running healthcheck on http://127.0.0.1:8001");
+                debug!("Running local kube pod healthcheck on http://127.0.0.1:8001");
                 reqwest::get("http://127.0.0.1:8001").await?.text().await?;
-                info!("Healthcheck passed");
+                info!("Local kube pod healthcheck passed");
                 Ok::<(), reqwest::Error>(())
             })
         })
@@ -223,7 +223,7 @@ impl ClusterSwarmKube {
                                 return Ok(true);
                             }
                         }
-                        if let Some(failed) = job_status.succeeded {
+                        if let Some(failed) = job_status.failed {
                             if failed as u32 == back_off_limit + 1 {
                                 error!("job {} failed to complete", job_name);
                                 return Ok(false);
@@ -266,49 +266,11 @@ impl ClusterSwarmKube {
         Ok(())
     }
 
-    async fn list_nodes(&self) -> Result<Vec<Node>> {
+    async fn list_nodes(&self) -> Result<Vec<KubeNode>> {
         let node_api: Api<Node> = Api::all(self.client.clone());
         let lp = ListParams::default().labels("nodeType=validators");
-        Ok(node_api.list(&lp).await?.items)
-    }
-
-    async fn get_pod_node_and_ip(&self, pod_name: &str) -> Result<(String, String)> {
-        libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(10000, 60), || {
-            let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
-            let pod_name = pod_name.to_string();
-            Box::pin(async move {
-                match pod_api.get(&pod_name).await {
-                    Ok(o) => {
-                        let node_name = o
-                            .spec
-                            .as_ref()
-                            .ok_or_else(|| format_err!("spec not found for pod {}, spec: {:?}", pod_name, o))?
-                            .node_name
-                            .as_ref()
-                            .ok_or_else(|| {
-                                format_err!("node_name not found for pod {}, spec: {:?}", pod_name, o)
-                            })?;
-                        let pod_ip = o
-                            .status
-                            .as_ref()
-                            .ok_or_else(|| format_err!("status not found for pod {}, spec: {:?}", pod_name, o))?
-                            .pod_ip
-                            .as_ref()
-                            .ok_or_else(|| format_err!("pod_ip not found for pod {}", pod_name))?;
-                        if node_name.is_empty() || pod_ip.is_empty() {
-                            bail!(
-                                "Either node_name or pod_ip was empty string for pod {}, spec: {:?}",
-                                pod_name, o
-                            )
-                        } else {
-                            Ok((node_name.clone(), pod_ip.clone()))
-                        }
-                    }
-                    Err(e) => bail!("pod_api.get failed for pod {} : {:?}", pod_name, e),
-                }
-            })
-        })
-        .await
+        let nodes = node_api.list(&lp).await?.items;
+        nodes.into_iter().map(KubeNode::try_from).collect()
     }
 
     async fn delete_resource<T>(&self, name: &str) -> Result<()>
@@ -379,14 +341,6 @@ impl ClusterSwarmKube {
             .await?
             .iter()
             .map(|node| -> Result<Job, anyhow::Error> {
-                let node_name = node
-                    .metadata
-                    .as_ref()
-                    .ok_or_else(|| format_err!("metadata not found for node"))?
-                    .name
-                    .as_ref()
-                    .ok_or_else(|| format_err!("name not found for node"))?
-                    .clone();
                 let suffix = thread_rng()
                     .sample_iter(&Alphanumeric)
                     .take(10)
@@ -398,11 +352,11 @@ impl ClusterSwarmKube {
                     name = &job_name,
                     label = "remove-network-effects",
                     image = "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
-                    node_name = node_name,
+                    node_name = node.name,
                     command = "tc qdisc delete dev eth0 root || true",
                     back_off_limit = back_off_limit,
                 );
-                debug!("Removing network effects from node {}", node_name);
+                debug!("Removing network effects from node {}", node.name);
                 let job_spec: serde_yaml::Value = serde_yaml::from_str(&job_yaml)?;
                 let job_spec = serde_json::value::to_value(job_spec)?;
                 serde_json::from_value(job_spec)
@@ -429,7 +383,7 @@ impl ClusterSwarmKube {
         &self,
         k8s_node: &str,
         docker_image: &str,
-        command: String,
+        command: &str,
         job_name: &str,
     ) -> Result<()> {
         let back_off_limit = 0;
@@ -445,7 +399,7 @@ impl ClusterSwarmKube {
             label = job_name,
             image = docker_image,
             node_name = k8s_node,
-            command = &command,
+            command = command,
             back_off_limit = back_off_limit,
         );
         let job_spec: serde_yaml::Value = serde_yaml::from_str(&job_yaml)?;
@@ -456,31 +410,26 @@ impl ClusterSwarmKube {
         self.run_jobs(vec![job_spec], back_off_limit).await
     }
 
-    async fn allocate_node(&self, instance_config: &InstanceConfig) -> Result<String> {
+    async fn allocate_node(&self, pod_name: &str) -> Result<KubeNode> {
         libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 15), || {
-            Box::pin(async move { self.allocate_node_impl(instance_config).await })
+            Box::pin(async move { self.allocate_node_impl(pod_name).await })
         })
         .await
     }
 
-    async fn allocate_node_impl(&self, instance_config: &InstanceConfig) -> Result<String> {
+    async fn allocate_node_impl(&self, pod_name: &str) -> Result<KubeNode> {
         let nodes = self.list_nodes().await?;
         let nodes_count = nodes.len();
         // Holding lock for read-verfy-write to avoid race conditions on this map
         let mut node_map = self.node_map.lock().await;
-        if let Some(existed) = node_map.get(instance_config) {
+        if let Some(existed) = node_map.get(pod_name) {
             return Ok(existed.clone());
         }
-        let used_nodes: HashSet<_> = node_map.values().collect();
+        let used_nodes: HashSet<_> = node_map.values().map(|node| &node.name).collect();
         for node in nodes {
-            let name = node
-                .metadata
-                .ok_or_else(|| format_err!("metadata not found for node"))?
-                .name
-                .ok_or_else(|| format_err!("node name not found"))?;
-            if !used_nodes.contains(&&name) {
-                node_map.insert(instance_config.clone(), name.clone());
-                return Ok(name);
+            if !used_nodes.contains(&node.name) {
+                node_map.insert(pod_name.to_string(), node.clone());
+                return Ok(node);
             }
         }
         Err(format_err!(
@@ -494,59 +443,48 @@ impl ClusterSwarmKube {
         instance_config: InstanceConfig,
         delete_data: bool,
     ) -> Result<Instance> {
-        let pod_name = match &instance_config {
-            Validator(validator_config) => format!("val-{}", validator_config.index),
-            Fullnode(fullnode_config) => format!(
-                "fn-{}-{}",
-                fullnode_config.validator_index, fullnode_config.fullnode_index
-            ),
-            LSR(lsr_config) => format!("lsr-{}", lsr_config.index),
-            Vault(vault_config) => format!("vault-{}", vault_config.index),
-        };
+        let pod_name = instance_config.pod_name();
         let pod_api: Api<Pod> = Api::namespaced(self.client.clone(), DEFAULT_NAMESPACE);
         if pod_api.get(&pod_name).await.is_ok() {
             self.delete_resource::<Pod>(&pod_name).await?;
         }
-        let node_name = self
-            .allocate_node(&instance_config)
+        let node = self
+            .allocate_node(&pod_name)
             .await
             .map_err(|e| format_err!("Failed to allocate node: {}", e))?;
-        debug!("Creating pod {} on node {:?}", pod_name, node_name);
-        let (p, s): (Pod, Service) = match &instance_config {
+        debug!("Creating pod {} on {:?}", pod_name, node);
+        let (p, s): (Pod, Service) = match &instance_config.application_config {
             Validator(validator_config) => (
                 self.validator_spec(
-                    validator_config.index,
+                    instance_config.validator_group,
                     validator_config.num_validators,
                     validator_config.num_fullnodes,
                     validator_config.enable_lsr,
-                    &node_name,
+                    &node.name,
                     &validator_config.image_tag,
                     &validator_config.config_overrides.iter().join(","),
                     delete_data,
                 )?,
-                self.service_spec(format!("val-{}", validator_config.index)),
+                self.service_spec(instance_config.pod_name()),
             ),
             Fullnode(fullnode_config) => (
                 self.fullnode_spec(
                     fullnode_config.fullnode_index,
                     fullnode_config.num_fullnodes_per_validator,
-                    fullnode_config.validator_index,
+                    instance_config.validator_group,
                     fullnode_config.num_validators,
-                    &node_name,
+                    &node.name,
                     &fullnode_config.image_tag,
                     &fullnode_config.config_overrides.iter().join(","),
                     delete_data,
                 )?,
-                self.service_spec(format!(
-                    "fn-{}-{}",
-                    fullnode_config.validator_index, fullnode_config.fullnode_index
-                )),
+                self.service_spec(instance_config.pod_name()),
             ),
-            Vault(vault_config) => self.vault_spec(vault_config.index, &node_name)?,
+            Vault(_vault_config) => self.vault_spec(instance_config.validator_group, &node.name)?,
             LSR(lsr_config) => self.lsr_spec(
-                lsr_config.index,
+                instance_config.validator_group,
                 lsr_config.num_validators,
-                &node_name,
+                &node.name,
                 &lsr_config.image_tag,
                 &lsr_config.lsr_backend,
             )?,
@@ -588,14 +526,12 @@ impl ClusterSwarmKube {
             }
             Err(e) => bail!("Failed to create service : {}", e),
         }
-        let (pod_node_name, pod_ip) = self.get_pod_node_and_ip(&pod_name).await?;
-        assert_eq!(node_name, pod_node_name);
         let ac_port = DEFAULT_JSON_RPC_PORT as u32;
         let instance = Instance::new_k8s(
             pod_name,
-            pod_ip,
+            node.internal_ip,
             ac_port,
-            node_name.clone(),
+            node.name.clone(),
             instance_config.clone(),
             self.http_client.clone(),
             self.clone(),
@@ -604,23 +540,12 @@ impl ClusterSwarmKube {
     }
 
     pub async fn delete_node(&self, instance_config: &InstanceConfig) -> Result<()> {
-        let pod_name = match instance_config {
-            Validator(ref validator_config) => format!("val-{}", validator_config.index),
-            Fullnode(ref fullnode_config) => format!(
-                "fn-{}-{}",
-                fullnode_config.validator_index, fullnode_config.fullnode_index
-            ),
-            LSR(lsr_config) => format!("lsr-{}", lsr_config.index),
-            Vault(vault_config) => format!("vault-{}", vault_config.index),
-        };
+        let pod_name = instance_config.pod_name();
         let service_name = pod_name.clone();
         self.delete_resource::<Pod>(&pod_name).await?;
         self.delete_resource::<Service>(&service_name).await
     }
-}
 
-#[async_trait]
-impl ClusterSwarm for ClusterSwarmKube {
     async fn remove_all_network_effects(&self) -> Result<()> {
         libra_retrier::retry_async(libra_retrier::fixed_retry_strategy(5000, 3), || {
             Box::pin(async move { self.remove_all_network_effects_helper().await })
@@ -628,8 +553,13 @@ impl ClusterSwarm for ClusterSwarmKube {
         .await
     }
 
-    async fn spawn_new_instance(&self, instance_config: InstanceConfig) -> Result<Instance> {
-        self.upsert_node(instance_config, false).await
+    pub async fn cleanup(&self) -> Result<()> {
+        self.delete_all()
+            .await
+            .map_err(|e| format_err!("delete_all failed: {}", e))?;
+        self.remove_all_network_effects()
+            .await
+            .map_err(|e| format_err!("remove_all_network_effects: {}", e))
     }
 
     async fn delete_all(&self) -> Result<()> {
@@ -704,6 +634,17 @@ impl ClusterSwarm for ClusterSwarmKube {
         try_join_all(delete_futures).await?;
         Ok(())
     }
+}
+
+#[async_trait]
+impl ClusterSwarm for ClusterSwarmKube {
+    async fn spawn_new_instance(
+        &self,
+        instance_config: InstanceConfig,
+        delete_data: bool,
+    ) -> Result<Instance> {
+        self.upsert_node(instance_config, delete_data).await
+    }
 
     async fn get_grafana_baseurl(&self) -> Result<String> {
         let workspace = self.get_workspace().await?;
@@ -711,5 +652,47 @@ impl ClusterSwarm for ClusterSwarmKube {
             "http://grafana.{}-k8s-testnet.aws.hlw3truzy4ls.com",
             workspace
         ))
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct KubeNode {
+    pub name: String,
+    pub provider_id: String,
+    pub internal_ip: String,
+}
+
+impl TryFrom<Node> for KubeNode {
+    type Error = anyhow::Error;
+
+    fn try_from(node: Node) -> Result<Self, Self::Error> {
+        let metadata = node
+            .metadata
+            .ok_or_else(|| format_err!("metadata not found for node"))?;
+        let spec = node
+            .spec
+            .ok_or_else(|| format_err!("spec not found for node"))?;
+        let provider_id = spec
+            .provider_id
+            .ok_or_else(|| format_err!("provider_id not found for node"))?;
+        let name = metadata
+            .name
+            .ok_or_else(|| format_err!("node name not found"))?;
+        let status = node
+            .status
+            .ok_or_else(|| format_err!("status not found for node"))?;
+        let addresses = status
+            .addresses
+            .ok_or_else(|| format_err!("addresses name not found"))?;
+        let internal_address = addresses
+            .iter()
+            .find(|a| a.type_ == "InternalIP")
+            .ok_or_else(|| format_err!("internal address not found"))?;
+        let internal_ip = internal_address.address.clone();
+        Ok(Self {
+            name,
+            provider_id,
+            internal_ip,
+        })
     }
 }

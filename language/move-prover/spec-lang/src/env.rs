@@ -19,6 +19,7 @@ use num::{BigUint, Num};
 
 use bytecode_source_map::source_map::SourceMap;
 use move_core_types::{account_address::AccountAddress, language_storage, value::MoveValue};
+use serde::{Deserialize, Serialize};
 use vm::{
     access::ModuleAccess,
     file_format::{
@@ -59,6 +60,10 @@ pub const VERIFY_PRAGMA: &str = "verify";
 /// instead treated to be like a native function.
 pub const INTRINSIC_PRAGMA: &str = "intrinsic";
 
+/// Pragma indicating whether implementation of function should be ignored and
+/// instead interpreted by its pre and post conditions only.
+pub const OPAQUE_PRAGMA: &str = "opaque";
+
 /// Pragma indicating whether aborts_if specification should be considered partial.
 pub const ABORTS_IF_IS_PARTIAL_PRAGMA: &str = "aborts_if_is_partial";
 
@@ -70,7 +75,14 @@ pub const ABORTS_IF_IS_STRICT_PRAGMA: &str = "aborts_if_is_strict";
 pub const REQUIRES_IF_ABORTS: &str = "requires_if_aborts";
 
 /// Pragma indicating that the function will run smoke tests
-pub const SMOKE_TEST_PRAGMA: &str = "smoke_test";
+pub const ALWAYS_ABORTS_TEST_PRAGMA: &str = "always_aborts_test";
+
+/// Pragma indicating that adding u64 or u128 values should not be checked
+/// for overflow.
+pub const ADDITION_OVERFLOW_UNCHECKED_PRAGMA: &str = "addition_overflow_unchecked";
+
+/// Pragma indicating that aborts from this function shall be ignored.
+pub const ASSUME_NO_ABORT_FROM_HERE_PRAGMA: &str = "assume_no_abort_from_here";
 
 // =================================================================================================
 /// # Locations
@@ -264,6 +276,26 @@ impl GlobalId {
 }
 
 // =================================================================================================
+/// # Verification Scope
+
+/// Defines what functions to verify.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub enum VerificationScope {
+    /// Verify only public functions.
+    Public,
+    /// Verify all functions.
+    All,
+    /// Verify no functions
+    None,
+}
+
+impl Default for VerificationScope {
+    fn default() -> Self {
+        Self::Public
+    }
+}
+
+// =================================================================================================
 /// # Global Environment
 
 /// Global environment for a set of modules.
@@ -275,6 +307,8 @@ pub struct GlobalEnv {
     /// The comments are represented as map from ByteIndex into string, where the index is the
     /// start position of the associated language item in the source.
     doc_comments: BTreeMap<FileId, BTreeMap<ByteIndex, String>>,
+    /// A map of locations to information about verification conditions at the location.
+    condition_infos: RefCell<BTreeMap<Loc, ConditionInfo>>,
     /// A mapping from file names to associated FileId. Though this information is
     /// already in `source_files`, we can't get it out of there so need to book keep here.
     file_name_map: BTreeMap<String, FileId>,
@@ -304,6 +338,32 @@ pub struct GlobalEnv {
     global_id_counter: RefCell<usize>,
 }
 
+/// Information about a verification condition stored in the environment.
+#[derive(Debug, Clone, Default)]
+pub struct ConditionInfo {
+    /// The message to print when the condition fails.
+    pub message: String,
+    /// An alternative message to print if this condition fails in the context of a pre-condition.
+    /// This is used to distinguishes the case where the same condition is being used as pre and
+    /// post condition.
+    pub message_if_requires: Option<String>,
+    /// Whether execution traces shall be printed if this condition fails.
+    pub omit_trace: bool,
+    /// Whether passing this condition is actually a failure.
+    pub negative_cond: bool,
+}
+
+impl ConditionInfo {
+    pub fn for_message(message: String, message_if_requires: Option<String>) -> Self {
+        Self {
+            message,
+            message_if_requires,
+            omit_trace: false,
+            negative_cond: false,
+        }
+    }
+}
+
 impl GlobalEnv {
     /// Creates a new environment.
     pub fn new() -> Self {
@@ -328,6 +388,7 @@ impl GlobalEnv {
         GlobalEnv {
             source_files,
             doc_comments: Default::default(),
+            condition_infos: Default::default(),
             unknown_loc,
             unknown_move_ir_loc,
             internal_loc,
@@ -774,6 +835,27 @@ impl GlobalEnv {
             .get(&loc.file_id)
             .and_then(|comments| comments.get(&loc.span.start()).map(|s| s.as_str()))
             .unwrap_or("")
+    }
+
+    /// Get verification condition info associated with location.
+    pub fn get_condition_info(&self, loc: &Loc) -> Option<ConditionInfo> {
+        self.condition_infos.borrow().get(loc).cloned()
+    }
+
+    /// Set verification condition info.
+    pub fn set_condition_info(&self, loc: Loc, info: ConditionInfo) {
+        self.condition_infos.borrow_mut().insert(loc, info);
+    }
+
+    /// Execute function on each condition info.
+    pub fn with_condition_infos<F>(&self, mut f: F)
+    where
+        F: FnMut(&Loc, &ConditionInfo),
+    {
+        self.condition_infos
+            .borrow()
+            .iter()
+            .for_each(|(l, i)| f(l, i))
     }
 }
 
@@ -1786,6 +1868,22 @@ impl<'env> FunctionEnv<'env> {
             .iter()
             .map(|x| self.module_env.get_struct_id(*x))
             .collect()
+    }
+
+    /// Determine whether the function is target of verification.
+    pub fn should_verify(&self, default_scope: VerificationScope) -> bool {
+        if self.module_env.is_dependency() {
+            // Never generate verify method for functions from dependencies.
+            return false;
+        }
+        // We look up the `verify` pragma property first in this function, then in
+        // the module, and finally fall back to the value specified by default_scope.
+        let default = || match default_scope {
+            VerificationScope::Public => self.is_public(),
+            VerificationScope::All => true,
+            VerificationScope::None => false,
+        };
+        self.is_pragma_true(VERIFY_PRAGMA, default)
     }
 
     fn definition_view(&'env self) -> FunctionDefinitionView<'env, CompiledModule> {

@@ -7,7 +7,7 @@ use libra_crypto::{
     traits::*,
     HashValue,
 };
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_status::{StatusCode, VMStatus};
 use move_core_types::gas_schedule::CostTable;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,

@@ -17,6 +17,7 @@ mod consensusdb;
 mod counters;
 mod epoch_manager;
 mod liveness;
+mod metrics_safety_rules;
 mod network;
 #[cfg(test)]
 mod network_tests;

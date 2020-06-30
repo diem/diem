@@ -11,6 +11,7 @@ use itertools::Itertools;
 use libra_mempool::{
     CommittedTransaction, ConsensusRequest, ConsensusResponse, TransactionExclusion,
 };
+use libra_metrics::monitor;
 use libra_types::transaction::TransactionStatus;
 use std::time::Duration;
 use tokio::time::timeout;
@@ -31,11 +32,7 @@ impl MempoolProxy {
 
 #[async_trait::async_trait]
 impl TxnManager for MempoolProxy {
-    async fn pull_txns(
-        &mut self,
-        max_size: u64,
-        exclude_payloads: Vec<&Payload>,
-    ) -> Result<Payload> {
+    async fn pull_txns(&self, max_size: u64, exclude_payloads: Vec<&Payload>) -> Result<Payload> {
         let mut exclude_txns = vec![];
         for payload in exclude_payloads {
             for transaction in payload {
@@ -50,7 +47,10 @@ impl TxnManager for MempoolProxy {
         // send to shared mempool
         self.consensus_to_mempool_sender.clone().try_send(req)?;
         // wait for response
-        match timeout(Duration::from_secs(1), callback_rcv).await {
+        match monitor!(
+            "pull_txn",
+            timeout(Duration::from_secs(1), callback_rcv).await
+        ) {
             Err(_) => Err(format_err!(
                 "[consensus] did not receive GetBlockResponse on time"
             )),
@@ -63,8 +63,8 @@ impl TxnManager for MempoolProxy {
         }
     }
 
-    // Consensus notifies mempool of committed transactions that were rejected
-    async fn commit(&mut self, block: &Block, compute_results: &StateComputeResult) -> Result<()> {
+    // Consensus notifies mempool of executed transactions
+    async fn notify(&self, block: &Block, compute_results: &StateComputeResult) -> Result<()> {
         let mut rejected_txns = vec![];
         let txns = match block.payload() {
             Some(txns) => txns,
@@ -93,15 +93,14 @@ impl TxnManager for MempoolProxy {
         // send to shared mempool
         self.consensus_to_mempool_sender.clone().try_send(req)?;
 
-        if let Err(e) = timeout(Duration::from_secs(1), callback_rcv).await {
+        if let Err(e) = monitor!(
+            "notify_mempool",
+            timeout(Duration::from_secs(1), callback_rcv).await
+        ) {
             Err(format_err!("[consensus] txn manager did not receive ACK for commit notification sent to mempool on time: {:?}", e))
         } else {
             Ok(())
         }
-    }
-
-    fn _clone_box(&self) -> Box<dyn TxnManager> {
-        Box::new(self.clone())
     }
 
     fn trace_transactions(&self, block: &Block) {

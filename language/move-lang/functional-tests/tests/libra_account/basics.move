@@ -1,5 +1,6 @@
 //! account: bob, 10000LBR
 //! account: alice, 10000LBR
+//! account: abby, 0, 0, address
 
 module Holder {
     use 0x1::Signer;
@@ -22,12 +23,15 @@ module Holder {
 //! new-transaction
 script {
     use 0x1::LibraAccount;
+    use 0x1::Roles::{Self, LibraRootRole};
     fun main(sender: &signer) {
-        LibraAccount::initialize(sender);
+        let cap = Roles::extract_privilege_to_capability<LibraRootRole>(sender);
+        LibraAccount::initialize(sender, &cap);
+        Roles::restore_capability_to_privilege(sender, cap);
     }
 }
 // check: ABORTED
-// check: 0
+// check: 3
 
 //! new-transaction
 //! sender: bob
@@ -75,11 +79,15 @@ script {
 // check: 11
 
 //! new-transaction
+//! sender: association
 script {
     use 0x1::LibraAccount;
     use 0x1::LBR::LBR;
-    fun main() {
-        LibraAccount::create_unhosted_account<LBR>(0xDEADBEEF, x"", false);
+    use 0x1::Roles::{Self, LibraRootRole};
+    fun main(account: &signer) {
+        let cap = Roles::extract_privilege_to_capability<LibraRootRole>(account);
+        LibraAccount::create_unhosted_account<LBR>(account, &cap, 0xDEADBEEF, x"", false);
+        Roles::restore_capability_to_privilege(account, cap);
     }
 }
 // check: ABORTED
@@ -107,31 +115,6 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
-script {
-    use 0x1::LibraAccount;
-    use 0x1::LBR::LBR;
-    use 0x1::Testnet;
-    fun main(account: &signer) {
-        Testnet::remove_testnet(account);
-        LibraAccount::create_testnet_account<LBR>(account, 0xDEADBEEF, x"");
-        Testnet::initialize(account);
-    }
-}
-// check: ABORTED
-// check: 10042
-
-//! new-transaction
-//! sender: association
-script {
-    use 0x1::Testnet;
-    fun main(account: &signer) {
-        Testnet::remove_testnet(account);
-    }
-}
-// check: EXECUTED
-
-//! new-transaction
 //! sender: bob
 script {
     use 0x1::LibraAccount;
@@ -145,13 +128,3 @@ script {
 // TODO: what is this testing?
 // chec: ABORTED
 // chec: 9001
-
-//! new-transaction
-//! sender: association
-script {
-    use 0x1::Testnet;
-    fun main(account: &signer) {
-        Testnet::initialize(account);
-    }
-}
-// check: EXECUTED

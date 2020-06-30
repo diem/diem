@@ -4,6 +4,7 @@
 #![forbid(unsafe_code)]
 
 use crate::health::{Event, HealthCheck, HealthCheckContext, ValidatorEvent};
+use async_trait::async_trait;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
 
 /// Verifies that commit history produced by validators is 'lineariazble'
@@ -26,6 +27,7 @@ impl CommitHistoryHealthCheck {
     }
 }
 
+#[async_trait]
 impl HealthCheck for CommitHistoryHealthCheck {
     fn on_event(&mut self, ve: &ValidatorEvent, ctx: &mut HealthCheckContext) {
         let commit = if let Event::Commit(ref commit) = ve.event {
@@ -83,6 +85,8 @@ impl HealthCheck for CommitHistoryHealthCheck {
             self.round_to_commit.retain(|k, _v| *k >= *min_round);
         }
     }
+
+    async fn verify(&mut self, _ctx: &mut HealthCheckContext) {}
 
     fn clear(&mut self) {
         self.round_to_commit.clear();

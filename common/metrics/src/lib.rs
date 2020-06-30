@@ -125,8 +125,7 @@ pub fn dump_all_metrics_to_file_periodically<P: AsRef<Path>>(
 macro_rules! monitor {
     ( $name:literal, $fn:expr ) => {{
         use crate::counters::OP_COUNTERS;
-        OP_COUNTERS.inc(concat!($name, "_count"));
-        let _timer = OP_COUNTERS.timer(concat!($name, "_time"));
+        let _timer = OP_COUNTERS.timer($name);
         let gauge = OP_COUNTERS.gauge(concat!($name, "_running"));
         gauge.inc();
         let result = $fn;

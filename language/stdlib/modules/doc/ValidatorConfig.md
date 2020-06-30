@@ -5,24 +5,49 @@
 
 ### Table of Contents
 
+-  [Resource `UpdateValidatorConfig`](#0x1_ValidatorConfig_UpdateValidatorConfig)
 -  [Struct `Config`](#0x1_ValidatorConfig_Config)
--  [Struct `ValidatorConfig`](#0x1_ValidatorConfig_ValidatorConfig)
+-  [Resource `ValidatorConfig`](#0x1_ValidatorConfig_ValidatorConfig)
 -  [Function `publish`](#0x1_ValidatorConfig_publish)
 -  [Function `set_operator`](#0x1_ValidatorConfig_set_operator)
 -  [Function `remove_operator`](#0x1_ValidatorConfig_remove_operator)
 -  [Function `set_config`](#0x1_ValidatorConfig_set_config)
--  [Function `set_consensus_pubkey`](#0x1_ValidatorConfig_set_consensus_pubkey)
 -  [Function `is_valid`](#0x1_ValidatorConfig_is_valid)
 -  [Function `get_config`](#0x1_ValidatorConfig_get_config)
 -  [Function `get_operator`](#0x1_ValidatorConfig_get_operator)
 -  [Function `get_consensus_pubkey`](#0x1_ValidatorConfig_get_consensus_pubkey)
 -  [Function `get_validator_network_identity_pubkey`](#0x1_ValidatorConfig_get_validator_network_identity_pubkey)
 -  [Function `get_validator_network_address`](#0x1_ValidatorConfig_get_validator_network_address)
--  [Function `decertify`](#0x1_ValidatorConfig_decertify)
--  [Function `certify`](#0x1_ValidatorConfig_certify)
--  [Function `is_certified`](#0x1_ValidatorConfig_is_certified)
 
 
+
+<a name="0x1_ValidatorConfig_UpdateValidatorConfig"></a>
+
+## Resource `UpdateValidatorConfig`
+
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_ValidatorConfig_UpdateValidatorConfig">UpdateValidatorConfig</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>dummy_field: bool</code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
 
 <a name="0x1_ValidatorConfig_Config"></a>
 
@@ -82,7 +107,7 @@
 
 <a name="0x1_ValidatorConfig_ValidatorConfig"></a>
 
-## Struct `ValidatorConfig`
+## Resource `ValidatorConfig`
 
 
 
@@ -110,13 +135,6 @@
 <dd>
 
 </dd>
-<dt>
-
-<code>is_certified: bool</code>
-</dt>
-<dd>
-
-</dd>
 </dl>
 
 
@@ -128,7 +146,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(creator: &signer, account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;)
 </code></pre>
 
 
@@ -137,13 +155,12 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(creator: &signer, account: &signer) {
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creator) == <a href="CoreAddresses.md#0x1_CoreAddresses_ASSOCIATION_ROOT_ADDRESS">CoreAddresses::ASSOCIATION_ROOT_ADDRESS</a>(), 1101);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, _: &Capability&lt;LibraRootRole&gt;) {
     move_to(account, <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
         config: <a href="Option.md#0x1_Option_none">Option::none</a>(),
         operator_account: <a href="Option.md#0x1_Option_none">Option::none</a>(),
-        is_certified: <b>true</b>
     });
+    <a href="Roles.md#0x1_Roles_add_privilege_to_account_validator_role">Roles::add_privilege_to_account_validator_role</a>(account, <a href="#0x1_ValidatorConfig_UpdateValidatorConfig">UpdateValidatorConfig</a>{})
 }
 </code></pre>
 
@@ -230,8 +247,8 @@
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(signer) == <a href="#0x1_ValidatorConfig_get_operator">get_operator</a>(validator_account),
         1101
     );
-    // TODO(valerini): verify the validity of new_config.consensus_pubkey and
-    // the proof of posession
+    <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> consensus_pubkey), 1108);
+    // TODO(valerini): verify the proof of posession for consensus_pubkey
     <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(validator_account);
     t_ref.config = <a href="Option.md#0x1_Option_some">Option::some</a>(<a href="#0x1_ValidatorConfig_Config">Config</a> {
         consensus_pubkey,
@@ -240,39 +257,6 @@
         full_node_network_identity_pubkey,
         full_node_network_address,
     });
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_ValidatorConfig_set_consensus_pubkey"></a>
-
-## Function `set_consensus_pubkey`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_consensus_pubkey">set_consensus_pubkey</a>(account: &signer, validator_account: address, consensus_pubkey: vector&lt;u8&gt;)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_set_consensus_pubkey">set_consensus_pubkey</a>(
-    account: &signer,
-    validator_account: address,
-    consensus_pubkey: vector&lt;u8&gt;,
-) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>assert</b>(
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="#0x1_ValidatorConfig_get_operator">get_operator</a>(validator_account),
-        1101
-    );
-    <b>let</b> t_config_ref = <a href="Option.md#0x1_Option_borrow_mut">Option::borrow_mut</a>(&<b>mut</b> borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(validator_account).config);
-    t_config_ref.consensus_pubkey = consensus_pubkey;
 }
 </code></pre>
 
@@ -421,80 +405,6 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_validator_network_address">get_validator_network_address</a>(config_ref: &<a href="#0x1_ValidatorConfig_Config">Config</a>): &vector&lt;u8&gt; {
     &config_ref.validator_network_address
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_ValidatorConfig_decertify"></a>
-
-## Function `decertify`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_decertify">decertify</a>(account: &signer, addr: address)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_decertify">decertify</a>(account: &signer, addr: address) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>assert</b>(<a href="Association.md#0x1_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), 1002);
-    borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).is_certified = <b>false</b>;
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_ValidatorConfig_certify"></a>
-
-## Function `certify`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_certify">certify</a>(account: &signer, addr: address)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_certify">certify</a>(account: &signer, addr: address) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>assert</b>(<a href="Association.md#0x1_Association_addr_is_association">Association::addr_is_association</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), 1002);
-    borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).is_certified = <b>true</b>;
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_ValidatorConfig_is_certified"></a>
-
-## Function `is_certified`
-
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_is_certified">is_certified</a>(addr: address): bool
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_is_certified">is_certified</a>(addr: address): bool <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-     exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr) && borrow_global&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).is_certified
 }
 </code></pre>
 

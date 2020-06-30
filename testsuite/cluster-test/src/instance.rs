@@ -5,41 +5,45 @@
 
 use crate::cluster_swarm::cluster_swarm_kube::ClusterSwarmKube;
 use anyhow::{format_err, Result};
+use debug_interface::AsyncNodeDebugClient;
 use libra_config::config::NodeConfig;
 use libra_json_rpc_client::{JsonRpcAsyncClient, JsonRpcBatch};
-use once_cell::sync::Lazy;
-use regex::Regex;
 use reqwest::{Client, Url};
 use serde_json::Value;
-use std::{collections::HashSet, fmt, str::FromStr};
+use std::{
+    collections::HashSet,
+    fmt,
+    str::FromStr,
+    time::{Duration, Instant},
+};
+use tokio::{process::Command, time};
 
-static VAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"val-(\d+)").unwrap());
-static FULLNODE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"fn-(\d+)").unwrap());
+#[derive(Debug, Clone)]
+pub struct InstanceConfig {
+    pub validator_group: u32,
+    pub application_config: ApplicationConfig,
+}
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub enum InstanceConfig {
+#[derive(Debug, Clone)]
+pub enum ApplicationConfig {
     Validator(ValidatorConfig),
     Fullnode(FullnodeConfig),
     LSR(LSRConfig),
     Vault(VaultConfig),
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
-pub struct VaultConfig {
-    pub index: u32,
-}
+#[derive(Debug, Clone)]
+pub struct VaultConfig {}
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct LSRConfig {
-    pub index: u32,
     pub num_validators: u32,
     pub image_tag: String,
     pub lsr_backend: String,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct ValidatorConfig {
-    pub index: u32,
     pub num_validators: u32,
     pub num_fullnodes: u32,
     pub enable_lsr: bool,
@@ -47,11 +51,10 @@ pub struct ValidatorConfig {
     pub config_overrides: Vec<String>,
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone)]
 pub struct FullnodeConfig {
     pub fullnode_index: u32,
     pub num_fullnodes_per_validator: u32,
-    pub validator_index: u32,
     pub num_validators: u32,
     pub image_tag: String,
     pub config_overrides: Vec<String>,
@@ -78,6 +81,40 @@ struct K8sInstanceInfo {
     k8s_node: String,
     instance_config: InstanceConfig,
     kube: ClusterSwarmKube,
+}
+
+impl InstanceConfig {
+    pub fn replace_tag(&mut self, new_tag: String) -> Result<()> {
+        match &mut self.application_config {
+            ApplicationConfig::Validator(c) => {
+                c.image_tag = new_tag;
+            }
+            ApplicationConfig::Fullnode(c) => {
+                c.image_tag = new_tag;
+            }
+            ApplicationConfig::LSR(c) => {
+                c.image_tag = new_tag;
+            }
+            ApplicationConfig::Vault(..) => {
+                return Err(format_err!(
+                    "InstanceConfig::Vault does not support custom tags"
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn pod_name(&self) -> String {
+        match &self.application_config {
+            ApplicationConfig::Validator(_) => format!("val-{}", self.validator_group),
+            ApplicationConfig::Fullnode(fullnode_config) => format!(
+                "fn-{}-{}",
+                self.validator_group, fullnode_config.fullnode_index
+            ),
+            ApplicationConfig::LSR(_) => format!("lsr-{}", self.validator_group),
+            ApplicationConfig::Vault(_) => format!("vault-{}", self.validator_group),
+        }
+    }
 }
 
 impl Instance {
@@ -154,25 +191,23 @@ impl Instance {
         Ok(())
     }
 
+    pub async fn wait_json_rpc(&self, deadline: Instant) -> Result<()> {
+        while self.try_json_rpc().await.is_err() {
+            if Instant::now() > deadline {
+                return Err(format_err!("wait_json_rpc for {} timed out", self));
+            }
+            time::delay_for(Duration::from_secs(3)).await;
+        }
+        Ok(())
+    }
+
     pub fn peer_name(&self) -> &String {
         &self.peer_name
     }
 
-    pub fn validator_index(&self) -> String {
-        if let Some(cap) = VAL_REGEX.captures(&self.peer_name) {
-            if let Some(cap) = cap.get(1) {
-                return cap.as_str().to_string();
-            }
-        }
-        if let Some(cap) = FULLNODE_REGEX.captures(&self.peer_name) {
-            if let Some(cap) = cap.get(1) {
-                return cap.as_str().to_string();
-            }
-        }
-        panic!(
-            "Failed to parse peer name {} into validator_index",
-            self.peer_name
-        )
+    pub fn validator_group(&self) -> u32 {
+        let backend = self.k8s_backend();
+        backend.instance_config.validator_group
     }
 
     pub fn ip(&self) -> &String {
@@ -217,18 +252,68 @@ impl Instance {
             .map(|_| ())
     }
 
+    pub fn instance_config(&self) -> &InstanceConfig {
+        let backend = self.k8s_backend();
+        &backend.instance_config
+    }
+
     /// Runs command on the same host in separate utility container based on cluster-test-util image
-    pub async fn util_cmd(&self, command: String, job_name: &str) -> Result<()> {
+    pub async fn util_cmd<S: AsRef<str>>(&self, command: S, job_name: &str) -> Result<()> {
         let backend = self.k8s_backend();
         backend
             .kube
             .run(
                 &backend.k8s_node,
                 "853397791086.dkr.ecr.us-west-2.amazonaws.com/cluster-test-util:latest",
-                command,
+                command.as_ref(),
                 job_name,
             )
             .await
+    }
+
+    /// Unlike util_cmd, exec runs command inside the container
+    pub async fn exec(&self, command: &str) -> Result<()> {
+        let child = Command::new("kubectl")
+            .arg("exec")
+            .arg(&self.peer_name)
+            .arg("--container")
+            .arg("main")
+            .arg("--")
+            .arg("sh")
+            .arg("-c")
+            .arg(command)
+            .kill_on_drop(true)
+            .spawn()
+            .map_err(|e| {
+                format_err!(
+                    "Failed to spawn child process {} on {}: {}",
+                    command,
+                    self.peer_name(),
+                    e
+                )
+            })?;
+        let status = child
+            .await
+            .map_err(|e| format_err!("Error running {} on {}: {}", command, self.peer_name(), e))?;
+        if !status.success() {
+            Err(format_err!(
+                "Running {} on {}, exit code {:?}",
+                command,
+                self.peer_name(),
+                status.code()
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn debug_interface_client(&self) -> AsyncNodeDebugClient {
+        AsyncNodeDebugClient::new(
+            self.http_client.clone(),
+            self.ip(),
+            self.debug_interface_port
+                .expect("debug_interface_port is not known on this instance") as u16,
+        )
     }
 }
 

@@ -15,7 +15,7 @@ use libra_proptest_helpers::Index;
 use libra_types::{
     account_config::LBR_NAME,
     transaction::{SignedTransaction, TransactionStatus},
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier, GasConstants};
 use move_vm_types::gas_schedule::calculate_intrinsic_gas;

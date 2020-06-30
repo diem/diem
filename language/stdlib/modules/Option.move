@@ -1,4 +1,8 @@
 address 0x1 {
+
+/**
+This module defines the Option type and its methods to represent and handle an optional value.
+*/
 module Option {
     use 0x1::Vector;
 
@@ -106,6 +110,115 @@ module Option {
         Vector::destroy_empty(vec)
     }
 
+
+    // ****************** SPECIFICATIONS *******************
+
+    spec struct Option {
+        /// The size of vector is always less than equal to 1
+        /// because it's 0 for "none" or 1 for "some".
+        invariant len(vec) <= 1;
+    }
+
+    spec module {
+        pragma verify=true;
+    }
+
+    spec module {
+        /// Return true iff t contains none.
+        define spec_is_none<Element>(t: Option<Element>): bool {
+            len(t.vec) == 0
+        }
+        /// Return true iff t contains some.
+        define spec_is_some<Element>(t: Option<Element>): bool {
+            !spec_is_none(t)
+        }
+        /// Return the value inside of t.
+        define spec_value_inside<Element>(t: Option<Element>): Element {
+            t.vec[0]
+        }
+    }
+
+    spec fun none {
+        aborts_if false;
+        ensures spec_is_none(result);
+    }
+
+    spec fun some {
+        aborts_if false;
+        ensures spec_is_some(result);
+        ensures spec_value_inside(result) == e;
+    }
+
+    spec fun is_none {
+        aborts_if false;
+        ensures result == spec_is_none(t);
+    }
+
+    spec fun is_some {
+        aborts_if false;
+        ensures result == spec_is_some(t);
+    }
+
+    spec fun contains {
+        aborts_if false;
+        ensures result == (spec_is_some(t) && spec_value_inside(t) == e_ref);
+    }
+
+    spec fun borrow {
+        aborts_if spec_is_none(t);
+        ensures result == spec_value_inside(t);
+    }
+
+    spec fun borrow_with_default {
+        aborts_if false;
+        ensures spec_is_none(t) ==> result == default_ref;
+        ensures spec_is_some(t) ==> result == spec_value_inside(t);
+    }
+
+    spec fun get_with_default {
+        aborts_if false;
+        ensures spec_is_none(t) ==> result == default;
+        ensures spec_is_some(t) ==> result == spec_value_inside(t);
+    }
+
+    spec fun fill {
+        aborts_if spec_is_some(t);
+        ensures spec_is_some(t);
+        ensures spec_value_inside(t) == e;
+    }
+
+    spec fun extract {
+        aborts_if spec_is_none(t);
+        ensures result == spec_value_inside(old(t));
+        ensures spec_is_none(t);
+    }
+
+    spec fun borrow_mut {
+        aborts_if spec_is_none(t);
+        ensures result == spec_value_inside(t);
+    }
+
+    spec fun swap {
+        aborts_if spec_is_none(t);
+        ensures result == spec_value_inside(old(t));
+        ensures spec_is_some(t);
+        ensures spec_value_inside(t) == e;
+    }
+
+    spec fun destroy_with_default {
+        aborts_if false;
+        ensures spec_is_none(old(t)) ==> result == default;
+        ensures spec_is_some(old(t)) ==> result == spec_value_inside(old(t));
+    }
+
+    spec fun destroy_some {
+        aborts_if spec_is_none(t);
+        ensures result == spec_value_inside(old(t));
+    }
+
+    spec fun destroy_none {
+        aborts_if spec_is_some(t);
+    }
 }
 
 }

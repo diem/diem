@@ -12,17 +12,16 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 
 type AccountKeyPair = KeyPair<Ed25519PrivateKey>;
-type ConsensusKeyPair = KeyPair<Ed25519PrivateKey>;
+type ExecutionKeyPair = KeyPair<Ed25519PrivateKey>;
 
 #[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct TestConfig {
     pub auth_key: Option<AuthenticationKey>,
     #[serde(rename = "operator_private_key")]
     pub operator_keypair: Option<AccountKeyPair>,
-    #[serde(rename = "consensus_private_key")]
-    pub consensus_keypair: Option<ConsensusKeyPair>,
-    // Used to initialize storage defaults in safety rules
-    pub initialize_storage: bool,
+    #[serde(rename = "execution_private_key")]
+    pub execution_keypair: Option<ExecutionKeyPair>,
     // Used only to prevent a potentially temporary data_dir from being deleted. This should
     // eventually be moved to be owned by something outside the config.
     #[serde(skip)]
@@ -37,8 +36,7 @@ impl Clone for TestConfig {
         Self {
             auth_key: self.auth_key,
             operator_keypair: self.operator_keypair.clone(),
-            consensus_keypair: self.consensus_keypair.clone(),
-            initialize_storage: self.initialize_storage,
+            execution_keypair: self.execution_keypair.clone(),
             temp_dir: None,
             publishing_option: self.publishing_option.clone(),
         }
@@ -49,8 +47,7 @@ impl PartialEq for TestConfig {
     fn eq(&self, other: &Self) -> bool {
         self.operator_keypair == other.operator_keypair
             && self.auth_key == other.auth_key
-            && self.consensus_keypair == other.consensus_keypair
-            && self.initialize_storage == other.initialize_storage
+            && self.execution_keypair == other.execution_keypair
     }
 }
 
@@ -59,8 +56,7 @@ impl TestConfig {
         Self {
             auth_key: None,
             operator_keypair: None,
-            consensus_keypair: None,
-            initialize_storage: false,
+            execution_keypair: None,
             temp_dir: None,
             publishing_option: Some(VMPublishingOption::Open),
         }
@@ -72,8 +68,7 @@ impl TestConfig {
         Self {
             auth_key: None,
             operator_keypair: None,
-            consensus_keypair: None,
-            initialize_storage: false,
+            execution_keypair: None,
             temp_dir: Some(temp_dir),
             publishing_option: None,
         }
@@ -85,9 +80,9 @@ impl TestConfig {
         self.operator_keypair = Some(AccountKeyPair::load(privkey));
     }
 
-    pub fn random_consensus_key(&mut self, rng: &mut StdRng) {
+    pub fn random_execution_key(&mut self, rng: &mut StdRng) {
         let privkey = Ed25519PrivateKey::generate(rng);
-        self.consensus_keypair = Some(ConsensusKeyPair::load(privkey));
+        self.execution_keypair = Some(ExecutionKeyPair::load(privkey));
     }
 
     pub fn temp_dir(&self) -> Option<&Path> {
@@ -105,7 +100,7 @@ mod test {
         // Create default test config without keys
         let mut test_config = TestConfig::new_with_temp_dir();
         assert_eq!(test_config.operator_keypair, None);
-        assert_eq!(test_config.consensus_keypair, None);
+        assert_eq!(test_config.execution_keypair, None);
 
         // Clone the config and verify equality
         let mut clone_test_config = test_config.clone();
@@ -114,15 +109,15 @@ mod test {
         // Generate keys for original test config
         let mut rng = StdRng::from_seed([0u8; 32]);
         test_config.random_account_key(&mut rng);
-        test_config.random_consensus_key(&mut rng);
+        test_config.random_execution_key(&mut rng);
 
         // Verify that configs differ
         assert_ne!(clone_test_config, test_config);
 
         // Copy keys across configs
-        clone_test_config.operator_keypair = test_config.operator_keypair.clone();
-        clone_test_config.consensus_keypair = test_config.consensus_keypair.clone();
         clone_test_config.auth_key = test_config.auth_key;
+        clone_test_config.execution_keypair = test_config.execution_keypair.clone();
+        clone_test_config.operator_keypair = test_config.operator_keypair.clone();
 
         // Verify both configs are identical
         assert_eq!(clone_test_config, test_config);

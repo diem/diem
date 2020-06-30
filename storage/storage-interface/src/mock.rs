@@ -25,7 +25,7 @@ use std::convert::TryFrom;
 pub struct MockDbReader;
 
 impl DbReader for MockDbReader {
-    fn get_epoch_change_ledger_infos(
+    fn get_epoch_ending_ledger_infos(
         &self,
         _start_epoch: u64,
         _end_epoch: u64,
@@ -51,6 +51,10 @@ impl DbReader for MockDbReader {
         _ascending: bool,
         _limit: u64,
     ) -> Result<Vec<(u64, ContractEvent)>> {
+        unimplemented!()
+    }
+
+    fn get_block_timestamp(&self, _version: u64) -> Result<u64> {
         unimplemented!()
     }
 
@@ -124,7 +128,7 @@ impl DbReader for MockDbReader {
         unimplemented!()
     }
 
-    fn get_epoch_change_ledger_info(
+    fn get_epoch_ending_ledger_info(
         &self,
         _known_version: u64,
     ) -> Result<LedgerInfoWithSignatures> {
@@ -141,7 +145,6 @@ fn get_mock_account_state_blob() -> AccountStateBlob {
         EventHandle::random_handle(0),
         EventHandle::random_handle(0),
         false,
-        5, // PARENT_VASP_ROLE_ID
     );
 
     let mut account_state = AccountState::default();

@@ -12,22 +12,6 @@ fun main() {
 }
 // check: EXECUTED
 
-// minting various amounts of LBR via LBR::mint should work
-//! new-transaction
-//! sender: blessed
-script {
-use 0x1::LibraAccount;
-use 0x1::LBR;
-fun main(account: &signer) {
-   LibraAccount::deposit(account, {{alice}}, LBR::mint(account, 1));
-   LibraAccount::deposit(account, {{alice}}, LBR::mint(account,  2));
-   LibraAccount::deposit(account, {{alice}}, LBR::mint(account, 77));
-   LibraAccount::deposit(account, {{alice}}, LBR::mint(account, 100));
-   LibraAccount::deposit(account, {{alice}}, LBR::mint(account, 1589));
-}
-}
-// check: EXECUTED
-
 // minting LBR via Libra::mint should not work
 //! new-transaction
 //! sender: blessed

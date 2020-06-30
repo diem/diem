@@ -183,6 +183,20 @@ spec fun increment {
 }
 ```
 
+### Experimental
+
+We are working towards supporting smoke testing to check unsound or imprecise models. To turn this option on, set the smoke\_test pragma to true as shown below. By default, the experimental smoke\_test pragma is set to false.
+
+List of checks smoke\_test pragma runs:
+- Checks if `aborts_if true;` is provable for a function (at the Boogie model level, this is done by adding `ensures $abort_flag;` to the end of a function and ignoring the other post conditions); this usually indicates a bug in the specification or implementation.
+
+```move
+spec fun {
+    pragma smoke_test = true;
+    ...
+}
+```
+
 ## Helper Functions
 
 The Spec language allows to define helper functions. Those functions can than be used in expressions.
@@ -609,6 +623,9 @@ verification success.
 |------------|--------------
 | `verify`     | Turns on or off verification.
 | `intrinsic`  | Marks a function to skip the Move implementation and use a prover native implementation. This makes a function behave like a native function even if it not so in Move.
+| `opaque`  | Marks a function to use only pre/post conditions when it is called, not inlining the implementation. The implementation will still be verified standalone. Use `verify = false` if this is not wanted.
 | `aborts_if_is_partial` | Allows a function to abort [under non-specified conditions](#abortsif-condition).
 | `aborts_if_is_strict`  | Disallows a function to abort even if no conditions are specified.
 | `requires_if_aborts`   | Makes a requires condition mandatory to hold even in cases where the function is specified to abort.
+| `addition_overflow_unchecked` | Makes addition of large integers (`u64` and `u128`) unchecked, avoiding the need to specify `aborts_if` for those.
+| `assume_no_abort_from_here` | Assumes that this function, if called from elsewhere, does not abort.

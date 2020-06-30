@@ -110,7 +110,7 @@ const MAX_LIMIT: u64 = 1000;
 
 // TODO: Either implement an iteration API to allow a very old client to loop through a long history
 // or guarantee that there is always a recent enough waypoint and client knows to boot from there.
-const MAX_NUM_EPOCH_CHANGE_LEDGER_INFO: usize = 100;
+const MAX_NUM_EPOCH_ENDING_LEDGER_INFO: usize = 100;
 
 fn error_if_too_many_requested(num_requested: u64, max_allowed: u64) -> Result<()> {
     if num_requested > max_allowed {
@@ -193,19 +193,65 @@ impl LibraDB {
     // ================================== Public API ==================================
 
     /// Returns ledger infos reflecting epoch bumps starting with the given epoch. If there are no
-    /// more than `MAX_NUM_EPOCH_CHANGE_LEDGER_INFO` results, this function returns all of them,
-    /// otherwise the first `MAX_NUM_EPOCH_CHANGE_LEDGER_INFO` results are returned and a flag
+    /// more than `MAX_NUM_EPOCH_ENDING_LEDGER_INFO` results, this function returns all of them,
+    /// otherwise the first `MAX_NUM_EPOCH_ENDING_LEDGER_INFO` results are returned and a flag
     /// (when true) will be used to indicate the fact that there is more.
-    pub fn get_epoch_change_ledger_infos(
+    pub fn get_epoch_ending_ledger_infos(
         &self,
         start_epoch: u64,
         end_epoch: u64,
     ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
-        self.ledger_store.get_epoch_change_ledger_infos(
+        self.get_epoch_ending_ledger_infos_impl(
             start_epoch,
             end_epoch,
-            MAX_NUM_EPOCH_CHANGE_LEDGER_INFO,
+            MAX_NUM_EPOCH_ENDING_LEDGER_INFO,
         )
+    }
+
+    fn get_epoch_ending_ledger_infos_impl(
+        &self,
+        start_epoch: u64,
+        end_epoch: u64,
+        limit: usize,
+    ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
+        ensure!(
+            start_epoch <= end_epoch,
+            "Bad epoch range [{}, {})",
+            start_epoch,
+            end_epoch,
+        );
+        // Note that the latest epoch can be the same with the current epoch (in most cases), or
+        // current_epoch + 1 (when the latest ledger_info carries next validator set)
+        let latest_epoch = self
+            .ledger_store
+            .get_latest_ledger_info()?
+            .ledger_info()
+            .next_block_epoch();
+        ensure!(
+            end_epoch <= latest_epoch,
+            "Unable to provide epoch change ledger info for still open epoch. asked upper bound: {}, last sealed epoch: {}",
+            end_epoch,
+            latest_epoch - 1,  // okay to -1 because genesis LedgerInfo has .next_block_epoch() == 1
+        );
+
+        let (paging_epoch, more) = if end_epoch - start_epoch > limit as u64 {
+            (start_epoch + limit as u64, true)
+        } else {
+            (end_epoch, false)
+        };
+
+        let lis = self
+            .ledger_store
+            .get_epoch_ending_ledger_info_iter(start_epoch, paging_epoch)?
+            .collect::<Result<Vec<_>>>()?;
+        ensure!(
+            lis.len() == (paging_epoch - start_epoch) as usize,
+            "DB corruption: missing epoch ending ledger info for epoch {}",
+            lis.last()
+                .map(|li| li.ledger_info().next_block_epoch())
+                .unwrap_or(start_epoch),
+        );
+        Ok((lis, more))
     }
 
     pub fn get_transaction_with_proof(
@@ -452,13 +498,13 @@ impl LibraDB {
 }
 
 impl DbReader for LibraDB {
-    fn get_epoch_change_ledger_infos(
+    fn get_epoch_ending_ledger_infos(
         &self,
         start_epoch: u64,
         end_epoch: u64,
     ) -> Result<EpochChangeProof> {
         let (ledger_info_with_sigs, more) =
-            Self::get_epoch_change_ledger_infos(&self, start_epoch, end_epoch)?;
+            Self::get_epoch_ending_ledger_infos(&self, start_epoch, end_epoch)?;
         Ok(EpochChangeProof::new(ledger_info_with_sigs, more))
     }
 
@@ -565,8 +611,8 @@ impl DbReader for LibraDB {
     }
 
     /// Gets ledger info at specified version and ensures it's an epoch change.
-    fn get_epoch_change_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
-        self.ledger_store.get_epoch_change_ledger_info(version)
+    fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+        self.ledger_store.get_epoch_ending_ledger_info(version)
     }
 
     fn get_state_proof_with_ledger_info(
@@ -578,7 +624,7 @@ impl DbReader for LibraDB {
         let known_epoch = self.ledger_store.get_epoch(known_version)?;
         let epoch_change_proof = if known_epoch < ledger_info.next_block_epoch() {
             let (ledger_infos_with_sigs, more) =
-                self.get_epoch_change_ledger_infos(known_epoch, ledger_info.next_block_epoch())?;
+                self.get_epoch_ending_ledger_infos(known_epoch, ledger_info.next_block_epoch())?;
             EpochChangeProof::new(ledger_infos_with_sigs, more)
         } else {
             EpochChangeProof::new(vec![], /* more = */ false)
@@ -672,6 +718,15 @@ impl DbReader for LibraDB {
         };
 
         Ok(tree_state)
+    }
+
+    fn get_block_timestamp(&self, version: u64) -> Result<u64> {
+        let ts = match self.transaction_store.get_block_metadata(version)? {
+            Some((_v, block_meta)) => block_meta.into_inner()?.1,
+            // genesis timestamp is 0
+            None => 0,
+        };
+        Ok(ts)
     }
 }
 

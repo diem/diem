@@ -15,7 +15,7 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config,
+    account_config::{self, RoleId},
     block_metadata::BlockMetadata,
     on_chain_config::{LibraVersion, OnChainConfig, VMConfig},
     transaction::{
@@ -23,14 +23,16 @@ use libra_types::{
         TransactionArgument, TransactionOutput, TransactionPayload, TransactionStatus,
         VMValidatorResult,
     },
-    vm_error::{sub_status, StatusCode, VMStatus},
+    vm_status::{sub_status, StatusCode, VMStatus},
     write_set::{WriteSet, WriteSetMut},
 };
 use move_core_types::{
     gas_schedule::{AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits},
     identifier::IdentStr,
     language_storage::{ResourceKey, StructTag, TypeTag},
+    move_resource::MoveResource,
 };
+
 use move_vm_runtime::{
     data_cache::{RemoteCache, TransactionDataCache},
     move_vm::MoveVM,
@@ -42,6 +44,10 @@ use move_vm_types::{
 use rayon::prelude::*;
 use std::{collections::HashSet, convert::TryFrom, sync::Arc};
 use vm::errors::{convert_prologue_runtime_error, VMResult};
+
+/// Any transation sent from an account with a role id below this cutoff will be priorited over
+/// other transactions.
+const PRIORITIZED_TRANSACTION_ROLE_CUTOFF: u64 = 5;
 
 #[derive(Clone)]
 /// A wrapper to make VMRuntime standalone and thread safe.
@@ -338,8 +344,22 @@ impl LibraVM {
             VerifiedTransactionPayload::Module(m) => cost_strategy
                 .charge_intrinsic_gas(txn_data.transaction_size())
                 .and_then(|_| {
-                    self.move_vm
-                        .publish_module(m, txn_data.sender(), &mut data_store)
+                    // Module publishing is currently restricted to the Association, so we choose to
+                    // publish all modules under the address 0x0...1 for convenience.
+                    // This will change to the sender's address once module publishing becomes open.
+                    // REVIEW: should we check that the address of the Module is in fact
+                    // `CORE_CODE_ADDRESS`?
+                    let module_address = if self.on_chain_config()?.publishing_option.is_open() {
+                        txn_data.sender()
+                    } else {
+                        account_config::CORE_CODE_ADDRESS
+                    };
+                    self.move_vm.publish_module(
+                        m,
+                        module_address,
+                        &mut data_store,
+                        &mut cost_strategy,
+                    )
                 }),
             VerifiedTransactionPayload::Script(s, ty_args, args) => {
                 let ret = cost_strategy
@@ -522,7 +542,7 @@ impl LibraVM {
                 &BLOCK_PROLOGUE,
                 vec![],
                 args,
-                txn_data.sender(),
+                txn_data.sender,
                 &mut data_store,
                 &mut cost_strategy,
             )?
@@ -685,7 +705,7 @@ impl LibraVM {
                     Value::u64(txn_max_gas_units),
                     Value::u64(txn_expiration_time),
                 ],
-                txn_data.sender(),
+                txn_data.sender,
                 data_store,
                 cost_strategy,
             )
@@ -719,7 +739,7 @@ impl LibraVM {
                 Value::u64(txn_max_gas_units),
                 Value::u64(gas_remaining),
             ],
-            txn_data.sender(),
+            txn_data.sender,
             data_store,
             cost_strategy,
         )
@@ -752,7 +772,7 @@ impl LibraVM {
                 Value::u64(txn_max_gas_units),
                 Value::u64(gas_remaining),
             ],
-            txn_data.sender(),
+            txn_data.sender,
             data_store,
             cost_strategy,
         )
@@ -780,7 +800,7 @@ impl LibraVM {
                     Value::u64(txn_sequence_number),
                     Value::vector_u8(txn_public_key),
                 ],
-                txn_data.sender(),
+                txn_data.sender,
                 data_store,
                 &mut cost_strategy,
             )
@@ -809,7 +829,7 @@ impl LibraVM {
                 Value::transaction_argument_signer_reference(txn_data.sender),
                 Value::vector_u8(change_set_bytes),
             ],
-            txn_data.sender(),
+            txn_data.sender,
             data_store,
             &mut cost_strategy,
         )
@@ -965,7 +985,7 @@ impl VMValidator for LibraVM {
             );
         };
 
-        let is_governance_txn = is_governance_txn(txn_sender, &data_cache);
+        let is_prioritized_txn = is_prioritized_txn(txn_sender, &data_cache);
         let normalized_gas_price = match normalize_gas_price(gas_price, &currency_code, &data_cache)
         {
             Ok(price) => price,
@@ -999,7 +1019,7 @@ impl VMValidator for LibraVM {
             .with_label_values(&[counter_label])
             .inc();
 
-        VMValidatorResult::new(res, normalized_gas_price, is_governance_txn)
+        VMValidatorResult::new(res, normalized_gas_price, is_prioritized_txn)
     }
 }
 
@@ -1055,24 +1075,23 @@ impl<'a> LibraVMInternals<'a> {
     }
 }
 
-fn is_governance_txn(sender: AccountAddress, remote_cache: &dyn RemoteCache) -> bool {
-    let association_capability_path =
-        create_access_path(sender, association_capability_struct_tag());
-    if let Ok(Some(blob)) = remote_cache.get(&association_capability_path) {
-        return lcs::from_bytes::<account_config::AssociationCapabilityResource>(&blob).is_ok();
+fn is_prioritized_txn(sender: AccountAddress, remote_cache: &dyn RemoteCache) -> bool {
+    let role_access_path = create_access_path(sender, RoleId::struct_tag());
+    if let Ok(Some(blob)) = remote_cache.get(&role_access_path) {
+        return lcs::from_bytes::<account_config::RoleId>(&blob)
+            .map(|role_id| role_id.role_id() < PRIORITIZED_TRANSACTION_ROLE_CUTOFF)
+            .unwrap_or(false);
     }
     false
 }
 
 fn can_publish_modules(sender: AccountAddress, remote_cache: &dyn RemoteCache) -> bool {
-    let association_capability_path = create_access_path(
-        sender,
-        association_module_publishing_capability_struct_tag(),
-    );
-    if let Ok(Some(blob)) = remote_cache.get(&association_capability_path) {
-        return lcs::from_bytes::<account_config::AssociationCapabilityResource>(&blob).is_ok();
+    let module_publishing_priv_path =
+        create_access_path(sender, module_publishing_capability_struct_tag());
+    match remote_cache.get(&module_publishing_priv_path) {
+        Ok(Some(_)) => true,
+        _ => false,
     }
-    false
 }
 
 fn normalize_gas_price(

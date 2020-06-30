@@ -9,6 +9,7 @@ use crate::{
         rotating_proposer_election::RotatingProposer,
         round_state::{ExponentialTimeInterval, RoundState},
     },
+    metrics_safety_rules::MetricsSafetyRules,
     network::{IncomingBlockRetrievalRequest, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkEvents, ConsensusNetworkSender},
     network_tests::{NetworkPlayground, TwinId},
@@ -40,7 +41,7 @@ use futures::{
     stream::select,
     Stream, StreamExt, TryStreamExt,
 };
-use libra_crypto::{hash::CryptoHash, HashValue};
+use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, HashValue, Uniform};
 use libra_secure_storage::Storage;
 use libra_types::{
     epoch_state::EpochState,
@@ -51,9 +52,9 @@ use libra_types::{
 };
 use network::{
     peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
-    protocols::network::Event,
+    protocols::network::{Event, NewNetworkEvents, NewNetworkSender},
 };
-use safety_rules::{ConsensusState, PersistentSafetyStorage, SafetyRulesManager};
+use safety_rules::{ConsensusState, PersistentSafetyStorage, SafetyRulesManager, TSafetyRules};
 use std::{num::NonZeroUsize, sync::Arc, time::Duration};
 use tokio::runtime::Handle;
 
@@ -96,18 +97,17 @@ impl NodeSetup {
             Waypoint::new_epoch_boundary(&LedgerInfo::mock_genesis(Some(validator_set))).unwrap();
 
         let mut nodes = vec![];
-        //let mut id = 0;
-        //for signer in signers.iter().take(num_nodes) {
         for (id, signer) in signers.iter().take(num_nodes).enumerate() {
             let (initial_data, storage) = MockStorage::start_for_testing((&validators).into());
 
-            let author = signer.author();
             let safety_storage = PersistentSafetyStorage::initialize(
                 Storage::from(libra_secure_storage::InMemoryStorage::new()),
+                signer.author(),
                 signer.private_key().clone(),
+                Ed25519PrivateKey::generate_for_testing(),
                 waypoint,
             );
-            let safety_rules_manager = SafetyRulesManager::new_local(author, safety_storage);
+            let safety_rules_manager = SafetyRulesManager::new_local(safety_storage, false);
 
             nodes.push(Self::new(
                 playground,
@@ -119,7 +119,6 @@ impl NodeSetup {
                 safety_rules_manager,
                 id,
             ));
-            //id += 1;
         }
         nodes
     }
@@ -129,11 +128,6 @@ impl NodeSetup {
         executor: Handle,
         signer: ValidatorSigner,
         proposer_author: Author,
-        /*
-        storage: Arc<MockStorage<TestPayload>>,
-        initial_data: RecoveryData<TestPayload>,
-        safety_rules_manager: SafetyRulesManager<TestPayload>,
-        */
         storage: Arc<MockStorage>,
         initial_data: RecoveryData,
         safety_rules_manager: SafetyRulesManager,
@@ -190,14 +184,14 @@ impl NodeSetup {
         let proposal_generator = ProposalGenerator::new(
             author,
             block_store.clone(),
-            Box::new(MockTransactionManager::new(None)),
+            Arc::new(MockTransactionManager::new(None)),
             time_service.clone(),
             1,
         );
 
         let round_state = Self::create_round_state(time_service);
         let proposer_election = Self::create_proposer_election(proposer_author);
-        let mut safety_rules = safety_rules_manager.client();
+        let mut safety_rules = MetricsSafetyRules::new(safety_rules_manager.client());
         let proof = storage.retrieve_epoch_change_proof(0).unwrap();
         safety_rules.initialize(&proof).unwrap();
 
@@ -209,7 +203,7 @@ impl NodeSetup {
             proposal_generator,
             safety_rules,
             network,
-            Box::new(MockTransactionManager::new(None)),
+            Arc::new(MockTransactionManager::new(None)),
             storage.clone(),
         );
         block_on(round_manager.start(last_vote_sent));

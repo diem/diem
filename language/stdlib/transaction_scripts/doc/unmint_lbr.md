@@ -13,6 +13,9 @@
 
 ## Function `unmint_lbr`
 
+Unmints
+<code>amount_lbr</code> LBR from the sending account into the constituent coins and deposits
+the resulting coins into the sending account."
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_unmint_lbr">unmint_lbr</a>(account: &signer, amount_lbr: u64)

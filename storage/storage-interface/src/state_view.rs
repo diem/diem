@@ -7,7 +7,7 @@ use libra_crypto::{
     hash::{CryptoHash, SPARSE_MERKLE_PLACEHOLDER_HASH},
     HashValue,
 };
-use libra_state_view::StateView;
+use libra_state_view::{StateView, StateViewId};
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
@@ -26,6 +26,9 @@ use std::{
 /// `VerifiedStateView` is like a snapshot of the global state comprised of state view at two
 /// levels, persistent storage and memory.
 pub struct VerifiedStateView<'a> {
+    /// For logging and debugging purpose, identifies what this view is for.
+    id: StateViewId,
+
     /// A gateway implementing persistent storage interface, which can be a RPC client or direct
     /// accessor.
     reader: Arc<dyn DbReader>,
@@ -84,6 +87,7 @@ impl<'a> VerifiedStateView<'a> {
     /// `latest_persistent_state_root` plus a storage reader, and the in-memory speculative state
     /// on top of it represented by `speculative_state`.
     pub fn new(
+        id: StateViewId,
         reader: Arc<dyn DbReader>,
         latest_persistent_version: Option<Version>,
         latest_persistent_state_root: HashValue,
@@ -99,6 +103,7 @@ impl<'a> VerifiedStateView<'a> {
             }
         });
         Self {
+            id,
             reader,
             latest_persistent_version,
             latest_persistent_state_root,
@@ -129,6 +134,10 @@ impl<'a>
 }
 
 impl<'a> StateView for VerifiedStateView<'a> {
+    fn id(&self) -> StateViewId {
+        self.id
+    }
+
     fn get(&self, access_path: &AccessPath) -> Result<Option<Vec<u8>>> {
         let address = access_path.address;
         let path = &access_path.path;

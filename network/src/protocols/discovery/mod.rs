@@ -35,11 +35,11 @@
 
 use crate::{
     connectivity_manager::{ConnectivityRequest, DiscoverySource},
+    constants::NETWORK_CHANNEL_SIZE,
     counters,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
-    protocols::network::{Event, NetworkEvents, NetworkSender},
-    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
+    protocols::network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
     ProtocolId,
 };
 use bytes::Bytes;
@@ -51,6 +51,7 @@ use futures::{
 use libra_config::network_id::NetworkContext;
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_logger::prelude::*;
+use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
@@ -60,9 +61,11 @@ use std::{
     cmp::max,
     collections::{HashMap, HashSet},
     convert::TryInto,
+    sync::Arc,
     time::SystemTime,
 };
 
+pub mod builder;
 #[cfg(test)]
 mod test;
 
@@ -87,28 +90,26 @@ pub struct DiscoveryNetworkSender {
     inner: NetworkSender<DiscoveryMsg>,
 }
 
-/// Register the discovery sender and event handler with network and return interfaces for those
-/// actors.
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
-) -> (DiscoveryNetworkSender, DiscoveryNetworkEvents) {
-    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
-        .add_protocol_handler(
-            vec![],
-            vec![ProtocolId::DiscoveryDirectSend],
-            QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
-            Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
-        );
+/// Configuration for the network endpoints to support Discovery.
+pub fn network_endpoint_config() -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static IntCounterVec>,
+) {
     (
-        DiscoveryNetworkSender::new(sender, connection_reqs_tx),
-        DiscoveryNetworkEvents::new(receiver, connection_notifs_rx),
+        vec![],
+        vec![ProtocolId::DiscoveryDirectSend],
+        QueueStyle::LIFO,
+        NETWORK_CHANNEL_SIZE,
+        Some(&counters::PENDING_DISCOVERY_NETWORK_EVENTS),
     )
 }
 
-impl DiscoveryNetworkSender {
+impl NewNetworkSender for DiscoveryNetworkSender {
     /// Create a new Discovery sender
-    pub fn new(
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -116,7 +117,8 @@ impl DiscoveryNetworkSender {
             inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
-
+}
+impl DiscoveryNetworkSender {
     /// Send a DiscoveryMsg to a peer.
     pub fn send_to(&mut self, peer: PeerId, msg: DiscoveryMsg) -> Result<(), NetworkError> {
         self.inner
@@ -129,7 +131,7 @@ pub struct Discovery<TTicker> {
     /// Note for self, which is prefixed with an underscore as this is not used but is in
     /// preparation for logic that changes the advertised Note while the validator is running.
     note: Note,
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     /// The DNS domain name other public full nodes should query to get this
     /// validator's list of full nodes.
     dns_seed_addr: Bytes,
@@ -155,7 +157,7 @@ where
     TTicker: Stream + FusedStream + Unpin,
 {
     pub fn new(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         self_addrs: Vec<NetworkAddress>,
         ticker: TTicker,
         network_reqs_tx: DiscoveryNetworkSender,

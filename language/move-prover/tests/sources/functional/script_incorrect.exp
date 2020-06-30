@@ -8,16 +8,19 @@ error: abort not covered by any of the `aborts_if` clauses
  9 │ │ }
    │ ╰─^
    │
-   =     at tests/sources/functional/script_incorrect.move:7:1: main (entry)
-   =     at tests/sources/functional/script_provider.move:16:5: register (entry)
-   =     at ../stdlib/modules/Signer.move:13:5: address_of (entry)
-   =     at ../stdlib/modules/Signer.move:10:23: borrow_address
-   =     at ../stdlib/modules/Signer.move:14:9: address_of
-   =         s = <redacted>,
-   =         result = <redacted>
-   =     at tests/sources/functional/script_provider.move:17:24: register (ABORTED)
+   =     at tests/sources/functional/script_incorrect.move:7:1: main
+   =         account = <redacted>
+   =     at tests/sources/functional/script_provider.move:19:5: register (entry)
    =         account = <redacted>,
    =         $t1 = <redacted>
+   =     at tests/sources/functional/script_provider.move:16:5: register
+   =     at ../stdlib/modules/Signer.move:15:5: address_of (entry)
+   =         s = <redacted>,
+   =         result = <redacted>
+   =     at ../stdlib/modules/Signer.move:13:5: address_of
+   =     at ../stdlib/modules/Signer.move:10:23: borrow_address
+   =     at ../stdlib/modules/Signer.move:14:9: address_of
+   =     at tests/sources/functional/script_provider.move:17:24: register (ABORTED)
 
     ┌── tests/sources/functional/script_provider.move:17:24 ───
     │

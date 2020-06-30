@@ -13,7 +13,7 @@ use crate::{
 use anyhow::Result;
 use async_trait::async_trait;
 use futures::{future::try_join_all, join};
-use libra_logger::info;
+use libra_logger::{info, warn};
 use serde_json::Value;
 use std::{
     collections::HashSet,
@@ -38,6 +38,8 @@ pub struct PerformanceBenchmarkParams {
     help = "Duration of an experiment in seconds"
     )]
     pub duration: u64,
+    #[structopt(long, help = "Set fixed tps during perf experiment")]
+    pub tps: Option<u64>,
 }
 
 pub struct PerformanceBenchmark {
@@ -47,6 +49,7 @@ pub struct PerformanceBenchmark {
     percent_nodes_down: usize,
     duration: Duration,
     trace: bool,
+    tps: Option<u64>,
 }
 
 pub const DEFAULT_BENCH_DURATION: u64 = 120;
@@ -57,6 +60,16 @@ impl PerformanceBenchmarkParams {
             percent_nodes_down,
             duration: DEFAULT_BENCH_DURATION,
             trace: false,
+            tps: None,
+        }
+    }
+
+    pub fn new_fixed_tps(percent_nodes_down: usize, fixed_tps: u64) -> Self {
+        Self {
+            percent_nodes_down,
+            duration: DEFAULT_BENCH_DURATION,
+            trace: false,
+            tps: Some(fixed_tps),
         }
     }
 }
@@ -74,7 +87,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
             .filter_map(|val| {
                 all_fullnode_instances
                     .iter()
-                    .find(|x| val.validator_index() == x.validator_index())
+                    .find(|x| val.validator_group() == x.validator_group())
                     .cloned()
             })
             .collect();
@@ -85,6 +98,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
             percent_nodes_down: self.percent_nodes_down,
             duration: Duration::from_secs(self.duration),
             trace: self.trace,
+            tps: self.tps,
         }
     }
 }
@@ -100,16 +114,14 @@ impl Experiment for PerformanceBenchmark {
         try_join_all(futures).await?;
         let buffer = Duration::from_secs(60);
         let window = self.duration + buffer * 2;
-        let emit_job_request = if context.emit_to_validator {
-            EmitJobRequest::for_instances(
-                self.up_validators.clone(),
-                context.global_emit_job_request,
-            )
+        let instances = if context.emit_to_validator {
+            self.up_validators.clone()
         } else {
-            EmitJobRequest::for_instances(
-                self.up_fullnodes.clone(),
-                context.global_emit_job_request,
-            )
+            self.up_fullnodes.clone()
+        };
+        let emit_job_request = match self.tps {
+            Some(tps) => EmitJobRequest::fixed_tps(instances, tps),
+            None => EmitJobRequest::for_instances(instances, context.global_emit_job_request),
         };
         let emit_txn = context.tx_emitter.emit_txn_for(window, emit_job_request);
         let trace_tail = &context.trace_tail;
@@ -146,7 +158,10 @@ impl Experiment for PerformanceBenchmark {
         }
         let end = unix_timestamp_now() - buffer;
         let start = end - window + 2 * buffer;
-        let avg_txns_per_block = stats::avg_txns_per_block(&context.prometheus, start, end)?;
+        let avg_txns_per_block = stats::avg_txns_per_block(&context.prometheus, start, end);
+        let avg_txns_per_block = avg_txns_per_block
+            .map_err(|e| warn!("Failed to query avg_txns_per_block: {}", e))
+            .ok();
         let avg_latency_client = stats.latency / stats.committed;
         let p99_latency = stats.latency_buckets.percentile(99, 100);
         let avg_tps = stats.committed / window.as_secs();
@@ -155,7 +170,7 @@ impl Experiment for PerformanceBenchmark {
             context.prometheus.link_to_dashboard(start, end)
         );
         info!(
-            "Tx status from client side: txn {}, avg latency {}",
+            "Tx status: txn {}, avg latency {}",
             stats.committed as u64, avg_latency_client
         );
         let futures: Vec<_> = self
@@ -172,9 +187,11 @@ impl Experiment for PerformanceBenchmark {
         context
             .report
             .report_metric(&self, "expired_txn", expired_txn as f64);
-        context
-            .report
-            .report_metric(&self, "avg_txns_per_block", avg_txns_per_block as f64);
+        if let Some(avg_txns_per_block) = avg_txns_per_block {
+            context
+                .report
+                .report_metric(&self, "avg_txns_per_block", avg_txns_per_block);
+        }
         context
             .report
             .report_metric(&self, "avg_tps", avg_tps as f64);
@@ -184,7 +201,6 @@ impl Experiment for PerformanceBenchmark {
         context
             .report
             .report_metric(&self, "p99_latency", p99_latency as f64);
-        info!("avg_txns_per_block: {}", avg_txns_per_block);
         let expired_text = if expired_txn == 0 {
             "no expired txns".to_string()
         } else {
@@ -198,13 +214,15 @@ impl Experiment for PerformanceBenchmark {
     }
 
     fn deadline(&self) -> Duration {
-        Duration::from_secs(600)
+        Duration::from_secs(600) + self.duration
     }
 }
 
 impl Display for PerformanceBenchmark {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
-        if self.percent_nodes_down == 0 {
+        if let Some(tps) = self.tps {
+            write!(f, "fixed tps {}", tps)
+        } else if self.percent_nodes_down == 0 {
             write!(f, "all up")
         } else {
             write!(f, "{}% down", self.percent_nodes_down)

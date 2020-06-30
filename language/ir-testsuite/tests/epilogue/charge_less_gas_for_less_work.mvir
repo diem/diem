@@ -1,20 +1,21 @@
-//! account: alice, 0
-//! account: bob, 0
+//! account: alice, 0Coin1
+//! account: bob, 0Coin1
 
 //! new-transaction
 //! sender: blessed
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.LibraAccount;
 import 0x1.Libra;
 main(blessed: &signer) {
-    LibraAccount.deposit<LBR.LBR>(copy(blessed), {{alice}}, LBR.mint(copy(blessed), 10000));
-    LibraAccount.deposit<LBR.LBR>(copy(blessed), {{bob}}, LBR.mint(move(blessed), 10000));
+    LibraAccount.deposit<Coin1.Coin1>(copy(blessed), {{alice}}, Libra.mint<Coin1.Coin1>(copy(blessed), 10000));
+    LibraAccount.deposit<Coin1.Coin1>(copy(blessed), {{bob}}, Libra.mint<Coin1.Coin1>(move(blessed), 10000));
     return;
 }
 
 //! new-transaction
 //! sender: alice
 //! gas-price: 1
+//! gas-currency: Coin1
 main() {
     return;
 }
@@ -23,6 +24,7 @@ main() {
 //! new-transaction
 //! sender: bob
 //! gas-price: 1
+//! gas-currency: Coin1
 main() {
     let x: u64;
     x = 1 + 2 + 3;
@@ -32,10 +34,9 @@ main() {
 
 //! new-transaction
 import 0x1.LibraAccount;
-import 0x1.LBR;
-
+import 0x1.Coin1;
 main() {
     // Alice did less work than bob so she should pay less gas.
-    assert(LibraAccount.balance<LBR.LBR>({{bob}}) < LibraAccount.balance<LBR.LBR>({{alice}}), 42);
+    assert(LibraAccount.balance<Coin1.Coin1>({{bob}}) < LibraAccount.balance<Coin1.Coin1>({{alice}}), 42);
     return;
 }

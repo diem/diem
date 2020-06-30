@@ -1,11 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{
-    block::Block,
-    common::{Author, Round},
-    sync_info::SyncInfo,
-};
+use crate::{block::Block, common::Author, sync_info::SyncInfo};
 use anyhow::{ensure, format_err, Context, Result};
 use libra_types::validator_verifier::ValidatorVerifier;
 use serde::{Deserialize, Serialize};
@@ -81,7 +77,7 @@ impl ProposalMsg {
 
     pub fn verify(&self, validator: &ValidatorVerifier) -> Result<()> {
         self.proposal
-            .validate_signatures(validator)
+            .validate_signature(validator)
             .map_err(|e| format_err!("{:?}", e))?;
         // if there is a timeout certificate, verify its signatures
         if let Some(tc) = self.sync_info.highest_timeout_certificate() {
@@ -101,10 +97,6 @@ impl ProposalMsg {
 
     pub fn sync_info(&self) -> &SyncInfo {
         &self.sync_info
-    }
-
-    pub fn round(&self) -> Round {
-        self.proposal.round()
     }
 
     pub fn proposer(&self) -> Author {

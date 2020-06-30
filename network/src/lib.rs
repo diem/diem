@@ -10,22 +10,24 @@ pub use interface::NetworkProvider;
 
 pub mod common;
 pub mod connectivity_manager;
+pub mod constants;
 pub mod error;
 pub mod interface;
 pub mod logging;
 pub mod peer_manager;
 pub mod protocols;
-pub mod validator_network;
 
 pub mod counters;
 mod peer;
 mod sink;
-mod transport;
+pub mod transport;
 
 #[cfg(not(any(feature = "testing", feature = "fuzzing")))]
 mod noise;
 #[cfg(any(feature = "testing", feature = "fuzzing"))]
 pub mod noise;
+#[cfg(any(test, feature = "testing", feature = "fuzzing"))]
+pub mod testutils;
 
 pub type DisconnectReason = peer::DisconnectReason;
 pub type ConnectivityRequest = connectivity_manager::ConnectivityRequest;

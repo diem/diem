@@ -22,6 +22,7 @@ use libra_crypto::{
     HashValue,
 };
 use libra_logger::prelude::*;
+use libra_state_view::StateViewId;
 use libra_types::{
     account_address::AccountAddress,
     account_state::AccountState,
@@ -131,7 +132,7 @@ where
                 "Version of a given epoch LI does not match local computation."
             );
             ensure!(
-                epoch_change_li.ledger_info().next_epoch_state().is_some(),
+                epoch_change_li.ledger_info().ends_epoch(),
                 "Epoch change LI does not carry validator set"
             );
             ensure!(
@@ -420,9 +421,11 @@ where
 
     fn get_executed_state_view<'a>(
         &self,
+        id: StateViewId,
         executed_trees: &'a ExecutedTrees,
     ) -> VerifiedStateView<'a> {
         VerifiedStateView::new(
+            id,
             Arc::clone(&self.db.reader),
             self.cache.committed_trees().version(),
             self.cache.committed_trees().state_root(),
@@ -503,6 +506,7 @@ impl<V: VMExecutor> ChunkExecutor for Executor<V> {
 
         // Construct a StateView and pass the transactions to VM.
         let state_view = VerifiedStateView::new(
+            StateViewId::ChunkExecution { first_version },
             Arc::clone(&self.db.reader),
             self.cache.synced_trees().version(),
             self.cache.synced_trees().state_root(),
@@ -613,37 +617,85 @@ impl<V: VMExecutor> BlockExecutor for Executor<V> {
         parent_block_id: HashValue,
     ) -> Result<StateComputeResult, Error> {
         let (block_id, transactions) = block;
-        let _timer = OP_COUNTERS.timer("block_execute_time_s");
-        let parent_block_executed_trees = self.get_executed_trees(parent_block_id)?;
-        let state_view = self.get_executed_state_view(&parent_block_executed_trees);
 
-        let vm_outputs = {
-            trace_code_block!("executor::execute_block", {"block", block_id});
-            let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
-            V::execute_block(transactions.clone(), &state_view).map_err(anyhow::Error::from)?
+        // Reconfiguration rule - if a block is a child of pending reconfiguration, it needs to be empty
+        // So we roll over the executed state until it's committed and we start new epoch.
+        let (output, state_compute_result) = if parent_block_id != self.committed_block_id()?
+            && self
+                .cache
+                .get_block(&parent_block_id)?
+                .lock()
+                .unwrap()
+                .output()
+                .has_reconfiguration()
+        {
+            let parent = self.cache.get_block(&parent_block_id)?;
+            let parent_block = parent.lock().unwrap();
+            let parent_output = parent_block.output();
+            debug!(
+                "Received block {:x} which is a descendant of a reconfiguration block.",
+                block_id
+            );
+
+            let output = ProcessedVMOutput::new(
+                vec![],
+                parent_output.executed_trees().clone(),
+                parent_output.epoch_state().clone(),
+            );
+
+            let parent_accu = parent_output.executed_trees().txn_accumulator();
+            let state_compute_result = output.compute_result(
+                parent_accu.frozen_subtree_roots().clone(),
+                parent_accu.num_leaves(),
+            );
+
+            (output, state_compute_result)
+        } else {
+            debug!("Received block {:x} to execute.", block_id);
+
+            let _timer = OP_COUNTERS.timer("block_execute_time_s");
+
+            let parent_block_executed_trees = self.get_executed_trees(parent_block_id)?;
+
+            let state_view = self.get_executed_state_view(
+                StateViewId::BlockExecution { block_id },
+                &parent_block_executed_trees,
+            );
+
+            let vm_outputs = {
+                trace_code_block!("executor::execute_block", {"block", block_id});
+                let _timer = OP_COUNTERS.timer("vm_execute_block_time_s");
+                V::execute_block(transactions.clone(), &state_view).map_err(anyhow::Error::from)?
+            };
+
+            trace_code_block!("executor::process_vm_outputs", {"block", block_id});
+            let status: Vec<_> = vm_outputs
+                .iter()
+                .map(TransactionOutput::status)
+                .cloned()
+                .collect();
+            if !status.is_empty() {
+                trace!("Execution status: {:?}", status);
+            }
+
+            let (account_to_state, account_to_proof) = state_view.into();
+            let output = Self::process_vm_outputs(
+                account_to_state,
+                account_to_proof,
+                &transactions,
+                vm_outputs,
+                &parent_block_executed_trees,
+            )
+            .map_err(|err| format_err!("Failed to execute block: {}", err))?;
+
+            let parent_accu = parent_block_executed_trees.txn_accumulator();
+
+            let state_compute_result = output.compute_result(
+                parent_accu.frozen_subtree_roots().clone(),
+                parent_accu.num_leaves(),
+            );
+            (output, state_compute_result)
         };
-
-        trace_code_block!("executor::process_vm_outputs", {"block", block_id});
-        let status: Vec<_> = vm_outputs
-            .iter()
-            .map(TransactionOutput::status)
-            .cloned()
-            .collect();
-        if !status.is_empty() {
-            trace!("Execution status: {:?}", status);
-        }
-
-        let (account_to_state, account_to_proof) = state_view.into();
-        let output = Self::process_vm_outputs(
-            account_to_state,
-            account_to_proof,
-            &transactions,
-            vm_outputs,
-            &parent_block_executed_trees,
-        )
-        .map_err(|err| format_err!("Failed to execute block: {}", err))?;
-
-        let state_compute_result = output.state_compute_result();
 
         // Add the output to the speculation_output_tree
         self.cache

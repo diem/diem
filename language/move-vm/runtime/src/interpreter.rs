@@ -11,7 +11,7 @@ use libra_logger::prelude::*;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    vm_error::{StatusCode, StatusType, VMStatus},
+    vm_status::{StatusCode, StatusType, VMStatus},
 };
 use move_core_types::gas_schedule::{AbstractMemorySize, GasAlgebra, GasCarrier};
 use move_vm_types::{
@@ -24,8 +24,8 @@ use std::{cmp::min, collections::VecDeque, fmt::Write, sync::Arc};
 use vm::{
     errors::*,
     file_format::{
-        Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, StructDefInstantiationIndex,
-        StructDefinitionIndex,
+        Bytecode, FunctionHandleIndex, FunctionInstantiationIndex, Signature,
+        StructDefInstantiationIndex, StructDefinitionIndex,
     },
     file_format_common::Opcodes,
 };
@@ -57,8 +57,6 @@ pub(crate) struct Interpreter {
     operand_stack: Stack,
     /// The stack of active functions.
     call_stack: CallStack,
-    /// The sender of the transaction. This can materialize as an argument to a script.
-    sender: AccountAddress,
 }
 
 impl Interpreter {
@@ -68,24 +66,22 @@ impl Interpreter {
         function: Arc<Function>,
         ty_args: Vec<Type>,
         args: Vec<Value>,
-        sender: AccountAddress,
         data_store: &mut dyn DataStore,
         cost_strategy: &mut CostStrategy,
         loader: &Loader,
     ) -> VMResult<()> {
         // We count the intrinsic cost of the transaction here, since that needs to also cover the
         // setup of the function.
-        let mut interp = Self::new(sender);
+        let mut interp = Self::new();
         interp.execute(loader, data_store, cost_strategy, function, ty_args, args)
     }
 
     /// Create a new instance of an `Interpreter` in the context of a transaction with a
     /// given module cache and gas schedule.
-    fn new(sender: AccountAddress) -> Self {
+    fn new() -> Self {
         Interpreter {
             operand_stack: Stack::new(),
             call_stack: CallStack::new(),
-            sender,
         }
     }
 
@@ -121,11 +117,12 @@ impl Interpreter {
         ty_args: Vec<Type>,
         args: Vec<Value>,
     ) -> VMResult<()> {
+        verify_args(function.parameters(), &ty_args, &args)?;
         let mut locals = Locals::new(function.local_count());
-        // TODO: assert consistency of args and function formals
         for (i, value) in args.into_iter().enumerate() {
             locals.store_loc(i, value)?;
         }
+
         let mut current_frame = Frame::new(function, ty_args, locals);
         loop {
             let resolver = current_frame.resolver(loader);
@@ -381,19 +378,6 @@ impl Interpreter {
             move_resource_to(data_store, &ap, struct_ty, resource)?;
             Ok(size)
         }
-    }
-
-    /// MoveToSender opcode.
-    fn move_to_sender(
-        &mut self,
-        data_store: &mut dyn DataStore,
-        ap: AccessPath,
-        struct_ty: &FatStructType,
-    ) -> VMResult<AbstractMemorySize<GasCarrier>> {
-        let resource = self.operand_stack.pop_as::<Struct>()?;
-        let size = resource.size();
-        move_resource_to(data_store, &ap, struct_ty, resource)?;
-        Ok(size)
     }
 
     //
@@ -1007,10 +991,11 @@ impl Frame {
                             .push(Value::bool(!lhs.equals(&rhs)?))?;
                     }
                     Bytecode::GetTxnSenderAddress => {
-                        cost_strategy.charge_instr(Opcodes::GET_TXN_SENDER)?;
-                        interpreter
-                            .operand_stack
-                            .push(Value::address(interpreter.sender))?;
+                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(
+                                "GetTxnSenderAddress is deprecated and will be removed soon"
+                                    .to_string(),
+                            ));
                     }
                     Bytecode::MutBorrowGlobal(sd_idx) | Bytecode::ImmBorrowGlobal(sd_idx) => {
                         let addr = interpreter.operand_stack.pop_as::<AccountAddress>()?;
@@ -1087,27 +1072,17 @@ impl Frame {
                         // the size of the data that we are about to read in.
                         cost_strategy.charge_instr_with_size(Opcodes::MOVE_FROM_GENERIC, size)?;
                     }
-                    Bytecode::MoveToSender(sd_idx) => {
-                        let size = interpreter.global_data_op(
-                            resolver,
-                            data_store,
-                            interpreter.sender,
-                            *sd_idx,
-                            Interpreter::move_to_sender,
-                        )?;
-                        cost_strategy.charge_instr_with_size(Opcodes::MOVE_TO_SENDER, size)?;
+                    Bytecode::MoveToSender(_) => {
+                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(
+                                "MoveToSender is deprecated and will be removed soon".to_string(),
+                            ));
                     }
-                    Bytecode::MoveToSenderGeneric(si_idx) => {
-                        let size = interpreter.global_data_op_generic(
-                            resolver,
-                            data_store,
-                            interpreter.sender,
-                            *si_idx,
-                            self,
-                            Interpreter::move_to_sender,
-                        )?;
-                        cost_strategy
-                            .charge_instr_with_size(Opcodes::MOVE_TO_SENDER_GENERIC, size)?;
+                    Bytecode::MoveToSenderGeneric(_) => {
+                        return Err(VMStatus::new(StatusCode::UNKNOWN_INVARIANT_VIOLATION_ERROR)
+                            .with_message(
+                                "MoveToSender is deprecated and will be removed soon".to_string(),
+                            ));
                     }
                     Bytecode::MoveTo(sd_idx) => {
                         let resource = interpreter.operand_stack.pop_as::<Struct>()?;
@@ -1181,4 +1156,27 @@ impl Frame {
     fn resolver<'a>(&self, loader: &'a Loader) -> Resolver<'a> {
         self.function.get_resolver(loader)
     }
+}
+
+// Verify the the type of the arguments in input from the outside is restricted (`is_valid_arg()`)
+// TODO: we need to check the instantiation
+// TODO: specify the values allowed, we could try to match everything, this function should have
+// minimal or non existent policy (besides any type/value match) but it's tricky
+fn verify_args(signature: &Signature, _ty_args: &[Type], args: &[Value]) -> VMResult<()> {
+    if signature.len() != args.len() {
+        return Err(
+            VMStatus::new(StatusCode::TYPE_MISMATCH).with_message(format!(
+                "argument length mismatch: expected {} got {}",
+                signature.len(),
+                args.len()
+            )),
+        );
+    }
+    for (tok, val) in signature.0.iter().zip(args) {
+        if !val.is_valid_arg(tok) {
+            return Err(VMStatus::new(StatusCode::TYPE_MISMATCH)
+                .with_message(format!("unexpected type: {:?}, arg: {:?}", tok, val)));
+        }
+    }
+    Ok(())
 }

@@ -8,9 +8,7 @@
 #![recursion_limit = "1024"]
 
 use executor_types::ExecutedTrees;
-use libra_types::{
-    account_address::AccountAddress, epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures,
-};
+use libra_types::{epoch_state::EpochState, ledger_info::LedgerInfoWithSignatures};
 pub use synchronizer::{StateSyncClient, StateSynchronizer};
 
 mod chunk_request;
@@ -21,8 +19,6 @@ mod executor_proxy;
 pub mod network;
 mod peer_manager;
 mod synchronizer;
-
-type PeerId = AccountAddress;
 
 /// The state distinguishes between the following fields:
 /// * highest_local_li is keeping the latest certified ledger info

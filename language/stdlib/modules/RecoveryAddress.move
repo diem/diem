@@ -32,6 +32,9 @@ module RecoveryAddress {
         //     B and B is the recovery account for A
         // (2) rotation_caps is always nonempty
         let rotation_cap = LibraAccount::extract_key_rotation_capability(recovery_account);
+        // TODO: proper error code
+        assert(*LibraAccount::key_rotation_capability_address(&rotation_cap)
+             == Signer::address_of(recovery_account), 2222);
         move_to(
             recovery_account,
             RecoveryAddress { rotation_caps: Vector::singleton(rotation_cap) }
@@ -56,13 +59,24 @@ module RecoveryAddress {
         let caps = &borrow_global<RecoveryAddress>(recovery_address).rotation_caps;
         let i = 0;
         let len = Vector::length(caps);
-        while (i < len) {
+        while ({
+            spec {
+                assert i <= len + 1;
+                assert forall j in 0..i: caps[j].account_address != to_recover;
+            };
+            (i <= len)
+        })
+        {
             let cap = Vector::borrow(caps, i);
             if (LibraAccount::key_rotation_capability_address(cap) == &to_recover) {
                 LibraAccount::rotate_authentication_key(cap, new_key);
                 return
             };
             i = i + 1
+        };
+        spec {
+            assert i == len + 1;
+            assert forall j in 0..len: caps[j].account_address != to_recover;
         };
         // Couldn't find `to_recover` in the account recovery resource; abort
         // TODO: proper error code
@@ -85,7 +99,130 @@ module RecoveryAddress {
         );
 
         let caps = &mut borrow_global_mut<RecoveryAddress>(recovery_address).rotation_caps;
-        Vector::push_back(caps, LibraAccount::extract_key_rotation_capability(to_recover_account));
+        let rotation_cap = LibraAccount::extract_key_rotation_capability(to_recover_account);
+        // TODO: proper error code
+        assert(*LibraAccount::key_rotation_capability_address(&rotation_cap)
+             == Signer::address_of(to_recover_account), 2222);
+        Vector::push_back(caps, rotation_cap);
+    }
+
+    // ****************** SPECIFICATIONS *******************
+
+    /// # Module specifications
+
+    spec module {
+        pragma verify = true;
+    }
+
+    spec module {
+        /// Returns true if `addr` is a recovery address.
+        define spec_is_recovery_address(addr: address): bool
+        {
+            exists<RecoveryAddress>(addr)
+        }
+
+        /// Returns all the `KeyRotationCapability`s held at `recovery_address`.
+        define spec_get_rotation_caps(recovery_address: address):
+            vector<LibraAccount::KeyRotationCapability>
+        {
+            global<RecoveryAddress>(recovery_address).rotation_caps
+        }
+
+        /// Returns true if `recovery_address` holds the
+        /// `KeyRotationCapability` for `addr`.
+        define spec_holds_key_rotation_cap_for(
+            recovery_address: address,
+            addr: address): bool
+        {
+            // BUG: the commented out version will break the postconditions.
+            // exists i in 0..len(spec_get_rotation_caps(recovery_address)):
+            //     spec_get_rotation_caps(recovery_address)[i].account_address == addr
+            exists i: u64
+                where 0 <= i && i < len(spec_get_rotation_caps(recovery_address)):
+                    spec_get_rotation_caps(recovery_address)[i].account_address == addr
+        }
+    }
+
+    /// ## RecoveryAddress has its own KeyRotationCapability
+
+    spec schema RecoveryAddressHasItsOwnKeyRotationCap {
+        invariant module forall addr1: address
+            where spec_is_recovery_address(addr1):
+                len(spec_get_rotation_caps(addr1)) > 0
+                && spec_get_rotation_caps(addr1)[0].account_address == addr1;
+    }
+
+    spec module {
+        apply RecoveryAddressHasItsOwnKeyRotationCap to *;
+    }
+
+    /// ## RecoveryAddress resource stays
+
+    spec schema RecoveryAddressStays {
+        ensures forall addr1: address:
+            old(spec_is_recovery_address(addr1))
+            ==> spec_is_recovery_address(addr1);
+    }
+
+    spec module {
+        apply RecoveryAddressStays to *;
+    }
+
+    /// ## RecoveryAddress remains same
+
+    spec schema RecoveryAddressRemainsSame {
+        ensures forall recovery_addr: address, to_recovery_addr: address
+            where old(spec_is_recovery_address(recovery_addr)):
+                old(spec_holds_key_rotation_cap_for(recovery_addr, to_recovery_addr))
+                ==> spec_holds_key_rotation_cap_for(recovery_addr, to_recovery_addr);
+    }
+
+    spec module {
+        apply RecoveryAddressRemainsSame to *;
+    }
+
+    /// ## Only VASPs can be RecoveryAddress
+    spec schema RecoveryAddressIsVASP {
+        invariant module forall recovery_addr: address
+            where spec_is_recovery_address(recovery_addr):
+                VASP::spec_is_vasp(recovery_addr);
+    }
+
+    spec module {
+        apply RecoveryAddressIsVASP to *;
+    }
+
+    /// # Specifications for individual functions
+
+    spec fun publish {
+        aborts_if !exists<LibraAccount::LibraAccount>(Signer::spec_address_of(recovery_account));
+        aborts_if !VASP::spec_is_vasp(Signer::spec_address_of(recovery_account));
+        aborts_if !LibraAccount::spec_holds_own_key_rotation_cap(
+            Signer::spec_address_of(recovery_account));
+        aborts_if spec_is_recovery_address(Signer::spec_address_of(recovery_account));
+        ensures spec_is_recovery_address(Signer::spec_address_of(recovery_account));
+    }
+
+    spec fun rotate_authentication_key {
+        aborts_if !spec_is_recovery_address(recovery_address);
+        aborts_if !exists<LibraAccount::LibraAccount>(to_recover);
+        aborts_if len(new_key) != 32;
+        aborts_if !spec_holds_key_rotation_cap_for(recovery_address, to_recover);
+        aborts_if !(Signer::spec_address_of(account) == recovery_address
+                    || Signer::spec_address_of(account) == to_recover);
+        ensures global<LibraAccount::LibraAccount>(to_recover).authentication_key == new_key;
+    }
+
+    spec fun add_rotation_capability {
+        aborts_if !exists<LibraAccount::LibraAccount>(Signer::spec_address_of(to_recover_account));
+        aborts_if !spec_is_recovery_address(recovery_address);
+        aborts_if VASP::spec_parent_address(recovery_address)
+               != VASP::spec_parent_address(Signer::spec_address_of(to_recover_account));
+        aborts_if !LibraAccount::spec_holds_own_key_rotation_cap(
+            Signer::spec_address_of(to_recover_account));
+        aborts_if !VASP::spec_is_vasp(Signer::spec_address_of(to_recover_account));
+        ensures spec_get_rotation_caps(recovery_address)[
+            len(spec_get_rotation_caps(recovery_address)) - 1].account_address == Signer::spec_address_of(to_recover_account);
     }
 }
 }

@@ -98,11 +98,11 @@ module FixedPoint32 {
       less than or equal to the input.
     * Let mul_R and div_R be the multiplication and the division function over real numbers respectively.
     */
-
     spec fun multiply_u64 {
         // aborts_if mul_R(num, multiplier) >= max_u64() + 1; // overflow (note that max_u64() == max_FP0())
         // aborts_if 0 < mul_R(num, multiplier) < 1; // underflow (note that 1 is the smallest non-zero FP0);
         // ensures result == round_FP0(mul_R(num, multiplier)); // exactly rounded
+        pragma intrinsic = true;
     }
 
     spec fun divide_u64 {
@@ -110,12 +110,14 @@ module FixedPoint32 {
         // aborts_if 0 < div_R(num, divisor) < 1; // underflow
         // aborts_if divisor == 0; // div by zero
         // ensures result == round_FP0(div_R(num, divisor)); // exactly rounded
+        pragma intrinsic = true;
     }
 
     spec fun create_from_rational {
         // aborts_if denominator == 0; // div by zero
         // aborts_if 0 < div_R(numerator, denominator) < smallest_non_zero_FP32(); // underflow
         // ensures result == round_FP32(div_R(numerator, denominator)); // exactly rounded
+        pragma intrinsic = true;
     }
 
     spec fun create_from_raw_value {

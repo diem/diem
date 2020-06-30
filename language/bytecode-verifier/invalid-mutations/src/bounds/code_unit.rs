@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_proptest_helpers::pick_slice_idxs;
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_status::{StatusCode, VMStatus};
 use proptest::{prelude::*, sample::Index as PropIndex};
 use std::collections::BTreeMap;
 use vm::{

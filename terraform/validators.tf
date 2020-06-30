@@ -141,6 +141,7 @@ locals {
   image_repo                 = var.image_repo
   image_version              = substr(var.image_tag, 0, 6) == "sha256" ? "@${var.image_tag}" : ":${var.image_tag}"
   override_image_versions    = [for img in var.override_image_tags : substr(img, 0, 6) == "sha256" ? "@${img}" : ":${img}"]
+  override_safety_rules_image_versions  = [for img in var.override_safety_rules_image_tags : substr(img, 0, 6) == "sha256" ? "@${img}" : ":${img}"]
   logstash_image_repo        = var.logstash_image
   logstash_image_version     = substr(var.logstash_version, 0, 6) == "sha256" ? "@${var.logstash_version}" : ":${var.logstash_version}"
   safety_rules_image_repo    = var.safety_rules_image_repo
@@ -233,7 +234,7 @@ data "template_file" "ecs_task_definition" {
     logstash_version           = local.logstash_image_version
     logstash_config            = local.logstash_config
     safety_rules_image         = local.safety_rules_image_repo
-    safety_rules_image_version = local.override_image_versions == [] ? local.safety_rules_image_version : local.override_image_versions[count.index % length(local.override_image_versions)]
+    safety_rules_image_version = local.override_safety_rules_image_versions == [] ? local.safety_rules_image_version : local.override_safety_rules_image_versions[count.index % length(local.override_safety_rules_image_versions)]
     push_metrics_endpoint      = "http://${aws_instance.monitoring.private_ip}:9092/metrics/job/safety_rules/role/validator/peer_id/val-${count.index}"
     cfg_vault_addr             = "http://${aws_instance.vault.private_ip}:8200"
     cfg_vault_namespace        = "val-${count.index}"

@@ -12,7 +12,7 @@ module TraceBug {
             // With one TRACE, everything is fine.
             //   all(domain<address>(), |addr| exists<Root>(addr) ==> TRACE(addr) == root_address())
             // BUG: With two TRACE, verification fails
-            all(domain<address>(), |addr| exists<Root>(TRACE(addr)) ==> TRACE(addr) == root_address())
+            forall addr: address: exists<Root>(TRACE(addr)) ==> TRACE(addr) == root_address()
         }
         define root_address(): address { 0xA550C18 }
     }

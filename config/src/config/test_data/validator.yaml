@@ -14,9 +14,7 @@ consensus:
     safety_rules:
         service:
             type: process
-            server_address: "127.0.0.1:5555"
-        backend:
-            type: "in_memory_storage"
+            server_address: "/ip4/127.0.0.1/tcp/5555"
 
 execution:
     genesis_file_location: "relative/path/to/genesis"
@@ -37,6 +35,7 @@ full_node_networks:
           private: "vfn"
 
 validator_network:
+    discovery_method: "onchain"
     listen_address: "/ip4/0.0.0.0/tcp/6180"
     identity:
         type: "from_storage"

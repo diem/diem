@@ -19,7 +19,8 @@ libra-logger = { path = "../../common/logger", version = "0.1.0" }
 libra-network-address = { path = "../network-address", version = "0.1.0" }
 libra-types = { path = "../../types" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
-memsocket = { path = "../memsocket", version = "0.1.0" }
-netcore = { path = "../netcore", version = "0.1.0" }
-network = { path = "../", version = "0.1.0", features = ["testing"] }
+memsocket = { path = "../../network/memsocket", version = "0.1.0" }
+netcore = { path = "../../network/netcore", version = "0.1.0" }
+network = { path = "../../network", version = "0.1.0", features = ["testing"] }
+network-builder = { path = "../../network/builder", version = "0.1.0"}
 rand = "0.7.3"

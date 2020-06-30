@@ -5,10 +5,13 @@ mod absint;
 pub mod ast;
 mod borrows;
 pub(crate) mod cfg;
+mod constant_fold;
 mod eliminate_locals;
+mod inline_blocks;
 mod liveness;
 mod locals;
 mod remove_no_ops;
+mod simplify_jumps;
 pub(crate) mod translate;
 
 use crate::{
@@ -43,5 +46,15 @@ pub fn optimize(
     _locals: &UniqueMap<Var, SingleType>,
     cfg: &mut BlockCFG,
 ) {
-    eliminate_locals::optimize(cfg);
+    loop {
+        let mut changed = false;
+        changed |= eliminate_locals::optimize(cfg);
+        changed |= constant_fold::optimize(cfg);
+        changed |= simplify_jumps::optimize(cfg);
+        changed |= inline_blocks::optimize(cfg);
+
+        if !changed {
+            break;
+        }
+    }
 }

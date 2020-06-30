@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::runtime::VMRuntime;
-use bytecode_verifier::VerifiedModule;
 use move_core_types::{
     account_address::AccountAddress,
     identifier::IdentStr,
@@ -28,7 +27,7 @@ impl MoveVM {
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
-        sender: AccountAddress,
+        _sender: AccountAddress,
         data_store: &mut dyn DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
@@ -37,7 +36,6 @@ impl MoveVM {
             function_name,
             ty_args,
             args,
-            sender,
             data_store,
             cost_strategy,
         )
@@ -61,16 +59,10 @@ impl MoveVM {
         module: Vec<u8>,
         sender: AccountAddress,
         data_store: &mut dyn DataStore,
+        cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
-        self.runtime.publish_module(module, &sender, data_store)
-    }
-
-    pub fn cache_module(
-        &self,
-        module: VerifiedModule,
-        data_store: &mut dyn DataStore,
-    ) -> VMResult<()> {
-        self.runtime.cache_module(module, data_store)
+        self.runtime
+            .publish_module(module, sender, data_store, cost_strategy)
     }
 }
 

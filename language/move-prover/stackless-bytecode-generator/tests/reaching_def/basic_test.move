@@ -10,8 +10,8 @@ module ReachingDefTest {
 	    x + 1
 	}
 
-    fun create_resource() {
+    fun create_resource(sender: &signer) {
         let r = R{ x: 1, y: false};
-        move_to_sender<R>(r);
+        move_to<R>(sender, r);
     }
 }

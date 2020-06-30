@@ -7,7 +7,7 @@ use libra_types::{
     account_config::{
         AccountResource, AccountRole, BalanceResource, BurnEvent, CancelBurnEvent,
         CurrencyInfoResource, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent,
-        ReceivedPaymentEvent, SentPaymentEvent, UpgradeEvent,
+        ReceivedPaymentEvent, SentPaymentEvent, ToLBRExchangeRateUpdateEvent, UpgradeEvent,
     },
     account_state_blob::AccountStateWithProof,
     contract_event::ContractEvent,
@@ -15,7 +15,7 @@ use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     proof::{AccountStateProof, AccumulatorConsistencyProof},
     transaction::{Transaction, TransactionArgument, TransactionPayload},
-    vm_error::StatusCode,
+    vm_status::StatusCode,
 };
 use move_core_types::{
     identifier::Identifier,
@@ -57,6 +57,7 @@ pub enum AccountRoleView {
         base_url: String,
         expiration_time: u64,
         compliance_key: BytesView,
+        num_children: u64,
     },
 }
 
@@ -70,7 +71,6 @@ pub struct AccountView {
     pub delegated_key_rotation_capability: bool,
     pub delegated_withdrawal_capability: bool,
     pub is_frozen: bool,
-    pub role_id: u64,
     pub role: AccountRoleView,
 }
 
@@ -94,7 +94,6 @@ impl AccountView {
             delegated_key_rotation_capability: account.has_delegated_key_rotation_capability(),
             delegated_withdrawal_capability: account.has_delegated_withdrawal_capability(),
             is_frozen: account.is_frozen(),
-            role_id: account.role_id(),
             role: AccountRoleView::from(account_role),
         }
     }
@@ -123,6 +122,11 @@ pub enum EventDataView {
     },
     #[serde(rename = "mint")]
     Mint { amount: AmountView },
+    #[serde(rename = "to_lbr_exchange_rate_update")]
+    ToLBRExchangeRateUpdate {
+        currency_code: String,
+        new_to_lbr_exchange_rate: f32,
+    },
     #[serde(rename = "preburn")]
     Preburn {
         amount: AmountView,
@@ -209,6 +213,15 @@ impl From<(u64, ContractEvent)> for EventView {
                 })
             } else {
                 Err(format_err!("Unable to parse CancelBurnEvent"))
+            }
+        } else if event.type_tag() == &TypeTag::Struct(ToLBRExchangeRateUpdateEvent::struct_tag()) {
+            if let Ok(update_event) = ToLBRExchangeRateUpdateEvent::try_from(&event) {
+                Ok(EventDataView::ToLBRExchangeRateUpdate {
+                    currency_code: update_event.currency_code().to_string(),
+                    new_to_lbr_exchange_rate: update_event.new_to_lbr_exchange_rate(),
+                })
+            } else {
+                Err(format_err!("Unable to parse ToLBRExchangeRateUpdate"))
             }
         } else if event.type_tag() == &TypeTag::Struct(MintEvent::struct_tag()) {
             if let Ok(mint_event) = MintEvent::try_from(&event) {
@@ -361,13 +374,6 @@ pub enum ScriptView {
 
 impl ScriptView {
     // TODO cover all script types
-    pub fn get_name(&self) -> String {
-        match self {
-            ScriptView::PeerToPeer { .. } => "peer to peer transaction".to_string(),
-            ScriptView::Mint { .. } => "mint transaction".to_string(),
-            ScriptView::Unknown { .. } => "unknown transaction".to_string(),
-        }
-    }
 }
 
 impl From<Transaction> for TransactionDataView {
@@ -419,6 +425,7 @@ impl From<AccountRole> for AccountRoleView {
                 base_url: parent_vasp.base_url().to_string(),
                 expiration_time: parent_vasp.expiration_date(),
                 compliance_key: BytesView::from(parent_vasp.compliance_public_key()),
+                num_children: parent_vasp.num_children(),
             },
         }
     }
@@ -491,6 +498,7 @@ pub struct CurrencyInfoView {
     pub code: String,
     pub scaling_factor: u64,
     pub fractional_part: u64,
+    pub to_lbr_exchange_rate: f32,
 }
 
 impl From<CurrencyInfoResource> for CurrencyInfoView {
@@ -499,6 +507,7 @@ impl From<CurrencyInfoResource> for CurrencyInfoView {
             code: info.currency_code().to_string(),
             scaling_factor: info.scaling_factor(),
             fractional_part: info.fractional_part(),
+            to_lbr_exchange_rate: info.exchange_rate(),
         }
     }
 }

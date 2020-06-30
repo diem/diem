@@ -40,14 +40,16 @@ script{
 //! new-transaction
 //! sender: association
 script{
-    use 0x1::LBR::LBR;
     use 0x1::LibraAccount;
+    use 0x1::Roles::{Self, LibraRootRole};
 
     // register Alice as a validator candidate
     fun main(creator: &signer) {
-        LibraAccount::create_validator_account<LBR>(
-            creator, 0xAA, x"00000000000000000000000000000000"
+        let r = Roles::extract_privilege_to_capability<LibraRootRole>(creator);
+        LibraAccount::create_validator_account(
+            creator, &r, 0xAA, x"00000000000000000000000000000000"
         );
+        Roles::restore_capability_to_privilege(creator, r);
     }
 }
 

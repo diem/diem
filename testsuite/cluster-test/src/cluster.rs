@@ -65,11 +65,22 @@ impl Cluster {
 
     pub fn random_validator_instance(&self) -> Instance {
         let mut rnd = rand::thread_rng();
-        self.validator_instances.choose(&mut rnd).unwrap().clone()
+        self.validator_instances
+            .choose(&mut rnd)
+            .expect("random_validator_instance requires non-empty validator_instances")
+            .clone()
     }
 
     pub fn validator_instances(&self) -> &[Instance] {
         &self.validator_instances
+    }
+
+    pub fn random_full_node_instance(&self) -> Instance {
+        let mut rnd = rand::thread_rng();
+        self.fullnode_instances
+            .choose(&mut rnd)
+            .expect("random_full_node_instance requires non-empty fullnode_instances")
+            .clone()
     }
 
     pub fn fullnode_instances(&self) -> &[Instance] {
@@ -164,5 +175,9 @@ impl Cluster {
         }
         assert!(!instances.is_empty(), "No instances for subcluster");
         self.new_validator_sub_cluster(instances)
+    }
+
+    pub fn find_instance_by_pod(&self, pod: &str) -> Option<&Instance> {
+        self.all_instances().find(|i| i.peer_name() == pod)
     }
 }

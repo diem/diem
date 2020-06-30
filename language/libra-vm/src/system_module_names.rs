@@ -66,12 +66,6 @@ pub static GAS_SCHEDULE_MODULE: Lazy<ModuleId> = Lazy::new(|| {
         Identifier::new("GasSchedule").unwrap(),
     )
 });
-pub static ASSOCIATION_MODULE: Lazy<ModuleId> = Lazy::new(|| {
-    ModuleId::new(
-        account_config::CORE_CODE_ADDRESS,
-        ASSOCIATION_MODULE_NAME.clone(),
-    )
-});
 
 // Names for special functions and structs
 pub static CREATE_ACCOUNT_NAME: Lazy<Identifier> =
@@ -90,42 +84,23 @@ pub static BLOCK_PROLOGUE: Lazy<Identifier> =
 pub static DISTRIBUTE_TXN_FEES: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("distribute_transaction_fees").unwrap());
 
-static ASSOCIATION_MODULE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("Association").unwrap());
-pub static ASSOCIATION_CAPABILITY_STRUCT_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("PrivilegedCapability").unwrap());
-pub static BASE_ASSOCIATION_CAPABILITY_TYPE_NAME: Lazy<Identifier> =
-    Lazy::new(|| Identifier::new("Association").unwrap());
-pub static ASSOCIATION_MODULE_PUBLISHING_TYPE_NAME: Lazy<Identifier> =
+static ROLES_MODULE_NAME: Lazy<Identifier> = Lazy::new(|| Identifier::new("Roles").unwrap());
+pub static ROLES_PRIVILEGE_NAME: Lazy<Identifier> =
+    Lazy::new(|| Identifier::new("Privilege").unwrap());
+pub static MODULE_PUBLISHING_TYPE_NAME: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("PublishModule").unwrap());
 
-// TODO Move this somewhere else
-pub fn association_capability_struct_tag() -> StructTag {
-    let base_association_cap_tag = StructTag {
+pub fn module_publishing_capability_struct_tag() -> StructTag {
+    let mod_publishing_tag = StructTag {
         address: account_config::CORE_CODE_ADDRESS,
-        module: ASSOCIATION_MODULE_NAME.to_owned(),
-        name: BASE_ASSOCIATION_CAPABILITY_TYPE_NAME.to_owned(),
+        module: account_config::ACCOUNT_MODULE_IDENTIFIER.to_owned(),
+        name: MODULE_PUBLISHING_TYPE_NAME.to_owned(),
         type_params: vec![],
     };
     StructTag {
         address: account_config::CORE_CODE_ADDRESS,
-        module: ASSOCIATION_MODULE_NAME.to_owned(),
-        name: ASSOCIATION_CAPABILITY_STRUCT_NAME.to_owned(),
-        type_params: vec![TypeTag::Struct(base_association_cap_tag)],
-    }
-}
-
-pub fn association_module_publishing_capability_struct_tag() -> StructTag {
-    let base_association_cap_tag = StructTag {
-        address: account_config::CORE_CODE_ADDRESS,
-        module: ASSOCIATION_MODULE_NAME.to_owned(),
-        name: ASSOCIATION_MODULE_PUBLISHING_TYPE_NAME.to_owned(),
-        type_params: vec![],
-    };
-    StructTag {
-        address: account_config::CORE_CODE_ADDRESS,
-        module: ASSOCIATION_MODULE_NAME.to_owned(),
-        name: ASSOCIATION_CAPABILITY_STRUCT_NAME.to_owned(),
-        type_params: vec![TypeTag::Struct(base_association_cap_tag)],
+        module: ROLES_MODULE_NAME.to_owned(),
+        name: ROLES_PRIVILEGE_NAME.to_owned(),
+        type_params: vec![TypeTag::Struct(mod_publishing_tag)],
     }
 }

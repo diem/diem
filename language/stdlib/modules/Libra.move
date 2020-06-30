@@ -1,13 +1,21 @@
 address 0x1 {
 
+/// The `Libra` module describes the concept of a coin in the Libra framework. It introduces the
+/// resource `Libra::Libra<CoinType>`, representing a coin of given coin type.
+/// The module defines functions operating on coins as well as functionality like
+/// minting and burning of coins.
 module Libra {
     use 0x1::CoreAddresses;
-    use 0x1::Association;
-    use 0x1::Event;
+    use 0x1::Event::{Self, EventHandle};
     use 0x1::FixedPoint32::{Self, FixedPoint32};
-    use 0x1::RegisteredCurrencies;
+    use 0x1::RegisteredCurrencies::{Self, RegistrationCapability};
     use 0x1::Signer;
     use 0x1::Vector;
+    use 0x1::Roles::{Self, Capability, TreasuryComplianceRole};
+    use 0x1::LibraConfig::CreateOnChainConfig;
+    use 0x1::LibraTimestamp;
+
+    resource struct RegisterNewCurrency {}
 
     /// The `Libra` resource defines the Libra coin for each currency in
     /// Libra. Each "coin" is coupled with a type `CoinType` specifying the
@@ -22,23 +30,25 @@ module Libra {
 
     /// The `MintCapability` resource defines a capability to allow minting
     /// of coins of `CoinType` currency by the holder of this capability.
-    /// This capability is held only either by the CoreAddresses::TREASURY_COMPLIANCE_ADDRESS() account or the
-    /// `0x1::LBR` module (and `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()` in testnet).
+    /// This capability is held only either by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()` account or the
+    /// `0x1::LBR` module (and `CoreAddresses::LIBRA_ROOT_ADDRESS()` in testnet).
+    ///
+    /// > TODO(wrwg): what does it mean that a capability is held by a module? Consider to remove?
     resource struct MintCapability<CoinType> { }
 
     /// The `BurnCapability` resource defines a capability to allow coins
     /// of `CoinType` currency to be burned by the holder of the
     /// capability. This capability is only held by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()` account,
-    /// and the `0x1::LBR` module (and `CoreAddresses::ASSOCIATION_ROOT_ADDRESS()` in testnet).
+    /// and the `0x1::LBR` module (and `CoreAddresses::LIBRA_ROOT_ADDRESS()` in testnet).
     resource struct BurnCapability<CoinType> { }
 
     /// The `CurrencyRegistrationCapability` is a singleton resource
-    /// published under the `CoreAddresses::DEFAULT_CONFIG_ADDRESS()` and grants
+    /// published under the `CoreAddresses::LIBRA_ROOT_ADDRESS()` and grants
     /// the capability to the `0x1::Libra` module to add currencies to the
     /// `0x1::RegisteredCurrencies` on-chain config.
     resource struct CurrencyRegistrationCapability {
         /// A capability to allow updating the set of registered currencies on-chain.
-        cap: RegisteredCurrencies::RegistrationCapability,
+        cap: RegistrationCapability,
     }
 
     /// A `MintEvent` is emitted every time a Libra coin is minted. This
@@ -95,6 +105,17 @@ module Libra {
         preburn_address: address,
     }
 
+    /// An `ToLBRExchangeRateUpdateEvent` is emitted every time the to-LBR exchange
+    /// rate for the currency given by `currency_code` is updated.
+    struct ToLBRExchangeRateUpdateEvent {
+        /// The currency code of the currency whose exchange rate was updated.
+        currency_code: vector<u8>,
+        /// The new on-chain to-LBR exchange rate between the
+        /// `currency_code` currency and LBR. Represented in conversion
+        /// between the (on-chain) base-units for the currency and microlibra.
+        new_to_lbr_exchange_rate: u64,
+    }
+
     /// The `CurrencyInfo<CoinType>` resource stores the various
     /// pieces of information needed for a currency (`CoinType`) that is
     /// registered on-chain. This resource _must_ be published under the
@@ -117,6 +138,8 @@ module Libra {
         /// The scaling factor for the coin (i.e. the amount to multiply by
         /// to get to the human-readable representation for this currency).
         /// e.g. 10^6 for `Coin1`
+        ///
+        /// > TODO(wrwg): should the above be "to divide by"?
         scaling_factor: u64,
         /// The smallest fractional part (number of decimal places) to be
         /// used in the human-readable representation for the currency (e.g.
@@ -131,15 +154,17 @@ module Libra {
         /// creation of coins in the `CoinType` currency. Mutable.
         can_mint: bool,
         /// Event stream for minting and where `MintEvent`s will be emitted.
-        mint_events: Event::EventHandle<MintEvent>,
+        mint_events: EventHandle<MintEvent>,
         /// Event stream for burning, and where `BurnEvent`s will be emitted.
-        burn_events: Event::EventHandle<BurnEvent>,
+        burn_events: EventHandle<BurnEvent>,
         /// Event stream for preburn requests, and where all
         /// `PreburnEvent`s for this `CoinType` will be emitted.
-        preburn_events: Event::EventHandle<PreburnEvent>,
+        preburn_events: EventHandle<PreburnEvent>,
         /// Event stream for all cancelled preburn requests for this
         /// `CoinType`.
-        cancel_burn_events: Event::EventHandle<CancelBurnEvent>,
+        cancel_burn_events: EventHandle<CancelBurnEvent>,
+        /// Event stream for emiting exchange rate change events
+        exchange_rate_update_events: EventHandle<ToLBRExchangeRateUpdateEvent>,
     }
 
     /// A holding area where funds that will subsequently be burned wait while their underlying
@@ -156,54 +181,77 @@ module Libra {
         requests: vector<Libra<CoinType>>,
     }
 
-    /// An association account holding this privilege can add/remove the
-    /// currencies from the system. This must be published under the
-    /// address at `CoreAddresses::CURRENCY_INFO_ADDRESS()`.
-    struct AddCurrency { }
-
     ///////////////////////////////////////////////////////////////////////////
     // Initialization and granting of privileges
     ///////////////////////////////////////////////////////////////////////////
 
+    /// Grants the `RegisterNewCurrency` privilege to
+    /// the calling account as long as it has the correct role (TC).
+    /// Aborts if `account` does not have a `RoleId` that corresponds with
+    /// the treacury compliance role.
+    public fun grant_privileges(account: &signer) {
+        Roles::add_privilege_to_account_treasury_compliance_role(account, RegisterNewCurrency{});
+    }
+
     /// Initialization of the `Libra` module; initializes the set of
     /// registered currencies in the `0x1::RegisteredCurrencies` on-chain
     /// config, and publishes the `CurrencyRegistrationCapability` under the
-    /// `CoreAddresses::DEFAULT_CONFIG_ADDRESS()`.
-    public fun initialize(config_account: &signer) {
+    /// `CoreAddresses::LIBRA_ROOT_ADDRESS()`. This can only be called from genesis.
+    public fun initialize(
+        config_account: &signer,
+        create_config_capability: &Capability<CreateOnChainConfig>,
+    ) {
+        LibraTimestamp::assert_is_genesis();
+        // Operational constraint
         assert(
-            Signer::address_of(config_account) == CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
+            Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
             0
         );
-        let cap = RegisteredCurrencies::initialize(config_account);
+        let cap = RegisteredCurrencies::initialize(config_account, create_config_capability);
         move_to(config_account, CurrencyRegistrationCapability{ cap })
     }
 
     /// Publishes the `MintCapability` `cap` for the `CoinType` currency
-    /// under `account`. `CoinType`  must be a registered currency type,
-    /// and the `account` must be an association account.
-    public fun publish_mint_capability<CoinType>(account: &signer, cap: MintCapability<CoinType>) {
-        assert_assoc_and_currency<CoinType>(account);
+    /// under `account`. `CoinType`  must be a registered currency type.
+    /// The caller must pass a `TreasuryComplianceRole` capability.
+    public fun publish_mint_capability<CoinType>(
+        account: &signer,
+        cap: MintCapability<CoinType>,
+        _: &Capability<TreasuryComplianceRole>,
+    ) {
+        assert_is_currency<CoinType>();
         move_to(account, cap)
     }
 
     /// Publishes the `BurnCapability` `cap` for the `CoinType` currency under `account`. `CoinType`
-    /// must be a registered currency type, and the `account` must be an
-    /// association account.
-    public fun publish_burn_capability<CoinType>(account: &signer, cap: BurnCapability<CoinType>) {
-        assert_assoc_and_currency<CoinType>(account);
+    /// must be a registered currency type.
+    /// The caller must pass a `TreasuryComplianceRole` capability.
+    public fun publish_burn_capability<CoinType>(
+        account: &signer,
+        cap: BurnCapability<CoinType>,
+        _: &Capability<TreasuryComplianceRole>,
+    ) {
+        assert_is_currency<CoinType>();
         move_to(account, cap)
     }
 
     /// Mints `amount` coins. The `account` must hold a
     /// `MintCapability<CoinType>` at the top-level in order for this call
     /// to be successful, and will fail with `MISSING_DATA` otherwise.
-    public fun mint<CoinType>(account: &signer, amount: u64): Libra<CoinType>
+    public fun mint<CoinType>(account: &signer, value: u64): Libra<CoinType>
     acquires CurrencyInfo, MintCapability {
         mint_with_capability(
-            amount,
+            value,
             borrow_global<MintCapability<CoinType>>(Signer::address_of(account))
         )
     }
+    spec fun mint {
+        aborts_if !exists<MintCapability<CoinType>>(Signer::spec_address_of(account));
+        include MintAbortsIf<CoinType>;
+        include MintEnsures<CoinType>;
+    }
+
+
 
     /// Burns the coins currently held in the `Preburn` resource held under `preburn_address`.
     /// Calls to this functions will fail if the `account` does not have a
@@ -236,7 +284,7 @@ module Libra {
     /// Create a new `Preburn` resource, and return it back to the sender.
     /// The `CoinType` must be a registered currency on-chain.
     public fun new_preburn<CoinType>(): Preburn<CoinType> {
-        assert_is_coin<CoinType>();
+        assert_is_currency<CoinType>();
         Preburn<CoinType> { requests: Vector::empty() }
     }
 
@@ -248,13 +296,7 @@ module Libra {
         value: u64,
         _capability: &MintCapability<CoinType>
     ): Libra<CoinType> acquires CurrencyInfo {
-        assert_is_coin<CoinType>();
-        // TODO: temporary measure for testnet only: limit minting to 1B Libra at a time.
-        // this is to prevent the market cap's total value from hitting u64_max due to excessive
-        // minting. This will not be a problem in the production Libra system because coins will
-        // be backed with real-world assets, and thus minting will be correspondingly rarer.
-        // * 1000000 here because the unit is microlibra
-        assert(value <= 1000000000 * 1000000, 11);
+        assert_is_currency<CoinType>();
         let currency_code = currency_code<CoinType>();
         // update market cap resource to reflect minting
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
@@ -272,6 +314,23 @@ module Libra {
         };
 
         Libra<CoinType> { value }
+    }
+    spec fun mint_with_capability {
+        include MintAbortsIf<CoinType>;
+        include MintEnsures<CoinType>;
+    }
+    spec schema MintAbortsIf<CoinType> {
+        value: u64;
+        aborts_if !spec_is_currency<CoinType>();
+        aborts_if !spec_currency_info<CoinType>().can_mint;
+        aborts_if spec_currency_info<CoinType>().total_value + value > max_u128();
+    }
+    spec schema MintEnsures<CoinType> {
+        value: u64;
+        result: Libra<CoinType>;
+        ensures spec_currency_info<CoinType>().total_value
+                    == old(spec_currency_info<CoinType>().total_value) + value;
+        ensures result.value == value;
     }
 
     /// Add the `coin` to the `preburn` queue in the `Preburn` resource
@@ -304,15 +363,31 @@ module Libra {
             );
         };
     }
+    spec fun preburn_with_resource {
+        include PreburnAbortsIf<CoinType>;
+        include PreburnEnsures<CoinType>;
+    }
+    spec schema PreburnAbortsIf<CoinType> {
+        coin: Libra<CoinType>;
+        aborts_if !spec_is_currency<CoinType>();
+        aborts_if spec_currency_info<CoinType>().preburn_value + coin.value > max_u64();
+    }
+    spec schema PreburnEnsures<CoinType> {
+        coin: Libra<CoinType>;
+        preburn: Preburn<CoinType>;
+        ensures Vector::eq_push_back(preburn.requests, old(preburn.requests), coin);
+        ensures spec_currency_info<CoinType>().preburn_value
+                    == old(spec_currency_info<CoinType>().preburn_value) + coin.value;
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // Treasury Compliance specific methods for DDs
     ///////////////////////////////////////////////////////////////////////////
 
     /// Create a `Preburn<CoinType>` resource
-    public fun create_preburn<CoinType>(creator: &signer): Preburn<CoinType> {
-        // TODO: this should check for AssocRoot in the future
-        Association::assert_is_association(creator);
+    public fun create_preburn<CoinType>(
+        _: &Capability<TreasuryComplianceRole>
+    ): Preburn<CoinType> {
         assert(is_currency<CoinType>(), 201);
         Preburn<CoinType> { requests: Vector::empty() }
     }
@@ -322,10 +397,11 @@ module Libra {
     /// time, and the association TC account `creator` (at `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()`) is creating
     /// this resource for the designated dealer.
     public fun publish_preburn_to_account<CoinType>(
-        creator: &signer, account: &signer
+        account: &signer,
+        tc_capability: &Capability<TreasuryComplianceRole>,
     ) acquires CurrencyInfo {
         assert(!is_synthetic_currency<CoinType>(), 202);
-        move_to(account, create_preburn<CoinType>(creator))
+        move_to(account, create_preburn<CoinType>(tc_capability))
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -338,6 +414,11 @@ module Libra {
         account: &signer, coin: Libra<CoinType>) acquires CurrencyInfo, Preburn {
         let sender = Signer::address_of(account);
         preburn_with_resource(coin, borrow_global_mut<Preburn<CoinType>>(sender), sender);
+    }
+    spec fun preburn_to {
+        aborts_if !exists<Preburn<CoinType>>(Signer::spec_address_of(account));
+        include PreburnAbortsIf<CoinType>;
+        include PreburnEnsures<CoinType>{preburn: global<Preburn<CoinType>>(Signer::spec_address_of(account))};
     }
 
     /// Permanently removes the coins held in the `Preburn` resource stored at `preburn_address` and
@@ -357,6 +438,11 @@ module Libra {
             preburn_address,
             capability
         )
+    }
+    spec fun burn_with_capability {
+        aborts_if !exists<Preburn<CoinType>>(preburn_address);
+        include BurnAbortsIf<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
+        include BurnEnsures<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
     }
 
     /// Permanently removes the coins held in the `Preburn` resource `preburn` stored at `preburn_address` and
@@ -389,6 +475,27 @@ module Libra {
                 }
             );
         };
+    }
+    spec fun burn_with_resource_cap {
+        include BurnAbortsIf<CoinType>;
+        include BurnEnsures<CoinType>;
+    }
+    spec schema BurnAbortsIf<CoinType> {
+        preburn: Preburn<CoinType>;
+        aborts_if !spec_is_currency<CoinType>();
+        aborts_if len(preburn.requests) == 0;
+        aborts_if {
+            let i = spec_currency_info<CoinType>();
+            i.total_value < preburn.requests[0].value || i.preburn_value < preburn.requests[0].value
+        };
+    }
+    spec schema BurnEnsures<CoinType> {
+        preburn: Preburn<CoinType>;
+        ensures Vector::eq_pop_front(preburn.requests, old(preburn.requests));
+        ensures spec_currency_info<CoinType>().total_value
+                == old(spec_currency_info<CoinType>().total_value) - old(preburn.requests[0].value);
+        ensures spec_currency_info<CoinType>().preburn_value
+                == old(spec_currency_info<CoinType>().preburn_value) - old(preburn.requests[0].value);
     }
 
     /// Cancels the burn request in the `Preburn` resource stored at `preburn_address` and
@@ -453,7 +560,7 @@ module Libra {
     /// Create a new `Libra<CoinType>` with a value of `0`. Anyone can call
     /// this and it will be successful as long as `CoinType` is a registered currency.
     public fun zero<CoinType>(): Libra<CoinType> {
-        assert_is_coin<CoinType>();
+        assert_is_currency<CoinType>();
         Libra<CoinType> { value: 0 }
     }
 
@@ -471,6 +578,12 @@ module Libra {
         let other = withdraw(&mut coin, amount);
         (coin, other)
     }
+    spec fun split {
+        aborts_if coin.value < amount;
+        ensures result_1.value == coin.value - amount;
+        ensures result_2.value == amount;
+    }
+
 
     /// Withdraw `amount` from the passed-in `coin`, where the original coin is modified in place.
     /// After this function is executed, the original `coin` will have
@@ -483,6 +596,23 @@ module Libra {
         coin.value = coin.value - amount;
         Libra { value: amount }
     }
+    spec fun withdraw {
+        aborts_if coin.value < amount;
+        ensures coin.value == old(coin.value) - amount;
+        ensures result.value == amount;
+    }
+
+    /// Return a `Libra<CoinType>` worth `coin.value` and reduces the `value` of the input `coin` to
+    /// zero. Does not abort.
+    public fun withdraw_all<CoinType>(coin: &mut Libra<CoinType>): Libra<CoinType> {
+        let val = coin.value;
+        withdraw(coin, val)
+    }
+    spec fun withdraw_all {
+        aborts_if false;
+        ensures result.value == old(coin.value);
+        ensures coin.value == 0;
+    }
 
     /// Combines the two coins of the same currency `CoinType` passed-in,
     /// and returns a new coin whose value is equal to the sum of the two inputs.
@@ -490,6 +620,11 @@ module Libra {
         deposit(&mut coin1, coin2);
         coin1
     }
+    spec fun join {
+        aborts_if coin1.value + coin2.value > max_u64();
+        ensures result.value == coin1.value + coin2.value;
+    }
+
 
     /// "Merges" the two coins.
     /// The coin passed in by reference will have a value equal to the sum of the two coins
@@ -507,6 +642,9 @@ module Libra {
         let Libra { value } = coin;
         assert(value == 0, 5)
     }
+    spec fun destroy_zero {
+        aborts_if coin.value > 0;
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     // Definition of Currencies
@@ -515,8 +653,8 @@ module Libra {
     /// Register the type `CoinType` as a currency. Until the type is
     /// registered as a currency it cannot be used as a coin/currency unit in Libra.
     /// The passed-in `account` must be a specific address (`CoreAddresses::CURRENCY_INFO_ADDRESS()`) and
-    /// the `account` must also have the correct `AddCurrency` association
-    /// privilege. After the first registration of `CoinType` as a
+    /// the `account` must also have the correct `RegisterNewCurrency` capability.
+    /// After the first registration of `CoinType` as a
     /// currency, all subsequent tries to register `CoinType` as a currency
     /// will fail.
     /// When the `CoinType` is registered it publishes the
@@ -525,6 +663,7 @@ module Libra {
     /// `MintCapability<CoinType>` and `BurnCapability<CoinType>` resources.
     public fun register_currency<CoinType>(
         account: &signer,
+        _: &Capability<RegisterNewCurrency>,
         to_lbr_exchange_rate: FixedPoint32,
         is_synthetic: bool,
         scaling_factor: u64,
@@ -532,10 +671,10 @@ module Libra {
         currency_code: vector<u8>,
     ): (MintCapability<CoinType>, BurnCapability<CoinType>)
     acquires CurrencyRegistrationCapability {
-        // And only callable by the designated currency address.
+        // Operational constraint that it must be stored under a specific
+        // address.
         assert(
-            Signer::address_of(account) == CoreAddresses::CURRENCY_INFO_ADDRESS() &&
-            Association::has_privilege<AddCurrency>(Signer::address_of(account)),
+            Signer::address_of(account) == CoreAddresses::CURRENCY_INFO_ADDRESS(),
             8
         );
 
@@ -551,13 +690,23 @@ module Libra {
             mint_events: Event::new_event_handle<MintEvent>(account),
             burn_events: Event::new_event_handle<BurnEvent>(account),
             preburn_events: Event::new_event_handle<PreburnEvent>(account),
-            cancel_burn_events: Event::new_event_handle<CancelBurnEvent>(account)
+            cancel_burn_events: Event::new_event_handle<CancelBurnEvent>(account),
+            exchange_rate_update_events: Event::new_event_handle<ToLBRExchangeRateUpdateEvent>(account)
         });
         RegisteredCurrencies::add_currency_code(
             currency_code,
-            &borrow_global<CurrencyRegistrationCapability>(CoreAddresses::DEFAULT_CONFIG_ADDRESS()).cap
+            &borrow_global<CurrencyRegistrationCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).cap
         );
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
+    }
+    spec fun register_currency {
+        aborts_if Signer::spec_address_of(account) != CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS();
+        aborts_if !exists<CurrencyRegistrationCapability>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
+        aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(account));
+        aborts_if spec_is_currency<CoinType>();
+        include RegisteredCurrencies::AddCurrencyCodeAbortsIf;
+
+        ensures spec_is_currency<CoinType>();
     }
 
     /// Returns the total amount of currency minted of type `CoinType`.
@@ -623,13 +772,20 @@ module Libra {
     /// Updates the `to_lbr_exchange_rate` held in the `CurrencyInfo` for
     /// `FromCoinType` to the new passed-in `lbr_exchange_rate`.
     public fun update_lbr_exchange_rate<FromCoinType>(
-        account: &signer,
+        _: &Capability<TreasuryComplianceRole>,
         lbr_exchange_rate: FixedPoint32
     ) acquires CurrencyInfo {
-        Association::assert_account_is_blessed(account);
-        assert_assoc_and_currency<FromCoinType>(account);
+        assert_is_currency<FromCoinType>();
         let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
+        Event::emit_event(
+            &mut currency_info.exchange_rate_update_events,
+            ToLBRExchangeRateUpdateEvent {
+                currency_code: *&currency_info.currency_code,
+                new_to_lbr_exchange_rate: FixedPoint32::get_raw_value(*&currency_info.to_lbr_exchange_rate),
+            }
+        );
+
     }
 
     /// Returns the (rough) exchange rate between `CoinType` and `LBR`
@@ -645,9 +801,9 @@ module Libra {
     /// true`, then minting is allowed, if `can_mint = false` then minting is
     /// disallowed until it is turned back on via this function. All coins
     /// start out in the default state of `can_mint = true`.
-    public fun update_minting_ability<CoinType>(account: &signer, can_mint: bool)
+    public fun update_minting_ability<CoinType>(_: &Capability<TreasuryComplianceRole>, can_mint: bool)
     acquires CurrencyInfo {
-        assert_assoc_and_currency<CoinType>(account);
+        assert_is_currency<CoinType>();
         let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.can_mint = can_mint;
     }
@@ -656,72 +812,30 @@ module Libra {
     // Helper functions
     ///////////////////////////////////////////////////////////////////////////
 
-    /// Asserts that the `account` is an association account, and that
-    /// `CoinType` is a registered currency type.
-    fun assert_assoc_and_currency<CoinType>(account: &signer) {
-        Association::assert_is_association(account);
-        assert_is_coin<CoinType>();
-    }
-
     /// Asserts that `CoinType` is a registered currency.
-    fun assert_is_coin<CoinType>() {
+    fun assert_is_currency<CoinType>() {
         assert(is_currency<CoinType>(), 1);
     }
 
-    /// **************** SPECIFICATIONS ****************
-    /// Only a few of the specifications appear at this time. More to come.
+    /// **************** MODULE SPECIFICATION ****************
 
-    /// # Module specifications
+    /// # Module Specification
 
     spec module {
+        /// Verify all functions in this module.
         pragma verify = true;
     }
 
     spec module {
-        // Address at which currencies should be registered (mirrors CoreAddresses::CURRENCY_INFO_ADDRESS)
-        define spec_currency_addr(): address { 0xA550C18 }
-
-        /// Checks whether currency is registered.
-        /// Mirrors `Self::is_currency<CoinType>` in Move, above.
+        /// Checks whether currency is registered. Mirrors `Self::is_currency<CoinType>`.
         define spec_is_currency<CoinType>(): bool {
-            exists<CurrencyInfo<CoinType>>(spec_currency_addr())
+            exists<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS())
         }
-    }
 
-    /// ## Management of capabilities
-
-    spec schema OnlyAssocHasMintCapabilityInvariant {
-        /// Before a currency is registered, there is no mint capability for that currency.
-        invariant module forall coin_type: type, addr1: address:
-            !spec_is_currency<coin_type>() ==> !exists<MintCapability<coin_type>>(addr1);
-
-        /// After a currency is registered, only accounts with association privilege
-        /// have the mint capability for that currency.
-        invariant module forall coin_type: type, addr1: address
-            where spec_is_currency<coin_type>():
-                exists<MintCapability<coin_type>>(addr1)
-                    ==> Association::spec_addr_is_association(addr1);
-    }
-
-    spec module {
-        apply OnlyAssocHasMintCapabilityInvariant to *, *<CoinType>;
-    }
-
-    spec schema OnlyAssocHasBurnCapabilityInvariant {
-        /// Before a currency is registered, there is no burn capability for that currency.
-        invariant module forall coin_type: type, addr1: address:
-            !spec_is_currency<coin_type>() ==> !exists<BurnCapability<coin_type>>(addr1);
-
-        /// After a currency is registered, only accounts with association privileges
-        /// has the burn capability for that currency.
-        invariant module forall coin_type: type, addr1: address
-            where spec_is_currency<coin_type>():
-                exists<BurnCapability<coin_type>>(addr1)
-                    ==> Association::spec_addr_is_association(addr1);
-    }
-
-    spec module {
-        apply OnlyAssocHasBurnCapabilityInvariant to *, *<CoinType>;
+        /// Returns currency information.
+        define spec_currency_info<CoinType>(): CurrencyInfo<CoinType> {
+            global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS())
+        }
     }
 
     /// ## Conservation of currency
@@ -732,6 +846,7 @@ module Libra {
         global sum_of_coin_values<CoinType>: num;
     }
 
+    /// Account for updating `sum_of_coin_values` when a `Libra` is packed or unpacked.
     spec struct Libra {
         invariant pack sum_of_coin_values<CoinType> = sum_of_coin_values<CoinType> + value;
         invariant unpack sum_of_coin_values<CoinType> = sum_of_coin_values<CoinType> - value;
@@ -755,18 +870,11 @@ module Libra {
         invariant module !spec_is_currency<CoinType>() ==> sum_of_coin_values<CoinType> == 0;
         invariant module spec_is_currency<CoinType>()
                     ==> sum_of_coin_values<CoinType>
-                        == global<CurrencyInfo<CoinType>>(spec_currency_addr()).total_value;
+                        == global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS()).total_value;
     }
 
     spec module {
         apply SumOfCoinValuesInvariant<CoinType> to *<CoinType>;
-    }
-
-    spec module {
-        /// Apply invariant from `RegisteredCurrencies` to functions
-        /// that call functions in `RegisteredCurrencies`.
-        apply RegisteredCurrencies::OnlySingletonHasRegisteredCurrencies to
-            initialize, register_currency<CoinType>;
     }
 
     /*
@@ -780,7 +888,5 @@ module Libra {
           module and maybe add a spec variable representing the sum of account
           balances.
     */
-
-    // TODO: What happens to the CurrencyRegistrationCapability?
 }
 }

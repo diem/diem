@@ -3,8 +3,8 @@
 
 use crate::{ConsensusState, Error, SafetyRules, TSafetyRules};
 use consensus_types::{
-    block::Block, block_data::BlockData, quorum_cert::QuorumCert, timeout::Timeout, vote::Vote,
-    vote_proposal::VoteProposal,
+    block::Block, block_data::BlockData, timeout::Timeout, vote::Vote,
+    vote_proposal::MaybeSignedVoteProposal,
 };
 use libra_crypto::ed25519::Ed25519Signature;
 use libra_types::epoch_change::EpochChangeProof;
@@ -32,11 +32,10 @@ impl TSafetyRules for LocalClient {
         self.internal.write().unwrap().initialize(proof)
     }
 
-    fn update(&mut self, qc: &QuorumCert) -> Result<(), Error> {
-        self.internal.write().unwrap().update(qc)
-    }
-
-    fn construct_and_sign_vote(&mut self, vote_proposal: &VoteProposal) -> Result<Vote, Error> {
+    fn construct_and_sign_vote(
+        &mut self,
+        vote_proposal: &MaybeSignedVoteProposal,
+    ) -> Result<Vote, Error> {
         self.internal
             .write()
             .unwrap()

@@ -58,10 +58,6 @@ impl ValidatorConsensusInfo {
             voting_power,
         }
     }
-
-    pub fn voting_power(&self) -> u64 {
-        self.voting_power
-    }
 }
 
 /// Supports validation of signatures for known authors with individual voting powers. This struct

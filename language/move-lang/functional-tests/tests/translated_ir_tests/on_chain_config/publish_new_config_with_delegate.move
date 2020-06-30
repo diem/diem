@@ -3,21 +3,24 @@
 
 //! sender: alice
 module FooConfig {
-    use 0x1::LibraConfig;
+    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
     use 0x1::CoreAddresses;
+    use 0x1::Roles;
 
     struct T {
         version: u64,
     }
 
     public fun new(account: &signer, version: u64) {
-        LibraConfig::publish_new_config_with_delegate(account, T { version: version }, {{alice}});
+        let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
+        LibraConfig::publish_new_config_with_delegate(account, &r, T { version: version }, {{alice}});
+        Roles::restore_capability_to_privilege(account, r);
     }
 
     public fun claim(account: &signer) {
         LibraConfig::claim_delegated_modify_config<T>(
             account,
-            CoreAddresses::DEFAULT_CONFIG_ADDRESS(),
+            CoreAddresses::LIBRA_ROOT_ADDRESS(),
         );
     }
 
@@ -34,7 +37,7 @@ module FooConfig {
 //! block-time: 2
 
 //! new-transaction
-//! sender: config
+//! sender: association
 // Publish a new config item.
 script {
 use {{alice}}::FooConfig;
@@ -67,7 +70,7 @@ fun main(account: &signer) {
 //! block-time: 4
 
 //! new-transaction
-//! sender: config
+//! sender: association
 script {
 use {{alice}}::FooConfig;
 fun main(account: &signer) {

@@ -4,7 +4,9 @@
 pub mod atomic_histogram;
 pub mod aws;
 pub mod cluster;
+pub mod cluster_builder;
 pub mod cluster_swarm;
+pub mod effects;
 pub mod experiments;
 pub mod github;
 pub mod health;

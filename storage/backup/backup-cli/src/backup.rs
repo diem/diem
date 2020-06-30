@@ -3,7 +3,7 @@
 
 use crate::{
     manifest::state_snapshot::{StateSnapshotBackup, StateSnapshotChunk},
-    storage::{BackupHandleRef, BackupStorage, FileHandle},
+    storage::{BackupHandleRef, BackupStorage, FileHandle, ShellSafeName},
     ReadRecordBytes,
 };
 use anyhow::{anyhow, Result};
@@ -14,7 +14,8 @@ use libra_types::{
     account_state_blob::AccountStateBlob, ledger_info::LedgerInfoWithSignatures,
     proof::TransactionInfoWithProof, transaction::Version,
 };
-use std::{mem::size_of, sync::Arc};
+use once_cell::sync::Lazy;
+use std::{convert::TryInto, mem::size_of, str::FromStr, sync::Arc};
 use structopt::StructOpt;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWriteExt};
 use tokio_util::compat::FuturesAsyncReadCompatExt;
@@ -193,24 +194,30 @@ impl StateSnapshotBackupController {
 }
 
 impl StateSnapshotBackupController {
-    fn backup_name(&self) -> String {
-        format!("state_ver_{}", self.version)
+    fn backup_name(&self) -> ShellSafeName {
+        format!("state_ver_{}", self.version).try_into().unwrap()
     }
 
-    fn manifest_name() -> &'static str {
-        "state.manifest"
+    fn manifest_name() -> &'static ShellSafeName {
+        static NAME: Lazy<ShellSafeName> =
+            Lazy::new(|| ShellSafeName::from_str("state.manifest").unwrap());
+        &NAME
     }
 
-    fn proof_name() -> &'static str {
-        "state.proof"
+    fn proof_name() -> &'static ShellSafeName {
+        static NAME: Lazy<ShellSafeName> =
+            Lazy::new(|| ShellSafeName::from_str("state.proof").unwrap());
+        &NAME
     }
 
-    fn chunk_name(first_idx: usize) -> String {
-        format!("{}-.chunk", first_idx)
+    fn chunk_name(first_idx: usize) -> ShellSafeName {
+        format!("{}-.chunk", first_idx).try_into().unwrap()
     }
 
-    fn chunk_proof_name(first_idx: usize, last_idx: usize) -> String {
+    fn chunk_proof_name(first_idx: usize, last_idx: usize) -> ShellSafeName {
         format!("{}-{}.proof", first_idx, last_idx)
+            .try_into()
+            .unwrap()
     }
 
     fn parse_key(record: &Bytes) -> Result<HashValue> {

@@ -86,10 +86,10 @@ async fn submit(mut service: JsonRpcService, request: JsonRpcRequest) -> Result<
         .mempool_sender
         .send((transaction, req_sender))
         .await?;
-    let (mempool_status, vm_status) = callback.await??;
+    let (mempool_status, vm_status_opt) = callback.await??;
 
-    if let Some(vm_error) = vm_status {
-        Err(Error::new(JsonRpcError::vm_error(vm_error)))
+    if let Some(vm_status) = vm_status_opt {
+        Err(Error::new(JsonRpcError::vm_status(vm_status)))
     } else if mempool_status.code == MempoolStatusCode::Accepted {
         Ok(())
     } else {
@@ -129,19 +129,16 @@ async fn get_account_state(
 /// returning the current blockchain metadata
 /// Can be used to verify that target Full Node is up-to-date
 async fn get_metadata(service: JsonRpcService, request: JsonRpcRequest) -> Result<BlockMetadata> {
-    let (version, timestamp) = match serde_json::from_value::<u64>(request.get_param(0)) {
-        Ok(version) => {
-            // TODO: fix once we have a real way to get transaction timestamps
-            let li = service.db.get_epoch_change_ledger_info(version)?;
-            (version, li.ledger_info().timestamp_usecs())
-        }
-        _ => (
-            request.version(),
-            request.ledger_info.ledger_info().timestamp_usecs(),
-        ),
-    };
-
-    Ok(BlockMetadata { version, timestamp })
+    match serde_json::from_value::<u64>(request.get_param(0)) {
+        Ok(version) => Ok(BlockMetadata {
+            version,
+            timestamp: service.db.get_block_timestamp(version)?,
+        }),
+        _ => Ok(BlockMetadata {
+            version: request.version(),
+            timestamp: request.ledger_info.ledger_info().timestamp_usecs(),
+        }),
+    }
 }
 
 /// Returns transactions by range

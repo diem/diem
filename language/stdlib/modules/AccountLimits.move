@@ -7,9 +7,9 @@ address 0x1 {
 
 module AccountLimits {
     use 0x1::CoreAddresses;
-    use 0x1::Association;
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
+    use 0x1::Roles::{Capability, TreasuryComplianceRole, LibraRootRole};
 
     // An operations capability that restricts callers of this module since
     // the operations can mutate account states.
@@ -17,17 +17,16 @@ module AccountLimits {
 
     // A resource specifying the account limits. There is a default
     // `LimitsDefinition` resource for unhosted accounts published at
-    // `default_limits_addr()`, but other not-unhosted accounts may have
+    // `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()`, but other not-unhosted accounts may have
     // different account limit definitons. In such cases, they will have a
     // `LimitsDefinition` published under their (root) account. Note that
     // empty accounts do _not_ have a published LimitsDefinition for
     // them--any operations (sending/receiving/storing) that would cause us
     // to look at it will cause the transaction to abort.
+    // All monentary amounts specified in microLBR
     resource struct LimitsDefinition {
-        // The maximum outflow allowed during the specified time period.
-        max_outflow: u64,
-        // The maximum inflow allowed during the specified time period.
-        max_inflow: u64,
+        // The maximum inflow + outflow allowed during the specified time period.
+        max_total_flow: u64,
         // Time period, specified in microseconds
         time_period: u64,
         // The maximum that can be held
@@ -41,10 +40,8 @@ module AccountLimits {
     resource struct Window {
         // Time window start in microseconds
         window_start: u64,
-        // The outflow during this time window
-        window_outflow: u64,
-        // The inflow during this time window
-        window_inflow: u64,
+        // The outflow + inflow during this time window
+        window_total_flow: u64,
         // The balance that this account has held during this time period.
         tracked_balance: u64,
         // address storing the LimitsDefinition resource that governs this window
@@ -53,8 +50,7 @@ module AccountLimits {
 
     // Grant a capability to call this module. This does not necessarily
     // need to be a unique capability.
-    public fun grant_calling_capability(account: &signer): CallingCapability {
-        assert(Signer::address_of(account) == CoreAddresses::ASSOCIATION_ROOT_ADDRESS(), 3000);
+    public fun grant_calling_capability(_: &Capability<LibraRootRole>): CallingCapability {
         CallingCapability{}
     }
 
@@ -66,7 +62,6 @@ module AccountLimits {
         addr: address,
         _cap: &CallingCapability,
     ): bool acquires LimitsDefinition, Window {
-        assert(0x1::Testnet::is_testnet(), 10047);
         can_receive<CoinType>(
             amount,
             borrow_global_mut<Window>(addr),
@@ -82,7 +77,6 @@ module AccountLimits {
         addr: address,
         _cap: &CallingCapability,
     ): bool acquires LimitsDefinition, Window {
-        assert(0x1::Testnet::is_testnet(), 10048);
         can_withdraw<CoinType>(
             amount,
             borrow_global_mut<Window>(addr),
@@ -97,10 +91,9 @@ module AccountLimits {
             to_limit,
             Window {
                 window_start: current_time(),
-                window_outflow: 0,
-                window_inflow: 0,
+                window_total_flow: 0,
                 tracked_balance: 0,
-                limits_definition: default_limits_addr()
+                limits_definition: CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()
             }
         )
     }
@@ -109,16 +102,14 @@ module AccountLimits {
     // it does nothing until the association certifies the LimitsDefinition.
     public fun publish_limits_definition(
         account: &signer,
-        max_outflow: u64,
-        max_inflow: u64,
+        max_total_flow: u64,
         max_holding: u64,
         time_period: u64
     ) {
         move_to(
             account,
             LimitsDefinition {
-                max_outflow,
-                max_inflow,
+                max_total_flow,
                 max_holding,
                 time_period,
                 is_certified: false,
@@ -130,41 +121,47 @@ module AccountLimits {
     // limits definition to u64 max.
     public fun publish_unrestricted_limits(account: &signer) {
         let u64_max = 18446744073709551615u64;
-        publish_limits_definition(account, u64_max, u64_max, u64_max, u64_max)
+        publish_limits_definition(account, u64_max, u64_max, u64_max)
     }
 
     // Removes the limits definition at the sender's address.
     public fun unpublish_limits_definition(account: &signer)
     acquires LimitsDefinition {
         LimitsDefinition {
-            max_outflow: _,
-            max_inflow: _,
+            max_total_flow: _,
             max_holding: _,
             time_period: _,
             is_certified: _,
         } = move_from<LimitsDefinition>(Signer::address_of(account));
     }
 
+    public fun update_limits_definition(
+        _: &Capability<TreasuryComplianceRole>,
+        new_max_total_flow: u64,
+        new_max_holding_balance: u64,
+    ) acquires LimitsDefinition {
+        // As we don't have Optionals for txn scripts, in update_unhosted_wallet_limits.move
+        // we use 0 value to represent a None (ie no update to that variable)
+        if (new_max_total_flow != 0) {
+            borrow_global_mut<LimitsDefinition>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).max_total_flow = new_max_total_flow;
+        };
+        if (new_max_holding_balance != 0) {
+            borrow_global_mut<LimitsDefinition>(CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()).max_holding = new_max_holding_balance;
+        };
+    }
+
     // Certify the limits definition published under the account at
-    // `limits_addr`. Only callable by the association.
-    public fun certify_limits_definition(account: &signer, limits_addr: address)
+    // `limits_addr`.
+    public fun certify_limits_definition(_: &Capability<TreasuryComplianceRole>, limits_addr: address)
     acquires LimitsDefinition {
-        Association::assert_is_association(account);
         borrow_global_mut<LimitsDefinition>(limits_addr).is_certified = true;
     }
 
     // Decertify the limits_definition published under the account at
-    // `limits_addr`. Only callable by the association.
-    public fun decertify_limits_definition(account: &signer, limits_addr: address)
+    // `limits_addr`.
+    public fun decertify_limits_definition(_: &Capability<TreasuryComplianceRole>, limits_addr: address)
     acquires LimitsDefinition {
-        Association::assert_is_association(account);
         borrow_global_mut<LimitsDefinition>(limits_addr).is_certified = false;
-    }
-
-    // The address where the default (unhosted) account limits are
-    // published
-    public fun default_limits_addr(): address {
-        CoreAddresses::ASSOCIATION_ROOT_ADDRESS()
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -179,8 +176,7 @@ module AccountLimits {
         let current_time = LibraTimestamp::now_microseconds();
         if (current_time > window.window_start + limits_definition.time_period) {
             window.window_start = current_time;
-            window.window_inflow = 0;
-            window.window_outflow = 0;
+            window.window_total_flow = 0;
         }
     }
 
@@ -196,16 +192,16 @@ module AccountLimits {
         if (is_unrestricted(limits_definition)) return true;
 
         reset_window(receiving, limits_definition);
-        // Check that the max inflow is OK
-        let inflow_ok = receiving.window_inflow + amount <= limits_definition.max_inflow;
+        // Check that the max total flow is OK
+        let total_flow_ok = receiving.window_total_flow + amount <= limits_definition.max_total_flow;
         // Check that the holding after the deposit is OK
         let holding_ok = receiving.tracked_balance + amount <= limits_definition.max_holding;
         // The account with `receiving` window can receive the payment so record it.
-        if (inflow_ok && holding_ok) {
-            receiving.window_inflow = receiving.window_inflow + amount;
+        if (total_flow_ok && holding_ok) {
+            receiving.window_total_flow = receiving.window_total_flow + amount;
             receiving.tracked_balance = receiving.tracked_balance + amount;
         };
-        inflow_ok && holding_ok
+        total_flow_ok && holding_ok
     }
 
     // Verify that `amount` can be withdrawn from the account tracked
@@ -220,24 +216,22 @@ module AccountLimits {
         if (is_unrestricted(limits_definition)) return true;
 
         reset_window(sending, limits_definition);
-        // Check max outlflow
-        let outflow = sending.window_outflow + amount;
-        let outflow_ok = outflow <= limits_definition.max_outflow;
-        // Outflow is OK, so record it.
-        if (outflow_ok) {
-            sending.window_outflow = outflow;
+        // Check total flow OK
+        let total_flow_ok = sending.window_total_flow + amount <= limits_definition.max_total_flow;
+        // Flow is OK, so record it.
+        if (total_flow_ok) {
+            sending.window_total_flow = sending.window_total_flow + amount;
             sending.tracked_balance = if (amount >= sending.tracked_balance) 0
                                        else sending.tracked_balance - amount;
         };
-        outflow_ok
+        total_flow_ok
     }
 
     // Return whether the LimitsDefinition definition is unrestricted or
     // not.
     fun is_unrestricted(limits_def: &LimitsDefinition): bool {
         let u64_max = 18446744073709551615u64;
-        limits_def.max_inflow == u64_max &&
-        limits_def.max_outflow == u64_max &&
+        limits_def.max_total_flow == u64_max &&
         limits_def.max_holding == u64_max &&
         limits_def.time_period == u64_max
     }
@@ -251,7 +245,7 @@ module AccountLimits {
     }
 
     fun current_time(): u64 {
-        if (LibraTimestamp::is_genesis()) 0 else LibraTimestamp::now_microseconds()
+        if (LibraTimestamp::is_not_initialized()) 0 else LibraTimestamp::now_microseconds()
     }
 }
 

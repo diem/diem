@@ -257,7 +257,7 @@ jobs:
       - restore_cargo_package_cache
       - run:
           name: Build release
-          command: RUST_BACKTRACE=1 cargo build -j 8 --release
+          command: RUST_BACKTRACE=1 cargo build -j 12 --release
       - build_teardown
   run-e2e-test:
     executor: build-executor
@@ -331,7 +331,7 @@ jobs:
       - run:
           name: Run all unit tests
           command: |
-            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 8 --unit
+            RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 12 --unit
   run-crypto-unit-test:
     executor: audit-executor
     description: Run crypto unit tests without formally verified crypto, to insulate against a curve25519 "default" backend regression
@@ -356,16 +356,6 @@ jobs:
           command: |
             RUST_BACKTRACE=1 $CI_TIMEOUT \
             ./scripts/run_quarantined.sh -c <your package here> -r 3 -f
-  validate-cluster-test-dockerfile:
-    description: Validate that committed docker files for cluster test are up to date
-    executor: audit-executor
-    steps:
-      - build_setup
-      - run:
-          # generate dockerfile; diff config to existing one
-          name: Validate cluster-test dockerfiles
-          command: ./docker/cluster-test/generate.sh
-      - build_teardown
   audit:
     executor: audit-executor
     steps:
@@ -383,11 +373,12 @@ jobs:
           command: |
             cargo audit --deny-warnings \
               --ignore RUSTSEC-2018-0015 \
-              --ignore RUSTSEC-2019-0031
+              --ignore RUSTSEC-2019-0031 \
+              --ignore RUSTSEC-2020-0016
       - build_teardown
   code-coverage:
     description: Run code coverage
-    executor: build-executor
+    executor: unittest-executor
     environment:
       MESSAGE_PAYLOAD_FILE: "/tmp/message_payload"
     steps:
@@ -420,10 +411,9 @@ jobs:
           name: Terraform validate
           command: terraform validate
           working_directory: terraform/
-  build-docker:
-    machine:
-      image: ubuntu-1604:201903-01
-    resource_class: large
+  lint-docker:
+    executor: audit-executor
+    description: Lint changed Dockerfiles
     steps:
       - checkout
       - run:
@@ -436,23 +426,6 @@ jobs:
           command: |
             export HADOLINT=${HOME}/hadolint
             ${HADOLINT} -c .lintrules/hadolint.yaml $CHANGED_DOCKER_FILES || true
-      - run:
-          name: Build each of the updated docker files
-          command: |
-            # Use the dockerfile own build.sh script if it has one.
-            for docker_file in $CHANGED_DOCKER_FILES; do
-              echo "Checking $docker_file"
-              build_script=$(dirname $docker_file)/build.sh
-              if [ -f "$build_script" ]; then
-                $build_script
-              elif [ -f "$docker_file" ]; then
-                file_no_ext=$(basename $docker_file)
-                module=${file_no_ext%.Dockerfile}
-                docker build -f $docker_file --tag commit_verify_${CIRCLE_BUILD_NUM}_$module .
-              else
-                echo "$docker_file is renamed or removed in pull request."
-              fi
-            done
   check-breaking-change:
     executor: audit-executor
     description: Detect breaking change in CLI
@@ -557,68 +530,10 @@ jobs:
           name: Deploy to gh-pages branch
           command: |
             gh-pages --dotfiles --message "[skip ci] documentation update" --dist target/doc
-  premainnet-cluster-test:
-    executor: premainnet-cluster-test-executor
-    description: Run cluster test against Premainnet
-    steps:
-      - run:
-          name: Set Premainnet Clustetest Environment
-          command: |
-            # Please see the runbook to determine when to update these values: https://fb.quip.com/FnSVAppvJaT9
-            echo Premainnet git revision $PREMAINNET_GIT_REVISION
-            echo 'export NODES=aa4d66f81665240019022d50326c1654-cf61b8e99df12293.elb.eu-west-1.amazonaws.com:80,\
-            aa82477d9b73b4531976e66cd4076eed-a1a497567aecf78e.elb.eu-west-1.amazonaws.com:80,\
-            a0aa8f8cacac149bb8d5bd891fda3dfa-2285ad042afe7e20.elb.us-east-1.amazonaws.com:80,\
-            a0be2811e181148f193dbb130042ca17-fa9afbb369bf4b77.elb.us-west-2.amazonaws.com:80,\
-            a092976324bb748d7b2885dc64e6c71a-dac92eeea83a39b1.elb.us-west-2.amazonaws.com:80,\
-            a11d2e31854e811eaa1f702474484dd1-21dcb00bef9f6cc0.elb.us-west-2.amazonaws.com:80,\
-            a6c7d5afc80de11ea9bcd0a7a792c33e-564886650.ap-southeast-1.elb.amazonaws.com:80,\
-            libra-fullnode-pre-mainnet.shopifyapps.com:80,\
-            3.230.173.177:32251,\
-            20.50.43.42:80,\
-            34.68.134.0:80,\
-            34.96.244.174:80,\
-            35.246.147.6:80,\
-            51.159.75.165:80,\
-            104.197.179.142:80' >> $BASH_ENV
-            echo 'export CARGO_INCREMENTAL=0' >> $BASH_ENV
-            echo 'export CI_TIMEOUT="timeout 40m"' >> $BASH_ENV
-      - checkout
-      - run:
-          name: Get premain git revision
-          command: git checkout $PREMAINNET_GIT_REVISION
-      - rust_setup
-      - print_versions
-      - env_setup
-      - install_deps
-      - run:
-          name: Build config-builder
-          command: |
-            cargo build -p config-builder
-      - run:
-          name: Build cluster-test
-          command: |
-            cargo build -p cluster-test
-      - run:
-          name: Generate premaintnet config key
-          command: |
-            cargo run -p config-builder -- faucet \
-            --output-dir "/tmp/config" \
-            --validators-in-genesis $PREMAINNET_NUM_VAL \
-            --seed $PREMAINNET_CONFIG_SEED
-      - run:
-          name: Premainnet cluster test
-          command: |
-            cargo run -p cluster-test -- --swarm --emit-tx --mint-file /tmp/config/mint.key --peers $NODES
-      - slack/status:
-          fail_only: true
-          webhook: "${WEBHOOK_PREMAINNET}"
-          failure_message: "<@channel> Cluster test failed on premainnet :ferris-detective:"
 workflows:
   commit-workflow:
     jobs:
-      - build-docker
-      - validate-cluster-test-dockerfile
+      - lint-docker
       - terraform
       - prefetch-crates
       - lint:
@@ -665,13 +580,3 @@ workflows:
     jobs:
       - audit
       - code-coverage
-
-  premainnet-clustertest:
-    triggers:
-      - schedule:
-          cron: "0 * * * *"
-          filters:
-            branches:
-              only: master
-    jobs:
-      - premainnet-cluster-test

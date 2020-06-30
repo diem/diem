@@ -8,7 +8,7 @@
 //! native function itself.
 use libra_types::{
     transaction::MAX_TRANSACTION_SIZE_IN_BYTES,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use mirai_annotations::*;
 use move_core_types::gas_schedule::{

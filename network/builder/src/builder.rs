@@ -1,0 +1,682 @@
+// Copyright (c) The Libra Core Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+//! Remotely authenticated vs. unauthenticated network end-points:
+//! ---------------------------------------------------
+//! A network end-point operates with remote authentication if it only accepts connections
+//! from a known set of peers (`trusted_peers`) identified by their network identity keys.
+//! This does not mean that the other end-point of a connection also needs to operate with
+//! authentication -- a network end-point running with remote authentication enabled will
+//! connect to or accept connections from an end-point running in authenticated mode as
+//! long as the latter is in its trusted peers set.
+use channel::{self, libra_channel, message_queues::QueueStyle};
+use libra_config::{
+    chain_id::ChainId,
+    config::{DiscoveryMethod, NetworkConfig, RoleType, HANDSHAKE_VERSION},
+    network_id::{NetworkContext, NetworkId},
+};
+use libra_crypto::x25519;
+use libra_logger::prelude::*;
+use libra_metrics::IntCounterVec;
+use libra_network_address::NetworkAddress;
+use libra_types::PeerId;
+use netcore::transport::{memory, Transport};
+use network::{
+    connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
+    constants, counters,
+    peer_manager::{
+        conn_notifs_channel, ConnectionRequest, ConnectionRequestSender, PeerManager,
+        PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
+    },
+    protocols::{
+        discovery::{self, builder::DiscoveryBuilder},
+        health_checker::{self, builder::HealthCheckerBuilder},
+        network::{NewNetworkEvents, NewNetworkSender},
+        wire::handshake::v1::SupportedProtocols,
+    },
+    transport::{self, Connection, LibraNetTransport, LIBRA_TCP_TRANSPORT},
+    ProtocolId,
+};
+use network_simple_onchain_discovery::{
+    builder::ConfigurationChangeListenerBuilder, gen_simple_discovery_reconfig_subscription,
+};
+use std::{
+    clone::Clone,
+    collections::HashMap,
+    num::NonZeroUsize,
+    sync::{Arc, RwLock},
+};
+use subscription_service::ReconfigSubscription;
+use tokio::runtime::{Builder, Handle, Runtime};
+
+#[derive(Debug)]
+pub enum AuthenticationMode {
+    /// Inbound and outbound connections are secured with NoiseIK; however, only
+    /// clients/dialers will authenticate the servers/listeners. More specifically,
+    /// dialers will pin the connection to a specific, expected pubkey while
+    /// listeners will accept any inbound dialer's pubkey.
+    ServerOnly(x25519::PrivateKey),
+    /// Inbound and outbound connections are secured with NoiseIK. Both dialer and
+    /// listener will only accept connections that successfully authenticate to a
+    /// pubkey in their "trusted peers" set.
+    Mutual(x25519::PrivateKey),
+}
+
+impl AuthenticationMode {
+    /// Convenience method to retrieve the public key for the auth mode's inner
+    /// network identity key.
+    ///
+    /// Note: this only works because all auth modes are Noise-based.
+    pub fn public_key(&self) -> x25519::PublicKey {
+        match self {
+            AuthenticationMode::ServerOnly(key) | AuthenticationMode::Mutual(key) => {
+                key.public_key()
+            }
+        }
+    }
+}
+
+/// Build Network module with custom configuration values.
+/// Methods can be chained in order to set the configuration values.
+/// MempoolNetworkHandler and ConsensusNetworkHandler are constructed by calling
+/// [`NetworkBuilder::build`].  New instances of `NetworkBuilder` are obtained
+/// via [`NetworkBuilder::new`].
+// TODO(philiphayes): refactor NetworkBuilder and libra-node; current config is
+// pretty tangled.
+pub struct NetworkBuilder {
+    executor: Handle,
+    chain_id: ChainId,
+    network_context: Arc<NetworkContext>,
+    // TODO(philiphayes): better support multiple listening addrs
+    listen_address: NetworkAddress,
+    seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
+    trusted_peers: Arc<RwLock<HashMap<PeerId, x25519::PublicKey>>>,
+    authentication_mode: Option<AuthenticationMode>,
+    channel_size: usize,
+    direct_send_protocols: Vec<ProtocolId>,
+    rpc_protocols: Vec<ProtocolId>,
+    upstream_handlers:
+        HashMap<ProtocolId, libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+    connection_event_handlers: Vec<conn_notifs_channel::Sender>,
+    pm_reqs_tx: libra_channel::Sender<(PeerId, ProtocolId), PeerManagerRequest>,
+    pm_reqs_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
+    connection_reqs_tx: libra_channel::Sender<PeerId, ConnectionRequest>,
+    connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
+    connectivity_check_interval_ms: u64,
+    max_concurrent_network_reqs: usize,
+    max_concurrent_network_notifs: usize,
+    max_connection_delay_ms: u64,
+    /// For now full node connections are limited by
+    max_fullnode_connections: usize,
+
+    configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
+    connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
+    discovery_builder: Option<DiscoveryBuilder>,
+    health_checker_builder: Option<HealthCheckerBuilder>,
+
+    reconfig_subscriptions: Vec<ReconfigSubscription>,
+}
+
+impl NetworkBuilder {
+    /// Return a new NetworkBuilder initialized with default configuration values.
+    pub fn new(
+        executor: Handle,
+        chain_id: ChainId,
+        network_id: NetworkId,
+        role: RoleType,
+        peer_id: PeerId,
+        listen_address: NetworkAddress,
+    ) -> NetworkBuilder {
+        // Setup channel to send requests to peer manager.
+        let (pm_reqs_tx, pm_reqs_rx) = libra_channel::new(
+            QueueStyle::FIFO,
+            NonZeroUsize::new(constants::NETWORK_CHANNEL_SIZE).unwrap(),
+            Some(&counters::PENDING_PEER_MANAGER_REQUESTS),
+        );
+        // Setup channel to send connection requests to peer manager.
+        let (connection_reqs_tx, connection_reqs_rx) = libra_channel::new(
+            QueueStyle::FIFO,
+            NonZeroUsize::new(constants::NETWORK_CHANNEL_SIZE).unwrap(),
+            None,
+        );
+        NetworkBuilder {
+            executor,
+            chain_id,
+            network_context: Arc::new(NetworkContext::new(network_id, role, peer_id)),
+            listen_address,
+            seed_peers: HashMap::new(),
+            trusted_peers: Arc::new(RwLock::new(HashMap::new())),
+            authentication_mode: None,
+            channel_size: constants::NETWORK_CHANNEL_SIZE,
+            direct_send_protocols: vec![],
+            rpc_protocols: vec![],
+            upstream_handlers: HashMap::new(),
+            connection_event_handlers: Vec::new(),
+            pm_reqs_tx,
+            pm_reqs_rx,
+            connection_reqs_tx,
+            connection_reqs_rx,
+            connectivity_check_interval_ms: constants::CONNECTIVITY_CHECK_INTERNAL_MS,
+            max_concurrent_network_reqs: constants::MAX_CONCURRENT_NETWORK_REQS,
+            max_concurrent_network_notifs: constants::MAX_CONCURRENT_NETWORK_NOTIFS,
+            max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
+            max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
+            configuration_change_listener_builder: None,
+            connectivity_manager_builder: None,
+            discovery_builder: None,
+            health_checker_builder: None,
+            reconfig_subscriptions: vec![],
+        }
+    }
+
+    pub fn create(
+        chain_id: &ChainId,
+        role: RoleType,
+        config: &mut NetworkConfig,
+    ) -> (Runtime, NetworkBuilder) {
+        let runtime = Builder::new()
+            .thread_name("network-")
+            .threaded_scheduler()
+            .enable_all()
+            .build()
+            .expect("Failed to start runtime. Won't be able to start networking.");
+
+        let identity_key = config.identity_key();
+        let peer_id = config.peer_id();
+
+        let mut network_builder = NetworkBuilder::new(
+            runtime.handle().clone(),
+            chain_id.clone(),
+            config.network_id.clone(),
+            role,
+            peer_id,
+            config.listen_address.clone(),
+        );
+        network_builder.add_connection_monitoring(
+            // TODO: Move these values into NetworkConfig
+            constants::PING_INTERVAL_MS,
+            constants::PING_TIMEOUT_MS,
+            constants::PING_FAILURES_TOLERATED,
+        );
+
+        // Sanity check seed peer addresses.
+        config
+            .verify_seed_peer_addrs()
+            .expect("Seed peer addresses must be well-formed");
+        let seed_peers = config.seed_peers.clone();
+
+        if config.mutual_authentication {
+            let network_peers = config.network_peers.clone();
+            let trusted_peers = if role == RoleType::Validator {
+                // for validators, trusted_peers is empty will be populated from consensus
+                HashMap::new()
+            } else {
+                network_peers
+            };
+
+            info!(
+                "network setup: role: {}, seed_peers: {:?}, trusted_peers: {:?}",
+                role, seed_peers, trusted_peers,
+            );
+
+            network_builder
+                .authentication_mode(AuthenticationMode::Mutual(identity_key))
+                .trusted_peers(trusted_peers)
+                .seed_peers(seed_peers)
+                .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
+                .add_connectivity_manager();
+        } else {
+            // Enforce the outgoing connection (dialer) verifies the identity of the listener (server)
+            network_builder.authentication_mode(AuthenticationMode::ServerOnly(identity_key));
+            if config.discovery_method == DiscoveryMethod::Onchain || !seed_peers.is_empty() {
+                network_builder
+                    .seed_peers(seed_peers)
+                    .add_connectivity_manager();
+            }
+        }
+
+        match &config.discovery_method {
+            DiscoveryMethod::Gossip(gossip_config) => {
+                network_builder.add_gossip_discovery(
+                    gossip_config.advertised_address.clone(),
+                    gossip_config.discovery_interval_ms,
+                );
+                // HACK: gossip relies on on-chain discovery for the eligible peers update.
+                if role == RoleType::Validator {
+                    network_builder.add_configuration_change_listener(role);
+                }
+            }
+            DiscoveryMethod::Onchain => {
+                network_builder.add_configuration_change_listener(role);
+            }
+            DiscoveryMethod::None => {}
+        }
+
+        (runtime, network_builder)
+    }
+
+    pub fn reconfig_subscriptions(&mut self) -> &mut Vec<ReconfigSubscription> {
+        &mut self.reconfig_subscriptions
+    }
+
+    pub fn network_context(&self) -> Arc<NetworkContext> {
+        self.network_context.clone()
+    }
+
+    pub fn peer_id(&self) -> PeerId {
+        self.network_context.peer_id()
+    }
+
+    /// Set network authentication mode.
+    pub fn authentication_mode(&mut self, authentication_mode: AuthenticationMode) -> &mut Self {
+        self.authentication_mode = Some(authentication_mode);
+        self
+    }
+
+    /// Set trusted peers.
+    pub fn trusted_peers(
+        &mut self,
+        trusted_peers: HashMap<PeerId, x25519::PublicKey>,
+    ) -> &mut Self {
+        *self.trusted_peers.write().unwrap() = trusted_peers;
+        self
+    }
+
+    /// Set seed peers to bootstrap discovery
+    pub fn seed_peers(&mut self, seed_peers: HashMap<PeerId, Vec<NetworkAddress>>) -> &mut Self {
+        self.seed_peers = seed_peers;
+        self
+    }
+
+    /// Set connectivity check ticker interval
+    pub fn connectivity_check_interval_ms(
+        &mut self,
+        connectivity_check_interval_ms: u64,
+    ) -> &mut Self {
+        self.connectivity_check_interval_ms = connectivity_check_interval_ms;
+        self
+    }
+
+    pub fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
+        match self.connectivity_manager_builder.as_ref() {
+            Some(conn_mgr_builder) => Some(conn_mgr_builder.conn_mgr_reqs_tx()),
+            None => None,
+        }
+    }
+
+    fn supported_protocols(&self) -> SupportedProtocols {
+        self.direct_send_protocols
+            .iter()
+            .chain(&self.rpc_protocols)
+            .into()
+    }
+
+    /// Add a handler for given protocols using raw bytes.
+    fn inner_add_protocol_handler(
+        &mut self,
+        rpc_protocols: Vec<ProtocolId>,
+        direct_send_protocols: Vec<ProtocolId>,
+        queue_preference: QueueStyle,
+        max_queue_size_per_peer: usize,
+        counter: Option<&'static IntCounterVec>,
+    ) -> (
+        PeerManagerRequestSender,
+        libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerNotification>,
+        ConnectionRequestSender,
+        conn_notifs_channel::Receiver,
+    ) {
+        self.direct_send_protocols
+            .extend(direct_send_protocols.clone());
+        self.rpc_protocols.extend(rpc_protocols.clone());
+        let (network_notifs_tx, network_notifs_rx) = libra_channel::new(
+            queue_preference,
+            NonZeroUsize::new(max_queue_size_per_peer).unwrap(),
+            counter,
+        );
+        for protocol in rpc_protocols
+            .iter()
+            .chain(direct_send_protocols.iter())
+            .cloned()
+        {
+            self.upstream_handlers
+                .insert(protocol, network_notifs_tx.clone());
+        }
+        let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
+        // Auto-subscribe all application level handlers to connection events.
+        self.connection_event_handlers.push(connection_notifs_tx);
+        (
+            PeerManagerRequestSender::new(self.pm_reqs_tx.clone()),
+            network_notifs_rx,
+            ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
+            connection_notifs_rx,
+        )
+    }
+
+    pub fn add_connection_event_listener(&mut self) -> conn_notifs_channel::Receiver {
+        let (tx, rx) = conn_notifs_channel::new();
+        self.connection_event_handlers.push(tx);
+        rx
+    }
+
+    /// Add a [`ConnectivityManager`] to the network.
+    ///
+    /// [`ConnectivityManager`] is responsible for ensuring that we are connected
+    /// to a node iff. it is an eligible node and maintaining persistent
+    /// connections with all eligible nodes. A list of eligible nodes is received
+    /// at initialization, and updates are received on changes to system membership.
+    ///
+    /// Note: a connectivity manager should only be added if the network is
+    /// permissioned.
+    pub fn add_connectivity_manager(&mut self) -> &mut Self {
+        let trusted_peers = self.trusted_peers.clone();
+        let seed_peers = self.seed_peers.clone();
+        let max_connection_delay_ms = self.max_connection_delay_ms;
+        let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
+        let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
+        let connection_limit = if let RoleType::FullNode = self.network_context.role() {
+            Some(self.max_fullnode_connections)
+        } else {
+            None
+        };
+
+        self.connectivity_manager_builder = Some(ConnectivityManagerBuilder::create(
+            self.network_context(),
+            trusted_peers,
+            seed_peers,
+            connectivity_check_interval_ms,
+            // TODO:  move this into a config
+            2, // Legacy hardcoded value,
+            max_connection_delay_ms,
+            self.channel_size,
+            ConnectionRequestSender::new(self.connection_reqs_tx.clone()),
+            pm_conn_mgr_notifs_rx,
+            connection_limit,
+        ));
+        self.build_connectivity_manager()
+            .start_connectivity_manager()
+    }
+
+    fn build_connectivity_manager(&mut self) -> &mut Self {
+        if let Some(builder) = self.connectivity_manager_builder.as_mut() {
+            builder.build(&self.executor);
+        }
+        self
+    }
+
+    fn start_connectivity_manager(&mut self) -> &mut Self {
+        if let Some(builder) = self.connectivity_manager_builder.as_mut() {
+            builder.start(&self.executor);
+        }
+        self
+    }
+
+    fn add_configuration_change_listener(&mut self, role: RoleType) -> &mut Self {
+        let conn_mgr_reqs_tx = self
+            .conn_mgr_reqs_tx()
+            .expect("ConnectivityManager must be installed for validator");
+        let (simple_discovery_reconfig_subscription, simple_discovery_reconfig_rx) =
+            gen_simple_discovery_reconfig_subscription();
+        self.reconfig_subscriptions
+            .push(simple_discovery_reconfig_subscription);
+
+        self.configuration_change_listener_builder =
+            Some(ConfigurationChangeListenerBuilder::create(
+                role,
+                conn_mgr_reqs_tx,
+                simple_discovery_reconfig_rx,
+            ));
+        self.build_configuration_change_listener()
+            .start_configuration_change_listener()
+    }
+
+    fn build_configuration_change_listener(&mut self) -> &mut Self {
+        if let Some(configuration_change_listener) =
+            self.configuration_change_listener_builder.as_mut()
+        {
+            configuration_change_listener.build();
+        }
+        self
+    }
+
+    fn start_configuration_change_listener(&mut self) -> &mut Self {
+        if let Some(configuration_change_listener) =
+            self.configuration_change_listener_builder.as_mut()
+        {
+            configuration_change_listener.start(&self.executor);
+        }
+        self
+    }
+
+    /// Add the (gossip) [`Discovery`] protocol to the network.
+    ///
+    /// (gossip) [`Discovery`] discovers other eligible peers' network addresses
+    /// by exchanging the full set of known peer network addresses with connected
+    /// peers as a network protocol.
+    ///
+    /// This is for testing purposes only and should not be used in production networks.
+    // TODO:  remove the pub qualifier
+    pub fn add_gossip_discovery(
+        &mut self,
+        advertised_address: NetworkAddress,
+        discovery_interval_ms: u64,
+    ) -> &mut Self {
+        let conn_mgr_reqs_tx = self
+            .conn_mgr_reqs_tx()
+            .expect("ConnectivityManager not enabled");
+        // Get handles for network events and sender.
+        let (discovery_network_tx, discovery_network_rx) =
+            self.add_protocol_handler(discovery::network_endpoint_config());
+
+        // TODO(philiphayes): the current setup for gossip discovery doesn't work
+        // when we don't have an `advertised_address` set, since it uses the
+        // `listen_address`, which might not be bound to a port yet. For example,
+        // if our `listen_address` is "/ip6/::1/tcp/0" and `advertised_address` is
+        // `None`, then this will set our `advertised_address` to something like
+        // "/ip6/::1/tcp/0/ln-noise-ik/<pubkey>/ln-handshake/0", which is wrong
+        // since the actual bound port will be something > 0.
+
+        // TODO(philiphayes): in network_builder setup, only bind the channels.
+        // wait until PeerManager is running to actual setup gossip discovery.
+
+        let authentication_mode = self
+            .authentication_mode
+            .as_ref()
+            .expect("Authentication Mode not set");
+        let pubkey = authentication_mode.public_key();
+        let advertised_address = advertised_address.append_prod_protos(pubkey, HANDSHAKE_VERSION);
+
+        let addrs = vec![advertised_address];
+
+        self.discovery_builder = Some(DiscoveryBuilder::create(
+            self.network_context(),
+            addrs,
+            discovery_interval_ms,
+            discovery_network_tx,
+            discovery_network_rx,
+            conn_mgr_reqs_tx,
+        ));
+        self.build_gossip_discovery().start_gossip_discovery();
+        self
+    }
+
+    fn build_gossip_discovery(&mut self) -> &mut Self {
+        if let Some(discovery_builder) = self.discovery_builder.as_mut() {
+            discovery_builder.build(&self.executor);
+            debug!("{} Built Gossip Discovery", self.network_context());
+        }
+        self
+    }
+
+    fn start_gossip_discovery(&mut self) -> &mut Self {
+        if let Some(discovery_builder) = self.discovery_builder.as_mut() {
+            discovery_builder.start(&self.executor);
+            debug!("{} Started gossip discovery", self.network_context());
+        }
+        self
+    }
+
+    /// Add a HealthChecker to the network.
+    pub fn add_connection_monitoring(
+        &mut self,
+        ping_interval_ms: u64,
+        ping_timeout_ms: u64,
+        ping_failures_tolerated: u64,
+    ) -> &mut Self {
+        // Initialize and start HealthChecker.
+        let (hc_network_tx, hc_network_rx) =
+            self.add_protocol_handler(health_checker::network_endpoint_config());
+
+        self.health_checker_builder = Some(HealthCheckerBuilder::create(
+            self.network_context(),
+            ping_interval_ms,
+            ping_timeout_ms,
+            ping_failures_tolerated,
+            hc_network_tx,
+            hc_network_rx,
+        ));
+        debug!("{} Created health checker", self.network_context);
+        self.build_connection_monitoring()
+    }
+
+    /// Build the HealthChecker, if it has been added.
+    fn build_connection_monitoring(&mut self) -> &mut Self {
+        if let Some(health_checker) = self.health_checker_builder.as_mut() {
+            health_checker.build(&self.executor);
+            debug!("{} Built health checker", self.network_context);
+        };
+        self.start_connection_monitoring()
+    }
+
+    /// Star the built HealthChecker.
+    fn start_connection_monitoring(&mut self) -> &mut Self {
+        if let Some(health_checker) = self.health_checker_builder.as_mut() {
+            health_checker.start(&self.executor);
+            debug!("{} Started health checker", self.network_context);
+        };
+        self
+    }
+
+    /// Create the configured transport and start PeerManager.
+    /// Return the actual NetworkAddress over which this peer is listening.
+    pub fn build(mut self) -> NetworkAddress {
+        use libra_network_address::Protocol::*;
+
+        let chain_id = self.chain_id.clone();
+        let network_id = self.network_context.network_id().clone();
+        let protos = self.supported_protocols();
+
+        let authentication_mode = self
+            .authentication_mode
+            .take()
+            .expect("Authentication Mode not set");
+
+        let (key, maybe_trusted_peers, peer_id) = match authentication_mode {
+            // validator-operated full node
+            AuthenticationMode::ServerOnly(key)
+                if self.network_context.peer_id() == PeerId::ZERO =>
+            {
+                let public_key = key.public_key();
+                let peer_id = PeerId::from_identity_public_key(public_key);
+                (key, None, peer_id)
+            }
+            // full node
+            AuthenticationMode::ServerOnly(key) => (key, None, self.network_context.peer_id()),
+            // validator
+            AuthenticationMode::Mutual(key) => (
+                key,
+                Some(self.trusted_peers.clone()),
+                self.network_context.peer_id(),
+            ),
+        };
+
+        match self.listen_address.as_slice() {
+            [Ip4(_), Tcp(_)] | [Ip6(_), Tcp(_)] => {
+                self.build_with_transport(LibraNetTransport::new(
+                    LIBRA_TCP_TRANSPORT.clone(),
+                    peer_id,
+                    key,
+                    maybe_trusted_peers,
+                    HANDSHAKE_VERSION,
+                    chain_id,
+                    network_id,
+                    protos,
+                ))
+            }
+            [Memory(_)] => self.build_with_transport(LibraNetTransport::new(
+                memory::MemoryTransport,
+                peer_id,
+                key,
+                maybe_trusted_peers,
+                HANDSHAKE_VERSION,
+                chain_id,
+                network_id,
+                protos,
+            )),
+            _ => panic!(
+                "{} Unsupported listen_address: '{}', expected '/memory/<port>', \
+                 '/ip4/<addr>/tcp/<port>', or '/ip6/<addr>/tcp/<port>'.",
+                self.network_context, self.listen_address
+            ),
+        }
+    }
+
+    /// Given a transport build and launch PeerManager.
+    /// Return the actual NetworkAddress over which this peer is listening.
+    fn build_with_transport<TTransport, TSocket>(self, transport: TTransport) -> NetworkAddress
+    where
+        TTransport: Transport<Output = Connection<TSocket>> + Send + 'static,
+        TSocket: transport::TSocket,
+    {
+        let peer_mgr = PeerManager::new(
+            self.executor.clone(),
+            transport,
+            self.network_context.clone(),
+            // TODO(philiphayes): peer manager should take `Vec<NetworkAddress>`
+            // (which could be empty, like in client use case)
+            self.listen_address,
+            self.pm_reqs_rx,
+            self.connection_reqs_rx,
+            self.upstream_handlers,
+            self.connection_event_handlers,
+            self.max_concurrent_network_reqs,
+            self.max_concurrent_network_notifs,
+            self.channel_size,
+        );
+        let listen_addr = peer_mgr.listen_addr().clone();
+
+        self.executor.spawn(peer_mgr.start());
+        debug!("{} Started peer manager", self.network_context);
+
+        listen_addr
+    }
+
+    /// Adds a endpoints for the provided configuration.  Returns NetworkSender and NetworkEvent which
+    /// can be attached to other components.
+    pub fn add_protocol_handler<SenderT, EventT>(
+        &mut self,
+        (rpc_protocols, direct_send_protocols, queue_preference, max_queue_size_per_peer, counter): (
+            Vec<ProtocolId>,
+            Vec<ProtocolId>,
+            QueueStyle,
+            usize,
+            Option<&'static IntCounterVec>,
+        ),
+    ) -> (SenderT, EventT)
+    where
+        EventT: NewNetworkEvents,
+        SenderT: NewNetworkSender,
+    {
+        let (peer_mgr_reqs_tx, peer_mgr_reqs_rx, connection_reqs_tx, connection_notifs_rx) = self
+            .inner_add_protocol_handler(
+                rpc_protocols,
+                direct_send_protocols,
+                queue_preference,
+                max_queue_size_per_peer,
+                counter,
+            );
+        (
+            SenderT::new(peer_mgr_reqs_tx, connection_reqs_tx),
+            EventT::new(peer_mgr_reqs_rx, connection_notifs_rx),
+        )
+    }
+}

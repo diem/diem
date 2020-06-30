@@ -2,21 +2,25 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::{RoleType, SecureBackend},
+    config::{Error, RoleType, SecureBackend},
     keys::KeyPair,
     network_id::NetworkId,
     utils,
 };
-use anyhow::{anyhow, ensure, Result};
 use libra_crypto::{x25519, Uniform};
 use libra_network_address::NetworkAddress;
+use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_types::{transaction::authenticator::AuthenticationKey, PeerId};
 use rand::{
     rngs::{OsRng, StdRng},
     Rng, SeedableRng,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::TryFrom, string::ToString};
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+    string::ToString,
+};
 
 /// Current supported protocol negotiation handshake version.
 ///
@@ -32,22 +36,22 @@ pub type SeedPeersConfig = HashMap<PeerId, Vec<NetworkAddress>>;
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct NetworkConfig {
+    pub connectivity_check_interval_ms: u64,
+    // Enable this network to use either gossip discovery or onchain discovery.
+    pub discovery_method: DiscoveryMethod,
+    pub identity: Identity,
     // TODO: Add support for multiple listen/advertised addresses in config.
     // The address that this node is listening on for new connections.
     pub listen_address: NetworkAddress,
-    pub connectivity_check_interval_ms: u64,
     // Select this to enforce that both peers should authenticate each other, otherwise
     // authentication only occurs for outgoing connections.
     pub mutual_authentication: bool,
+    pub network_id: NetworkId,
     // Leveraged by mutual_authentication for incoming peers that may not have a well-defined
     // network address.
     pub network_peers: NetworkPeersConfig,
     // Initial set of peers to connect to
     pub seed_peers: SeedPeersConfig,
-    // Enable this network to use either gossip discovery or onchain discovery.
-    pub discovery_method: DiscoveryMethod,
-    pub identity: Identity,
-    pub network_id: NetworkId,
 }
 
 impl Default for NetworkConfig {
@@ -59,12 +63,12 @@ impl Default for NetworkConfig {
 impl NetworkConfig {
     pub fn network_with_id(network_id: NetworkId) -> NetworkConfig {
         let mut config = Self {
-            network_id,
-            listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             connectivity_check_interval_ms: 5000,
-            mutual_authentication: false,
             discovery_method: DiscoveryMethod::None,
             identity: Identity::None,
+            listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+            mutual_authentication: false,
+            network_id,
             network_peers: HashMap::default(),
             seed_peers: HashMap::default(),
         };
@@ -78,31 +82,67 @@ impl NetworkConfig {
     /// template for another config.
     pub fn clone_for_template(&self) -> Self {
         Self {
-            network_id: self.network_id.clone(),
-            listen_address: self.listen_address.clone(),
             connectivity_check_interval_ms: self.connectivity_check_interval_ms,
-            mutual_authentication: self.mutual_authentication,
             discovery_method: self.discovery_method.clone(),
             identity: Identity::None,
+            listen_address: self.listen_address.clone(),
+            mutual_authentication: self.mutual_authentication,
+            network_id: self.network_id.clone(),
             network_peers: self.network_peers.clone(),
             seed_peers: self.seed_peers.clone(),
         }
     }
 
-    pub fn load(&mut self, network_role: RoleType) -> Result<()> {
+    pub fn identity_key(&mut self) -> x25519::PrivateKey {
+        let key = match &mut self.identity {
+            Identity::FromConfig(config) => config.keypair.take_private(),
+            Identity::FromStorage(config) => {
+                let storage: Storage = (&config.backend).into();
+                let key = storage
+                    .export_private_key(&config.key_name)
+                    .expect("Unable to read key");
+                let key = x25519::PrivateKey::from_ed25519_private_bytes(&key.to_bytes())
+                    .expect("Unable to convert key");
+                Some(key)
+            }
+            Identity::None => None,
+        };
+        key.expect("identity key should be present")
+    }
+
+    pub fn load(&mut self, network_role: RoleType) -> Result<(), Error> {
         if self.listen_address.to_string().is_empty() {
-            self.listen_address = utils::get_local_ip().ok_or_else(|| anyhow!("No local IP"))?;
+            self.listen_address = utils::get_local_ip()
+                .ok_or_else(|| Error::InvariantViolation("No local IP".to_string()))?;
         }
 
         if network_role.is_validator() {
-            ensure!(
+            crate::config::invariant(
                 self.network_peers.is_empty(),
-                "Validators should not define network_peers"
-            );
+                "Validators should not define network_peers".into(),
+            )?;
         }
 
         self.prepare_identity();
         Ok(())
+    }
+
+    pub fn peer_id(&self) -> PeerId {
+        match &self.identity {
+            Identity::FromConfig(config) => Some(config.peer_id),
+            Identity::FromStorage(config) => {
+                let storage: Storage = (&config.backend).into();
+                let peer_id = storage
+                    .get(&config.peer_id_name)
+                    .expect("Unable to read peer id")
+                    .value
+                    .string()
+                    .expect("Expected string for peer id");
+                Some(peer_id.try_into().expect("Unable to parse peer id"))
+            }
+            Identity::None => None,
+        }
+        .expect("peer id should be present")
     }
 
     fn prepare_identity(&mut self) {
@@ -145,21 +185,18 @@ impl NetworkConfig {
         self.identity = Identity::from_config(identity_key, peer_id);
     }
 
-    #[cfg(any(test, feature = "fuzzing"))]
-    pub fn peer_id(&self) -> PeerId {
-        self.identity.peer_id_from_config().unwrap()
-    }
-
     /// Check that all seed peer addresses look like canonical LibraNet addresses
-    pub fn verify_seed_peer_addrs(&self) -> Result<()> {
+    pub fn verify_seed_peer_addrs(&self) -> Result<(), Error> {
         for (peer_id, addrs) in self.seed_peers.iter() {
             for addr in addrs {
-                ensure!(
+                crate::config::invariant(
                     addr.is_libranet_addr(),
-                    "Unexpected seed peer address format: peer_id: {}, addr: '{}'",
-                    peer_id.short_str(),
-                    addr,
-                );
+                    format!(
+                        "Unexpected seed peer address format: peer_id: {}, addr: '{}'",
+                        peer_id.short_str(),
+                        addr,
+                    ),
+                )?;
             }
         }
         Ok(())
@@ -193,6 +230,7 @@ impl DiscoveryMethod {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct GossipConfig {
     // The address that this node advertises to other nodes for the discovery protocol.
     pub advertised_address: NetworkAddress,
@@ -216,17 +254,10 @@ impl Identity {
 
     pub fn from_storage(key_name: String, peer_id_name: String, backend: SecureBackend) -> Self {
         Identity::FromStorage(IdentityFromStorage {
+            backend,
             key_name,
             peer_id_name,
-            backend,
         })
-    }
-
-    pub fn peer_id_from_config(&self) -> Option<PeerId> {
-        match self {
-            Identity::FromConfig(config) => Some(config.peer_id),
-            _ => None,
-        }
     }
 
     pub fn public_key_from_config(&self) -> Option<x25519::PublicKey> {
@@ -241,6 +272,7 @@ impl Identity {
 /// The identity is stored within the config.
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct IdentityFromConfig {
     #[serde(rename = "key")]
     pub keypair: KeyPair<x25519::PrivateKey>,
@@ -250,8 +282,9 @@ pub struct IdentityFromConfig {
 /// This represents an identity in a secure-storage as defined in NodeConfig::secure.
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct IdentityFromStorage {
+    pub backend: SecureBackend,
     pub key_name: String,
     pub peer_id_name: String,
-    pub backend: SecureBackend,
 }

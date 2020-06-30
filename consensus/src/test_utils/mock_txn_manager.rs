@@ -12,7 +12,7 @@ use futures::channel::mpsc;
 use libra_mempool::ConsensusRequest;
 use libra_types::{
     transaction::TransactionStatus,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use rand::Rng;
 
@@ -51,32 +51,30 @@ fn mock_transaction_status(count: usize) -> Vec<TransactionStatus> {
 #[async_trait::async_trait]
 impl TxnManager for MockTransactionManager {
     /// The returned future is fulfilled with the vector of SignedTransactions
-    async fn pull_txns(&mut self, max_size: u64, _exclude_txns: Vec<&Payload>) -> Result<Payload> {
+    async fn pull_txns(&self, max_size: u64, _exclude_txns: Vec<&Payload>) -> Result<Payload> {
         Ok(random_payload(max_size as usize))
     }
 
-    async fn commit(&mut self, block: &Block, compute_results: &StateComputeResult) -> Result<()> {
+    async fn notify(&self, block: &Block, compute_results: &StateComputeResult) -> Result<()> {
         if self.mempool_proxy.is_some() {
             let mock_compute_result = StateComputeResult::new(
                 compute_results.root_hash(),
                 compute_results.frozen_subtree_roots().clone(),
                 compute_results.num_leaves(),
+                compute_results.parent_frozen_subtree_roots().clone(),
+                compute_results.parent_num_leaves(),
                 compute_results.epoch_state().clone(),
                 mock_transaction_status(block.payload().map_or(0, |txns| txns.len())),
                 compute_results.transaction_info_hashes().clone(),
             );
             assert!(self
                 .mempool_proxy
-                .as_mut()
+                .as_ref()
                 .unwrap()
-                .commit(&block, &mock_compute_result)
+                .notify(&block, &mock_compute_result)
                 .await
                 .is_ok());
         }
         Ok(())
-    }
-
-    fn _clone_box(&self) -> Box<dyn TxnManager> {
-        Box::new(self.clone())
     }
 }

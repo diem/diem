@@ -18,14 +18,14 @@
 //! - Use successful inbound pings as a sign of remote note being healthy
 //! - Ping a peer only in periods of no application-level communication with the peer
 use crate::{
+    constants::NETWORK_CHANNEL_SIZE,
     counters,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
-        network::{Event, NetworkEvents, NetworkSender},
+        network::{Event, NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
 use bytes::Bytes;
@@ -36,12 +36,14 @@ use futures::{
 };
 use libra_config::network_id::NetworkContext;
 use libra_logger::prelude::*;
+use libra_metrics::IntCounterVec;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
 use rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
+pub mod builder;
 #[cfg(test)]
 mod test;
 
@@ -66,25 +68,25 @@ pub struct HealthCheckerNetworkSender {
     inner: NetworkSender<HealthCheckerMsg>,
 }
 
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
-) -> (HealthCheckerNetworkSender, HealthCheckerNetworkEvents) {
-    let (sender, receiver, connection_reqs_tx, connection_notifs_rx) = network
-        .add_protocol_handler(
-            vec![ProtocolId::HealthCheckerRpc],
-            vec![],
-            QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
-            Some(&counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS),
-        );
+/// Configuration for the network endpoints to support HealthChecker.
+pub fn network_endpoint_config() -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static IntCounterVec>,
+) {
     (
-        HealthCheckerNetworkSender::new(sender, connection_reqs_tx),
-        HealthCheckerNetworkEvents::new(receiver, connection_notifs_rx),
+        vec![ProtocolId::HealthCheckerRpc],
+        vec![],
+        QueueStyle::LIFO,
+        NETWORK_CHANNEL_SIZE,
+        Some(&counters::PENDING_HEALTH_CHECKER_NETWORK_EVENTS),
     )
 }
 
-impl HealthCheckerNetworkSender {
-    pub fn new(
+impl NewNetworkSender for HealthCheckerNetworkSender {
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -92,7 +94,9 @@ impl HealthCheckerNetworkSender {
             inner: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
+}
 
+impl HealthCheckerNetworkSender {
     /// Send a HealthChecker Ping RPC request to remote peer `recipient`. Returns
     /// the remote peer's future `Pong` reply.
     ///
@@ -129,7 +133,7 @@ pub struct Pong(u32);
 
 /// The actor performing health checks by running the Ping protocol
 pub struct HealthChecker<TTicker> {
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     /// Ticker to trigger ping to a random peer. In production, the ticker is likely to be
     /// fixed duration interval timer.
     ticker: TTicker,
@@ -158,7 +162,7 @@ where
 {
     /// Create new instance of the [`HealthChecker`] actor.
     pub fn new(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         ticker: TTicker,
         network_tx: HealthCheckerNetworkSender,
         network_rx: HealthCheckerNetworkEvents,
@@ -357,7 +361,7 @@ where
     }
 
     async fn ping_peer(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         mut network_tx: HealthCheckerNetworkSender,
         peer_id: PeerId,
         round: u64,

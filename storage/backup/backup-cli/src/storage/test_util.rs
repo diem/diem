@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::storage::BackupStorage;
+use crate::storage::{BackupStorage, ShellSafeName};
 use libra_temppath::TempPath;
 use proptest::{
     collection::{hash_map, vec},
@@ -24,11 +24,11 @@ fn to_file_name(tmpdir: &TempPath, backup_name: &str, file_name: &str) -> String
 pub async fn test_write_and_read_impl(
     store: Box<dyn BackupStorage>,
     tmpdir: &TempPath,
-    backups: HashMap<String, HashMap<String, Vec<u8>>>,
+    backups: HashMap<ShellSafeName, HashMap<ShellSafeName, Vec<u8>>>,
 ) {
     for (backup_name, files) in &backups {
         let backup_handle = store.create_backup(backup_name).await.unwrap();
-        assert_eq!(&backup_handle, backup_name);
+        assert_eq!(backup_handle, backup_name.as_ref());
         for (name, content) in files {
             let (handle, mut file) = store.create_for_write(&backup_handle, name).await.unwrap();
             assert_eq!(handle, to_file_name(&tmpdir, backup_name, name));
@@ -47,15 +47,12 @@ pub async fn test_write_and_read_impl(
     }
 }
 
-fn arb_file_name() -> impl Strategy<Value = String> {
-    r"[-A-Za-z0-9_.]{1, 50}".prop_filter("no . and ..", |s| s != "." && s != "..")
-}
-
-pub fn arb_backups() -> impl Strategy<Value = HashMap<String, HashMap<String, Vec<u8>>>> {
+pub fn arb_backups(
+) -> impl Strategy<Value = HashMap<ShellSafeName, HashMap<ShellSafeName, Vec<u8>>>> {
     hash_map(
-        arb_file_name(), // backup_name
+        any::<ShellSafeName>(), // backup_name
         hash_map(
-            arb_file_name(),           // file name
+            any::<ShellSafeName>(),    // file name
             vec(any::<u8>(), 1..1000), // file content
             1..10,
         ),

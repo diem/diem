@@ -62,7 +62,7 @@ pub fn run(mut args: Args, xctx: XContext) -> Result<()> {
             // for more info see:  https://github.com/mozilla/grcov#example-how-to-generate-gcda-fiels-for-a-rust-project
             (
                 "RUSTFLAGS",
-                "-Zprofile -Ccodegen-units=1 -Coverflow-checks=off -Zno-landing-pads",
+                "-Zprofile -Ccodegen-units=1 -Coverflow-checks=off",
             ),
         ]
     } else {

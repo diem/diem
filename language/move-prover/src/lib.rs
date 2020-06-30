@@ -9,9 +9,10 @@ use crate::{
     cli::{Options, INLINE_PRELUDE},
     prelude_template_helpers::StratificationHelper,
 };
+use abigen::Abigen;
 use anyhow::anyhow;
 use codespan_reporting::term::termcolor::{ColorChoice, StandardStream, WriteColor};
-use docgen::docgen::Docgen;
+use docgen::Docgen;
 use handlebars::Handlebars;
 use itertools::Itertools;
 #[allow(unused_imports)]
@@ -28,6 +29,7 @@ use stackless_bytecode_generator::{
     livevar_analysis::LiveVarAnalysisProcessor,
     packref_analysis::PackrefAnalysisProcessor,
     reaching_def_analysis::ReachingDefProcessor,
+    test_instrumenter::TestInstrumenter,
     writeback_analysis::WritebackAnalysisProcessor,
 };
 use std::{
@@ -73,6 +75,10 @@ pub fn run_move_prover<W: WriteColor>(
     // Until this point, prover and docgen have same code. Here we part ways.
     if options.run_docgen {
         return run_docgen(&env, &options, now);
+    }
+    // Same for ABI generator.
+    if options.run_abigen {
+        return run_abigen(&env, &options, now);
     }
     let targets = create_and_process_bytecode(&options, &env);
     if env.has_errors() {
@@ -150,6 +156,25 @@ fn run_docgen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Resul
     Ok(())
 }
 
+fn run_abigen(env: &GlobalEnv, options: &Options, now: Instant) -> anyhow::Result<()> {
+    let mut generator = Abigen::new(env, &options.abigen);
+    let checking_elapsed = now.elapsed();
+    info!("generating ABI files");
+    generator.gen();
+    for (file, content) in generator.into_result() {
+        let path = PathBuf::from(&file);
+        fs::create_dir_all(path.parent().unwrap())?;
+        fs::write(path.as_path(), content)?;
+    }
+    let generating_elapsed = now.elapsed();
+    info!(
+        "{:.3}s checking, {:.3}s generating",
+        checking_elapsed.as_secs_f64(),
+        (generating_elapsed - checking_elapsed).as_secs_f64()
+    );
+    Ok(())
+}
+
 /// Adds the prelude to the generated output.
 fn add_prelude(options: &Options, writer: &CodeWriter) -> anyhow::Result<()> {
     emit!(writer, "\n// ** prelude from {}\n\n", &options.prelude_path);
@@ -191,7 +216,7 @@ fn create_and_process_bytecode(options: &Options, env: &GlobalEnv) -> FunctionTa
 }
 
 /// Function to create the transformation pipeline.
-fn create_bytecode_processing_pipeline(_options: &Options) -> FunctionTargetPipeline {
+fn create_bytecode_processing_pipeline(options: &Options) -> FunctionTargetPipeline {
     let mut res = FunctionTargetPipeline::default();
 
     // Add processors in order they are executed.
@@ -202,6 +227,7 @@ fn create_bytecode_processing_pipeline(_options: &Options) -> FunctionTargetPipe
     res.add_processor(WritebackAnalysisProcessor::new());
     res.add_processor(PackrefAnalysisProcessor::new());
     res.add_processor(EliminateMutRefsProcessor::new());
+    res.add_processor(TestInstrumenter::new(options.prover.verify_scope));
 
     res
 }
@@ -217,11 +243,22 @@ fn calculate_deps(sources: &[String], input_deps: &[String]) -> anyhow::Result<V
     // Remove input sources from deps. They can end here because our dep analysis is an
     // over-approximation and for example cannot distinguish between references inside
     // and outside comments.
+    let canonical_sources = sources
+        .iter()
+        .map(|s| canonicalize(s))
+        .collect::<BTreeSet<_>>();
     let deps = deps
         .into_iter()
-        .filter(|d| !sources.contains(d))
+        .filter(|d| !canonical_sources.contains(&canonicalize(d)))
         .collect_vec();
     Ok(deps)
+}
+
+fn canonicalize(s: &str) -> String {
+    match fs::canonicalize(s) {
+        Ok(p) => p.to_string_lossy().to_string(),
+        Err(_) => s.to_string(),
+    }
 }
 
 /// Recursively calculate dependencies.

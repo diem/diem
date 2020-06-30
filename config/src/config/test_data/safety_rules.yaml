@@ -1,0 +1,9 @@
+service:
+    type: process
+    server_address: "/ip4/127.0.0.1/tcp/5555"
+backend:
+    type: "vault"
+    server: "https://127.0.0.1:8200"
+    ca_certificate: "/full/path/to/certificate"
+    token:
+        from_disk: "/full/path/to/token"

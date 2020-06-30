@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
+use libra_state_view::StateViewId;
 use libra_types::{
     account_address::AccountAddress,
     account_config::AccountResource,
@@ -38,8 +39,13 @@ impl VMValidator {
         let mut vm = LibraVM::new();
         let (version, state_root) = db_reader.get_latest_state_root().expect("Should not fail.");
         let smt = SparseMerkleTree::new(state_root);
-        let state_view =
-            VerifiedStateView::new(Arc::clone(&db_reader), Some(version), state_root, &smt);
+        let state_view = VerifiedStateView::new(
+            StateViewId::Miscellaneous,
+            Arc::clone(&db_reader),
+            Some(version),
+            state_root,
+            &smt,
+        );
 
         vm.load_configs(&state_view);
         VMValidator { db_reader, vm }
@@ -57,7 +63,15 @@ impl TransactionValidation for VMValidator {
         let vm = self.vm.clone();
 
         let smt = SparseMerkleTree::new(state_root);
-        let state_view = VerifiedStateView::new(db_reader, Some(version), state_root, &smt);
+        let state_view = VerifiedStateView::new(
+            StateViewId::TransactionValidation {
+                base_version: version,
+            },
+            db_reader,
+            Some(version),
+            state_root,
+            &smt,
+        );
 
         Ok(vm.validate_transaction(txn, &state_view))
     }

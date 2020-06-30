@@ -23,7 +23,7 @@ use futures::{
     stream::{select_all, FuturesUnordered},
     StreamExt,
 };
-use libra_config::config::{PeerNetworkId, UpstreamNetworkId};
+use libra_config::{config::PeerNetworkId, network_id::NetworkId};
 use libra_logger::prelude::*;
 use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
@@ -39,7 +39,7 @@ use vm_validator::vm_validator::TransactionValidation;
 pub(crate) async fn coordinator<V>(
     mut smp: SharedMempool<V>,
     executor: Handle,
-    network_events: Vec<(UpstreamNetworkId, MempoolNetworkEvents)>,
+    network_events: Vec<(NetworkId, MempoolNetworkEvents)>,
     mut client_events: mpsc::Receiver<(
         SignedTransaction,
         oneshot::Sender<Result<SubmissionStatus>>,
@@ -52,7 +52,7 @@ pub(crate) async fn coordinator<V>(
 {
     let smp_events: Vec<_> = network_events
         .into_iter()
-        .map(|(network_id, events)| events.map(move |e| (network_id, e)))
+        .map(|(network_id, events)| events.map(move |e| (network_id.clone(), e)))
         .collect();
     let mut events = select_all(smp_events).fuse();
     let mempool = smp.mempool.clone();
@@ -100,9 +100,9 @@ pub(crate) async fn coordinator<V>(
                                     .with_label_values(&["new_peer".to_string().deref()])
                                     .inc();
                                 let peer = PeerNetworkId(network_id, peer_id);
-                                let is_new_peer = peer_manager.add_peer(peer);
+                                let is_new_peer = peer_manager.add_peer(peer.clone());
                                 notify_subscribers(SharedMempoolNotification::PeerStateChange, &subscribers);
-                                if is_new_peer && peer_manager.is_upstream_peer(peer) {
+                                if is_new_peer && peer_manager.is_upstream_peer(&peer) {
                                     tasks::execute_broadcast(peer, false, &mut smp, &mut scheduled_broadcasts, executor.clone());
                                 }
                             }
@@ -125,7 +125,7 @@ pub(crate) async fn coordinator<V>(
                                         let smp_clone = smp.clone();
                                         let peer = PeerNetworkId(network_id, peer_id);
                                         let timeline_state = match peer_manager
-                                            .is_upstream_peer(peer)
+                                            .is_upstream_peer(&peer)
                                         {
                                             true => TimelineState::NonQualified,
                                             false => TimelineState::NotReady,
@@ -141,8 +141,7 @@ pub(crate) async fn coordinator<V>(
                                             .await;
                                     }
                                     MempoolSyncMsg::BroadcastTransactionsResponse{request_id, retry_txns, backoff} => {
-                                        let peer = PeerNetworkId(network_id, peer_id);
-                                        peer_manager.process_broadcast_ack(PeerNetworkId(network_id, peer_id), request_id, retry_txns, backoff);
+                                        peer_manager.process_broadcast_ack(PeerNetworkId(network_id.clone(), peer_id), request_id, retry_txns, backoff);
                                         notify_subscribers(SharedMempoolNotification::ACK, &smp.subscribers);
                                     }
                                 };

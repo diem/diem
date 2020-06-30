@@ -53,7 +53,17 @@ impl From<std::io::Error> for Error {
 
 impl From<ureq::Response> for Error {
     fn from(resp: ureq::Response) -> Self {
-        Error::HttpError(resp.status(), resp.status_line().into())
+        if let Some(e) = resp.synthetic_error() {
+            // Local error
+            Error::InternalError(e.to_string())
+        } else {
+            // Clear buffer and use that as the message
+            let status = resp.status();
+            match resp.into_string() {
+                Ok(v) => Error::HttpError(status, v),
+                Err(e) => Error::InternalError(e.to_string()),
+            }
+        }
     }
 }
 
@@ -78,6 +88,7 @@ impl From<serde_json::Error> for Error {
 /// token, but policies can be amended afterward. So you cannot add new policies to a token, but
 /// you can increase the tokens abilities by modifying the underlying policies.
 pub struct Client {
+    agent: ureq::Agent,
     host: String,
     token: String,
     tls_config: Option<Arc<rustls::ClientConfig>>,
@@ -97,7 +108,9 @@ impl Client {
         } else {
             None
         };
+
         Self {
+            agent: ureq::Agent::new().set("connection", "keep-alive").build(),
             host,
             token,
             tls_config,
@@ -105,9 +118,13 @@ impl Client {
     }
 
     pub fn delete_policy(&self, policy_name: &str) -> Result<(), Error> {
-        let request = ureq::delete(&format!("{}/v1/sys/policy/{}", self.host, policy_name));
+        let request = self
+            .agent
+            .delete(&format!("{}/v1/sys/policy/{}", self.host, policy_name));
         let resp = self.upgrade_request(request).call();
         if resp.ok() {
+            // Explicitly clear buffer so the stream can be re-used.
+            resp.into_string()?;
             Ok(())
         } else {
             Err(resp.into())
@@ -115,7 +132,7 @@ impl Client {
     }
 
     pub fn list_policies(&self) -> Result<Vec<String>, Error> {
-        let request = ureq::get(&format!("{}/v1/sys/policy", self.host));
+        let request = self.agent.get(&format!("{}/v1/sys/policy", self.host));
         let resp = self.upgrade_request(request).call();
         match resp.status() {
             200 => {
@@ -123,14 +140,20 @@ impl Client {
                 Ok(policies.policies)
             }
             // There are no policies.
-            404 => Ok(vec![]),
+            404 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Ok(vec![])
+            }
             _ => Err(resp.into()),
         }
     }
 
     /// Retrieves the policy at the given policy name.
     pub fn read_policy(&self, policy_name: &str) -> Result<Policy, Error> {
-        let request = ureq::get(&format!("{}/v1/sys/policy/{}", self.host, policy_name));
+        let request = self
+            .agent
+            .get(&format!("{}/v1/sys/policy/{}", self.host, policy_name));
         let resp = self.upgrade_request(request).call();
         match resp.status() {
             200 => Ok(Policy::try_from(resp.into_json()?)?),
@@ -142,9 +165,13 @@ impl Client {
     /// structured. Vault does not distingush a create and update. An update must first read the
     /// existing policy, amend the contents,  and then be applied via this API.
     pub fn set_policy(&self, policy_name: &str, policy: &Policy) -> Result<(), Error> {
-        let request = ureq::post(&format!("{}/v1/sys/policy/{}", self.host, policy_name));
+        let request = self
+            .agent
+            .post(&format!("{}/v1/sys/policy/{}", self.host, policy_name));
         let resp = self.upgrade_request(request).send_json(policy.try_into()?);
         if resp.ok() {
+            // Explicitly clear buffer so the stream can be re-used.
+            resp.into_string()?;
             Ok(())
         } else {
             Err(resp.into())
@@ -154,7 +181,9 @@ impl Client {
     /// Creates a new token or identity for accessing Vault. The token will have access to anything
     /// under the default policy and any prescribed policies.
     pub fn create_token(&self, policies: Vec<&str>) -> Result<String, Error> {
-        let request = ureq::post(&format!("{}/v1/auth/token/create", self.host));
+        let request = self
+            .agent
+            .post(&format!("{}/v1/auth/token/create", self.host));
         let resp = self
             .upgrade_request(request)
             .send_json(json!({ "policies": policies }));
@@ -168,7 +197,7 @@ impl Client {
 
     /// List all stored secrets
     pub fn list_secrets(&self, secret: &str) -> Result<Vec<String>, Error> {
-        let request = ureq::request(
+        let request = self.agent.request(
             "LIST",
             &format!("{}/v1/secret/metadata/{}", self.host, secret),
         );
@@ -179,16 +208,24 @@ impl Client {
                 Ok(resp.data.keys)
             }
             // There are no secrets.
-            404 => Ok(vec![]),
+            404 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Ok(vec![])
+            }
             _ => Err(resp.into()),
         }
     }
 
     /// Delete a specific secret store
     pub fn delete_secret(&self, secret: &str) -> Result<(), Error> {
-        let request = ureq::delete(&format!("{}/v1/secret/metadata/{}", self.host, secret));
+        let request = self
+            .agent
+            .delete(&format!("{}/v1/secret/metadata/{}", self.host, secret));
         let resp = self.upgrade_request(request).call();
         if resp.ok() {
+            // Explicitly clear buffer so the stream can be re-used.
+            resp.into_string()?;
             Ok(())
         } else {
             Err(resp.into())
@@ -197,7 +234,9 @@ impl Client {
 
     /// Read a key/value pair from a given secret store.
     pub fn read_secret(&self, secret: &str, key: &str) -> Result<ReadResponse<String>, Error> {
-        let request = ureq::get(&format!("{}/v1/secret/data/{}", self.host, secret));
+        let request = self
+            .agent
+            .get(&format!("{}/v1/secret/data/{}", self.host, secret));
         let resp = self.upgrade_request(request).call();
         match resp.status() {
             200 => {
@@ -211,26 +250,41 @@ impl Client {
                 let version = data.metadata.version;
                 Ok(ReadResponse::new(created_time, value, version))
             }
-            404 => Err(Error::NotFound(secret.into(), key.into())),
+            404 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Err(Error::NotFound(secret.into(), key.into()))
+            }
             _ => Err(resp.into()),
         }
     }
 
     pub fn create_ed25519_key(&self, name: &str, exportable: bool) -> Result<(), Error> {
-        let request = ureq::post(&format!("{}/v1/transit/keys/{}", self.host, name));
+        let request = self
+            .agent
+            .post(&format!("{}/v1/transit/keys/{}", self.host, name));
         let resp = self
             .upgrade_request(request)
             .send_json(json!({ "type": "ed25519", "exportable": exportable }));
         match resp.status() {
-            200 => Ok(()),
-            204 => Ok(()),
-            404 => Err(Error::NotFound("transit/".into(), name.into())),
+            200 | 204 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Ok(())
+            }
+            404 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Err(Error::NotFound("transit/".into(), name.into()))
+            }
             _ => Err(resp.into()),
         }
     }
 
     pub fn delete_key(&self, name: &str) -> Result<(), Error> {
-        let request = ureq::post(&format!("{}/v1/transit/keys/{}/config", self.host, name));
+        let request = self
+            .agent
+            .post(&format!("{}/v1/transit/keys/{}/config", self.host, name));
         let resp = self
             .upgrade_request(request)
             .send_json(json!({ "deletion_allowed": true }));
@@ -238,10 +292,16 @@ impl Client {
         if !resp.ok() {
             return Err(resp.into());
         }
+        // Explicitly clear buffer so the stream can be re-used.
+        resp.into_string()?;
 
-        let request = ureq::delete(&format!("{}/v1/transit/keys/{}", self.host, name));
+        let request = self
+            .agent
+            .delete(&format!("{}/v1/transit/keys/{}", self.host, name));
         let resp = self.upgrade_request(request).call();
         if resp.ok() {
+            // Explicitly clear buffer so the stream can be re-used.
+            resp.into_string()?;
             Ok(())
         } else {
             Err(resp.into())
@@ -253,7 +313,7 @@ impl Client {
         name: &str,
         version: Option<u32>,
     ) -> Result<Ed25519PrivateKey, Error> {
-        let request = ureq::get(&format!(
+        let request = self.agent.get(&format!(
             "{}/v1/transit/export/signing-key/{}",
             self.host, name
         ));
@@ -278,25 +338,37 @@ impl Client {
 
     pub fn import_ed25519_key(&self, name: &str, key: &Ed25519PrivateKey) -> Result<(), Error> {
         let backup = base64::encode(serde_json::to_string(&KeyBackup::new(key))?);
-        let request = ureq::post(&format!("{}/v1/transit/restore/{}", self.host, name));
+        let request = self
+            .agent
+            .post(&format!("{}/v1/transit/restore/{}", self.host, name));
         let resp = self
             .upgrade_request(request)
             .send_json(json!({ "backup": backup }));
         match resp.status() {
-            204 => Ok(()),
+            204 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Ok(())
+            }
             _ => Err(resp.into()),
         }
     }
 
     pub fn list_keys(&self) -> Result<Vec<String>, Error> {
-        let request = ureq::request("LIST", &format!("{}/v1/transit/keys", self.host));
+        let request = self
+            .agent
+            .request("LIST", &format!("{}/v1/transit/keys", self.host));
         let resp = self.upgrade_request(request).call();
         match resp.status() {
             200 => {
                 let list_keys: ListKeysResponse = serde_json::from_str(&resp.into_string()?)?;
                 Ok(list_keys.data.keys)
             }
-            404 => Err(Error::NotFound("transit/".into(), "keys".into())),
+            404 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Err(Error::NotFound("transit/".into(), "keys".into()))
+            }
             _ => Err(resp.into()),
         }
     }
@@ -305,7 +377,9 @@ impl Client {
         &self,
         name: &str,
     ) -> Result<Vec<ReadResponse<Ed25519PublicKey>>, Error> {
-        let request = ureq::get(&format!("{}/v1/transit/keys/{}", self.host, name));
+        let request = self
+            .agent
+            .get(&format!("{}/v1/transit/keys/{}", self.host, name));
         let resp = self.upgrade_request(request).call();
         match resp.status() {
             200 => {
@@ -320,15 +394,23 @@ impl Client {
                 }
                 Ok(read_resp)
             }
-            404 => Err(Error::NotFound("transit/".into(), name.into())),
+            404 => {
+                // Explicitly clear buffer so the stream can be re-used.
+                resp.into_string()?;
+                Err(Error::NotFound("transit/".into(), name.into()))
+            }
             _ => Err(resp.into()),
         }
     }
 
     pub fn rotate_key(&self, name: &str) -> Result<(), Error> {
-        let request = ureq::post(&format!("{}/v1/transit/keys/{}/rotate", self.host, name));
+        let request = self
+            .agent
+            .post(&format!("{}/v1/transit/keys/{}/rotate", self.host, name));
         let resp = self.upgrade_request(request).call();
         if resp.ok() {
+            // Explicitly clear buffer so the stream can be re-used.
+            resp.into_string()?;
             Ok(())
         } else {
             Err(resp.into())
@@ -347,7 +429,9 @@ impl Client {
             json!({ "input": base64::encode(&data) })
         };
 
-        let request = ureq::post(&format!("{}/v1/transit/sign/{}", self.host, name));
+        let request = self
+            .agent
+            .post(&format!("{}/v1/transit/sign/{}", self.host, name));
         let resp = self.upgrade_request(request).send_json(data);
         if resp.ok() {
             let signature: SignatureResponse = serde_json::from_str(&resp.into_string()?)?;
@@ -366,28 +450,32 @@ impl Client {
 
     /// Create or update a key/value pair in a given secret store.
     pub fn write_secret(&self, secret: &str, key: &str, value: &str) -> Result<(), Error> {
-        let request = ureq::put(&format!("{}/v1/secret/data/{}", self.host, secret));
+        let request = self
+            .agent
+            .put(&format!("{}/v1/secret/data/{}", self.host, secret));
         let resp = self
             .upgrade_request(request)
             .send_json(json!({ "data": { key: value } }));
-        match resp.status() {
-            200 => Ok(()),
-            _ => Err(resp.into()),
+
+        if resp.ok() {
+            // Explicitly clear buffer so the stream can be re-used.
+            resp.into_string()?;
+            Ok(())
+        } else {
+            Err(resp.into())
         }
     }
 
     /// Returns whether or not the vault is unsealed (can be read from / written to). This can be
     /// queried without authentication.
     pub fn unsealed(&self) -> Result<bool, Error> {
-        let request = ureq::get(&format!("{}/v1/sys/seal-status", self.host));
+        let request = self.agent.get(&format!("{}/v1/sys/seal-status", self.host));
         let resp = self.upgrade_request_without_token(request).call();
-        println!("{:?}", resp.synthetic_error());
-        match resp.status() {
-            200 => {
-                let resp: SealStatusResponse = serde_json::from_str(&resp.into_string()?)?;
-                Ok(!resp.sealed)
-            }
-            _ => Err(resp.into()),
+        if resp.ok() {
+            let resp: SealStatusResponse = serde_json::from_str(&resp.into_string()?)?;
+            Ok(!resp.sealed)
+        } else {
+            Err(resp.into())
         }
     }
 

@@ -3,7 +3,7 @@
 
 use std::{
     collections::HashSet,
-    env, process,
+    env, fmt, process,
     time::{Duration, Instant},
 };
 
@@ -16,6 +16,7 @@ use anyhow::{bail, format_err, Result};
 use cluster_test::{
     aws,
     cluster::Cluster,
+    cluster_builder::{ClusterBuilder, ClusterBuilderParams},
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
     experiments::{get_experiment, Context, Experiment},
     github::GitHub,
@@ -41,7 +42,7 @@ const HEALTH_POLL_INTERVAL: Duration = Duration::from_secs(5);
 #[derive(StructOpt, Debug)]
 #[structopt(group = ArgGroup::with_name("action"))]
 struct Args {
-    #[structopt(short = "p", long, use_delimiter = true)]
+    #[structopt(short = "p", long, use_delimiter = true, requires = "swarm")]
     peers: Vec<String>,
 
     #[structopt(
@@ -61,9 +62,9 @@ struct Args {
     #[structopt(long, group = "action")]
     perf_run: bool,
     #[structopt(long, group = "action")]
-    cleanup: bool,
-    #[structopt(long, group = "action")]
     run_ci_suite: bool,
+    #[structopt(long, group = "action")]
+    exec: Option<String>,
 
     #[structopt(last = true)]
     last: Vec<String>,
@@ -97,18 +98,14 @@ struct Args {
     )]
     pub emit_to_validator: Option<bool>,
 
-    #[structopt(long, default_value = "1")]
-    pub k8s_fullnodes_per_validator: u32,
-    #[structopt(long, parse(try_from_str), default_value = "30")]
-    pub k8s_num_validators: u32,
-    #[structopt(long)]
-    pub enable_lsr: bool,
     #[structopt(
         long,
-        help = "Backend used by lsr. Possible Values are in-memory, on-disk, vault",
-        default_value = "vault"
+        help = "Wait for given number of seconds if experiment fails. This require experiment to return error, it does not catch panics"
     )]
-    pub lsr_backend: String,
+    pub wait_on_failure: Option<u64>,
+
+    #[structopt(flatten)]
+    pub cluster_builder_params: ClusterBuilderParams,
 }
 
 #[tokio::main]
@@ -125,83 +122,57 @@ pub async fn main() {
         let util = BasicSwarmUtil::setup(&args);
         exit_on_error(util.diag().await);
         return;
-    } else if args.emit_tx {
-        let thread_params = EmitThreadParams {
-            wait_millis: args.wait_millis,
-            wait_committed: !args.burst,
-        };
-        let duration = Duration::from_secs(args.duration);
-        if args.swarm {
-            let util = BasicSwarmUtil::setup(&args);
-            emit_tx(
-                &util.cluster,
-                args.accounts_per_client,
-                args.workers_per_ac,
-                thread_params,
-                duration,
-            )
-            .await;
-            return;
-        } else {
-            let util = ClusterUtil::setup(&args).await;
-            emit_tx(
-                &util.cluster,
-                args.accounts_per_client,
-                args.workers_per_ac,
-                thread_params,
-                duration,
-            )
-            .await;
-            return;
-        }
+    } else if args.emit_tx && args.swarm {
+        let util = BasicSwarmUtil::setup(&args);
+        exit_on_error(emit_tx(&util.cluster, &args).await);
+        return;
     } else if args.health_check && args.swarm {
         let util = BasicSwarmUtil::setup(&args);
         let logs = DebugPortLogWorker::spawn_new(&util.cluster).0;
         let mut health_check_runner = HealthCheckRunner::new_all(util.cluster);
         let duration = Duration::from_secs(args.duration);
-        exit_on_error(run_health_check(&logs, &mut health_check_runner, duration));
+        exit_on_error(run_health_check(&logs, &mut health_check_runner, duration).await);
         return;
     }
 
-    let mut runner = ClusterTestRunner::setup(&args).await;
+    let wait_on_failure = if let Some(wait_on_failure) = args.wait_on_failure {
+        if wait_on_failure > 20 * 60 {
+            println!("wait_on_failure can not be more then 1200 seconds on shared cluster");
+            process::exit(1);
+        }
+        Some(Duration::from_secs(wait_on_failure))
+    } else {
+        None
+    };
 
-    let mut perf_msg = None;
+    let runner = ClusterTestRunner::setup(&args).await;
+    let mut runner = match runner {
+        Ok(r) => r,
+        Err(e) => {
+            if let Some(wait_on_failure) = wait_on_failure {
+                warn!(
+                    "Setting up runner failed with {}, waiting for {:?} before terminating",
+                    e, wait_on_failure
+                );
+                delay_for(wait_on_failure).await;
+            }
+            panic!("Failed to setup cluster test runner: {}", e);
+        }
+    };
 
-    if args.health_check {
-        let duration = Duration::from_secs(args.duration);
-        exit_on_error(run_health_check(
-            &runner.logs,
-            &mut runner.health_check_runner,
-            duration,
-        ));
-    } else if args.perf_run {
-        perf_msg = Some(exit_on_error(runner.perf_run().await));
-    } else if args.cleanup {
-        runner.cleanup().await;
-    } else if args.run_ci_suite {
-        perf_msg = Some(exit_on_error(runner.run_ci_suite().await));
-    } else if let Some(experiment_name) = args.run {
-        let result = runner
-            .cleanup_and_run(get_experiment(
-                &experiment_name,
-                &args.last,
-                &runner.cluster,
-            ))
-            .await;
-        runner.cleanup().await;
-        runner.teardown().await;
-
-        exit_on_error(result);
-        info!(
-            "{}Experiment Result: {}{}",
-            style::Bold,
-            runner.report,
-            style::Reset
-        );
-    } else if args.changelog.is_none() && args.deploy.is_none() {
-        println!("No action specified");
-        process::exit(1);
+    let result = handle_cluster_test_runner_commands(&args, &mut runner).await;
+    if let Err(e) = &result {
+        if let Some(wait_on_failure) = wait_on_failure {
+            warn!(
+                "Command failed with {}, waiting for {:?} before terminating",
+                e, wait_on_failure
+            );
+            delay_for(wait_on_failure).await;
+            warn!("Tearing down cluster now");
+        }
     }
+    runner.teardown().await;
+    let perf_msg = exit_on_error(result);
 
     if let Some(mut changelog) = args.changelog {
         if changelog.len() != 2 {
@@ -218,6 +189,47 @@ pub async fn main() {
     } else if let Some(perf_msg) = perf_msg {
         println!("{}", perf_msg);
     }
+}
+
+// This function contain handlers for commands that require cluster running for executing them
+async fn handle_cluster_test_runner_commands(
+    args: &Args,
+    runner: &mut ClusterTestRunner,
+) -> Result<Option<String>> {
+    let startup_timeout = Duration::from_secs(5 * 60);
+    runner
+        .wait_until_all_healthy(Instant::now() + startup_timeout)
+        .await?;
+    let mut perf_msg = None;
+    if args.health_check {
+        let duration = Duration::from_secs(args.duration);
+        run_health_check(&runner.logs, &mut runner.health_check_runner, duration).await?
+    } else if args.perf_run {
+        perf_msg = Some(runner.perf_run().await?);
+    } else if args.run_ci_suite {
+        perf_msg = Some(runner.run_ci_suite().await?);
+    } else if let Some(experiment_name) = args.run.as_ref() {
+        runner
+            .run_and_report(get_experiment(experiment_name, &args.last, &runner.cluster))
+            .await?;
+        info!(
+            "{}Experiment Result: {}{}",
+            Bold {},
+            runner.report,
+            Reset {}
+        );
+    } else if args.emit_tx {
+        emit_tx(&runner.cluster, &args).await?;
+    } else if let Some(ref exec) = args.exec {
+        let pos = exec.find(':');
+        let pos = pos.ok_or_else(|| {
+            format_err!("Format for exec command is pod:command, for example val-1:date")
+        })?;
+        let (pod, cmd) = exec.split_at(pos);
+        let cmd = &cmd[1..];
+        runner.exec_on_pod(pod, cmd).await?;
+    }
+    Ok(perf_msg)
 }
 
 fn exit_on_error<T>(r: Result<T>) -> T {
@@ -241,19 +253,11 @@ struct BasicSwarmUtil {
     cluster: Cluster,
 }
 
-struct ClusterUtil {
-    cluster: Cluster,
-    prometheus: Prometheus,
-    cluster_swarm: ClusterSwarmKube,
-    current_tag: String,
-}
-
 struct ClusterTestRunner {
     logs: LogTail,
     trace_tail: TraceTail,
     cluster: Cluster,
     health_check_runner: HealthCheckRunner,
-    experiment_interval: Duration,
     slack: SlackClient,
     slack_changelog_url: Option<Url>,
     tx_emitter: TxEmitter,
@@ -287,13 +291,14 @@ fn parse_host_port(s: &str) -> Result<(String, u32, Option<u32>)> {
     Ok((host, port, None))
 }
 
-pub async fn emit_tx(
-    cluster: &Cluster,
-    accounts_per_client: usize,
-    workers_per_ac: Option<usize>,
-    thread_params: EmitThreadParams,
-    duration: Duration,
-) {
+async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
+    let accounts_per_client = args.accounts_per_client;
+    let workers_per_ac = args.workers_per_ac;
+    let thread_params = EmitThreadParams {
+        wait_millis: args.wait_millis,
+        wait_committed: !args.burst,
+    };
+    let duration = Duration::from_secs(args.duration);
     let mut emitter = TxEmitter::new(cluster);
     let job = emitter
         .start_job(EmitJobRequest {
@@ -303,7 +308,7 @@ pub async fn emit_tx(
             thread_params,
         })
         .await
-        .expect("Failed to start emit job");
+        .map_err(|e| format_err!("Failed to start emit job: {}", e))?;
     let deadline = Instant::now() + duration;
     let mut prev_stats: Option<TxStats> = None;
     while Instant::now() < deadline {
@@ -317,9 +322,10 @@ pub async fn emit_tx(
     let stats = emitter.stop_job(job).await;
     println!("Total stats: {}", stats);
     println!("Average rate: {}", stats.rate(duration));
+    Ok(())
 }
 
-fn run_health_check(
+async fn run_health_check(
     logs: &LogTail,
     health_check_runner: &mut HealthCheckRunner,
     duration: Duration,
@@ -331,7 +337,9 @@ fn run_health_check(
         // This assumes so far that event propagation time is << 1s, this need to be refined
         // in future to account for actual event propagation delay
         let events = logs.recv_all_until_deadline(deadline);
-        let result = health_check_runner.run(&events, &HashSet::new(), PrintFailures::All);
+        let result = health_check_runner
+            .run(&events, &HashSet::new(), PrintFailures::All)
+            .await;
         let now = Instant::now();
         if now > health_check_deadline {
             return result.map(|_| ());
@@ -431,93 +439,37 @@ impl BasicSwarmUtil {
     }
 }
 
-impl ClusterUtil {
-    pub async fn setup(args: &Args) -> Self {
-        let cluster_swarm = ClusterSwarmKube::new()
-            .await
-            .expect("Failed to initialize ClusterSwarmKube");
-        cluster_swarm.delete_all().await.expect("delete_all failed");
-        let current_tag = args.deploy.as_deref().unwrap_or("master");
-        info!(
-            "Deploying with {} tag for validators and fullnodes",
-            current_tag
-        );
-        let asg_name = format!(
-            "{}-k8s-testnet-validators",
-            cluster_swarm
-                .get_workspace()
-                .await
-                .expect("Failed to get workspace")
-        );
-        let mut instance_count =
-            args.k8s_num_validators + (args.k8s_fullnodes_per_validator * args.k8s_num_validators);
-        if args.enable_lsr {
-            if args.lsr_backend == "vault" {
-                instance_count += args.k8s_num_validators * 2;
-            } else {
-                instance_count += args.k8s_num_validators;
-            }
-        }
-        aws::set_asg_size(instance_count as i64, 5.0, &asg_name, true)
-            .await
-            .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
-        let (validators, fullnodes) = cluster_swarm
-            .spawn_validator_and_fullnode_set(
-                args.k8s_num_validators,
-                args.k8s_fullnodes_per_validator,
-                args.enable_lsr,
-                &args.lsr_backend,
-                current_tag,
-            )
-            .await
-            .expect("Failed to spawn_validator_and_fullnode_set");
-        info!("Deployment complete");
-        let cluster = Cluster::new(validators, fullnodes);
-
-        let cluster = if args.peers.is_empty() {
-            cluster
-        } else {
-            cluster.validator_sub_cluster(args.peers.clone())
-        };
-        let prometheus_ip = "libra-testnet-prometheus-server.default.svc.cluster.local";
-        let grafana_base_url = cluster_swarm
-            .get_grafana_baseurl()
-            .await
-            .expect("Failed to discover grafana url in k8s");
-        let prometheus = Prometheus::new(prometheus_ip, grafana_base_url);
-        info!(
-            "Discovered {} validators and {} fns",
-            cluster.validator_instances().len(),
-            cluster.fullnode_instances().len(),
-        );
-        Self {
-            cluster,
-            prometheus,
-            cluster_swarm,
-            current_tag: current_tag.to_string(),
-        }
-    }
-}
-
 impl ClusterTestRunner {
     pub async fn teardown(&mut self) {
+        self.cluster_swarm.cleanup().await.expect("Cleanup failed");
         let workspace = self
             .cluster_swarm
             .get_workspace()
             .await
             .expect("Failed to get workspace");
         let asg_name = format!("{}-k8s-testnet-validators", workspace);
-        aws::set_asg_size(0, 0.0, &asg_name, false)
+        aws::set_asg_size(0, 0.0, &asg_name, false, true)
             .await
             .unwrap_or_else(|_| panic!("{} scaling failed", asg_name));
     }
 
     /// Discovers cluster, setup log, etc
-    pub async fn setup(args: &Args) -> Self {
-        let util = ClusterUtil::setup(args).await;
-        let cluster = util.cluster;
-        let cluster_swarm = util.cluster_swarm;
-        let current_tag = util.current_tag;
+    pub async fn setup(args: &Args) -> Result<Self> {
+        let current_tag = args.deploy.as_deref().unwrap_or("master");
+        let cluster_swarm = ClusterSwarmKube::new()
+            .await
+            .map_err(|e| format_err!("Failed to initialize ClusterSwarmKube: {}", e))?;
+        let prometheus_ip = "libra-testnet-prometheus-server.default.svc.cluster.local";
+        let grafana_base_url = cluster_swarm
+            .get_grafana_baseurl()
+            .await
+            .expect("Failed to discover grafana url in k8s");
+        let prometheus = Prometheus::new(prometheus_ip, grafana_base_url);
+        let cluster_builder = ClusterBuilder::new(current_tag.to_string(), cluster_swarm.clone());
+        let cluster = cluster_builder
+            .setup_cluster(&args.cluster_builder_params)
+            .await
+            .map_err(|e| format_err!("Failed to setup cluster: {}", e))?;
         let log_tail_started = Instant::now();
         let (logs, trace_tail) = DebugPortLogWorker::spawn_new(&cluster);
         let log_tail_startup_time = Instant::now() - log_tail_started;
@@ -526,17 +478,11 @@ impl ClusterTestRunner {
             log_tail_startup_time.as_millis()
         );
         let health_check_runner = HealthCheckRunner::new_all(cluster.clone());
-        let experiment_interval_sec = match env::var("EXPERIMENT_INTERVAL") {
-            Ok(s) => s.parse().expect("EXPERIMENT_INTERVAL env is not a number"),
-            Err(..) => 15,
-        };
-        let experiment_interval = Duration::from_secs(experiment_interval_sec);
         let slack = SlackClient::new();
         let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
             .ok();
         let tx_emitter = TxEmitter::new(&cluster);
-        let prometheus = util.prometheus;
         let github = GitHub::new();
         let report = SuiteReport::new();
         let global_emit_job_request = EmitJobRequest {
@@ -554,12 +500,11 @@ impl ClusterTestRunner {
             } else {
                 args.emit_to_validator.unwrap_or(false)
             };
-        Self {
+        Ok(Self {
             logs,
             trace_tail,
             cluster,
             health_check_runner,
-            experiment_interval,
             slack,
             slack_changelog_url,
             tx_emitter,
@@ -569,14 +514,13 @@ impl ClusterTestRunner {
             global_emit_job_request,
             emit_to_validator,
             cluster_swarm,
-            current_tag,
-        }
+            current_tag: current_tag.to_string(),
+        })
     }
 
     pub async fn run_ci_suite(&mut self) -> Result<String> {
         let suite = ExperimentSuite::new_pre_release(&self.cluster);
         let result = self.run_suite(suite).await;
-        self.cluster_swarm.delete_all().await?;
         result?;
         let perf_msg = format!("Performance report:\n```\n{}\n```", self.report);
         Ok(perf_msg)
@@ -629,22 +573,17 @@ impl ClusterTestRunner {
         let suite_started = Instant::now();
         for experiment in suite.experiments {
             let experiment_name = format!("{}", experiment);
-            let result = self
-                .run_single_experiment(experiment, None)
+            self.run_single_experiment(experiment, None)
                 .await
-                .map_err(move |e| format_err!("Experiment `{}` failed: `{}`", experiment_name, e));
-            if result.is_err() {
-                self.teardown().await;
-                return result;
-            }
-            delay_for(self.experiment_interval).await;
+                .map_err(move |e| {
+                    format_err!("Experiment `{}` failed: `{}`", experiment_name, e)
+                })?;
         }
         info!(
             "Suite completed in {:?}",
             Instant::now().duration_since(suite_started)
         );
         self.print_report();
-        self.teardown().await;
         Ok(())
     }
 
@@ -663,12 +602,10 @@ impl ClusterTestRunner {
         Ok(self.report.to_string())
     }
 
-    pub async fn cleanup_and_run(&mut self, experiment: Box<dyn Experiment>) -> Result<()> {
-        self.cleanup().await;
+    pub async fn run_and_report(&mut self, experiment: Box<dyn Experiment>) -> Result<()> {
         let result = self
             .run_single_experiment(experiment, Some(self.global_emit_job_request.clone()))
             .await;
-        self.cluster_swarm.delete_all().await?;
         result?;
         self.print_report();
         Ok(())
@@ -679,11 +616,11 @@ impl ClusterTestRunner {
         experiment: Box<dyn Experiment>,
         global_emit_job_request: Option<EmitJobRequest>,
     ) -> Result<()> {
-        self.wait_until_all_healthy().await?;
         let events = self.logs.recv_all();
-        if let Err(s) =
-            self.health_check_runner
-                .run(&events, &HashSet::new(), PrintFailures::UnexpectedOnly)
+        if let Err(s) = self
+            .health_check_runner
+            .run(&events, &HashSet::new(), PrintFailures::UnexpectedOnly)
+            .await
         {
             bail!(
                 "Some validators are unhealthy before experiment started : {}",
@@ -693,23 +630,25 @@ impl ClusterTestRunner {
 
         info!(
             "{}Starting experiment {}{}{}{}",
-            style::Bold,
+            Bold {},
             color::Fg(color::Blue),
-            experiment,
+            experiment.to_string(),
             color::Fg(color::Reset),
-            style::Reset
+            Reset {}
         );
 
-        self.experiment_loop(experiment, global_emit_job_request)
+        let deadline = Instant::now() + experiment.deadline();
+
+        self.experiment_loop(experiment, global_emit_job_request, deadline)
             .await?;
 
         info!(
             "{}Experiment finished, waiting until all affected validators recover{}",
-            style::Bold,
-            style::Reset
+            Bold {},
+            Reset {}
         );
 
-        self.wait_until_all_healthy().await?;
+        self.wait_until_all_healthy(deadline).await?;
 
         info!("Experiment completed");
         Ok(())
@@ -721,10 +660,9 @@ impl ClusterTestRunner {
         &mut self,
         mut experiment: Box<dyn Experiment>,
         mut global_emit_job_request: Option<EmitJobRequest>,
+        deadline: Instant,
     ) -> Result<()> {
         let affected_validators = experiment.affected_validators();
-        let deadline = experiment.deadline();
-        let experiment_deadline = Instant::now() + deadline;
         let mut context = Context::new(
             &mut self.tx_emitter,
             &mut self.trace_tail,
@@ -736,7 +674,7 @@ impl ClusterTestRunner {
             &self.cluster_swarm,
             &self.current_tag[..],
         );
-        let mut deadline_future = delay_until(TokioInstant::from_std(experiment_deadline)).fuse();
+        let mut deadline_future = delay_until(TokioInstant::from_std(deadline)).fuse();
         let mut run_future = experiment.run(&mut context).fuse();
         loop {
             select! {
@@ -752,7 +690,7 @@ impl ClusterTestRunner {
                         &events,
                         &affected_validators,
                         PrintFailures::UnexpectedOnly,
-                    ) {
+                    ).await {
                         bail!("Validators which were not under experiment failed : {}", s);
                     }
                 }
@@ -760,36 +698,38 @@ impl ClusterTestRunner {
         }
     }
 
-    async fn wait_until_all_healthy(&mut self) -> Result<()> {
-        info!("Waiting for all validators to be healthy");
-        let wait_deadline = Instant::now() + Duration::from_secs(20 * 60);
+    async fn wait_until_all_healthy(&mut self, deadline: Instant) -> Result<()> {
+        info!("Waiting for all nodes to be healthy");
         for instance in self.cluster.validator_instances() {
             self.health_check_runner.invalidate(instance.peer_name());
         }
         loop {
             let now = Instant::now();
-            if now > wait_deadline {
-                bail!("Validators did not become healthy after deployment");
+            if now > deadline {
+                bail!("Nodes did not become healthy after deployment");
             }
             let deadline = now + HEALTH_POLL_INTERVAL;
             let events = self.logs.recv_all_until_deadline(deadline);
-            if let Ok(failed_instances) =
-                self.health_check_runner
-                    .run(&events, &HashSet::new(), PrintFailures::None)
+            if let Ok(failed_instances) = self
+                .health_check_runner
+                .run(&events, &HashSet::new(), PrintFailures::None)
+                .await
             {
                 if failed_instances.is_empty() {
                     break;
                 }
             }
         }
-        info!("All validators are now healthy. Checking json rpc endpoints of validators and full nodes");
+        info!(
+            "All nodes are now healthy. Checking json rpc endpoints of validators and full nodes"
+        );
         loop {
             let results = join_all(self.cluster.all_instances().map(Instance::try_json_rpc)).await;
 
             if results.iter().all(Result::is_ok) {
                 break;
             }
-            if Instant::now() > wait_deadline {
+            if Instant::now() > deadline {
                 for (instance, result) in zip(self.cluster.all_instances(), results) {
                     if let Err(err) = result {
                         warn!("Instance {} still unhealthy: {}", instance, err);
@@ -811,10 +751,39 @@ impl ClusterTestRunner {
         }
     }
 
-    async fn cleanup(&mut self) {
-        self.cluster_swarm
-            .remove_all_network_effects()
-            .await
-            .expect("remove_all_network_effects failed on cluster_swarm");
+    pub async fn exec_on_pod(&self, pod: &str, cmd: &str) -> Result<()> {
+        let instance = self
+            .cluster
+            .find_instance_by_pod(pod)
+            .ok_or_else(|| format_err!("Can not find instance with pod {}", pod))?;
+        instance.exec(cmd).await
+    }
+}
+
+struct Bold {}
+
+struct Reset {}
+
+impl fmt::Debug for Bold {
+    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Ok(())
+    }
+}
+
+impl fmt::Display for Bold {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", style::Bold)
+    }
+}
+
+impl fmt::Debug for Reset {
+    fn fmt(&self, _f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Ok(())
+    }
+}
+
+impl fmt::Display for Reset {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", style::Reset)
     }
 }

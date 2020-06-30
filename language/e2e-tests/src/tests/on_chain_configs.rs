@@ -13,7 +13,7 @@ use libra_types::{
     account_config::LBR_NAME,
     on_chain_config::LibraVersion,
     transaction::{TransactionArgument, TransactionStatus},
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use libra_vm::LibraVM;
 use transaction_builder::encode_update_travel_rule_limit;
@@ -34,7 +34,7 @@ fn initial_libra_version() {
         StdlibScript::UpdateLibraVersion.compiled_bytes().into_vec(),
         vec![],
         vec![TransactionArgument::U64(2)],
-        0,
+        1,
         TXN_RESERVED,
         0,
         LBR_NAME.to_owned(),
@@ -64,7 +64,7 @@ fn updated_limit_allows_txn() {
     // Execute updated dual attestation limit
     let new_micro_lbr_limit = 1_000_011;
     let output = executor.execute_and_apply(
-        blessed.signed_script_txn(encode_update_travel_rule_limit(1, new_micro_lbr_limit), 0),
+        blessed.signed_script_txn(encode_update_travel_rule_limit(3, new_micro_lbr_limit), 0),
     );
     assert_eq!(
         output.status(),

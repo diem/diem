@@ -14,11 +14,14 @@ use futures::{
     future::Future,
     SinkExt,
 };
-use libra_config::config::{NodeConfig, RoleType, StateSyncConfig, UpstreamConfig};
+use libra_config::{
+    config::{NodeConfig, RoleType, StateSyncConfig, UpstreamConfig},
+    network_id::NetworkId,
+};
 use libra_mempool::{CommitNotification, CommitResponse};
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
-    waypoint::Waypoint, PeerId,
+    waypoint::Waypoint,
 };
 use std::{
     boxed::Box,
@@ -41,7 +44,7 @@ pub struct StateSynchronizer {
 impl StateSynchronizer {
     /// Setup state synchronizer. spawns coordinator and downloader routines on executor
     pub fn bootstrap(
-        network: Vec<(PeerId, StateSynchronizerSender, StateSynchronizerEvents)>,
+        network: Vec<(NetworkId, StateSynchronizerSender, StateSynchronizerEvents)>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         storage: Arc<dyn DbReader>,
         executor: Box<dyn ChunkExecutor>,
@@ -71,7 +74,7 @@ impl StateSynchronizer {
 
     pub fn bootstrap_with_executor_proxy<E: ExecutorProxyTrait + 'static>(
         runtime: Runtime,
-        network: Vec<(PeerId, StateSynchronizerSender, StateSynchronizerEvents)>,
+        network: Vec<(NetworkId, StateSynchronizerSender, StateSynchronizerEvents)>,
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         role: RoleType,
         waypoint: Option<Waypoint>,
@@ -87,7 +90,7 @@ impl StateSynchronizer {
 
         let network_senders: HashMap<_, _> = network
             .iter()
-            .map(|(network_id, sender, _events)| (*network_id, sender.clone()))
+            .map(|(network_id, sender, _events)| (network_id.clone(), sender.clone()))
             .collect();
 
         let coordinator = SyncCoordinator::new(

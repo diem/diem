@@ -6,8 +6,9 @@ use crate::{
     config::{global::Config as GlobalConfig, transaction::Config as TransactionConfig},
     errors::*,
 };
-use bytecode_verifier::verifier::{
-    verify_module_dependencies, verify_script_dependencies, VerifiedModule, VerifiedScript,
+use bytecode_verifier::{
+    verifier::{verify_module_dependencies, verify_script_dependencies},
+    VerifiedModule, VerifiedScript,
 };
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use language_e2e_tests::executor::FakeExecutor;
@@ -24,7 +25,7 @@ use libra_types::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
         SignedTransaction, Transaction as LibraTransaction, TransactionOutput, TransactionStatus,
     },
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use mirai_annotations::checked_verify;
 use move_core_types::{
@@ -199,7 +200,7 @@ impl fmt::Display for EvaluationLog {
 fn fetch_script_dependencies(
     exec: &mut FakeExecutor,
     script: &CompiledScript,
-) -> Vec<VerifiedModule> {
+) -> Vec<CompiledModule> {
     let inner = script.as_inner();
     let idents = inner.module_handles.iter().map(|handle| {
         ModuleId::new(
@@ -213,7 +214,7 @@ fn fetch_script_dependencies(
 fn fetch_module_dependencies(
     exec: &mut FakeExecutor,
     module: &CompiledModule,
-) -> Vec<VerifiedModule> {
+) -> Vec<CompiledModule> {
     let idents = ModuleView::new(module)
         .module_handles()
         .map(|handle_view| handle_view.module_id());
@@ -223,26 +224,31 @@ fn fetch_module_dependencies(
 fn fetch_dependencies(
     exec: &mut FakeExecutor,
     idents: impl Iterator<Item = ModuleId>,
-) -> Vec<VerifiedModule> {
+) -> Vec<CompiledModule> {
     // idents.into_inner().
     idents
         .flat_map(|ident| fetch_dependency(exec, ident))
         .collect()
 }
 
-fn fetch_dependency(exec: &mut FakeExecutor, ident: ModuleId) -> Option<VerifiedModule> {
+fn fetch_dependency(exec: &mut FakeExecutor, ident: ModuleId) -> Option<CompiledModule> {
     let ap = AccessPath::from(&ident);
     let blob: Vec<u8> = exec.get_state_view().get(&ap).ok().flatten()?;
     let compiled: CompiledModule = CompiledModule::deserialize(&blob).ok()?;
-    VerifiedModule::new(compiled).ok()
+    match VerifiedModule::new(compiled) {
+        Ok(verified_module) => Some(verified_module.into_inner()),
+        Err(_) => None,
+    }
 }
 
 /// Verify a script with its dependencies.
 pub fn verify_script(
     script: CompiledScript,
-    deps: &[VerifiedModule],
-) -> std::result::Result<VerifiedScript, VMStatus> {
-    let verified_script = VerifiedScript::new(script).map_err(|(_, e)| e)?;
+    deps: &[CompiledModule],
+) -> std::result::Result<CompiledScript, VMStatus> {
+    let verified_script = VerifiedScript::new(script)
+        .map_err(|(_, e)| e)?
+        .into_inner();
     verify_script_dependencies(&verified_script, deps)?;
     Ok(verified_script)
 }
@@ -250,9 +256,11 @@ pub fn verify_script(
 /// Verify a module with its dependencies.
 pub fn verify_module(
     module: CompiledModule,
-    deps: &[VerifiedModule],
-) -> std::result::Result<VerifiedModule, VMStatus> {
-    let verified_module = VerifiedModule::new(module).map_err(|(_, e)| e)?;
+    deps: &[CompiledModule],
+) -> std::result::Result<CompiledModule, VMStatus> {
+    let verified_module = VerifiedModule::new(module)
+        .map_err(|(_, e)| e)?
+        .into_inner();
     verify_module_dependencies(&verified_module, deps)?;
     Ok(verified_module)
 }
@@ -280,17 +288,22 @@ fn get_transaction_parameters<'a>(
         .gas_currency_code
         .clone()
         .unwrap_or_else(|| LBR_NAME.to_owned());
-    let account_balance = exec
-        .read_balance_resource(
-            config.sender,
-            account_config::from_currency_code_string(&gas_currency_code).unwrap(),
-        )
-        .unwrap_or_else(|| panic!("Couldn't read balance of type {:?} for account {:?}; did you forget to specify //! gas-currency: {:?} ?", config.sender.address(), gas_currency_code, gas_currency_code));
     let max_number_of_gas_units = GasConstants::default().maximum_number_of_gas_units;
     let max_gas_amount = config.max_gas.unwrap_or_else(|| {
         if gas_unit_price == 0 {
             max_number_of_gas_units.get()
         } else {
+            let account_balance = exec
+                .read_balance_resource(
+                    config.sender,
+                    account_config::from_currency_code_string(&gas_currency_code).unwrap(),
+                )
+                .unwrap_or_else(|| panic!(
+                        "Couldn't read balance of type {:?} for account {:?}; did you forget to specify //! gas-currency: {:?} ?",
+                        config.sender.address(),
+                        gas_currency_code,
+                        gas_currency_code
+                ));
             std::cmp::min(
                 max_number_of_gas_units.get(),
                 account_balance.coin() / gas_unit_price,
@@ -470,7 +483,7 @@ fn eval_transaction<TComp: Compiler>(
             log.append(EvaluationOutput::Stage(Stage::Verifier));
             let deps = fetch_script_dependencies(exec, &compiled_script);
             let compiled_script = match verify_script(compiled_script, &deps) {
-                Ok(script) => script.into_inner(),
+                Ok(script) => script,
                 Err(err) => {
                     let err: Error = ErrorKind::VerificationError(err).into();
                     log.append(EvaluationOutput::Error(Box::new(err)));
@@ -508,7 +521,7 @@ fn eval_transaction<TComp: Compiler>(
             log.append(EvaluationOutput::Stage(Stage::Verifier));
             let deps = fetch_module_dependencies(exec, &compiled_module);
             let compiled_module = match verify_module(compiled_module, &deps) {
-                Ok(module) => module.into_inner(),
+                Ok(module) => module,
                 Err(err) => {
                     let err: Error = ErrorKind::VerificationError(err).into();
                     log.append(EvaluationOutput::Error(Box::new(err)));

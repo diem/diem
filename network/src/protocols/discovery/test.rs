@@ -8,7 +8,10 @@ use crate::{
         self, conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification,
         PeerManagerRequest,
     },
-    protocols::direct_send::Message,
+    protocols::{
+        direct_send::Message,
+        network::{NewNetworkEvents, NewNetworkSender},
+    },
     ProtocolId,
 };
 use anyhow::anyhow;
@@ -55,7 +58,11 @@ fn setup_discovery(
     let (ticker_tx, ticker_rx) = channel::new_test(0);
     let discovery = {
         Discovery::new(
-            NetworkContext::new(NetworkId::Validator, RoleType::Validator, peer_id),
+            Arc::new(NetworkContext::new(
+                NetworkId::Validator,
+                RoleType::Validator,
+                peer_id,
+            )),
             addrs,
             ticker_rx,
             DiscoveryNetworkSender::new(
@@ -227,7 +234,11 @@ fn outbound() {
         connection_notifs_tx
             .push_with_feedback(
                 other_peer_id,
-                peer_manager::ConnectionNotification::NewPeer(other_peer_id, other_peer_addr),
+                peer_manager::ConnectionNotification::NewPeer(
+                    other_peer_id,
+                    other_peer_addr,
+                    NetworkContext::mock(),
+                ),
                 Some(delivered_tx),
             )
             .unwrap();
@@ -283,6 +294,7 @@ fn old_note_higher_epoch() {
                 peer_manager::ConnectionNotification::NewPeer(
                     other_peer_id,
                     other_peer_addrs[0].clone(),
+                    NetworkContext::mock(),
                 ),
                 Some(delivered_tx),
             )
@@ -357,6 +369,7 @@ fn old_note_max_epoch() {
                 peer_manager::ConnectionNotification::NewPeer(
                     other_peer_id,
                     other_peer_addrs[0].clone(),
+                    NetworkContext::mock(),
                 ),
                 Some(delivered_tx),
             )

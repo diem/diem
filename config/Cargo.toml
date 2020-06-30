@@ -10,20 +10,21 @@ publish = false
 edition = "2018"
 
 [dependencies]
-anyhow = "1.0.31"
 get_if_addrs = { version = "0.5.3", default-features = false }
 mirai-annotations = "1.8.0"
 rand = "0.7.3"
-serde = { version = "1.0.112", features = ["rc"], default-features = false }
-serde_yaml = { version = "0.8.13" }
+serde = { version = "1.0.114", features = ["rc"], default-features = false }
+serde_yaml = "0.8.13"
 log = { version = "0.4.8", features = ["serde"] }
 thiserror = "1.0.20"
 
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
 libra-crypto-derive = { path = "../crypto/crypto-derive", version = "0.1.0" }
+libra-global-constants = { path = "../config/global-constants", version = "0.1.0"}
 libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-network-address = { path = "../network/network-address", version = "0.1.0" }
+libra-secure-storage = { path = "../secure/storage", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
@@ -31,3 +32,4 @@ libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 [features]
 default = []
 fuzzing = ["libra-crypto/fuzzing", "libra-types/fuzzing"]
+testing = []

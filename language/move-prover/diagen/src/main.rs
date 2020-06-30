@@ -81,14 +81,12 @@ fn generate(inp_dir: &Path, out_dir: &Path) -> anyhow::Result<()> {
         }
 
         let mut dep_list: Vec<String> = Vec::new();
-        let mut at = 0;
         // TODO: This is not 100% correct because modules can be used with full qualification and without `use`.
         // Refer to `move-prover/src/lib.rs` which correctly addresses this issue.
-        let rex2 = Regex::new(r"(?m)use 0x1::(\w+)\s*;").unwrap();
-        while let Some(cap) = rex2.captures(&content[at..]) {
+        let rex2 = Regex::new(r"(?m)use 0x1::(\w+)\s*(;|:)").unwrap();
+        for cap in rex2.captures_iter(&content) {
             let dep = cap.get(1).unwrap().as_str().to_string();
             dep_list.push(dep.clone());
-            at += cap.get(0).unwrap().end();
 
             match dep_graph_inverse.entry(dep) {
                 Entry::Vacant(e) => {
@@ -108,7 +106,6 @@ fn generate(inp_dir: &Path, out_dir: &Path) -> anyhow::Result<()> {
 
     for (module, dep_list) in dep_graph.iter() {
         dot_src.push_str(&format!("    {}\n", module));
-
         for dep in dep_list.iter() {
             dot_src.push_str(&format!("    {} -> {}\n", module, dep));
         }
@@ -132,7 +129,7 @@ fn generate(inp_dir: &Path, out_dir: &Path) -> anyhow::Result<()> {
 
     println!(
         "\nTo convert these .dot files into .pdf files, run {:?}.",
-        out_dir.join("convert_all.sh")
+        out_dir.join("convert_all_dot_to_pdf.sh")
     );
 
     Ok(())

@@ -5,13 +5,16 @@
 
 mod commit_check;
 mod debug_interface_log_tail;
+mod fullnode_check;
 mod liveness_check;
 mod log_tail;
 
 use crate::{cluster::Cluster, util::unix_timestamp_now};
 use anyhow::{bail, Result};
+use async_trait::async_trait;
 pub use commit_check::CommitHistoryHealthCheck;
 pub use debug_interface_log_tail::DebugPortLogWorker;
+pub use fullnode_check::FullNodeHealthCheck;
 use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
 pub use log_tail::{LogTail, TraceTail};
@@ -57,11 +60,12 @@ impl fmt::Debug for ValidatorEvent {
     }
 }
 
-pub trait HealthCheck {
+#[async_trait]
+pub trait HealthCheck: Send {
     /// Verify specific event
-    fn on_event(&mut self, event: &ValidatorEvent, ctx: &mut HealthCheckContext);
+    fn on_event(&mut self, _event: &ValidatorEvent, _ctx: &mut HealthCheckContext) {}
     /// Periodic verification (happens even if when no events produced)
-    fn verify(&mut self, _ctx: &mut HealthCheckContext) {}
+    async fn verify(&mut self, _ctx: &mut HealthCheckContext);
     /// Optionally marks validator as failed, requiring waiting for at least one event from it to
     /// mark it as healthy again
     fn invalidate(&mut self, _validator: &str) {}
@@ -89,11 +93,13 @@ impl HealthCheckRunner {
 
     pub fn new_all(cluster: Cluster) -> Self {
         let liveness_health_check = LivenessHealthCheck::new(&cluster);
+        let fullnode_check = FullNodeHealthCheck::new(cluster.clone());
         Self::new(
             cluster,
             vec![
                 Box::new(CommitHistoryHealthCheck::new()),
                 Box::new(liveness_health_check),
+                Box::new(fullnode_check),
             ],
         )
     }
@@ -103,7 +109,7 @@ impl HealthCheckRunner {
     /// of all the unexpected failures.
     /// Otherwise, it returns a list of ALL the failed validators
     /// It also takes print_failures parameter that controls level of verbosity of health check
-    pub fn run(
+    pub async fn run(
         &mut self,
         events: &[ValidatorEvent],
         affected_validators_set: &HashSet<String>,
@@ -122,7 +128,7 @@ impl HealthCheckRunner {
                 health_check.on_event(event, &mut context);
             }
             let events_processed = Instant::now();
-            health_check.verify(&mut context);
+            health_check.verify(&mut context).await;
             let verified = Instant::now();
             if self.debug {
                 messages.push(format!(

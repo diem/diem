@@ -2,10 +2,13 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    hlir::ast::{Command, Command_, FunctionSignature, Label, SingleType, StructDefinition},
-    parser::ast::{FunctionName, FunctionVisibility, ModuleIdent, StructName, Var},
+    hlir::ast::{
+        BaseType, Command, Command_, FunctionSignature, Label, SingleType, StructDefinition,
+    },
+    parser::ast::{ConstantName, FunctionName, FunctionVisibility, ModuleIdent, StructName, Var},
     shared::{ast_debug::*, unique_map::UniqueMap},
 };
+use move_core_types::value::MoveValue;
 use move_ir_types::location::*;
 use std::collections::{BTreeMap, VecDeque};
 
@@ -28,6 +31,7 @@ pub struct Program {
 #[derive(Debug)]
 pub struct Script {
     pub loc: Loc,
+    pub constants: UniqueMap<ConstantName, Constant>,
     pub function_name: FunctionName,
     pub function: Function,
 }
@@ -42,7 +46,19 @@ pub struct ModuleDefinition {
     /// `dependency_order` is the topological order/rank in the dependency graph.
     pub dependency_order: usize,
     pub structs: UniqueMap<StructName, StructDefinition>,
+    pub constants: UniqueMap<ConstantName, Constant>,
     pub functions: UniqueMap<FunctionName, Function>,
+}
+
+//**************************************************************************************************
+// Constants
+//**************************************************************************************************
+
+#[derive(PartialEq, Debug)]
+pub struct Constant {
+    pub loc: Loc,
+    pub signature: BaseType,
+    pub value: Option<MoveValue>,
 }
 
 //**************************************************************************************************
@@ -141,9 +157,14 @@ impl AstDebug for Script {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Script {
             loc: _loc,
+            constants,
             function_name,
             function,
         } = self;
+        for cdef in constants {
+            cdef.ast_debug(w);
+            w.new_line();
+        }
         (function_name.clone(), function).ast_debug(w);
     }
 }
@@ -154,6 +175,7 @@ impl AstDebug for ModuleDefinition {
             is_source_module,
             dependency_order,
             structs,
+            constants,
             functions,
         } = self;
         if *is_source_module {
@@ -166,9 +188,54 @@ impl AstDebug for ModuleDefinition {
             sdef.ast_debug(w);
             w.new_line();
         }
+        for cdef in constants {
+            cdef.ast_debug(w);
+            w.new_line();
+        }
         for fdef in functions {
             fdef.ast_debug(w);
             w.new_line();
+        }
+    }
+}
+
+impl AstDebug for (ConstantName, &Constant) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (
+            name,
+            Constant {
+                loc: _loc,
+                signature,
+                value,
+            },
+        ) = self;
+        w.write(&format!("const {}:", name));
+        signature.ast_debug(w);
+        w.write(" = ");
+        match value {
+            None => w.write("_|_ /* unfoldable */"),
+            Some(v) => v.ast_debug(w),
+        }
+        w.write(";");
+    }
+}
+
+impl AstDebug for MoveValue {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        use MoveValue as V;
+        match self {
+            V::U8(u) => w.write(&format!("{}", u)),
+            V::U64(u) => w.write(&format!("{}", u)),
+            V::U128(u) => w.write(&format!("{}", u)),
+            V::Bool(b) => w.write(&format!("{}", b)),
+            V::Address(a) => w.write(&format!("{}", a)),
+            V::Vector(vs) => {
+                w.write("vector[");
+                w.comma(vs, |w, v| v.ast_debug(w));
+                w.write("]");
+            }
+            V::Struct(_) => panic!("ICE struct constants not supported"),
+            V::Signer(_) => panic!("ICE signer constants not supported"),
         }
     }
 }

@@ -8,7 +8,7 @@ mod tests;
 
 use crate::storage::{
     command_adapter::config::{CommandAdapterConfig, EnvVar},
-    BackupHandle, BackupHandleRef, BackupStorage, FileHandle, FileHandleRef,
+    BackupHandle, BackupHandleRef, BackupStorage, FileHandle, FileHandleRef, ShellSafeName,
 };
 use anyhow::{anyhow, ensure, Result};
 use async_trait::async_trait;
@@ -50,7 +50,7 @@ impl CommandAdapter {
 
 #[async_trait]
 impl BackupStorage for CommandAdapter {
-    async fn create_backup(&self, name: &str) -> Result<BackupHandle> {
+    async fn create_backup(&self, name: &ShellSafeName) -> Result<BackupHandle> {
         let mut cmd = self.cmd(
             &self.config.commands.create_backup,
             vec![EnvVar::backup_name(name.to_string())],
@@ -62,13 +62,15 @@ impl BackupStorage for CommandAdapter {
             cmd,
             output.status.code(),
         );
-        Ok(BackupHandle::from_utf8(output.stdout)?)
+        let mut backup_handle = BackupHandle::from_utf8(output.stdout)?;
+        backup_handle.truncate(backup_handle.trim_end().len());
+        Ok(backup_handle)
     }
 
     async fn create_for_write(
         &self,
         backup_handle: &BackupHandleRef,
-        name: &str,
+        name: &ShellSafeName,
     ) -> Result<(FileHandle, Box<dyn AsyncWrite + Send + Unpin>)> {
         let mut child = self
             .cmd(
@@ -90,6 +92,7 @@ impl BackupStorage for CommandAdapter {
             .ok_or_else(|| anyhow!("Child process stdout is None."))?;
         let mut file_handle = FileHandle::new();
         stdout.read_to_string(&mut file_handle).await?;
+        file_handle.truncate(file_handle.trim_end().len());
         Ok((file_handle, Box::new(stdin)))
     }
 

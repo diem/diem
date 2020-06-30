@@ -8,14 +8,12 @@ use std::collections::HashMap;
 #[test]
 fn test_peer_manager() {
     let peers = vec![
-        PeerNetworkId::random(),
-        PeerNetworkId::random(),
-        PeerNetworkId::random(),
-        PeerNetworkId::random(),
+        PeerNetworkId::random_validator(),
+        PeerNetworkId::random_validator(),
+        PeerNetworkId::random_validator(),
+        PeerNetworkId::random_validator(),
     ];
-    let mut upstream_config = UpstreamConfig::default();
-    upstream_config.upstream_peers = peers.iter().cloned().collect();
-    let mut peer_manager = PeerManager::new(upstream_config);
+    let mut peer_manager = PeerManager::new(UpstreamConfig::default());
     for peer_id in peers.clone() {
         peer_manager.enable_peer(peer_id);
     }
@@ -40,19 +38,20 @@ fn test_peer_manager() {
 
 #[test]
 fn test_remove_requests() {
-    let peers = vec![PeerNetworkId::random(), PeerNetworkId::random()];
-    let mut upstream_config = UpstreamConfig::default();
-    upstream_config.upstream_peers = peers.iter().cloned().collect();
-    let mut peer_manager = PeerManager::new(upstream_config);
+    let peers = vec![
+        PeerNetworkId::random_validator(),
+        PeerNetworkId::random_validator(),
+    ];
+    let mut peer_manager = PeerManager::new(UpstreamConfig::default());
     for peer in peers.iter() {
-        peer_manager.enable_peer(*peer);
+        peer_manager.enable_peer(peer.clone());
     }
 
-    peer_manager.process_request(1, peers[0]);
-    peer_manager.process_request(3, peers[1]);
-    peer_manager.process_request(5, peers[0]);
-    peer_manager.process_request(10, peers[0]);
-    peer_manager.process_request(12, peers[1]);
+    peer_manager.process_request(1, peers[0].clone());
+    peer_manager.process_request(3, peers[1].clone());
+    peer_manager.process_request(5, peers[0].clone());
+    peer_manager.process_request(10, peers[0].clone());
+    peer_manager.process_request(12, peers[1].clone());
 
     peer_manager.remove_requests(5);
 
@@ -65,17 +64,18 @@ fn test_remove_requests() {
 
 #[test]
 fn test_peer_manager_request_metadata() {
-    let peers = vec![PeerNetworkId::random(), PeerNetworkId::random()];
-    let mut upstream_config = UpstreamConfig::default();
-    upstream_config.upstream_peers = peers.iter().cloned().collect();
-    let mut peer_manager = PeerManager::new(upstream_config);
+    let peers = vec![
+        PeerNetworkId::random_validator(),
+        PeerNetworkId::random_validator(),
+    ];
+    let mut peer_manager = PeerManager::new(UpstreamConfig::default());
     for peer in peers.iter() {
-        peer_manager.enable_peer(*peer);
+        peer_manager.enable_peer(peer.clone());
     }
     assert!(peer_manager.get_first_request_time(1).is_none());
-    peer_manager.process_request(1, peers[0]);
+    peer_manager.process_request(1, peers[0].clone());
     peer_manager.process_timeout(1, true);
-    peer_manager.process_request(1, peers[1]);
+    peer_manager.process_request(1, peers[1].clone());
     assert!(peer_manager.peer_score(&peers[0]).unwrap() < 99.0);
     assert!(peer_manager.peer_score(&peers[1]).unwrap() > 99.0);
     assert!(

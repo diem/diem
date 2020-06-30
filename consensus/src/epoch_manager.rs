@@ -11,6 +11,7 @@ use crate::{
         rotating_proposer_election::{choose_leader, RotatingProposer},
         round_state::{ExponentialTimeInterval, RoundState},
     },
+    metrics_safety_rules::MetricsSafetyRules,
     network::{IncomingBlockRetrievalRequest, NetworkReceivers, NetworkSender},
     network_interface::{ConsensusMsg, ConsensusNetworkSender},
     persistent_liveness_storage::{LedgerRecoveryData, PersistentLivenessStorage, RecoveryData},
@@ -28,7 +29,6 @@ use futures::{select, StreamExt};
 use libra_config::config::{ConsensusConfig, ConsensusProposerType, NodeConfig};
 use libra_logger::prelude::*;
 use libra_metrics::monitor;
-use libra_secure_storage::config;
 use libra_types::{
     account_address::AccountAddress,
     epoch_change::EpochChangeProof,
@@ -36,12 +36,8 @@ use libra_types::{
     on_chain_config::{OnChainConfigPayload, ValidatorSet},
 };
 use network::protocols::network::Event;
-use safety_rules::SafetyRulesManager;
-use std::{
-    cmp::Ordering,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use safety_rules::{SafetyRulesManager, TSafetyRules};
+use std::{cmp::Ordering, sync::Arc, time::Duration};
 
 /// RecoveryManager is used to process events in order to sync up with peer if we can't recover from local consensusdb
 /// RoundManager is used for normal event handling.
@@ -76,7 +72,7 @@ pub struct EpochManager {
     self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
     network_sender: ConsensusNetworkSender,
     timeout_sender: channel::Sender<Round>,
-    txn_manager: Box<dyn TxnManager>,
+    txn_manager: Arc<dyn TxnManager>,
     state_computer: Arc<dyn StateComputer>,
     storage: Arc<dyn PersistentLivenessStorage>,
     safety_rules_manager: SafetyRulesManager,
@@ -90,13 +86,14 @@ impl EpochManager {
         self_sender: channel::Sender<anyhow::Result<Event<ConsensusMsg>>>,
         network_sender: ConsensusNetworkSender,
         timeout_sender: channel::Sender<Round>,
-        txn_manager: Box<dyn TxnManager>,
+        txn_manager: Arc<dyn TxnManager>,
         state_computer: Arc<dyn StateComputer>,
         storage: Arc<dyn PersistentLivenessStorage>,
     ) -> Self {
-        let author = config::peer_id(node_config.validator_network.as_ref().unwrap());
+        let author = node_config.validator_network.as_ref().unwrap().peer_id();
         let config = node_config.consensus.clone();
-        let safety_rules_manager = SafetyRulesManager::new(node_config);
+        let sr_config = &mut node_config.consensus.safety_rules;
+        let safety_rules_manager = SafetyRulesManager::new(sr_config);
         Self {
             author,
             config,
@@ -186,7 +183,7 @@ impl EpochManager {
         let proof = self
             .storage
             .libra_db()
-            .get_epoch_change_ledger_infos(request.start_epoch, request.end_epoch)
+            .get_epoch_ending_ledger_infos(request.start_epoch, request.end_epoch)
             .context("[EpochManager] Failed to get epoch proof")?;
         let msg = ConsensusMsg::EpochChangeProof(Box::new(proof));
         self.network_sender.send_to(peer_id, msg).context(format!(
@@ -255,7 +252,6 @@ impl EpochManager {
         self.processor = None;
         counters::EPOCH.set(epoch_state.epoch as i64);
         counters::CURRENT_EPOCH_VALIDATORS.set(epoch_state.verifier.len() as i64);
-        counters::CURRENT_EPOCH_QUORUM_SIZE.set(epoch_state.verifier.quorum_voting_power() as i64);
         info!(
             "Starting {} with genesis {}",
             epoch_state,
@@ -274,7 +270,7 @@ impl EpochManager {
 
         info!("Update SafetyRules");
 
-        let mut safety_rules = self.safety_rules_manager.client();
+        let mut safety_rules = MetricsSafetyRules::new(self.safety_rules_manager.client());
         let consensus_state = safety_rules
             .consensus_state()
             .expect("Unable to retrieve ConsensusState from SafetyRules");
@@ -466,19 +462,14 @@ impl EpochManager {
         request: IncomingBlockRetrievalRequest,
     ) -> anyhow::Result<()> {
         match self.processor_mut() {
-            RoundProcessor::Normal(p) => {
-                monitor!("block_retrieval", p.process_block_retrieval(request).await)
-            }
+            RoundProcessor::Normal(p) => p.process_block_retrieval(request).await,
             _ => bail!("[EpochManager] RoundManager not started yet"),
         }
     }
 
     pub async fn process_local_timeout(&mut self, round: u64) -> anyhow::Result<()> {
         match self.processor_mut() {
-            RoundProcessor::Normal(p) => monitor!(
-                "process_local_timeout",
-                p.process_local_timeout(round).await
-            ),
+            RoundProcessor::Normal(p) => p.process_local_timeout(round).await,
             _ => unreachable!("RoundManager not started yet"),
         }
     }
@@ -494,36 +485,30 @@ impl EpochManager {
             self.start_processor(payload).await;
         }
         loop {
-            let pre_select_instant = Instant::now();
-            let idle_duration;
-            let result = select! {
-                payload = reconfig_events.select_next_some() => {
-                    idle_duration = pre_select_instant.elapsed();
-                    self.start_processor(payload).await;
-                    Ok(())
+            if let Err(e) = monitor!(
+                "main_loop",
+                select! {
+                    payload = reconfig_events.select_next_some() => {
+                        monitor!("reconfig", self.start_processor(payload).await);
+                        Ok(())
+                    }
+                    msg = network_receivers.consensus_messages.select_next_some() => {
+                        monitor!("process_message", self.process_message(msg.0, msg.1).await)
+                    }
+                    block_retrieval = network_receivers.block_retrieval.select_next_some() => {
+                        monitor!("process_block_retrieval", self.process_block_retrieval(block_retrieval).await)
+                    }
+                    round = round_timeout_sender_rx.select_next_some() => {
+                        monitor!("process_local_timeout", self.process_local_timeout(round).await)
+                    }
                 }
-                msg = network_receivers.consensus_messages.select_next_some() => {
-                    idle_duration = pre_select_instant.elapsed();
-                    self.process_message(msg.0, msg.1).await
-                }
-                block_retrieval = network_receivers.block_retrieval.select_next_some() => {
-                    idle_duration = pre_select_instant.elapsed();
-                    self.process_block_retrieval(block_retrieval).await
-                }
-                round = round_timeout_sender_rx.select_next_some() => {
-                    idle_duration = pre_select_instant.elapsed();
-                    self.process_local_timeout(round).await
-                }
-            };
-            if let Err(e) = result {
+            ) {
+                counters::ERROR_COUNT.inc();
                 error!("{:?}", e);
             }
             if let RoundProcessor::Normal(p) = self.processor_mut() {
                 debug!("{}", p.round_state());
             }
-            counters::EVENT_PROCESSING_LOOP_BUSY_DURATION_S
-                .observe_duration(pre_select_instant.elapsed() - idle_duration);
-            counters::EVENT_PROCESSING_LOOP_IDLE_DURATION_S.observe_duration(idle_duration);
         }
     }
 }

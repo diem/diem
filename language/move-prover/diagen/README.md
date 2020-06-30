@@ -15,6 +15,6 @@ To convert `.dot` into `.pdf`, run the following command:
 ```
 brew install graphviz
 cd diagrams
-chmod +x convert_all.sh
-./convert_all.sh
+chmod +x convert_all_dot_to_pdf.sh
+./convert_all_dot_to_pdf.sh
 ```

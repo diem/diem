@@ -13,6 +13,7 @@
 
 ## Function `update_libra_version`
 
+Update Libra version.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_update_libra_version">update_libra_version</a>(account: &signer, major: u64)

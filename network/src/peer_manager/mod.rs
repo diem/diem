@@ -13,6 +13,7 @@
 use crate::{
     counters,
     interface::{NetworkNotification, NetworkProvider, NetworkRequest},
+    logging,
     peer::DisconnectReason,
     protocols::{
         direct_send::Message,
@@ -31,7 +32,8 @@ use futures::{
     sink::SinkExt,
     stream::{Fuse, FuturesUnordered, StreamExt},
 };
-use libra_logger::prelude::*;
+use libra_config::network_id::NetworkContext;
+use libra_logger::{prelude::*, StructuredLogEntry};
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use netcore::transport::{ConnectionOrigin, Transport};
@@ -40,6 +42,7 @@ use std::{
     collections::{hash_map::Entry, HashMap},
     fmt::Debug,
     marker::PhantomData,
+    sync::Arc,
     time::Duration,
 };
 use tokio::runtime::Handle;
@@ -50,10 +53,9 @@ mod error;
 mod tests;
 
 pub use self::error::PeerManagerError;
-use libra_config::network_id::NetworkContext;
 
 /// Request received by PeerManager from upstream actors.
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum PeerManagerRequest {
     /// Send an RPC request to a remote peer.
     SendRpc(PeerId, OutboundRpcRequest),
@@ -70,20 +72,23 @@ pub enum PeerManagerNotification {
     RecvMessage(PeerId, Message),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum ConnectionRequest {
     DialPeer(
         PeerId,
         NetworkAddress,
-        oneshot::Sender<Result<(), PeerManagerError>>,
+        #[serde(skip)] oneshot::Sender<Result<(), PeerManagerError>>,
     ),
-    DisconnectPeer(PeerId, oneshot::Sender<Result<(), PeerManagerError>>),
+    DisconnectPeer(
+        PeerId,
+        #[serde(skip)] oneshot::Sender<Result<(), PeerManagerError>>,
+    ),
 }
 
 #[derive(Debug, PartialEq, Eq, Serialize)]
 pub enum ConnectionNotification {
     /// Connection with a new peer has been established.
-    NewPeer(PeerId, NetworkAddress),
+    NewPeer(PeerId, NetworkAddress, Arc<NetworkContext>),
     /// Connection to a peer has been terminated. This could have been triggered from either end.
     LostPeer(PeerId, NetworkAddress, DisconnectReason),
 }
@@ -211,7 +216,7 @@ where
     TTransport: Transport,
     TSocket: AsyncRead + AsyncWrite,
 {
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     /// A handle to a tokio executor.
     executor: Handle,
     /// Address to listen on for incoming connections.
@@ -265,7 +270,7 @@ where
     pub fn new(
         executor: Handle,
         transport: TTransport,
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         listen_addr: NetworkAddress,
         requests_rx: libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>,
         connection_reqs_rx: libra_channel::Receiver<PeerId, ConnectionRequest>,
@@ -325,22 +330,45 @@ where
     /// Start listening on the set address and return a future which runs PeerManager
     pub async fn start(mut self) {
         // Start listening for connections.
+        send_struct_log!(StructuredLogEntry::new_named(logging::PEER_MANAGER_LOOP)
+            .data(logging::TYPE, logging::START)
+            .field(&logging::NETWORK_CONTEXT, &self.network_context));
         self.start_connection_listener();
         loop {
             ::futures::select! {
                 connection_event = self.transport_notifs_rx.select_next_some() => {
-                  self.handle_connection_event(connection_event);
+                    send_struct_log!(StructuredLogEntry::new_named(logging::PEER_MANAGER_LOOP)
+                        .data(logging::TYPE, "connection_event")
+                        .data(logging::EVENT, &connection_event)
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                    );
+                    self.handle_connection_event(connection_event);
                 }
                 request = self.requests_rx.select_next_some() => {
-                  self.handle_request(request).await;
+                    send_struct_log!(StructuredLogEntry::new_named(logging::PEER_MANAGER_LOOP)
+                        .data(logging::TYPE, "request")
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .field(&logging::PEER_MANAGER_REQUEST, &request)
+                    );
+                    self.handle_request(request).await;
                 }
                 connection_request = self.connection_reqs_rx.select_next_some() => {
-                  self.handle_connection_request(connection_request).await;
+                    send_struct_log!(StructuredLogEntry::new_named(logging::PEER_MANAGER_LOOP)
+                        .data(logging::TYPE, "connection_request")
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .field(&logging::CONNECTION_REQUEST, &connection_request)
+                    );
+                    self.handle_connection_request(connection_request).await;
                 }
                 complete => {
-                  // TODO: This should be ok when running in client mode.
-                  crit!("{} Peer manager actor terminated", self.network_context);
-                  break;
+                    // TODO: This should be ok when running in client mode.
+                    send_struct_log!(StructuredLogEntry::new_named(logging::PEER_MANAGER_LOOP)
+                        .data(logging::TYPE, logging::TERMINATION)
+                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                        .critical()
+                    );
+                    crit!("{} Peer manager actor terminated", self.network_context);
+                    break;
                 }
             }
         }
@@ -609,7 +637,11 @@ where
                 handler
                     .push(
                         peer_id,
-                        ConnectionNotification::NewPeer(peer_id, conn_meta.addr().clone()),
+                        ConnectionNotification::NewPeer(
+                            peer_id,
+                            conn_meta.addr().clone(),
+                            self.network_context.clone(),
+                        ),
                     )
                     .unwrap();
             }
@@ -670,7 +702,7 @@ where
     }
 
     fn handle_inbound_event(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         inbound_event: NetworkNotification,
         peer_id: PeerId,
         upstream_handlers: &mut HashMap<
@@ -735,12 +767,12 @@ enum TransportRequest {
     ),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub enum TransportNotification<TSocket>
 where
     TSocket: AsyncRead + AsyncWrite,
 {
-    NewConnection(Connection<TSocket>),
+    NewConnection(#[serde(skip)] Connection<TSocket>),
     Disconnected(ConnectionMetadata, DisconnectReason),
 }
 
@@ -750,7 +782,7 @@ where
     TTransport: Transport,
     TSocket: AsyncRead + AsyncWrite,
 {
-    network_context: NetworkContext,
+    network_context: Arc<NetworkContext>,
     /// [`Transport`] that is used to establish connections
     transport: TTransport,
     listener: Fuse<TTransport::Listener>,
@@ -767,7 +799,7 @@ where
     TSocket: AsyncRead + AsyncWrite + 'static,
 {
     fn new(
-        network_context: NetworkContext,
+        network_context: Arc<NetworkContext>,
         transport: TTransport,
         listen_addr: NetworkAddress,
         transport_reqs_rx: channel::Receiver<TransportRequest>,

@@ -13,6 +13,19 @@
 
 ## Function `peer_to_peer_with_metadata`
 
+Transfer
+<code>amount</code> coins to
+<code>recipient_address</code> with (optional)
+associated metadata
+<code>metadata</code> and (optional)
+<code>signature</code> on the metadata, amount, and
+sender address. The
+<code>metadata</code> and
+<code>signature</code> parameters are only required if
+<code>amount</code> >= 1_000_000 micro LBR and the sender and recipient of the funds are two distinct VASPs.
+Fails if there is no account at the recipient address or if the sender's balance is lower
+than
+<code>amount</code>.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_peer_to_peer_with_metadata">peer_to_peer_with_metadata</a>&lt;Token&gt;(payer: &signer, payee: address, amount: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)

@@ -384,13 +384,9 @@ impl NoiseConfig {
             msg: received_encrypted_payload,
             aad: &h,
         };
-        let received_payload = match aead.decrypt(nonce, ct_and_ad) {
-            Ok(res) => res,
-            Err(_) if cfg!(feature = "fuzzing") => Vec::new(),
-            Err(_) => {
-                return Err(NoiseError::Decrypt);
-            }
-        };
+        let received_payload = aead
+            .decrypt(nonce, ct_and_ad)
+            .map_err(|_| NoiseError::Decrypt)?;
 
         // split
         let (k1, k2) = hkdf(&ck, None)?;
@@ -463,13 +459,9 @@ impl NoiseConfig {
             msg: &encrypted_remote_static,
             aad: &h,
         };
-        let rs = match aead.decrypt(nonce, ct_and_ad) {
-            Ok(res) => res,
-            Err(_) if cfg!(feature = "fuzzing") => encrypted_remote_static[..32].to_vec(),
-            Err(_) => {
-                return Err(NoiseError::Decrypt);
-            }
-        };
+        let rs = aead
+            .decrypt(nonce, ct_and_ad)
+            .map_err(|_| NoiseError::Decrypt)?;
         let rs = x25519::PublicKey::try_from(rs.as_slice())
             .map_err(|_| NoiseError::WrongPublicKeyReceived)?;
         mix_hash(&mut h, &encrypted_remote_static);
@@ -489,13 +481,9 @@ impl NoiseConfig {
             msg: received_encrypted_payload,
             aad: &h,
         };
-        let received_payload = match aead.decrypt(nonce, ct_and_ad) {
-            Ok(res) => res,
-            Err(_) if cfg!(feature = "fuzzing") => Vec::new(),
-            Err(_) => {
-                return Err(NoiseError::Decrypt);
-            }
-        };
+        let received_payload = aead
+            .decrypt(nonce, ct_and_ad)
+            .map_err(|_| NoiseError::Decrypt)?;
         mix_hash(&mut h, received_encrypted_payload);
 
         // return

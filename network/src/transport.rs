@@ -19,6 +19,7 @@ use libra_logger::prelude::*;
 use libra_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
 use libra_types::PeerId;
 use netcore::transport::{tcp, ConnectionOrigin, Transport};
+use serde::Serialize;
 use std::{
     collections::HashMap,
     convert::TryFrom,
@@ -60,7 +61,7 @@ pub trait TSocket: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
 impl<T> TSocket for T where T: AsyncRead + AsyncWrite + Send + Debug + Unpin + 'static {}
 
 /// Unique local identifier for a connection.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, Serialize)]
 pub struct ConnectionId(u32);
 
 impl From<u32> for ConnectionId {
@@ -88,7 +89,7 @@ impl ConnectionIdGenerator {
 }
 
 /// Metadata associated with an established and fully upgraded connection.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize)]
 pub struct ConnectionMetadata {
     peer_id: PeerId,
     connection_id: ConnectionId,

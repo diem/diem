@@ -1,7 +1,10 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{anyhow, Result};
+use crate::config::Error;
+use libra_secure_storage::{
+    GitHubStorage, InMemoryStorage, NamespacedStorage, OnDiskStorage, Storage, VaultStorage,
+};
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::Read, path::PathBuf};
 
@@ -15,20 +18,22 @@ pub enum SecureBackend {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct GitHubConfig {
     /// The owner or account that hosts a repository
-    pub owner: String,
+    pub repository_owner: String,
     /// The repository where storage will mount
     pub repository: String,
     /// The authorization token for accessing the repository
     pub token: Token,
-    /// A namespace is an optional portion of the path to a key stored within OnDiskStorage. For
+    /// A namespace is an optional portion of the path to a key stored within GitHubConfig. For
     /// example, a key, S, without a namespace would be available in S, with a namespace, N, it
     /// would be in N/S.
     pub namespace: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct VaultConfig {
     /// Optional SSL Certificate for the vault host, this is expected to be a full path.
     pub ca_certificate: Option<PathBuf>,
@@ -43,16 +48,17 @@ pub struct VaultConfig {
 }
 
 impl VaultConfig {
-    pub fn ca_certificate(&self) -> Result<String> {
+    pub fn ca_certificate(&self) -> Result<String, Error> {
         let path = self
             .ca_certificate
             .as_ref()
-            .ok_or_else(|| anyhow!("No Certificate path"))?;
+            .ok_or_else(|| Error::Missing("ca_certificate"))?;
         read_file(path)
     }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct OnDiskStorageConfig {
     // Required path for on disk storage
     pub path: PathBuf,
@@ -74,7 +80,7 @@ pub enum Token {
 }
 
 impl Token {
-    pub fn read_token(&self) -> Result<String> {
+    pub fn read_token(&self) -> Result<String, Error> {
         match self {
             Token::FromDisk(path) => read_file(path),
             Token::FromConfig(token) => Ok(token.clone()),
@@ -83,11 +89,13 @@ impl Token {
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct TokenFromConfig {
     token: String,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct TokenFromDisk {
     path: PathBuf,
 }
@@ -96,7 +104,7 @@ impl Default for OnDiskStorageConfig {
     fn default() -> Self {
         Self {
             namespace: None,
-            path: PathBuf::from("secure_storage.toml"),
+            path: PathBuf::from("secure_storage.json"),
             data_dir: PathBuf::from("/opt/libra/data/common"),
         }
     }
@@ -116,13 +124,51 @@ impl OnDiskStorageConfig {
     }
 }
 
-fn read_file(path: &PathBuf) -> Result<String> {
-    let mut file = File::open(path)?;
+fn read_file(path: &PathBuf) -> Result<String, Error> {
+    let mut file =
+        File::open(path).map_err(|e| Error::IO(path.to_str().unwrap().to_string(), e))?;
     let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
+    file.read_to_string(&mut contents)
+        .map_err(|e| Error::IO(path.to_str().unwrap().to_string(), e))?;
     Ok(contents)
 }
 
+impl From<&SecureBackend> for Storage {
+    fn from(backend: &SecureBackend) -> Self {
+        match backend {
+            SecureBackend::GitHub(config) => {
+                let storage = GitHubStorage::new(
+                    config.repository_owner.clone(),
+                    config.repository.clone(),
+                    config.token.read_token().expect("Unable to read token"),
+                );
+                if let Some(namespace) = &config.namespace {
+                    Storage::from(NamespacedStorage::new(Box::new(storage), namespace.clone()))
+                } else {
+                    Storage::from(storage)
+                }
+            }
+            SecureBackend::InMemoryStorage => Storage::from(InMemoryStorage::new()),
+            SecureBackend::OnDiskStorage(config) => {
+                let storage = OnDiskStorage::new(config.path());
+                if let Some(namespace) = &config.namespace {
+                    Storage::from(NamespacedStorage::new(Box::new(storage), namespace.clone()))
+                } else {
+                    Storage::from(storage)
+                }
+            }
+            SecureBackend::Vault(config) => Storage::from(VaultStorage::new(
+                config.server.clone(),
+                config.token.read_token().expect("Unable to read token"),
+                config.namespace.clone(),
+                config
+                    .ca_certificate
+                    .as_ref()
+                    .map(|_| config.ca_certificate().unwrap()),
+            )),
+        }
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -5,7 +5,7 @@
 mod test;
 
 use crate::{
-    ledger_store::{LedgerStore, TransactionInfoIter},
+    ledger_store::LedgerStore,
     state_store::StateStore,
     transaction_store::{TransactionIter, TransactionStore},
 };
@@ -49,16 +49,6 @@ impl BackupHandler {
     ) -> Result<TransactionIter> {
         self.transaction_store
             .get_transaction_iter(start_version, num_transactions)
-    }
-
-    /// Gets an iterator that yields a range of transaction infos.
-    pub fn get_transaction_info_iter(
-        &self,
-        start_version: Version,
-        num_transaction_infos: u64,
-    ) -> Result<TransactionInfoIter> {
-        self.ledger_store
-            .get_transaction_info_iter(start_version, num_transaction_infos)
     }
 
     /// Gets an iterator which can yield all accounts in the state tree.

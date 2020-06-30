@@ -1,7 +1,6 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use anyhow::{ensure, Result};
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{
@@ -18,6 +17,8 @@ mod consensus_config;
 pub use consensus_config::*;
 mod debug_interface_config;
 pub use debug_interface_config::*;
+mod error;
+pub use error::*;
 mod execution_config;
 pub use execution_config::*;
 mod key_manager_config;
@@ -44,6 +45,7 @@ mod upstream_config;
 pub use upstream_config::*;
 mod test_config;
 use crate::{chain_id::ChainId, network_id::NetworkId};
+use libra_secure_storage::{KVStorage, Storage};
 use libra_types::waypoint::Waypoint;
 pub use test_config::*;
 
@@ -121,6 +123,24 @@ impl WaypointConfig {
             None
         }
     }
+
+    pub fn waypoint(&self) -> Waypoint {
+        let waypoint = match &self {
+            WaypointConfig::FromConfig(waypoint) => Some(*waypoint),
+            WaypointConfig::FromStorage(backend) => {
+                let storage: Storage = backend.into();
+                let waypoint = storage
+                    .get(libra_global_constants::WAYPOINT)
+                    .expect("Unable to read waypoint")
+                    .value
+                    .string()
+                    .expect("Expected string for waypoint");
+                Some(Waypoint::from_str(&waypoint).expect("Unable to parse waypoint"))
+            }
+            WaypointConfig::None => None,
+        };
+        waypoint.expect("waypoint should be present")
+    }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -146,7 +166,7 @@ impl RoleType {
 impl FromStr for RoleType {
     type Err = ParseRoleError;
 
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "validator" => Ok(RoleType::Validator),
             "full_node" => Ok(RoleType::FullNode),
@@ -173,6 +193,7 @@ impl NodeConfig {
     pub fn set_data_dir(&mut self, data_dir: PathBuf) {
         self.base.data_dir = data_dir.clone();
         self.consensus.set_data_dir(data_dir.clone());
+        self.execution.set_data_dir(data_dir.clone());
         self.metrics.set_data_dir(data_dir.clone());
         self.storage.set_data_dir(data_dir);
     }
@@ -208,18 +229,18 @@ impl NodeConfig {
     /// Reads the config file and returns the configuration object in addition to doing some
     /// post-processing of the config
     /// Paths used in the config are either absolute or relative to the config location
-    pub fn load<P: AsRef<Path>>(input_path: P) -> Result<Self> {
+    pub fn load<P: AsRef<Path>>(input_path: P) -> Result<Self, Error> {
         let mut config = Self::load_config(&input_path)?;
         if config.base.role.is_validator() {
-            ensure!(
+            invariant(
                 config.validator_network.is_some(),
-                "Missing a validator network config for a validator node"
-            );
+                "Missing a validator network config for a validator node".into(),
+            )?;
         } else {
-            ensure!(
+            invariant(
                 config.validator_network.is_none(),
-                "Provided a validator network config for a full_node node"
-            );
+                "Provided a validator network config for a full_node node".into(),
+            )?;
         }
 
         let mut network_ids = HashSet::new();
@@ -234,17 +255,17 @@ impl NodeConfig {
 
             // Validate that a network isn't repeated
             let network_id = network.network_id.clone();
-            ensure!(
+            invariant(
                 !network_ids.contains(&network_id),
-                format!("network_id {:?} was repeated", network_id)
-            );
+                format!("network_id {:?} was repeated", network_id),
+            )?;
             network_ids.insert(network_id);
         }
         config.set_data_dir(config.data_dir().clone());
         Ok(config)
     }
 
-    pub fn save<P: AsRef<Path>>(&mut self, output_path: P) -> Result<()> {
+    pub fn save<P: AsRef<Path>>(&mut self, output_path: P) -> Result<(), Error> {
         let output_dir = RootPath::new(&output_path);
         self.execution.save(&output_dir)?;
         // This must be last as calling save on subconfigs may change their fields
@@ -293,7 +314,6 @@ impl NodeConfig {
         let mut test = TestConfig::new_with_temp_dir();
 
         if self.base.role == RoleType::Validator {
-            test.initialize_storage = true;
             test.random_account_key(rng);
             let peer_id = libra_types::account_address::from_public_key(
                 &test.operator_keypair.as_ref().unwrap().public_key(),
@@ -306,7 +326,14 @@ impl NodeConfig {
 
             let validator_network = self.validator_network.as_mut().unwrap();
             validator_network.random_with_peer_id(rng, Some(peer_id));
-            test.random_consensus_key(rng);
+            // We want to produce this key twice
+            let mut cloned_rng = rng.clone();
+            test.random_execution_key(rng);
+
+            let mut safety_rules_test_config = SafetyRulesTestConfig::new(peer_id);
+            safety_rules_test_config.random_consensus_key(rng);
+            safety_rules_test_config.random_execution_key(&mut cloned_rng);
+            self.consensus.safety_rules.test = Some(safety_rules_test_config);
         } else {
             self.validator_network = None;
             if self.full_node_networks.is_empty() {
@@ -320,27 +347,51 @@ impl NodeConfig {
         self.set_data_dir(test.temp_dir().unwrap().to_path_buf());
         self.test = Some(test);
     }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn default_for_public_full_node() -> Self {
+        let contents = std::include_str!("test_data/public_full_node.yaml");
+        let path = "default_for_public_full_node";
+        Self::parse(&contents).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn default_for_validator() -> Self {
+        let contents = std::include_str!("test_data/validator.yaml");
+        let path = "default_for_validator";
+        Self::parse(&contents).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+    }
+
+    #[cfg(any(test, feature = "fuzzing"))]
+    pub fn default_for_validator_full_node() -> Self {
+        let contents = std::include_str!("test_data/validator_full_node.yaml");
+        let path = "default_for_validator_full_node";
+        Self::parse(&contents).unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
+    }
 }
 
 pub trait PersistableConfig: Serialize + DeserializeOwned {
-    fn load_config<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let mut file = File::open(&path)?;
+    fn load_config<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+        let mut file = File::open(&path)
+            .map_err(|e| Error::IO(path.as_ref().to_str().unwrap().to_string(), e))?;
         let mut contents = String::new();
-        file.read_to_string(&mut contents)?;
+        file.read_to_string(&mut contents)
+            .map_err(|e| Error::IO(path.as_ref().to_str().unwrap().to_string(), e))?;
         Self::parse(&contents)
     }
 
-    fn save_config<P: AsRef<Path>>(&self, output_file: P) -> Result<()> {
-        let contents = serde_yaml::to_vec(&self)?;
-        let mut file = File::create(output_file)?;
-        file.write_all(&contents)?;
-        // @TODO This causes a major perf regression that needs to be evaluated before enabling
-        // file.sync_all()?;
+    fn save_config<P: AsRef<Path>>(&self, output_file: P) -> Result<(), Error> {
+        let contents = serde_yaml::to_vec(&self)
+            .map_err(|e| Error::Yaml(output_file.as_ref().to_str().unwrap().to_string(), e))?;
+        let mut file = File::create(output_file.as_ref())
+            .map_err(|e| Error::IO(output_file.as_ref().to_str().unwrap().to_string(), e))?;
+        file.write_all(&contents)
+            .map_err(|e| Error::IO(output_file.as_ref().to_str().unwrap().to_string(), e))?;
         Ok(())
     }
 
-    fn parse(serialized: &str) -> Result<Self> {
-        Ok(serde_yaml::from_str(&serialized)?)
+    fn parse(serialized: &str) -> Result<Self, Error> {
+        serde_yaml::from_str(&serialized).map_err(|e| Error::Yaml("config".to_string(), e))
     }
 }
 
@@ -382,10 +433,6 @@ impl RootPath {
 mod test {
     use super::*;
 
-    const PUBLIC_FULL_NODE: &str = "src/config/test_data/public_full_node.yaml";
-    const VALIDATOR: &str = "src/config/test_data/validator.yaml";
-    const VALIDATOR_FULL_NODE: &str = "src/config/test_data/validator_full_node.yaml";
-
     #[test]
     fn verify_role_type_conversion() {
         // Verify relationship between RoleType and as_string() is reflexive
@@ -409,12 +456,12 @@ mod test {
 
     #[test]
     fn verify_configs() {
-        let _ = vec![PUBLIC_FULL_NODE, VALIDATOR, VALIDATOR_FULL_NODE]
-            .iter()
-            .map(|path| {
-                NodeConfig::load_config(PathBuf::from(path))
-                    .unwrap_or_else(|e| panic!("Error in {}: {}", path, e))
-            })
-            .collect::<Vec<_>>();
+        NodeConfig::default_for_public_full_node();
+        NodeConfig::default_for_validator();
+        NodeConfig::default_for_validator_full_node();
+
+        let contents = std::include_str!("test_data/safety_rules.yaml");
+        SafetyRulesConfig::parse(&contents)
+            .unwrap_or_else(|e| panic!("Error in safety_rules.yaml: {}", e));
     }
 }

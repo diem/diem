@@ -13,6 +13,7 @@
 
 ## Function `empty_script`
 
+Used for testing.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_empty_script">empty_script</a>()

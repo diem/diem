@@ -5,7 +5,8 @@ use crate::{
     expansion::ast::{Fields, SpecId, Value},
     naming::ast::{FunctionSignature, StructDefinition, Type, TypeName_, Type_},
     parser::ast::{
-        BinOp, Field, FunctionName, FunctionVisibility, ModuleIdent, StructName, UnaryOp, Var,
+        BinOp, ConstantName, Field, FunctionName, FunctionVisibility, ModuleIdent, StructName,
+        UnaryOp, Var,
     },
     shared::{ast_debug::*, unique_map::UniqueMap},
 };
@@ -32,6 +33,7 @@ pub struct Program {
 #[derive(Debug)]
 pub struct Script {
     pub loc: Loc,
+    pub constants: UniqueMap<ConstantName, Constant>,
     pub function_name: FunctionName,
     pub function: Function,
 }
@@ -46,6 +48,7 @@ pub struct ModuleDefinition {
     /// `dependency_order` is the topological order/rank in the dependency graph.
     pub dependency_order: usize,
     pub structs: UniqueMap<StructName, StructDefinition>,
+    pub constants: UniqueMap<ConstantName, Constant>,
     pub functions: UniqueMap<FunctionName, Function>,
 }
 
@@ -66,6 +69,17 @@ pub struct Function {
     pub signature: FunctionSignature,
     pub acquires: BTreeMap<StructName, Loc>,
     pub body: FunctionBody,
+}
+
+//**************************************************************************************************
+// Constants
+//**************************************************************************************************
+
+#[derive(PartialEq, Debug)]
+pub struct Constant {
+    pub loc: Loc,
+    pub signature: Type,
+    pub value: Exp,
 }
 
 //**************************************************************************************************
@@ -121,6 +135,7 @@ pub enum UnannotatedExp_ {
     Move { from_user: bool, var: Var },
     Copy { from_user: bool, var: Var },
     Use(Var),
+    Constant(Option<ModuleIdent>, ConstantName),
 
     ModuleCall(Box<ModuleCall>),
     Builtin(Box<BuiltinFunction>, Box<Exp>),
@@ -194,24 +209,33 @@ pub fn splat_item(splat_loc: Loc, e: Exp) -> ExpListItem {
 }
 
 //**************************************************************************************************
+// impls
+//**************************************************************************************************
+
+impl BuiltinFunction_ {
+    pub fn display_name(&self) -> &'static str {
+        use crate::naming::ast::BuiltinFunction_ as NB;
+        use BuiltinFunction_ as B;
+        match self {
+            B::MoveToSender(_) => NB::MOVE_TO_SENDER,
+            B::MoveTo(_) => NB::MOVE_TO,
+            B::MoveFrom(_) => NB::MOVE_FROM,
+            B::BorrowGlobal(false, _) => NB::BORROW_GLOBAL,
+            B::BorrowGlobal(true, _) => NB::BORROW_GLOBAL_MUT,
+            B::Exists(_) => NB::EXISTS,
+            B::Freeze(_) => NB::FREEZE,
+            B::Assert => NB::ASSERT,
+        }
+    }
+}
+
+//**************************************************************************************************
 // Display
 //**************************************************************************************************
 
 impl fmt::Display for BuiltinFunction_ {
     fn fmt(&self, f: &mut fmt::Formatter) -> std::fmt::Result {
-        use crate::naming::ast::BuiltinFunction_ as NB;
-        use BuiltinFunction_::*;
-        let s = match self {
-            MoveToSender(_) => NB::MOVE_TO_SENDER,
-            MoveTo(_) => NB::MOVE_TO,
-            MoveFrom(_) => NB::MOVE_FROM,
-            BorrowGlobal(false, _) => NB::BORROW_GLOBAL,
-            BorrowGlobal(true, _) => NB::BORROW_GLOBAL_MUT,
-            Exists(_) => NB::EXISTS,
-            Freeze(_) => NB::FREEZE,
-            Assert => NB::ASSERT,
-        };
-        write!(f, "{}", s)
+        write!(f, "{}", self.display_name())
     }
 }
 
@@ -240,9 +264,14 @@ impl AstDebug for Script {
     fn ast_debug(&self, w: &mut AstWriter) {
         let Script {
             loc: _loc,
+            constants,
             function_name,
             function,
         } = self;
+        for cdef in constants {
+            cdef.ast_debug(w);
+            w.new_line();
+        }
         (function_name.clone(), function).ast_debug(w);
     }
 }
@@ -253,6 +282,7 @@ impl AstDebug for ModuleDefinition {
             is_source_module,
             dependency_order,
             structs,
+            constants,
             functions,
         } = self;
         if *is_source_module {
@@ -263,6 +293,10 @@ impl AstDebug for ModuleDefinition {
         w.writeln(&format!("dependency order #{}", dependency_order));
         for sdef in structs {
             sdef.ast_debug(w);
+            w.new_line();
+        }
+        for cdef in constants {
+            cdef.ast_debug(w);
             w.new_line();
         }
         for fdef in functions {
@@ -287,7 +321,7 @@ impl AstDebug for (FunctionName, &Function) {
         if let FunctionBody_::Native = &body.value {
             w.write("native ");
         }
-        w.write(&format!("{}", name));
+        w.write(&format!("fun {}", name));
         signature.ast_debug(w);
         if !acquires.is_empty() {
             w.write(" acquires ");
@@ -298,6 +332,24 @@ impl AstDebug for (FunctionName, &Function) {
             FunctionBody_::Defined(body) => w.block(|w| body.ast_debug(w)),
             FunctionBody_::Native => w.writeln(";"),
         }
+    }
+}
+
+impl AstDebug for (ConstantName, &Constant) {
+    fn ast_debug(&self, w: &mut AstWriter) {
+        let (
+            name,
+            Constant {
+                loc: _loc,
+                signature,
+                value,
+            },
+        ) = self;
+        w.write(&format!("const {}:", name));
+        signature.ast_debug(w);
+        w.write(" = ");
+        value.ast_debug(w);
+        w.write(";");
     }
 }
 
@@ -356,6 +408,8 @@ impl AstDebug for UnannotatedExp_ {
                 var: v,
             } => w.write(&format!("copy@{}", v)),
             E::Use(v) => w.write(&format!("use@{}", v)),
+            E::Constant(None, c) => w.write(&format!("{}", c)),
+            E::Constant(Some(m), c) => w.write(&format!("{}::{}", m, c)),
             E::ModuleCall(mcall) => {
                 mcall.ast_debug(w);
             }

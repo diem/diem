@@ -2,22 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::IndexKind;
-use libra_types::{
+use move_core_types::{
     account_address::AccountAddress,
-    transaction::TransactionStatus,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
-
-// We may want to eventually move this into the VM runtime since it is a semantic decision that
-// need to be made by the VM. But for now, this will reside here.
-pub fn vm_result_to_transaction_status<T>(result: &VMResult<T>) -> TransactionStatus {
-    // The decision as to whether or not a transaction should be dropped should be able to be
-    // determined solely by the VMStatus. This then means that we can audit/verify any decisions
-    // made by the VM externally on whether or not to discard or keep the transaction output by
-    // inspecting the contained VMStatus.
-    let vm_status = vm_status_of_result(result);
-    vm_status.into()
-}
 
 // TODO: Fill in the details for Locations. Ideally it should be a unique handle into a function and
 // a pc.
@@ -35,6 +23,7 @@ pub const ESEQUENCE_NUMBER_TOO_NEW: u64 = 4; // transaction sequence number is t
 pub const EACCOUNT_DOES_NOT_EXIST: u64 = 5; // transaction sender's account does not exist
 pub const ECANT_PAY_GAS_DEPOSIT: u64 = 6; // insufficient balance to pay for gas deposit
 pub const ETRANSACTION_EXPIRED: u64 = 7; // transaction expiration time exceeds block time.
+pub const ENO_ACCOUNT_ROLE: u64 = 8; // Account does not have a role
 
 /// Generic error codes. These codes don't have any special meaning for the VM, but they are useful
 /// conventions for debugging
@@ -86,6 +75,7 @@ pub fn convert_prologue_runtime_error(err: &VMStatus, txn_sender: &AccountAddres
                 VMStatus::new(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE)
             }
             Some(ETRANSACTION_EXPIRED) => VMStatus::new(StatusCode::TRANSACTION_EXPIRED),
+            Some(ENO_ACCOUNT_ROLE) => VMStatus::new(StatusCode::NO_ACCOUNT_ROLE),
             // This should never happen...
             _ => err.clone(),
         }
@@ -94,7 +84,7 @@ pub fn convert_prologue_runtime_error(err: &VMStatus, txn_sender: &AccountAddres
     }
 }
 
-pub fn vm_error(location: Location, err: StatusCode) -> VMStatus {
+pub fn vm_status(location: Location, err: StatusCode) -> VMStatus {
     let msg = format!("At location {:#?}", location);
     VMStatus::new(err).with_message(msg)
 }

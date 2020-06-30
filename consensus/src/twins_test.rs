@@ -28,8 +28,9 @@ use libra_types::{
     validator_info::ValidatorInfo,
     waypoint::Waypoint,
 };
-use network::peer_manager::{
-    conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender,
+use network::{
+    peer_manager::{conn_notifs_channel, ConnectionRequestSender, PeerManagerRequestSender},
+    protocols::network::{NewNetworkEvents, NewNetworkSender},
 };
 use std::{collections::HashMap, num::NonZeroUsize, sync::Arc};
 use tokio::runtime::{Builder, Runtime};
@@ -78,7 +79,7 @@ impl SMRNode {
             commit_cb_sender,
             Arc::clone(&storage),
         ));
-        let txn_manager = Box::new(MockTransactionManager::new(Some(
+        let txn_manager = Arc::new(MockTransactionManager::new(Some(
             consensus_to_mempool_sender,
         )));
         let (mut reconfig_sender, reconfig_events) =
@@ -136,17 +137,15 @@ impl SMRNode {
             nodes
                 .iter()
                 .map(|config| {
+                    let sr_test_config = config.consensus.safety_rules.test.as_ref().unwrap();
                     ValidatorInfo::new_with_test_network_keys(
-                        config.validator_network.as_ref().unwrap().peer_id(), // account address
-                        config
-                            .test
-                            .as_ref()
-                            .unwrap()
+                        sr_test_config.author,
+                        sr_test_config
                             .consensus_keypair
                             .as_ref()
                             .unwrap()
-                            .public_key(), // consensus pubkey
-                        1,                                                    // voting power
+                            .public_key(),
+                        1,
                     )
                 })
                 .collect(),
@@ -158,6 +157,13 @@ impl SMRNode {
 
             let waypoint = Waypoint::new_epoch_boundary(&storage.get_ledger_info())
                 .expect("Unable to produce waypoint with the provided LedgerInfo");
+            config
+                .consensus
+                .safety_rules
+                .test
+                .as_mut()
+                .unwrap()
+                .waypoint = Some(waypoint);
             config.base.waypoint = WaypointConfig::FromConfig(waypoint);
             config.consensus.proposer_type = proposer_type;
             // Use in memory storage for testing

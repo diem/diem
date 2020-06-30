@@ -21,7 +21,7 @@ use crate::{
         Transaction, TransactionArgument, TransactionListWithProof, TransactionPayload,
         TransactionStatus, TransactionToCommit, Version,
     },
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use libra_crypto::{
@@ -108,7 +108,6 @@ struct AccountInfo {
     sequence_number: u64,
     sent_event_handle: EventHandle,
     received_event_handle: EventHandle,
-    role_id: u64,
 }
 
 impl AccountInfo {
@@ -121,7 +120,6 @@ impl AccountInfo {
             sequence_number: 0,
             sent_event_handle: EventHandle::new_from_address(&address, 0),
             received_event_handle: EventHandle::new_from_address(&address, 1),
-            role_id: 5, // XXX support types other than ParentVASP
         }
     }
 }
@@ -480,35 +478,6 @@ impl TransactionPayload {
     }
 }
 
-/// The `Arbitrary` impl only generates validation statuses since the full enum is too large.
-impl Arbitrary for StatusCode {
-    type Parameters = ();
-    type Strategy = BoxedStrategy<Self>;
-
-    fn arbitrary_with(_args: ()) -> Self::Strategy {
-        prop_oneof![
-            Just(StatusCode::UNKNOWN_VALIDATION_STATUS),
-            Just(StatusCode::INVALID_SIGNATURE),
-            Just(StatusCode::INVALID_AUTH_KEY),
-            Just(StatusCode::SEQUENCE_NUMBER_TOO_OLD),
-            Just(StatusCode::SEQUENCE_NUMBER_TOO_NEW),
-            Just(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE),
-            Just(StatusCode::TRANSACTION_EXPIRED),
-            Just(StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST),
-            Just(StatusCode::REJECTED_WRITE_SET),
-            Just(StatusCode::INVALID_WRITE_SET),
-            Just(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE),
-            Just(StatusCode::UNKNOWN_SCRIPT),
-            Just(StatusCode::UNKNOWN_MODULE),
-            Just(StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND),
-            Just(StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS),
-            Just(StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND),
-            Just(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND),
-        ]
-        .boxed()
-    }
-}
-
 prop_compose! {
     fn arb_transaction_status()(vm_status in any::<VMStatus>()) -> TransactionStatus {
         vm_status.into()
@@ -651,7 +620,6 @@ impl AccountResourceGen {
             account_info.sent_event_handle.clone(),
             account_info.received_event_handle.clone(),
             false,
-            account_info.role_id,
         )
     }
 }

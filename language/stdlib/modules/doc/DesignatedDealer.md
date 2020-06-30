@@ -5,7 +5,8 @@
 
 ### Table of Contents
 
--  [Struct `Dealer`](#0x1_DesignatedDealer_Dealer)
+-  [Resource `Dealer`](#0x1_DesignatedDealer_Dealer)
+-  [Struct `ReceivedMintEvent`](#0x1_DesignatedDealer_ReceivedMintEvent)
 -  [Function `publish_designated_dealer_credential`](#0x1_DesignatedDealer_publish_designated_dealer_credential)
 -  [Function `add_tier_`](#0x1_DesignatedDealer_add_tier_)
 -  [Function `add_tier`](#0x1_DesignatedDealer_add_tier)
@@ -21,7 +22,7 @@
 
 <a name="0x1_DesignatedDealer_Dealer"></a>
 
-## Struct `Dealer`
+## Resource `Dealer`
 
 
 
@@ -56,6 +57,48 @@
 <dd>
  0-indexed array of tier upperbounds
 </dd>
+<dt>
+
+<code>mint_event_handle: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_DesignatedDealer_ReceivedMintEvent">DesignatedDealer::ReceivedMintEvent</a>&gt;</code>
+</dt>
+<dd>
+ Handle for mint events
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x1_DesignatedDealer_ReceivedMintEvent"></a>
+
+## Struct `ReceivedMintEvent`
+
+
+
+<pre><code><b>struct</b> <a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>destination_address: address</code>
+</dt>
+<dd>
+
+</dd>
+<dt>
+
+<code>amount: u64</code>
+</dt>
+<dd>
+
+</dd>
 </dl>
 
 
@@ -67,7 +110,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>(association: &signer, dd: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>(dd: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;)
 </code></pre>
 
 
@@ -76,15 +119,14 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>(association: &signer, dd: &signer) {
-    // TODO: this should check for AssocRoot in the future
-    <a href="Association.md#0x1_Association_assert_is_association">Association::assert_is_association</a>(association);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>(dd: &signer, _: &Capability&lt;TreasuryComplianceRole&gt;) {
     move_to(
         dd,
         <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
             window_start: <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>(),
             window_inflow: 0,
             tiers: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>(),
+            mint_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>&gt;(dd),
         }
     )
 }
@@ -133,7 +175,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>(blessed: &signer, addr: address, tier_upperbound: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, addr: address, tier_upperbound: u64)
 </code></pre>
 
 
@@ -142,9 +184,11 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>(blessed: &signer, addr: address, tier_upperbound: u64
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>(
+    _: &Capability&lt;TreasuryComplianceRole&gt;,
+    addr: address,
+    tier_upperbound: u64
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
-    <a href="Association.md#0x1_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(blessed);
     <b>let</b> dealer = borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr);
     <a href="#0x1_DesignatedDealer_add_tier_">add_tier_</a>(dealer, tier_upperbound)
 }
@@ -173,7 +217,7 @@
     <b>let</b> tiers = &<b>mut</b> dealer.tiers;
     <b>let</b> number_of_tiers = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
     // INVALID_TIER_INDEX
-    <b>assert</b>(tier_index &lt;= 4, 3);
+    <b>assert</b>(tier_index &lt;= 3, 3); // max 4 tiers allowed
     <b>assert</b>(tier_index &lt; number_of_tiers, 3);
     // Make sure that this new start for the tier is consistent
     // with the tier above it.
@@ -197,7 +241,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_update_tier">update_tier</a>(blessed: &signer, addr: address, tier_index: u64, new_upperbound: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_update_tier">update_tier</a>(_update_tier_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, addr: address, tier_index: u64, new_upperbound: u64)
 </code></pre>
 
 
@@ -207,9 +251,11 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_update_tier">update_tier</a>(
-    blessed: &signer, addr: address, tier_index: u64, new_upperbound: u64
+    _update_tier_capability: &Capability&lt;TreasuryComplianceRole&gt;,
+    addr: address,
+    tier_index: u64,
+    new_upperbound: u64
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
-    <a href="Association.md#0x1_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(blessed);
     <b>let</b> dealer = borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr);
     <a href="#0x1_DesignatedDealer_update_tier_">update_tier_</a>(dealer, tier_index, new_upperbound)
 }
@@ -266,7 +312,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(blessed: &signer, amount: u64, addr: address, tier_index: u64): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(blessed: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, amount: u64, dd_addr: address, tier_index: u64): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -276,14 +322,29 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(
-    blessed: &signer, amount: u64, addr: address, tier_index: u64
+    blessed: &signer,
+    _: &Capability&lt;TreasuryComplianceRole&gt;,
+    amount: u64,
+    dd_addr: address,
+    tier_index: u64,
 ): <a href="Libra.md#0x1_Libra">Libra</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
-    <a href="Association.md#0x1_Association_assert_account_is_blessed">Association::assert_account_is_blessed</a>(blessed);
+
+    // INVALID_MINT_AMOUNT
+    <b>assert</b>(amount &gt; 0, 6);
+
     // NOT_A_DD
-    <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(addr), 1);
-    <b>let</b> tier_check = <a href="#0x1_DesignatedDealer_tiered_mint_">tiered_mint_</a>(borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr), amount, tier_index);
+    <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr), 1);
+    <b>let</b> tier_check = <a href="#0x1_DesignatedDealer_tiered_mint_">tiered_mint_</a>(borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr), amount, tier_index);
     // INVALID_AMOUNT_FOR_TIER
     <b>assert</b>(tier_check, 5);
+    // Send <a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>
+    <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>&gt;(
+        &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr).mint_event_handle,
+        <a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a> {
+            destination_address: dd_addr,
+            amount: amount,
+        },
+    );
     <a href="Libra.md#0x1_Libra_mint">Libra::mint</a>&lt;CoinType&gt;(blessed, amount)
 }
 </code></pre>

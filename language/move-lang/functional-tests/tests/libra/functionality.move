@@ -107,35 +107,32 @@ script {
 //! sender: association
 script {
     use 0x1::Libra;
+    use 0x1::LibraConfig::CreateOnChainConfig;
+    use 0x1::Roles;
+    use 0x1::LibraTimestamp;
     fun main(account: &signer)  {
-        Libra::initialize(account);
+        LibraTimestamp::reset_time_has_started_for_test();
+        let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
+        Libra::initialize(account, &r);
+        Roles::restore_capability_to_privilege(account, r);
     }
 }
-// check: ABORTED
-// check: 0
-
-//! new-transaction
-//! sender: blessed
-script {
-use 0x1::LibraAccount;
-use 0x1::Coin1::Coin1;
-fun main(account: &signer)  {
-    LibraAccount::mint_to_address<Coin1>(account, {{bob}}, 1000000000 * 1000000 + 1);
-}
-}
-// check: ABORTED
-// check: 11
+// check: CANNOT_WRITE_EXISTING_RESOURCE
 
 //! new-transaction
 //! sender: blessed
 script {
     use 0x1::Libra;
     use 0x1::Coin1::Coin1;
+    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(account: &signer)  {
+        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
         Libra::publish_mint_capability(
             account,
-            Libra::remove_mint_capability<Coin1>(account)
+            Libra::remove_mint_capability<Coin1>(account),
+            &tc_capability,
         );
+        Roles::restore_capability_to_privilege(account, tc_capability);
     }
 }
 // check: EXECUTED

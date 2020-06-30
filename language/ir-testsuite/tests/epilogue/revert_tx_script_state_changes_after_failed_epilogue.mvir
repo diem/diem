@@ -1,15 +1,15 @@
-//! account: alice, 0
-//! account: bob, 0
-//! account: carol, 0
+//! account: alice, 0Coin1
+//! account: bob, 0Coin1
+//! account: carol, 0Coin1
 
 //! new-transaction
 //! sender: blessed
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.LibraAccount;
 import 0x1.Libra;
 main(blessed: &signer) {
-    LibraAccount.deposit<LBR.LBR>(copy(blessed), {{alice}}, LBR.mint(copy(blessed), 1000000));
-    LibraAccount.deposit<LBR.LBR>(copy(blessed), {{bob}}, LBR.mint(move(blessed), 1000000));
+    LibraAccount.deposit<Coin1.Coin1>(copy(blessed), {{alice}}, Libra.mint<Coin1.Coin1>(copy(blessed), 1000000));
+    LibraAccount.deposit<Coin1.Coin1>(copy(blessed), {{bob}}, Libra.mint<Coin1.Coin1>(move(blessed), 1000000));
     return;
 }
 
@@ -21,15 +21,16 @@ main(blessed: &signer) {
 //! new-transaction
 //! sender: alice
 //! gas-price: 1
+//! gas-currency: Coin1
 //! args: 1000000
 import 0x1.LibraAccount;
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Vector;
 
 main(account: &signer, amount: u64) {
     let with_cap: LibraAccount.WithdrawCapability;
     with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    LibraAccount.pay_from<LBR.LBR>(&with_cap, {{carol}}, move(amount));
+    LibraAccount.pay_from<Coin1.Coin1>(&with_cap, {{carol}}, move(amount));
     LibraAccount.restore_withdraw_capability(move(with_cap));
     return;
 }
@@ -44,15 +45,16 @@ main(account: &signer, amount: u64) {
 //! new-transaction
 //! sender: bob
 //! gas-price: 1
+//! gas-currency: Coin1
 //! args: 1000
 import 0x1.LibraAccount;
-import 0x1.LBR;
+import 0x1.Coin1;
 import 0x1.Vector;
 
 main(account: &signer, amount: u64) {
     let with_cap: LibraAccount.WithdrawCapability;
     with_cap = LibraAccount.extract_withdraw_capability(copy(account));
-    LibraAccount.pay_from<LBR.LBR>(&with_cap, {{carol}}, move(amount));
+    LibraAccount.pay_from<Coin1.Coin1>(&with_cap, {{carol}}, move(amount));
     LibraAccount.restore_withdraw_capability(move(with_cap));
     return;
 }
@@ -66,11 +68,11 @@ main(account: &signer, amount: u64) {
 
 //! new-transaction
 import 0x1.LibraAccount;
-import 0x1.LBR;
+import 0x1.Coin1;
 
 main() {
-    assert(LibraAccount.balance<LBR.LBR>({{carol}}) == 1000, 42);
-    assert(LibraAccount.balance<LBR.LBR>({{alice}}) == LibraAccount.balance<LBR.LBR>({{bob}}) + 1000, 43)
+    assert(LibraAccount.balance<Coin1.Coin1>({{carol}}) == 1000, 42);
+    assert(LibraAccount.balance<Coin1.Coin1>({{alice}}) == LibraAccount.balance<Coin1.Coin1>({{bob}}) + 1000, 43)
     return;
 }
 

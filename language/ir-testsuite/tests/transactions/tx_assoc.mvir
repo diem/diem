@@ -2,7 +2,7 @@ import 0x1.CoreAddresses;
 import 0x1.Signer;
 //! sender: association
 main(account: &signer) {
-    assert(Signer.address_of(move(account)) == CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 0);
+    assert(Signer.address_of(move(account)) == CoreAddresses.LIBRA_ROOT_ADDRESS(), 0);
     return;
 }
 
@@ -10,7 +10,7 @@ main(account: &signer) {
 import 0x1.CoreAddresses;
 import 0x1.Signer;
 main(account: &signer) {
-    assert(Signer.address_of(move(account)) != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 1);
+    assert(Signer.address_of(move(account)) != CoreAddresses.LIBRA_ROOT_ADDRESS(), 1);
     return;
 }
 
@@ -20,7 +20,7 @@ main(account: &signer) {
 import 0x1.CoreAddresses;
 import 0x1.Signer;
 main(account: &signer) {
-    assert(Signer.address_of(move(account)) != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 2);
-    assert({{alice}} != CoreAddresses.ASSOCIATION_ROOT_ADDRESS(), 3);
+    assert(Signer.address_of(move(account)) != CoreAddresses.LIBRA_ROOT_ADDRESS(), 2);
+    assert({{alice}} != CoreAddresses.LIBRA_ROOT_ADDRESS(), 3);
     return;
 }

@@ -12,15 +12,16 @@ use consensus_types::{
     sync_info::SyncInfo,
     vote_msg::VoteMsg,
 };
+use libra_metrics::IntCounterVec;
 use libra_types::{epoch_change::EpochChangeProof, PeerId};
 use network::{
+    constants::NETWORK_CHANNEL_SIZE,
     error::NetworkError,
     peer_manager::{ConnectionRequestSender, PeerManagerRequestSender},
     protocols::{
-        network::{NetworkEvents, NetworkSender},
+        network::{NetworkEvents, NetworkSender, NewNetworkSender},
         rpc::error::RpcError,
     },
-    validator_network::network_builder::{NetworkBuilder, NETWORK_CHANNEL_SIZE},
     ProtocolId,
 };
 use serde::{Deserialize, Serialize};
@@ -69,30 +70,27 @@ pub struct ConsensusNetworkSender {
     network_sender: NetworkSender<ConsensusMsg>,
 }
 
-/// Create a new Sender that only sends for the `CONSENSUS_DIRECT_SEND_PROTOCOL` and
-/// `CONSENSUS_RPC_PROTOCOL` ProtocolId and a Receiver (Events) that explicitly returns only said
-/// ProtocolId.
-pub fn add_to_network(
-    network: &mut NetworkBuilder,
-) -> (ConsensusNetworkSender, ConsensusNetworkEvents) {
-    let (network_sender, network_receiver, connection_reqs_tx, connection_notifs_rx) = network
-        .add_protocol_handler(
-            vec![ProtocolId::ConsensusRpc],
-            vec![ProtocolId::ConsensusDirectSend],
-            QueueStyle::LIFO,
-            NETWORK_CHANNEL_SIZE,
-            Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
-        );
+/// Configuration for the network endpoints to support consensus.
+pub fn network_endpoint_config() -> (
+    Vec<ProtocolId>,
+    Vec<ProtocolId>,
+    QueueStyle,
+    usize,
+    Option<&'static IntCounterVec>,
+) {
     (
-        ConsensusNetworkSender::new(network_sender, connection_reqs_tx),
-        ConsensusNetworkEvents::new(network_receiver, connection_notifs_rx),
+        vec![ProtocolId::ConsensusRpc],
+        vec![ProtocolId::ConsensusDirectSend],
+        QueueStyle::LIFO,
+        NETWORK_CHANNEL_SIZE,
+        Some(&counters::PENDING_CONSENSUS_NETWORK_EVENTS),
     )
 }
 
-impl ConsensusNetworkSender {
+impl NewNetworkSender for ConsensusNetworkSender {
     /// Returns a Sender that only sends for the `CONSENSUS_DIRECT_SEND_PROTOCOL` and
     /// `CONSENSUS_RPC_PROTOCOL` ProtocolId.
-    pub fn new(
+    fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
         connection_reqs_tx: ConnectionRequestSender,
     ) -> Self {
@@ -100,7 +98,9 @@ impl ConsensusNetworkSender {
             network_sender: NetworkSender::new(peer_mgr_reqs_tx, connection_reqs_tx),
         }
     }
+}
 
+impl ConsensusNetworkSender {
     /// Send a single message to the destination peer using the `CONSENSUS_DIRECT_SEND_PROTOCOL`
     /// ProtocolId.
     pub fn send_to(

@@ -94,66 +94,8 @@ impl LedgerStore {
         })
     }
 
-    /// Returns the ledger infos reflecting epoch bumps with their 2f+1 signatures in
-    /// [`start_epoch`, `end_epoch`). If there is no more than `limit` results, this function
-    /// returns all of them, otherwise the first `limit` results are returned and a flag
-    /// (when true) will be used to indicate the fact that there is more.
-    pub fn get_epoch_change_ledger_infos(
-        &self,
-        start_epoch: u64,
-        end_epoch: u64,
-        limit: usize,
-    ) -> Result<(Vec<LedgerInfoWithSignatures>, bool)> {
-        ensure!(
-            start_epoch <= end_epoch,
-            "Bad epoch range [{}, {})",
-            start_epoch,
-            end_epoch,
-        );
-        // Note that the latset epoch can be the same with the current epoch (in most cases), or
-        // current_epoch + 1 (when the latest ledger_info carries next validator set)
-        let latest_epoch = self
-            .get_latest_ledger_info()?
-            .ledger_info()
-            .next_block_epoch();
-        ensure!(
-            end_epoch <= latest_epoch,
-            "Unable to provide epoch change ledger info for still open epoch. asked upper bound: {}, last sealed epoch: {}",
-            end_epoch,
-            latest_epoch - 1,  // okay to -1 because genesis LedgerInfo has .next_block_epoch() == 1
-        );
-        let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
-        iter.seek(&start_epoch)?;
-
-        let mut results = Vec::new();
-
-        for res in iter {
-            let (epoch, ledger_info_with_sigs) = res?;
-            debug_assert_eq!(epoch, ledger_info_with_sigs.ledger_info().epoch());
-
-            if epoch >= end_epoch {
-                break;
-            }
-            if results.len() >= limit {
-                return Ok((results, true));
-            }
-
-            ensure!(
-                ledger_info_with_sigs
-                    .ledger_info()
-                    .next_epoch_state()
-                    .is_some(),
-                "DB corruption: the last ledger info of epoch {} is missing next epoch info",
-                epoch,
-            );
-            results.push(ledger_info_with_sigs);
-        }
-
-        Ok((results, false))
-    }
-
     /// Gets ledger info at specified version and ensures it's an epoch change.
-    pub fn get_epoch_change_ledger_info(
+    pub fn get_epoch_ending_ledger_info(
         &self,
         version: Version,
     ) -> Result<LedgerInfoWithSignatures> {
@@ -280,7 +222,8 @@ impl LedgerStore {
 
     /// Gets an iterator that yields `num_transaction_infos` transaction infos starting from
     /// `start_version`.
-    pub fn get_transaction_info_iter(
+    #[cfg(test)]
+    fn get_transaction_info_iter(
         &self,
         start_version: Version,
         num_transaction_infos: u64,
@@ -295,6 +238,22 @@ impl LedgerStore {
             end_version: start_version
                 .checked_add(num_transaction_infos)
                 .ok_or_else(|| format_err!("Too many transaction infos requested."))?,
+        })
+    }
+
+    /// Gets an iterator that yields epoch ending ledger infos, starting
+    /// from `start_epoch`, and ends at the one before `end_epoch`
+    pub fn get_epoch_ending_ledger_info_iter(
+        &self,
+        start_epoch: u64,
+        end_epoch: u64,
+    ) -> Result<EpochEndingLedgerInfoIter> {
+        let mut iter = self.db.iter::<LedgerInfoSchema>(ReadOptions::default())?;
+        iter.seek(&start_epoch)?;
+        Ok(EpochEndingLedgerInfoIter {
+            inner: iter,
+            next_epoch: start_epoch,
+            end_epoch,
         })
     }
 
@@ -381,15 +340,13 @@ impl LedgerStore {
     ) -> Result<()> {
         let ledger_info = ledger_info_with_sigs.ledger_info();
 
-        if ledger_info.next_epoch_state().is_some() {
+        if ledger_info.ends_epoch() {
             // This is the last version of the current epoch, update the epoch by version index.
             cs.batch
                 .put::<EpochByVersionSchema>(&ledger_info.version(), &ledger_info.epoch())?;
         }
-        cs.batch.put::<LedgerInfoSchema>(
-            &ledger_info_with_sigs.ledger_info().epoch(),
-            ledger_info_with_sigs,
-        )
+        cs.batch
+            .put::<LedgerInfoSchema>(&ledger_info.epoch(), ledger_info_with_sigs)
     }
 }
 
@@ -433,6 +390,43 @@ impl<'a> TransactionInfoIter<'a> {
 
 impl<'a> Iterator for TransactionInfoIter<'a> {
     type Item = Result<TransactionInfo>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next_impl().transpose()
+    }
+}
+
+pub struct EpochEndingLedgerInfoIter<'a> {
+    inner: SchemaIterator<'a, LedgerInfoSchema>,
+    next_epoch: u64,
+    end_epoch: u64,
+}
+
+impl<'a> EpochEndingLedgerInfoIter<'a> {
+    fn next_impl(&mut self) -> Result<Option<LedgerInfoWithSignatures>> {
+        if self.next_epoch >= self.end_epoch {
+            return Ok(None);
+        }
+
+        let ret = match self.inner.next().transpose()? {
+            Some((epoch, li)) => {
+                if !li.ledger_info().ends_epoch() {
+                    None
+                } else {
+                    ensure!(epoch == self.next_epoch, "Epochs are not consecutive.");
+                    self.next_epoch += 1;
+                    Some(li)
+                }
+            }
+            _ => None,
+        };
+
+        Ok(ret)
+    }
+}
+
+impl<'a> Iterator for EpochEndingLedgerInfoIter<'a> {
+    type Item = Result<LedgerInfoWithSignatures>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.next_impl().transpose()

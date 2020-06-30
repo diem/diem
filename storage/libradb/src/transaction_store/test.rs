@@ -5,7 +5,11 @@ use super::*;
 use crate::LibraDB;
 use libra_proptest_helpers::Index;
 use libra_temppath::TempPath;
-use libra_types::proptest_types::{AccountInfoUniverse, SignatureCheckedTransactionGen};
+use libra_types::{
+    block_metadata::BlockMetadata,
+    proptest_types::{AccountInfoUniverse, SignatureCheckedTransactionGen},
+    transaction::{SignedTransaction, Transaction},
+};
 use proptest::{collection::vec, prelude::*};
 
 proptest! {
@@ -97,6 +101,54 @@ proptest! {
         }
 
         prop_assert!(store.get_transaction_iter(10, u64::max_value()).is_err());
+    }
+
+    #[test]
+    fn test_get_block_metadata(
+        txns in vec(
+            prop_oneof![
+                any::<BlockMetadata>().prop_map(Transaction::BlockMetadata),
+                any::<SignedTransaction>().prop_map(Transaction::UserTransaction),
+            ],
+            1..100,
+        )
+    ) {
+        let tmp_dir = TempPath::new();
+        let db = LibraDB::new_for_test(&tmp_dir);
+        let store = &db.transaction_store;
+
+        let mut cs = ChangeSet::new();
+        for (ver, txn) in txns.iter().enumerate() {
+            store
+                .put_transaction(ver as Version, &txn, &mut cs)
+                .unwrap();
+        }
+        store.db.write_schemas(cs.batch).unwrap();
+
+        let mut timestamp = 0;
+        let mut block_meta_ver = 0;
+        let mut seen_any_block = false;
+        for (ver, txn) in txns.into_iter().enumerate() {
+            if let Transaction::BlockMetadata(b) = txn {
+                timestamp = b.into_inner().unwrap().1;
+                block_meta_ver = ver as Version;
+                seen_any_block = true;
+            }
+            let block_meta_opt = store.get_block_metadata(ver as Version).unwrap();
+            if seen_any_block {
+                let (v, block_meta) = block_meta_opt.unwrap();
+                prop_assert_eq!(
+                    v,
+                    block_meta_ver
+                );
+                prop_assert_eq!(
+                    block_meta.into_inner().unwrap().1,
+                    timestamp
+                );
+            } else {
+                prop_assert!(block_meta_opt.is_none());
+            }
+        }
     }
 }
 

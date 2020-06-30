@@ -3,4 +3,6 @@
 
 #![forbid(unsafe_code)]
 
-pub mod docgen;
+mod docgen;
+
+pub use crate::docgen::*;

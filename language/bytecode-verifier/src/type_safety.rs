@@ -6,9 +6,9 @@
 
 use crate::{
     control_flow_graph::{ControlFlowGraph, VMControlFlowGraph},
-    signature::kind,
+    kind,
 };
-use libra_types::vm_error::{StatusCode, VMStatus};
+use libra_types::vm_status::{StatusCode, VMStatus};
 use mirai_annotations::*;
 use vm::{
     access::ModuleAccess,

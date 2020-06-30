@@ -43,7 +43,7 @@ impl Waypoint {
 
     /// Generates a new waypoint given the epoch change LedgerInfo.
     pub fn new_epoch_boundary(ledger_info: &LedgerInfo) -> Result<Self> {
-        ensure!(ledger_info.next_epoch_state().is_some(), "No validator set");
+        ensure!(ledger_info.ends_epoch(), "No validator set");
         Ok(Self::new_any(ledger_info))
     }
 

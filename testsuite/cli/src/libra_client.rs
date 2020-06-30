@@ -22,7 +22,7 @@ use libra_types::{
     ledger_info::LedgerInfoWithSignatures,
     transaction::{SignedTransaction, Version},
     trusted_state::{TrustedState, TrustedStateChange},
-    vm_error::StatusCode,
+    vm_status::StatusCode,
     waypoint::Waypoint,
 };
 use reqwest::Url;
@@ -90,8 +90,8 @@ impl LibraClient {
             Err(e) => {
                 if let Some(error) = e.downcast_ref::<JsonRpcError>() {
                     // check VM status
-                    if let Some(vm_error) = error.get_vm_error() {
-                        if vm_error.major_status == StatusCode::SEQUENCE_NUMBER_TOO_OLD {
+                    if let Some(vm_status) = error.get_vm_status() {
+                        if vm_status.major_status == StatusCode::SEQUENCE_NUMBER_TOO_OLD {
                             if let Some(sender_account) = sender_account_opt {
                                 // update sender's sequence number if too old
                                 sender_account.sequence_number =

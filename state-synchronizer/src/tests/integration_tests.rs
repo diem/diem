@@ -2,16 +2,19 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    executor_proxy::ExecutorProxyTrait, tests::mock_storage::MockStorage, PeerId, StateSyncClient,
-    StateSynchronizer, SynchronizerState,
+    executor_proxy::ExecutorProxyTrait,
+    network::{StateSynchronizerEvents, StateSynchronizerSender},
+    tests::mock_storage::MockStorage,
+    StateSyncClient, StateSynchronizer, SynchronizerState,
 };
 use anyhow::{bail, Result};
+use channel::{libra_channel, message_queues::QueueStyle};
 use executor_types::ExecutedTrees;
-use futures::executor::block_on;
+use futures::{executor::block_on, StreamExt};
 use libra_config::{
     chain_id::ChainId,
-    config::{PeerNetworkId, RoleType},
-    network_id::NetworkId,
+    config::RoleType,
+    network_id::{NetworkContext, NetworkId},
 };
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
 use libra_mempool::mocks::MockSharedMempool;
@@ -21,13 +24,23 @@ use libra_types::{
     on_chain_config::ValidatorSet, proof::TransactionListProof,
     transaction::TransactionListWithProof, validator_config::ValidatorConfig,
     validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
-    validator_verifier::random_validator_verifier, waypoint::Waypoint,
+    validator_verifier::random_validator_verifier, waypoint::Waypoint, PeerId,
 };
-use network::validator_network::network_builder::{AuthenticationMode, NetworkBuilder};
+use network::{
+    constants,
+    peer_manager::{
+        conn_notifs_channel, ConnectionNotification, ConnectionRequestSender,
+        PeerManagerNotification, PeerManagerRequest, PeerManagerRequestSender,
+    },
+    protocols::network::{NewNetworkEvents, NewNetworkSender},
+    ProtocolId,
+};
+use network_builder::builder::{AuthenticationMode, NetworkBuilder};
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
     collections::HashMap,
     convert::TryFrom,
+    num::NonZeroUsize,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, RwLock,
@@ -95,11 +108,11 @@ impl ExecutorProxyTrait for MockExecutorProxy {
         Ok(self.storage.read().unwrap().get_epoch_changes(epoch))
     }
 
-    fn get_epoch_change_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
+    fn get_epoch_ending_ledger_info(&self, version: u64) -> Result<LedgerInfoWithSignatures> {
         self.storage
             .read()
             .unwrap()
-            .get_epoch_change_ledger_info(version)
+            .get_epoch_ending_ledger_info(version)
     }
 
     fn load_on_chain_configs(&mut self) -> Result<()> {
@@ -123,6 +136,9 @@ struct SynchronizerEnv {
     peer_ids: Vec<PeerId>,
     peer_addresses: Vec<NetworkAddress>,
     mempools: Vec<MockSharedMempool>,
+    network_reqs_rxs: Vec<libra_channel::Receiver<(PeerId, ProtocolId), PeerManagerRequest>>,
+    network_notifs_txs: Vec<libra_channel::Sender<(PeerId, ProtocolId), PeerManagerNotification>>,
+    network_conn_event_notifs_txs: Vec<conn_notifs_channel::Sender>,
 }
 
 impl SynchronizerEnv {
@@ -153,7 +169,6 @@ impl SynchronizerEnv {
                 RawNetworkAddress::try_from(&addr).unwrap(),
                 network_keys[idx].public_key(),
                 RawNetworkAddress::try_from(&addr).unwrap(),
-                // Vec::<AccountAddress>::new(),
             );
             let validator_info =
                 ValidatorInfo::new(signer.author(), voting_power, validator_config);
@@ -212,6 +227,9 @@ impl SynchronizerEnv {
             peer_ids,
             peer_addresses: vec![],
             mempools: vec![],
+            network_reqs_rxs: vec![],
+            network_notifs_txs: vec![],
+            network_conn_event_notifs_txs: vec![],
         }
     }
 
@@ -220,8 +238,9 @@ impl SynchronizerEnv {
         handler: MockRpcHandler,
         role: RoleType,
         waypoint: Option<Waypoint>,
+        mock_network: bool,
     ) {
-        self.setup_next_synchronizer(handler, role, waypoint, 60_000);
+        self.setup_next_synchronizer(handler, role, waypoint, 60_000, mock_network);
     }
 
     fn setup_next_synchronizer(
@@ -230,6 +249,7 @@ impl SynchronizerEnv {
         role: RoleType,
         waypoint: Option<Waypoint>,
         timeout_ms: u64,
+        mock_network: bool,
     ) {
         let new_peer_idx = self.synchronizers.len();
         let trusted_peers: HashMap<_, _> = self
@@ -244,47 +264,77 @@ impl SynchronizerEnv {
             .collect();
 
         // setup network
-        let addr: NetworkAddress = "/memory/0".parse().unwrap();
-        let mut seed_peers = HashMap::new();
-        if new_peer_idx > 0 {
-            seed_peers.insert(
-                self.peer_ids[new_peer_idx - 1],
-                vec![self.peer_addresses[new_peer_idx - 1].clone()],
+        let (sender, events) = if mock_network {
+            // mock the StateSynchronizerEvents and StateSynchronizerSender to allow manually controlling
+            // msg delivery in test
+            let (network_reqs_tx, network_reqs_rx) =
+                libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            let (connection_reqs_tx, _) =
+                libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            let (network_notifs_tx, network_notifs_rx) =
+                libra_channel::new(QueueStyle::FIFO, NonZeroUsize::new(8).unwrap(), None);
+            let (conn_status_tx, conn_status_rx) = conn_notifs_channel::new();
+            let network_sender = StateSynchronizerSender::new(
+                PeerManagerRequestSender::new(network_reqs_tx),
+                ConnectionRequestSender::new(connection_reqs_tx),
             );
-        }
-        let mut network_builder = NetworkBuilder::new(
-            self.runtime.handle().clone(),
-            ChainId::default(),
-            self.network_id.clone(),
-            RoleType::Validator,
-            self.peer_ids[new_peer_idx],
-            addr,
-        );
-        network_builder
-            .authentication_mode(AuthenticationMode::Mutual(
-                self.network_keys[new_peer_idx].clone(),
-            ))
-            .trusted_peers(trusted_peers)
-            .seed_peers(seed_peers)
-            .add_connectivity_manager()
-            .add_gossip_discovery();
+            let network_events = StateSynchronizerEvents::new(network_notifs_rx, conn_status_rx);
+            self.network_reqs_rxs.push(network_reqs_rx);
+            self.network_notifs_txs.push(network_notifs_tx);
+            self.network_conn_event_notifs_txs.push(conn_status_tx);
+            (network_sender, network_events)
+        } else {
+            let addr: NetworkAddress = "/memory/0".parse().unwrap();
+            let mut seed_peers = HashMap::new();
+            if new_peer_idx > 0 {
+                seed_peers.insert(
+                    self.peer_ids[new_peer_idx - 1],
+                    vec![self.peer_addresses[new_peer_idx - 1].clone()],
+                );
+            }
+            let mut network_builder = NetworkBuilder::new(
+                self.runtime.handle().clone(),
+                ChainId::default(),
+                self.network_id.clone(),
+                RoleType::Validator,
+                self.peer_ids[new_peer_idx],
+                addr.clone(),
+            );
+            network_builder
+                .authentication_mode(AuthenticationMode::Mutual(
+                    self.network_keys[new_peer_idx].clone(),
+                ))
+                .trusted_peers(trusted_peers)
+                .seed_peers(seed_peers)
+                .add_connectivity_manager()
+                .add_gossip_discovery(addr, constants::DISCOVERY_INTERVAL_MS);
 
-        let (sender, events) = crate::network::add_to_network(&mut network_builder);
-        let peer_addr = network_builder.build();
+            let (sender, events) =
+                network_builder.add_protocol_handler(crate::network::network_endpoint_config());
+            let peer_addr = network_builder.build();
+            self.peer_addresses.push(peer_addr);
+            (sender, events)
+        };
 
         let mut config = config_builder::test_config().0;
+        config.base.role = role;
+        config.state_sync.sync_request_timeout_ms = timeout_ms;
+
         let network = config.validator_network.unwrap();
-        let network_id = network.peer_id();
+        let network_id = if role.is_validator() {
+            NetworkId::Validator
+        } else {
+            NetworkId::vfn_network()
+        };
         if !role.is_validator() {
             config.full_node_networks = vec![network];
             config.validator_network = None;
-        }
-        config.base.role = role;
-        config.state_sync.sync_request_timeout_ms = timeout_ms;
-        if new_peer_idx > 0 {
-            // set the upstream peer in the config
-            let upstream_peer = PeerNetworkId(network_id, self.peer_ids[new_peer_idx - 1]);
-            config.upstream.upstream_peers.insert(upstream_peer);
+            if new_peer_idx > 0 {
+                // setup upstream network for FN
+                // TODO for now the tests support creating V network and VFN networks - add more robust test setup
+                // to support FN-only networks
+                config.upstream.networks.push(network_id.clone());
+            }
         }
 
         let genesis_li = Self::genesis_li(&self.public_keys);
@@ -309,7 +359,6 @@ impl SynchronizerEnv {
         self.synchronizers.push(synchronizer);
         self.clients.push(client);
         self.storage_proxies.push(storage_proxy);
-        self.peer_addresses.push(peer_addr);
     }
 
     fn default_handler() -> MockRpcHandler {
@@ -350,7 +399,7 @@ impl SynchronizerEnv {
     }
 
     // Find LedgerInfo for a epoch boundary version
-    fn get_epoch_change_ledger_info(
+    fn get_epoch_ending_ledger_info(
         &self,
         peer_id: usize,
         version: u64,
@@ -358,15 +407,22 @@ impl SynchronizerEnv {
         self.storage_proxies[peer_id]
             .read()
             .unwrap()
-            .get_epoch_change_ledger_info(version)
+            .get_epoch_ending_ledger_info(version)
     }
 
-    fn wait_for_version(&self, peer_id: usize, target_version: u64) -> bool {
+    fn wait_for_version(
+        &self,
+        peer_id: usize,
+        target_version: u64,
+        highest_li_version: Option<u64>,
+    ) -> bool {
         let max_retries = 30;
         for _ in 0..max_retries {
             let state = block_on(self.clients[peer_id].get_state()).unwrap();
             if state.synced_trees.version().unwrap_or(0) == target_version {
-                return true;
+                return highest_li_version.map_or(true, |li_version| {
+                    li_version == state.highest_local_li.ledger_info().version()
+                });
             }
             std::thread::sleep(std::time::Duration::from_millis(1000));
         }
@@ -375,6 +431,38 @@ impl SynchronizerEnv {
 
     fn wait_until_initialized(&self, peer_id: usize) -> Result<()> {
         block_on(self.synchronizers[peer_id].wait_until_initialized())
+    }
+
+    fn send_connection_event(
+        &mut self,
+        peer_idx: usize,
+        peer_id: PeerId,
+        notif: ConnectionNotification,
+    ) {
+        let conn_notifs_tx = self
+            .network_conn_event_notifs_txs
+            .get_mut(peer_idx)
+            .unwrap();
+        conn_notifs_tx.push(peer_id, notif).unwrap();
+    }
+
+    /// Delivers next message from peer with index `sender` to `receiver` in this SynchronizerEnv
+    fn deliver_msg(&mut self, sender: usize, receiver: usize, sender_id: PeerId) {
+        let network_reqs_rx = self.network_reqs_rxs.get_mut(sender).unwrap();
+        let network_req = block_on(network_reqs_rx.next()).unwrap();
+
+        // await next message from node
+        if let PeerManagerRequest::SendMessage(_receiver_id, msg) = network_req {
+            let receiver_network_notif_tx = self.network_notifs_txs.get_mut(receiver).unwrap();
+            receiver_network_notif_tx
+                .push(
+                    (sender_id, ProtocolId::StateSynchronizerDirectSend),
+                    PeerManagerNotification::RecvMessage(sender_id, msg),
+                )
+                .unwrap();
+        } else {
+            panic!("received network request other than PeerManagerRequest");
+        }
     }
 }
 
@@ -385,11 +473,13 @@ fn test_basic_catch_up() {
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         None,
+        false,
     );
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         None,
+        false,
     );
 
     // test small sequential syncs
@@ -428,8 +518,9 @@ fn test_flaky_peer_sync() {
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         None,
+        false,
     );
-    env.start_next_synchronizer(handler, RoleType::Validator, None);
+    env.start_next_synchronizer(handler, RoleType::Validator, None, false);
     env.commit(0, 20);
     env.sync_to(1, env.latest_li(0));
     assert_eq!(env.latest_li(1).ledger_info().version(), 20);
@@ -441,12 +532,13 @@ fn test_request_timeout() {
     let handler =
         Box::new(move |_| -> Result<TransactionListWithProof> { bail!("chunk fetch failed") });
     let mut env = SynchronizerEnv::new(2);
-    env.start_next_synchronizer(handler, RoleType::Validator, None);
+    env.start_next_synchronizer(handler, RoleType::Validator, None, false);
     env.setup_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         None,
         100,
+        false,
     );
     env.commit(0, 1);
     env.sync_to(1, env.latest_li(0));
@@ -459,15 +551,21 @@ fn test_full_node() {
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         None,
+        false,
     );
-    env.start_next_synchronizer(SynchronizerEnv::default_handler(), RoleType::FullNode, None);
+    env.start_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::FullNode,
+        None,
+        false,
+    );
     env.commit(0, 10);
     // first sync should be fulfilled immediately after peer discovery
-    assert!(env.wait_for_version(1, 10));
+    assert!(env.wait_for_version(1, 10, None));
     env.commit(0, 20);
     // second sync will be done via long polling cause first node should send new request
     // after receiving first chunk immediately
-    assert!(env.wait_for_version(1, 20));
+    assert!(env.wait_for_version(1, 20, None));
 }
 
 #[test]
@@ -477,11 +575,13 @@ fn catch_up_through_epochs_validators() {
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         None,
+        false,
     );
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         None,
+        false,
     );
 
     // catch up to the next epoch starting from the middle of the current one
@@ -512,6 +612,7 @@ fn catch_up_through_epochs_full_node() {
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         None,
+        false,
     );
     // catch up through multiple epochs
     for epoch in 1..10 {
@@ -520,13 +621,23 @@ fn catch_up_through_epochs_full_node() {
     }
     env.commit(0, 950); // At this point peer 0 is at epoch 10 and version 950
 
-    env.start_next_synchronizer(SynchronizerEnv::default_handler(), RoleType::FullNode, None);
-    assert!(env.wait_for_version(1, 950));
+    env.start_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::FullNode,
+        None,
+        false,
+    );
+    assert!(env.wait_for_version(1, 950, None));
     assert_eq!(env.latest_li(1).ledger_info().epoch(), 10);
 
     // Peer 2 has peer 1 as its upstream, should catch up from it.
-    env.start_next_synchronizer(SynchronizerEnv::default_handler(), RoleType::FullNode, None);
-    assert!(env.wait_for_version(2, 950));
+    env.start_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::FullNode,
+        None,
+        false,
+    );
+    assert!(env.wait_for_version(2, 950, None));
     assert_eq!(env.latest_li(2).ledger_info().epoch(), 10);
 }
 
@@ -537,6 +648,7 @@ fn catch_up_with_waypoints() {
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
         None,
+        false,
     );
     for epoch in 1..10 {
         env.commit(0, epoch * 100);
@@ -545,24 +657,114 @@ fn catch_up_with_waypoints() {
     env.commit(0, 950); // At this point peer 0 is at epoch 10 and version 950
 
     // Create a waypoint based on LedgerInfo of peer 0 at version 700 (epoch 7)
-    let waypoint_li = env.get_epoch_change_ledger_info(0, 700).unwrap();
+    let waypoint_li = env.get_epoch_ending_ledger_info(0, 700).unwrap();
     let waypoint = Waypoint::new_epoch_boundary(waypoint_li.ledger_info()).unwrap();
 
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
         Some(waypoint),
+        false,
     );
     env.wait_until_initialized(1).unwrap();
     assert!(env.latest_li(1).ledger_info().version() >= 700);
     assert!(env.latest_li(1).ledger_info().epoch() >= 7);
 
     // Once caught up with the waypoint peer 1 continues with the regular state sync
-    assert!(env.wait_for_version(1, 950));
+    assert!(env.wait_for_version(1, 950, None));
     assert_eq!(env.latest_li(1).ledger_info().epoch(), 10);
 
     // Peer 2 has peer 1 as its upstream, should catch up from it.
-    env.start_next_synchronizer(SynchronizerEnv::default_handler(), RoleType::FullNode, None);
-    assert!(env.wait_for_version(2, 950));
+    env.start_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::FullNode,
+        None,
+        false,
+    );
+    assert!(env.wait_for_version(2, 950, None));
     assert_eq!(env.latest_li(2).ledger_info().epoch(), 10);
+}
+
+// test full node catching up to validator that is also making progress
+#[test]
+fn test_sync_pending_ledger_infos() {
+    let mut env = SynchronizerEnv::new(2);
+    let (validator, full_node) = (PeerId::random(), PeerId::random());
+    env.start_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::Validator,
+        None,
+        true,
+    );
+    env.start_next_synchronizer(
+        SynchronizerEnv::default_handler(),
+        RoleType::FullNode,
+        None,
+        true,
+    );
+
+    // validator discovers fn
+    env.send_connection_event(
+        0,
+        validator,
+        ConnectionNotification::NewPeer(full_node, NetworkAddress::mock(), NetworkContext::mock()),
+    );
+    // fn discovers validator
+    env.send_connection_event(
+        1,
+        full_node,
+        ConnectionNotification::NewPeer(validator, NetworkAddress::mock(), NetworkContext::mock()),
+    );
+
+    let commit_versions = vec![
+        900, 1800, 2800, 3100, 3200, 3300, 3325, 3350, 3400, 3450, 3650, 4300,
+    ];
+
+    let expected_states = vec![
+        (250, 0),
+        (500, 0),
+        (750, 0),
+        (900, 900),
+        (1150, 900),
+        (1400, 900),
+        (1650, 900),
+        (1800, 1800),
+        (2050, 1800),
+        (2300, 1800),
+        (2550, 1800),
+        (2800, 2800),
+        (3050, 2800),
+        (3100, 3100),
+        (3350, 3350),
+        (3450, 3450),
+        (3650, 3650),
+        (3900, 3650),
+        (4150, 3650),
+        (4300, 4300),
+    ];
+
+    fn deliver_and_check_chunk_state(
+        env: &mut SynchronizerEnv,
+        full_node: PeerId,
+        validator: PeerId,
+        expected_state: (u64, u64),
+    ) {
+        env.deliver_msg(1, 0, full_node);
+        env.deliver_msg(0, 1, validator);
+        let (sync_version, li_version) = expected_state;
+        assert!(
+            env.wait_for_version(1, sync_version, Some(li_version)),
+            "didn't reach synced version {} and highest LI version {}",
+            sync_version,
+            li_version
+        );
+    }
+
+    for (idx, expected_state) in expected_states.iter().enumerate() {
+        // commit if applicable
+        if let Some(version) = commit_versions.get(idx) {
+            env.commit(0, *version);
+        }
+        deliver_and_check_chunk_state(&mut env, full_node, validator, *expected_state);
+    }
 }

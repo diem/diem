@@ -5,20 +5,29 @@
 
 ### Table of Contents
 
--  [Struct `EventHandleGenerator`](#0x1_Event_EventHandleGenerator)
--  [Struct `EventHandle`](#0x1_Event_EventHandle)
+-  [Resource `EventHandleGenerator`](#0x1_Event_EventHandleGenerator)
+-  [Resource `EventHandle`](#0x1_Event_EventHandle)
 -  [Function `publish_generator`](#0x1_Event_publish_generator)
 -  [Function `fresh_guid`](#0x1_Event_fresh_guid)
 -  [Function `new_event_handle`](#0x1_Event_new_event_handle)
 -  [Function `emit_event`](#0x1_Event_emit_event)
 -  [Function `write_to_event_store`](#0x1_Event_write_to_event_store)
 -  [Function `destroy_handle`](#0x1_Event_destroy_handle)
+-  [Specification](#0x1_Event_Specification)
 
+
+The Event module defines an
+<code><a href="#0x1_Event_EventHandleGenerator">EventHandleGenerator</a></code> that is used to create
+<code><a href="#0x1_Event_EventHandle">EventHandle</a></code>s with unique GUIDs. It contains a counter for the number
+of
+<code><a href="#0x1_Event_EventHandle">EventHandle</a></code>s it generates. An
+<code><a href="#0x1_Event_EventHandle">EventHandle</a></code> is used to count the number of
+events emitted to a handle and emit events to the event store.
 
 
 <a name="0x1_Event_EventHandleGenerator"></a>
 
-## Struct `EventHandleGenerator`
+## Resource `EventHandleGenerator`
 
 
 
@@ -53,7 +62,7 @@
 
 <a name="0x1_Event_EventHandle"></a>
 
-## Struct `EventHandle`
+## Resource `EventHandle`
 
 
 
@@ -241,3 +250,29 @@
 
 
 </details>
+
+<a name="0x1_Event_Specification"></a>
+
+## Specification
+
+
+Functions of the event module are mocked out using the intrinsic
+pragma. They are implemented in the prover's prelude as no-ops.
+
+Functionality in this module uses GUIDs created from serialization of
+addresses and integers. These constructs are difficult to treat by the
+verifier and the verification problem propagates up to callers of
+those functions. Since events cannot be observed by Move programs,
+mocking out functions of this module does not have effect on other
+verification result.
+
+A specification of the functions is neverthelesse  included in the
+comments of this module and it has been verified.
+
+> TODO(wrwg): We may want to have support by the Move prover to
+> mock out functions for callers but still have them verified
+> standlone.
+
+
+<pre><code>pragma intrinsic = <b>true</b>;
+</code></pre>

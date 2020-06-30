@@ -4,13 +4,13 @@
 use serde::Serialize;
 use std::fmt;
 
-#[derive(Default, Serialize)]
+#[derive(Default, Debug, Serialize)]
 pub struct SuiteReport {
     metrics: Vec<ReportedMetric>,
     text: String,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct ReportedMetric {
     pub experiment: String,
     pub metric: String,

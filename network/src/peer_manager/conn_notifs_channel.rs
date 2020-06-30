@@ -25,6 +25,7 @@ mod test {
     use super::*;
     use crate::peer::DisconnectReason;
     use futures::{executor::block_on, future::FutureExt, stream::StreamExt};
+    use libra_config::network_id::NetworkContext;
     use libra_network_address::NetworkAddress;
 
     #[test]
@@ -36,7 +37,11 @@ mod test {
             sender
                 .push(
                     peer_id_a,
-                    ConnectionNotification::NewPeer(peer_id_a, NetworkAddress::mock()),
+                    ConnectionNotification::NewPeer(
+                        peer_id_a,
+                        NetworkAddress::mock(),
+                        NetworkContext::mock(),
+                    ),
                 )
                 .unwrap();
             sender
@@ -52,7 +57,11 @@ mod test {
             sender
                 .push(
                     peer_id_a,
-                    ConnectionNotification::NewPeer(peer_id_a, NetworkAddress::mock()),
+                    ConnectionNotification::NewPeer(
+                        peer_id_a,
+                        NetworkAddress::mock(),
+                        NetworkContext::mock(),
+                    ),
                 )
                 .unwrap();
             sender
@@ -80,13 +89,21 @@ mod test {
             sender
                 .push(
                     peer_id_a,
-                    ConnectionNotification::NewPeer(peer_id_a, NetworkAddress::mock()),
+                    ConnectionNotification::NewPeer(
+                        peer_id_a,
+                        NetworkAddress::mock(),
+                        NetworkContext::mock(),
+                    ),
                 )
                 .unwrap();
             sender
                 .push(
                     peer_id_b,
-                    ConnectionNotification::NewPeer(peer_id_b, NetworkAddress::mock()),
+                    ConnectionNotification::NewPeer(
+                        peer_id_b,
+                        NetworkAddress::mock(),
+                        NetworkContext::mock(),
+                    ),
                 )
                 .unwrap();
             // Assert that we receive 2 updates, since they are sent for different peers.

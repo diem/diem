@@ -28,6 +28,8 @@ static DEFAULT_BALANCE: Lazy<Balance> = Lazy::new(|| Balance {
 pub enum Role {
     /// Means that the account is a current validator; its address is in the on-chain validator set
     Validator,
+    /// Means that this this is only an account address (with known authentication keys)
+    Address,
 }
 
 #[derive(Debug, Clone)]
@@ -80,6 +82,7 @@ impl FromStr for Role {
     fn from_str(s: &str) -> Result<Self> {
         match s {
             "validator" => Ok(Role::Validator),
+            "address" => Ok(Role::Address),
             other => Err(ErrorKind::Other(format!("Invalid account role {:?}", other)).into()),
         }
     }
@@ -98,6 +101,16 @@ impl Entry {
             self,
             Entry::AccountDefinition(AccountDefinition {
                 role: Some(Role::Validator),
+                ..
+            })
+        )
+    }
+
+    pub fn is_address(&self) -> bool {
+        matches!(
+            self,
+            Entry::AccountDefinition(AccountDefinition {
+                role: Some(Role::Address),
                 ..
             })
         )
@@ -149,6 +162,7 @@ pub struct Config {
     /// A map from account names to account data
     pub accounts: BTreeMap<String, AccountData>,
     pub genesis_accounts: BTreeMap<String, Account>,
+    pub addresses: BTreeMap<String, Account>,
     /// The validator set after genesis
     pub validator_accounts: usize,
 }
@@ -156,6 +170,7 @@ pub struct Config {
 impl Config {
     pub fn build(entries: &[Entry]) -> Result<Self> {
         let mut accounts = BTreeMap::new();
+        let mut addresses = BTreeMap::new();
         let mut validator_accounts = entries.iter().filter(|entry| entry.is_validator()).count();
         let total_validator_accounts = validator_accounts;
 
@@ -181,8 +196,26 @@ impl Config {
 
         // initialize the keys of validator entries with the validator set
         // enhance type of config to contain a validator set, use it to initialize genesis
-        for entry in entries {
+        for entry in entries.iter() {
             match entry {
+                Entry::AccountDefinition(def) if entry.is_address() => {
+                    let (privkey, pubkey) = keygen.generate_keypair();
+                    let account = Account::with_keypair(privkey, pubkey);
+                    let name = def.name.to_ascii_lowercase();
+                    let entry = addresses.entry(name);
+                    match entry {
+                        btree_map::Entry::Vacant(entry) => {
+                            entry.insert(account);
+                        }
+                        btree_map::Entry::Occupied(_) => {
+                            return Err(ErrorKind::Other(format!(
+                                "already has account '{}'",
+                                def.name,
+                            ))
+                            .into());
+                        }
+                    }
+                }
                 Entry::AccountDefinition(def) => {
                     let balance = def.balance.as_ref().unwrap_or(&DEFAULT_BALANCE).clone();
                     let account_data = if entry.is_validator() {
@@ -239,6 +272,7 @@ impl Config {
         }
         Ok(Config {
             accounts,
+            addresses,
             genesis_accounts: make_genesis_accounts(),
             validator_accounts: total_validator_accounts,
         })
@@ -249,6 +283,7 @@ impl Config {
             .get(name)
             .map(|account_data| account_data.account())
             .or_else(|| self.genesis_accounts.get(name))
+            .or_else(|| self.addresses.get(name))
             .ok_or_else(|| ErrorKind::Other(format!("account '{}' does not exist", name)).into())
     }
 }

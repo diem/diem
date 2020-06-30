@@ -13,6 +13,9 @@
 
 ## Function `rotate_authentication_key`
 
+Rotate the sender's authentication key to
+<code>new_key</code>.
+<code>new_key</code> should be a 256 bit sha3 hash of an ed25519 public key.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_authentication_key">rotate_authentication_key</a>(account: &signer, new_key: vector&lt;u8&gt;)

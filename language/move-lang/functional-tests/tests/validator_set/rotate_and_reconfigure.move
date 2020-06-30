@@ -13,25 +13,41 @@
 //! new-transaction
 //! sender: bob
 //! expiration-time: 3
-// rotate bob's key with reconfiguration
+// rotate bob's key
 script {
-use 0x1::ValidatorConfig;
-use 0x1::LibraSystem;
-fun main(account: &signer) {
-    // assert alice is a validator
-    assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
-    assert(LibraSystem::is_validator({{bob}}) == true, 98);
+    use 0x1::ValidatorConfig;
+    use 0x1::LibraSystem;
+    fun main(account: &signer) {
+        // assert alice is a validator
+        assert(ValidatorConfig::is_valid({{bob}}) == true, 98);
+        assert(LibraSystem::is_validator({{bob}}) == true, 98);
 
-    // bob rotates his public key
-    ValidatorConfig::set_consensus_pubkey(account, {{bob}}, x"30");
-
-    // use the update_token to trigger reconfiguration
-    LibraSystem::update_and_reconfigure(account);
-
-    // check bob's public key
-    let validator_config = LibraSystem::get_validator_config({{bob}});
-    assert(*ValidatorConfig::get_consensus_pubkey(&validator_config) == x"30", 99);
+        // bob rotates his public key
+        ValidatorConfig::set_config(account, {{bob}},
+                                    x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c",
+                                    x"", x"", x"", x"");
+    }
 }
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: association
+script {
+    use 0x1::LibraSystem;
+    use 0x1::Roles::{Self, LibraRootRole};
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
+        // use the update_token to trigger reconfiguration
+        LibraSystem::update_and_reconfigure(&assoc_root_role);
+        Roles::restore_capability_to_privilege(account, assoc_root_role);
+
+        // check bob's public key
+        let validator_config = LibraSystem::get_validator_config({{bob}});
+        assert(*ValidatorConfig::get_consensus_pubkey(&validator_config) ==
+               x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c", 99);
+    }
 }
 
 // check: NewEpochEvent

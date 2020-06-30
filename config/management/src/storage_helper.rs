@@ -4,8 +4,8 @@
 use crate::{error::Error, Command};
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_global_constants::{
-    ASSOCIATION_KEY, CONSENSUS_KEY, EPOCH, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND, OPERATOR_KEY,
-    OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
+    ASSOCIATION_KEY, CONSENSUS_KEY, EPOCH, EXECUTION_KEY, FULLNODE_NETWORK_KEY, LAST_VOTED_ROUND,
+    OPERATOR_KEY, OWNER_KEY, PREFERRED_ROUND, VALIDATOR_NETWORK_KEY, WAYPOINT,
 };
 use libra_network_address::NetworkAddress;
 use libra_secure_storage::{
@@ -45,6 +45,7 @@ impl StorageHelper {
 
         storage.create_key(ASSOCIATION_KEY).unwrap();
         storage.create_key(CONSENSUS_KEY).unwrap();
+        storage.create_key(EXECUTION_KEY).unwrap();
         storage.create_key(FULLNODE_NETWORK_KEY).unwrap();
         storage.create_key(OWNER_KEY).unwrap();
         storage.create_key(OPERATOR_KEY).unwrap();
@@ -164,6 +165,7 @@ impl StorageHelper {
         command.operator_key()
     }
 
+    #[cfg(test)]
     pub fn owner_key(&self, local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
@@ -186,6 +188,7 @@ impl StorageHelper {
         command.owner_key()
     }
 
+    #[cfg(test)]
     pub fn set_layout(&self, path: &str, namespace: &str) -> Result<crate::layout::Layout, Error> {
         let args = format!(
             "
@@ -241,6 +244,7 @@ impl StorageHelper {
         command.validator_config()
     }
 
+    #[cfg(test)]
     pub fn verify(&self, namespace: &str) -> Result<String, Error> {
         let args = format!(
             "

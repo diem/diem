@@ -313,6 +313,7 @@ impl<'a> ModuleGenerator<'a> {
             explicit_dependency_declarations: Vec::new(),
             structs: Vec::new(),
             functions: Vec::new(),
+            constants: Vec::new(),
             synthetics: Vec::new(),
         };
         Self {

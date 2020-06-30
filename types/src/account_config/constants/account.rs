@@ -11,7 +11,7 @@ use once_cell::sync::Lazy;
 pub const ACCOUNT_MODULE_NAME: &str = "LibraAccount";
 
 // Account
-static ACCOUNT_MODULE_IDENTIFIER: Lazy<Identifier> =
+pub static ACCOUNT_MODULE_IDENTIFIER: Lazy<Identifier> =
     Lazy::new(|| Identifier::new("LibraAccount").unwrap());
 
 /// The ModuleId for the Account module.

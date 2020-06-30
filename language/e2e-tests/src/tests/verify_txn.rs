@@ -8,7 +8,6 @@ use crate::{
     executor::FakeExecutor,
     transaction_status_eq,
 };
-use bytecode_verifier::VerifiedModule;
 use compiled_stdlib::transaction_scripts::StdlibScript;
 use compiler::Compiler;
 use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
@@ -20,7 +19,7 @@ use libra_types::{
         Script, TransactionArgument, TransactionPayload, TransactionStatus,
         MAX_TRANSACTION_SIZE_IN_BYTES,
     },
-    vm_error::{StatusCode, StatusType, VMStatus},
+    vm_status::{StatusCode, StatusType, VMStatus},
 };
 use move_core_types::gas_schedule::{GasAlgebra, GasConstants};
 use transaction_builder::encode_transfer_with_metadata_script;
@@ -407,7 +406,7 @@ pub fn test_arbitrary_script_execution() {
 }
 
 #[test]
-pub fn test_no_publishing() {
+pub fn test_publish_from_assoc() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
 
@@ -476,7 +475,8 @@ pub fn test_no_publishing_assoc_sender() {
         ",
     );
 
-    let random_module = compile_module_with_address(sender.address(), "file_name", &module);
+    let random_module =
+        compile_module_with_address(&account_config::CORE_CODE_ADDRESS, "file_name", &module);
     let txn = sender.create_user_txn(random_module, 1, 100_000, 0, LBR_NAME.to_owned());
     assert_eq!(executor.verify_transaction(txn.clone()).status(), None);
     assert_eq!(
@@ -623,9 +623,7 @@ fn test_dependency_fails_verification() {
     let compiler = Compiler {
         address: *sender.address(),
         // This is OK because we *know* the module is unverified.
-        extra_deps: vec![VerifiedModule::bypass_verifier_DANGEROUS_FOR_TESTING_ONLY(
-            module,
-        )],
+        extra_deps: vec![module],
         ..Compiler::default()
     };
     let script = compiler

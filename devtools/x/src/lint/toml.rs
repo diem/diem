@@ -45,7 +45,7 @@ impl ContentLinter for RootToml {
         let expected = Workspace {
             members: package_graph
                 .workspace()
-                .members()
+                .iter_by_path()
                 .map(|(path, _)| path)
                 .collect(),
         };

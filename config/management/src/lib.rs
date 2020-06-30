@@ -5,6 +5,7 @@
 
 mod error;
 mod genesis;
+mod json_rpc;
 mod key;
 mod layout;
 mod secure_backend;
@@ -12,10 +13,10 @@ mod validator_config;
 mod verify;
 mod waypoint;
 
-#[cfg(test)]
-mod smoke_test;
+#[cfg(any(test, feature = "testing"))]
+pub mod config_builder;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 mod storage_helper;
 
 use crate::{error::Error, layout::SetLayout, secure_backend::SecureBackend};
@@ -50,6 +51,10 @@ pub enum Command {
     OperatorKey(crate::key::OperatorKey),
     #[structopt(about = "Submits an Ed25519PublicKey for the owner")]
     OwnerKey(crate::key::OwnerKey),
+    #[structopt(about = "Read account state from JSON-RPC endpoint")]
+    ReadAccountState(crate::json_rpc::ReadAccountState),
+    #[structopt(about = "Submit a transaction to the blockchain")]
+    SubmitTransaction(crate::json_rpc::SubmitTransaction),
     #[structopt(about = "Submits a Layout doc to a shared storage")]
     SetLayout(SetLayout),
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
@@ -66,7 +71,9 @@ pub enum CommandName {
     InsertWaypoint,
     OperatorKey,
     OwnerKey,
+    ReadAccountState,
     SetLayout,
+    SubmitTransaction,
     ValidatorConfig,
     Verify,
 }
@@ -80,7 +87,9 @@ impl From<&Command> for CommandName {
             Command::InsertWaypoint(_) => CommandName::InsertWaypoint,
             Command::OperatorKey(_) => CommandName::OperatorKey,
             Command::OwnerKey(_) => CommandName::OwnerKey,
+            Command::ReadAccountState(_) => CommandName::ReadAccountState,
             Command::SetLayout(_) => CommandName::SetLayout,
+            Command::SubmitTransaction(_) => CommandName::SubmitTransaction,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::Verify(_) => CommandName::Verify,
         }
@@ -96,7 +105,9 @@ impl std::fmt::Display for CommandName {
             CommandName::InsertWaypoint => "insert-waypoint",
             CommandName::OperatorKey => "operator-key",
             CommandName::OwnerKey => "owner-key",
+            CommandName::ReadAccountState => "read-account-state",
             CommandName::SetLayout => "set-layout",
+            CommandName::SubmitTransaction => "submit-transaction",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::Verify => "verify",
         };
@@ -113,109 +124,97 @@ impl Command {
             Command::InsertWaypoint(_) => self.insert_waypoint().unwrap().to_string(),
             Command::OperatorKey(_) => self.operator_key().unwrap().to_string(),
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
+            Command::ReadAccountState(_) => format!("{:?}", self.read_account_state().unwrap()),
             Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
+            Command::SubmitTransaction(_) => self
+                .submit_transaction()
+                .map(|_| "success!")
+                .unwrap()
+                .to_string(),
             Command::ValidatorConfig(_) => format!("{:?}", self.validator_config().unwrap()),
             Command::Verify(_) => self.verify().unwrap(),
         }
     }
 
     pub fn association_key(self) -> Result<Ed25519PublicKey, Error> {
-        if let Command::AssociationKey(association_key) = self {
-            association_key.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::AssociationKey,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::AssociationKey(association_key) => association_key.execute(),
+            _ => Err(self.unexpected_command(CommandName::AssociationKey)),
         }
     }
 
     pub fn create_waypoint(self) -> Result<Waypoint, Error> {
-        if let Command::CreateWaypoint(create_waypoint) = self {
-            create_waypoint.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::CreateWaypoint,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::CreateWaypoint(create_waypoint) => create_waypoint.execute(),
+            _ => Err(self.unexpected_command(CommandName::CreateWaypoint)),
         }
     }
 
     pub fn genesis(self) -> Result<Transaction, Error> {
-        if let Command::Genesis(genesis) = self {
-            genesis.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::Genesis,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::Genesis(genesis) => genesis.execute(),
+            _ => Err(self.unexpected_command(CommandName::Genesis)),
         }
     }
 
     pub fn insert_waypoint(self) -> Result<Waypoint, Error> {
-        if let Command::InsertWaypoint(insert_waypoint) = self {
-            insert_waypoint.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::InsertWaypoint,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::InsertWaypoint(insert_waypoint) => insert_waypoint.execute(),
+            _ => Err(self.unexpected_command(CommandName::InsertWaypoint)),
         }
     }
 
     pub fn operator_key(self) -> Result<Ed25519PublicKey, Error> {
-        if let Command::OperatorKey(operator_key) = self {
-            operator_key.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::OperatorKey,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::OperatorKey(operator_key) => operator_key.execute(),
+            _ => Err(self.unexpected_command(CommandName::OperatorKey)),
         }
     }
 
     pub fn owner_key(self) -> Result<Ed25519PublicKey, Error> {
-        if let Command::OwnerKey(owner_key) = self {
-            owner_key.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::OwnerKey,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::OwnerKey(owner_key) => owner_key.execute(),
+            _ => Err(self.unexpected_command(CommandName::OwnerKey)),
+        }
+    }
+
+    pub fn read_account_state(self) -> Result<libra_types::account_state::AccountState, Error> {
+        match self {
+            Command::ReadAccountState(read_account_state) => read_account_state.execute(),
+            _ => Err(self.unexpected_command(CommandName::ReadAccountState)),
         }
     }
 
     pub fn set_layout(self) -> Result<crate::layout::Layout, Error> {
-        if let Command::SetLayout(set_layout) = self {
-            set_layout.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::SetLayout,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::SetLayout(set_layout) => set_layout.execute(),
+            _ => Err(self.unexpected_command(CommandName::SetLayout)),
+        }
+    }
+
+    pub fn submit_transaction(self) -> Result<(), Error> {
+        match self {
+            Command::SubmitTransaction(submit_transaction) => submit_transaction.execute(),
+            _ => Err(self.unexpected_command(CommandName::SubmitTransaction)),
         }
     }
 
     pub fn validator_config(self) -> Result<Transaction, Error> {
-        if let Command::ValidatorConfig(config) = self {
-            config.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::ValidatorConfig,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::ValidatorConfig(config) => config.execute(),
+            _ => Err(self.unexpected_command(CommandName::ValidatorConfig)),
         }
     }
 
     pub fn verify(self) -> Result<String, Error> {
-        if let Command::Verify(verify) = self {
-            verify.execute()
-        } else {
-            Err(Error::UnexpectedCommand(
-                CommandName::Verify,
-                CommandName::from(&self),
-            ))
+        match self {
+            Command::Verify(verify) => verify.execute(),
+            _ => Err(self.unexpected_command(CommandName::Verify)),
         }
+    }
+
+    fn unexpected_command(self, expected: CommandName) -> Error {
+        Error::UnexpectedCommand(expected, CommandName::from(&self))
     }
 }
 
@@ -227,7 +226,7 @@ pub struct SecureBackends {
     ///     Vault: "backend=vault;server=URL;token=PATH_TO_TOKEN"
     ///         an optional namespace: "namespace=NAMESPACE"
     ///         an optional server certificate: "ca_certificate=PATH_TO_CERT"
-    ///     GitHub: "backend=github;owner=OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN"
+    ///     GitHub: "backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN"
     ///         an optional namespace: "namespace=NAMESPACE"
     ///     InMemory: "backend=memory"
     ///     OnDisk: "backend=disk;path=LOCAL_PATH"
@@ -247,7 +246,7 @@ pub struct SingleBackend {
     ///     Vault: "backend=vault;server=URL;token=PATH_TO_TOKEN"
     ///         an optional namespace: "namespace=NAMESPACE"
     ///         an optional server certificate: "ca_certificate=PATH_TO_CERT"
-    ///     GitHub: "backend=github;owner=OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN"
+    ///     GitHub: "backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_TOKEN"
     ///         an optional namespace: "namespace=NAMESPACE"
     ///     InMemory: "backend=memory"
     ///     OnDisk: "backend=disk;path=LOCAL_PATH"

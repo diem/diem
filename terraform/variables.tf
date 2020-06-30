@@ -216,6 +216,12 @@ variable "override_image_tags" {
   description = "List of Docker image tags to be used in record and replay test, overrides image_tag"
 }
 
+variable "override_safety_rules_image_tags" {
+  type        = list(string)
+  default     = []
+  description = "Similar to override_image_tags but for safety rules, overrides safety_rules_image_tag"
+}
+
 variable "vault_type" {
   description = "EC2 instance type of Vault instances"
   default     = "c5.large"
@@ -223,7 +229,7 @@ variable "vault_type" {
 
 variable "safety_rules_use_vault" {
   description = "Configure safety-rules to use Vault as the backend"
-  default     = false
+  default     = true
 }
 
 variable "persist_libra_data" {

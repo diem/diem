@@ -1,0 +1,11 @@
+error: 
+
+   ┌── tests/move_check/parser/constants_standalone_let.move:4:21 ───
+   │
+ 4 │     const C1: u64 = let x = 0;
+   │                     ^^^ Unexpected 'let'
+   ·
+ 4 │     const C1: u64 = let x = 0;
+   │                     --- Expected an expression term
+   │
+

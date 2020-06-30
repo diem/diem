@@ -259,4 +259,4 @@ module M {
         return;
     }
 }
-// check: "arguments/locals size (256) cannot exceed 255"
+// check: "value (256) cannot exceed (255)"

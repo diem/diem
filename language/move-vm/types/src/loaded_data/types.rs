@@ -4,7 +4,7 @@
 
 use libra_types::{
     account_address::AccountAddress,
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use move_core_types::{
     identifier::Identifier,

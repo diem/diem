@@ -1,10 +1,16 @@
 import 0x1.LBR;
+import 0x1.Libra;
+import 0x1.Roles;
 
 main(account: &signer) {
-
+    let x: Roles.Capability<Libra.RegisterNewCurrency>;
+    let y: Roles.Capability<Roles.TreasuryComplianceRole>;
+    x = Roles.extract_privilege_to_capability<Libra.RegisterNewCurrency>(copy(account));
+    y = Roles.extract_privilege_to_capability<Roles.TreasuryComplianceRole>(copy(account));
     // This will fail because the sender is not 0x0
-    LBR.initialize(move(account));
-
+    LBR.initialize(copy(account), &x, &y);
+    Roles.restore_capability_to_privilege<Libra.RegisterNewCurrency>(copy(account), move(x));
+    Roles.restore_capability_to_privilege<Roles.TreasuryComplianceRole>(move(account), move(y));
     return;
 }
 

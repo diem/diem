@@ -68,9 +68,9 @@ impl Experiment for RecoveryTime {
         info!("Deleting db and restarting node for {}", self.instance);
         self.instance.start(true).await?;
         info!("Waiting for instance to be up: {}", self.instance);
-        while self.instance.try_json_rpc().await.is_err() {
-            time::delay_for(Duration::from_secs(1)).await;
-        }
+        self.instance
+            .wait_json_rpc(Instant::now() + Duration::from_secs(120))
+            .await?;
         let start_instant = Instant::now();
         info!(
             "Instance {} is up. Waiting for it to start committing.",

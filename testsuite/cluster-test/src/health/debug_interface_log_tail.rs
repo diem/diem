@@ -40,16 +40,10 @@ impl DebugPortLogWorker {
         let pending_messages = Arc::new(AtomicI64::new(0));
         let (trace_sender, trace_receiver) = mpsc::channel();
         let trace_enabled = Arc::new(AtomicBool::new(false));
-        let http_client = reqwest::Client::new();
         for instance in cluster.all_instances() {
             let (started_sender, started_receiver) = mpsc::channel();
             started_receivers.push(started_receiver);
-            let debug_interface_port = instance
-                .debug_interface_port()
-                .expect("Debug interface port is not found")
-                as u16;
-            let client =
-                AsyncNodeDebugClient::new(http_client.clone(), instance.ip(), debug_interface_port);
+            let client = instance.debug_interface_client();
             let debug_port_log_worker = DebugPortLogWorker {
                 instance: instance.clone(),
                 client,

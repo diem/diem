@@ -10,10 +10,10 @@ use serde::{
 };
 use std::fmt::{self, Debug};
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct MoveStruct(Vec<MoveValue>);
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum MoveValue {
     U8(u8),
     U64(u64),

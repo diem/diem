@@ -15,7 +15,7 @@ use libra_types::{
         Script, SignedTransaction, TransactionArgument, TransactionOutput, TransactionPayload,
         TransactionStatus,
     },
-    vm_error::{StatusCode, VMStatus},
+    vm_status::{StatusCode, VMStatus},
 };
 use std::{convert::TryFrom, time::Instant};
 use vm::file_format::{Bytecode, CompiledScript};

@@ -11,6 +11,6 @@ publish = false
 
 [dependencies]
 futures = "0.3.5"
-bytes = "0.5.4"
+bytes = "0.5.5"
 once_cell = "1.4.0"
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }

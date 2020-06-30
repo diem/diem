@@ -35,10 +35,7 @@
 //! On the other hand, if you want to query only <Alice>/a/*, `address` will be set to Alice and
 //! `path` will be set to "/a" and use the `get_prefix()` method from statedb
 
-use crate::{
-    account_address::AccountAddress,
-    account_config::{ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH},
-};
+use crate::account_address::AccountAddress;
 use libra_crypto::hash::HashValue;
 use move_core_types::language_storage::{ModuleId, ResourceKey, StructTag, CODE_TAG, RESOURCE_TAG};
 #[cfg(any(test, feature = "fuzzing"))]
@@ -50,6 +47,7 @@ use std::fmt;
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct AccessPath {
     pub address: AccountAddress,
+    #[serde(with = "serde_bytes")]
     pub path: Vec<u8>,
 }
 
@@ -59,25 +57,6 @@ impl AccessPath {
 
     pub fn new(address: AccountAddress, path: Vec<u8>) -> Self {
         AccessPath { address, path }
-    }
-
-    /// Create an AccessPath to the event for the sender account in a deposit operation.
-    /// The sent counter in LibraAccount.T (LibraAccount.T.sent_events_count) is used to generate
-    /// the AccessPath.
-    /// That AccessPath can be used as a key into the event storage to retrieve all sent
-    /// events for a given account.
-    pub fn new_for_sent_event(address: AccountAddress) -> Self {
-        Self::new(address, ACCOUNT_SENT_EVENT_PATH.to_vec())
-    }
-
-    /// Create an AccessPath to the event for the target account (the receiver)
-    /// in a deposit operation.
-    /// The received counter in LibraAccount.T (LibraAccount.T.received_events_count) is used to
-    /// generate the AccessPath.
-    /// That AccessPath can be used as a key into the event storage to retrieve all received
-    /// events for a given account.
-    pub fn new_for_received_event(address: AccountAddress) -> Self {
-        Self::new(address, ACCOUNT_RECEIVED_EVENT_PATH.to_vec())
     }
 
     pub fn resource_access_vec(tag: &StructTag) -> Vec<u8> {

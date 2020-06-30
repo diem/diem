@@ -1,10 +1,13 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::{error::Error, SecureBackends};
+use crate::{
+    error::Error,
+    secure_backend::StorageLocation::{LocalStorage, RemoteStorage},
+    SecureBackends,
+};
 use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
-use std::convert::TryInto;
+use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -60,32 +63,24 @@ fn submit_key(
     account_name: Option<&'static str>,
     secure_backends: SecureBackends,
 ) -> Result<Ed25519PublicKey, Error> {
-    let mut local: Storage = secure_backends.local.try_into()?;
-    local
-        .available()
-        .map_err(|e| Error::LocalStorageUnavailable(e.to_string()))?;
+    let mut local_storage = secure_backends.local.create_storage(LocalStorage)?;
 
-    let key = local
+    let key = local_storage
         .get_public_key(key_name)
         .map_err(|e| Error::LocalStorageReadError(key_name, e.to_string()))?
         .public_key;
 
     if let Some(account_name) = account_name {
         let peer_id = libra_types::account_address::from_public_key(&key);
-        local
+        local_storage
             .set(account_name, Value::String(peer_id.to_string()))
             .map_err(|e| Error::LocalStorageWriteError(account_name, e.to_string()))?
     }
 
     if let Some(remote) = secure_backends.remote {
-        let key = Value::Ed25519PublicKey(key.clone());
-        let mut remote: Storage = remote.try_into()?;
-        remote
-            .available()
-            .map_err(|e| Error::RemoteStorageUnavailable(e.to_string()))?;
-
-        remote
-            .set(key_name, key)
+        let mut remote_storage = remote.create_storage(RemoteStorage)?;
+        remote_storage
+            .set(key_name, Value::Ed25519PublicKey(key.clone()))
             .map_err(|e| Error::RemoteStorageWriteError(key_name, e.to_string()))?;
     }
 

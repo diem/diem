@@ -431,6 +431,23 @@ fn test_executor_execute_and_commit_chunk_local_result_mismatch() {
         .is_err());
 }
 
+#[test]
+fn test_noop_block_after_reconfiguration() {
+    let mut executor = TestExecutor::new();
+    let mut parent_block_id = executor.committed_block_id();
+    let first_txn = encode_reconfiguration_transaction(gen_address(1));
+    let first_block_id = gen_block_id(1);
+    let output1 = executor
+        .execute_block((first_block_id, vec![first_txn]), parent_block_id)
+        .unwrap();
+    parent_block_id = first_block_id;
+    let second_block = TestBlock::new(0..10, 10, gen_block_id(2));
+    let output2 = executor
+        .execute_block((second_block.id, second_block.txns), parent_block_id)
+        .unwrap();
+    assert_eq!(output1.root_hash(), output2.root_hash());
+}
+
 struct TestBlock {
     txns: Vec<Transaction>,
     id: HashValue,
@@ -551,7 +568,7 @@ proptest! {
             let output = executor.execute_block(
                 (block.id, block.txns), parent_block_id
             ).unwrap();
-        let retry_iter = output.compute_status().iter()
+            let retry_iter = output.compute_status().iter()
             .skip_while(|status| matches!(*status, TransactionStatus::Keep(_)));
             prop_assert_eq!(retry_iter.take_while(|status| matches!(*status,TransactionStatus::Retry)).count() as u64, num_txns - reconfig_txn_index - 1);
         }

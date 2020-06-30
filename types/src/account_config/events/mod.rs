@@ -3,6 +3,7 @@
 
 pub mod burn;
 pub mod cancel_burn;
+pub mod exchange_rate_update;
 pub mod mint;
 pub mod new_block;
 pub mod new_epoch;
@@ -13,6 +14,7 @@ pub mod upgrade;
 
 pub use burn::*;
 pub use cancel_burn::*;
+pub use exchange_rate_update::*;
 pub use mint::*;
 pub use new_block::*;
 pub use new_epoch::*;

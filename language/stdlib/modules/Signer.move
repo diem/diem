@@ -15,7 +15,8 @@ module Signer {
     }
 
     spec module {
-        native define get_address(account: signer): address;
+        /// Specification version of `Self::address_of`.
+        native define spec_address_of(account: signer): address;
     }
 }
 }

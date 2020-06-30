@@ -7,7 +7,7 @@ use crate::{
 };
 use anyhow::Result;
 use libra_types::account_address::AccountAddress;
-use move_core_types::{identifier::Identifier, language_storage::ModuleId};
+use move_core_types::{identifier::Identifier, language_storage::ModuleId, value::MoveValue};
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -53,6 +53,9 @@ pub struct Script {
     /// Explicit declaration of dependencies. If not provided, will be inferred based on given
     /// dependencies to the IR compiler
     pub explicit_dependency_declarations: Vec<ModuleDependency>,
+    /// the constants that the module defines. Only a utility, the identifiers are not carried into
+    /// the Move bytecode
+    pub constants: Vec<Constant>,
     /// The transaction script's `main` procedure
     pub main: Function,
 }
@@ -87,6 +90,9 @@ pub struct ModuleDefinition {
     pub explicit_dependency_declarations: Vec<ModuleDependency>,
     /// the structs (including resources) that the module defines
     pub structs: Vec<StructDefinition>,
+    /// the constants that the script defines. Only a utility, the identifiers are not carried into
+    /// the Move bytecode
+    pub constants: Vec<Constant>,
     /// the procedure that the module defines
     pub functions: Vec<(FunctionName, Function)>,
     /// the synthetic, specification variables the module defines.
@@ -257,6 +263,25 @@ pub enum StructDefinitionFields {
     Move { fields: Fields<Type> },
     /// The struct is a type provided by the VM
     Native,
+}
+
+//**************************************************************************************************
+// Structs
+//**************************************************************************************************
+
+/// Newtype for the name of a constant
+#[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Clone)]
+pub struct ConstantName(String);
+
+/// A constant declaration in a module or script
+#[derive(Clone, Debug, PartialEq)]
+pub struct Constant {
+    /// The constant's name. Not carried through to the Move bytecode
+    pub name: ConstantName,
+    /// The type of the constant's value
+    pub signature: Type,
+    /// The constant's value
+    pub value: MoveValue,
 }
 
 //**************************************************************************************************
@@ -627,6 +652,7 @@ pub enum Bytecode_ {
     LdAddr(AccountAddress),
     LdTrue,
     LdFalse,
+    LdConst(ConstantName),
     CopyLoc(Var),
     MoveLoc(Var),
     StLoc(Var),
@@ -697,11 +723,13 @@ impl Script {
     pub fn new(
         imports: Vec<ImportDefinition>,
         explicit_dependency_declarations: Vec<ModuleDependency>,
+        constants: Vec<Constant>,
         main: Function,
     ) -> Self {
         Script {
             imports,
             explicit_dependency_declarations,
+            constants,
             main,
         }
     }
@@ -787,6 +815,7 @@ impl ModuleDefinition {
         imports: Vec<ImportDefinition>,
         explicit_dependency_declarations: Vec<ModuleDependency>,
         structs: Vec<StructDefinition>,
+        constants: Vec<Constant>,
         functions: Vec<(FunctionName, Function)>,
         synthetics: Vec<SyntheticDefinition>,
     ) -> Result<Self> {
@@ -795,6 +824,7 @@ impl ModuleDefinition {
             imports,
             explicit_dependency_declarations,
             structs,
+            constants,
             functions,
             synthetics,
         })
@@ -933,6 +963,23 @@ impl StructDefinition_ {
             fields: StructDefinitionFields::Native,
             invariants: vec![],
         })
+    }
+}
+
+impl ConstantName {
+    /// Create a new `ConstantName` from a string
+    pub fn new(name: String) -> Self {
+        ConstantName(name)
+    }
+
+    /// Converts self into a string.
+    pub fn into_inner(self) -> String {
+        self.0
+    }
+
+    /// Accessor for the name of the function
+    pub fn as_inner(&self) -> &str {
+        &self.0
     }
 }
 
@@ -1255,9 +1302,23 @@ impl fmt::Display for ScriptOrModule {
 impl fmt::Display for Script {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "Script(")?;
+
         write!(f, "Imports(")?;
         write!(f, "{}", intersperse(&self.imports, ", "))?;
         writeln!(f, ")")?;
+
+        writeln!(f, "Dependency(")?;
+        for dependency in &self.explicit_dependency_declarations {
+            writeln!(f, "{},", dependency)?;
+        }
+        writeln!(f, ")")?;
+
+        writeln!(f, "Constants(")?;
+        for constant in &self.constants {
+            writeln!(f, "{};", constant)?;
+        }
+        writeln!(f, ")")?;
+
         write!(f, "Main(")?;
         write!(f, "{}", self.main)?;
         write!(f, ")")?;
@@ -1306,6 +1367,12 @@ impl fmt::Display for ModuleDefinition {
         writeln!(f, "Structs(")?;
         for struct_def in &self.structs {
             writeln!(f, "{}, ", struct_def)?;
+        }
+        writeln!(f, ")")?;
+
+        writeln!(f, "Constants(")?;
+        for constant in &self.constants {
+            writeln!(f, "{};", constant)?;
         }
         writeln!(f, ")")?;
 
@@ -1376,6 +1443,16 @@ impl fmt::Display for StructDefinition_ {
     }
 }
 
+impl fmt::Display for Constant {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "const {}: {} = {:?}",
+            &self.name.0, self.signature, self.value
+        )
+    }
+}
+
 impl fmt::Display for Function_ {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} ({})", self.signature, self.body)
@@ -1395,6 +1472,12 @@ impl fmt::Display for StructName {
 }
 
 impl fmt::Display for FunctionName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl fmt::Display for ConstantName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
@@ -1779,6 +1862,7 @@ impl fmt::Display for Bytecode_ {
             Bytecode_::LdAddr(a) => write!(f, "LdAddr {}", a),
             Bytecode_::LdTrue => write!(f, "LdTrue"),
             Bytecode_::LdFalse => write!(f, "LdFalse"),
+            Bytecode_::LdConst(n) => write!(f, "LdConst({})", &n.0),
             Bytecode_::CopyLoc(v) => write!(f, "CopyLoc {}", v),
             Bytecode_::MoveLoc(v) => write!(f, "MoveLoc {}", v),
             Bytecode_::StLoc(v) => write!(f, "StLoc {}", v),

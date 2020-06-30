@@ -8,7 +8,7 @@ use anyhow::{ensure, format_err, Result};
 use executor_types::BlockExecutor;
 use libra_crypto::{hash::PRE_GENESIS_BLOCK_ID, HashValue};
 use libra_logger::prelude::*;
-use libra_state_view::StateView;
+use libra_state_view::{StateView, StateViewId};
 use libra_types::{
     access_path::AccessPath,
     account_config::association_address,
@@ -89,7 +89,8 @@ pub fn calculate_genesis<V: VMExecutor>(
         GENESIS_EPOCH
     } else {
         let executor_trees = executor.get_executed_trees(*PRE_GENESIS_BLOCK_ID)?;
-        let state_view = executor.get_executed_state_view(&executor_trees);
+        let state_view =
+            executor.get_executed_state_view(StateViewId::Miscellaneous, &executor_trees);
         get_state_epoch(&state_view)?
     };
 
@@ -103,7 +104,7 @@ pub fn calculate_genesis<V: VMExecutor>(
         .as_ref()
         .ok_or_else(|| format_err!("Genesis transaction must emit a epoch change."))?;
     let executed_trees = executor.get_executed_trees(block_id)?;
-    let state_view = executor.get_executed_state_view(&executed_trees);
+    let state_view = executor.get_executed_state_view(StateViewId::Miscellaneous, &executed_trees);
     let timestamp_usecs = if genesis_version == 0 {
         // TODO(aldenhu): fix existing tests before using real timestamp and check on-chain epoch.
         GENESIS_TIMESTAMP_USECS

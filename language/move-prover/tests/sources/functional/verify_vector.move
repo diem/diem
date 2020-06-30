@@ -97,22 +97,44 @@ module VerifyVector {
         ensures result[0] == e;
     }
 
+    spec module {
+        /// Ghost variable `old_v` used to store the old value of the array v.
+        /// TODO: by allowing old(.) to appear in assume/assert expressions,
+        /// we can eliminate the need for old_v.
+        global old_v<Element>: vector<Element>;
+        global old_other<Element>: vector<Element>;
+    }
+
     // Reverses the order of the elements in the vector in place.
     fun verify_reverse<Element>(v: &mut vector<Element>) {
-        let len = Vector::length(v);
-        if (len == 0) return ();
+        let vlen = Vector::length(v);
+        if (vlen == 0) return ();
 
-//        let front_index = 0;
-//        let back_index = len -1;
-//        while (front_index < back_index) {
-//            Vector::swap(v, front_index, back_index);
-//            front_index = front_index + 1;
-//            back_index = back_index - 1;
-//        }
+        spec {
+            /// Initialize the old vector `old_v` ghost variable
+            assume old_v<Element> == v;
+        };
+
+        let front_index = 0;
+        let back_index = vlen -1;
+        while ({
+            spec {
+                assert front_index + back_index == vlen - 1;
+                assert forall i in 0..front_index: v[i] == old_v<Element>[vlen-1-i];
+                assert forall i in 0..front_index: v[vlen-1-i] == old_v<Element>[i];
+                assert forall j in front_index..back_index+1: v[j] == old_v<Element>[j];
+                assert len(v) == vlen;
+            };
+            (front_index < back_index)
+        }) {
+            Vector::swap(v, front_index, back_index);
+            front_index = front_index + 1;
+            back_index = back_index - 1;
+        };
     }
-    spec fun verify_reverse { // TODO: cannot verify loop
-//        aborts_if false;
-//        ensures all(0..len(v), |i| old(v[i]) == v[len(v)-1-i]);
+    spec fun verify_reverse {
+        aborts_if false;
+        ensures forall i in 0..len(v): v[i] == old(v)[len(v)-1-i];
     }
 
     // Reverses the order of the elements in the vector in place.
@@ -124,16 +146,33 @@ module VerifyVector {
         ensures forall i in 0..len(v): old(v[i]) == v[len(v)-1-i];
     }
 
-    // Moves all of the elements of the `other` vector into the `lhs` vector.
-    fun verify_append<Element>(lhs: &mut vector<Element>, other: vector<Element>) {
+    // Moves all of the elements of the `other` vector into the `v` vector.
+    fun verify_append<Element>(v: &mut vector<Element>, other: vector<Element>) {
+        spec {
+            /// Initialize the old vector `old_v` and `old_other` ghost variables
+            assume old_v<Element> == v;
+            assume old_other<Element> == other;
+        };
         Vector::reverse(&mut other);
-        while (!Vector::is_empty(&other)) Vector::push_back(lhs, Vector::pop_back(&mut other));
+        while ({
+            spec {
+                assert len(v) >= len(old_v<Element>);
+                assert len(other) <= len(old_other<Element>);
+                assert len(v) + len(other) == len(old_v<Element>) + len(old_other<Element>);
+                assert forall k in 0..len(old_v<Element>): v[k] == old_v<Element>[k];
+                assert forall k in 0..len(other): other[k] == old_other<Element>[len(old_other<Element>)-1-k];
+                assert forall k in len(old_v<Element>)..len(v): v[k] == old_other<Element>[k-len(old_v<Element>)];
+            };
+            !Vector::is_empty(&other)
+        }) {
+            Vector::push_back(v, Vector::pop_back(&mut other))
+        };
         Vector::destroy_empty(other);
     }
-    spec fun verify_append { // TODO: cannot verify loop
-        //ensures len(lhs) == old(len(lhs) + len(other)); //! A postcondition might not hold on this return path.
-        //ensures lhs[0..len(old(lhs))] == old(lhs); //! A postcondition might not hold on this return path.
-        //ensures lhs[len(old(lhs))..len(lhs)] == old(other); //! A postcondition might not hold on this return path.
+    spec fun verify_append {
+        ensures len(v) == old(len(v) + len(other));
+        ensures v[0..len(old(v))] == old(v);
+        ensures v[len(old(v))..len(v)] == old(other);
     }
 
     // Moves all of the elements of the `other` vector into the `lhs` vector.
@@ -179,7 +218,7 @@ module VerifyVector {
         (false, 0)
     }
     spec fun verify_index_of {
-//        aborts_if false; // FIXME: this should be verified.
+        aborts_if false;
         ensures result_1 == (exists x in v: x==e); // whether v contains e or not
         ensures result_1 ==> v[result_2] == e; // if true, return the index where v contains e
         ensures result_1 ==> (forall i in 0..result_2: v[i]!=e); // ensure the smallest index
@@ -216,7 +255,7 @@ module VerifyVector {
         false
     }
     spec fun verify_contains {
-        //aborts_if false; // FIXME: This should be verified
+        aborts_if false;
         ensures result == (exists x in v: x==e);
     }
 
@@ -231,21 +270,39 @@ module VerifyVector {
 
     // Remove the `i`th element E of the vector, shifting all subsequent elements
     // It is O(n) and preserves ordering
-    fun verify_remove<Element>(v: &mut vector<Element>, i: u64): Element {
-        let len = Vector::length(v);
+    fun verify_remove<Element>(v: &mut vector<Element>, j: u64): Element {
+        let vlen = Vector::length(v);
+        let i = j;
         // i out of bounds; abort
-        if (i >= len) abort 10;
+        if (i >= vlen) abort 10;
 
-//        len = len - 1;
-//        while (i < len) Vector::swap(v, i, { i = i + 1; i });
+        spec {
+            /// Initialize the old vector `old_v` ghost variable
+            assume old_v<Element> == v;
+        };
+
+        vlen = vlen - 1;
+        while ({
+            spec {
+                assert j <= i && i <= vlen;
+                assert vlen + 1 == len(v);
+                assert v[0..j] == old_v<Element>[0..j];
+                assert forall k in j..i: v[k] == old_v<Element>[k+1];
+                assert forall k in i+1..len(v): v[k] == old_v<Element>[k];
+                assert v[i] == old_v<Element>[j];
+            };
+            i < vlen
+            }) {
+            Vector::swap(v, i, { i = i + 1; i });
+        };
         Vector::pop_back(v)
     }
-    spec fun verify_remove { // TODO: cannot verify loop
-        //aborts_if i >= len(v); //! A postcondition might not hold on this return path.
-        //ensures len(v) == len(old(v)) - 1; //! A postcondition might not hold on this return path.
-        //ensures v[0..i] == old(v[0..i]); //! A postcondition might not hold on this return path.
-        //ensures v[i..len(v)] == old(v[i+1..len(v)]); //! A postcondition might not hold on this return path.
-        //ensures old(v[i]) == result;
+    spec fun verify_remove {
+        aborts_if j >= len(v);
+        ensures len(v) == len(old(v)) - 1;
+        ensures v[0..j] == old(v[0..j]);
+        ensures v[j..len(v)] == old(v[j+1..len(v)]);
+        ensures old(v[j]) == result;
     }
 
     // Remove the `i`th element E of the vector, shifting all subsequent elements

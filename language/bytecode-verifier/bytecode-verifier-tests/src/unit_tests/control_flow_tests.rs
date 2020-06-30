@@ -3,7 +3,7 @@
 
 use bytecode_verifier::control_flow;
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
-use libra_types::vm_error::StatusCode;
+use libra_types::vm_status::StatusCode;
 use vm::{
     access::ModuleAccess,
     errors::VMResult,

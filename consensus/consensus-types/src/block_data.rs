@@ -123,7 +123,7 @@ impl BlockData {
     }
 
     pub fn new_genesis_from_ledger_info(ledger_info: &LedgerInfo) -> Self {
-        assert!(ledger_info.next_epoch_state().is_some());
+        assert!(ledger_info.ends_epoch());
         let ancestor = BlockInfo::new(
             ledger_info.epoch(),
             0,                 /* round */

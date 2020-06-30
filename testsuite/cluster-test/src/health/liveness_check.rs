@@ -7,6 +7,7 @@ use crate::{
     cluster::Cluster,
     health::{Event, HealthCheck, HealthCheckContext, ValidatorEvent},
 };
+use async_trait::async_trait;
 use std::{collections::HashMap, time::Duration};
 
 pub struct LivenessHealthCheck {
@@ -31,6 +32,7 @@ impl LivenessHealthCheck {
     }
 }
 
+#[async_trait]
 impl HealthCheck for LivenessHealthCheck {
     fn on_event(&mut self, ve: &ValidatorEvent, ctx: &mut HealthCheckContext) {
         match ve.event {
@@ -54,7 +56,7 @@ impl HealthCheck for LivenessHealthCheck {
         }
     }
 
-    fn verify(&mut self, ctx: &mut HealthCheckContext) {
+    async fn verify(&mut self, ctx: &mut HealthCheckContext) {
         let min_timestamp = ctx.now - MAX_BEHIND;
         for (validator, lci) in &self.last_committed {
             if lci.timestamp < min_timestamp {

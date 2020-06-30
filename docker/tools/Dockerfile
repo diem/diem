@@ -16,12 +16,12 @@ FROM toolchain AS builder
 
 COPY . /libra
 
-ENV RUSTFLAGS "-Ctarget-cpu=skylake -Ctarget-feature=+aes,+sse2,+sse4.1,+ssse3"
-RUN cargo build --release -p libra-management && cd target/release && rm -r build deps incremental
-RUN strip target/release/libra-management
+RUN ./docker/build-common.sh
 
 ### Production Image ###
 FROM debian:buster-slim AS prod
+
+RUN apt-get update && apt-get -y install socat && apt-get clean && rm -r /var/lib/apt/lists/*
 
 COPY --from=builder /libra/target/release/libra-management /usr/local/bin
 
