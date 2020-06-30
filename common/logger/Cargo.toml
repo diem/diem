@@ -21,3 +21,4 @@ serde = { version = "1.0.114", features = ["derive"] }
 once_cell = "1.4.0"
 
 [features]
+names_required = []
