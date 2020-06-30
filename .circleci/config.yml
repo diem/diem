@@ -557,7 +557,7 @@ jobs:
               circleci step halt;
             fi
             curl -o /tmp/pr https://api.github.com/repos/libra/libra/pulls/${pr_num}
-            export TARGET_BRANCH=$( cat /tmp/pr | jq ".base .ref" )
+            export TARGET_BRANCH=$( cat /tmp/pr | jq ".base .ref" | sed 's/"//g' )
             if [[ $TARGET_BRANCH =~ $TARGET_BRANCH_PATTERN ]]; then
               echo Targeting branch $TARGET_BRANCH proceeding to publish docker images.
             else
@@ -570,12 +570,12 @@ jobs:
           command: |
             export BRANCH=$TARGET_BRANCH
             export GIT_REV=$(git rev-parse --short=8 HEAD)
-            docker/update_r_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n init
-            docker/update_r_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n mint
-            docker/update_r_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n safety-rules
-            docker/update_r_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n validator
-            docker/update_r_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n validator-dynamic
-            docker/update_r_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n cluster-test
+            docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n init
+            docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n mint
+            docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n safety-rules
+            docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n validator
+            docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n validator-dynamic
+            docker/update_or_build.sh -p -b ${BRANCH} -g ${GIT_REV} -n cluster-test
 
   ######################################################################################################
   # Docker Builds:                                                                                     #
@@ -590,12 +590,12 @@ jobs:
           command: |
             export BRANCH=$TARGET_BRANCH
             export GIT_REV=$(git rev-parse --short=8 HEAD)
-            docker/update_r_build.sh -b ${BRANCH} -g ${GIT_REV} -n init
-            docker/update_r_build.sh -b ${BRANCH} -g ${GIT_REV} -n mint
-            docker/update_r_build.sh -b ${BRANCH} -g ${GIT_REV} -n safety-rules
-            docker/update_r_build.sh -b ${BRANCH} -g ${GIT_REV} -n validator
-            docker/update_r_build.sh -b ${BRANCH} -g ${GIT_REV} -n validator-dynamic
-            docker/update_r_build.sh -b ${BRANCH} -g ${GIT_REV} -n cluster-test
+            docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n init
+            docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n mint
+            docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n safety-rules
+            docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n validator
+            docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n validator-dynamic
+            docker/update_or_build.sh -b ${BRANCH} -g ${GIT_REV} -n cluster-test
 
 workflows:
   commit-workflow:
