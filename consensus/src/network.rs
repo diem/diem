@@ -18,7 +18,6 @@ use consensus_types::{
 use futures::{channel::oneshot, stream::select, SinkExt, Stream, StreamExt, TryStreamExt};
 use libra_logger::prelude::*;
 use libra_metrics::monitor;
-use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{
     account_address::AccountAddress, epoch_change::EpochChangeProof,
     validator_verifier::ValidatorVerifier,
@@ -101,10 +100,9 @@ impl NetworkSender {
                 &self.validators,
             )
             .map_err(|e| {
-                security_log(SecurityEvent::InvalidRetrievedBlock)
-                    .error(&e)
-                    .data(&response)
-                    .log();
+                send_struct_log!(security_log(security_events::INVALID_RETRIEVED_BLOCK)
+                    .data("request_block_reponse", &response)
+                    .data("error", format!("{}", e)));
                 e
             })?;
 

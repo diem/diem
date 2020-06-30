@@ -19,7 +19,6 @@ members = [
     "common/option-future",
     "common/proptest-helpers",
     "common/retrier",
-    "common/security-logger",
     "common/stream-ratelimiter",
     "common/subscription-service",
     "common/temppath",

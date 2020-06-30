@@ -25,7 +25,6 @@ use futures::{
 };
 use libra_config::{config::PeerNetworkId, network_id::NetworkId};
 use libra_logger::prelude::*;
-use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use std::{
     ops::Deref,
@@ -146,19 +145,25 @@ pub(crate) async fn coordinator<V>(
                                     }
                                 };
                             }
-                            _ => {
-                                security_log(SecurityEvent::InvalidNetworkEventMP)
-                                    .error("UnexpectedNetworkEvent")
-                                    .data(&network_event)
-                                    .log();
-                                debug_assert!(false, "Unexpected network event");
+                            Event::RpcRequest((peer_id, msg, res_tx)) => {
+                                send_struct_log!(security_log(security_events::INVALID_NETWORK_EVENT_MP)
+                                    .data("message", &msg)
+                                    .data("peer_id", &peer_id)
+                                );
+                                debug_assert!(false, "Unexpected network event rpc request");
+                            }
+                            Event::Message(message) => {
+                                send_struct_log!(security_log(security_events::INVALID_NETWORK_EVENT_MP)
+                                    .data("event_msg", &message)
+                            );
+                                debug_assert!(false, "Unexpected network event message");
                             }
                         }
                     },
                     Err(e) => {
-                        security_log(SecurityEvent::InvalidNetworkEventMP)
-                            .error(&e)
-                            .log();
+                        send_struct_log!(security_log(security_events::INVALID_NETWORK_EVENT_MP)
+                            .data("error", format!("{}", e))
+                    );
                     }
                 };
             },
