@@ -383,10 +383,9 @@ impl RoundManager {
     /// a timeout.
     /// 2) Otherwise vote for a NIL block and sign a timeout.
     pub async fn process_local_timeout(&mut self, round: Round) -> anyhow::Result<()> {
-        ensure!(
-            self.round_state.process_local_timeout(round),
-            "[RoundManager] local timeout is stale"
-        );
+        if !self.round_state.process_local_timeout(round) {
+            return Ok(());
+        }
 
         let (use_last_vote, mut timeout_vote) = match self.round_state.vote_sent() {
             Some(vote) if vote.vote_data().proposed().round() == round => (true, vote),
