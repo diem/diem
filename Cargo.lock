@@ -2346,6 +2346,7 @@ dependencies = [
  "libra-workspace-hack 0.1.0",
  "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_bytes 0.11.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
