@@ -4,7 +4,7 @@
 use crate::{BuildSwarm, Error, ValidatorConfig};
 use anyhow::{ensure, Result};
 use libra_config::{
-    config::{DiscoveryMethod, NetworkPeersConfig, NodeConfig, RoleType},
+    config::{DiscoveryMethod, NodeConfig, RoleType, SeedPubkeySetsConfig},
     generator,
     network_id::NetworkId,
     utils,
@@ -13,7 +13,7 @@ use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_network_address::NetworkAddress;
 use libra_types::transaction::Transaction;
 use rand::{rngs::StdRng, SeedableRng};
-use std::str::FromStr;
+use std::{collections::HashSet, str::FromStr};
 
 pub struct FullNodeConfig {
     pub advertised_address: NetworkAddress,
@@ -148,7 +148,7 @@ impl FullNodeConfig {
 
         let mut rng = StdRng::from_seed(self.full_node_seed);
         let mut configs = Vec::new();
-        let mut network_peers = NetworkPeersConfig::default();
+        let mut seed_pubkey_sets = SeedPubkeySetsConfig::default();
 
         // @TODO The last one is the upstream peer, note at some point we'll have to support taking
         // in a genesis instead at which point we may not have an upstream peer config
@@ -175,13 +175,12 @@ impl FullNodeConfig {
             network.discovery_method = DiscoveryMethod::gossip(self.advertised_address.clone());
             network.mutual_authentication = self.mutual_authentication;
 
-            network_peers.insert(
-                network.peer_id(),
-                network
-                    .identity
-                    .public_key_from_config()
-                    .ok_or(Error::MissingNetworkKeyPairs)?,
-            );
+            let pubkey = network
+                .identity
+                .public_key_from_config()
+                .ok_or(Error::MissingNetworkKeyPairs)?;
+            let pubkey_set: HashSet<_> = [pubkey].iter().copied().collect();
+            seed_pubkey_sets.insert(network.peer_id(), pubkey_set);
 
             configs.push(config);
         }
@@ -199,7 +198,7 @@ impl FullNodeConfig {
                 .last_mut()
                 .ok_or(Error::MissingFullNodeNetwork)?;
             network.network_id = NetworkId::Public;
-            network.network_peers = network_peers.clone();
+            network.seed_pubkey_sets = seed_pubkey_sets.clone();
             network.seed_peers = seed_peers.clone();
             if idx < actual_nodes - 1 {
                 config.upstream.networks.push(network.network_id.clone());
@@ -276,8 +275,8 @@ mod test {
         );
         assert!(config_extended.full_node_networks != config_orig.full_node_networks);
         assert_eq!(
-            config_extended.full_node_networks[0].network_peers,
-            config_full.full_node_networks[0].network_peers
+            config_extended.full_node_networks[0].seed_pubkey_sets,
+            config_full.full_node_networks[0].seed_pubkey_sets,
         );
     }
 
