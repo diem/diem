@@ -48,6 +48,13 @@ use std::{
 use subscription_service::ReconfigSubscription;
 use tokio::runtime::{Builder, Handle, Runtime};
 
+#[derive(Debug, PartialEq, PartialOrd)]
+enum State {
+    CREATED,
+    BUILT,
+    STARTED,
+}
+
 /// Build Network module with custom configuration values.
 /// Methods can be chained in order to set the configuration values.
 /// MempoolNetworkHandler and ConsensusNetworkHandler are constructed by calling
@@ -56,6 +63,7 @@ use tokio::runtime::{Builder, Handle, Runtime};
 // TODO(philiphayes): refactor NetworkBuilder and libra-node; current config is
 // pretty tangled.
 pub struct NetworkBuilder {
+    state: State,
     executor: Handle,
     network_context: Arc<NetworkContext>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
@@ -110,6 +118,7 @@ impl NetworkBuilder {
         );
 
         NetworkBuilder {
+            state: State::CREATED,
             executor,
             network_context,
             trusted_peers,
@@ -211,6 +220,30 @@ impl NetworkBuilder {
         (runtime, network_builder)
     }
 
+    /// Create the configured transport and start PeerManager.
+    /// Return the actual NetworkAddress over which this peer is listening.
+    pub fn build(&mut self) -> &mut Self {
+        assert_eq!(self.state, State::CREATED);
+        self.state = State::BUILT;
+        self.build_peer_manager()
+            .build_configuration_change_listener()
+            .build_gossip_discovery()
+            .build_connectivity_manager()
+            .build_connection_monitoring()
+            // TODO:  move start out of build.
+            .start()
+    }
+
+    pub fn start(&mut self) -> &mut Self {
+        assert_eq!(self.state, State::BUILT);
+        self.state = State::STARTED;
+        self.start_peer_manager()
+            .start_connectivity_manager()
+            .start_connection_monitoring()
+            .start_gossip_discovery()
+            .start_configuration_change_listener()
+    }
+
     pub fn reconfig_subscriptions(&mut self) -> &mut Vec<ReconfigSubscription> {
         &mut self.reconfig_subscriptions
     }
@@ -219,11 +252,13 @@ impl NetworkBuilder {
         self.network_context.clone()
     }
 
+    // TODO: remove this function call
     pub fn peer_id(&self) -> PeerId {
         self.network_context.peer_id()
     }
 
     /// Set additional public keys for seed peers to bootstrap discovery.
+    // TODO: remove this function
     pub fn seed_pubkeys(
         &mut self,
         seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
@@ -233,12 +268,14 @@ impl NetworkBuilder {
     }
 
     /// Set addresses of seed peers to bootstrap discovery
+    // TODO: remove this function
     pub fn seed_addrs(&mut self, seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>) -> &mut Self {
         self.seed_addrs = seed_addrs;
         self
     }
 
     /// Set connectivity check ticker interval
+    // TODO: remove this function
     pub fn connectivity_check_interval_ms(
         &mut self,
         connectivity_check_interval_ms: u64,
@@ -321,8 +358,7 @@ impl NetworkBuilder {
             pm_conn_mgr_notifs_rx,
             connection_limit,
         ));
-        self.build_connectivity_manager()
-            .start_connectivity_manager()
+        self
     }
 
     fn build_connectivity_manager(&mut self) -> &mut Self {
@@ -362,8 +398,7 @@ impl NetworkBuilder {
                 conn_mgr_reqs_tx,
                 simple_discovery_reconfig_rx,
             ));
-        self.build_configuration_change_listener()
-            .start_configuration_change_listener()
+        self
     }
 
     fn build_configuration_change_listener(&mut self) -> &mut Self {
@@ -429,7 +464,6 @@ impl NetworkBuilder {
             discovery_network_rx,
             conn_mgr_reqs_tx,
         ));
-        self.build_gossip_discovery().start_gossip_discovery();
         self
     }
 
@@ -450,6 +484,7 @@ impl NetworkBuilder {
     }
 
     /// Add a HealthChecker to the network.
+    // TODO: remove the pub qualifier
     pub fn add_connection_monitoring(
         &mut self,
         ping_interval_ms: u64,
@@ -469,7 +504,7 @@ impl NetworkBuilder {
             hc_network_rx,
         ));
         debug!("{} Created health checker", self.network_context);
-        self.build_connection_monitoring()
+        self
     }
 
     /// Build the HealthChecker, if it has been added.
@@ -478,7 +513,7 @@ impl NetworkBuilder {
             health_checker.build(&self.executor);
             debug!("{} Built health checker", self.network_context);
         };
-        self.start_connection_monitoring()
+        self
     }
 
     /// Star the built HealthChecker.
@@ -487,13 +522,6 @@ impl NetworkBuilder {
             health_checker.start(&self.executor);
             debug!("{} Started health checker", self.network_context);
         };
-        self
-    }
-
-    /// Create the configured transport and start PeerManager.
-    /// Return the actual NetworkAddress over which this peer is listening.
-    pub fn build(&mut self) -> &mut Self {
-        self.build_peer_manager().start_peer_manager();
         self
     }
 
