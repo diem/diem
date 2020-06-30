@@ -85,4 +85,24 @@ impl CurrencyInfoResource {
     pub fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
         lcs::from_bytes(bytes).map_err(Into::into)
     }
+
+    pub fn mint_events(&self) -> &EventHandle {
+        &self.mint_events
+    }
+
+    pub fn burn_events(&self) -> &EventHandle {
+        &self.burn_events
+    }
+
+    pub fn preburn_events(&self) -> &EventHandle {
+        &self.preburn_events
+    }
+
+    pub fn cancel_burn_events(&self) -> &EventHandle {
+        &self.cancel_burn_events
+    }
+
+    pub fn exchange_rate_update_events(&self) -> &EventHandle {
+        &self.exchange_rate_update_events
+    }
 }

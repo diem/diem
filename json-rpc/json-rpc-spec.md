@@ -628,6 +628,46 @@ None
    <td>Factor by which the amount is scaled before it is stored in the blockchain
    </td>
   </tr>
+  <tr>
+   <td><strong>mint_events_key</strong>
+   </td>
+   <td>string
+   </td>
+   <td>Unique key for the mint events stream of this currency
+   </td>
+  </tr>
+  <tr>
+   <td><strong>burn_events_key</strong>
+   </td>
+   <td>string
+   </td>
+   <td>Unique key for the burn events stream of this currency
+   </td>
+  </tr>
+  <tr>
+   <td><strong>preburn_events_key</strong>
+   </td>
+   <td>string
+   </td>
+   <td>Unique key for the preburn events stream of this currency
+   </td>
+  </tr>
+  <tr>
+   <td><strong>cancel_burn_events_key</strong>
+   </td>
+   <td>string
+   </td>
+   <td>Unique key for the cancel_burn events stream of this currency
+   </td>
+  </tr>
+  <tr>
+   <td><strong>exchange_rate_update_events_key</strong>
+   </td>
+   <td>string
+   </td>
+   <td>Unique key for the exchange rate update events stream of this currency
+   </td>
+  </tr>
 </table>
 
 
