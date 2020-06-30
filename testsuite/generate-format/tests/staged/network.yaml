@@ -1,4 +1,6 @@
 ---
+ChainId:
+  NEWTYPESTRUCT: STR
 DirectSendMsg:
   STRUCT:
     - protocol_id:
@@ -36,8 +38,6 @@ MessagingProtocolVersion:
   ENUM:
     0:
       V1: UNIT
-ChainId:
-  NEWTYPESTRUCT: STR
 NetworkAddress:
   NEWTYPESTRUCT:
     SEQ:
@@ -153,5 +153,4 @@ RpcResponse:
     - priority: U8
     - raw_response: BYTES
 SupportedProtocols:
-  NEWTYPESTRUCT:
-    SEQ: U8
+  NEWTYPESTRUCT: BYTES

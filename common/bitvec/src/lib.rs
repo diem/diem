@@ -50,6 +50,7 @@ const MAX_BUCKETS: usize = 32;
 /// ```
 #[derive(Clone, Default, Debug, PartialEq, Serialize)]
 pub struct BitVec {
+    #[serde(with = "serde_bytes")]
     inner: Vec<u8>,
 }
 
@@ -127,7 +128,7 @@ impl<'de> Deserialize<'de> for BitVec {
     where
         D: Deserializer<'de>,
     {
-        let v = <Vec<u8>>::deserialize(deserializer)?;
+        let v = serde_bytes::ByteBuf::deserialize(deserializer)?.into_vec();
         if v.len() > MAX_BUCKETS {
             return Err(D::Error::custom(format!("BitVec too long: {}", v.len())));
         }
