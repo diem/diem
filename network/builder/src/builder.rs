@@ -65,11 +65,6 @@ pub struct NetworkBuilder {
     executor: Handle,
     network_context: Arc<NetworkContext>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
-    channel_size: usize,
-    connectivity_check_interval_ms: u64,
-    max_connection_delay_ms: u64,
-    /// For now full node connections are limited by
-    max_fullnode_connections: usize,
 
     configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
     connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
@@ -115,10 +110,6 @@ impl NetworkBuilder {
             executor,
             network_context,
             trusted_peers,
-            channel_size: constants::NETWORK_CHANNEL_SIZE,
-            connectivity_check_interval_ms: constants::CONNECTIVITY_CHECK_INTERNAL_MS,
-            max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
-            max_fullnode_connections: constants::MAX_FULLNODE_CONNECTIONS,
             configuration_change_listener_builder: None,
             connectivity_manager_builder: None,
             discovery_builder: None,
@@ -165,14 +156,12 @@ impl NetworkBuilder {
             config.max_frame_size,
         );
 
-        network_builder
-            .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
-            .add_connection_monitoring(
-                // TODO: Move these values into NetworkConfig
-                constants::PING_INTERVAL_MS,
-                constants::PING_TIMEOUT_MS,
-                constants::PING_FAILURES_TOLERATED,
-            );
+        network_builder.add_connection_monitoring(
+            // TODO: Move these values into NetworkConfig
+            constants::PING_INTERVAL_MS,
+            constants::PING_TIMEOUT_MS,
+            constants::PING_FAILURES_TOLERATED,
+        );
 
         // Sanity check seed addresses.
         config
@@ -194,8 +183,15 @@ impl NetworkBuilder {
             || config.discovery_method != DiscoveryMethod::None
             || !config.seed_addrs.is_empty()
         {
-            network_builder
-                .add_connectivity_manager(config.seed_addrs.clone(), config.seed_pubkeys.clone());
+            network_builder.add_connectivity_manager(
+                config.seed_addrs.clone(),
+                config.seed_pubkeys.clone(), // TODO: this should be encoded in network config
+                constants::MAX_FULLNODE_CONNECTIONS,
+                // TODO: this should be encoded in network_config
+                constants::MAX_CONNECTION_DELAY_MS,
+                config.connectivity_check_interval_ms,
+                constants::NETWORK_CHANNEL_SIZE,
+            );
         }
 
         match &config.discovery_method {
@@ -247,16 +243,6 @@ impl NetworkBuilder {
         self.network_context.clone()
     }
 
-    /// Set connectivity check ticker interval
-    // TODO: remove this function
-    pub fn connectivity_check_interval_ms(
-        &mut self,
-        connectivity_check_interval_ms: u64,
-    ) -> &mut Self {
-        self.connectivity_check_interval_ms = connectivity_check_interval_ms;
-        self
-    }
-
     pub fn conn_mgr_reqs_tx(&self) -> Option<channel::Sender<ConnectivityRequest>> {
         match self.connectivity_manager_builder.as_ref() {
             Some(conn_mgr_builder) => Some(conn_mgr_builder.conn_mgr_reqs_tx()),
@@ -295,13 +281,15 @@ impl NetworkBuilder {
         &mut self,
         seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
         mut seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
+        max_fullnode_connections: usize,
+        max_connection_delay_ms: u64,
+        connectivity_check_interval_ms: u64,
+        channel_size: usize,
     ) -> &mut Self {
         let trusted_peers = self.trusted_peers.clone();
-        let max_connection_delay_ms = self.max_connection_delay_ms;
-        let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
         let pm_conn_mgr_notifs_rx = self.add_connection_event_listener();
         let connection_limit = if let RoleType::FullNode = self.network_context.role() {
-            Some(self.max_fullnode_connections)
+            Some(max_fullnode_connections)
         } else {
             None
         };
@@ -327,7 +315,7 @@ impl NetworkBuilder {
             // TODO:  move this into a config
             2, // Legacy hardcoded value,
             max_connection_delay_ms,
-            self.channel_size,
+            channel_size,
             ConnectionRequestSender::new(self.peer_manager_builder.connection_reqs_tx()),
             pm_conn_mgr_notifs_rx,
             connection_limit,
@@ -421,9 +409,7 @@ impl NetworkBuilder {
         // "/ip6/::1/tcp/0/ln-noise-ik/<pubkey>/ln-handshake/0", which is wrong
         // since the actual bound port will be something > 0.
 
-        // TODO(philiphayes): in network_builder setup, only bind the channels.
-        // wait until PeerManager is running to actual setup gossip discovery.
-
+        // TODO:  move this logic into DiscoveryBuilder::create
         let advertised_address = gossip_config
             .advertised_address
             .append_prod_protos(pubkey, HANDSHAKE_VERSION);

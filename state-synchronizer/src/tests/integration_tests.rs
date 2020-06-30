@@ -379,7 +379,14 @@ impl SynchronizerEnv {
                 constants::MAX_FRAME_SIZE,
             );
             network_builder
-                .add_connectivity_manager(seed_addrs, seed_pubkeys)
+                .add_connectivity_manager(
+                    seed_addrs,
+                    seed_pubkeys,
+                    constants::MAX_FULLNODE_CONNECTIONS,
+                    constants::MAX_CONNECTION_DELAY_MS,
+                    constants::CONNECTIVITY_CHECK_INTERNAL_MS,
+                    constants::NETWORK_CHANNEL_SIZE,
+                )
                 .add_gossip_discovery(
                     GossipConfig {
                         advertised_address: addr,
