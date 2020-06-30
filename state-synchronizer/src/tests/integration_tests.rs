@@ -293,6 +293,7 @@ impl SynchronizerEnv {
                 (peer_id, pubkey_set)
             })
             .collect();
+        let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
         // set up config
         let mut config = config_builder::test_config().0;
@@ -373,6 +374,7 @@ impl SynchronizerEnv {
             let mut network_builder = NetworkBuilder::new(
                 self.runtime.handle().clone(),
                 ChainId::default(),
+                trusted_peers.clone(),
                 network_context,
                 addr.clone(),
                 authentication_mode,
@@ -382,6 +384,7 @@ impl SynchronizerEnv {
                 .add_connectivity_manager(
                     seed_addrs,
                     seed_pubkeys,
+                    trusted_peers,
                     constants::MAX_FULLNODE_CONNECTIONS,
                     constants::MAX_CONNECTION_DELAY_MS,
                     constants::CONNECTIVITY_CHECK_INTERNAL_MS,
