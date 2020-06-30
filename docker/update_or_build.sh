@@ -4,7 +4,7 @@
 
 function usage {
   echo "Usage:"
-  echo "update_or_build.sh [-p] -g <GITHASH> -b <TARGET_BRANCH>"
+  echo "update_or_build.sh [-p] -g <GITHASH> -b <TARGET_BRANCH> -n <image name>"
   echo "-p indicates this a prebuild, where images are built and pushed to dockerhub with an infix of '_pre_', should be run on the 'auto' branch, trigger by bors."
   echo "-g the GIT_HASH of the form: short=8"
   echo "-b the branch we're building on, or the branch we're targeting if a prebuild"
@@ -39,6 +39,10 @@ while getopts "pg:b:n:" arg; do
   esac
 done
 
+echo Branch $BRANCH
+echo Git rev $GIT_REV
+echo Name $NAME
+
 [ "$BRANCH" != "" ] || { echo "-b branch must be set"; usage; exit 99; }
 [ "$GIT_REV" != "" ] || { echo "-g githash must be set"; usage; exit 99; }
 [ "$NAME" != "" ] || { echo "-n name must be set"; usage; exit 99; }
@@ -65,7 +69,7 @@ if [ "$pulled" != "0" ]; then
   #push our tagged prebuild image if this is a prebuild.  Usually means this is called from bors' auto branch.
   if [ $PREBUILD == "true" ]; then
      echo pushing libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV}
-     docker push libra/test:libra_${tag_name}_pre_$BRANCH_$GIT_REV
+     docker push libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV}
   fi
 fi
 
