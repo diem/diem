@@ -258,6 +258,10 @@ impl NetworkBuilder {
         self.peer_manager_builder.add_connection_event_listener()
     }
 
+    pub fn listen_address(&self) -> NetworkAddress {
+        self.peer_manager_builder.listen_address()
+    }
+
     fn build_peer_manager(&mut self) -> &mut Self {
         self.peer_manager_builder.build(&self.executor);
         self
@@ -488,9 +492,9 @@ impl NetworkBuilder {
 
     /// Create the configured transport and start PeerManager.
     /// Return the actual NetworkAddress over which this peer is listening.
-    pub fn build(mut self) -> NetworkAddress {
+    pub fn build(&mut self) -> &mut Self {
         self.build_peer_manager().start_peer_manager();
-        self.peer_manager_builder.listen_address()
+        self
     }
 
     /// Adds a endpoints for the provided configuration.  Returns NetworkSender and NetworkEvent which

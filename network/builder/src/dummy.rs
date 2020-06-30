@@ -152,7 +152,8 @@ pub fn setup_network() -> DummyNetwork {
         .add_connectivity_manager();
     let (listener_sender, mut listener_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
-    let listener_addr = network_builder.build();
+    network_builder.build();
+    let listener_addr = network_builder.listen_address();
 
     let authentication_mode = AuthenticationMode::Mutual(dialer_identity_private_key);
     let seed_addrs: HashMap<_, _> = [(listener_peer_id, vec![listener_addr])]
@@ -177,7 +178,7 @@ pub fn setup_network() -> DummyNetwork {
         .add_connectivity_manager();
     let (dialer_sender, mut dialer_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
-    let _dialer_addr = network_builder.build();
+    network_builder.build();
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
