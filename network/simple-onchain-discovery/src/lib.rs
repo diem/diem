@@ -15,7 +15,7 @@ use libra_types::{
 };
 use network::connectivity_manager::{ConnectivityRequest, DiscoverySource};
 use once_cell::sync::Lazy;
-use std::{collections::HashSet, convert::TryFrom, time::Instant};
+use std::{collections::HashSet, convert::TryFrom, iter, time::Instant};
 use subscription_service::ReconfigSubscription;
 
 pub mod builder;
@@ -80,10 +80,15 @@ fn extract_updates(role: RoleType, node_set: ValidatorSet) -> Vec<ConnectivityRe
     // Collect the set of address updates.
     let address_map = node_list
         .iter()
-        .flat_map(|node| match network_address(role, node.config()) {
+        .filter_map(|node| match network_address(role, node.config()) {
             Ok(addr) => Some((*node.account_address(), vec![addr])),
-            Err(e) => {
-                warn!("Cannot parse network address {}", e);
+            Err(err) => {
+                let account = node.account_address();
+                let config = node.config();
+                warn!(
+                    "Failed to parse network address for account: {}, role: {}, config: {:?}, err: {:?}",
+                    account, role, config, err
+                );
                 None
             }
         })
@@ -100,8 +105,16 @@ fn extract_updates(role: RoleType, node_set: ValidatorSet) -> Vec<ConnectivityRe
         node_list
             .iter()
             .map(|node| {
+                // TODO(philiphayes): remove this after removing pubkey field
                 let pubkey = public_key(role, node.config());
-                let pubkey_set: HashSet<_> = [pubkey].iter().copied().collect();
+                // parse out pubkey from address
+                let pubkey_set: HashSet<_> = network_address(role, node.config())
+                    .ok()
+                    .iter()
+                    .filter_map(NetworkAddress::find_noise_proto)
+                    // for now, also add the explicit pubkey field
+                    .chain(iter::once(pubkey))
+                    .collect();
                 (*node.account_address(), pubkey_set)
             })
             .collect(),
