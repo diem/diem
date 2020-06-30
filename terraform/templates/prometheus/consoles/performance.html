@@ -53,7 +53,9 @@
 
     {{ template "graph_in_table" (args "creationToStrongCommit3" "Avg time since block creation to strong commit with x=1.75f (ms)" "irate(consensus_duration_sum{op='creation_to_strong_commit_3_s'}[1m])/irate(consensus_duration_count{op='creation_to_strong_commit_3_s'}[1m])" "ms") }}
 
-    {{ template "graph_in_table" (args "creationToStrongCommit4" "Avg time since block creation to strong commit with x=2f (ms)" "irate(consensus_duration_sum{op='creation_to_strong_commit_4_s'}[1m])/irate(consensus_duration_count{op='creation_to_strong_commit_4_s'}[1m])" "ms") }}
+    {{ template "graph_in_table" (args "creationToStrongCommit4" "Avg time since block creation to strong commit with x=2f-1 (ms)" "irate(consensus_duration_sum{op='creation_to_strong_commit_4_s'}[1m])/irate(consensus_duration_count{op='creation_to_strong_commit_4_s'}[1m])" "ms") }}
+
+    {{ template "graph_in_table" (args "creationToStrongCommit5" "Avg time since block creation to strong commit with x=2f (ms)" "irate(consensus_duration_sum{op='creation_to_strong_commit_5_s'}[1m])/irate(consensus_duration_count{op='creation_to_strong_commit_5_s'}[1m])" "ms") }}
 
     {{ template "graph_in_table" (args "creationToQC" "Avg time since block creation to QC (ms)" "irate(consensus_duration_sum{op='creation_to_qc_s'}[1m])/irate(consensus_duration_count{op='creation_to_qc_s'}[1m])" "ms") }}
   </tr>

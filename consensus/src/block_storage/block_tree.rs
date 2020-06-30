@@ -748,14 +748,24 @@ where
                         .observe_duration(time_to_strong_commit_3);
                 }
             }
-            if previous_voting_powers < verifier.total_voting_power()
-                && *voting_powers >= verifier.total_voting_power()
+            if previous_voting_powers < verifier.total_voting_power() - 1
+                && *voting_powers >= verifier.total_voting_power() - 1
             {
                 if let Some(time_to_strong_commit_4) =
                     duration_since_epoch().checked_sub(Duration::from_micros(grandparent_timestamp))
                 {
                     counters::CREATION_TO_STRONG_COMMIT_4_S
                         .observe_duration(time_to_strong_commit_4);
+                }
+            }
+            if previous_voting_powers < verifier.total_voting_power()
+                && *voting_powers >= verifier.total_voting_power()
+            {
+                if let Some(time_to_strong_commit_5) =
+                    duration_since_epoch().checked_sub(Duration::from_micros(grandparent_timestamp))
+                {
+                    counters::CREATION_TO_STRONG_COMMIT_5_S
+                        .observe_duration(time_to_strong_commit_5);
                 }
             }
         }
