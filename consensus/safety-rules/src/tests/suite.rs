@@ -377,6 +377,7 @@ fn test_voting(safety_rules: &Callback) {
     let a3 = make_proposal_with_parent(round + 5, &a2, None, &signer, key.as_ref());
     let b3 = make_proposal_with_parent(round + 6, &b2, None, &signer, key.as_ref());
     let a4 = make_proposal_with_parent(round + 7, &a3, None, &signer, key.as_ref());
+    let a4_prime = make_proposal_with_parent(round + 7, &a2, None, &signer, key.as_ref());
     let b4 = make_proposal_with_parent(round + 8, &b2, None, &signer, key.as_ref());
 
     safety_rules.initialize(&proof).unwrap();
@@ -405,9 +406,16 @@ fn test_voting(safety_rules: &Callback) {
     assert_eq!(vote.ledger_info().consensus_block_id(), HashValue::zero());
 
     assert_eq!(
-        safety_rules.construct_and_sign_vote(&a4),
-        Err(Error::IncorrectLastVotedRound(7, 7))
+        safety_rules.construct_and_sign_vote(&a3),
+        Err(Error::IncorrectLastVotedRound(5, 7))
     );
+
+    // return the last vote for the same round
+    assert_eq!(
+        safety_rules.construct_and_sign_vote(&a4_prime),
+        Ok(vote.clone())
+    );
+    assert_eq!(safety_rules.construct_and_sign_vote(&a4), Ok(vote));
 
     assert_eq!(
         safety_rules.construct_and_sign_vote(&b4),

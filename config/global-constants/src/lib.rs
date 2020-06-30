@@ -24,3 +24,4 @@ pub const EPOCH: &str = "epoch";
 pub const LAST_VOTED_ROUND: &str = "last_voted_round";
 pub const PREFERRED_ROUND: &str = "preferred_round";
 pub const WAYPOINT: &str = "waypoint";
+pub const LAST_VOTE: &str = "last_vote";

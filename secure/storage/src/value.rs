@@ -19,6 +19,7 @@ pub enum Value {
     String(String),
     Transaction(Transaction),
     U64(u64),
+    Bytes(Vec<u8>),
 }
 
 impl Value {
@@ -64,6 +65,14 @@ impl Value {
 
     pub fn transaction(self) -> Result<Transaction, Error> {
         if let Value::Transaction(value) = self {
+            Ok(value)
+        } else {
+            Err(Error::UnexpectedValueType)
+        }
+    }
+
+    pub fn bytes(self) -> Result<Vec<u8>, Error> {
+        if let Value::Bytes(value) = self {
             Ok(value)
         } else {
             Err(Error::UnexpectedValueType)
