@@ -165,7 +165,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
         // Start the network and cache the runtime so it does not go out of scope.
         // TODO:  move all 'start' commands to a second phase at the end of setup_environment.  Target is to have one pass to wire the pieces together and a second pass to start processing in an appropriate order.
         let peer_id = network_builder.peer_id();
-        let _listen_addr = network_builder.build();
+        network_builder.build();
         network_runtimes.push(runtime);
         debug!("Network started for peer_id: {}", peer_id);
     }

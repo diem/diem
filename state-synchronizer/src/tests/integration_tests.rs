@@ -389,7 +389,8 @@ impl SynchronizerEnv {
 
             let (sender, events) =
                 network_builder.add_protocol_handler(crate::network::network_endpoint_config());
-            let peer_addr = network_builder.build();
+            network_builder.build();
+            let peer_addr = network_builder.listen_address();
             self.peer_addresses.push(peer_addr);
             network_handles.push((network_id, sender, events));
         };
