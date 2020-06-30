@@ -148,7 +148,6 @@ pub fn setup_network() -> DummyNetwork {
     ));
     // Set up the listener network
     let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
         chain_id,
         trusted_peers.clone(),
         network_context,
@@ -167,7 +166,7 @@ pub fn setup_network() -> DummyNetwork {
     );
     let (listener_sender, mut listener_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
-    network_builder.build();
+    network_builder.build(runtime.handle().clone());
     let listener_addr = network_builder.listen_address();
 
     let authentication_mode = AuthenticationMode::Mutual(dialer_identity_private_key);
@@ -186,7 +185,6 @@ pub fn setup_network() -> DummyNetwork {
     let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
     let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
         chain_id,
         trusted_peers.clone(),
         network_context,
@@ -205,7 +203,7 @@ pub fn setup_network() -> DummyNetwork {
     );
     let (dialer_sender, mut dialer_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
-    network_builder.build();
+    network_builder.build(runtime.handle().clone());
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();

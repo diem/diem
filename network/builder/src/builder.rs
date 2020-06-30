@@ -46,7 +46,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 use subscription_service::ReconfigSubscription;
-use tokio::runtime::{Builder, Handle, Runtime};
+use tokio::runtime::Handle;
 
 #[derive(Debug, PartialEq, PartialOrd)]
 enum State {
@@ -62,7 +62,7 @@ enum State {
 /// via [`NetworkBuilder::create`].
 pub struct NetworkBuilder {
     state: State,
-    executor: Handle,
+    executor: Option<Handle>,
     network_context: Arc<NetworkContext>,
 
     configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
@@ -79,7 +79,6 @@ impl NetworkBuilder {
     /// Return a new NetworkBuilder initialized with default configuration values.
     // TODO:  Remove `pub`.  NetworkBuilder should only be created thorugh `::create()`
     pub fn new(
-        executor: Handle,
         chain_id: ChainId,
         trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
         network_context: Arc<NetworkContext>,
@@ -106,7 +105,7 @@ impl NetworkBuilder {
 
         NetworkBuilder {
             state: State::CREATED,
-            executor,
+            executor: None,
             network_context,
             configuration_change_listener_builder: None,
             connectivity_manager_builder: None,
@@ -118,18 +117,7 @@ impl NetworkBuilder {
     }
 
     /// Create a new NetworkBuilder based on the provided configuration.
-    pub fn create(
-        chain_id: ChainId,
-        role: RoleType,
-        config: &mut NetworkConfig,
-    ) -> (Runtime, NetworkBuilder) {
-        let runtime = Builder::new()
-            .thread_name("network-")
-            .threaded_scheduler()
-            .enable_all()
-            .build()
-            .expect("Failed to start runtime. Won't be able to start networking.");
-
+    pub fn create(chain_id: ChainId, role: RoleType, config: &mut NetworkConfig) -> NetworkBuilder {
         let peer_id = config.peer_id();
         let identity_key = config.identity_key();
 
@@ -149,7 +137,6 @@ impl NetworkBuilder {
         let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
         let mut network_builder = NetworkBuilder::new(
-            runtime.handle().clone(),
             chain_id,
             trusted_peers.clone(),
             network_context,
@@ -183,6 +170,7 @@ impl NetworkBuilder {
         //    discovered peers.
         // 3) if we have seed peers, then we need connmgr to connect to them.
         // TODO(philiphayes): could probably use a better way to specify these cases
+        // TODO:  Why not add ConnectivityManager always?
         if config.mutual_authentication
             || config.discovery_method != DiscoveryMethod::None
             || !config.seed_addrs.is_empty()
@@ -215,13 +203,14 @@ impl NetworkBuilder {
             DiscoveryMethod::None => {}
         }
 
-        (runtime, network_builder)
+        network_builder
     }
 
     /// Create the configured Networking components.
-    pub fn build(&mut self) -> &mut Self {
+    pub fn build(&mut self, executor: Handle) -> &mut Self {
         assert_eq!(self.state, State::CREATED);
         self.state = State::BUILT;
+        self.executor = Some(executor);
         self.build_peer_manager()
             .build_configuration_change_listener()
             .build_gossip_discovery()
@@ -266,12 +255,14 @@ impl NetworkBuilder {
     }
 
     fn build_peer_manager(&mut self) -> &mut Self {
-        self.peer_manager_builder.build(&self.executor);
+        self.peer_manager_builder
+            .build(self.executor.as_mut().expect("Executor must exist"));
         self
     }
 
     fn start_peer_manager(&mut self) -> &mut Self {
-        self.peer_manager_builder.start(&self.executor);
+        self.peer_manager_builder
+            .start(self.executor.as_mut().expect("Executor must exist"));
         self
     }
 
@@ -332,14 +323,14 @@ impl NetworkBuilder {
 
     fn build_connectivity_manager(&mut self) -> &mut Self {
         if let Some(builder) = self.connectivity_manager_builder.as_mut() {
-            builder.build(&self.executor);
+            builder.build(self.executor.as_mut().expect("Executor must exist"));
         }
         self
     }
 
     fn start_connectivity_manager(&mut self) -> &mut Self {
         if let Some(builder) = self.connectivity_manager_builder.as_mut() {
-            builder.start(&self.executor);
+            builder.start(self.executor.as_mut().expect("Executor must exist"));
         }
         self
     }
@@ -383,7 +374,8 @@ impl NetworkBuilder {
         if let Some(configuration_change_listener) =
             self.configuration_change_listener_builder.as_mut()
         {
-            configuration_change_listener.start(&self.executor);
+            configuration_change_listener
+                .start(self.executor.as_mut().expect("Executor must exist"));
         }
         self
     }
@@ -436,7 +428,7 @@ impl NetworkBuilder {
 
     fn build_gossip_discovery(&mut self) -> &mut Self {
         if let Some(discovery_builder) = self.discovery_builder.as_mut() {
-            discovery_builder.build(&self.executor);
+            discovery_builder.build(self.executor.as_mut().expect("Executor must exist"));
             debug!("{} Built Gossip Discovery", self.network_context());
         }
         self
@@ -444,7 +436,7 @@ impl NetworkBuilder {
 
     fn start_gossip_discovery(&mut self) -> &mut Self {
         if let Some(discovery_builder) = self.discovery_builder.as_mut() {
-            discovery_builder.start(&self.executor);
+            discovery_builder.start(self.executor.as_mut().expect("Executor must exist"));
             debug!("{} Started gossip discovery", self.network_context());
         }
         self
@@ -477,7 +469,7 @@ impl NetworkBuilder {
     /// Build the HealthChecker, if it has been added.
     fn build_connection_monitoring(&mut self) -> &mut Self {
         if let Some(health_checker) = self.health_checker_builder.as_mut() {
-            health_checker.build(&self.executor);
+            health_checker.build(self.executor.as_mut().expect("Executor must exist"));
             debug!("{} Built health checker", self.network_context);
         };
         self
@@ -486,7 +478,7 @@ impl NetworkBuilder {
     /// Star the built HealthChecker.
     fn start_connection_monitoring(&mut self) -> &mut Self {
         if let Some(health_checker) = self.health_checker_builder.as_mut() {
-            health_checker.start(&self.executor);
+            health_checker.start(self.executor.as_mut().expect("Executor must exist"));
             debug!("{} Started health checker", self.network_context);
         };
         self
