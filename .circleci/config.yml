@@ -557,7 +557,7 @@ jobs:
               circleci step halt;
             fi
             curl -o /tmp/pr https://api.github.com/repos/libra/libra/pulls/${pr_num}
-            export TARGET_BRANCH=$( cat /tmp/pr | jq ".base .ref" )
+            export TARGET_BRANCH=$( cat /tmp/pr | jq ".base .ref" | sed 's/"//g' )
             if [[ $TARGET_BRANCH =~ $TARGET_BRANCH_PATTERN ]]; then
               echo Targeting branch $TARGET_BRANCH proceeding to publish docker images.
             else
