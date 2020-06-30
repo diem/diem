@@ -170,7 +170,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
             .enable_all()
             .build()
             .expect("Failed to start runtime. Won't be able to start networking.");
-        network_builder.build(runtime.handle().clone());
+        network_builder.build(runtime.handle().clone()).start();
         network_runtimes.push(runtime);
         debug!(
             "Network started for peer_id: {:?}",
