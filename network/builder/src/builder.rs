@@ -166,35 +166,19 @@ impl NetworkBuilder {
         config
             .verify_seed_peer_addrs()
             .expect("Seed peer addresses must be well-formed");
-        // TODO(philiphayes): rename config field to seed_addrs?
-        let seed_addrs = config.seed_peers.clone();
 
         if config.mutual_authentication {
-            // TODO(philiphayes): remove
-            let seed_pubkey_sets = config
-                .network_peers
-                .iter()
-                .map(|(peer_id, pubkey)| {
-                    let pubkey_set: HashSet<_> = [*pubkey].iter().copied().collect();
-                    (*peer_id, pubkey_set)
-                })
-                .collect();
-
-            info!(
-                "network setup: role: {}, seed_addrs: {:?}, seed_pubkey_sets: {:?}",
-                role, seed_addrs, seed_pubkey_sets,
-            );
-
             network_builder
-                .seed_addrs(seed_addrs)
-                .seed_pubkey_sets(seed_pubkey_sets)
+                .seed_addrs(config.seed_peers.clone())
+                .seed_pubkey_sets(config.seed_pubkey_sets.clone())
                 .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
                 .add_connectivity_manager();
         } else {
             // Enforce the outgoing connection (dialer) verifies the identity of the listener (server)
-            if config.discovery_method == DiscoveryMethod::Onchain || !seed_addrs.is_empty() {
+            if config.discovery_method == DiscoveryMethod::Onchain || !config.seed_peers.is_empty()
+            {
                 network_builder
-                    .seed_addrs(seed_addrs)
+                    .seed_addrs(config.seed_peers.clone())
                     .add_connectivity_manager();
             }
         }

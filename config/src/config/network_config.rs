@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::{Error, RoleType, SecureBackend},
+    config::{Error, SecureBackend},
     keys::KeyPair,
     network_id::NetworkId,
     utils,
@@ -17,7 +17,7 @@ use rand::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     convert::{TryFrom, TryInto},
     string::ToString,
 };
@@ -29,7 +29,7 @@ use std::{
 // might need to extract into a separate network_constants crate or something.
 pub const HANDSHAKE_VERSION: u8 = 0;
 
-pub type NetworkPeersConfig = HashMap<PeerId, x25519::PublicKey>;
+pub type SeedPubkeySetsConfig = HashMap<PeerId, HashSet<x25519::PublicKey>>;
 pub type SeedPeersConfig = HashMap<PeerId, Vec<NetworkAddress>>;
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
@@ -49,7 +49,7 @@ pub struct NetworkConfig {
     pub network_id: NetworkId,
     // Leveraged by mutual_authentication for incoming peers that may not have a well-defined
     // network address.
-    pub network_peers: NetworkPeersConfig,
+    pub seed_pubkey_sets: SeedPubkeySetsConfig,
     // Initial set of peers to connect to
     pub seed_peers: SeedPeersConfig,
 }
@@ -69,7 +69,7 @@ impl NetworkConfig {
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             mutual_authentication: false,
             network_id,
-            network_peers: HashMap::default(),
+            seed_pubkey_sets: HashMap::default(),
             seed_peers: HashMap::default(),
         };
         config.prepare_identity();
@@ -88,7 +88,7 @@ impl NetworkConfig {
             listen_address: self.listen_address.clone(),
             mutual_authentication: self.mutual_authentication,
             network_id: self.network_id.clone(),
-            network_peers: self.network_peers.clone(),
+            seed_pubkey_sets: self.seed_pubkey_sets.clone(),
             seed_peers: self.seed_peers.clone(),
         }
     }
@@ -110,19 +110,11 @@ impl NetworkConfig {
         key.expect("identity key should be present")
     }
 
-    pub fn load(&mut self, network_role: RoleType) -> Result<(), Error> {
+    pub fn load(&mut self) -> Result<(), Error> {
         if self.listen_address.to_string().is_empty() {
             self.listen_address = utils::get_local_ip()
                 .ok_or_else(|| Error::InvariantViolation("No local IP".to_string()))?;
         }
-
-        if network_role.is_validator() {
-            crate::config::invariant(
-                self.network_peers.is_empty(),
-                "Validators should not define network_peers".into(),
-            )?;
-        }
-
         self.prepare_identity();
         Ok(())
     }

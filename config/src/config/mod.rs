@@ -247,11 +247,11 @@ impl NodeConfig {
         let input_dir = RootPath::new(input_path);
         config.execution.load(&input_dir)?;
         if let Some(network) = &mut config.validator_network {
-            network.load(RoleType::Validator)?;
+            network.load()?;
             network_ids.insert(network.network_id.clone());
         }
         for network in &mut config.full_node_networks {
-            network.load(RoleType::FullNode)?;
+            network.load()?;
 
             // Validate that a network isn't repeated
             let network_id = network.network_id.clone();
