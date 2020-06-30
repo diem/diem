@@ -129,6 +129,7 @@ pub use struct_log::{
 mod text_log;
 pub use log::Level;
 pub use text_log::{Logger, CHANNEL_SIZE, DEFAULT_TARGET};
+pub mod counters;
 
 /// Define crit macro that specify libra as the target
 // TODO Remove historical crit from code base since it isn't supported in Rust Log.
@@ -149,6 +150,7 @@ macro_rules! debug {
     ($($arg:tt)+) => ({
         if $crate::struct_log_enabled!($crate::log::Level::Debug) {
             $crate::struct_log!($($arg)+);
+            $crate::counters::LOG_DEBUG_COUNT.inc();
         }
         $crate::log::debug!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
@@ -160,6 +162,7 @@ macro_rules! error {
     ($($arg:tt)+) => ({
         if $crate::struct_log_enabled!($crate::log::Level::Error) {
             $crate::struct_log!($($arg)+);
+            $crate::counters::LOG_ERROR_COUNT.inc();
         }
         $crate::log::error!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
@@ -171,6 +174,7 @@ macro_rules! info {
     ($($arg:tt)+) => ({
         if $crate::struct_log_enabled!($crate::log::Level::Info) {
             $crate::struct_log!($($arg)+);
+            $crate::counters::LOG_INFO_COUNT.inc();
         }
         $crate::log::info!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })
@@ -193,6 +197,7 @@ macro_rules! warn {
     ($($arg:tt)+) => ({
         if $crate::struct_log_enabled!($crate::log::Level::Warn) {
             $crate::struct_log!($($arg)+);
+            $crate::counters::LOG_WARN_COUNT.inc();
         }
         $crate::log::warn!(target: $crate::DEFAULT_TARGET, $($arg)+);
     })

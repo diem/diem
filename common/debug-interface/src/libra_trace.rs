@@ -45,6 +45,7 @@ macro_rules! trace_event {
                "duration": $duration,
             });
         $crate::send_logs!($crate::libra_trace::TRACE_EVENT, json);
+        $crate::counters::TRACE_EVENT_COUNT.inc();
     }
 }
 
@@ -139,6 +140,7 @@ macro_rules! end_trace {
                     "end": true,
                 });
             $crate::send_logs!($crate::libra_trace::TRACE_EVENT, json);
+            $crate::counters::END_TRACE_COUNT.inc();
         }
     };
 }
@@ -154,6 +156,7 @@ macro_rules! trace_edge {
                     "stage": $stage,
                 });
             $crate::send_logs!($crate::libra_trace::TRACE_EDGE, json);
+            $crate::counters::TRACE_EDGE_COUNT.inc();
         }
     };
 }
