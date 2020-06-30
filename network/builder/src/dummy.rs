@@ -121,9 +121,15 @@ pub fn setup_network() -> DummyNetwork {
     let listener_addr: NetworkAddress = "/ip4/127.0.0.1/tcp/0".parse().unwrap();
 
     // Setup trusted peers.
-    let trusted_peers: HashMap<_, _> = vec![
-        (dialer_peer_id, dialer_identity_public_key),
-        (listener_peer_id, listener_identity_public_key),
+    let seed_pubkey_sets: HashMap<_, _> = vec![
+        (
+            dialer_peer_id,
+            vec![dialer_identity_public_key].into_iter().collect(),
+        ),
+        (
+            listener_peer_id,
+            vec![listener_identity_public_key].into_iter().collect(),
+        ),
     ]
     .into_iter()
     .collect();
@@ -141,13 +147,18 @@ pub fn setup_network() -> DummyNetwork {
         authentication_mode,
     );
     network_builder
-        .trusted_peers(trusted_peers.clone())
+        .seed_pubkey_sets(seed_pubkey_sets.clone())
         .add_connectivity_manager();
     let (listener_sender, mut listener_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
     let listener_addr = network_builder.build();
 
     let authentication_mode = AuthenticationMode::Mutual(dialer_identity_private_key);
+    let seed_addrs: HashMap<_, _> = [(listener_peer_id, vec![listener_addr])]
+        .iter()
+        .cloned()
+        .collect();
+
     // Set up the dialer network
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
@@ -159,13 +170,8 @@ pub fn setup_network() -> DummyNetwork {
         authentication_mode,
     );
     network_builder
-        .trusted_peers(trusted_peers)
-        .seed_peers(
-            [(listener_peer_id, vec![listener_addr])]
-                .iter()
-                .cloned()
-                .collect(),
-        )
+        .seed_addrs(seed_addrs)
+        .seed_pubkey_sets(seed_pubkey_sets)
         .add_connectivity_manager();
     let (dialer_sender, mut dialer_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());

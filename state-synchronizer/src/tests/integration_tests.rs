@@ -39,7 +39,7 @@ use network::{
 use network_builder::builder::NetworkBuilder;
 use rand::{rngs::StdRng, SeedableRng};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     convert::TryFrom,
     num::NonZeroUsize,
     sync::{
@@ -253,14 +253,14 @@ impl SynchronizerEnv {
         mock_network: bool,
     ) {
         let new_peer_idx = self.synchronizers.len();
-        let trusted_peers: HashMap<_, _> = self
+        let seed_pubkey_sets: HashMap<_, _> = self
             .public_keys
             .iter()
             .map(|public_keys| {
-                (
-                    *public_keys.account_address(),
-                    public_keys.network_identity_public_key(),
-                )
+                let peer_id = *public_keys.account_address();
+                let pubkey = public_keys.network_identity_public_key();
+                let pubkey_set: HashSet<_> = [pubkey].iter().copied().collect();
+                (peer_id, pubkey_set)
             })
             .collect();
 
@@ -286,9 +286,9 @@ impl SynchronizerEnv {
             (network_sender, network_events)
         } else {
             let addr: NetworkAddress = "/memory/0".parse().unwrap();
-            let mut seed_peers = HashMap::new();
+            let mut seed_addrs = HashMap::new();
             if new_peer_idx > 0 {
-                seed_peers.insert(
+                seed_addrs.insert(
                     self.peer_ids[new_peer_idx - 1],
                     vec![self.peer_addresses[new_peer_idx - 1].clone()],
                 );
@@ -306,8 +306,8 @@ impl SynchronizerEnv {
                 authentication_mode,
             );
             network_builder
-                .trusted_peers(trusted_peers)
-                .seed_peers(seed_peers)
+                .seed_pubkey_sets(seed_pubkey_sets)
+                .seed_addrs(seed_addrs)
                 .add_connectivity_manager()
                 .add_gossip_discovery(addr, constants::DISCOVERY_INTERVAL_MS, pub_key);
 

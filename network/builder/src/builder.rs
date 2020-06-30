@@ -40,7 +40,6 @@ use network_simple_onchain_discovery::{
 use std::{
     clone::Clone,
     collections::{HashMap, HashSet},
-    mem,
     sync::{Arc, RwLock},
 };
 use subscription_service::ReconfigSubscription;
@@ -56,8 +55,9 @@ use tokio::runtime::{Builder, Handle, Runtime};
 pub struct NetworkBuilder {
     executor: Handle,
     network_context: Arc<NetworkContext>,
-    seed_peers: HashMap<PeerId, Vec<NetworkAddress>>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
+    seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
+    seed_pubkey_sets: HashMap<PeerId, HashSet<x25519::PublicKey>>,
     channel_size: usize,
     connectivity_check_interval_ms: u64,
     max_connection_delay_ms: u64,
@@ -107,8 +107,9 @@ impl NetworkBuilder {
         NetworkBuilder {
             executor,
             network_context,
-            seed_peers: HashMap::new(),
             trusted_peers,
+            seed_addrs: HashMap::new(),
+            seed_pubkey_sets: HashMap::new(),
             channel_size: constants::NETWORK_CHANNEL_SIZE,
             connectivity_check_interval_ms: constants::CONNECTIVITY_CHECK_INTERNAL_MS,
             max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
@@ -165,32 +166,35 @@ impl NetworkBuilder {
         config
             .verify_seed_peer_addrs()
             .expect("Seed peer addresses must be well-formed");
-        let seed_peers = config.seed_peers.clone();
+        // TODO(philiphayes): rename config field to seed_addrs?
+        let seed_addrs = config.seed_peers.clone();
 
         if config.mutual_authentication {
-            let network_peers = config.network_peers.clone();
-            let trusted_peers = if role == RoleType::Validator {
-                // for validators, trusted_peers is empty will be populated from consensus
-                HashMap::new()
-            } else {
-                network_peers
-            };
+            // TODO(philiphayes): remove
+            let seed_pubkey_sets = config
+                .network_peers
+                .iter()
+                .map(|(peer_id, pubkey)| {
+                    let pubkey_set: HashSet<_> = [*pubkey].iter().copied().collect();
+                    (*peer_id, pubkey_set)
+                })
+                .collect();
 
             info!(
-                "network setup: role: {}, seed_peers: {:?}, trusted_peers: {:?}",
-                role, seed_peers, trusted_peers,
+                "network setup: role: {}, seed_addrs: {:?}, seed_pubkey_sets: {:?}",
+                role, seed_addrs, seed_pubkey_sets,
             );
 
             network_builder
-                .trusted_peers(trusted_peers)
-                .seed_peers(seed_peers)
+                .seed_addrs(seed_addrs)
+                .seed_pubkey_sets(seed_pubkey_sets)
                 .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
                 .add_connectivity_manager();
         } else {
             // Enforce the outgoing connection (dialer) verifies the identity of the listener (server)
-            if config.discovery_method == DiscoveryMethod::Onchain || !seed_peers.is_empty() {
+            if config.discovery_method == DiscoveryMethod::Onchain || !seed_addrs.is_empty() {
                 network_builder
-                    .seed_peers(seed_peers)
+                    .seed_addrs(seed_addrs)
                     .add_connectivity_manager();
             }
         }
@@ -228,27 +232,18 @@ impl NetworkBuilder {
         self.network_context.peer_id()
     }
 
-    /// Set trusted peers.
-    pub fn trusted_peers(
+    /// Set additional public keys for seed peers to bootstrap discovery.
+    pub fn seed_pubkey_sets(
         &mut self,
-        trusted_peers: HashMap<PeerId, x25519::PublicKey>,
+        seed_pubkey_sets: HashMap<PeerId, HashSet<x25519::PublicKey>>,
     ) -> &mut Self {
-        // TODO(philiphayes): remove
-        let trusted_peers = trusted_peers
-            .into_iter()
-            .map(|(peer_id, pubkey)| {
-                let mut pubkey_set = HashSet::new();
-                pubkey_set.insert(pubkey);
-                (peer_id, pubkey_set)
-            })
-            .collect();
-        *self.trusted_peers.write().unwrap() = trusted_peers;
+        self.seed_pubkey_sets = seed_pubkey_sets;
         self
     }
 
-    /// Set seed peers to bootstrap discovery
-    pub fn seed_peers(&mut self, seed_peers: HashMap<PeerId, Vec<NetworkAddress>>) -> &mut Self {
-        self.seed_peers = seed_peers;
+    /// Set addresses of seed peers to bootstrap discovery
+    pub fn seed_addrs(&mut self, seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>) -> &mut Self {
+        self.seed_addrs = seed_addrs;
         self
     }
 
@@ -293,13 +288,8 @@ impl NetworkBuilder {
     /// permissioned.
     pub fn add_connectivity_manager(&mut self) -> &mut Self {
         let trusted_peers = self.trusted_peers.clone();
-        let seed_addrs = self.seed_peers.clone();
-
-        // TODO(philiphayes): temporary. refactor builder api
-        let seed_pubkey_sets = {
-            let mut trusted_peers = self.trusted_peers.write().unwrap();
-            mem::replace(&mut *trusted_peers, HashMap::new())
-        };
+        let seed_addrs = self.seed_addrs.clone();
+        let mut seed_pubkey_sets = self.seed_pubkey_sets.clone();
 
         let max_connection_delay_ms = self.max_connection_delay_ms;
         let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
@@ -309,6 +299,21 @@ impl NetworkBuilder {
         } else {
             None
         };
+
+        // union pubkeys from addrs with pubkeys directly in config
+        let addr_pubkeys_iter = seed_addrs.iter().map(|(peer_id, addrs)| {
+            let pubkey_set: HashSet<_> = addrs
+                .iter()
+                .filter_map(NetworkAddress::find_noise_proto)
+                .collect();
+            (*peer_id, pubkey_set)
+        });
+        for (peer_id, pubkey_set) in addr_pubkeys_iter {
+            seed_pubkey_sets
+                .entry(peer_id)
+                .or_default()
+                .extend(pubkey_set);
+        }
 
         self.connectivity_manager_builder = Some(ConnectivityManagerBuilder::create(
             self.network_context(),
