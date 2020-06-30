@@ -517,7 +517,9 @@ impl From<CurrencyInfoResource> for CurrencyInfoView {
             burn_events: BytesView::from(info.burn_events().key().as_bytes()),
             preburn_events: BytesView::from(info.preburn_events().key().as_bytes()),
             cancel_burn_events: BytesView::from(info.cancel_burn_events().key().as_bytes()),
-            exchange_rate_update_events: BytesView::from(info.exchange_rate_update_events().key().as_bytes()),
+            exchange_rate_update_events: BytesView::from(
+                info.exchange_rate_update_events().key().as_bytes(),
+            ),
         }
     }
 }
