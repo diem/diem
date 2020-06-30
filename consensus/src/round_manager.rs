@@ -30,7 +30,6 @@ use consensus_types::{
 };
 use debug_interface::prelude::*;
 use libra_logger::prelude::*;
-use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
 #[cfg(test)]
 use safety_rules::ConsensusState;
@@ -318,10 +317,9 @@ impl RoundManager {
             sync_info
                 .verify(&self.epoch_state().verifier)
                 .map_err(|e| {
-                    security_log(SecurityEvent::InvalidSyncInfoMsg)
-                        .error(&e)
-                        .data(&sync_info)
-                        .log();
+                    send_struct_log!(security_log(security_events::INVALID_SYNC_INFO_MSG)
+                        .data("sync_info", &sync_info)
+                        .data("error", format!("{}", e)));
                     e
                 })?;
             let result = self

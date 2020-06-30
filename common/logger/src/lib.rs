@@ -116,9 +116,14 @@
 pub use log;
 
 pub mod prelude {
-    pub use crate::{crit, debug, error, info, send_struct_log, trace, warn};
+    pub use crate::{
+        crit, debug, error, info,
+        security::{security_events, security_log},
+        send_struct_log, trace, warn,
+    };
 }
 
+mod security;
 mod struct_log;
 
 pub use struct_log::{

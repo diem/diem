@@ -53,7 +53,6 @@ use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
-use libra_security_logger::{security_log, SecurityEvent};
 use libra_types::PeerId;
 use rand::{rngs::SmallRng, Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
@@ -333,9 +332,8 @@ where
                             self.note.epoch()
                         );
                         if note.epoch() == std::u64::MAX {
-                            security_log(SecurityEvent::InvalidDiscoveryMsg)
-                                .data("Older note received for self has u64::MAX epoch.")
-                                .log();
+                            send_struct_log!(security_log(security_events::INVALID_DISCOVERY_MSG)
+                                .data("error", "Older note received for self has u64::MAX epoch."));
                             continue;
                         }
                         note = Note::new(
