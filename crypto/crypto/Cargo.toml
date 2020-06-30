@@ -46,7 +46,7 @@ proptest-derive = "0.2.0"
 ripemd160 = "0.9.1"
 criterion = "0.3.2"
 sha3 = "0.9.1"
-serde_json = "1.0.55"
+serde_json = "1.0.56"
 
 [features]
 default = ["std", "fiat_u64_backend"]
