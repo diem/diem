@@ -7,11 +7,14 @@
 
 -  [Resource `ParentVASP`](#0x1_VASP_ParentVASP)
 -  [Resource `ChildVASP`](#0x1_VASP_ChildVASP)
+-  [Resource `VASPOperationsResource`](#0x1_VASP_VASPOperationsResource)
+-  [Function `initialize`](#0x1_VASP_initialize)
 -  [Function `recertify_vasp`](#0x1_VASP_recertify_vasp)
 -  [Function `decertify_vasp`](#0x1_VASP_decertify_vasp)
 -  [Function `cert_lifetime`](#0x1_VASP_cert_lifetime)
 -  [Function `publish_parent_vasp_credential`](#0x1_VASP_publish_parent_vasp_credential)
 -  [Function `publish_child_vasp_credential`](#0x1_VASP_publish_child_vasp_credential)
+-  [Function `try_allow_currency`](#0x1_VASP_try_allow_currency)
 -  [Function `parent_address`](#0x1_VASP_parent_address)
 -  [Function `is_parent`](#0x1_VASP_is_parent)
 -  [Function `is_child`](#0x1_VASP_is_child)
@@ -132,6 +135,63 @@ A resource that represents a child account of the parent VASP account at
 
 </dd>
 </dl>
+
+
+</details>
+
+<a name="0x1_VASP_VASPOperationsResource"></a>
+
+## Resource `VASPOperationsResource`
+
+A singleton resource allowing this module to publish limits definitions and accounting windows
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a></code>
+</dt>
+<dd>
+
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x1_VASP_initialize"></a>
+
+## Function `initialize`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_initialize">initialize</a>(lr_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_initialize">initialize</a>(lr_account: &signer) {
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), NOT_GENESIS);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), NOT_LIBRA_ROOT);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), INVALID_INITIALIZATION_ADDRESS);
+    <b>let</b> limits_cap = <a href="AccountLimits.md#0x1_AccountLimits_grant_calling_capability">AccountLimits::grant_calling_capability</a>(lr_account);
+    move_to(lr_account, <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a> { limits_cap })
+}
+</code></pre>
+
 
 
 </details>
@@ -304,6 +364,57 @@ Aborts if
     <b>let</b> num_children = &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent_vasp_addr).num_children;
     *num_children = *num_children + 1;
     move_to(child, <a href="#0x1_VASP_ChildVASP">ChildVASP</a> { parent_vasp_addr });
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_VASP_try_allow_currency"></a>
+
+## Function `try_allow_currency`
+
+If the account passed in is not a VASP account, this returns true since
+we don't need to ensure account limits exist for those accounts.
+If the account is a child VASP account, this returns true only if a
+<code>LimitsDefinition&lt;CoinType&gt;</code> (and hence a
+<code>Window&lt;CoinType&gt;</code>) is
+published in the parent's account.
+If the account is a child VASP account, this will always return true;
+either a
+<code>LimitsDefinition</code>/
+<code>Window</code> exist for
+<code>CoinType</code>, or these
+will be published under the account.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_try_allow_currency">try_allow_currency</a>&lt;CoinType&gt;(account: &signer): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_try_allow_currency">try_allow_currency</a>&lt;CoinType&gt;(account: &signer): bool
+<b>acquires</b> <a href="#0x1_VASP_ChildVASP">ChildVASP</a>, <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a> {
+    <b>assert</b>(<a href="Libra.md#0x1_Libra_is_currency">Libra::is_currency</a>&lt;CoinType&gt;(), NOT_A_REGISTERED_CURRENCY);
+    <b>let</b> account_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
+    <b>if</b> (!<a href="#0x1_VASP_is_vasp">is_vasp</a>(account_address)) <b>return</b> <b>true</b>;
+    <b>let</b> parent_address = <a href="#0x1_VASP_parent_address">parent_address</a>(account_address);
+    <b>if</b> (<a href="AccountLimits.md#0x1_AccountLimits_has_limits_published">AccountLimits::has_limits_published</a>&lt;CoinType&gt;(parent_address)) {
+        <b>true</b>
+    } <b>else</b> <b>if</b> (<a href="#0x1_VASP_is_parent">is_parent</a>(account_address)) {
+        <b>let</b> cap = &borrow_global&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).limits_cap;
+        <a href="AccountLimits.md#0x1_AccountLimits_publish_unrestricted_limits">AccountLimits::publish_unrestricted_limits</a>&lt;CoinType&gt;(account, cap);
+        <a href="AccountLimits.md#0x1_AccountLimits_publish_window">AccountLimits::publish_window</a>&lt;CoinType&gt;(account, cap, parent_address);
+        <b>true</b>
+    } <b>else</b> {
+        // it's a child vasp, and we can't publish the limits definition under it.
+        <b>false</b>
+    }
 }
 </code></pre>
 

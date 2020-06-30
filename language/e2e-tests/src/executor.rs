@@ -279,6 +279,10 @@ impl FakeExecutor {
         self.block_time = new_block_time;
     }
 
+    pub fn get_block_time(&mut self) -> u64 {
+        self.block_time
+    }
+
     pub fn exec(
         &mut self,
         module_name: &str,

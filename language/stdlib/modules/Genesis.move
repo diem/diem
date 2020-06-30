@@ -4,7 +4,7 @@
 // genesis (for now).
 address 0x1 {
 module Genesis {
-    use 0x1::AccountLimits;
+    use 0x1::VASP;
     use 0x1::Coin1;
     use 0x1::Coin2;
     use 0x1::DualAttestationLimit;
@@ -40,17 +40,13 @@ module Genesis {
         LibraAccount::grant_association_privileges(lr_account);
         Roles::grant_treasury_compliance_role(tc_account, lr_account);
 
-        Event::publish_generator(lr_account);
-
         // Event and On-chain config setup
-        LibraConfig::initialize(
-            lr_account,
-        );
+        Event::publish_generator(lr_account);
+        LibraConfig::initialize(lr_account);
 
-        // Currency setup
-        Libra::initialize(
-            lr_account,
-        );
+        // Currency and VASP setup
+        Libra::initialize(lr_account);
+        VASP::initialize(lr_account);
 
         // Currency setup
         let (coin1_mint_cap, coin1_burn_cap) = Coin1::initialize(
@@ -89,8 +85,6 @@ module Genesis {
             coin2_mint_cap,
             coin2_burn_cap,
         );
-        AccountLimits::publish_unrestricted_limits(tc_account);
-        AccountLimits::certify_limits_definition(tc_account, tc_addr);
 
         LibraTransactionTimeout::initialize(lr_account);
         LibraSystem::initialize_validator_set(

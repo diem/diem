@@ -18,6 +18,7 @@
 -  [Struct `UnfreezeAccountEvent`](#0x1_LibraAccount_UnfreezeAccountEvent)
 -  [Function `grant_association_privileges`](#0x1_LibraAccount_grant_association_privileges)
 -  [Function `initialize`](#0x1_LibraAccount_initialize)
+-  [Function `should_track_limits_for_account`](#0x1_LibraAccount_should_track_limits_for_account)
 -  [Function `staple_lbr`](#0x1_LibraAccount_staple_lbr)
 -  [Function `unstaple_lbr`](#0x1_LibraAccount_unstaple_lbr)
 -  [Function `deposit`](#0x1_LibraAccount_deposit)
@@ -541,15 +542,57 @@ soon.
     lr_account: &signer,
 ) {
     // Operational constraint, not a privilege constraint.
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), NOT_GENESIS);
     <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 0);
+    <b>let</b> limits_cap = <a href="AccountLimits.md#0x1_AccountLimits_grant_calling_capability">AccountLimits::grant_calling_capability</a>(lr_account);
+    <a href="AccountLimits.md#0x1_AccountLimits_initialize">AccountLimits::initialize</a>(lr_account, &limits_cap);
     move_to(
         lr_account,
         <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-            limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_grant_calling_capability">AccountLimits::grant_calling_capability</a>(lr_account),
+            limits_cap,
             freeze_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>(lr_account),
             unfreeze_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>(lr_account),
         }
     );
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraAccount_should_track_limits_for_account"></a>
+
+## Function `should_track_limits_for_account`
+
+Returns whether we should track and record limits for the
+<code>payer</code> or
+<code>payee</code> account.
+Depending on the
+<code>is_withdrawal</code> flag passed in we determine whether the
+<code>payer</code> or
+<code>payee</code> account is being queried.
+<code><a href="VASP.md#0x1_VASP">VASP</a>-&gt;any</code> and
+<code>any-&gt;<a href="VASP.md#0x1_VASP">VASP</a></code> transfers are tracked in the VASP.
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>(payer: address, payee: address, is_withdrawal: bool): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>(payer: address, payee: address, is_withdrawal: bool): bool {
+    <b>let</b> is_intra_vasp_transfer = <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) && <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) &&
+        <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payer) == <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payee);
+    <b>if</b> (is_withdrawal) {
+        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) && !is_intra_vasp_transfer
+    } <b>else</b> {
+        <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee) && !is_intra_vasp_transfer
+    }
 }
 </code></pre>
 
@@ -713,16 +756,17 @@ Record a payment of
     };
 
     // Ensure that this deposit is compliant with the account limits on
-    // this account.
-    <b>let</b> _ = borrow_global&lt;<a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
-    /*<b>assert</b>(
-        <a href="AccountLimits.md#0x1_AccountLimits_update_deposit_limits">AccountLimits::update_deposit_limits</a>&lt;Token&gt;(
-            deposit_value,
-            payee,
-            &borrow_global&lt;<a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).limits_cap
-        ),
-        9
-    );*/
+    // this account. Tracked <b>if</b> the payee is a <a href="VASP.md#0x1_VASP">VASP</a>. Dont' track intra-vasp transfers.
+    <b>if</b> (<a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>(payer, payee, <b>false</b>)) {
+        <b>assert</b>(
+            <a href="AccountLimits.md#0x1_AccountLimits_update_deposit_limits">AccountLimits::update_deposit_limits</a>&lt;Token&gt;(
+                deposit_value,
+                <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payee),
+                &borrow_global&lt;<a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).limits_cap
+            ),
+            9
+        )
+    };
 
     // Deposit the `to_deposit` coin
     <a href="Libra.md#0x1_Libra_deposit">Libra::deposit</a>(&<b>mut</b> borrow_global_mut&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee).coin, to_deposit);
@@ -816,7 +860,7 @@ Sender should be treasury compliance account and receiver authorized DD.
 
 
 
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_withdraw_from_balance">withdraw_from_balance</a>&lt;Token&gt;(_addr: address, balance: &<b>mut</b> <a href="#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Token&gt;, amount: u64): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;Token&gt;
+<pre><code><b>fun</b> <a href="#0x1_LibraAccount_withdraw_from_balance">withdraw_from_balance</a>&lt;Token&gt;(payer: address, payee: address, balance: &<b>mut</b> <a href="#0x1_LibraAccount_Balance">LibraAccount::Balance</a>&lt;Token&gt;, amount: u64): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;Token&gt;
 </code></pre>
 
 
@@ -826,19 +870,21 @@ Sender should be treasury compliance account and receiver authorized DD.
 
 
 <pre><code><b>fun</b> <a href="#0x1_LibraAccount_withdraw_from_balance">withdraw_from_balance</a>&lt;Token&gt;(
-    _addr: address,
+    payer: address,
+    payee: address,
     balance: &<b>mut</b> <a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;,
     amount: u64
 ): <a href="Libra.md#0x1_Libra">Libra</a>&lt;Token&gt; <b>acquires</b> <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     // Make sure that this withdrawal is compliant with the limits on
-    // the account.
-    <b>let</b> _  = borrow_global&lt;<a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
-    /*<b>let</b> can_withdraw = <a href="AccountLimits.md#0x1_AccountLimits_update_withdrawal_limits">AccountLimits::update_withdrawal_limits</a>&lt;Token&gt;(
-        amount,
-        addr,
-        &borrow_global&lt;<a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).limits_cap
-    );
-    <b>assert</b>(can_withdraw, 11);*/
+    // the account <b>if</b> it's a inter-<a href="VASP.md#0x1_VASP">VASP</a> transfer,
+    <b>if</b> (<a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>(payer, payee, <b>true</b>)) {
+        <b>let</b> can_withdraw = <a href="AccountLimits.md#0x1_AccountLimits_update_withdrawal_limits">AccountLimits::update_withdrawal_limits</a>&lt;Token&gt;(
+                amount,
+                <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payer),
+                &borrow_global&lt;<a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).limits_cap
+        );
+        <b>assert</b>(can_withdraw, 11);
+    };
     <a href="Libra.md#0x1_Libra_withdraw">Libra::withdraw</a>(&<b>mut</b> balance.coin, amount)
 }
 </code></pre>
@@ -880,7 +926,7 @@ Sender should be treasury compliance account and receiver authorized DD.
             metadata
         },
     );
-    <a href="#0x1_LibraAccount_withdraw_from_balance">withdraw_from_balance</a>&lt;Token&gt;(payer, account_balance, amount)
+    <a href="#0x1_LibraAccount_withdraw_from_balance">withdraw_from_balance</a>&lt;Token&gt;(payer, payee, account_balance, amount)
 }
 </code></pre>
 
@@ -1561,6 +1607,10 @@ also be added. This account will be a child of
 
 ## Function `add_currency`
 
+Add a balance of
+<code>Token</code> type to the sending account.
+If the account is a VASP account, it must have (or be able to publish)
+a limits definition and window.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_add_currency">add_currency</a>&lt;Token&gt;(account: &signer)
@@ -1573,6 +1623,7 @@ also be added. This account will be a child of
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_add_currency">add_currency</a>&lt;Token&gt;(account: &signer) {
+    <b>assert</b>(<a href="VASP.md#0x1_VASP_try_allow_currency">VASP::try_allow_currency</a>&lt;Token&gt;(account), PARENT_VASP_CURRENCY_LIMITS_DNE);
     move_to(account, <a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;{ coin: <a href="Libra.md#0x1_Libra_zero">Libra::zero</a>&lt;Token&gt;() })
 }
 </code></pre>
@@ -2038,7 +2089,12 @@ also be added. This account will be a child of
     <b>if</b> (transaction_fee_amount &gt; 0) {
         <b>let</b> sender_balance = borrow_global_mut&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(sender);
         <a href="TransactionFee.md#0x1_TransactionFee_pay_fee">TransactionFee::pay_fee</a>(
-            <a href="#0x1_LibraAccount_withdraw_from_balance">withdraw_from_balance</a>(sender, sender_balance, transaction_fee_amount)
+            <a href="#0x1_LibraAccount_withdraw_from_balance">withdraw_from_balance</a>(
+                sender,
+                <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
+                sender_balance,
+                transaction_fee_amount
+            )
         )
     }
 }
