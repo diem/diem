@@ -65,7 +65,11 @@ fi
 if [ "$pulled" != "0" ]; then
   docker/$NAME/build.sh
   echo retagging libra_${tag_name} as libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV}
-  docker tag libra_${tag_name} libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV}
+  if [ $NAME == "cluster-test" ]; then
+    docker tag cluster-test libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV}
+  else
+    docker tag libra_${tag_name} libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV}
+  fi
   #push our tagged prebuild image if this is a prebuild.  Usually means this is called from bors' auto branch.
   if [ $PREBUILD == "true" ]; then
      echo pushing libra/test:libra_${tag_name}_pre_${BRANCH}_${GIT_REV}
