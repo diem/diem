@@ -12,6 +12,7 @@ members = [
     "common/debug-interface",
     "common/futures-semaphore",
     "common/lcs",
+    "common/libradoc",
     "common/logger",
     "common/metrics",
     "common/nibble",
