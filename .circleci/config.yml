@@ -88,6 +88,43 @@ commands:
       - run:
           name: Install nightly toolchain for features not in beta/stable
           command: rustup install nightly
+  install_sccache:
+    steps:
+      - run:
+          name: Install scccache
+          command: |
+            cargo install sccache
+            echo 'export SCCACHE_CACHE_SIZE=3G' >> $BASH_ENV
+            echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
+            echo 'export CC="sccache cc"' >> $BASH_ENV
+            echo 'export CXX="sccache c++"' >> $BASH_ENV
+  save_sccache:
+    description: Save shared compilation cache for future jobs
+    steps:
+      - run:
+          name: Show sccache
+          command: sccache -s
+      - run:
+          name: Generate date code for cache key
+          # NOTE circle's built-in key does not support date
+          command: date +%Y%m%d > /tmp/date
+      - save_cache:
+          name: Save sccache
+          key: sccache-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/date" }}
+          paths:
+            - "/home/circleci/.cache/sccache"
+  restore_sccache:
+    description: Restore shared compilation cache from prior jobs
+    steps:
+      - run:
+          name: Generate date code for cache key
+          command: date +%Y%m%d > /tmp/date
+      - restore_cache:
+          name: Restore sccache
+          key: sccache-{{ .Environment.CIRCLE_JOB }}-{{ checksum "/tmp/date" }}
+      - run:
+          name: Show sccache
+          command: sccache -s
   find_dockerfile_changes:
     steps:
       - run:
@@ -217,9 +254,6 @@ jobs:
     description: Run Rust linting tools.
     steps:
       - build_setup
-      - run:
-          name: Git Hooks and Checks
-          command: ./scripts/git-checks.sh
       - restore_cargo_package_cache
       - run:
           name: cargo lint
@@ -236,6 +270,8 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
+      - install_sccache
+      - restore_sccache
       - run:
           command: RUST_BACKTRACE=1 cargo build -j 16
       - run:
@@ -252,6 +288,7 @@ jobs:
           command: |
             rustup target add powerpc-unknown-linux-gnu
             RUST_BACKTRACE=1 cargo build -j 16 -p transaction-builder -p move-vm-types --target powerpc-unknown-linux-gnu
+      - save_sccache
       - build_teardown
   build-release:
     executor: test-executor
@@ -259,9 +296,12 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
+      - install_sccache
+      - restore_sccache
       - run:
           name: Build release
           command: RUST_BACKTRACE=1 cargo build -j 12 --release
+      - save_sccache
       - build_teardown
   run-e2e-test:
     executor: build-executor
@@ -332,10 +372,13 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
+      - install_sccache
+      - restore_sccache
       - run:
           name: Run all unit tests
           command: |
             RUST_BACKTRACE=1 $CI_TIMEOUT cargo x test --jobs 12 --unit
+      - save_sccache
   run-crypto-unit-test:
     executor: audit-executor
     description: Run crypto unit tests without formally verified crypto, to insulate against a curve25519 "default" backend regression
@@ -502,6 +545,7 @@ jobs:
     description: Documentation Build
     steps:
       - build_setup
+      - restore_cargo_package_cache
       - run:
           name: Generate documentation
           command: |
