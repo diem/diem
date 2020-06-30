@@ -86,19 +86,18 @@ fn setup_conn_mgr_with_context(
     )
 }
 
-fn gen_peer() -> (PeerId, x25519::PublicKey) {
+fn gen_peer() -> (
+    PeerId,
+    x25519::PublicKey,
+    HashSet<x25519::PublicKey>,
+    NetworkAddress,
+) {
     let peer_id = PeerId::random();
-    let public_key = x25519::PrivateKey::generate_for_testing().public_key();
-    (peer_id, public_key)
-}
-
-fn generate_peer_with_addr() -> (PeerId, NetworkAddress, HashSet<x25519::PublicKey>) {
-    let (peer_id, pubkey) = gen_peer();
+    let pubkey = x25519::PrivateKey::generate_for_testing().public_key();
+    let pubkey_set: HashSet<_> = [pubkey].iter().copied().collect();
     let addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
     let addr = addr.append_prod_protos(pubkey, libra_config::config::HANDSHAKE_VERSION);
-    let mut pubkey_set = HashSet::new();
-    pubkey_set.insert(pubkey);
-    (peer_id, addr, pubkey_set)
+    (peer_id, pubkey, pubkey_set, addr)
 }
 
 async fn get_dial_queue_size(conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>) -> usize {
@@ -244,7 +243,7 @@ async fn expect_num_dials(
 fn connect_to_seeds_on_startup() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
-    let (seed_peer_id, seed_addr, _) = generate_peer_with_addr();
+    let (seed_peer_id, _, _, seed_addr) = gen_peer();
     let seed_addrs: HashMap<_, _> = vec![(seed_peer_id, vec![seed_addr.clone()])]
         .into_iter()
         .collect();
@@ -548,6 +547,7 @@ fn disconnect() {
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
+    let other_pubkey_set: HashSet<_> = [other_pubkey].iter().copied().collect();
     let other_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
     let eligible_peers = vec![];
     let seed_addrs = HashMap::new();
@@ -560,7 +560,10 @@ fn disconnect() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateEligibleNodes(
                 DiscoverySource::Gossip,
-                [(other_peer_id, other_pubkey)].iter().cloned().collect(),
+                [(other_peer_id, other_pubkey_set)]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -629,6 +632,7 @@ fn retry_on_failure() {
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
+    let other_pubkey_set: HashSet<_> = [other_pubkey].iter().copied().collect();
     let other_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
     let eligible_peers = vec![];
     let seed_addrs = HashMap::new();
@@ -641,7 +645,10 @@ fn retry_on_failure() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateEligibleNodes(
                 DiscoverySource::Gossip,
-                [(other_peer_id, other_pubkey)].iter().cloned().collect(),
+                [(other_peer_id, other_pubkey_set)]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -747,6 +754,7 @@ fn no_op_requests() {
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
+    let other_pubkey_set: HashSet<_> = [other_pubkey].iter().copied().collect();
     let other_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
     let eligible_peers = vec![];
     let seed_addrs = HashMap::new();
@@ -759,7 +767,10 @@ fn no_op_requests() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateEligibleNodes(
                 DiscoverySource::Gossip,
-                [(other_peer_id, other_pubkey)].iter().cloned().collect(),
+                [(other_peer_id, other_pubkey_set)]
+                    .iter()
+                    .cloned()
+                    .collect(),
             ))
             .await
             .unwrap();
@@ -866,10 +877,8 @@ fn backoff_on_failure() {
         setup_conn_mgr(&mut rt, eligible_peers, seed_addrs);
 
     let events_f = async move {
-        let (peer_a, peer_a_keys) = gen_peer();
-        let peer_a_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
-        let (peer_b, peer_b_keys) = gen_peer();
-        let peer_b_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/8080").unwrap();
+        let (peer_a, _, peer_a_keys, peer_a_addr) = gen_peer();
+        let (peer_b, _, peer_b_keys, peer_b_addr) = gen_peer();
 
         info!("Sending list of eligible peers");
         conn_mgr_reqs_tx
@@ -888,7 +897,7 @@ fn backoff_on_failure() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                [(peer_a, vec![peer_a_address.clone()])]
+                [(peer_a, vec![peer_a_addr.clone()])]
                     .iter()
                     .cloned()
                     .collect(),
@@ -900,7 +909,7 @@ fn backoff_on_failure() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                [(peer_b, vec![peer_b_address.clone()])]
+                [(peer_b, vec![peer_b_addr.clone()])]
                     .iter()
                     .cloned()
                     .collect(),
@@ -915,7 +924,7 @@ fn backoff_on_failure() {
             peer_b,
             peer_manager::ConnectionNotification::NewPeer(
                 peer_b,
-                peer_b_address.clone(),
+                peer_b_addr.clone(),
                 NetworkContext::mock(),
             ),
         )
@@ -936,7 +945,7 @@ fn backoff_on_failure() {
                 &mut connection_notifs_tx,
                 &mut conn_mgr_reqs_tx,
                 peer_a,
-                peer_a_address.clone(),
+                peer_a_addr.clone(),
                 Err(PeerManagerError::IoError(io::Error::from(
                     io::ErrorKind::ConnectionRefused,
                 ))),
@@ -1217,7 +1226,7 @@ fn public_connection_limit() {
     let mut seed_addrs: HashMap<PeerId, Vec<NetworkAddress>> = HashMap::new();
     let mut seed_pubkey_sets: HashMap<PeerId, HashSet<x25519::PublicKey>> = HashMap::new();
     for _ in 0..MAX_TEST_CONNECTIONS + 1 {
-        let (peer_id, addr, pubkey_set) = generate_peer_with_addr();
+        let (peer_id, _, pubkey_set, addr) = gen_peer();
         seed_pubkey_sets.insert(peer_id, pubkey_set);
         seed_addrs.insert(peer_id, vec![addr]);
     }
