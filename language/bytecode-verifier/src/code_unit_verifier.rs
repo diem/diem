@@ -5,13 +5,12 @@
 //! The overall verification is split between stack_usage_verifier.rs and
 //! abstract_interpreter.rs. CodeUnitVerifier simply orchestrates calls into these two files.
 use crate::{
-    acquires_list_verifier::AcquiresVerifier, control_flow_graph::VMControlFlowGraph,
+    acquires_list_verifier::AcquiresVerifier, control_flow, control_flow_graph::VMControlFlowGraph,
     locals_safety, reference_safety, stack_usage_verifier::StackUsageVerifier, type_safety,
 };
-use libra_types::vm_status::{StatusCode, VMStatus};
 use vm::{
     access::ModuleAccess,
-    errors::{append_err_info, err_at_offset, VMResult},
+    errors::{append_err_info, VMResult},
     file_format::{CompiledModule, FunctionDefinition},
     IndexKind,
 };
@@ -37,17 +36,7 @@ impl<'a> CodeUnitVerifier<'a> {
             None => return Ok(()),
         };
 
-        // Check to make sure that the bytecode vector ends with a branching instruction.
-        match code.last() {
-            None => return Err(VMStatus::new(StatusCode::EMPTY_CODE_UNIT)),
-            Some(bytecode) if !bytecode.is_unconditional_branch() => {
-                return Err(err_at_offset(
-                    StatusCode::INVALID_FALL_THROUGH,
-                    code.len() - 1,
-                ))
-            }
-            Some(_) => (),
-        }
+        control_flow::verify(self.module, function_definition)?;
         self.verify_function_inner(function_definition, &VMControlFlowGraph::new(code))
     }
 
