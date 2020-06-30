@@ -6,7 +6,10 @@
 use crate::builder::NetworkBuilder;
 use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
-use libra_config::{config::RoleType, network_id::NetworkId};
+use libra_config::{
+    config::RoleType,
+    network_id::{NetworkContext, NetworkId},
+};
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
@@ -28,6 +31,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{HashMap, HashSet},
+    sync::Arc,
     time::Duration,
 };
 use tokio::runtime::Runtime;
@@ -136,13 +140,16 @@ pub fn setup_network() -> DummyNetwork {
 
     let authentication_mode = AuthenticationMode::Mutual(listener_identity_private_key);
 
+    let network_context = Arc::new(NetworkContext::new(
+        network_id.clone(),
+        RoleType::Validator,
+        listener_peer_id,
+    ));
     // Set up the listener network
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
         chain_id,
-        network_id.clone(),
-        RoleType::Validator,
-        listener_peer_id,
+        network_context,
         listener_addr,
         authentication_mode,
         MAX_FRAME_SIZE,
@@ -162,12 +169,16 @@ pub fn setup_network() -> DummyNetwork {
         .collect();
 
     // Set up the dialer network
-    let mut network_builder = NetworkBuilder::new(
-        runtime.handle().clone(),
-        chain_id,
+    let network_context = Arc::new(NetworkContext::new(
         network_id,
         RoleType::Validator,
         dialer_peer_id,
+    ));
+
+    let mut network_builder = NetworkBuilder::new(
+        runtime.handle().clone(),
+        chain_id,
+        network_context,
         dialer_addr,
         authentication_mode,
         MAX_FRAME_SIZE,

@@ -12,7 +12,7 @@
 use channel::{self, message_queues::QueueStyle};
 use libra_config::{
     config::{DiscoveryMethod, GossipConfig, NetworkConfig, RoleType, HANDSHAKE_VERSION},
-    network_id::{NetworkContext, NetworkId},
+    network_id::NetworkContext,
 };
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
@@ -59,9 +59,7 @@ enum State {
 /// Methods can be chained in order to set the configuration values.
 /// MempoolNetworkHandler and ConsensusNetworkHandler are constructed by calling
 /// [`NetworkBuilder::build`].  New instances of `NetworkBuilder` are obtained
-/// via [`NetworkBuilder::new`].
-// TODO(philiphayes): refactor NetworkBuilder and libra-node; current config is
-// pretty tangled.
+/// via [`NetworkBuilder::create`].
 pub struct NetworkBuilder {
     state: State,
     executor: Handle,
@@ -89,19 +87,16 @@ impl NetworkBuilder {
     pub fn new(
         executor: Handle,
         chain_id: ChainId,
-        network_id: NetworkId,
-        role: RoleType,
-        peer_id: PeerId,
+        network_context: Arc<NetworkContext>,
         listen_address: NetworkAddress,
         authentication_mode: AuthenticationMode,
         max_frame_size: usize,
     ) -> NetworkBuilder {
         // TODO: Pass network_context in as a constructed object.
-        let network_context = Arc::new(NetworkContext::new(network_id, role, peer_id));
         let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
 
         // A network cannot exist without a PeerManager
-        // TODO:  construct this in create and pass it to new() as a parameter
+        // TODO:  construct this in create and pass it to new() as a parameter. The complication is manual construction of NetworkBuilder in various tests.
         let peer_manager_builder = PeerManagerBuilder::create(
             chain_id,
             network_context.clone(),
@@ -159,19 +154,22 @@ impl NetworkBuilder {
         };
         let pubkey = authentication_mode.public_key();
 
-        let mut network_builder = NetworkBuilder::new(
-            runtime.handle().clone(),
-            chain_id,
+        let network_context = Arc::new(NetworkContext::new(
             config.network_id.clone(),
             role,
             peer_id,
+        ));
+
+        let mut network_builder = NetworkBuilder::new(
+            runtime.handle().clone(),
+            chain_id,
+            network_context,
             config.listen_address.clone(),
             authentication_mode,
             config.max_frame_size,
         );
+
         network_builder
-            .seed_addrs(config.seed_addrs.clone())
-            .seed_pubkeys(config.seed_pubkeys.clone())
             .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
             .add_connection_monitoring(
                 // TODO: Move these values into NetworkConfig
@@ -220,8 +218,7 @@ impl NetworkBuilder {
         (runtime, network_builder)
     }
 
-    /// Create the configured transport and start PeerManager.
-    /// Return the actual NetworkAddress over which this peer is listening.
+    /// Create the configured Networking components.
     pub fn build(&mut self) -> &mut Self {
         assert_eq!(self.state, State::CREATED);
         self.state = State::BUILT;
@@ -234,6 +231,7 @@ impl NetworkBuilder {
             .start()
     }
 
+    /// Start the built Networking components.
     pub fn start(&mut self) -> &mut Self {
         assert_eq!(self.state, State::BUILT);
         self.state = State::STARTED;
@@ -250,11 +248,6 @@ impl NetworkBuilder {
 
     pub fn network_context(&self) -> Arc<NetworkContext> {
         self.network_context.clone()
-    }
-
-    // TODO: remove this function call
-    pub fn peer_id(&self) -> PeerId {
-        self.network_context.peer_id()
     }
 
     /// Set additional public keys for seed peers to bootstrap discovery.
