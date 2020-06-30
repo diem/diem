@@ -365,12 +365,15 @@ impl SynchronizerEnv {
             let authentication_mode =
                 AuthenticationMode::Mutual(self.network_keys[new_peer_idx].clone());
             let pub_key = authentication_mode.public_key();
-            let mut network_builder = NetworkBuilder::new(
-                self.runtime.handle().clone(),
-                ChainId::default(),
+            let network_context = Arc::new(NetworkContext::new(
                 self.network_id.clone(),
                 RoleType::Validator,
                 self.peer_ids[new_peer_idx],
+            ));
+            let mut network_builder = NetworkBuilder::new(
+                self.runtime.handle().clone(),
+                ChainId::default(),
+                network_context,
                 addr.clone(),
                 authentication_mode,
                 constants::MAX_FRAME_SIZE,
