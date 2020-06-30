@@ -2,11 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use consensus_types::common::{Author, Round};
+use consensus_types::{
+    common::{Author, Round},
+    vote::Vote,
+};
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_global_constants::{
-    CONSENSUS_KEY, EPOCH, EXECUTION_KEY, LAST_VOTED_ROUND, OPERATOR_ACCOUNT, PREFERRED_ROUND,
-    WAYPOINT,
+    CONSENSUS_KEY, EPOCH, EXECUTION_KEY, LAST_VOTE, LAST_VOTED_ROUND, OPERATOR_ACCOUNT,
+    PREFERRED_ROUND, WAYPOINT,
 };
 use libra_secure_storage::{CryptoStorage, InMemoryStorage, KVStorage, Storage, Value};
 use libra_types::waypoint::Waypoint;
@@ -70,6 +73,10 @@ impl PersistentSafetyStorage {
         internal_store.set(OPERATOR_ACCOUNT, Value::String(author.to_string()))?;
         internal_store.set(PREFERRED_ROUND, Value::U64(0))?;
         internal_store.set(WAYPOINT, Value::String(waypoint.to_string()))?;
+        internal_store.set(
+            LAST_VOTE,
+            Value::Bytes(lcs::to_bytes::<Option<Vote>>(&None)?),
+        )?;
         Ok(())
     }
 
@@ -148,6 +155,22 @@ impl PersistentSafetyStorage {
     pub fn set_waypoint(&mut self, waypoint: &Waypoint) -> Result<()> {
         self.internal_store
             .set(WAYPOINT, Value::String(waypoint.to_string()))?;
+        Ok(())
+    }
+
+    pub fn last_vote(&self) -> Result<Option<Vote>> {
+        let result = lcs::from_bytes(
+            &self
+                .internal_store
+                .get(LAST_VOTE)
+                .and_then(|r| r.value.bytes())?,
+        )?;
+        Ok(result)
+    }
+
+    pub fn set_last_vote(&mut self, vote: Option<Vote>) -> Result<()> {
+        self.internal_store
+            .set(LAST_VOTE, Value::Bytes(lcs::to_bytes(&vote)?))?;
         Ok(())
     }
 

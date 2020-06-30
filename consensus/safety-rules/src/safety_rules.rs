@@ -258,6 +258,7 @@ impl TSafetyRules for SafetyRules {
                 .set_waypoint(&Waypoint::new_epoch_boundary(ledger_info)?)?;
             self.persistent_storage.set_last_voted_round(0)?;
             self.persistent_storage.set_preferred_round(0)?;
+            self.persistent_storage.set_last_vote(None)?;
             self.persistent_storage.set_epoch(epoch_state.epoch)?;
         }
         self.epoch_state = Some(epoch_state);
@@ -289,6 +290,15 @@ impl TSafetyRules for SafetyRules {
         proposed_block.validate_signature(&self.epoch_state()?.verifier)?;
 
         self.verify_and_update_preferred_round(proposed_block.quorum_cert())?;
+        // if already voted on this round, send back the previous vote.
+        let last_vote = self.persistent_storage.last_vote()?;
+        if let Some(vote) = last_vote {
+            if vote.vote_data().proposed().round() == proposed_block.round() {
+                self.persistent_storage
+                    .set_last_voted_round(proposed_block.round())?;
+                return Ok(vote);
+            }
+        }
         self.verify_last_vote_round(proposed_block.block_data())?;
 
         let vote_data = self.extension_check(vote_proposal)?;
@@ -296,12 +306,17 @@ impl TSafetyRules for SafetyRules {
             .set_last_voted_round(proposed_block.round())?;
 
         let validator_signer = self.signer()?;
-        Ok(Vote::new(
+        let vote = Vote::new(
             vote_data,
             validator_signer.author(),
             self.construct_ledger_info(proposed_block),
             validator_signer,
-        ))
+        );
+        self.persistent_storage.set_last_vote(Some(vote.clone()))?;
+        self.persistent_storage
+            .set_last_voted_round(proposed_block.round())?;
+
+        Ok(vote)
     }
 
     fn sign_proposal(&mut self, block_data: BlockData) -> Result<Block, Error> {
