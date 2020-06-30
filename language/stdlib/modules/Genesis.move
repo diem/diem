@@ -37,7 +37,7 @@ module Genesis {
         let dummy_auth_key_prefix = x"00000000000000000000000000000000";
 
         Roles::grant_root_association_role(lr_account);
-        LibraAccount::grant_association_privileges(lr_account);
+        LibraAccount::grant_module_publishing_privilege(lr_account);
         Roles::grant_treasury_compliance_role(tc_account, lr_account);
 
         // Event and On-chain config setup
