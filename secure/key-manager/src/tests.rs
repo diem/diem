@@ -15,7 +15,7 @@ use libra_config::{
     utils::get_genesis_txn,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, x25519, HashValue, PrivateKey, Uniform};
-use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
+use libra_global_constants::{OPERATOR_KEY, OWNER_ACCOUNT};
 use libra_network_address::RawNetworkAddress;
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Value};
 use libra_secure_time::{MockTimeService, TimeService};
@@ -354,15 +354,9 @@ fn setup_node<T: LibraInterface + Clone>(
     let time = MockTimeService::new();
     let libra_test_harness = LibraInterfaceTestHarness::new(libra);
     let storage = setup_secure_storage(&node_config, time.clone());
-    let account = AccountAddress::try_from(
-        storage
-            .get(OPERATOR_ACCOUNT)
-            .unwrap()
-            .value
-            .string()
-            .unwrap(),
-    )
-    .unwrap();
+    let account =
+        AccountAddress::try_from(storage.get(OWNER_ACCOUNT).unwrap().value.string().unwrap())
+            .unwrap();
 
     let key_manager = KeyManager::new(
         libra_test_harness.clone(),
@@ -391,10 +385,7 @@ fn setup_secure_storage(
 
     let operator_account = libra_types::account_address::from_public_key(&a_keypair.public_key());
     sec_storage
-        .set(
-            OPERATOR_ACCOUNT,
-            Value::String(operator_account.to_string()),
-        )
+        .set(OWNER_ACCOUNT, Value::String(operator_account.to_string()))
         .unwrap();
 
     let mut c_keypair = test_config.consensus_keypair.unwrap();

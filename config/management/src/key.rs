@@ -9,6 +9,7 @@ use crate::{
 use libra_crypto::ed25519::Ed25519PublicKey;
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use structopt::StructOpt;
+use vm_genesis::get_account_address_from_name;
 
 #[derive(Debug, StructOpt)]
 pub struct AssociationKey {
@@ -71,9 +72,19 @@ fn submit_key(
         .public_key;
 
     if let Some(account_name) = account_name {
-        let peer_id = libra_types::account_address::from_public_key(&key);
+        // If a remote backend is specified, fetch the owner/operator name from the shared repository
+        // and use to derive an account address. Otherwise, derive the address from the public key.
+        // TODO(joshlind): see if there's a better way to get access to the owner/operator account here!
+        let account = if let Some(remote_config) = secure_backends.remote.clone() {
+            let name = remote_config.get_namespace()?;
+            let (_, account) = get_account_address_from_name(&name);
+            account
+        } else {
+            libra_types::account_address::from_public_key(&key)
+        };
+
         local_storage
-            .set(account_name, Value::String(peer_id.to_string()))
+            .set(account_name, Value::String(account.to_string()))
             .map_err(|e| Error::LocalStorageWriteError(account_name, e.to_string()))?
     }
 

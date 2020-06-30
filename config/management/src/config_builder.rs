@@ -113,19 +113,9 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 
         let validator_network = config.validator_network.as_mut().unwrap();
         let validator_network_address = validator_network.listen_address.clone();
-        validator_network.identity = Identity::from_storage(
-            libra_global_constants::VALIDATOR_NETWORK_KEY.into(),
-            libra_global_constants::OPERATOR_ACCOUNT.into(),
-            self.secure_backend(&local_ns, "validator"),
-        );
 
         let fullnode_network = &mut config.full_node_networks[0];
         let fullnode_network_address = fullnode_network.listen_address.clone();
-        fullnode_network.identity = Identity::from_storage(
-            libra_global_constants::FULLNODE_NETWORK_KEY.into(),
-            libra_global_constants::OPERATOR_ACCOUNT.into(),
-            self.secure_backend(&local_ns, "full_node"),
-        );
 
         self.storage_helper
             .validator_config(
@@ -136,30 +126,45 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
                 &remote_ns,
             )
             .unwrap();
+
+        validator_network.identity = Identity::from_storage(
+            libra_global_constants::VALIDATOR_NETWORK_KEY.into(),
+            libra_global_constants::OWNER_ACCOUNT.into(),
+            self.secure_backend(&local_ns, "validator"),
+        );
+
+        fullnode_network.identity = Identity::from_storage(
+            libra_global_constants::FULLNODE_NETWORK_KEY.into(),
+            libra_global_constants::OWNER_ACCOUNT.into(),
+            self.secure_backend(&local_ns, "full_node"),
+        );
+
         config
     }
 
     /// Operators generate genesis from shared storage and verify against waypoint.
     /// Insert the genesis/waypoint into local config.
     fn finish_validator_config(&self, index: usize, config: &mut NodeConfig) {
-        let ns = index.to_string();
+        let local_ns = index.to_string() + OPERATOR_NS;
         let genesis_path = TempPath::new();
         genesis_path.create_as_file().unwrap();
         let genesis = self.storage_helper.genesis(genesis_path.path()).unwrap();
-        self.storage_helper
-            .insert_waypoint(&ns, constants::COMMON_NS)
+        let _ = self
+            .storage_helper
+            .insert_waypoint(&local_ns, constants::COMMON_NS)
             .unwrap();
+
         let output = self
             .storage_helper
-            .verify_genesis(&ns, genesis_path.path())
+            .verify_genesis(&local_ns, genesis_path.path())
             .unwrap();
         assert_eq!(output.split("match").count(), 5);
 
         config.consensus.safety_rules.service = SafetyRulesService::Thread;
-        config.consensus.safety_rules.backend = self.secure_backend(&ns, "safety-rules");
-        config.execution.backend = self.secure_backend(&ns, "execution");
+        config.consensus.safety_rules.backend = self.secure_backend(&local_ns, "safety-rules");
+        config.execution.backend = self.secure_backend(&local_ns, "execution");
 
-        let backend = self.secure_backend(&ns, "waypoint");
+        let backend = self.secure_backend(&local_ns, "waypoint");
         config.base.waypoint = WaypointConfig::FromStorage(backend);
         config.execution.genesis = Some(genesis);
         config.execution.genesis_file_location = PathBuf::from("");
@@ -187,7 +192,8 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
             .collect();
 
         // Create genesis and verify waypoint
-        self.storage_helper
+        let _ = self
+            .storage_helper
             .create_waypoint(constants::COMMON_NS)
             .unwrap();
         for (i, config) in configs.iter_mut().enumerate() {

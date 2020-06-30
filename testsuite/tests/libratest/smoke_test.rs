@@ -5,7 +5,7 @@ use cli::client_proxy::ClientProxy;
 use debug_interface::{libra_trace, NodeDebugClient};
 use libra_config::config::{KeyManagerConfig, NodeConfig, OnDiskStorageConfig, SecureBackend};
 use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, PrivateKey, SigningKey, Uniform};
-use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
+use libra_global_constants::{CONSENSUS_KEY, OPERATOR_KEY, OWNER_ACCOUNT};
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_key_manager::libra_interface::{JsonRpcLibraInterface, LibraInterface};
 use libra_management::config_builder::FullnodeType;
@@ -1269,7 +1269,7 @@ fn test_key_manager_consensus_rotation() {
         libra_types::account_address::from_public_key(&operator_private.public_key());
     storage
         .set(
-            OPERATOR_ACCOUNT,
+            OWNER_ACCOUNT,
             Value::String(operator_account.to_string()),
         )
         .unwrap();

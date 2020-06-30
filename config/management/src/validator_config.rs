@@ -10,7 +10,7 @@ use crate::{
 use libra_config::config::HANDSHAKE_VERSION;
 use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};
 use libra_global_constants::{
-    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
+    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_KEY, OWNER_ACCOUNT, VALIDATOR_NETWORK_KEY,
 };
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
@@ -63,8 +63,9 @@ impl ValidatorConfig {
 
         // TODO(philiphayes): remove network identity pubkey field from struct when
         // transition complete
+        let (_, owner_account) = get_account_address_from_name(&self.owner_name);
         let script = transaction_builder::encode_set_validator_config_script(
-            get_account_address_from_name(&self.owner_name),
+            owner_account,
             consensus_key.to_bytes().to_vec(),
             validator_network_key.to_bytes(),
             raw_validator_address.into(),
@@ -77,7 +78,8 @@ impl ValidatorConfig {
         // TODO(joshlind): see if there's a better way to get access to the operator account here!
         let operator_account = if let Some(remote_config) = self.backends.remote.clone() {
             let operator_name = remote_config.get_namespace()?;
-            get_account_address_from_name(&operator_name)
+            let (_, operator_account) = get_account_address_from_name(&operator_name);
+            operator_account
         } else {
             account_address::from_public_key(&operator_key)
         };
@@ -103,12 +105,24 @@ impl ValidatorConfig {
         let signed_txn = SignedTransaction::new(raw_transaction, operator_key, signature);
         let txn = Transaction::UserTransaction(signed_txn);
 
-        // Step 3) Submit to remote storage
+        // Step 3) Write validator config to local storage to save for verification later on
+        local_storage
+            .set(constants::VALIDATOR_CONFIG, Value::Transaction(txn.clone()))
+            .map_err(|e| {
+                Error::LocalStorageWriteError(constants::VALIDATOR_CONFIG, e.to_string())
+            })?;
+
+        local_storage
+            .set(OWNER_ACCOUNT, Value::String(owner_account.to_string()))
+            .map_err(|e| {
+                Error::LocalStorageWriteError(constants::VALIDATOR_CONFIG, e.to_string())
+            })?;
+
+        // Step 4) Submit to remote storage
         if let Some(remote_config) = self.backends.remote {
             let mut remote_storage = remote_config.create_storage(RemoteStorage)?;
-            let txn = Value::Transaction(txn.clone());
             remote_storage
-                .set(constants::VALIDATOR_CONFIG, txn)
+                .set(constants::VALIDATOR_CONFIG, Value::Transaction(txn.clone()))
                 .map_err(|e| {
                     Error::RemoteStorageWriteError(constants::VALIDATOR_CONFIG, e.to_string())
                 })?;

@@ -21,7 +21,7 @@
 
 use crate::{counters::COUNTERS, libra_interface::LibraInterface};
 use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519};
-use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
+use libra_global_constants::{CONSENSUS_KEY, OPERATOR_KEY, OWNER_ACCOUNT};
 use libra_logger::{error, info};
 use libra_network_address::RawNetworkAddress;
 use libra_secure_storage::{CryptoStorage, KVStorage};
@@ -160,7 +160,7 @@ where
 
     pub fn compare_storage_to_config(&self) -> Result<(), Error> {
         let storage_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
-        let operator_account = self.get_operator_account()?;
+        let operator_account = self.get_owner_account()?;
         let validator_config = self.libra.retrieve_validator_config(operator_account)?;
         let config_key = validator_config.consensus_public_key;
 
@@ -171,7 +171,7 @@ where
     }
 
     pub fn compare_info_to_config(&self) -> Result<(), Error> {
-        let operator_account = self.get_operator_account()?;
+        let operator_account = self.get_owner_account()?;
         let validator_info = self.libra.retrieve_validator_info(operator_account)?;
         let info_key = validator_info.consensus_public_key();
         let validator_config = self.libra.retrieve_validator_config(operator_account)?;
@@ -215,7 +215,7 @@ where
         &mut self,
         consensus_key: Ed25519PublicKey,
     ) -> Result<Ed25519PublicKey, Error> {
-        let operator_account = self.get_operator_account()?;
+        let operator_account = self.get_owner_account()?;
         let seq_id = self.libra.retrieve_sequence_number(operator_account)?;
         let expiration = Duration::from_secs(self.time_service.now() + self.txn_expiration_secs);
 
@@ -315,10 +315,10 @@ where
         }
     }
 
-    fn get_operator_account(&self) -> Result<AccountAddress, Error> {
+    fn get_owner_account(&self) -> Result<AccountAddress, Error> {
         match self
             .storage
-            .get(OPERATOR_ACCOUNT)
+            .get(OWNER_ACCOUNT)
             .and_then(|response| response.value.string())
         {
             Ok(account_address) => AccountAddress::from_str(&account_address)

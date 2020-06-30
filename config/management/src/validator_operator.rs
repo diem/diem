@@ -37,7 +37,7 @@ impl ValidatorOperator {
             .public_key;
 
         // Create the transaction script that sets the validator operator for the owner
-        let operator_account = get_account_address_from_name(&self.operator_name);
+        let (_, operator_account) = get_account_address_from_name(&self.operator_name);
         let set_operator_script =
             transaction_builder::encode_set_validator_operator_script(operator_account);
 
@@ -46,7 +46,8 @@ impl ValidatorOperator {
         // TODO(joshlind): see if there's a better way to get access to the owner account here!
         let owner_account = if let Some(remote_config) = self.backends.remote.clone() {
             let owner_name = remote_config.get_namespace()?;
-            get_account_address_from_name(&owner_name)
+            let (_, owner_account) = get_account_address_from_name(&owner_name);
+            owner_account
         } else {
             account_address::from_public_key(&owner_key)
         };

@@ -32,10 +32,13 @@ use move_core_types::{
 use move_vm_types::{data_store::DataStore, loaded_data::types::FatStructType, values::Value};
 use once_cell::sync::Lazy;
 use rand::prelude::*;
-use std::{collections::btree_map::BTreeMap, convert::TryFrom};
+use std::{
+    collections::btree_map::BTreeMap,
+    convert::TryFrom,
+    hash::{Hash, Hasher},
+};
 use transaction_builder::encode_create_designated_dealer;
 use vm::access::ModuleAccess;
-use std::hash::{Hash, Hasher};
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];
@@ -249,8 +252,7 @@ fn create_and_initialize_owners_operators(
     for (owner_name, _) in operator_assignments {
         context.set_sender(account_config::association_address());
 
-        let owner_auth_key = AuthenticationKey::random();
-        let owner_account = get_account_address_from_name(owner_name);
+        let (owner_auth_key, owner_account) = get_account_address_from_name(owner_name);
         let create_owner_script = transaction_builder::encode_create_validator_account_script(
             owner_account,
             owner_auth_key.prefix().to_vec(),
@@ -264,7 +266,7 @@ fn create_and_initialize_owners_operators(
 
         let token = TypeTag::Signer;
         let auth_key = AuthenticationKey::ed25519(&operator_key);
-        let operator_account = get_account_address_from_name(&operator_name);
+        let (_, operator_account) = get_account_address_from_name(operator_name);
         let create_operator_script =
             transaction_builder::encode_create_validator_operator_account_script(
                 token,
@@ -276,14 +278,14 @@ fn create_and_initialize_owners_operators(
 
     // Set the validator operator for each validator owner
     for (owner_name, assignment) in operator_assignments {
-        let owner_account = get_account_address_from_name(owner_name);
+        let (_, owner_account) = get_account_address_from_name(owner_name);
         context.set_sender(owner_account);
         context.exec_script(assignment);
     }
 
-    // Set the validator config for each validator and add to the validator set
+    // Set the validator config for each validator
     for (operator_name, _, registration) in operator_registrations {
-        let operator_account = get_account_address_from_name(operator_name);
+        let (_, operator_account) = get_account_address_from_name(operator_name);
         context.set_sender(operator_account);
         context.exec_script(registration);
     }
@@ -292,7 +294,7 @@ fn create_and_initialize_owners_operators(
     for (owner_name, _) in operator_assignments {
         context.set_sender(account_config::association_address());
 
-        let owner_account = get_account_address_from_name(owner_name);
+        let (_, owner_account) = get_account_address_from_name(owner_name);
         context.exec(
             "LibraSystem",
             "add_validator",
@@ -398,12 +400,11 @@ pub fn operator_assignments(node_configs: &[NodeConfig]) -> Vec<OperatorAssignme
     node_configs
         .iter()
         .enumerate()
-        .map(|(index, node_config)| {
-            let test_config = node_config.test.as_ref().unwrap();
-            let operator_key = test_config.operator_keypair.as_ref().unwrap().public_key();
-            let operator_account = AuthenticationKey::ed25519(&operator_key).derived_address();
+        .map(|(index, _)| {
+            let operator_name = format!("{}_operator_shared", index);
+            let owner_name = format!("{}_owner_shared", index);
 
-            let owner_name = format!("owner_{}", index);
+            let (_, operator_account) = get_account_address_from_name(&operator_name);
             let set_operator_script =
                 transaction_builder::encode_set_validator_operator_script(operator_account);
 
@@ -434,9 +435,11 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
             // TODO(philiphayes): do something with n.full_node_networks instead
             // of ignoring them?
 
-            let operator_name = format!("operator_{}", index);
+            let operator_name = format!("{}_operator_shared", index);
+            let owner_name = format!("{}_owner_shared", index);
+            let (_, owner_account) = get_account_address_from_name(&owner_name);
             let script = transaction_builder::encode_set_validator_config_script(
-                AuthenticationKey::ed25519(&operator_key).derived_address(),
+                owner_account,
                 consensus_key.to_bytes().to_vec(),
                 identity_key.to_bytes(),
                 raw_advertised_address.clone().into(),
@@ -452,13 +455,13 @@ pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegist
 // mappings from validator owner/operator names to account addresses.
 // TODO(joshlind): Update me once we've settled on a concrete hashing strategy from string name to
 // account address. For now, we use the default hasher and a seeded random number generator.
-pub fn get_account_address_from_name(name: &str) -> AccountAddress {
+pub fn get_account_address_from_name(name: &str) -> (AuthenticationKey, AccountAddress) {
     let mut hasher = std::collections::hash_map::DefaultHasher::new();
     name.hash(&mut hasher);
     let seed = hasher.finish();
-
     let mut rng = StdRng::seed_from_u64(seed);
     let private_key = Ed25519PrivateKey::generate(&mut rng);
     let auth_key = AuthenticationKey::ed25519(&private_key.public_key());
-    auth_key.derived_address()
+    let account = auth_key.derived_address();
+    (auth_key, account)
 }

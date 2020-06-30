@@ -57,7 +57,6 @@ pub fn storage(config: &mut NodeConfig) -> PersistentSafetyStorage {
             .expect("lcs serialization cannot fail")
             .take_private()
             .expect("Failed to take Execution private key, key absent or already read");
-
         PersistentSafetyStorage::initialize(
             internal_storage,
             author,
