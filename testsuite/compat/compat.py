@@ -137,7 +137,7 @@ else:
     WORKSPACE = select_compat_cluster(ECS_POOL_SIZE, TEST_TAG)
     # fails if no workspace
 
-def_map = get_task_defs(WORKSPACE)
+def_map = get_task_defs(WORKSPACE, NUM_VALIDATORS, NUM_FULLNODES)
 
 # get the task definition families as they are the def_map keys
 v_fams = [f"{WORKSPACE}-validator-{i}" for i in range(NUM_VALIDATORS)]
