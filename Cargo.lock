@@ -3088,6 +3088,9 @@ dependencies = [
 [[package]]
 name = "lsr-sgx"
 version = "0.1.0"
+dependencies = [
+ "libra-types 0.1.0",
+]
 
 [[package]]
 name = "maplit"

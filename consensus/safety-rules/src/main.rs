@@ -9,9 +9,12 @@ use libra_config::config::NodeConfig;
 use libra_secure_push_metrics::MetricsPusher;
 use safety_rules::{Process, COUNTERS};
 use std::{env, process};
+mod safety_rules_sgx_runner;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
+
+    safety_rules_sgx_runner::start_lsr_enclave();
 
     if args.len() != 2 {
         eprintln!("Incorrect number of parameters, expected a path to a config file");

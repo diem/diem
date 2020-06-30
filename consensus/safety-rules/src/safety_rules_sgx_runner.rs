@@ -12,8 +12,9 @@ extern crate enclave_runner;
 extern crate sgxs_loaders;
 
 use aesm_client::AesmClient;
-use enclave_runner::usercalls::{SyncStream, UsercallExtension};
-use std::io::{Read, Write, Result as IoResult};
+use enclave_runner::usercalls::{SyncStream, UsercallExtension, SyncListener};
+use std::io::{Read, Write, Result as IoResult, Error, ErrorKind};
+use std::net::{TcpListener, TcpStream, Shutdown};
 use std::thread;
 use enclave_runner::EnclaveBuilder;
 use sgxs_loaders::isgx::Device as IsgxDevice;
@@ -46,66 +47,74 @@ fn parse_args() -> Result<String, ()> {
 }
 
 struct LSRService{
-    c: Lock<Child>,
+    listener: TcpListener,
 }
 
-impl LSRService{
-    fn new() -> Result<LSRService, std::io::Error> {
-        Command::new("/bin/cat")
-            .stdout(Stdio::piped())
-            .stdin(Stdio::piped())
-            .spawn()
-            .map(|c| Lock::new(c))
-            .map(|c| LSRService{ c })
-    }
-}
-
-macro_rules! poll_lock_wouldblock {
-    ($lock:expr) => {
-        match $lock.clone().poll_lock() {
-            Async::NotReady => Err(std::io::ErrorKind::WouldBlock.into()),
-            Async::Ready(ret) => IoResult::Ok(ret),
-        }
+impl LSRService {
+    fn new(addr: &str) -> IoResult<(Self, String)> {
+        println!("init service for addr {}...", addr);
+        TcpListener::bind(addr).map(|listener| {
+            let local_address = match listener.local_addr() {
+                Ok(local_address) => local_address.to_string(),
+                Err(_) => "xxx".to_string(),
+            };
+            (LSRService {listener}, local_address)
+        })
     }
 }
 
+impl SyncListener for LSRService {
+    fn accept(&self, local_addr: Option<&mut String>, peer_addr: Option<&mut String>) -> IoResult<Box<dyn SyncStream>> {
 
-impl SyncStream for LSRService {
-    fn read(&self, buf: &mut [u8]) -> IoResult<usize> {
-        poll_lock_wouldblock!(self.c)?.stdout.as_mut().unwrap().read(buf)
+        eprintln!(
+            "hello from {}", line!()
+        );
+        let (mut stream, peer_address_tcp) = self.listener.accept()?;
+        eprintln!(
+            "hello from {}", line!()
+        );
+        let local_addr_tcp = stream.local_addr()?;
+        eprintln!(
+            "runner:: bind -- local_address is {}, peer_address is {}",
+            local_addr_tcp, peer_address_tcp
+            );
+        Ok(Box::new(stream))
     }
-
-    fn write(&self, buf: &[u8]) -> IoResult<usize> {
-        poll_lock_wouldblock!(self.c)?.stdin.as_mut().unwrap().write(buf)
-    }
-
-    fn flush(&self) -> IoResult<()> {
-        poll_lock_wouldblock!(self.c)?.stdin.as_mut().unwrap().flush()
-    }
-
 
 }
+
+const LSR_CORE_ADDRESS: &str = "localhost:8888";
 
 #[derive(Debug)]
-struct ExternalService;
-// Ignoring local_addr and peer_addr, as they are not relavent in the current context.
-impl UsercallExtension for ExternalService {
-    fn connect_stream(
+struct LSRCoreService;
+impl UsercallExtension for LSRCoreService {
+    fn bind_stream(
         &self,
         addr: &str,
-        _local_addr: Option<&mut String>,
-        _peer_addr: Option<&mut String>,
-    ) -> IoResult<Option<Box<dyn SyncStream>>> {
-        // If the passed address is not "cat", we return none, whereby the passed address gets treated as
-        // an IP address which is the default behavior.
-        match &*addr {
-            "cat" => {
-                let stream = LSRService::new()?;
-                Ok(Some(Box::new(stream)))
+        local_addr: Option<&mut String>,
+    ) -> IoResult<Option<Box<dyn SyncListener>>> {
+        if addr == LSR_CORE_ADDRESS {
+            println!("trying to bind {}...", addr);
+            let (listener, local_address) = LSRService::new(addr)?;
+            println!("local addr: {}", local_address);
+            if let Some(local_addr) = local_addr {
+                *local_addr = local_address;
             }
-            _ => Ok(None),
+            Ok(Some(Box::new(listener)))
+        } else {
+            Ok(None)
         }
     }
+
+}
+
+fn test_connect() {
+    thread::sleep(std::time::Duration::from_secs(5));
+    println!("trying to connect ... {}", line!());
+    let mut stream = TcpStream::connect(LSR_CORE_ADDRESS).unwrap();
+    println!("trying to connect ... {}", line!());
+    stream.write_all("shit".as_bytes()).unwrap();
+    stream.shutdown(Shutdown::Write).unwrap();
 }
 
 fn run_server(file: String) -> Result<(), ()> {
@@ -118,8 +127,12 @@ fn run_server(file: String) -> Result<(), ()> {
 
     let mut enclave_builder = EnclaveBuilder::new(file.as_ref());
     enclave_builder.dummy_signature();
-    enclave_builder.usercall_extension(ExternalService);
+    println!("lwg:running enclave...{}", line!());
+    enclave_builder.usercall_extension(LSRCoreService);
+    println!("lwg:running enclave...{}", line!());
     let enclave = enclave_builder.build(&mut device).unwrap();
+    println!("lwg:running enclave...{}", line!());
+
 
     enclave.run().map_err(|e| {
         eprintln!("Error in running enclave {}", e);
@@ -129,6 +142,8 @@ fn run_server(file: String) -> Result<(), ()> {
 pub fn start_lsr_enclave() {
     let file = parse_args().unwrap();
     let server = thread::spawn(move || run_server(file));
+    let test = thread::spawn(move || test_connect());
+    let _ = test.join().unwrap();
     let _ = server.join().unwrap();
 }
 
