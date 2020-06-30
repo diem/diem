@@ -266,7 +266,7 @@ fn service_handles_remote_query() {
 
     let (libra_db, _executor, waypoint) = setup_storage_service_and_executor(&config);
     let validator_set = read_validator_set(&libra_db);
-    let expected_validator_set = DiscoverySetInternal::from_validator_set(role, validator_set);
+    let expected_validator_set = DiscoverySetInternal::from_validator_set(role, &validator_set);
 
     let (
         f_onchain_discovery,
@@ -301,7 +301,7 @@ fn service_handles_remote_query() {
 
     // verify validator set is the same as genesis validator set
     let actual_validator_set =
-        DiscoverySetInternal::from_validator_set(role, opt_validator_set.unwrap());
+        DiscoverySetInternal::from_validator_set(role, &opt_validator_set.unwrap());
     assert_eq!(expected_validator_set, actual_validator_set);
 
     // shutdown
@@ -344,7 +344,7 @@ fn queries_storage_on_tick() {
     drop(storage_query_ticker_tx);
 
     // expect updates for all nodes
-    let validator_set = DiscoverySetInternal::from_validator_set(role, validator_set);
+    let validator_set = DiscoverySetInternal::from_validator_set(role, &validator_set);
     let expected_update_reqs = validator_set
         .0
         .into_iter()
@@ -444,7 +444,7 @@ fn queries_peers_on_tick() {
     drop(client_storage_query_ticker_tx);
 
     // expect updates for all other nodes except ourselves
-    let validator_set = DiscoverySetInternal::from_validator_set(client_role, validator_set);
+    let validator_set = DiscoverySetInternal::from_validator_set(client_role, &validator_set);
     let expected_update_reqs = validator_set
         .0
         .into_iter()

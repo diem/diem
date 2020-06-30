@@ -350,7 +350,7 @@ where
 
     async fn handle_new_discovery_set_event(&mut self, validator_set: ValidatorSet) {
         let latest_discovery_set =
-            DiscoverySetInternal::from_validator_set(self.network_context.role(), validator_set);
+            DiscoverySetInternal::from_validator_set(self.network_context.role(), &validator_set);
 
         let prev_discovery_set =
             mem::replace(&mut self.latest_discovery_set, latest_discovery_set.clone());
@@ -363,7 +363,7 @@ where
         // we need to update the connectivity manager that a peer is
         // advertising new addresses.
         if self.latest_discovery_set != prev_discovery_set {
-            let update_addr_reqs = self
+            let address_map = self
                 .latest_discovery_set
                 .0
                 .iter()
@@ -371,11 +371,10 @@ where
                     (*peer_id, addrs.clone())
                 })
                 .collect();
+            let update_address_req =
+                ConnectivityRequest::UpdateAddresses(DiscoverySource::OnChain, address_map);
             self.conn_mgr_reqs_tx
-                .send(ConnectivityRequest::UpdateAddresses(
-                    DiscoverySource::OnChain,
-                    update_addr_reqs,
-                ))
+                .send(update_address_req)
                 .await
                 .unwrap();
         }

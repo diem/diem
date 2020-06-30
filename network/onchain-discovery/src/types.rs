@@ -19,7 +19,11 @@ use libra_types::{
     PeerId,
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, convert::TryFrom};
+use std::{
+    collections::{HashMap, HashSet},
+    convert::TryFrom,
+    iter,
+};
 
 /// OnchainDiscovery LibraNet message types. These are sent over-the-wire.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -132,26 +136,15 @@ impl QueryDiscoverySetResponse {
 pub struct DiscoverySetInternal(pub HashMap<PeerId, DiscoveryInfoInternal>);
 
 impl DiscoverySetInternal {
-    pub fn from_validator_set(role_filter: RoleType, validator_set: ValidatorSet) -> Self {
+    pub fn from_validator_set(role: RoleType, validator_set: &ValidatorSet) -> Self {
         Self(
             validator_set
-                .into_iter()
-                .filter_map(|validator_info| {
-                    let peer_id = *validator_info.account_address();
-                    let res_info =
-                        DiscoveryInfoInternal::try_from_validator_info(role_filter, validator_info);
-
-                    // ignore network addresses that fail to deserialize
-                    res_info
-                        .map_err(|err| {
-                            debug!(
-                                "failed to deserialize addresses from validator: {}, err: {}",
-                                peer_id.short_str(),
-                                err
-                            )
-                        })
-                        .map(|info| (peer_id, info))
-                        .ok()
+                .payload()
+                .iter()
+                .map(|validator_info| {
+                    let discovery_info =
+                        DiscoveryInfoInternal::from_validator_info(role, validator_info);
+                    (*validator_info.account_address(), discovery_info)
                 })
                 .collect::<HashMap<_, _>>(),
         )
@@ -163,31 +156,45 @@ impl DiscoverySetInternal {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct DiscoveryInfoInternal(pub x25519::PublicKey, pub Vec<NetworkAddress>);
+pub struct DiscoveryInfoInternal(pub HashSet<x25519::PublicKey>, pub Vec<NetworkAddress>);
 
 impl DiscoveryInfoInternal {
-    pub fn try_from_validator_info(
-        role_filter: RoleType,
-        validator_info: ValidatorInfo,
-    ) -> Result<Self> {
-        let info = match role_filter {
-            RoleType::Validator => Self(
-                validator_info
-                    .config()
-                    .validator_network_identity_public_key,
-                vec![NetworkAddress::try_from(
-                    &validator_info.config().validator_network_address,
-                )?],
+    pub fn from_validator_info(role: RoleType, validator_info: &ValidatorInfo) -> Self {
+        let account = validator_info.account_address();
+        let config = validator_info.config();
+        let (pubkey, raw_addr) = match role {
+            RoleType::Validator => (
+                config.validator_network_identity_public_key,
+                &config.validator_network_address,
             ),
-            RoleType::FullNode => Self(
-                validator_info
-                    .config()
-                    .full_node_network_identity_public_key,
-                vec![NetworkAddress::try_from(
-                    &validator_info.config().full_node_network_address,
-                )?],
+            RoleType::FullNode => (
+                config.full_node_network_identity_public_key,
+                &config.full_node_network_address,
             ),
         };
-        Ok(info)
+
+        let addrs: Vec<_> = iter::once(raw_addr).filter_map(|raw_addr| {
+            // just log and ignore network addresses that fail to deserialize
+            match NetworkAddress::try_from(raw_addr) {
+                Ok(addr) => Some(addr),
+                Err(err) => {
+                    warn!(
+                        "Failed to parse network address for account: {}, role: {}, config: {:?}, err: {:?}",
+                        account, role, config, err,
+                    );
+                    None
+                }
+            }
+        }).collect();
+
+        let pubkey_set: HashSet<_> = addrs
+            .iter()
+            .filter_map(NetworkAddress::find_noise_proto)
+            // for now, also add the explicit pubkey field
+            // TODO(philiphayes): remove this after removing pubkey field
+            .chain(iter::once(pubkey))
+            .collect();
+
+        Self(pubkey_set, addrs)
     }
 }
