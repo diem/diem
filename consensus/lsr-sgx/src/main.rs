@@ -15,6 +15,7 @@ impl LSRCore {
 
 }
 
+/* this works for using ValidatorSigner */
 fn init_lsr_core(addr: String) -> Result<LSRCore, Error> {
     let a = ValidatorSigner::from_int(1);
     println!("signer = {:#?}", a);
@@ -28,7 +29,6 @@ fn init_lsr_core(addr: String) -> Result<LSRCore, Error> {
 
 fn main() -> std::io::Result<()> {
     //let lsr_core = init_lsr_core("lsr".into()).unwrap();
-
     let listener = TcpListener::bind("127.0.0.1:8888")?;
     let (stream, peer_addr) = listener.accept()?;
     let peer_addr = peer_addr.to_string();
@@ -36,8 +36,7 @@ fn main() -> std::io::Result<()> {
     eprintln!(
         "LSR_CORE:accept meesage from local {}, peer {}",
         local_addr, peer_addr
-        );
-
+    );
     let mut reader = BufReader::new(stream);
     let mut message = String::new();
     loop {
@@ -45,7 +44,10 @@ fn main() -> std::io::Result<()> {
         if read_bytes == 0 {
             break;
         }
-        println!("{}", message);
+        println!("receiving --  {}", message);
     }
+    eprintln!(
+        "Wohoo! LSR_CORE about to terminate",
+    );
     Ok(())
 }

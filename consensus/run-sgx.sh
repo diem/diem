@@ -4,7 +4,7 @@ ENCLAVE=lsr-sgx
 SAFETY_RULES=safety-rules
 
 # first build the LSR, which invokes lsr-sgx...
-cargo build -p $SAFETY_RULES
+cargo +nightly build -p $SAFETY_RULES
 
 # build enclave
 cd $ENCLAVE
@@ -12,4 +12,4 @@ cd $ENCLAVE
 cd -
 
 # test
-cargo x test -p $SAFETY_RULES -- --nocapture
+cargo +nightly x test -p $SAFETY_RULES -- --nocapture

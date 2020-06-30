@@ -47,5 +47,6 @@ required-features = ["testing"]
 
 [features]
 default = []
+sgx = []
 fuzzing = ["consensus-types/fuzzing", "libra-config/fuzzing"]
 testing = ["libra-secure-storage/testing", "workspace-builder"]

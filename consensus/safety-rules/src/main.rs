@@ -14,6 +14,7 @@ mod safety_rules_sgx_runner;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
+    // lwg: this is for testing.. removal will be there
     safety_rules_sgx_runner::start_lsr_enclave();
 
     if args.len() != 2 {
