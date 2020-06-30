@@ -499,6 +499,11 @@ pub struct CurrencyInfoView {
     pub scaling_factor: u64,
     pub fractional_part: u64,
     pub to_lbr_exchange_rate: f32,
+    pub mint_events: BytesView,
+    pub burn_events: BytesView,
+    pub preburn_events: BytesView,
+    pub cancel_burn_events: BytesView,
+    pub exchange_rate_update_events: BytesView,
 }
 
 impl From<CurrencyInfoResource> for CurrencyInfoView {
@@ -508,6 +513,11 @@ impl From<CurrencyInfoResource> for CurrencyInfoView {
             scaling_factor: info.scaling_factor(),
             fractional_part: info.fractional_part(),
             to_lbr_exchange_rate: info.exchange_rate(),
+            mint_events: BytesView::from(info.mint_events().key().as_bytes()),
+            burn_events: BytesView::from(info.burn_events().key().as_bytes()),
+            preburn_events: BytesView::from(info.preburn_events().key().as_bytes()),
+            cancel_burn_events: BytesView::from(info.cancel_burn_events().key().as_bytes()),
+            exchange_rate_update_events: BytesView::from(info.exchange_rate_update_events().key().as_bytes()),
         }
     }
 }
