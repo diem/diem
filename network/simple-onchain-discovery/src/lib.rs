@@ -15,7 +15,7 @@ use libra_types::{
 };
 use network::connectivity_manager::{ConnectivityRequest, DiscoverySource};
 use once_cell::sync::Lazy;
-use std::{convert::TryFrom, time::Instant};
+use std::{collections::HashSet, convert::TryFrom, time::Instant};
 use subscription_service::ReconfigSubscription;
 
 pub mod builder;
@@ -99,7 +99,11 @@ fn extract_updates(role: RoleType, node_set: ValidatorSet) -> Vec<ConnectivityRe
         DiscoverySource::OnChain,
         node_list
             .iter()
-            .map(|node| (*node.account_address(), public_key(role, node.config())))
+            .map(|node| {
+                let pubkey = public_key(role, node.config());
+                let pubkey_set: HashSet<_> = [pubkey].iter().copied().collect();
+                (*node.account_address(), pubkey_set)
+            })
             .collect(),
     ));
 

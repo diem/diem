@@ -115,7 +115,7 @@ pub enum ConnectivityRequest {
     /// Request to update known addresses of peer with id `PeerId` to given list.
     UpdateAddresses(DiscoverySource, HashMap<PeerId, Vec<NetworkAddress>>),
     /// Update set of nodes eligible to join the network.
-    UpdateEligibleNodes(DiscoverySource, HashMap<PeerId, x25519::PublicKey>),
+    UpdateEligibleNodes(DiscoverySource, HashMap<PeerId, HashSet<x25519::PublicKey>>),
     /// Gets current size of dial queue. This is useful in tests.
     #[serde(skip)]
     GetDialQueueSize(oneshot::Sender<usize>),
@@ -456,27 +456,18 @@ where
         match req {
             ConnectivityRequest::UpdateAddresses(src, address_map) => {
                 trace!(
-                    "{} Received updated list of peer addresses",
-                    self.network_context
+                    "{} Received updated list of peer addresses: src: {:?}",
+                    self.network_context,
+                    src,
                 );
                 self.handle_update_addresses(src, address_map);
             }
-            ConnectivityRequest::UpdateEligibleNodes(src, pubkeys_map) => {
+            ConnectivityRequest::UpdateEligibleNodes(src, pubkey_sets_map) => {
                 trace!(
-                    "{} Received updated list of eligible nodes",
-                    self.network_context
+                    "{} Received updated list of eligible nodes: src: {:?}",
+                    self.network_context,
+                    src,
                 );
-
-                // TODO(philiphayes): remove
-                let pubkey_sets_map = pubkeys_map
-                    .into_iter()
-                    .map(|(peer_id, pubkey)| {
-                        let mut pubkey_set = HashSet::new();
-                        pubkey_set.insert(pubkey);
-                        (peer_id, pubkey_set)
-                    })
-                    .collect();
-
                 self.handle_update_eligible_peers(src, pubkey_sets_map);
             }
             ConnectivityRequest::GetDialQueueSize(sender) => {
@@ -490,12 +481,6 @@ where
         src: DiscoverySource,
         address_map: HashMap<PeerId, Vec<NetworkAddress>>,
     ) {
-        trace!(
-            "handle_update_addresses: src: {:?}, address_map: {:?}",
-            src,
-            address_map
-        );
-
         // TODO(philiphayes): do these two in next commit
         // 1. set peers not in update to empty
         // 2. remove all empty
@@ -549,12 +534,6 @@ where
         src: DiscoverySource,
         pubkey_sets_map: HashMap<PeerId, HashSet<x25519::PublicKey>>,
     ) {
-        trace!(
-            "handle_update_eligible_peers: src: {:?}, pubkey_sets_map: {:?}",
-            src,
-            pubkey_sets_map
-        );
-
         let mut have_any_changed = false;
         let self_peer_id = self.network_context.peer_id();
 
