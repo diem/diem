@@ -158,7 +158,7 @@ impl CompiledScriptMut {
     /// [`CompiledScript::serialize`].
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
         let mut binary_data = BinaryData::from(binary.clone());
-        let mut ser = ScriptSerializer::new(1, 0);
+        let mut ser = ScriptSerializer::new(1);
         let mut temp = BinaryData::new();
 
         ser.common.serialize_common_tables(&mut temp, self)?;
@@ -196,7 +196,7 @@ impl CompiledModuleMut {
     /// [`CompiledModule::serialize`].
     pub fn serialize(&self, binary: &mut Vec<u8>) -> Result<()> {
         let mut binary_data = BinaryData::from(binary.clone());
-        let mut ser = ModuleSerializer::new(1, 0);
+        let mut ser = ModuleSerializer::new(1);
         let mut temp = BinaryData::new();
         ser.serialize_tables(&mut temp, self)?;
         if temp.len() > u32::max_value() as usize {
@@ -227,8 +227,7 @@ impl CompiledModuleMut {
 /// `CompiledModule`.
 #[derive(Debug)]
 struct CommonSerializer {
-    major_version: u8,
-    minor_version: u8,
+    major_version: u32,
     table_count: u8,
     module_handles: (u32, u32),
     struct_handles: (u32, u32),
@@ -866,10 +865,9 @@ fn checked_calculate_table_size(binary: &mut BinaryData, start: u32) -> Result<u
 }
 
 impl CommonSerializer {
-    pub fn new(major_version: u8, minor_version: u8) -> CommonSerializer {
+    pub fn new(major_version: u32) -> CommonSerializer {
         CommonSerializer {
             major_version,
-            minor_version,
             table_count: 0,
             module_handles: (0, 0),
             struct_handles: (0, 0),
@@ -884,8 +882,7 @@ impl CommonSerializer {
 
     fn serialize_header(&mut self, binary: &mut BinaryData) -> Result<()> {
         serialize_magic(binary)?;
-        binary.push(self.major_version)?;
-        binary.push(self.minor_version)?;
+        write_u32(binary, self.major_version)?;
         Ok(())
     }
 
@@ -1104,9 +1101,9 @@ impl CommonSerializer {
 }
 
 impl ModuleSerializer {
-    fn new(major_version: u8, minor_version: u8) -> ModuleSerializer {
+    fn new(major_version: u32) -> ModuleSerializer {
         ModuleSerializer {
-            common: CommonSerializer::new(major_version, minor_version),
+            common: CommonSerializer::new(major_version),
             struct_defs: (0, 0),
             struct_def_instantiations: (0, 0),
             function_defs: (0, 0),
@@ -1250,9 +1247,9 @@ impl ModuleSerializer {
 }
 
 impl ScriptSerializer {
-    fn new(major_version: u8, minor_version: u8) -> ScriptSerializer {
+    fn new(major_version: u32) -> ScriptSerializer {
         ScriptSerializer {
-            common: CommonSerializer::new(major_version, minor_version),
+            common: CommonSerializer::new(major_version),
         }
     }
 

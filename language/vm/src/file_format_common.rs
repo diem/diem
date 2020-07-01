@@ -25,9 +25,9 @@ impl BinaryConstants {
     /// The blob that must start a binary.
     pub const LIBRA_MAGIC_SIZE: usize = 4;
     pub const LIBRA_MAGIC: [u8; BinaryConstants::LIBRA_MAGIC_SIZE] = [0xA1, 0x1C, 0xEB, 0x0B];
-    /// The `LIBRA_MAGIC` size, 1 byte for major version, 1 byte for minor version and 1 byte
+    /// The `LIBRA_MAGIC` size, 4 byte for major version and 1 byte
     /// for table count.
-    pub const HEADER_SIZE: usize = BinaryConstants::LIBRA_MAGIC_SIZE + 3;
+    pub const HEADER_SIZE: usize = BinaryConstants::LIBRA_MAGIC_SIZE + 5;
     /// A (Table Type, Start Offset, Byte Count) size, which is 1 byte for the type and
     /// 4 bytes for the offset/count.
     pub const TABLE_HEADER_SIZE: u8 = size_of::<u32>() as u8 * 2 + 1;
@@ -322,6 +322,12 @@ pub fn write_u64(binary: &mut BinaryData, value: u64) -> Result<()> {
 /// Write a `u128` in Little Endian format.
 pub fn write_u128(binary: &mut BinaryData, value: u128) -> Result<()> {
     binary.extend(&value.to_le_bytes())
+}
+
+pub fn read_u32(cursor: &mut Cursor<&[u8]>) -> Result<u32> {
+    let mut buf = [0; 4];
+    cursor.read_exact(&mut buf)?;
+    Ok(u32::from_le_bytes(buf))
 }
 
 pub fn read_u8(cursor: &mut Cursor<&[u8]>) -> Result<u8> {
