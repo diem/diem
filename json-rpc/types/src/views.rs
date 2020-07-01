@@ -136,12 +136,14 @@ pub enum EventDataView {
     ReceivedPayment {
         amount: AmountView,
         sender: BytesView,
+        receiver: BytesView,
         metadata: BytesView,
     },
     #[serde(rename = "sentpayment")]
     SentPayment {
         amount: AmountView,
         receiver: BytesView,
+        sender: BytesView,
         metadata: BytesView,
     },
     #[serde(rename = "upgrade")]
@@ -171,6 +173,7 @@ impl From<(u64, ContractEvent)> for EventView {
                 Ok(EventDataView::ReceivedPayment {
                     amount: amount_view,
                     sender: BytesView::from(received_event.sender().as_ref()),
+                    receiver: BytesView::from(&event.key().get_creator_address().to_vec()),
                     metadata: BytesView::from(received_event.metadata()),
                 })
             } else {
@@ -183,6 +186,7 @@ impl From<(u64, ContractEvent)> for EventView {
                 Ok(EventDataView::SentPayment {
                     amount: amount_view,
                     receiver: BytesView::from(sent_event.receiver().as_ref()),
+                    sender: BytesView::from(&event.key().get_creator_address().to_vec()),
                     metadata: BytesView::from(sent_event.metadata()),
                 })
             } else {
