@@ -79,10 +79,14 @@ impl ser::Serialize for EventKey {
     where
         S: ser::Serializer,
     {
-        // In order to preserve the Serde data model and help analysis tools,
-        // make sure to wrap our value in a container with the same name
-        // as the original type.
-        serializer.serialize_newtype_struct("EventKey", serde_bytes::Bytes::new(&self.0))
+        if serializer.is_human_readable() {
+            self.to_string().serialize(serializer)
+        } else {
+            // In order to preserve the Serde data model and help analysis tools,
+            // make sure to wrap our value in a container with the same name
+            // as the original type.
+            serializer.serialize_newtype_struct("EventKey", serde_bytes::Bytes::new(&self.0))
+        }
     }
 }
 
@@ -91,13 +95,23 @@ impl<'de> de::Deserialize<'de> for EventKey {
     where
         D: de::Deserializer<'de>,
     {
-        // See comment in serialize.
-        #[derive(::serde::Deserialize)]
-        #[serde(rename = "EventKey")]
-        struct Value<'a>(&'a [u8]);
+        if deserializer.is_human_readable() {
+            let s = <String>::deserialize(deserializer)?;
+            Self::try_from(
+                hex::decode(s)
+                    .map_err(<D::Error as ::serde::de::Error>::custom)?
+                    .as_slice(),
+            )
+            .map_err(<D::Error as ::serde::de::Error>::custom)
+        } else {
+            // See comment in serialize.
+            #[derive(::serde::Deserialize)]
+            #[serde(rename = "EventKey")]
+            struct Value<'a>(&'a [u8]);
 
-        let value = Value::deserialize(deserializer)?;
-        Self::try_from(value.0).map_err(<D::Error as ::serde::de::Error>::custom)
+            let value = Value::deserialize(deserializer)?;
+            Self::try_from(value.0).map_err(<D::Error as ::serde::de::Error>::custom)
+        }
     }
 }
 
