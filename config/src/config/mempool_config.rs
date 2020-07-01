@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(default, deny_unknown_fields)]
 pub struct MempoolConfig {
-    pub broadcast_transactions: bool,
     pub capacity: usize,
     pub capacity_per_user: usize,
     pub max_broadcasts_per_peer: usize,
@@ -22,7 +21,6 @@ pub struct MempoolConfig {
 impl Default for MempoolConfig {
     fn default() -> MempoolConfig {
         MempoolConfig {
-            broadcast_transactions: true,
             shared_mempool_tick_interval_ms: 50,
             shared_mempool_backoff_interval_ms: 30_000,
             shared_mempool_batch_size: 100,
