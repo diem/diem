@@ -189,25 +189,33 @@ impl crate::SourceInstaller for Installer {
 
     fn install_transaction_builders(
         &self,
-        name: &str,
+        public_name: &str,
         abis: &[ScriptABI],
     ) -> std::result::Result<(), Self::Error> {
-        let dir_path = self.install_dir.join(name);
+        let (name, version) = {
+            let parts = public_name.splitn(2, ':').collect::<Vec<_>>();
+            if parts.len() >= 2 {
+                (parts[0].to_string(), parts[1].to_string())
+            } else {
+                (parts[0].to_string(), "0.1.0".to_string())
+            }
+        };
+        let dir_path = self.install_dir.join(&name);
         std::fs::create_dir_all(&dir_path)?;
         let mut cargo = std::fs::File::create(&dir_path.join("Cargo.toml"))?;
         write!(
             cargo,
             r#"[package]
 name = "{}"
-version = "0.1.0"
+version = "{}"
 edition = "2018"
 
 [dependencies]
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_bytes = "0.11"
-libra_types = "{}"
+libra-types = {{ path = "../libra-types", version = "{}" }}
 "#,
-            name, self.libra_types_version,
+            name, version, self.libra_types_version,
         )?;
         std::fs::create_dir(dir_path.join("src"))?;
         let source_path = dir_path.join("src/lib.rs");
