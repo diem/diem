@@ -12,6 +12,7 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.31"
 futures = "0.3.5"
+itertools = "0.9.0"
 once_cell = "1.4.0"
 serde = { version = "1.0.114", default-features = false }
 tokio = { version = "0.2.21", features = ["full"] }
@@ -28,6 +29,7 @@ libra-types = { path = "../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
 mirai-annotations = "1.8.0"
 network = { path = "../network", version = "0.1.0" }
+rand = "0.7.3"
 serde_json = "1.0.56"
 storage-interface = { path = "../storage/storage-interface", version = "0.1.0" }
 subscription-service = { path = "../common/subscription-service", version = "0.1.0" }
@@ -39,7 +41,6 @@ storage-service = { path = "../storage/storage-service", version = "0.1.0", opti
 
 [dev-dependencies]
 libra-network-address = { path = "../network/network-address", version = "0.1.0" }
-rand = "0.7.3"
 
 [features]
 default = []
