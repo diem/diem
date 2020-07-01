@@ -307,19 +307,9 @@ fn check_binary(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<()> {
             VMStatus::new(StatusCode::MALFORMED).with_message("Bad binary header".to_string())
         );
     }
-    let major_ver = 1u8;
-    let minor_ver = 0u8;
-    if let Ok(ver) = read_u8(cursor) {
+    let major_ver = 1u32;
+    if let Ok(ver) = read_u32(cursor) {
         if ver != major_ver {
-            return Err(VMStatus::new(StatusCode::UNKNOWN_VERSION));
-        }
-    } else {
-        return Err(
-            VMStatus::new(StatusCode::MALFORMED).with_message("Bad binary header".to_string())
-        );
-    }
-    if let Ok(ver) = read_u8(cursor) {
-        if ver != minor_ver {
             return Err(VMStatus::new(StatusCode::UNKNOWN_VERSION));
         }
     } else {
