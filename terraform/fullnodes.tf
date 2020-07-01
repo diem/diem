@@ -38,6 +38,13 @@ resource "aws_instance" "fullnode" {
 
 }
 
+data "template_file" "fullnode_config" {
+  template = file("templates/fullnode.yaml")
+
+  vars = {
+    chain_id = local.chain_id
+  }
+}
 
 data "template_file" "fullnode_ecs_task_definition" {
   count    = local.total_num_fullnodes
@@ -49,6 +56,7 @@ data "template_file" "fullnode_ecs_task_definition" {
     cpu           = local.cpu_by_instance[var.validator_type]
     mem           = local.mem_by_instance[var.validator_type]
 
+    cfg_base_config    = jsonencode(data.template_file.validator_config.rendered)
     cfg_listen_addr    = element(aws_instance.fullnode.*.private_ip, count.index)
     cfg_num_validators = var.cfg_num_validators_override == 0 ? var.num_validators : var.cfg_num_validators_override
     cfg_seed           = var.config_seed
