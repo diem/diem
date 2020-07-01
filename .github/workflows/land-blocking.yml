@@ -61,7 +61,7 @@ jobs:
             --tag ${TEST_TAG} \
             -E RUST_LOG=debug \
             --report report.json \
-            --run bench
+            --suite land_blocking
           if [ -s "report.json" ]; then
             echo "report.json start"
             cat report.json

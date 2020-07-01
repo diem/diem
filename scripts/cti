@@ -134,6 +134,10 @@ kube_wait_pod () {
 
 while (( "$#" )); do
   case "$1" in
+    --perf-run)
+      echo "--perf-run is deprecated. Use --suite perf instead"
+      exit 1
+      ;;
     -R|--report)
       REPORT=$2
       shift 2
