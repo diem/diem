@@ -1,9 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_config::config::{PeerNetworkId, UpstreamConfig};
+use itertools::Itertools;
+use libra_config::{
+    config::{PeerNetworkId, UpstreamConfig},
+    network_id::NetworkId,
+};
+use rand::seq::SliceRandom;
 use std::{
     collections::{BTreeSet, HashMap, HashSet},
+    ops::{Deref, DerefMut},
     sync::Mutex,
 };
 
@@ -23,6 +29,9 @@ pub(crate) struct PeerSyncState {
 pub(crate) struct PeerManager {
     upstream_config: UpstreamConfig,
     peer_info: Mutex<PeerInfo>,
+    // the upstream peer to failover to if all peers in the primary upstream network are dead
+    // the number of failover peers is limited to 1 to avoid network competition in the failover networks
+    failover_peer: Mutex<Option<PeerNetworkId>>,
 }
 
 #[derive(Clone)]
@@ -50,6 +59,7 @@ impl PeerManager {
         Self {
             upstream_config,
             peer_info: Mutex::new(PeerInfo::new()),
+            failover_peer: Mutex::new(None),
         }
     }
 
@@ -61,15 +71,33 @@ impl PeerManager {
             .expect("failed to acquire peer_info lock");
         let is_new_peer = !peer_info.contains_key(&peer);
         if self.is_upstream_peer(&peer) {
-            peer_info
-                .entry(peer)
-                .or_insert(PeerSyncState {
-                    timeline_id: 0,
-                    is_alive: true,
-                    broadcast_info: BroadcastInfo::new(),
-                })
-                .is_alive = true;
+            if peer.network_id() == NetworkId::Validator {
+                // For a validator network, resume broadcasting from previous state
+                // we can afford to not re-broadcast here since the transaction is already in a validator
+                peer_info
+                    .entry(peer)
+                    .or_insert(PeerSyncState {
+                        timeline_id: 0,
+                        is_alive: true,
+                        broadcast_info: BroadcastInfo::new(),
+                    })
+                    .is_alive = true;
+            } else {
+                // For a non-validator network, potentially re-broadcast any transactions that have not been
+                // committed yet
+                // This is to ensure better reliability of transactions reaching the validator network
+                peer_info.insert(
+                    peer,
+                    PeerSyncState {
+                        timeline_id: 0,
+                        is_alive: true,
+                        broadcast_info: BroadcastInfo::new(),
+                    },
+                );
+            }
         }
+        drop(peer_info);
+        self.update_failover();
         is_new_peer
     }
 
@@ -81,6 +109,74 @@ impl PeerManager {
             .get_mut(&peer)
         {
             state.is_alive = false;
+        }
+        self.update_failover();
+    }
+
+    // updates the peer chosen to failover to if all peers in the primary upstream network are down
+    fn update_failover(&self) {
+        // failover is enabled only if there are multiple upstream networks
+        if self.upstream_config.networks.len() < 2 {
+            return;
+        }
+
+        // declare `failover` as standalone to satisfy lifetime requirement
+        let mut failover = self
+            .failover_peer
+            .lock()
+            .expect("failed to acquire failover lock");
+        let current_failover = failover.deref_mut();
+        let peer_info = self.peer_info.lock().expect("can not get peer info lock");
+        let active_peers_by_network = peer_info
+            .iter()
+            .filter_map(|(peer, state)| {
+                if state.is_alive {
+                    Some((peer.network_id(), peer))
+                } else {
+                    None
+                }
+            })
+            .into_group_map();
+
+        let primary_upstream = self
+            .upstream_config
+            .networks
+            .get(0)
+            .expect("missing primary upstream network");
+        if active_peers_by_network.get(primary_upstream).is_none() {
+            // there are no live peers in the primary upstream network - pick a failover peer
+
+            let mut failover_candidate = None;
+            // find the highest-pref'ed network (based on preference defined in upstream config)
+            // with any live peer and pick a peer from that network
+            for failover_network in self.upstream_config.networks[1..].iter() {
+                if let Some(active_peers) = active_peers_by_network.get(failover_network) {
+                    failover_candidate = active_peers.choose(&mut rand::thread_rng());
+                    if failover_candidate.is_some() {
+                        break;
+                    }
+                }
+            }
+
+            if let Some(chosen) = current_failover {
+                if let Some(candidate) = &failover_candidate {
+                    if chosen.network_id() == candidate.network_id()
+                        && peer_info.get(chosen).expect("missing peer state").is_alive
+                    {
+                        // if current chosen failover peer is alive, then do not overwrite it
+                        // with another live peer of the same network
+                        // for mempool broadcasts, broadcasting to the same peer consistently makes
+                        // faster progress
+                        return;
+                    }
+                }
+            }
+
+            *current_failover = failover_candidate.cloned().cloned();
+        } else {
+            // there is at least one peer alive in the primary upstream network, so don't pick
+            // a failover peer
+            *current_failover = None;
         }
     }
 
@@ -189,13 +285,11 @@ impl PeerManager {
             return true;
         }
 
-        // checks whether this is fallback peer that is alive
-        self
-            .peer_info
+        // checks whether this peer a chosen upstream failover peer
+        self.failover_peer
             .lock()
-            .expect("failed to acquire peer info lock")
-            .iter()
-            .find(|(peer, state)| self.is_upstream_peer(*peer) && state.is_alive)
-            .is_none()
+            .expect("failed to get failover peer")
+            .deref()
+            == &Some(peer.clone())
     }
 }

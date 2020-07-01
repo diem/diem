@@ -704,36 +704,33 @@ fn test_state_sync_events_committed_txns() {
     assert_eq!(timeline.get(0).unwrap().1, kept_txn);
 }
 
-// primary_peers = k, fallbacks > 0
 #[test]
-fn test_k_policy_broadcast_no_fallback() {
-    // all nodes
+fn test_fn_failover() {
+    // test vfn failing over to fallback network
+
+    // set up network with fn with 1 primary v upstream and 3 fallback upstream fn
     let v_0 = PeerId::random();
     let fn_0 = PeerId::random();
     let fn_0_fallback_network_id = PeerId::random();
-    let v_1 = PeerId::random();
     let fn_1 = PeerId::random();
+    let fn_2 = PeerId::random();
+    let fn_3 = PeerId::random();
+    let fallback_peers = vec![fn_1, fn_2, fn_3];
 
-    // v0 config
     let v0_config = NodeConfig::default();
-    let v1_config = NodeConfig::default();
-
-    // fn_0 has v0 as primary upstream peer and v1 as fallback upstream peer
     let mut fn_0_config = NodeConfig::default();
+    fn_0_config.base.role = RoleType::FullNode;
     fn_0_config.mempool.shared_mempool_batch_size = 1;
-    fn_0_config
-        .mempool
-        .shared_mempool_min_broadcast_recipient_count = Some(1);
     fn_0_config.upstream.networks = vec![NetworkId::vfn_network(), NetworkId::Public];
-
     let mut fn_1_config = NodeConfig::default();
-    fn_1_config.mempool.shared_mempool_batch_size = 1;
-    fn_1_config.upstream.networks = vec![NetworkId::vfn_network()];
+    fn_1_config.base.role = RoleType::FullNode;
+    let mut fn_2_config = NodeConfig::default();
+    fn_2_config.base.role = RoleType::FullNode;
+    let mut fn_3_config = NodeConfig::default();
+    fn_3_config.base.role = RoleType::FullNode;
 
     let mut smp = SharedMempoolNetwork::default();
     init_single_shared_mempool(&mut smp, v_0, NetworkId::Validator, v0_config);
-    init_single_shared_mempool(&mut smp, v_1, NetworkId::Validator, v1_config);
-    init_single_shared_mempool(&mut smp, fn_1, NetworkId::vfn_network(), fn_1_config);
     init_smp_multiple_networks(
         &mut smp,
         vec![
@@ -742,60 +739,118 @@ fn test_k_policy_broadcast_no_fallback() {
         ],
         fn_0_config,
     );
+    init_single_shared_mempool(&mut smp, fn_1, NetworkId::Public, fn_1_config);
+    init_single_shared_mempool(&mut smp, fn_2, NetworkId::Public, fn_2_config);
+    init_single_shared_mempool(&mut smp, fn_3, NetworkId::Public, fn_3_config);
 
     // fn_0 discovers primary and fallback upstream peers
     smp.send_new_peer_event(&fn_0, &v_0);
-    smp.send_new_peer_event(&fn_0_fallback_network_id, &fn_1);
+    for fallback_peer in fallback_peers.iter() {
+        smp.send_new_peer_event(&fn_0_fallback_network_id, fallback_peer);
+    }
 
     // add txn to fn_0
     smp.add_txns(&fn_0, vec![TestTransaction::new(1, 0, 1)]);
 
     // make sure it delivers txn to primary peer
-    let peers = vec![smp.deliver_message(&fn_0, 1, true).1];
-    assert_eq!(peers[0], v_0);
-    // check that no messages have been sent to fallback upstream peer
+    let recipient_peer = smp.deliver_message(&fn_0, 1, true).1;
+    assert_eq!(recipient_peer, v_0);
+    // check that no messages have been sent to fallback upstream peers
     smp.assert_no_message_sent(&fn_0_fallback_network_id);
-}
 
-// primary_peers < k, fallback = 0 (primary_peers + fallbacks < k)
-#[test]
-fn test_k_policy_broadcast_not_enough_fallbacks() {
-    // all nodes
-    let v_0 = PeerId::random();
-    let fn_0 = PeerId::random();
-    let fn_0_fallback_network_id = PeerId::random();
-
-    let v0_config = NodeConfig::default();
-    // fn_0 has v0 as primary upstream peer and v1 as fallback upstream peer
-    let mut fn_0_config = NodeConfig::default();
-    fn_0_config.mempool.shared_mempool_batch_size = 1;
-    fn_0_config
-        .mempool
-        .shared_mempool_min_broadcast_recipient_count = Some(2);
-    fn_0_config.upstream.networks = vec![NetworkId::vfn_network(), NetworkId::Public];
-
-    let mut smp = SharedMempoolNetwork::default();
-    init_single_shared_mempool(&mut smp, v_0, NetworkId::Validator, v0_config);
-    init_smp_multiple_networks(
-        &mut smp,
-        vec![
-            (NetworkId::vfn_network(), fn_0),
-            (NetworkId::Public, fn_0_fallback_network_id),
-        ],
-        fn_0_config,
+    // bring v down
+    smp.send_connection_event(
+        &fn_0,
+        ConnectionNotification::LostPeer(
+            v_0,
+            NetworkAddress::mock(),
+            DisconnectReason::ConnectionLost,
+        ),
     );
 
-    // fn_0 discovers primary peer but no fallback peers available
+    // add txn to fn_0
+    smp.add_txns(&fn_0, vec![TestTransaction::new(1, 1, 1)]);
+
+    // make sure it delivers txn to fallback peer
+    let (txn, first_fallback_recipient) = smp.deliver_message(&fn_0_fallback_network_id, 1, true);
+    assert!(fallback_peers.contains(&first_fallback_recipient));
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 0);
+    // check that no messages have been sent to primary upstream peer
+    smp.assert_no_message_sent(&fn_0);
+
+    // add some more txns to fn_0
+    smp.add_txns(
+        &fn_0,
+        vec![TestTransaction::new(1, 2, 1), TestTransaction::new(1, 3, 1)],
+    );
+    let expected_seq_nums = vec![1, 2, 3];
+    for seq_num in expected_seq_nums {
+        let (txn, fallback_recipient) = smp.deliver_message(&fn_0_fallback_network_id, 1, true);
+        assert_eq!(first_fallback_recipient, fallback_recipient);
+        // check sequence number
+        assert_eq!(txn.get(0).unwrap().sequence_number(), seq_num);
+    }
+    // check that no messages have been sent to primary upstream peer
+    smp.assert_no_message_sent(&fn_0);
+
+    // bring down fallback peer
+    smp.send_connection_event(
+        &fn_0_fallback_network_id,
+        ConnectionNotification::LostPeer(
+            first_fallback_recipient,
+            NetworkAddress::mock(),
+            DisconnectReason::ConnectionLost,
+        ),
+    );
+
+    // add txn
+    smp.add_txns(&fn_0, vec![TestTransaction::new(1, 4, 1)]);
+    // make sure it gets broadcast to another fallback peer
+    let (txn, second_fallback_recipient) = smp.deliver_message(&fn_0_fallback_network_id, 1, true);
+    assert_ne!(first_fallback_recipient, second_fallback_recipient);
+    assert!(fallback_peers.contains(&second_fallback_recipient));
+    assert_eq!(txn.get(0).unwrap().sequence_number(), 0);
+    // check that no messages have been sent to primary upstream peer
+    smp.assert_no_message_sent(&fn_0);
+
+    // bring down all upstream peers
+    for fallback_peer in fallback_peers.iter() {
+        if fallback_peer != &first_fallback_recipient {
+            smp.send_lost_peer_event(&fn_0_fallback_network_id, fallback_peer);
+        }
+    }
+    // check that no messages get sent
+    smp.add_txns(&fn_0, vec![TestTransaction::new(1, 5, 1)]);
+    smp.assert_no_message_sent(&fn_0);
+    smp.assert_no_message_sent(&fn_0_fallback_network_id);
+
+    // bring back v up
     smp.send_new_peer_event(&fn_0, &v_0);
 
-    // add txn to fn_0
-    smp.add_txns(&fn_0, vec![TestTransaction::new(1, 0, 1)]);
+    // add txn
+    smp.add_txns(&fn_0, vec![TestTransaction::new(1, 6, 1)]);
+    // check that we don't broadcast to failovers, only v
 
-    // make sure it delivers txn to primary peer
-    let peers = vec![smp.deliver_message(&fn_0, 1, true).1];
-    assert_eq!(peers[0], v_0);
-    // check that no messages have been sent to fallback upstream peer
-    smp.assert_no_message_sent(&fn_0_fallback_network_id);
+    for expected_seq_num in 0..=3 {
+        let (txn, recipient) = smp.deliver_message(&fn_0, 1, true);
+        assert_eq!(recipient, v_0);
+        assert_eq!(txn.get(0).unwrap().sequence_number(), expected_seq_num);
+        // check that no messages have been sent to fallback peers
+        smp.assert_no_message_sent(&fn_0_fallback_network_id);
+    }
+
+    // bring back all fallback peers back
+    for fallback_peer in fallback_peers.iter() {
+        smp.send_new_peer_event(&fn_0_fallback_network_id, fallback_peer);
+    }
+
+    for expected_seq_num in 4..=6 {
+        let (txn, recipient) = smp.deliver_message(&fn_0, 1, true);
+        assert_eq!(recipient, v_0);
+        assert_eq!(txn.get(0).unwrap().sequence_number(), expected_seq_num);
+        // check that no messages have been sent to fallback peers
+        smp.assert_no_message_sent(&fn_0_fallback_network_id);
+    }
 }
 
 #[test]
