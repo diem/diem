@@ -182,6 +182,17 @@ where
             .get_range_proof(first_leaf_index, num_leaves)
     }
 
+    /// See `get_range_proof`. This is the version of it that returns `Position`s only.
+    pub fn get_range_proof_positions(
+        reader: &R,
+        full_acc_leaves: LeafCount,
+        first_leaf_index: Option<u64>,
+        num_leaves: LeafCount,
+    ) -> Result<(Vec<Position>, Vec<Position>)> {
+        MerkleAccumulatorView::<R, H>::new(reader, full_acc_leaves)
+            .get_range_proof_positions(first_leaf_index, num_leaves)
+    }
+
     /// From left to right, gets frozen subtree root hashes of the accumulator. For example, if the
     /// accumulator has 5 leaves, `x` and `e` are returned.
     /// ```text
@@ -328,6 +339,10 @@ where
         }
     }
 
+    fn get_hashes(&self, positions: &[Position]) -> Result<Vec<HashValue>> {
+        positions.iter().map(|p| self.get_hash(*p)).collect()
+    }
+
     /// implementation for pub interface `MerkleAccumulator::get_proof`
     fn get_proof(&self, leaf_index: u64) -> Result<AccumulatorProof<H>> {
         ensure!(
@@ -367,12 +382,25 @@ where
         first_leaf_index: Option<u64>,
         num_leaves: LeafCount,
     ) -> Result<AccumulatorRangeProof<H>> {
+        let (left_siblings, right_siblings) =
+            self.get_range_proof_positions(first_leaf_index, num_leaves)?;
+        Ok(AccumulatorRangeProof::new(
+            self.get_hashes(&left_siblings)?,
+            self.get_hashes(&right_siblings)?,
+        ))
+    }
+
+    fn get_range_proof_positions(
+        &self,
+        first_leaf_index: Option<u64>,
+        num_leaves: LeafCount,
+    ) -> Result<(Vec<Position>, Vec<Position>)> {
         if first_leaf_index.is_none() {
             ensure!(
                 num_leaves == 0,
                 "num_leaves is not zero while first_leaf_index is None.",
             );
-            return Ok(AccumulatorRangeProof::new_empty());
+            return Ok((Vec::new(), Vec::new()));
         }
 
         let first_leaf_index = first_leaf_index.expect("first_leaf_index should not be None.");
@@ -390,31 +418,32 @@ where
             self.num_leaves,
         );
 
-        let left_siblings = self.get_siblings(first_leaf_index, |p| p.is_left_child())?;
-        let right_siblings = self.get_siblings(last_leaf_index, |p| p.is_right_child())?;
-        Ok(AccumulatorRangeProof::new(left_siblings, right_siblings))
+        let left_siblings = self.get_sibling_positions(first_leaf_index, |p| p.is_left_child());
+        let right_siblings = self.get_sibling_positions(last_leaf_index, |p| p.is_right_child());
+        Ok((left_siblings, right_siblings))
     }
 
-    /// Helper function to get siblings on the path from the given leaf to the root. An additional
-    /// filter function can be applied to filter out certain siblings.
     fn get_siblings(
         &self,
         leaf_index: u64,
         filter: impl Fn(Position) -> bool,
     ) -> Result<Vec<HashValue>> {
+        self.get_hashes(&self.get_sibling_positions(leaf_index, filter))
+    }
+
+    /// Helper function to get siblings on the path from the given leaf to the root. An additional
+    /// filter function can be applied to filter out certain siblings.
+    fn get_sibling_positions(
+        &self,
+        leaf_index: u64,
+        filter: impl Fn(Position) -> bool,
+    ) -> Vec<Position> {
         let root_pos = Position::root_from_leaf_count(self.num_leaves);
-        let siblings = Position::from_leaf_index(leaf_index)
+        Position::from_leaf_index(leaf_index)
             .iter_ancestor_sibling()
             .take(root_pos.level() as usize)
-            .filter_map(|p| {
-                if filter(p) {
-                    Some(self.get_hash(p))
-                } else {
-                    None
-                }
-            })
-            .collect::<Result<Vec<_>>>()?;
-        Ok(siblings)
+            .filter(|p| filter(*p))
+            .collect()
     }
 
     /// Implementation for public interface `MerkleAccumulator::get_frozen_subtree_hashes`.
