@@ -9,7 +9,7 @@ error: post-condition does not hold
     =     at tests/sources/regression/generic_invariant200518.move:24:5: remove_privilege
     =         addr = <redacted>,
     =         $t1 = <redacted>
-    =     at tests/sources/regression/generic_invariant200518.move:26:57: remove_privilege
+    =     at tests/sources/regression/generic_invariant200518.move:28:9: remove_privilege
     =     at tests/sources/regression/generic_invariant200518.move:40:52: root_address (entry)
     =         result = <redacted>
     =     at tests/sources/regression/generic_invariant200518.move:40:52: root_address (exit)
