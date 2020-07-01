@@ -60,9 +60,7 @@ struct Args {
     #[structopt(long, group = "action", requires = "swarm")]
     diag: bool,
     #[structopt(long, group = "action")]
-    perf_run: bool,
-    #[structopt(long, group = "action")]
-    run_ci_suite: bool,
+    suite: Option<String>,
     #[structopt(long, group = "action")]
     exec: Option<String>,
 
@@ -204,10 +202,8 @@ async fn handle_cluster_test_runner_commands(
     if args.health_check {
         let duration = Duration::from_secs(args.duration);
         run_health_check(&runner.logs, &mut runner.health_check_runner, duration).await?
-    } else if args.perf_run {
-        perf_msg = Some(runner.perf_run().await?);
-    } else if args.run_ci_suite {
-        perf_msg = Some(runner.run_ci_suite().await?);
+    } else if let Some(suite) = args.suite.as_ref() {
+        perf_msg = Some(runner.run_named_suite(suite).await?);
     } else if let Some(experiment_name) = args.run.as_ref() {
         runner
             .run_and_report(get_experiment(experiment_name, &args.last, &runner.cluster))
@@ -518,14 +514,6 @@ impl ClusterTestRunner {
         })
     }
 
-    pub async fn run_ci_suite(&mut self) -> Result<String> {
-        let suite = ExperimentSuite::new_pre_release(&self.cluster);
-        let result = self.run_suite(suite).await;
-        result?;
-        let perf_msg = format!("Performance report:\n```\n{}\n```", self.report);
-        Ok(perf_msg)
-    }
-
     pub fn send_changelog_message(
         &self,
         perf_msg: &str,
@@ -596,17 +584,15 @@ impl ClusterTestRunner {
         );
     }
 
-    pub async fn perf_run(&mut self) -> Result<String> {
-        let suite = ExperimentSuite::new_perf_suite(&self.cluster);
+    pub async fn run_named_suite(&mut self, name: &str) -> Result<String> {
+        let suite = ExperimentSuite::new_by_name(&self.cluster, name)?;
         self.run_suite(suite).await?;
         Ok(self.report.to_string())
     }
 
     pub async fn run_and_report(&mut self, experiment: Box<dyn Experiment>) -> Result<()> {
-        let result = self
-            .run_single_experiment(experiment, Some(self.global_emit_job_request.clone()))
-            .await;
-        result?;
+        self.run_single_experiment(experiment, Some(self.global_emit_job_request.clone()))
+            .await?;
         self.print_report();
         Ok(())
     }
