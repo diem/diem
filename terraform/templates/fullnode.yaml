@@ -1,0 +1,2 @@
+base:
+  chain_id: "${chain_id}"
