@@ -35,4 +35,4 @@ proptest = "0.10.0"
 [features]
 default = []
 mirai-contracts = []
-fuzzing = ["vm/fuzzing"]
+fuzzing = ["vm/fuzzing","move-vm-types/fuzzing"]
