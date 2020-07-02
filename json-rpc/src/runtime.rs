@@ -19,6 +19,14 @@ use warp::{
     Filter,
 };
 
+// Counter labels for runtime metrics
+const LABEL_FAIL: &str = "fail";
+const LABEL_INVALID_FORMAT: &str = "invalid_format";
+const LABEL_INVALID_METHOD: &str = "invalid_method";
+const LABEL_INVALID_PARAMS: &str = "invalid_params";
+const LABEL_MISSING_METHOD: &str = "method_not_found";
+const LABEL_SUCCESS: &str = "success";
+
 /// Creates HTTP server (warp-based) that serves JSON RPC requests
 /// Returns handle to corresponding Tokio runtime
 pub fn bootstrap(
@@ -118,13 +126,11 @@ async fn rpc_request_handler(
             request = data;
         }
         _ => {
-            response.insert(
-                "error".to_string(),
-                JsonRpcError::invalid_request().serialize(),
+            set_response_error(
+                &mut response,
+                JsonRpcError::invalid_request(),
+                Some(LABEL_INVALID_FORMAT),
             );
-            counters::INVALID_REQUESTS
-                .with_label_values(&["invalid_format"])
-                .inc();
             return Value::Object(response);
         }
     }
@@ -135,20 +141,14 @@ async fn rpc_request_handler(
             response.insert("id".to_string(), request_id);
         }
         Err(err) => {
-            response.insert("error".to_string(), err.serialize());
-            counters::INVALID_REQUESTS
-                .with_label_values(&["invalid_format"])
-                .inc();
+            set_response_error(&mut response, err, Some(LABEL_INVALID_FORMAT));
             return Value::Object(response);
         }
     };
 
     // verify protocol version
     if let Err(err) = verify_protocol(&request) {
-        response.insert("error".to_string(), err.serialize());
-        counters::INVALID_REQUESTS
-            .with_label_values(&["invalid_format"])
-            .inc();
+        set_response_error(&mut response, err, Some(LABEL_INVALID_FORMAT));
         return Value::Object(response);
     }
 
@@ -159,13 +159,11 @@ async fn rpc_request_handler(
             params = parameters.to_vec();
         }
         _ => {
-            response.insert(
-                "error".to_string(),
-                JsonRpcError::invalid_params().serialize(),
+            set_response_error(
+                &mut response,
+                JsonRpcError::invalid_params(),
+                Some(LABEL_INVALID_PARAMS),
             );
-            counters::INVALID_REQUESTS
-                .with_label_values(&["invalid_params"])
-                .inc();
             return Value::Object(response);
         }
     }
@@ -181,44 +179,53 @@ async fn rpc_request_handler(
                 Ok(result) => {
                     response.insert("result".to_string(), result);
                     counters::REQUESTS
-                        .with_label_values(&[name, "success"])
+                        .with_label_values(&[name, LABEL_SUCCESS])
                         .inc();
                 }
                 Err(err) => {
                     // check for custom error
                     if let Some(custom_error) = err.downcast_ref::<JsonRpcError>() {
-                        response.insert("error".to_string(), custom_error.clone().serialize());
+                        set_response_error(&mut response, custom_error.clone(), None);
                     } else {
-                        response.insert(
-                            "error".to_string(),
-                            JsonRpcError::internal_error(err.to_string()).serialize(),
+                        set_response_error(
+                            &mut response,
+                            JsonRpcError::internal_error(err.to_string()),
+                            None,
                         );
                     }
-                    counters::REQUESTS.with_label_values(&[name, "fail"]).inc();
+                    counters::REQUESTS
+                        .with_label_values(&[name, LABEL_FAIL])
+                        .inc();
                 }
             },
             None => {
-                response.insert(
-                    "error".to_string(),
-                    JsonRpcError::method_not_found().serialize(),
+                set_response_error(
+                    &mut response,
+                    JsonRpcError::method_not_found(),
+                    Some(LABEL_MISSING_METHOD),
                 );
-                counters::INVALID_REQUESTS
-                    .with_label_values(&["method_not_found"])
-                    .inc();
             }
         },
         _ => {
-            response.insert(
-                "error".to_string(),
-                JsonRpcError::invalid_request().serialize(),
+            set_response_error(
+                &mut response,
+                JsonRpcError::invalid_request(),
+                Some(LABEL_INVALID_METHOD),
             );
-            counters::INVALID_REQUESTS
-                .with_label_values(&["invalid_method"])
-                .inc();
         }
     }
 
     Value::Object(response)
+}
+
+// Sets the JSON RPC error value for a given response.
+// If a counter label is supplied, also increments the invalid request counter using the label,
+fn set_response_error(response: &mut Map<String, Value>, error: JsonRpcError, label: Option<&str>) {
+    response.insert("error".to_string(), error.serialize());
+
+    if let Some(label) = label {
+        counters::INVALID_REQUESTS.with_label_values(&[label]).inc();
+    }
 }
 
 fn parse_request_id(request: &Map<String, Value>) -> Result<Value, JsonRpcError> {
