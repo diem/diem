@@ -86,7 +86,7 @@ pub enum ConnectionRequest {
     ),
 }
 
-#[derive(Debug, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub enum ConnectionNotification {
     /// Connection with a new peer has been established.
     NewPeer(PeerId, NetworkAddress, Arc<NetworkContext>),
@@ -430,11 +430,12 @@ where
                 // Notify upstream if there's still no active connection. This might be redundant,
                 // but does not affect correctness.
                 if !self.active_peers.contains_key(&peer_id) {
-                    self.send_lostpeer_notification(
+                    let notif = ConnectionNotification::LostPeer(
                         peer_id,
                         lost_conn_metadata.addr().clone(),
                         reason,
                     );
+                    self.send_conn_notification(peer_id, notif);
                 }
             }
         }
@@ -634,36 +635,23 @@ where
             .insert(peer_id, (conn_meta.clone(), network_reqs_tx));
         // Send NewPeer notification to connection event handlers.
         if send_new_peer_notification {
-            for handler in self.connection_event_handlers.iter_mut() {
-                handler
-                    .push(
-                        peer_id,
-                        ConnectionNotification::NewPeer(
-                            peer_id,
-                            conn_meta.addr().clone(),
-                            self.network_context.clone(),
-                        ),
-                    )
-                    .unwrap();
-            }
+            let notif = ConnectionNotification::NewPeer(
+                peer_id,
+                conn_meta.addr().clone(),
+                self.network_context.clone(),
+            );
+            self.send_conn_notification(peer_id, notif);
         }
     }
 
-    fn send_lostpeer_notification(
-        &mut self,
-        peer_id: PeerId,
-        addr: NetworkAddress,
-        reason: DisconnectReason,
-    ) {
-        // Send LostPeer notification to connection event handlers.
+    /// Sends a `ConnectionNotification` to all event handlers, warns on failures
+    fn send_conn_notification(&mut self, peer_id: PeerId, notification: ConnectionNotification) {
         for handler in self.connection_event_handlers.iter_mut() {
-            if let Err(e) = handler.push(
-                peer_id,
-                ConnectionNotification::LostPeer(peer_id, addr.clone(), reason),
-            ) {
+            if let Err(e) = handler.push(peer_id, notification.clone()) {
                 warn!(
-                    "{} Failed to send lost peer notification to handler for peer: {}. Error: {:?}",
+                    "{} Failed to send notification {:?} to handler for peer: {}. Error: {:?}",
                     self.network_context,
+                    notification,
                     peer_id.short_str(),
                     e
                 );

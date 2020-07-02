@@ -5,8 +5,8 @@ use super::*;
 use crate::{
     error::NetworkErrorKind,
     peer_manager::{
-        self, conn_notifs_channel, ConnectionRequestSender, PeerManagerNotification,
-        PeerManagerRequest,
+        self, conn_notifs_channel, conn_notifs_channel::Sender, ConnectionNotification,
+        ConnectionRequestSender, PeerManagerNotification, PeerManagerRequest,
     },
     protocols::{
         direct_send::Message,
@@ -15,7 +15,7 @@ use crate::{
     ProtocolId,
 };
 use anyhow::anyhow;
-use channel::{libra_channel, message_queues::QueueStyle};
+use channel::{libra_channel, libra_channel::ElementStatus, message_queues::QueueStyle};
 use futures::channel::oneshot;
 use libra_config::{config::RoleType, network_id::NetworkId};
 use libra_network_address::NetworkAddress;
@@ -81,6 +81,19 @@ fn setup_discovery(
         connection_notifs_tx,
         ticker_tx,
     )
+}
+
+fn send_new_peer_with_feedback(
+    connection_notifs_tx: &mut Sender,
+    peer_id: PeerId,
+    address: NetworkAddress,
+    delivered_tx: oneshot::Sender<ElementStatus<ConnectionNotification>>,
+) {
+    let notif =
+        peer_manager::ConnectionNotification::NewPeer(peer_id, address, NetworkContext::mock());
+    connection_notifs_tx
+        .push_with_feedback(peer_id, notif, Some(delivered_tx))
+        .unwrap();
 }
 
 async fn expect_address_update(
@@ -231,17 +244,12 @@ fn outbound() {
     let f_network = async move {
         let (delivered_tx, delivered_rx) = oneshot::channel();
         // Notify discovery actor of connection to other peer.
-        connection_notifs_tx
-            .push_with_feedback(
-                other_peer_id,
-                peer_manager::ConnectionNotification::NewPeer(
-                    other_peer_id,
-                    other_peer_addr,
-                    NetworkContext::mock(),
-                ),
-                Some(delivered_tx),
-            )
-            .unwrap();
+        send_new_peer_with_feedback(
+            &mut connection_notifs_tx,
+            other_peer_id,
+            other_peer_addr.clone(),
+            delivered_tx,
+        );
         delivered_rx.await.unwrap();
 
         // Trigger outbound msg.
@@ -288,17 +296,12 @@ fn old_note_higher_epoch() {
     let f_network = async move {
         // Notify discovery actor of connection to other peer.
         let (delivered_tx, delivered_rx) = oneshot::channel();
-        connection_notifs_tx
-            .push_with_feedback(
-                other_peer_id,
-                peer_manager::ConnectionNotification::NewPeer(
-                    other_peer_id,
-                    other_peer_addrs[0].clone(),
-                    NetworkContext::mock(),
-                ),
-                Some(delivered_tx),
-            )
-            .unwrap();
+        send_new_peer_with_feedback(
+            &mut connection_notifs_tx,
+            other_peer_id,
+            other_peer_addrs[0].clone(),
+            delivered_tx,
+        );
         delivered_rx.await.unwrap();
 
         // Send DiscoveryMsg consisting of the this node's older note which has higher epoch than
@@ -363,17 +366,12 @@ fn old_note_max_epoch() {
     let f_network = async move {
         // Notify discovery actor of connection to other peer.
         let (delivered_tx, delivered_rx) = oneshot::channel();
-        connection_notifs_tx
-            .push_with_feedback(
-                other_peer_id,
-                peer_manager::ConnectionNotification::NewPeer(
-                    other_peer_id,
-                    other_peer_addrs[0].clone(),
-                    NetworkContext::mock(),
-                ),
-                Some(delivered_tx),
-            )
-            .unwrap();
+        send_new_peer_with_feedback(
+            &mut connection_notifs_tx,
+            other_peer_id,
+            other_peer_addrs[0].clone(),
+            delivered_tx,
+        );
         delivered_rx.await.unwrap();
 
         // Send DiscoveryMsg consisting of the this node's older note which has u64::MAX epoch.
