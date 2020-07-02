@@ -84,6 +84,7 @@ macro_rules! trace_code_block {
             concat!($stage, "::done"),
             $crate::format_node!($node),
             module_path!(),
+            $crate::is_selected($crate::node_sampling_data!($node)),
         );
         trace_event!($stage, $node);
     };
@@ -92,6 +93,7 @@ macro_rules! trace_code_block {
             concat!($stage, "::done"),
             $crate::format_node!($node),
             module_path!(),
+            $crate::is_selected($crate::node_sampling_data!($node)),
         );
         trace_event!($stage, $node);
         $guard_vec.push(trace_guard);
@@ -103,6 +105,7 @@ pub struct TraceBlockGuard {
     node: String,
     module_path: &'static str,
     started: Instant,
+    is_selected: bool,
 }
 
 impl TraceBlockGuard {
@@ -110,12 +113,14 @@ impl TraceBlockGuard {
         stage: &'static str,
         node: String,
         module_path: &'static str,
+        is_selected: bool,
     ) -> TraceBlockGuard {
         let started = Instant::now();
         TraceBlockGuard {
             stage,
             node,
             module_path,
+            is_selected,
             started,
         }
     }
@@ -123,8 +128,10 @@ impl TraceBlockGuard {
 
 impl Drop for TraceBlockGuard {
     fn drop(&mut self) {
-        let duration = format!("{:.0?}", Instant::now().duration_since(self.started));
-        trace_event!(self.stage; {self.node, self.module_path, duration});
+        if self.is_selected {
+            let duration = format!("{:.0?}", Instant::now().duration_since(self.started));
+            trace_event!(self.stage; {self.node, self.module_path, duration});
+        }
     }
 }
 
