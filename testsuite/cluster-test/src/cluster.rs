@@ -11,7 +11,7 @@ use libra_crypto::{
 };
 use rand::prelude::*;
 use reqwest::Client;
-use std::convert::TryInto;
+use std::{collections::HashSet, convert::TryInto};
 
 #[derive(Clone)]
 pub struct Cluster {
@@ -179,5 +179,26 @@ impl Cluster {
 
     pub fn find_instance_by_pod(&self, pod: &str) -> Option<&Instance> {
         self.all_instances().find(|i| i.peer_name() == pod)
+    }
+
+    pub fn exclude_subcluster(&self, exclude: &[Instance]) -> Self {
+        let exclude: HashSet<_> = exclude.iter().cloned().collect();
+        let validator_instances = self
+            .validator_instances
+            .clone()
+            .into_iter()
+            .filter(|i| !exclude.contains(i))
+            .collect();
+        let fullnode_instances = self
+            .fullnode_instances
+            .clone()
+            .into_iter()
+            .filter(|i| !exclude.contains(i))
+            .collect();
+        Cluster {
+            validator_instances,
+            fullnode_instances,
+            mint_key_pair: self.mint_key_pair.clone(),
+        }
     }
 }

@@ -4,7 +4,6 @@
 use crate::{
     cluster::Cluster,
     experiments::{Context, Experiment, ExperimentParam},
-    instance,
     instance::Instance,
     stats,
     tx_emitter::EmitJobRequest,
@@ -17,7 +16,6 @@ use futures::{future::try_join_all, join};
 use libra_logger::{info, warn};
 use serde_json::Value;
 use std::{
-    collections::HashSet,
     fmt::{Display, Error, Formatter},
     time::Duration,
 };
@@ -115,8 +113,8 @@ impl ExperimentParam for PerformanceBenchmarkParams {
 
 #[async_trait]
 impl Experiment for PerformanceBenchmark {
-    fn affected_validators(&self) -> HashSet<String> {
-        instance::instancelist_to_set(&self.down_validators)
+    fn affected_instances(&self) -> &[Instance] {
+        &self.down_validators
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> Result<()> {

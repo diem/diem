@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use std::{collections::HashSet, fmt, time::Duration};
+use std::{fmt, slice, time::Duration};
 
 use structopt::StructOpt;
 use tokio::time;
@@ -46,10 +46,8 @@ impl ExperimentParam for RecoveryTimeParams {
 
 #[async_trait]
 impl Experiment for RecoveryTime {
-    fn affected_validators(&self) -> HashSet<String> {
-        let mut result = HashSet::new();
-        result.insert(self.instance.peer_name().clone());
-        result
+    fn affected_instances(&self) -> &[Instance] {
+        slice::from_ref(&self.instance)
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {

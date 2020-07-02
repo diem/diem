@@ -6,7 +6,6 @@
 use crate::{
     cluster::Cluster,
     experiments::{Context, Experiment, ExperimentParam},
-    instance,
     instance::Instance,
     tx_emitter::{execute_and_wait_transactions, AccountData, EmitJobRequest},
 };
@@ -20,7 +19,6 @@ use libra_types::{
     transaction::{helpers::create_user_txn, TransactionPayload},
 };
 use std::{
-    collections::HashSet,
     fmt,
     time::{Duration, Instant},
 };
@@ -46,6 +44,7 @@ pub struct ValidatorVersioning {
     first_batch: Vec<Instance>,
     second_batch: Vec<Instance>,
     full_nodes: Vec<Instance>,
+    affected_instances: Vec<Instance>,
     updated_image_tag: String,
 }
 
@@ -64,6 +63,7 @@ impl ExperimentParam for ValidatorVersioningParams {
         Self::E {
             first_batch: first_batch.into_validator_instances(),
             second_batch: second_batch.into_validator_instances(),
+            affected_instances: cluster.all_instances().cloned().collect(),
             full_nodes: cluster.fullnode_instances().to_vec(),
             updated_image_tag: self.updated_image_tag,
         }
@@ -110,11 +110,8 @@ async fn update_batch_instance(
 
 #[async_trait]
 impl Experiment for ValidatorVersioning {
-    fn affected_validators(&self) -> HashSet<String> {
-        instance::instancelist_to_set(&self.first_batch)
-            .union(&instance::instancelist_to_set(&self.second_batch))
-            .cloned()
-            .collect()
+    fn affected_instances(&self) -> &[Instance] {
+        &self.affected_instances
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()> {

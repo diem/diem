@@ -3,14 +3,13 @@
 
 #![forbid(unsafe_code)]
 
-use std::{collections::HashSet, fmt, time::Duration};
+use std::{fmt, time::Duration};
 
 use rand::Rng;
 
 use crate::{
     cluster::Cluster,
     experiments::{Context, Experiment, ExperimentParam},
-    instance,
     instance::Instance,
 };
 use async_trait::async_trait;
@@ -50,8 +49,8 @@ impl ExperimentParam for RebootRandomValidatorsParams {
 
 #[async_trait]
 impl Experiment for RebootRandomValidators {
-    fn affected_validators(&self) -> HashSet<String> {
-        instance::instancelist_to_set(&self.instances)
+    fn affected_instances(&self) -> &[Instance] {
+        &self.instances
     }
 
     async fn run(&mut self, _context: &mut Context<'_>) -> anyhow::Result<()> {

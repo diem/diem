@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
-    collections::HashSet,
     env, fmt, process,
     time::{Duration, Instant},
 };
@@ -127,9 +126,9 @@ pub async fn main() {
     } else if args.health_check && args.swarm {
         let util = BasicSwarmUtil::setup(&args);
         let logs = DebugPortLogWorker::spawn_new(&util.cluster).0;
-        let mut health_check_runner = HealthCheckRunner::new_all(logs, util.cluster);
+        let mut health_check_runner = HealthCheckRunner::new_all(logs, util.cluster.clone());
         let duration = Duration::from_secs(args.duration);
-        exit_on_error(run_health_check(&mut health_check_runner, duration).await);
+        exit_on_error(run_health_check(&util.cluster, &mut health_check_runner, duration).await);
         return;
     }
 
@@ -201,7 +200,7 @@ async fn handle_cluster_test_runner_commands(
     let mut perf_msg = None;
     if args.health_check {
         let duration = Duration::from_secs(args.duration);
-        run_health_check(&mut runner.health_check_runner, duration).await?
+        run_health_check(&runner.cluster, &mut runner.health_check_runner, duration).await?
     } else if let Some(suite) = args.suite.as_ref() {
         perf_msg = Some(runner.run_named_suite(suite).await?);
     } else if let Some(experiment_name) = args.run.as_ref() {
@@ -321,6 +320,7 @@ async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
 }
 
 async fn run_health_check(
+    cluster: &Cluster,
     health_check_runner: &mut HealthCheckRunner,
     duration: Duration,
 ) -> Result<()> {
@@ -330,9 +330,7 @@ async fn run_health_check(
         // This assumes so far that event propagation time is << 1s, this need to be refined
         // in future to account for actual event propagation delay
         delay_for(Duration::from_secs(1)).await;
-        let result = health_check_runner
-            .run(&HashSet::new(), PrintFailures::All)
-            .await;
+        let result = health_check_runner.run(cluster, PrintFailures::All).await;
         let now = Instant::now();
         if now > health_check_deadline {
             return result.map(|_| ());
@@ -600,7 +598,7 @@ impl ClusterTestRunner {
     ) -> Result<()> {
         if let Err(s) = self
             .health_check_runner
-            .run(&HashSet::new(), PrintFailures::UnexpectedOnly)
+            .run(&self.cluster, PrintFailures::UnexpectedOnly)
             .await
         {
             bail!(
@@ -643,7 +641,8 @@ impl ClusterTestRunner {
         mut global_emit_job_request: Option<EmitJobRequest>,
         deadline: Instant,
     ) -> Result<()> {
-        let affected_validators = experiment.affected_validators();
+        let affected_instances = experiment.affected_instances();
+        let healthy_cluster = self.cluster.exclude_subcluster(affected_instances);
         let mut context = Context::new(
             &mut self.tx_emitter,
             &mut self.trace_tail,
@@ -667,7 +666,7 @@ impl ClusterTestRunner {
                 }
                 delay = delay_for(HEALTH_POLL_INTERVAL).fuse() => {
                     if let Err(s) = self.health_check_runner.run(
-                        &affected_validators,
+                        &healthy_cluster,
                         PrintFailures::UnexpectedOnly,
                     ).await {
                         bail!("Validators which were not under experiment failed : {}", s);
@@ -690,7 +689,7 @@ impl ClusterTestRunner {
             delay_for(HEALTH_POLL_INTERVAL).await;
             if let Ok(failed_instances) = self
                 .health_check_runner
-                .run(&HashSet::new(), PrintFailures::None)
+                .run(&self.cluster, PrintFailures::None)
                 .await
             {
                 if failed_instances.is_empty() {

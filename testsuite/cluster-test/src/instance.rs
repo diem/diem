@@ -13,6 +13,7 @@ use serde_json::Value;
 use std::{
     collections::HashSet,
     fmt,
+    hash::{Hash, Hasher},
     str::FromStr,
     time::{Duration, Instant},
 };
@@ -335,4 +336,17 @@ pub fn instancelist_to_set(instances: &[Instance]) -> HashSet<String> {
         r.insert(instance.peer_name().clone());
     }
     r
+}
+
+impl PartialEq for Instance {
+    fn eq(&self, other: &Self) -> bool {
+        self.peer_name == other.peer_name
+    }
+}
+impl Eq for Instance {}
+
+impl Hash for Instance {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.peer_name.hash(state)
+    }
 }

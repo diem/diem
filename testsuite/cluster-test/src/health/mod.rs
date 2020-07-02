@@ -19,9 +19,8 @@ use itertools::Itertools;
 pub use liveness_check::LivenessHealthCheck;
 pub use log_tail::{LogTail, TraceTail};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     env, fmt,
-    iter::FromIterator,
     time::{Duration, Instant, SystemTime},
 };
 use termion::color::*;
@@ -77,16 +76,14 @@ pub trait HealthCheck: Send {
 }
 
 pub struct HealthCheckRunner {
-    cluster: Cluster,
     health_checks: Vec<Box<dyn HealthCheck>>,
     debug: bool,
     logs: LogTail,
 }
 
 impl HealthCheckRunner {
-    pub fn new(logs: LogTail, cluster: Cluster, health_checks: Vec<Box<dyn HealthCheck>>) -> Self {
+    pub fn new(logs: LogTail, health_checks: Vec<Box<dyn HealthCheck>>) -> Self {
         Self {
-            cluster,
             health_checks,
             debug: env::var("HEALTH_CHECK_DEBUG").is_ok(),
             logs,
@@ -95,10 +92,9 @@ impl HealthCheckRunner {
 
     pub fn new_all(logs: LogTail, cluster: Cluster) -> Self {
         let liveness_health_check = LivenessHealthCheck::new(&cluster);
-        let fullnode_check = FullNodeHealthCheck::new(cluster.clone());
+        let fullnode_check = FullNodeHealthCheck::new(cluster);
         Self::new(
             logs,
-            cluster,
             vec![
                 Box::new(CommitHistoryHealthCheck::new()),
                 Box::new(liveness_health_check),
@@ -114,12 +110,12 @@ impl HealthCheckRunner {
     /// It also takes print_failures parameter that controls level of verbosity of health check
     pub async fn run(
         &mut self,
-        affected_validators_set: &HashSet<String>,
+        cluster: &Cluster,
         print_failures: PrintFailures,
     ) -> Result<Vec<String>> {
         let events = self.logs.recv_all();
         let mut node_health = HashMap::new();
-        for instance in self.cluster.validator_instances() {
+        for instance in cluster.validator_instances() {
             node_health.insert(instance.peer_name().clone(), true);
         }
         let mut messages = vec![];
@@ -166,18 +162,12 @@ impl HealthCheckRunner {
         messages.push(format!(""));
         messages.push(format!(""));
 
-        let affected_validators_set_refs = HashSet::from_iter(affected_validators_set.iter());
-        let failed_set: HashSet<&String> = HashSet::from_iter(failed.iter());
-        let has_unexpected_failures = !failed_set.is_subset(&affected_validators_set_refs);
-
-        if print_failures.should_print(has_unexpected_failures) {
+        if print_failures.should_print(failed.is_empty()) {
             messages.iter().for_each(|m| println!("{}", m));
         }
 
-        if has_unexpected_failures {
-            let unexpected_failures = failed_set
-                .difference(&affected_validators_set_refs)
-                .join(",");
+        if failed.is_empty() {
+            let unexpected_failures = failed.join(",");
             bail!(unexpected_failures);
         }
         Ok(failed)

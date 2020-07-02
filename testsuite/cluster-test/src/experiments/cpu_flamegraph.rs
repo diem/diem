@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use std::{
-    collections::HashSet,
     fmt::{Display, Error, Formatter},
+    slice,
     time::Duration,
 };
 
@@ -18,7 +18,6 @@ use async_trait::async_trait;
 use crate::{
     cluster::Cluster,
     experiments::{Context, Experiment, ExperimentParam},
-    instance,
     instance::Instance,
     tx_emitter::EmitJobRequest,
 };
@@ -51,8 +50,8 @@ impl ExperimentParam for CpuFlamegraphParams {
 
 #[async_trait]
 impl Experiment for CpuFlamegraph {
-    fn affected_validators(&self) -> HashSet<String> {
-        instance::instancelist_to_set(&[self.perf_instance.clone()])
+    fn affected_instances(&self) -> &[Instance] {
+        slice::from_ref(&self.perf_instance)
     }
 
     async fn run(&mut self, context: &mut Context<'_>) -> Result<()> {

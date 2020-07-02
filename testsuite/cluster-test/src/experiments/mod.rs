@@ -11,7 +11,7 @@ mod reboot_random_validator;
 mod recovery_time;
 mod versioning_test;
 
-use std::{collections::HashSet, fmt::Display, time::Duration};
+use std::{fmt::Display, time::Duration};
 
 pub use packet_loss_random_validators::{
     PacketLossRandomValidators, PacketLossRandomValidatorsParams,
@@ -34,6 +34,7 @@ use crate::{
 use crate::{
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
     health::TraceTail,
+    instance::Instance,
 };
 use async_trait::async_trait;
 pub use cpu_flamegraph::{CpuFlamegraph, CpuFlamegraphParams};
@@ -42,8 +43,8 @@ use structopt::{clap::AppSettings, StructOpt};
 
 #[async_trait]
 pub trait Experiment: Display + Send {
-    fn affected_validators(&self) -> HashSet<String> {
-        HashSet::new()
+    fn affected_instances(&self) -> &[Instance] {
+        &[]
     }
     async fn run(&mut self, context: &mut Context<'_>) -> anyhow::Result<()>;
     fn deadline(&self) -> Duration;
