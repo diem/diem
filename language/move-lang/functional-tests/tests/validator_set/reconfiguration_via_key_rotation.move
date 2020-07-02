@@ -47,7 +47,9 @@ script{
 
     // rotate vivian's pubkey and then run the block prologue. Now, reconfiguration should be triggered.
     fun main(account: &signer) {
+        let old_num_validators = LibraSystem::validator_set_size();
         LibraSystem::update_and_reconfigure(account);
+        assert(old_num_validators == LibraSystem::validator_set_size(), 98);
         // check that the validator set contains Vivian's new key after reconfiguration
         assert(*ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{vivian}})) ==
                x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", 98);
@@ -86,7 +88,9 @@ script{
     // triggered. the not "NewEpochEvent" check part tests this because reconfiguration always emits a
     // NewEpoch event.
     fun main(account: &signer) {
+        let old_num_validators = LibraSystem::validator_set_size();
         LibraSystem::update_and_reconfigure(account);
+        assert(old_num_validators == LibraSystem::validator_set_size(), 98);
     }
 }
 

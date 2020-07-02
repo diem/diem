@@ -53,7 +53,9 @@ script{
 script{
     use 0x1::LibraSystem;
     fun main(account: &signer) {
+        let old_num_validators = LibraSystem::validator_set_size();
         LibraSystem::update_and_reconfigure(account);
+        assert(old_num_validators == LibraSystem::validator_set_size(), 98);
     }
 }
 
@@ -78,9 +80,25 @@ script{
 script{
     use 0x1::LibraSystem;
     fun main(account: &signer) {
+        let old_num_validators = LibraSystem::validator_set_size();
         LibraSystem::update_and_reconfigure(account);
+        assert(old_num_validators == LibraSystem::validator_set_size(), 98);
     }
 }
 
 // check: ABORT
 // check: 23
+
+//! new-transaction
+//! sender: blessed
+// freezing does not cause changes to the set
+script {
+    use 0x1::LibraAccount;
+    use 0x1::LibraSystem;
+    fun main(tc_account: &signer) {
+        assert(LibraSystem::is_validator({{alice}}) == true, 101);
+        LibraAccount::freeze_account(tc_account, {{alice}});
+        assert(LibraAccount::account_is_frozen({{alice}}), 1);
+        assert(LibraSystem::is_validator({{alice}}) == true, 102);
+    }
+}
