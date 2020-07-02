@@ -310,25 +310,14 @@
     <b>assert</b>(has_libra_root_role(lr_account), 919421);
     <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
     <b>let</b> validators = &<b>mut</b> validator_set.validators;
+    <b>let</b> configs_changed = <b>false</b>;
 
     <b>let</b> size = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(validators);
-    <b>if</b> (size == 0) {
-        <b>return</b>
-    };
-
-    <b>let</b> i = size;
-    <b>let</b> configs_changed = <b>false</b>;
-    <b>while</b> (i &gt; 0) {
-        i = i - 1;
-        // <b>if</b> the validator is invalid, remove it from the set
-        <b>let</b> validator_address = <a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(validators, i).addr;
-        <b>if</b> (<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(validator_address)) {
-            <b>let</b> validator_info_update = <a href="#0x1_LibraSystem_update_ith_validator_info_">update_ith_validator_info_</a>(validators, i);
-            configs_changed = configs_changed || validator_info_update;
-        } <b>else</b> {
-            _  = <a href="Vector.md#0x1_Vector_swap_remove">Vector::swap_remove</a>(validators, i);
-            configs_changed = <b>true</b>;
-        }
+    <b>let</b> i = 0;
+    <b>while</b> (i &lt; size) {
+        <b>let</b> validator_info_update = <a href="#0x1_LibraSystem_update_ith_validator_info_">update_ith_validator_info_</a>(validators, i);
+        configs_changed = configs_changed || validator_info_update;
+        i = i + 1;
     };
     <b>if</b> (configs_changed) {
         <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(validator_set);
@@ -480,10 +469,6 @@
 
 <pre><code><b>fun</b> <a href="#0x1_LibraSystem_get_validator_index_">get_validator_index_</a>(validators: &vector&lt;<a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a>&gt;, addr: address): <a href="Option.md#0x1_Option">Option</a>&lt;u64&gt; {
     <b>let</b> size = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(validators);
-    <b>if</b> (size == 0) {
-        <b>return</b> <a href="Option.md#0x1_Option_none">Option::none</a>()
-    };
-
     <b>let</b> i = 0;
     <b>while</b> ({
         <b>spec</b> {

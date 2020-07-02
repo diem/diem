@@ -76,7 +76,9 @@ script {
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
         // call update to reconfigure
+        let old_num_validators = LibraSystem::validator_set_size();
         LibraSystem::update_and_reconfigure(account);
+        assert(old_num_validators == LibraSystem::validator_set_size(), 98);
 
         // check bob's public key is updated
         let validator_config = LibraSystem::get_validator_config({{bob}});
