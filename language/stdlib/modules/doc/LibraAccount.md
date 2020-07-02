@@ -5,8 +5,6 @@
 
 ### Table of Contents
 
--  [Resource `AccountFreezing`](#0x1_LibraAccount_AccountFreezing)
--  [Resource `AccountUnfreezing`](#0x1_LibraAccount_AccountUnfreezing)
 -  [Resource `PublishModule`](#0x1_LibraAccount_PublishModule)
 -  [Resource `LibraAccount`](#0x1_LibraAccount_LibraAccount)
 -  [Resource `Balance`](#0x1_LibraAccount_Balance)
@@ -19,7 +17,6 @@
 -  [Struct `FreezeAccountEvent`](#0x1_LibraAccount_FreezeAccountEvent)
 -  [Struct `UnfreezeAccountEvent`](#0x1_LibraAccount_UnfreezeAccountEvent)
 -  [Function `grant_association_privileges`](#0x1_LibraAccount_grant_association_privileges)
--  [Function `grant_treasury_compliance_privileges`](#0x1_LibraAccount_grant_treasury_compliance_privileges)
 -  [Function `initialize`](#0x1_LibraAccount_initialize)
 -  [Function `staple_lbr`](#0x1_LibraAccount_staple_lbr)
 -  [Function `unstaple_lbr`](#0x1_LibraAccount_unstaple_lbr)
@@ -57,6 +54,8 @@
 -  [Function `withdraw_capability_address`](#0x1_LibraAccount_withdraw_capability_address)
 -  [Function `key_rotation_capability_address`](#0x1_LibraAccount_key_rotation_capability_address)
 -  [Function `exists_at`](#0x1_LibraAccount_exists_at)
+-  [Function `has_account_freezing_privilege`](#0x1_LibraAccount_has_account_freezing_privilege)
+-  [Function `has_account_unfreezing_privilege`](#0x1_LibraAccount_has_account_unfreezing_privilege)
 -  [Function `freeze_account`](#0x1_LibraAccount_freeze_account)
 -  [Function `unfreeze_account`](#0x1_LibraAccount_unfreeze_account)
 -  [Function `account_is_frozen`](#0x1_LibraAccount_account_is_frozen)
@@ -70,62 +69,6 @@
 -  [Specification](#0x1_LibraAccount_Specification)
 
 
-
-<a name="0x1_LibraAccount_AccountFreezing"></a>
-
-## Resource `AccountFreezing`
-
-
-
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_LibraAccount_AccountFreezing">AccountFreezing</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>dummy_field: bool</code>
-</dt>
-<dd>
-
-</dd>
-</dl>
-
-
-</details>
-
-<a name="0x1_LibraAccount_AccountUnfreezing"></a>
-
-## Resource `AccountUnfreezing`
-
-
-
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_LibraAccount_AccountUnfreezing">AccountUnfreezing</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>dummy_field: bool</code>
-</dt>
-<dd>
-
-</dd>
-</dl>
-
-
-</details>
 
 <a name="0x1_LibraAccount_PublishModule"></a>
 
@@ -552,11 +495,13 @@
 ## Function `grant_association_privileges`
 
 Grants
-<code><a href="#0x1_LibraAccount_AccountFreezing">AccountFreezing</a></code> and
-<code><a href="#0x1_LibraAccount_AccountUnfreezing">AccountUnfreezing</a></code> privileges to the calling
+<code>AccountFreezing</code> and
+<code>AccountUnfreezing</code> privileges to the calling
 <code>account</code>.
 Aborts if the
 <code>account</code> does not have the correct role (association root).
+TODO: This is legacy code. The VM looks for this published Privilege. It should disappear
+soon.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_grant_association_privileges">grant_association_privileges</a>(account: &signer)
@@ -569,39 +514,7 @@ Aborts if the
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_grant_association_privileges">grant_association_privileges</a>(account: &signer) {
-    // TODO: Need <b>to</b> also grant this <b>to</b> the core code address account.
     <a href="Roles.md#0x1_Roles_add_privilege_to_account_association_root_role">Roles::add_privilege_to_account_association_root_role</a>(account, <a href="#0x1_LibraAccount_PublishModule">PublishModule</a>{});
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraAccount_grant_treasury_compliance_privileges"></a>
-
-## Function `grant_treasury_compliance_privileges`
-
-Grants
-<code><a href="#0x1_LibraAccount_AccountFreezing">AccountFreezing</a></code> and
-<code><a href="#0x1_LibraAccount_AccountUnfreezing">AccountUnfreezing</a></code> privileges to the calling
-<code>account</code>.
-Aborts if the
-<code>account</code> does not have the correct role (treasury compliance).
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_grant_treasury_compliance_privileges">grant_treasury_compliance_privileges</a>(account: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_grant_treasury_compliance_privileges">grant_treasury_compliance_privileges</a>(account: &signer) {
-    <a href="Roles.md#0x1_Roles_add_privilege_to_account_treasury_compliance_role">Roles::add_privilege_to_account_treasury_compliance_role</a>(account, <a href="#0x1_LibraAccount_AccountFreezing">AccountFreezing</a>{});
-    <a href="Roles.md#0x1_Roles_add_privilege_to_account_treasury_compliance_role">Roles::add_privilege_to_account_treasury_compliance_role</a>(account, <a href="#0x1_LibraAccount_AccountUnfreezing">AccountUnfreezing</a>{});
 }
 </code></pre>
 
@@ -615,7 +528,7 @@ Aborts if the
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_initialize">initialize</a>(association: &signer, assoc_root_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_initialize">initialize</a>(lr_account: &signer)
 </code></pre>
 
 
@@ -625,17 +538,16 @@ Aborts if the
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_initialize">initialize</a>(
-    association: &signer,
-    assoc_root_capability: &Capability&lt;LibraRootRole&gt;,
+    lr_account: &signer,
 ) {
     // Operational constraint, not a privilege constraint.
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 0);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 0);
     move_to(
-        association,
+        lr_account,
         <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-            limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_grant_calling_capability">AccountLimits::grant_calling_capability</a>(assoc_root_capability),
-            freeze_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>(association),
-            unfreeze_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>(association),
+            limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_grant_calling_capability">AccountLimits::grant_calling_capability</a>(lr_account),
+            freeze_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>(lr_account),
+            unfreeze_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>(lr_account),
         }
     );
 }
@@ -840,7 +752,7 @@ Max valid tier index is 3 since there are max 4 tiers per DD.
 Sender should be treasury compliance account and receiver authorized DD.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_tiered_mint">tiered_mint</a>&lt;Token&gt;(tc_account: &signer, tc_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_tiered_mint">tiered_mint</a>&lt;Token&gt;(tc_account: &signer, designated_dealer_address: address, mint_amount: u64, tier_index: u64)
 </code></pre>
 
 
@@ -851,13 +763,12 @@ Sender should be treasury compliance account and receiver authorized DD.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_tiered_mint">tiered_mint</a>&lt;Token&gt;(
     tc_account: &signer,
-    tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
     designated_dealer_address: address,
     mint_amount: u64,
     tier_index: u64,
 ) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a>, <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> coin = <a href="DesignatedDealer.md#0x1_DesignatedDealer_tiered_mint">DesignatedDealer::tiered_mint</a>&lt;Token&gt;(
-        tc_account, tc_capability, mint_amount, designated_dealer_address, tier_index
+        tc_account, mint_amount, designated_dealer_address, tier_index
     );
     // <b>use</b> the reserved address <b>as</b> the payer because the funds did not come from an existing
     // balance
@@ -1347,7 +1258,7 @@ Create a treasury/compliance account at
 <code>new_account_address</code>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_treasury_compliance_account">create_treasury_compliance_account</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;, tc_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, sliding_nonce_creation_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="SlidingNonce.md#0x1_SlidingNonce_CreateSlidingNonce">SlidingNonce::CreateSlidingNonce</a>&gt;, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, coin1_mint_cap: <a href="Libra.md#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin1.md#0x1_Coin1_Coin1">Coin1::Coin1</a>&gt;, coin1_burn_cap: <a href="Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin1.md#0x1_Coin1_Coin1">Coin1::Coin1</a>&gt;, coin2_mint_cap: <a href="Libra.md#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin2.md#0x1_Coin2_Coin2">Coin2::Coin2</a>&gt;, coin2_burn_cap: <a href="Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin2.md#0x1_Coin2_Coin2">Coin2::Coin2</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_treasury_compliance_account">create_treasury_compliance_account</a>(lr_account: &signer, tc_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, coin1_mint_cap: <a href="Libra.md#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin1.md#0x1_Coin1_Coin1">Coin1::Coin1</a>&gt;, coin1_burn_cap: <a href="Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin1.md#0x1_Coin1_Coin1">Coin1::Coin1</a>&gt;, coin2_mint_cap: <a href="Libra.md#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin2.md#0x1_Coin2_Coin2">Coin2::Coin2</a>&gt;, coin2_burn_cap: <a href="Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin2.md#0x1_Coin2_Coin2">Coin2::Coin2</a>&gt;)
 </code></pre>
 
 
@@ -1357,9 +1268,9 @@ Create a treasury/compliance account at
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_treasury_compliance_account">create_treasury_compliance_account</a>(
-    _: &Capability&lt;LibraRootRole&gt;,
-    tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
-    sliding_nonce_creation_capability: &Capability&lt;CreateSlidingNonce&gt;,
+    lr_account: &signer,
+    tc_account: &signer,
+
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     coin1_mint_cap: <a href="Libra.md#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;,
@@ -1368,12 +1279,14 @@ Create a treasury/compliance account at
     coin2_burn_cap: <a href="Libra.md#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;,
 ) {
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_assert_is_genesis">LibraTimestamp::assert_is_genesis</a>();
+    // TODO: <b>abort</b> code
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), 919408);
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
-    <a href="Libra.md#0x1_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(&new_account, coin1_mint_cap, tc_capability);
-    <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(&new_account, coin1_burn_cap, tc_capability);
-    <a href="Libra.md#0x1_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(&new_account, coin2_mint_cap, tc_capability);
-    <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(&new_account, coin2_burn_cap, tc_capability);
-    <a href="SlidingNonce.md#0x1_SlidingNonce_publish_nonce_resource">SlidingNonce::publish_nonce_resource</a>(sliding_nonce_creation_capability, &new_account);
+    <a href="Libra.md#0x1_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(&new_account, coin1_mint_cap, tc_account);
+    <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(&new_account, coin1_burn_cap, tc_account);
+    <a href="Libra.md#0x1_Libra_publish_mint_capability">Libra::publish_mint_capability</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(&new_account, coin2_mint_cap, tc_account);
+    <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(&new_account, coin2_burn_cap, tc_account);
+    <a href="SlidingNonce.md#0x1_SlidingNonce_publish_nonce_resource">SlidingNonce::publish_nonce_resource</a>(lr_account, &new_account);
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="#0x1_LibraAccount_make_account">make_account</a>(new_account, auth_key_prefix)
 }
@@ -1394,7 +1307,7 @@ Create a designated dealer account at
 Creates Preburn resource under account 'new_account_address'
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(creator_account: &signer, tc_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1405,14 +1318,13 @@ Creates Preburn resource under account 'new_account_address'
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(
     creator_account: &signer,
-    tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
 ) {
     <b>let</b> new_dd_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_dd_account);
-    <a href="Libra.md#0x1_Libra_publish_preburn_to_account">Libra::publish_preburn_to_account</a>&lt;CoinType&gt;(&new_dd_account, tc_capability);
-    <a href="DesignatedDealer.md#0x1_DesignatedDealer_publish_designated_dealer_credential">DesignatedDealer::publish_designated_dealer_credential</a>(&new_dd_account, tc_capability);
+    <a href="Libra.md#0x1_Libra_publish_preburn_to_account">Libra::publish_preburn_to_account</a>&lt;CoinType&gt;(&new_dd_account, creator_account);
+    <a href="DesignatedDealer.md#0x1_DesignatedDealer_publish_designated_dealer_credential">DesignatedDealer::publish_designated_dealer_credential</a>(&new_dd_account, creator_account);
     <a href="Roles.md#0x1_Roles_new_designated_dealer_role">Roles::new_designated_dealer_role</a>(creator_account, &new_dd_account);
     <a href="#0x1_LibraAccount_add_currencies_for_account">add_currencies_for_account</a>&lt;CoinType&gt;(&new_dd_account, <b>false</b>);
     <a href="#0x1_LibraAccount_make_account">make_account</a>(new_dd_account, auth_key_prefix)
@@ -1435,7 +1347,7 @@ Create an account with the ParentVASP role at
 all available currencies in the system will also be added.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(creator_account: &signer, parent_vasp_creation_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1445,8 +1357,7 @@ all available currencies in the system will also be added.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_parent_vasp_account">create_parent_vasp_account</a>&lt;Token&gt;(
-    creator_account: &signer,
-    parent_vasp_creation_capability: &Capability&lt;LibraRootRole&gt;,
+    creator_account: &signer,  // libra root
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     human_name: vector&lt;u8&gt;,
@@ -1458,7 +1369,7 @@ all available currencies in the system will also be added.
     <a href="Roles.md#0x1_Roles_new_parent_vasp_role">Roles::new_parent_vasp_role</a>(creator_account, &new_account);
     <a href="VASP.md#0x1_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(
         &new_account,
-        parent_vasp_creation_capability,
+        creator_account,
         human_name,
         base_url,
         compliance_public_key
@@ -1487,7 +1398,7 @@ also be added. This account will be a child of
 <code>creator</code>, which must be a ParentVASP.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_child_vasp_account">create_child_vasp_account</a>&lt;Token&gt;(parent: &signer, child_vasp_creation_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_ParentVASPRole">Roles::ParentVASPRole</a>&gt;, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_child_vasp_account">create_child_vasp_account</a>&lt;Token&gt;(parent: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1498,7 +1409,6 @@ also be added. This account will be a child of
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_child_vasp_account">create_child_vasp_account</a>&lt;Token&gt;(
     parent: &signer,
-    child_vasp_creation_capability: &Capability&lt;ParentVASPRole&gt;,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     add_all_currencies: bool,
@@ -1508,7 +1418,6 @@ also be added. This account will be a child of
     <a href="VASP.md#0x1_VASP_publish_child_vasp_credential">VASP::publish_child_vasp_credential</a>(
         parent,
         &new_account,
-        child_vasp_creation_capability,
     );
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="#0x1_LibraAccount_add_currencies_for_account">add_currencies_for_account</a>&lt;Token&gt;(&new_account, add_all_currencies);
@@ -1526,7 +1435,7 @@ also be added. This account will be a child of
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_unhosted_account">create_unhosted_account</a>&lt;Token&gt;(creator_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_unhosted_account">create_unhosted_account</a>&lt;Token&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1537,11 +1446,12 @@ also be added. This account will be a child of
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_unhosted_account">create_unhosted_account</a>&lt;Token&gt;(
     creator_account: &signer,
-    _: &Capability&lt;LibraRootRole&gt;,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
     add_all_currencies: bool
 ) {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_libra_root_role(creator_account), 919409);
     <b>assert</b>(!<a href="#0x1_LibraAccount_exists_at">exists_at</a>(new_account_address), 777777);
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Roles.md#0x1_Roles_new_unhosted_role">Roles::new_unhosted_role</a>(creator_account, &new_account);
@@ -1889,13 +1799,61 @@ also be added. This account will be a child of
 
 </details>
 
+<a name="0x1_LibraAccount_has_account_freezing_privilege"></a>
+
+## Function `has_account_freezing_privilege`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_has_account_freezing_privilege">has_account_freezing_privilege</a>(tc_account: &signer): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_has_account_freezing_privilege">has_account_freezing_privilege</a>(tc_account: &signer): bool {
+    has_treasury_compliance_role(tc_account)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_LibraAccount_has_account_unfreezing_privilege"></a>
+
+## Function `has_account_unfreezing_privilege`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_has_account_unfreezing_privilege">has_account_unfreezing_privilege</a>(tc_account: &signer): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_has_account_unfreezing_privilege">has_account_unfreezing_privilege</a>(tc_account: &signer): bool {
+    has_treasury_compliance_role(tc_account)
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_LibraAccount_freeze_account"></a>
 
 ## Function `freeze_account`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_freeze_account">freeze_account</a>(account: &signer, _freezing_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraAccount_AccountFreezing">LibraAccount::AccountFreezing</a>&gt;, frozen_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_freeze_account">freeze_account</a>(account: &signer, frozen_address: address)
 </code></pre>
 
 
@@ -1906,10 +1864,11 @@ also be added. This account will be a child of
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_freeze_account">freeze_account</a>(
     account: &signer,
-    _freezing_capability: &Capability&lt;<a href="#0x1_LibraAccount_AccountFreezing">AccountFreezing</a>&gt;,
     frozen_address: address,
 )
 <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(<a href="#0x1_LibraAccount_has_account_freezing_privilege">has_account_freezing_privilege</a>(account), 919410);
     <b>let</b> initiator_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     // The root association account cannot be frozen
     <b>assert</b>(frozen_address != <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 14);
@@ -1934,7 +1893,7 @@ also be added. This account will be a child of
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_unfreeze_account">unfreeze_account</a>(account: &signer, _unfreezing_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraAccount_AccountUnfreezing">LibraAccount::AccountUnfreezing</a>&gt;, unfrozen_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_unfreeze_account">unfreeze_account</a>(account: &signer, unfrozen_address: address)
 </code></pre>
 
 
@@ -1945,10 +1904,11 @@ also be added. This account will be a child of
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_unfreeze_account">unfreeze_account</a>(
     account: &signer,
-    _unfreezing_capability: &Capability&lt;<a href="#0x1_LibraAccount_AccountUnfreezing">AccountUnfreezing</a>&gt;,
     unfrozen_address: address,
 )
 <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(<a href="#0x1_LibraAccount_has_account_unfreezing_privilege">has_account_unfreezing_privilege</a>(account), 919411);
     <b>let</b> initiator_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     borrow_global_mut&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(unfrozen_address).is_frozen = <b>false</b>;
     <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x1_LibraAccount_UnfreezeAccountEvent">UnfreezeAccountEvent</a>&gt;(
@@ -2191,7 +2151,7 @@ also be added. This account will be a child of
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_validator_account">create_validator_account</a>(creator_account: &signer, assoc_root_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_validator_account">create_validator_account</a>(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2202,14 +2162,14 @@ also be added. This account will be a child of
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_validator_account">create_validator_account</a>(
     creator_account: &signer,
-    assoc_root_capability: &Capability&lt;LibraRootRole&gt;,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
 ) {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_libra_root_role(creator_account), 919412);
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="Roles.md#0x1_Roles_new_validator_role">Roles::new_validator_role</a>(creator_account, &new_account);
-    <a href="ValidatorConfig.md#0x1_ValidatorConfig_publish">ValidatorConfig::publish</a>(&new_account, assoc_root_capability);
+    <a href="ValidatorConfig.md#0x1_ValidatorConfig_publish">ValidatorConfig::publish</a>(&new_account, creator_account);
     <a href="#0x1_LibraAccount_make_account">make_account</a>(new_account, auth_key_prefix)
 }
 </code></pre>
@@ -2224,7 +2184,7 @@ also be added. This account will be a child of
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_validator_operator_account">create_validator_operator_account</a>(creator_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_validator_operator_account">create_validator_operator_account</a>(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -2235,13 +2195,13 @@ also be added. This account will be a child of
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_validator_operator_account">create_validator_operator_account</a>(
     creator_account: &signer,
-    _: &Capability&lt;LibraRootRole&gt;,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
 ) {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_libra_root_role(creator_account), 919413);
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
-    <a href="Roles.md#0x1_Roles_new_validator_operator_role">Roles::new_validator_operator_role</a>(creator_account, &new_account);
     <a href="#0x1_LibraAccount_make_account">make_account</a>(new_account, auth_key_prefix)
 }
 </code></pre>

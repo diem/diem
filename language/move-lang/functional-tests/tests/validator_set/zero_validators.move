@@ -18,18 +18,15 @@ script {
 //! sender: association
 script {
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         let num_validators = LibraSystem::validator_set_size();
         assert(num_validators == 1, 98);
         let index = 0;
         while (index < num_validators) {
             let addr = LibraSystem::get_ith_validator_address(index);
-            LibraSystem::remove_validator(&assoc_root_role, addr);
+            LibraSystem::remove_validator(account, addr);
             index = index + 1;
         };
-        Roles::restore_capability_to_privilege(account, assoc_root_role);
     }
 }
 // check: EXECUTED
@@ -38,11 +35,8 @@ script {
 //! sender: association
 script {
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
-        LibraSystem::update_and_reconfigure(&assoc_root_role);
-        Roles::restore_capability_to_privilege(account, assoc_root_role);
+        LibraSystem::update_and_reconfigure(account);
         let num_validators = LibraSystem::validator_set_size();
         assert(num_validators == 0, 98);
     }

@@ -5,9 +5,8 @@ module LibraConfig {
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
     use 0x1::Offer;
-    use 0x1::Roles::{Self, Capability, LibraRootRole};
-
-    resource struct CreateOnChainConfig {}
+    // TODO: Can't use aliasing because spec functions won't import
+    use 0x1::Roles;
 
     // A generic singleton resource that holds a value of a specific type.
     resource struct LibraConfig<Config: copyable> { payload: Config }
@@ -25,16 +24,10 @@ module LibraConfig {
     // Accounts with this privilege can modify config of type TypeName under default_address
     resource struct ModifyConfigCapability<TypeName> {}
 
-    /// Will fail if the account is not association root
-    public fun grant_privileges(account: &signer) {
-        Roles::add_privilege_to_account_association_root_role(account, CreateOnChainConfig{});
-    }
-
     // This can only be invoked by the config address, and only a single time.
     // Currently, it is invoked in the genesis transaction
     public fun initialize(
         config_account: &signer,
-        _: &Capability<CreateOnChainConfig>,
     ) {
         // Operational constraint
         assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
@@ -85,9 +78,10 @@ module LibraConfig {
     // policy for who can modify the config.
     public fun publish_new_config_with_capability<Config: copyable>(
         config_account: &signer,
-        _: &Capability<CreateOnChainConfig>,
         payload: Config,
     ): ModifyConfigCapability<Config> {
+        // TODO: abort code
+        assert(Roles::has_on_chain_config_privilege(config_account), 919414);
         assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
         move_to(config_account, LibraConfig { payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the binary
@@ -100,9 +94,10 @@ module LibraConfig {
     public fun publish_new_treasury_compliance_config<Config: copyable>(
         config_account: &signer,
         tc_account: &signer,
-        _: &Capability<CreateOnChainConfig>,
         payload: Config,
     ) {
+        // TODO: abort code
+        assert(Roles::has_on_chain_config_privilege(config_account), 919415);
         move_to(config_account, LibraConfig { payload });
         move_to(tc_account, ModifyConfigCapability<Config> {});
     }
@@ -110,9 +105,10 @@ module LibraConfig {
     // Publish a new config item. Only the config address can modify such config.
     public fun publish_new_config<Config: copyable>(
         config_account: &signer,
-        _: &Capability<CreateOnChainConfig>,
         payload: Config
     ) {
+        // TODO: abort code
+        assert(Roles::has_on_chain_config_privilege(config_account), 919416);
         assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
         move_to(config_account, ModifyConfigCapability<Config> {});
         move_to(config_account, LibraConfig{ payload });
@@ -124,10 +120,11 @@ module LibraConfig {
     // Publish a new config item. Only the delegated address can modify such config after redeeming the capability.
     public fun publish_new_config_with_delegate<Config: copyable>(
         config_account: &signer,
-        _: &Capability<CreateOnChainConfig>,
         payload: Config,
         delegate: address,
     ) {
+        // TODO: abort code
+        assert(Roles::has_on_chain_config_privilege(config_account), 919417);
         assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
         Offer::create(config_account, ModifyConfigCapability<Config>{}, delegate);
         move_to(config_account, LibraConfig { payload });
@@ -142,9 +139,11 @@ module LibraConfig {
     }
 
     public fun reconfigure(
-        _: &Capability<LibraRootRole>,
+        lr_account: &signer,
     ) acquires Configuration {
         // Only callable by association address or by the VM internally.
+        // TODO: abort code
+        assert(Roles::has_libra_root_role(lr_account), 919418);
         reconfigure_();
     }
 
@@ -216,6 +215,10 @@ module LibraConfig {
         /// Spec version of `LibraConfig::is_published<Config>`.
         define spec_is_published<Config>(): bool {
             exists<LibraConfig<Config>>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
+        }
+
+        define spec_has_on_chain_config_privilege(account: signer): bool {
+            Roles::spec_has_libra_root_role(account)
         }
     }
 

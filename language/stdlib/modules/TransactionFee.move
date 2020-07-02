@@ -7,7 +7,7 @@ module TransactionFee {
     use 0x1::LBR::{Self, LBR};
     use 0x1::Libra::{Self, Libra, Preburn, BurnCapability};
     use 0x1::Signer;
-    use 0x1::Roles::{Capability, TreasuryComplianceRole};
+    use 0x1::Roles::{has_treasury_compliance_role};
 
     /// The `TransactionFee` resource holds a preburn resource for each
     /// fiat `CoinType` that can be collected as a transaction fee.
@@ -20,17 +20,18 @@ module TransactionFee {
     /// `TransactionFee` resource with the TreasuryCompliance account.
     public fun initialize(
         assoc_account: &signer,
-        tc_capability: &Capability<TreasuryComplianceRole>,
+        tc_account: &signer,
     ) {
         assert(
             Signer::address_of(assoc_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
             0
         );
-
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tc_account), 919424);
         // accept fees in all the currencies
-        add_txn_fee_currency<Coin1>(assoc_account, tc_capability);
-        add_txn_fee_currency<Coin2>(assoc_account, tc_capability);
-        add_txn_fee_currency<LBR>(assoc_account, tc_capability);
+        add_txn_fee_currency<Coin1>(assoc_account, tc_account);
+        add_txn_fee_currency<Coin2>(assoc_account, tc_account);
+        add_txn_fee_currency<LBR>(assoc_account, tc_account);
     }
 
     /// Sets ups the needed transaction fee state for a given `CoinType` currency by
@@ -38,13 +39,13 @@ module TransactionFee {
     /// (2) publishing a wrapper of the `Preburn<CoinType>` resource under `fee_account`
     fun add_txn_fee_currency<CoinType>(
         assoc_account: &signer,
-        tc_capability: &Capability<TreasuryComplianceRole>,
+        tc_account: &signer,
     ) {
         move_to(
             assoc_account,
             TransactionFee<CoinType> {
                 balance: Libra::zero(),
-                preburn: Libra::create_preburn(tc_capability)
+                preburn: Libra::create_preburn(tc_account)
             }
         )
     }
@@ -62,7 +63,6 @@ module TransactionFee {
     /// underlying fiat.
     public fun burn_fees<CoinType>(
         tc_account: &signer,
-        tc_capability: &Capability<TreasuryComplianceRole>,
     ) acquires TransactionFee {
         let fee_address =  CoreAddresses::LIBRA_ROOT_ADDRESS();
         if (LBR::is_lbr<CoinType>()) {
@@ -83,8 +83,8 @@ module TransactionFee {
                 borrow_global_mut<TransactionFee<Coin2>>(fee_address),
                 coin2
             );
-            Libra::publish_burn_capability(tc_account, coin1_burn_cap, tc_capability);
-            Libra::publish_burn_capability(tc_account, coin2_burn_cap, tc_capability);
+            Libra::publish_burn_capability(tc_account, coin1_burn_cap, tc_account);
+            Libra::publish_burn_capability(tc_account, coin2_burn_cap, tc_account);
         } else {
             // extract fees
             let fees = borrow_global_mut<TransactionFee<CoinType>>(fee_address);
@@ -92,7 +92,7 @@ module TransactionFee {
             // burn
             let burn_cap = Libra::remove_burn_capability<CoinType>(tc_account);
             preburn_burn_fees(&burn_cap, fees, coin);
-            Libra::publish_burn_capability(tc_account, burn_cap, tc_capability);
+            Libra::publish_burn_capability(tc_account, burn_cap, tc_account);
         }
     }
 

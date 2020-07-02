@@ -25,6 +25,7 @@
 -  [Function `rotate_compliance_public_key`](#0x1_VASP_rotate_compliance_public_key)
 -  [Specification](#0x1_VASP_Specification)
     -  [Module specifications](#0x1_VASP_@Module_specifications)
+        -  [Privileges](#0x1_VASP_@Privileges)
         -  [Number of children is consistent](#0x1_VASP_@Number_of_children_is_consistent)
         -  [Number of children does not change](#0x1_VASP_@Number_of_children_does_not_change)
         -  [Parent does not change](#0x1_VASP_@Parent_does_not_change)
@@ -225,7 +226,7 @@ Aborts if
 <code>association</code> is not an Association account
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(vasp: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(vasp: &signer, lr_account: &signer, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -236,11 +237,13 @@ Aborts if
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(
     vasp: &signer,
-    _: &Capability&lt;LibraRootRole&gt;,
+    lr_account: &signer,
     human_name: vector&lt;u8&gt;,
     base_url: vector&lt;u8&gt;,
     compliance_public_key: vector&lt;u8&gt;
 ) {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), 383838);
     <b>let</b> vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(vasp);
     // TODO: proper error code
     <b>assert</b>(!exists&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(vasp_addr), 7000);
@@ -273,7 +276,7 @@ Aborts if
 <code>parent</code> is not a ParentVASP
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_child_vasp_credential">publish_child_vasp_credential</a>(parent: &signer, child: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_ParentVASPRole">Roles::ParentVASPRole</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_child_vasp_credential">publish_child_vasp_credential</a>(parent: &signer, child: &signer)
 </code></pre>
 
 
@@ -285,8 +288,14 @@ Aborts if
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_child_vasp_credential">publish_child_vasp_credential</a>(
     parent: &signer,
     child: &signer,
-    _: &Capability&lt;ParentVASPRole&gt;,
 ) <b>acquires</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
+    // DD: The spreadsheet does not have a "privilege" for creating
+    // child VASPs. All logic in the code is based on the parent <a href="#0x1_VASP">VASP</a> role.
+    // DD: Since it checks for a <a href="#0x1_VASP_ParentVASP">ParentVASP</a> property, anyway, checking
+    // for role might be a bit redundant (would need <b>invariant</b> that only
+    // Parent Role has <a href="#0x1_VASP_ParentVASP">ParentVASP</a>)
+    // TODO: <b>abort</b> code
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_parent_VASP_role">Roles::has_parent_VASP_role</a>(parent), 234234);
     <b>let</b> child_vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(child);
     // TODO: proper error code
     <b>assert</b>(!exists&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(child_vasp_addr), 7000);
@@ -699,6 +708,34 @@ Returns the parent address of a VASP.
 
 
 
+<a name="0x1_VASP_@Privileges"></a>
+
+#### Privileges
+
+Only a parent VASP calling publish_child_vast_credential can create
+child VASP.
+
+
+<a name="0x1_VASP_ChildVASPsDontChange"></a>
+
+**Informally:** A child is at an address iff it was there in the
+previous state.
+
+
+<pre><code><b>schema</b> <a href="#0x1_VASP_ChildVASPsDontChange">ChildVASPsDontChange</a> {
+    <b>ensures</b> forall addr1: address :
+        exists&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr1) == <b>old</b>(exists&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr1));
+}
+</code></pre>
+
+
+
+
+<pre><code><b>apply</b> <a href="#0x1_VASP_ChildVASPsDontChange">ChildVASPsDontChange</a> <b>to</b> *&lt;T&gt;, * <b>except</b> publish_child_vasp_credential;
+</code></pre>
+
+
+
 <a name="0x1_VASP_@Number_of_children_is_consistent"></a>
 
 #### Number of children is consistent
@@ -842,13 +879,14 @@ Returns the parent address of a VASP.
 ### Function `publish_parent_vasp_credential`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(vasp: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(vasp: &signer, lr_account: &signer, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
 </code></pre>
 
 
 
 
-<pre><code><b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp));
+<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role">Roles::spec_has_libra_root_role</a>(lr_account);
+<b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp));
 <b>ensures</b> <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp));
 <b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp)) == 0;
 </code></pre>
@@ -860,16 +898,17 @@ Returns the parent address of a VASP.
 ### Function `publish_child_vasp_credential`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_child_vasp_credential">publish_child_vasp_credential</a>(parent: &signer, child: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_ParentVASPRole">Roles::ParentVASPRole</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_child_vasp_credential">publish_child_vasp_credential</a>(parent: &signer, child: &signer)
 </code></pre>
 
 
 
 
-<pre><code><b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child));
+<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_parent_VASP_role">Roles::spec_has_parent_VASP_role</a>(parent);
+<b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child));
 <b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent));
 <b>aborts_if</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent)) + 1
-        &gt; max_u64();
+                                    &gt; max_u64();
 <b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent))
      == <b>old</b>(<a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent))) + 1;
 <b>ensures</b> <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(child));

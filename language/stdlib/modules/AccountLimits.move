@@ -9,7 +9,7 @@ module AccountLimits {
     use 0x1::CoreAddresses;
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
-    use 0x1::Roles::{Capability, TreasuryComplianceRole, LibraRootRole};
+    use 0x1::Roles::{has_libra_root_role, has_treasury_compliance_role};
 
     // An operations capability that restricts callers of this module since
     // the operations can mutate account states.
@@ -50,7 +50,9 @@ module AccountLimits {
 
     // Grant a capability to call this module. This does not necessarily
     // need to be a unique capability.
-    public fun grant_calling_capability(_: &Capability<LibraRootRole>): CallingCapability {
+    public fun grant_calling_capability(lr_account: &signer): CallingCapability {
+        // TODO: abort code
+        assert(has_libra_root_role(lr_account), 919393);
         CallingCapability{}
     }
 
@@ -136,10 +138,12 @@ module AccountLimits {
     }
 
     public fun update_limits_definition(
-        _: &Capability<TreasuryComplianceRole>,
+        tc_account: &signer,
         new_max_total_flow: u64,
         new_max_holding_balance: u64,
     ) acquires LimitsDefinition {
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tc_account), 919394);
         // As we don't have Optionals for txn scripts, in update_unhosted_wallet_limits.move
         // we use 0 value to represent a None (ie no update to that variable)
         if (new_max_total_flow != 0) {
@@ -152,15 +156,25 @@ module AccountLimits {
 
     // Certify the limits definition published under the account at
     // `limits_addr`.
-    public fun certify_limits_definition(_: &Capability<TreasuryComplianceRole>, limits_addr: address)
+    public fun certify_limits_definition(
+        tc_account: &signer,
+        limits_addr: address,
+        )
     acquires LimitsDefinition {
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tc_account), 919395);
         borrow_global_mut<LimitsDefinition>(limits_addr).is_certified = true;
     }
 
     // Decertify the limits_definition published under the account at
     // `limits_addr`.
-    public fun decertify_limits_definition(_: &Capability<TreasuryComplianceRole>, limits_addr: address)
+    public fun decertify_limits_definition(
+        tc_account: &signer,
+        limits_addr: address,
+    )
     acquires LimitsDefinition {
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tc_account), 919396);
         borrow_global_mut<LimitsDefinition>(limits_addr).is_certified = false;
     }
 

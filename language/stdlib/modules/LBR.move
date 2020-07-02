@@ -16,8 +16,9 @@ module LBR {
     use 0x1::Coin2::Coin2;
     use 0x1::CoreAddresses;
     use 0x1::FixedPoint32::{Self, FixedPoint32};
-    use 0x1::Libra::{Self, Libra,  RegisterNewCurrency};
-    use 0x1::Roles::{Capability, TreasuryComplianceRole};
+    use 0x1::Libra::{Self, Libra,
+    // RegisterNewCurrency
+    };
     use 0x1::Signer;
 
     /// The type tag representing the `LBR` currency on-chain.
@@ -67,22 +68,21 @@ module LBR {
     /// restrictions are enforced in the `Libra::register_currency` function, but also enforced here.
     public fun initialize(
         association: &signer,
-        register_currency_capability: &Capability<RegisterNewCurrency>,
-        tc_capability: &Capability<TreasuryComplianceRole>,
+        tc_account: &signer,
     ) {
         // Operational constraint
         assert(Signer::address_of(association) == reserve_address(), 0);
         // Register the `LBR` currency.
         let (mint_cap, burn_cap) = Libra::register_currency<LBR>(
             association,
-            register_currency_capability,
+            tc_account,
             FixedPoint32::create_from_rational(1, 1), // exchange rate to LBR
             true,    // is_synthetic
             1000000, // scaling_factor = 10^6
             1000,    // fractional_part = 10^3
             b"LBR"
         );
-        let preburn_cap = Libra::create_preburn<LBR>(tc_capability);
+        let preburn_cap = Libra::create_preburn<LBR>(tc_account);
         let coin1 = ReserveComponent<Coin1> {
             ratio: FixedPoint32::create_from_rational(1, 2),
             backing: Libra::zero<Coin1>(),

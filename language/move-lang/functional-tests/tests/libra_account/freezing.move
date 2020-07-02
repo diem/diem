@@ -15,34 +15,26 @@ fun main() {
 //! new-transaction
 //! sender: association
 script {
-use 0x1::LibraAccount::{Self, AccountFreezing};
-use 0x1::Roles;
+use 0x1::LibraAccount;
 // A special association privilege is needed for freezing an account
 fun main(account: &signer) {
-    let r = Roles::extract_privilege_to_capability<AccountFreezing>(account);
-    LibraAccount::freeze_account(account, &r, {{bob}});
-    Roles::restore_capability_to_privilege(account, r);
+    LibraAccount::freeze_account(account, {{bob}});
 }
 }
 // check: ABORTED
-// check: 3
+// check: 100
 
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::LibraAccount::{Self, AccountFreezing, AccountUnfreezing};
-use 0x1::Roles;
+use 0x1::LibraAccount;
 // Make sure we can freeze and unfreeze accounts.
 fun main(account: &signer) {
-    let r = Roles::extract_privilege_to_capability<AccountFreezing>(account);
-    let y = Roles::extract_privilege_to_capability<AccountUnfreezing>(account);
-    LibraAccount::freeze_account(account, &r, {{bob}});
+    LibraAccount::freeze_account(account, {{bob}});
     assert(LibraAccount::account_is_frozen({{bob}}), 1);
-    LibraAccount::unfreeze_account(account, &y, {{bob}});
+    LibraAccount::unfreeze_account(account, {{bob}});
     assert(!LibraAccount::account_is_frozen({{bob}}), 2);
-    LibraAccount::freeze_account(account, &r, {{bob}});
-    Roles::restore_capability_to_privilege(account, r);
-    Roles::restore_capability_to_privilege(account, y);
+    LibraAccount::freeze_account(account, {{bob}});
 }
 }
 
@@ -61,12 +53,9 @@ fun main() { }
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::LibraAccount::{Self, AccountUnfreezing};
-use 0x1::Roles;
+use 0x1::LibraAccount::{Self};
 fun main(account: &signer) {
-    let r = Roles::extract_privilege_to_capability<AccountUnfreezing>(account);
-    LibraAccount::unfreeze_account(account, &r, {{bob}});
-    Roles::restore_capability_to_privilege(account, r);
+    LibraAccount::unfreeze_account(account, {{bob}});
 }
 }
 // check: UnfreezeAccountEvent
@@ -81,12 +70,9 @@ fun main() { }
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::LibraAccount::{Self, AccountFreezing};
-use 0x1::Roles;
+use 0x1::LibraAccount::{Self};
 fun main(account: &signer) {
-    let r = Roles::extract_privilege_to_capability<AccountFreezing>(account);
-    LibraAccount::freeze_account(account, &r, {{association}});
-    Roles::restore_capability_to_privilege(account, r);
+    LibraAccount::freeze_account(account, {{association}});
 }
 }
 // check: ABORTED
@@ -98,14 +84,11 @@ fun main(account: &signer) {
 //! sender: association
 script {
 use 0x1::LibraAccount;
-use 0x1::Roles::{Self, LibraRootRole};
 use 0x1::LBR::LBR;
 fun main(association: &signer) {
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
-    let r = Roles::extract_privilege_to_capability<LibraRootRole>(association);
     LibraAccount::create_parent_vasp_account<LBR>(
         association,
-        &r,
         {{vasp}},
         {{vasp::auth_key}},
         x"A",
@@ -113,7 +96,6 @@ fun main(association: &signer) {
         pubkey,
         false,
     );
-    Roles::restore_capability_to_privilege(association, r);
 }
 }
 // check: EXECUTED
@@ -124,12 +106,9 @@ fun main(association: &signer) {
 script {
 use 0x1::LibraAccount;
 use 0x1::LBR::LBR;
-use 0x1::Roles::{Self, ParentVASPRole};
 fun main(parent_vasp: &signer) {
     let dummy_auth_key_prefix = x"00000000000000000000000000000000";
-    let r = Roles::extract_privilege_to_capability<ParentVASPRole>(parent_vasp);
-    LibraAccount::create_child_vasp_account<LBR>(parent_vasp, &r, 0xAA, dummy_auth_key_prefix, false);
-    Roles::restore_capability_to_privilege(parent_vasp, r);
+    LibraAccount::create_child_vasp_account<LBR>(parent_vasp, 0xAA, dummy_auth_key_prefix, false);
 }
 }
 // check: EXECUTED
@@ -137,25 +116,20 @@ fun main(parent_vasp: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::LibraAccount::{Self, AccountFreezing, AccountUnfreezing};
-use 0x1::Roles;
+use 0x1::LibraAccount;
 // Freezing a child account doesn't freeze the root, freezing the root
 // doesn't freeze the child
 fun main(account: &signer) {
-    let r = Roles::extract_privilege_to_capability<AccountFreezing>(account);
-    let y = Roles::extract_privilege_to_capability<AccountUnfreezing>(account);
-    LibraAccount::freeze_account(account, &r, 0xAA);
+    LibraAccount::freeze_account(account, 0xAA);
     assert(LibraAccount::account_is_frozen(0xAA), 3);
     assert(!LibraAccount::account_is_frozen({{vasp}}), 4);
-    LibraAccount::unfreeze_account(account, &y, 0xAA);
+    LibraAccount::unfreeze_account(account, 0xAA);
     assert(!LibraAccount::account_is_frozen(0xAA), 5);
-    LibraAccount::freeze_account(account, &r, {{vasp}});
+    LibraAccount::freeze_account(account, {{vasp}});
     assert(LibraAccount::account_is_frozen({{vasp}}), 6);
     assert(!LibraAccount::account_is_frozen(0xAA), 7);
-    LibraAccount::unfreeze_account(account, &y, {{vasp}});
+    LibraAccount::unfreeze_account(account, {{vasp}});
     assert(!LibraAccount::account_is_frozen({{vasp}}), 8);
-    Roles::restore_capability_to_privilege(account, r);
-    Roles::restore_capability_to_privilege(account, y);
 }
 }
 

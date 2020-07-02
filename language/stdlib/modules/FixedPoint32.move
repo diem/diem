@@ -18,7 +18,6 @@ module FixedPoint32 {
         // The unscaled product has 32 fractional bits (from the multiplier)
         // so rescale it by shifting away the low bits.
         let product = unscaled_product >> 32;
-        // Convert back to u64. If the multiplier is larger than 1.0,
         // the value may be too large, which will cause the cast to fail
         // with an arithmetic error.
         (product as u64)
@@ -31,10 +30,8 @@ module FixedPoint32 {
         // First convert to 128 bits and then shift left to
         // add 32 fractional zero bits to the dividend.
         let scaled_value = (num as u128) << 32;
-        // Divide and convert the quotient to 64 bits. If the divisor is zero,
         // this will fail with a divide-by-zero error.
         let quotient = scaled_value / (divisor.value as u128);
-        // Convert back to u64. If the divisor is less than 1.0,
         // the value may be too large, which will cause the cast to fail
         // with an arithmetic error.
         (quotient as u64)
@@ -54,7 +51,6 @@ module FixedPoint32 {
         // If the denominator is zero, this will fail with a divide-by-zero
         // error.
         let quotient = scaled_numerator / scaled_denominator;
-        // Check for underflow. Truncating to zero might be the desired result,
         // but if you really want a ratio of zero, it is easy to create that
         // from a raw value.
         assert(quotient != 0 || numerator == 0, 16);

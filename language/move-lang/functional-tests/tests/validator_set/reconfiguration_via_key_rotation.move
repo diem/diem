@@ -43,14 +43,11 @@ script{
 //! sender: association
 script{
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, LibraRootRole};
     use 0x1::ValidatorConfig;
 
     // rotate vivian's pubkey and then run the block prologue. Now, reconfiguration should be triggered.
     fun main(account: &signer) {
-        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
-        LibraSystem::update_and_reconfigure(&assoc_root_role);
-        Roles::restore_capability_to_privilege(account, assoc_root_role);
+        LibraSystem::update_and_reconfigure(account);
         // check that the validator set contains Vivian's new key after reconfiguration
         assert(*ValidatorConfig::get_consensus_pubkey(&LibraSystem::get_validator_config({{vivian}})) ==
                x"d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a", 98);
@@ -85,14 +82,11 @@ script{
 //! sender: association
 script{
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, LibraRootRole};
     // No reconfiguration should be
     // triggered. the not "NewEpochEvent" check part tests this because reconfiguration always emits a
     // NewEpoch event.
     fun main(account: &signer) {
-        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
-        LibraSystem::update_and_reconfigure(&assoc_root_role);
-        Roles::restore_capability_to_privilege(account, assoc_root_role);
+        LibraSystem::update_and_reconfigure(account);
     }
 }
 

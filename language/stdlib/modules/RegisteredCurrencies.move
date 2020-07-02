@@ -3,11 +3,10 @@ address 0x1 {
 /// Module managing the registered currencies in the Libra framework.
 module RegisteredCurrencies {
     use 0x1::CoreAddresses;
-    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
+    use 0x1::LibraConfig;
     use 0x1::LibraTimestamp::{assert_is_genesis, spec_is_genesis};
     use 0x1::Signer;
     use 0x1::Vector;
-    use 0x1::Roles::Capability;
 
     /// An on-chain config holding all of the currency codes for registered
     /// currencies. The inner vector<u8>'s are string representations of
@@ -24,25 +23,25 @@ module RegisteredCurrencies {
     /// Initializes this module. Can only be called from genesis.
     public fun initialize(
         config_account: &signer,
-        create_config_capability: &Capability<CreateOnChainConfig>,
     ): RegistrationCapability {
         assert_is_genesis();
 
-        // enforce that this is only going to one specific address,
         assert(
             Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
             0
         );
         let cap = LibraConfig::publish_new_config_with_capability(
             config_account,
-            create_config_capability,
             RegisteredCurrencies { currency_codes: Vector::empty() }
         );
 
         RegistrationCapability { cap }
     }
     spec fun initialize {
+        pragma aborts_if_is_partial; // because of Roles import problem below
         /// Function aborts if already initialized or not in genesis.
+        // TODO: I don't think there is any way to import the next function for spec only.
+        // aborts_if !Roles::spec_has_on_chain_config_privilege(config_account);
         aborts_if Signer::spec_address_of(config_account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
         aborts_if LibraConfig::spec_is_published<RegisteredCurrencies>();
         aborts_if !spec_is_genesis();
@@ -83,7 +82,18 @@ module RegisteredCurrencies {
 
     // **************** Global Specification ****************
 
-    /// # Module specifications
+    // spec schema OnlyConfigAddressHasRegisteredCurrencies {
+    //     /// There is no address with a RegisteredCurrencies value before initialization.
+    //     invariant module !spec_is_initialized()
+    //         ==> (forall addr: address: !LibraConfig::spec_is_published<RegisteredCurrencies>(addr));
+
+    //     /// *Informally:* After initialization, only singleton_address() has a RegisteredCurrencies value.
+    //     invariant module spec_is_initialized()
+    //         ==> LibraConfig::spec_is_published<RegisteredCurrencies>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
+    //             && (forall addr: address:
+    //                    LibraConfig::spec_is_published<RegisteredCurrencies>(addr)
+    //                               ==> addr == CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
+    // }
 
     spec module {
         pragma verify = true;

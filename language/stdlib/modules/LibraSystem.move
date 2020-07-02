@@ -5,12 +5,12 @@ address 0x1 {
 
 module LibraSystem {
     use 0x1::CoreAddresses;
-    use 0x1::LibraConfig::{Self, CreateOnChainConfig, ModifyConfigCapability};
+    use 0x1::LibraConfig::{Self, ModifyConfigCapability};
     use 0x1::Option::{Self, Option};
     use 0x1::Signer;
     use 0x1::ValidatorConfig;
     use 0x1::Vector;
-    use 0x1::Roles::{Capability, LibraRootRole};
+    use 0x1::Roles::{has_libra_root_role};
 
     struct ValidatorInfo {
         addr: address,
@@ -38,7 +38,6 @@ module LibraSystem {
     // It can only be called a single time. Currently, it is invoked in the genesis transaction.
     public fun initialize_validator_set(
         config_account: &signer,
-        create_config_capability: &Capability<CreateOnChainConfig>,
     ) {
         assert(
             Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
@@ -47,7 +46,6 @@ module LibraSystem {
 
         let cap = LibraConfig::publish_new_config_with_capability<LibraSystem>(
             config_account,
-            create_config_capability,
             LibraSystem {
                 scheme: 0,
                 validators: Vector::empty(),
@@ -68,16 +66,17 @@ module LibraSystem {
 
     // Adds a new validator, this validator should met the validity conditions
     public fun add_validator(
-        _: &Capability<LibraRootRole>,
+        lr_account: &signer,
         account_address: address
     ) acquires CapabilityHolder {
+        // TODO: abort code
+        assert(has_libra_root_role(lr_account), 919419);
         // A prospective validator must have a validator config resource
         assert(ValidatorConfig::is_valid(account_address), 33);
 
         let validator_set = get_validator_set();
         // Ensure that this address is not already a validator
         assert(!is_validator_(account_address, &validator_set.validators), 18);
-        // Since ValidatorConfig::is_valid(account_address) == true,
         // it is guaranteed that the config is non-empty
         let config = ValidatorConfig::get_config(account_address);
         Vector::push_back(&mut validator_set.validators, ValidatorInfo {
@@ -91,9 +90,11 @@ module LibraSystem {
 
     // Removes a validator, only callable by the LibraAssociation address
     public fun remove_validator(
-        _: &Capability<LibraRootRole>,
+        lr_account: &signer,
         account_address: address
     ) acquires CapabilityHolder {
+        // TODO: abort code
+        assert(has_libra_root_role(lr_account), 919420);
         let validator_set = get_validator_set();
         // Ensure that this address is an active validator
         let to_remove_index_vec = get_validator_index_(&validator_set.validators, account_address);
@@ -109,7 +110,11 @@ module LibraSystem {
     // get copied into the ValidatorSet.
     // Invalid validators will get removed from the Validator Set.
     // NewEpochEvent event will be fired.
-    public fun update_and_reconfigure(_: &Capability<LibraRootRole>) acquires CapabilityHolder {
+    public fun update_and_reconfigure(
+        lr_account: &signer
+        ) acquires CapabilityHolder {
+        // TODO: abort code
+        assert(has_libra_root_role(lr_account), 919421);
         let validator_set = get_validator_set();
         let validators = &mut validator_set.validators;
 

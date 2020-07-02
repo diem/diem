@@ -1,4 +1,4 @@
-// Register alice as bob's delegate,
+// Register alice as bob's delegate
 // test all possible key rotations:
 // bob's key by bob - aborts
 // bob's key by alice - executes

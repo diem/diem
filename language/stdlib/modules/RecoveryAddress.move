@@ -7,7 +7,6 @@ module RecoveryAddress {
 
     /// A resource that holds the `KeyRotationCapability`s for several accounts belonging to the
     /// same VASP. A VASP account that delegates its `KeyRotationCapability` to
-    /// a `RecoveryAddress` resource retains the ability to rotate its own authentication key,
     /// but also allows the account that stores the `RecoveryAddress` resource to rotate its
     /// authentication key.
     /// This is useful as an account recovery mechanism: VASP accounts can all delegate their

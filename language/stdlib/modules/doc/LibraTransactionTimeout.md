@@ -73,7 +73,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_set_timeout">set_timeout</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;, new_duration: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_set_timeout">set_timeout</a>(lr_account: &signer, new_duration: u64)
 </code></pre>
 
 
@@ -82,7 +82,12 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_set_timeout">set_timeout</a>(_: &Capability&lt;LibraRootRole&gt;, new_duration: u64) <b>acquires</b> <a href="#0x1_LibraTransactionTimeout_TTL">TTL</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_set_timeout">set_timeout</a>(
+  lr_account: &signer,
+  new_duration: u64,
+  ) <b>acquires</b> <a href="#0x1_LibraTransactionTimeout_TTL">TTL</a> {
+  // TODO: <b>abort</b> code
+  <b>assert</b>(has_libra_root_role(lr_account), 919422);
   <b>let</b> timeout = borrow_global_mut&lt;<a href="#0x1_LibraTransactionTimeout_TTL">TTL</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
   timeout.duration_microseconds = new_duration;
 }
@@ -108,7 +113,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_is_valid_transaction_timestamp">is_valid_transaction_timestamp</a>(timestamp: u64): bool <b>acquires</b> <a href="#0x1_LibraTransactionTimeout_TTL">TTL</a> {
-  // Reject timestamp greater than u64::MAX / 1_000_000;
+  // Reject timestamp greater than u64::MAX / 1_000_000
   <b>if</b>(timestamp &gt; 9223372036854) {
     <b>return</b> <b>false</b>
   };

@@ -42,10 +42,8 @@ This account will a child of the transaction sender, which must be a ParentVASP.
     add_all_currencies: bool,
     child_initial_balance: u64
 ) {
-    <b>let</b> parent_vasp_capability = <a href="../../modules/doc/Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>&lt;ParentVASPRole&gt;(parent_vasp);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_child_vasp_account">LibraAccount::create_child_vasp_account</a>&lt;CoinType&gt;(
         parent_vasp,
-        &parent_vasp_capability,
         child_address,
         auth_key_prefix,
         add_all_currencies,
@@ -58,7 +56,6 @@ This account will a child of the transaction sender, which must be a ParentVASP.
         );
         <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_restore_withdraw_capability">LibraAccount::restore_withdraw_capability</a>(vasp_withdrawal_cap);
     };
-    <a href="../../modules/doc/Roles.md#0x1_Roles_restore_capability_to_privilege">Roles::restore_capability_to_privilege</a>(parent_vasp, parent_vasp_capability);
 }
 </code></pre>
 

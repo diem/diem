@@ -3,18 +3,15 @@
 
 //! sender: alice
 module FooConfig {
-    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
+    use 0x1::LibraConfig::{Self};
     use 0x1::CoreAddresses;
-    use 0x1::Roles;
 
     struct T {
         version: u64,
     }
 
     public fun new(account: &signer, version: u64) {
-        let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
-        LibraConfig::publish_new_config_with_delegate(account, &r, T { version: version }, {{alice}});
-        Roles::restore_capability_to_privilege(account, r);
+        LibraConfig::publish_new_config_with_delegate(account, T { version: version }, {{alice}});
     }
 
     public fun claim(account: &signer) {

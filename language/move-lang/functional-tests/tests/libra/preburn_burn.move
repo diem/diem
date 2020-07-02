@@ -6,24 +6,19 @@
 script {
 use 0x1::LibraAccount;
 use 0x1::Coin1::Coin1;
-use 0x1::Roles::{Self, TreasuryComplianceRole};
 
 fun main(account: &signer) {
-    let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
     LibraAccount::create_designated_dealer<Coin1>(
         account,
-        &tc_capability,
         {{dd}},
         {{dd::auth_key}},
     );
     LibraAccount::tiered_mint<Coin1>(
         account,
-        &tc_capability,
         {{dd}},
         600,
         0,
     );
-    Roles::restore_capability_to_privilege(account, tc_capability);
 }
 }
 // check: EXECUTED

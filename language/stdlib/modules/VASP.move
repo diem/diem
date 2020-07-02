@@ -10,7 +10,7 @@ module VASP {
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
     use 0x1::Signature;
-    use 0x1::Roles::{Capability, LibraRootRole, ParentVASPRole};
+      use 0x1::Roles;  // alias import does not play well with spec functions in Roles.
 
     /// Each VASP has a unique root account that holds a `ParentVASP` resource. This resource holds
     /// the VASP's globally unique name and all of the metadata that other VASPs need to perform
@@ -66,11 +66,13 @@ module VASP {
     /// Aborts if `association` is not an Association account
     public fun publish_parent_vasp_credential(
         vasp: &signer,
-        _: &Capability<LibraRootRole>,
+        lr_account: &signer,
         human_name: vector<u8>,
         base_url: vector<u8>,
         compliance_public_key: vector<u8>
     ) {
+        // TODO: abort code
+        assert(Roles::has_libra_root_role(lr_account), 383838);
         let vasp_addr = Signer::address_of(vasp);
         // TODO: proper error code
         assert(!exists<ChildVASP>(vasp_addr), 7000);
@@ -93,8 +95,14 @@ module VASP {
     public fun publish_child_vasp_credential(
         parent: &signer,
         child: &signer,
-        _: &Capability<ParentVASPRole>,
     ) acquires ParentVASP {
+        // DD: The spreadsheet does not have a "privilege" for creating
+        // child VASPs. All logic in the code is based on the parent VASP role.
+        // DD: Since it checks for a ParentVASP property, anyway, checking
+        // for role might be a bit redundant (would need invariant that only
+        // Parent Role has ParentVASP)
+        // TODO: abort code
+        assert(Roles::has_parent_VASP_role(parent), 234234);
         let child_vasp_addr = Signer::address_of(child);
         // TODO: proper error code
         assert(!exists<ParentVASP>(child_vasp_addr), 7000);
@@ -227,13 +235,25 @@ module VASP {
         }
     }
 
+    /// ## Privileges
+
+    /// Only a parent VASP calling publish_child_vast_credential can create
+    /// child VASP.
+    spec schema ChildVASPsDontChange {
+        /// **Informally:** A child is at an address iff it was there in the
+        /// previous state.
+        ensures forall addr1: address :
+            exists<ChildVASP>(addr1) == old(exists<ChildVASP>(addr1));
+    }
+    spec module {
+        apply ChildVASPsDontChange to *<T>, * except publish_child_vasp_credential;
+    }
 
     /// ## Number of children is consistent
     /// > PROVER TODO(emmazzz): implement the features that allows users
     /// > to reason about number of resources with certain property,
     /// > such as "number of ChildVASPs whose parent address is 0xDD".
     /// > See issue #4665.
-
 
     /// ## Number of children does not change
 
@@ -295,16 +315,18 @@ module VASP {
     }
 
     spec fun publish_parent_vasp_credential {
+        aborts_if !Roles::spec_has_libra_root_role(lr_account);
         aborts_if spec_is_vasp(Signer::spec_address_of(vasp));
         ensures spec_is_parent_vasp(Signer::spec_address_of(vasp));
         ensures spec_get_num_children(Signer::spec_address_of(vasp)) == 0;
     }
 
     spec fun publish_child_vasp_credential {
+        aborts_if !Roles::spec_has_parent_VASP_role(parent);
         aborts_if spec_is_vasp(Signer::spec_address_of(child));
         aborts_if !spec_is_parent_vasp(Signer::spec_address_of(parent));
         aborts_if spec_get_num_children(Signer::spec_address_of(parent)) + 1
-                > max_u64();
+                                            > max_u64();
         ensures spec_get_num_children(Signer::spec_address_of(parent))
              == old(spec_get_num_children(Signer::spec_address_of(parent))) + 1;
         ensures spec_is_child_vasp(Signer::spec_address_of(child));

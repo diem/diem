@@ -9,13 +9,9 @@
 //! new-transaction
 // Reconfiguration can only be invoked by association.
 import 0x1.LibraConfig;
-import 0x1.Roles;
 
 main(account: &signer) {
-    let x: Roles.Capability<Roles.LibraRootRole>;
-    x = Roles.extract_privilege_to_capability<Roles.LibraRootRole>(copy(account));
-    LibraConfig.reconfigure(&x);
-    Roles.restore_capability_to_privilege<Roles.LibraRootRole>(move(account), move(x));
+    LibraConfig.reconfigure(copy(account));
     return;
 }
 
@@ -25,13 +21,9 @@ main(account: &signer) {
 //! new-transaction
 //! sender: association
 import 0x1.LibraConfig;
-import 0x1.Roles;
 
 main(account: &signer) {
-    let x: Roles.Capability<Roles.LibraRootRole>;
-    x = Roles.extract_privilege_to_capability<Roles.LibraRootRole>(copy(account));
-    LibraConfig.reconfigure(&x);
-    Roles.restore_capability_to_privilege<Roles.LibraRootRole>(move(account), move(x));
+    LibraConfig.reconfigure(copy(account));
     return;
 }
 
@@ -42,13 +34,10 @@ main(account: &signer) {
 //! sender: association
 // Cannot trigger two reconfiguration within the same block.
 import 0x1.LibraConfig;
-import 0x1.Roles;
+// import 0x1.Roles;
 
 main(account: &signer) {
-    let x: Roles.Capability<Roles.LibraRootRole>;
-    x = Roles.extract_privilege_to_capability<Roles.LibraRootRole>(copy(account));
-    LibraConfig.reconfigure(&x);
-    Roles.restore_capability_to_privilege<Roles.LibraRootRole>(move(account), move(x));
+    LibraConfig.reconfigure(copy(account));
     return;
 }
 
@@ -62,13 +51,9 @@ main(account: &signer) {
 //! new-transaction
 //! sender: association
 import 0x1.LibraConfig;
-import 0x1.Roles;
 
 main(account: &signer) {
-    let x: Roles.Capability<Roles.LibraRootRole>;
-    x = Roles.extract_privilege_to_capability<Roles.LibraRootRole>(copy(account));
-    LibraConfig.reconfigure(&x);
-    Roles.restore_capability_to_privilege<Roles.LibraRootRole>(move(account), move(x));
+    LibraConfig.reconfigure(copy(account));
     return;
 }
 

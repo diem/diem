@@ -14,15 +14,13 @@ module ValidatorConfig {
     use 0x1::Option::{Self, Option};
     use 0x1::Signature;
     use 0x1::Signer;
-    use 0x1::Roles::{Self, Capability, LibraRootRole};
+    use 0x1::Roles::{has_libra_root_role};
 
     resource struct UpdateValidatorConfig {}
 
     struct Config {
         consensus_pubkey: vector<u8>,
         // TODO(philiphayes): restructure
-        //   1) make validator_network_address[es] of type vector<vector<u8>>,
-        //   2) make fullnodes_network_address[es] of type vector<vector<u8>>,
         //   3) remove validator_network_identity_pubkey
         //   4) remove full_node_network_identity_pubkey
         validator_network_identity_pubkey: vector<u8>,
@@ -43,12 +41,16 @@ module ValidatorConfig {
     // Validator setup methods
     ///////////////////////////////////////////////////////////////////////////
 
-    public fun publish(account: &signer, _: &Capability<LibraRootRole>) {
+    public fun publish(
+        account: &signer,
+        lr_account: &signer,
+        ) {
+        // TODO: abort code
+        assert(has_libra_root_role(lr_account), 919425);
         move_to(account, ValidatorConfig {
             config: Option::none(),
             operator_account: Option::none(),
         });
-        Roles::add_privilege_to_account_validator_role(account, UpdateValidatorConfig{})
     }
 
     ///////////////////////////////////////////////////////////////////////////

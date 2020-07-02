@@ -110,7 +110,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>(dd: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>(dd: &signer, tc_account: &signer)
 </code></pre>
 
 
@@ -119,7 +119,12 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>(dd: &signer, _: &Capability&lt;TreasuryComplianceRole&gt;) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_publish_designated_dealer_credential">publish_designated_dealer_credential</a>(
+    dd: &signer,
+    tc_account: &signer,
+) {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_treasury_compliance_role(tc_account), 919397);
     move_to(
         dd,
         <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
@@ -175,7 +180,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, addr: address, tier_upperbound: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>(tc_account: &signer, addr: address, tier_upperbound: u64)
 </code></pre>
 
 
@@ -185,10 +190,12 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>(
-    _: &Capability&lt;TreasuryComplianceRole&gt;,
+    tc_account: &signer,
     addr: address,
     tier_upperbound: u64
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_treasury_compliance_role(tc_account), 919398);
     <b>let</b> dealer = borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr);
     <a href="#0x1_DesignatedDealer_add_tier_">add_tier_</a>(dealer, tier_upperbound)
 }
@@ -241,7 +248,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_update_tier">update_tier</a>(_update_tier_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, addr: address, tier_index: u64, new_upperbound: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_update_tier">update_tier</a>(tc_account: &signer, addr: address, tier_index: u64, new_upperbound: u64)
 </code></pre>
 
 
@@ -251,11 +258,13 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_update_tier">update_tier</a>(
-    _update_tier_capability: &Capability&lt;TreasuryComplianceRole&gt;,
+    tc_account: &signer,
     addr: address,
     tier_index: u64,
     new_upperbound: u64
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_treasury_compliance_role(tc_account), 919399);
     <b>let</b> dealer = borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr);
     <a href="#0x1_DesignatedDealer_update_tier_">update_tier_</a>(dealer, tier_index, new_upperbound)
 }
@@ -312,7 +321,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(blessed: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, amount: u64, dd_addr: address, tier_index: u64): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: &signer, amount: u64, dd_addr: address, tier_index: u64): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
 </code></pre>
 
 
@@ -322,13 +331,14 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(
-    blessed: &signer,
-    _: &Capability&lt;TreasuryComplianceRole&gt;,
+    tc_account: &signer,
     amount: u64,
     dd_addr: address,
     tier_index: u64,
 ): <a href="Libra.md#0x1_Libra">Libra</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
 
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_treasury_compliance_role(tc_account), 919400);
     // INVALID_MINT_AMOUNT
     <b>assert</b>(amount &gt; 0, 6);
 
@@ -345,7 +355,7 @@
             amount: amount,
         },
     );
-    <a href="Libra.md#0x1_Libra_mint">Libra::mint</a>&lt;CoinType&gt;(blessed, amount)
+    <a href="Libra.md#0x1_Libra_mint">Libra::mint</a>&lt;CoinType&gt;(tc_account, amount)
 }
 </code></pre>
 

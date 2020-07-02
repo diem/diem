@@ -61,7 +61,7 @@ Called in genesis. Sets up the needed resources to collect transaction fees from
 <code><a href="#0x1_TransactionFee">TransactionFee</a></code> resource with the TreasuryCompliance account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_initialize">initialize</a>(assoc_account: &signer, tc_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_initialize">initialize</a>(assoc_account: &signer, tc_account: &signer)
 </code></pre>
 
 
@@ -72,17 +72,18 @@ Called in genesis. Sets up the needed resources to collect transaction fees from
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_initialize">initialize</a>(
     assoc_account: &signer,
-    tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
+    tc_account: &signer,
 ) {
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(assoc_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
         0
     );
-
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_treasury_compliance_role(tc_account), 919424);
     // accept fees in all the currencies
-    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(assoc_account, tc_capability);
-    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(assoc_account, tc_capability);
-    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(assoc_account, tc_capability);
+    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(assoc_account, tc_account);
+    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(assoc_account, tc_account);
+    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(assoc_account, tc_account);
 }
 </code></pre>
 
@@ -104,7 +105,7 @@ Sets ups the needed transaction fee state for a given
 <code>fee_account</code>
 
 
-<pre><code><b>fun</b> <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(assoc_account: &signer, tc_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;)
+<pre><code><b>fun</b> <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(assoc_account: &signer, tc_account: &signer)
 </code></pre>
 
 
@@ -115,13 +116,13 @@ Sets ups the needed transaction fee state for a given
 
 <pre><code><b>fun</b> <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(
     assoc_account: &signer,
-    tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
+    tc_account: &signer,
 ) {
     move_to(
         assoc_account,
         <a href="#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt; {
             balance: <a href="Libra.md#0x1_Libra_zero">Libra::zero</a>(),
-            preburn: <a href="Libra.md#0x1_Libra_create_preburn">Libra::create_preburn</a>(tc_capability)
+            preburn: <a href="Libra.md#0x1_Libra_create_preburn">Libra::create_preburn</a>(tc_account)
         }
     )
 }
@@ -171,7 +172,7 @@ If the
 underlying fiat.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_burn_fees">burn_fees</a>&lt;CoinType&gt;(tc_account: &signer, tc_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_burn_fees">burn_fees</a>&lt;CoinType&gt;(tc_account: &signer)
 </code></pre>
 
 
@@ -182,7 +183,6 @@ underlying fiat.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_burn_fees">burn_fees</a>&lt;CoinType&gt;(
     tc_account: &signer,
-    tc_capability: &Capability&lt;TreasuryComplianceRole&gt;,
 ) <b>acquires</b> <a href="#0x1_TransactionFee">TransactionFee</a> {
     <b>let</b> fee_address =  <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>();
     <b>if</b> (<a href="LBR.md#0x1_LBR_is_lbr">LBR::is_lbr</a>&lt;CoinType&gt;()) {
@@ -203,8 +203,8 @@ underlying fiat.
             borrow_global_mut&lt;<a href="#0x1_TransactionFee">TransactionFee</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;&gt;(fee_address),
             coin2
         );
-        <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(tc_account, coin1_burn_cap, tc_capability);
-        <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(tc_account, coin2_burn_cap, tc_capability);
+        <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(tc_account, coin1_burn_cap, tc_account);
+        <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(tc_account, coin2_burn_cap, tc_account);
     } <b>else</b> {
         // extract fees
         <b>let</b> fees = borrow_global_mut&lt;<a href="#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt;&gt;(fee_address);
@@ -212,7 +212,7 @@ underlying fiat.
         // burn
         <b>let</b> burn_cap = <a href="Libra.md#0x1_Libra_remove_burn_capability">Libra::remove_burn_capability</a>&lt;CoinType&gt;(tc_account);
         <a href="#0x1_TransactionFee_preburn_burn_fees">preburn_burn_fees</a>(&burn_cap, fees, coin);
-        <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(tc_account, burn_cap, tc_capability);
+        <a href="Libra.md#0x1_Libra_publish_burn_capability">Libra::publish_burn_capability</a>(tc_account, burn_cap, tc_account);
     }
 }
 </code></pre>

@@ -41,15 +41,14 @@ script{
 //! sender: association
 script{
     use 0x1::LibraAccount;
-    use 0x1::Roles::{Self, LibraRootRole};
 
     // register Alice as a validator candidate
     fun main(creator: &signer) {
-        let r = Roles::extract_privilege_to_capability<LibraRootRole>(creator);
+//        LibraAccount::create_validator_account(
+//            creator, &r, 0xAA, x"00000000000000000000000000000000"
         LibraAccount::create_validator_account(
-            creator, &r, 0xAA, x"00000000000000000000000000000000"
+            creator, 0xAA, x"00000000000000000000000000000000"
         );
-        Roles::restore_capability_to_privilege(creator, r);
     }
 }
 
@@ -59,31 +58,14 @@ script{
 // //! new-transaction
 // //! sender: 0xAA
 // script{
-//     use 0x1::Signer;
-//     use 0x1::ValidatorConfig;
 
 //     // register Alice as a validator candidate, then rotate a key + check that it worked.
 //     fun main(account: &signer) {
-//         let sender = Signer::address_of(account);
 //         // Alice registers as a validator candidate
-//         assert(!ValidatorConfig::is_valid(sender), 9);
-//         ValidatorConfig::set_config(0xAA, x"10", x"20", x"30", x"40", x"50", x"60");
 
 //         // Rotating the consensus_pubkey should work
-//         let config = ValidatorConfig::get_config(sender);
-//         assert(*ValidatorConfig::get_consensus_pubkey(&config) == x"10", 11);
-//         ValidatorConfig::set_consensus_pubkey(0xAA, x"70");
-//         assert(*ValidatorConfig::get_consensus_pubkey(&config) == x"10", 12);
-//         config = ValidatorConfig::get_config(sender);
-//         assert(*ValidatorConfig::get_consensus_pubkey(&config) == x"70", 15);
 
 //         // Rotating the validator's full config
-//         ValidatorConfig::set_config(0xAA, x"70", x"80", x"90", x"100", x"110", x"120");
-//         config = ValidatorConfig::get_config(sender);
-//         assert(*ValidatorConfig::get_validator_network_identity_pubkey(&config) == x"90", 13);
-//         ValidatorConfig::set_config(0xAA, x"70", x"80", x"55", x"100", x"110", x"120");
-//         config = ValidatorConfig::get_config(sender);
-//         assert(*ValidatorConfig::get_validator_network_identity_pubkey(&config) == x"55", 14);
 //     }
 // }
 
