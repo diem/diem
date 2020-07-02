@@ -33,23 +33,23 @@ fn setup_conn_mgr(
     let network_context =
         NetworkContext::new(NetworkId::Validator, RoleType::Validator, PeerId::random());
 
-    let seed_pubkey_sets: HashMap<_, _> = eligible_peers
+    let seed_pubkeys: HashMap<_, _> = eligible_peers
         .into_iter()
         .map(|peer_id| {
             let pubkey = x25519::PrivateKey::generate_for_testing().public_key();
-            let pubkey_set: HashSet<_> = [pubkey].iter().copied().collect();
-            (peer_id, pubkey_set)
+            let pubkeys: HashSet<_> = [pubkey].iter().copied().collect();
+            (peer_id, pubkeys)
         })
         .collect();
 
-    setup_conn_mgr_with_context(network_context, rt, seed_addrs, seed_pubkey_sets)
+    setup_conn_mgr_with_context(network_context, rt, seed_addrs, seed_pubkeys)
 }
 
 fn setup_conn_mgr_with_context(
     network_context: NetworkContext,
     rt: &mut Runtime,
     seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
-    seed_pubkey_sets: HashMap<PeerId, HashSet<x25519::PublicKey>>,
+    seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
 ) -> (
     libra_channel::Receiver<PeerId, ConnectionRequest>,
     conn_notifs_channel::Sender,
@@ -67,7 +67,7 @@ fn setup_conn_mgr_with_context(
             Arc::new(network_context),
             Arc::new(RwLock::new(HashMap::new())),
             seed_addrs,
-            seed_pubkey_sets,
+            seed_pubkeys,
             ticker_rx,
             ConnectionRequestSender::new(connection_reqs_tx),
             connection_notifs_rx,
@@ -94,10 +94,10 @@ fn gen_peer() -> (
 ) {
     let peer_id = PeerId::random();
     let pubkey = x25519::PrivateKey::generate_for_testing().public_key();
-    let pubkey_set: HashSet<_> = [pubkey].iter().copied().collect();
+    let pubkeys: HashSet<_> = [pubkey].iter().copied().collect();
     let addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
     let addr = addr.append_prod_protos(pubkey, libra_config::config::HANDSHAKE_VERSION);
-    (peer_id, pubkey, pubkey_set, addr)
+    (peer_id, pubkey, pubkeys, addr)
 }
 
 async fn get_dial_queue_size(conn_mgr_reqs_tx: &mut channel::Sender<ConnectivityRequest>) -> usize {
@@ -357,7 +357,7 @@ fn addr_change() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
-    let other_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+    let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
     let eligible_peers = vec![other_peer_id];
     let seed_addrs = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
@@ -371,7 +371,7 @@ fn addr_change() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                [(other_peer_id, vec![other_address.clone()])]
+                [(other_peer_id, vec![other_addr.clone()])]
                     .iter()
                     .cloned()
                     .collect(),
@@ -390,7 +390,7 @@ fn addr_change() {
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
-            other_address.clone(),
+            other_addr.clone(),
             Ok(()),
         )
         .await;
@@ -403,7 +403,7 @@ fn addr_change() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                [(other_peer_id, vec![other_address.clone()])]
+                [(other_peer_id, vec![other_addr.clone()])]
                     .iter()
                     .cloned()
                     .collect(),
@@ -440,7 +440,7 @@ fn addr_change() {
             other_peer_id,
             peer_manager::ConnectionNotification::LostPeer(
                 other_peer_id,
-                other_address,
+                other_addr,
                 DisconnectReason::ConnectionLost,
             ),
         )
@@ -470,7 +470,7 @@ fn lost_connection() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
-    let other_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+    let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
     let eligible_peers = vec![other_peer_id];
     let seed_addrs = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
@@ -484,7 +484,7 @@ fn lost_connection() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                [(other_peer_id, vec![other_address.clone()])]
+                [(other_peer_id, vec![other_addr.clone()])]
                     .iter()
                     .cloned()
                     .collect(),
@@ -503,7 +503,7 @@ fn lost_connection() {
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
-            other_address.clone(),
+            other_addr.clone(),
             Ok(()),
         )
         .await;
@@ -515,7 +515,7 @@ fn lost_connection() {
             other_peer_id,
             peer_manager::ConnectionNotification::LostPeer(
                 other_peer_id,
-                other_address.clone(),
+                other_addr.clone(),
                 DisconnectReason::ConnectionLost,
             ),
         )
@@ -533,7 +533,7 @@ fn lost_connection() {
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
-            other_address.clone(),
+            other_addr.clone(),
             Ok(()),
         )
         .await;
@@ -547,8 +547,8 @@ fn disconnect() {
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
-    let other_pubkey_set: HashSet<_> = [other_pubkey].iter().copied().collect();
-    let other_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+    let other_pubkeys: HashSet<_> = [other_pubkey].iter().copied().collect();
+    let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
     let eligible_peers = vec![];
     let seed_addrs = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
@@ -560,10 +560,7 @@ fn disconnect() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateEligibleNodes(
                 DiscoverySource::Gossip,
-                [(other_peer_id, other_pubkey_set)]
-                    .iter()
-                    .cloned()
-                    .collect(),
+                [(other_peer_id, other_pubkeys)].iter().cloned().collect(),
             ))
             .await
             .unwrap();
@@ -573,7 +570,7 @@ fn disconnect() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                [(other_peer_id, vec![other_address.clone()])]
+                [(other_peer_id, vec![other_addr.clone()])]
                     .iter()
                     .cloned()
                     .collect(),
@@ -592,7 +589,7 @@ fn disconnect() {
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
-            other_address.clone(),
+            other_addr.clone(),
             Ok(()),
         )
         .await;
@@ -617,7 +614,7 @@ fn disconnect() {
             &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             other_peer_id,
-            other_address.clone(),
+            other_addr.clone(),
             Ok(()),
         )
         .await;
@@ -632,8 +629,8 @@ fn retry_on_failure() {
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
-    let other_pubkey_set: HashSet<_> = [other_pubkey].iter().copied().collect();
-    let other_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+    let other_pubkeys: HashSet<_> = [other_pubkey].iter().copied().collect();
+    let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
     let eligible_peers = vec![];
     let seed_addrs = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
@@ -645,10 +642,7 @@ fn retry_on_failure() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateEligibleNodes(
                 DiscoverySource::Gossip,
-                [(other_peer_id, other_pubkey_set)]
-                    .iter()
-                    .cloned()
-                    .collect(),
+                [(other_peer_id, other_pubkeys)].iter().cloned().collect(),
             ))
             .await
             .unwrap();
@@ -658,7 +652,7 @@ fn retry_on_failure() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                [(other_peer_id, vec![other_address.clone()])]
+                [(other_peer_id, vec![other_addr.clone()])]
                     .iter()
                     .cloned()
                     .collect(),
@@ -677,7 +671,7 @@ fn retry_on_failure() {
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
-            other_address.clone(),
+            other_addr.clone(),
             Err(PeerManagerError::IoError(io::Error::from(
                 io::ErrorKind::ConnectionRefused,
             ))),
@@ -695,7 +689,7 @@ fn retry_on_failure() {
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
-            other_address.clone(),
+            other_addr.clone(),
             Ok(()),
         )
         .await;
@@ -720,7 +714,7 @@ fn retry_on_failure() {
             &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             other_peer_id,
-            other_address.clone(),
+            other_addr.clone(),
             Err(PeerManagerError::IoError(io::Error::from(
                 io::ErrorKind::Interrupted,
             ))),
@@ -738,7 +732,7 @@ fn retry_on_failure() {
             &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             other_peer_id,
-            other_address.clone(),
+            other_addr.clone(),
             Ok(()),
         )
         .await;
@@ -754,8 +748,8 @@ fn no_op_requests() {
     let mut rt = Runtime::new().unwrap();
     let other_peer_id = PeerId::random();
     let other_pubkey = x25519::PrivateKey::generate_for_testing().public_key();
-    let other_pubkey_set: HashSet<_> = [other_pubkey].iter().copied().collect();
-    let other_address = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
+    let other_pubkeys: HashSet<_> = [other_pubkey].iter().copied().collect();
+    let other_addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9090").unwrap();
     let eligible_peers = vec![];
     let seed_addrs = HashMap::new();
     info!("Other peer_id is {}", other_peer_id.short_str());
@@ -767,10 +761,7 @@ fn no_op_requests() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateEligibleNodes(
                 DiscoverySource::Gossip,
-                [(other_peer_id, other_pubkey_set)]
-                    .iter()
-                    .cloned()
-                    .collect(),
+                [(other_peer_id, other_pubkeys)].iter().cloned().collect(),
             ))
             .await
             .unwrap();
@@ -780,7 +771,7 @@ fn no_op_requests() {
         conn_mgr_reqs_tx
             .send(ConnectivityRequest::UpdateAddresses(
                 DiscoverySource::Gossip,
-                [(other_peer_id, vec![other_address.clone()])]
+                [(other_peer_id, vec![other_addr.clone()])]
                     .iter()
                     .cloned()
                     .collect(),
@@ -799,8 +790,8 @@ fn no_op_requests() {
             &mut connection_notifs_tx,
             &mut conn_mgr_reqs_tx,
             other_peer_id,
-            other_address.clone(),
-            Err(PeerManagerError::AlreadyConnected(other_address.clone())),
+            other_addr.clone(),
+            Err(PeerManagerError::AlreadyConnected(other_addr.clone())),
         )
         .await;
 
@@ -811,7 +802,7 @@ fn no_op_requests() {
             other_peer_id,
             peer_manager::ConnectionNotification::NewPeer(
                 other_peer_id,
-                other_address.clone(),
+                other_addr.clone(),
                 NetworkContext::mock(),
             ),
         )
@@ -841,7 +832,7 @@ fn no_op_requests() {
             &mut connection_reqs_rx,
             &mut connection_notifs_tx,
             other_peer_id,
-            other_address.clone(),
+            other_addr.clone(),
             Err(PeerManagerError::NotConnected(other_peer_id)),
         )
         .await;
@@ -852,7 +843,7 @@ fn no_op_requests() {
             other_peer_id,
             peer_manager::ConnectionNotification::LostPeer(
                 other_peer_id,
-                other_address.clone(),
+                other_addr.clone(),
                 DisconnectReason::ConnectionLost,
             ),
         )
@@ -1224,21 +1215,21 @@ fn public_connection_limit() {
     ::libra_logger::Logger::new().environment_only(true).init();
     let mut rt = Runtime::new().unwrap();
     let mut seed_addrs: HashMap<PeerId, Vec<NetworkAddress>> = HashMap::new();
-    let mut seed_pubkey_sets: HashMap<PeerId, HashSet<x25519::PublicKey>> = HashMap::new();
+    let mut seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>> = HashMap::new();
     for _ in 0..MAX_TEST_CONNECTIONS + 1 {
-        let (peer_id, _, pubkey_set, addr) = gen_peer();
-        seed_pubkey_sets.insert(peer_id, pubkey_set);
+        let (peer_id, _, pubkeys, addr) = gen_peer();
+        seed_pubkeys.insert(peer_id, pubkeys);
         seed_addrs.insert(peer_id, vec![addr]);
     }
 
-    info!("Seed peers are {:?}", seed_pubkey_sets);
+    info!("Seed peers are {:?}", seed_pubkeys);
     let network_context = NetworkContext::new(
         NetworkId::vfn_network(),
         RoleType::FullNode,
         PeerId::random(),
     );
     let (mut connection_reqs_rx, mut connection_notifs_tx, mut conn_mgr_reqs_tx, mut ticker_tx) =
-        setup_conn_mgr_with_context(network_context, &mut rt, seed_addrs, seed_pubkey_sets);
+        setup_conn_mgr_with_context(network_context, &mut rt, seed_addrs, seed_pubkeys);
 
     // Fake peer manager and discovery.
     let f_peer_mgr = async move {
@@ -1284,14 +1275,14 @@ fn basic_update_eligible_peers() {
     let (_ticker_tx, ticker_rx) = channel::new_test::<()>(0);
     let trusted_peers = Arc::new(RwLock::new(HashMap::new()));
     let seed_addrs = HashMap::new();
-    let seed_pubkey_sets = HashMap::new();
+    let seed_pubkeys = HashMap::new();
     let mut rng = StdRng::from_seed(TEST_SEED);
 
     let mut conn_mgr = ConnectivityManager::new(
         network_context,
         trusted_peers.clone(),
         seed_addrs,
-        seed_pubkey_sets,
+        seed_pubkeys,
         ticker_rx,
         ConnectionRequestSender::new(connection_reqs_tx),
         connection_notifs_rx,
@@ -1309,56 +1300,52 @@ fn basic_update_eligible_peers() {
     let pubkey_1 = x25519::PrivateKey::generate(&mut rng).public_key();
     let pubkey_2 = x25519::PrivateKey::generate(&mut rng).public_key();
 
-    let pubkey_set_1: HashSet<_> = vec![pubkey_1].into_iter().collect();
-    let pubkey_set_2: HashSet<_> = vec![pubkey_2].into_iter().collect();
-    let pubkey_set_1_2: HashSet<_, _> = vec![pubkey_1, pubkey_2].into_iter().collect();
+    let pubkeys_1: HashSet<_> = vec![pubkey_1].into_iter().collect();
+    let pubkeys_2: HashSet<_> = vec![pubkey_2].into_iter().collect();
+    let pubkeys_1_2: HashSet<_, _> = vec![pubkey_1, pubkey_2].into_iter().collect();
 
-    let pubkey_sets_map_empty = HashMap::new();
-    let pubkey_sets_map_1: HashMap<_, _> = vec![(peer_id_a, pubkey_set_1.clone())]
+    let pubkeys_map_empty = HashMap::new();
+    let pubkeys_map_1: HashMap<_, _> = vec![(peer_id_a, pubkeys_1.clone())].into_iter().collect();
+    let pubkeys_map_2: HashMap<_, _> = vec![(peer_id_a, pubkeys_2), (peer_id_b, pubkeys_1.clone())]
         .into_iter()
         .collect();
-    let pubkey_sets_map_2: HashMap<_, _> =
-        vec![(peer_id_a, pubkey_set_2), (peer_id_b, pubkey_set_1.clone())]
-            .into_iter()
-            .collect();
-    let pubkey_sets_map_1_2: HashMap<_, _> =
-        vec![(peer_id_a, pubkey_set_1_2), (peer_id_b, pubkey_set_1)]
-            .into_iter()
-            .collect();
+    let pubkeys_map_1_2: HashMap<_, _> = vec![(peer_id_a, pubkeys_1_2), (peer_id_b, pubkeys_1)]
+        .into_iter()
+        .collect();
 
     // basic one peer one discovery source
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::Gossip, pubkey_sets_map_1.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkey_sets_map_1);
+    conn_mgr.handle_update_eligible_peers(DiscoverySource::Gossip, pubkeys_map_1.clone());
+    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1);
 
     // same update does nothing
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::Gossip, pubkey_sets_map_1.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkey_sets_map_1);
+    conn_mgr.handle_update_eligible_peers(DiscoverySource::Gossip, pubkeys_map_1.clone());
+    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1);
 
     // reset
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::Gossip, pubkey_sets_map_empty.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkey_sets_map_empty);
+    conn_mgr.handle_update_eligible_peers(DiscoverySource::Gossip, pubkeys_map_empty.clone());
+    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_empty);
 
     // basic union across multiple sources
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::Gossip, pubkey_sets_map_1.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkey_sets_map_1);
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkey_sets_map_2.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkey_sets_map_1_2);
+    conn_mgr.handle_update_eligible_peers(DiscoverySource::Gossip, pubkeys_map_1.clone());
+    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1);
+    conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_2.clone());
+    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1_2);
 
     // does nothing even if another source has same set
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::Config, pubkey_sets_map_2);
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkey_sets_map_1_2);
+    conn_mgr.handle_update_eligible_peers(DiscoverySource::Config, pubkeys_map_2);
+    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1_2);
 
     // since on-chain and config now contain the same sets, clearing one should do nothing.
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkey_sets_map_empty.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkey_sets_map_1_2);
+    conn_mgr.handle_update_eligible_peers(DiscoverySource::OnChain, pubkeys_map_empty.clone());
+    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1_2);
 
     // reset
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::Config, pubkey_sets_map_empty.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkey_sets_map_1);
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::Gossip, pubkey_sets_map_empty.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkey_sets_map_empty);
+    conn_mgr.handle_update_eligible_peers(DiscoverySource::Config, pubkeys_map_empty.clone());
+    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_1);
+    conn_mgr.handle_update_eligible_peers(DiscoverySource::Gossip, pubkeys_map_empty.clone());
+    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_empty);
 
     // empty update again does nothing
-    conn_mgr.handle_update_eligible_peers(DiscoverySource::Gossip, pubkey_sets_map_empty.clone());
-    assert_eq!(&*trusted_peers.read().unwrap(), &pubkey_sets_map_empty);
+    conn_mgr.handle_update_eligible_peers(DiscoverySource::Gossip, pubkeys_map_empty.clone());
+    assert_eq!(&*trusted_peers.read().unwrap(), &pubkeys_map_empty);
 }

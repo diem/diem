@@ -57,7 +57,7 @@ pub struct NetworkBuilder {
     network_context: Arc<NetworkContext>,
     trusted_peers: Arc<RwLock<HashMap<PeerId, HashSet<x25519::PublicKey>>>>,
     seed_addrs: HashMap<PeerId, Vec<NetworkAddress>>,
-    seed_pubkey_sets: HashMap<PeerId, HashSet<x25519::PublicKey>>,
+    seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
     channel_size: usize,
     connectivity_check_interval_ms: u64,
     max_connection_delay_ms: u64,
@@ -109,7 +109,7 @@ impl NetworkBuilder {
             network_context,
             trusted_peers,
             seed_addrs: HashMap::new(),
-            seed_pubkey_sets: HashMap::new(),
+            seed_pubkeys: HashMap::new(),
             channel_size: constants::NETWORK_CHANNEL_SIZE,
             connectivity_check_interval_ms: constants::CONNECTIVITY_CHECK_INTERNAL_MS,
             max_connection_delay_ms: constants::MAX_CONNECTION_DELAY_MS,
@@ -164,21 +164,21 @@ impl NetworkBuilder {
 
         // Sanity check seed peer addresses.
         config
-            .verify_seed_peer_addrs()
+            .verify_seed_addrs()
             .expect("Seed peer addresses must be well-formed");
 
         if config.mutual_authentication {
             network_builder
-                .seed_addrs(config.seed_peers.clone())
-                .seed_pubkey_sets(config.seed_pubkey_sets.clone())
+                .seed_addrs(config.seed_addrs.clone())
+                .seed_pubkeys(config.seed_pubkeys.clone())
                 .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
                 .add_connectivity_manager();
         } else {
             // Enforce the outgoing connection (dialer) verifies the identity of the listener (server)
-            if config.discovery_method == DiscoveryMethod::Onchain || !config.seed_peers.is_empty()
+            if config.discovery_method == DiscoveryMethod::Onchain || !config.seed_addrs.is_empty()
             {
                 network_builder
-                    .seed_addrs(config.seed_peers.clone())
+                    .seed_addrs(config.seed_addrs.clone())
                     .add_connectivity_manager();
             }
         }
@@ -217,11 +217,11 @@ impl NetworkBuilder {
     }
 
     /// Set additional public keys for seed peers to bootstrap discovery.
-    pub fn seed_pubkey_sets(
+    pub fn seed_pubkeys(
         &mut self,
-        seed_pubkey_sets: HashMap<PeerId, HashSet<x25519::PublicKey>>,
+        seed_pubkeys: HashMap<PeerId, HashSet<x25519::PublicKey>>,
     ) -> &mut Self {
-        self.seed_pubkey_sets = seed_pubkey_sets;
+        self.seed_pubkeys = seed_pubkeys;
         self
     }
 
@@ -273,7 +273,7 @@ impl NetworkBuilder {
     pub fn add_connectivity_manager(&mut self) -> &mut Self {
         let trusted_peers = self.trusted_peers.clone();
         let seed_addrs = self.seed_addrs.clone();
-        let mut seed_pubkey_sets = self.seed_pubkey_sets.clone();
+        let mut seed_pubkeys = self.seed_pubkeys.clone();
 
         let max_connection_delay_ms = self.max_connection_delay_ms;
         let connectivity_check_interval_ms = self.connectivity_check_interval_ms;
@@ -293,17 +293,14 @@ impl NetworkBuilder {
             (*peer_id, pubkey_set)
         });
         for (peer_id, pubkey_set) in addr_pubkeys_iter {
-            seed_pubkey_sets
-                .entry(peer_id)
-                .or_default()
-                .extend(pubkey_set);
+            seed_pubkeys.entry(peer_id).or_default().extend(pubkey_set);
         }
 
         self.connectivity_manager_builder = Some(ConnectivityManagerBuilder::create(
             self.network_context(),
             trusted_peers,
             seed_addrs,
-            seed_pubkey_sets,
+            seed_pubkeys,
             connectivity_check_interval_ms,
             // TODO:  move this into a config
             2, // Legacy hardcoded value,
