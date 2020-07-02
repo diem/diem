@@ -33,7 +33,9 @@ struct CategorySampling {
 #[macro_export]
 macro_rules! trace_event {
     ($stage:expr, $node:tt) => {
+        $crate::counters::TRACE_EVENT_CALL_COUNT.inc();
         if $crate::is_selected($crate::node_sampling_data!($node)) {
+            $crate::counters::TRACE_EVENT_SELECT_COUNT.inc();
             trace_event!($stage; {$crate::format_node!($node), module_path!(), Option::<u64>::None});
         }
     };
@@ -68,6 +70,7 @@ macro_rules! node_sampling_data {
 #[macro_export]
 macro_rules! send_logs {
     ($name:expr, $json:expr) => {
+        $crate::counters::TRACE_EVENT_COUNT.inc();
         let log_entry = $crate::json_log::JsonLogEntry::new($name, $json);
         $crate::json_log::send_json_log(log_entry.clone());
         libra_logger::send_struct_log!(libra_logger::StructuredLogEntry::new_named(
@@ -80,23 +83,33 @@ macro_rules! send_logs {
 #[macro_export]
 macro_rules! trace_code_block {
     ($stage:expr, $node:tt) => {
-        let trace_guard = $crate::libra_trace::TraceBlockGuard::new_entered(
-            concat!($stage, "::done"),
-            $crate::format_node!($node),
-            module_path!(),
-            $crate::is_selected($crate::node_sampling_data!($node)),
-        );
-        trace_event!($stage, $node);
+        $crate::counters::TRACE_EVENT_CALL_COUNT.inc();
+        let trace_guard = if $crate::is_selected($crate::node_sampling_data!($node)) {
+            $crate::counters::TRACE_EVENT_SELECT_COUNT.inc();
+            let node = $crate::format_node!($node);
+            trace_event!($stage; {node.clone(), module_path!(), Option::<u64>::None});
+            Some($crate::libra_trace::TraceBlockGuard::new_entered(
+                concat!($stage, "::done"),
+                node,
+                module_path!(),
+            ))
+        } else {
+            None
+        };
     };
     ($stage:expr, $node:tt, $guard_vec:tt) => {
-        let trace_guard = $crate::libra_trace::TraceBlockGuard::new_entered(
-            concat!($stage, "::done"),
-            $crate::format_node!($node),
-            module_path!(),
-            $crate::is_selected($crate::node_sampling_data!($node)),
-        );
-        trace_event!($stage, $node);
-        $guard_vec.push(trace_guard);
+        $crate::counters::TRACE_EVENT_CALL_COUNT.inc();
+        if $crate::is_selected($crate::node_sampling_data!($node)) {
+            $crate::counters::TRACE_EVENT_SELECT_COUNT.inc();
+            let node = $crate::format_node!($node);
+            let trace_guard = $crate::libra_trace::TraceBlockGuard::new_entered(
+                concat!($stage, "::done"),
+                node.clone(),
+                module_path!(),
+            );
+            trace_event!($stage; {node, module_path!(), Option::<u64>::None});
+            $guard_vec.push(trace_guard);
+        }
     };
 }
 
@@ -105,7 +118,6 @@ pub struct TraceBlockGuard {
     node: String,
     module_path: &'static str,
     started: Instant,
-    is_selected: bool,
 }
 
 impl TraceBlockGuard {
@@ -113,14 +125,12 @@ impl TraceBlockGuard {
         stage: &'static str,
         node: String,
         module_path: &'static str,
-        is_selected: bool,
     ) -> TraceBlockGuard {
         let started = Instant::now();
         TraceBlockGuard {
             stage,
             node,
             module_path,
-            is_selected,
             started,
         }
     }
@@ -128,17 +138,18 @@ impl TraceBlockGuard {
 
 impl Drop for TraceBlockGuard {
     fn drop(&mut self) {
-        if self.is_selected {
-            let duration = format!("{:.0?}", Instant::now().duration_since(self.started));
-            trace_event!(self.stage; {self.node, self.module_path, duration});
-        }
+        crate::counters::TRACE_EVENT_DROP_COUNT.inc();
+        let duration = format!("{:.0?}", Instant::now().duration_since(self.started));
+        trace_event!(self.stage; {self.node, self.module_path, duration});
     }
 }
 
 #[macro_export]
 macro_rules! end_trace {
     ($stage:expr, $node:tt) => {
+        $crate::counters::TRACE_EVENT_CALL_COUNT.inc();
         if $crate::is_selected($crate::node_sampling_data!($node)) {
+            $crate::counters::TRACE_EVENT_SELECT_COUNT.inc();
             let json = serde_json::json!({
                     "path": module_path!(),
                     "node": $crate::format_node!($node),
@@ -153,7 +164,9 @@ macro_rules! end_trace {
 #[macro_export]
 macro_rules! trace_edge {
     ($stage:expr, $node_from:tt, $node_to:tt) => {
+        $crate::counters::TRACE_EVENT_CALL_COUNT.inc();
         if $crate::is_selected($crate::node_sampling_data!($node_from)) {
+            $crate::counters::TRACE_EVENT_SELECT_COUNT.inc();
             let json = serde_json::json!({
                     "path": module_path!(),
                     "node": $crate::format_node!($node_from),
