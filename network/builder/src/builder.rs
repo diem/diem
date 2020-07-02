@@ -170,10 +170,19 @@ impl NetworkBuilder {
             .verify_seed_addrs()
             .expect("Seed addresses must be well-formed");
 
-        // Don't turn on connectivity manager if we're a public facing vfn for example.
+        // Don't turn on connectivity manager if we're a public-facing server,
+        // for example.
+        //
+        // Cases that require connectivity manager:
+        //
+        // 1) mutual authentication networks currently require connmgr to set the
+        //    trusted peers set.
+        // 2) networks with a discovery protocol need connmgr to connect to newly
+        //    discovered peers.
+        // 3) if we have seed peers, then we need connmgr to connect to them.
         // TODO(philiphayes): could probably use a better way to specify these cases
         if config.mutual_authentication
-            || config.discovery_method == DiscoveryMethod::Onchain
+            || config.discovery_method != DiscoveryMethod::None
             || !config.seed_addrs.is_empty()
         {
             network_builder.add_connectivity_manager();
