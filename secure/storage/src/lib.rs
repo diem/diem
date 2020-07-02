@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+mod cached_storage;
 mod crypto_kv_storage;
 mod crypto_storage;
 mod error;
@@ -17,6 +18,7 @@ mod value;
 mod vault;
 
 pub use crate::{
+    cached_storage::CachedStorage,
     crypto_kv_storage::CryptoKVStorage,
     crypto_storage::{CryptoStorage, PublicKeyResponse},
     error::Error,
