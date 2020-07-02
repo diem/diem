@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::counters;
+use itertools::Itertools;
 use libra_config::config::{PeerNetworkId, UpstreamConfig};
 use libra_logger::prelude::*;
 use rand::{
@@ -61,19 +62,22 @@ pub enum PeerScoreUpdateType {
 }
 
 pub struct PeerManager {
+    // list of peers that are eligible for this node to send sync requests to
+    eligible_peers: Vec<PeerNetworkId>,
     peers: HashMap<PeerNetworkId, PeerInfo>,
     requests: BTreeMap<u64, ChunkRequestInfo>,
-    weighted_index: Option<WeightedIndex<f64>>,
     upstream_config: UpstreamConfig,
+    weighted_index: Option<WeightedIndex<f64>>,
 }
 
 impl PeerManager {
     pub fn new(upstream_config: UpstreamConfig) -> Self {
         Self {
+            eligible_peers: vec![],
             peers: HashMap::new(),
             requests: BTreeMap::new(),
-            weighted_index: None,
             upstream_config,
+            weighted_index: None,
         }
     }
 
@@ -88,7 +92,7 @@ impl PeerManager {
         } else {
             self.peers.insert(peer, PeerInfo::new(true, MAX_SCORE));
         }
-        self.compute_weighted_index();
+        self.update_peer_selection_data();
         debug!("[state sync] state after: {:?}", self.peers);
     }
 
@@ -96,11 +100,11 @@ impl PeerManager {
         if let Some(peer_info) = self.peers.get_mut(peer) {
             peer_info.is_alive = false;
         };
-        self.compute_weighted_index();
+        self.update_peer_selection_data();
     }
 
     pub fn is_empty(&self) -> bool {
-        self.get_active_upstream_peers().is_empty()
+        self.eligible_peers.is_empty()
     }
 
     pub fn update_score(&mut self, peer: &PeerNetworkId, update_type: PeerScoreUpdateType) {
@@ -122,52 +126,80 @@ impl PeerManager {
                 }
             }
             if (old_score - peer_info.score).abs() > std::f64::EPSILON {
-                self.compute_weighted_index();
+                self.update_peer_selection_data();
             }
         }
     }
 
-    fn compute_weighted_index(&mut self) {
+    // Updates the information used to select a peer to send a chunk request to:
+    // * eligible_peers
+    // * weighted_index: the chance that a peer is selected from `eligible_peers` is weighted by its score
+    fn update_peer_selection_data(&mut self) {
         let active_peers = self.get_active_upstream_peers();
         counters::ACTIVE_UPSTREAM_PEERS.set(active_peers.len() as i64);
 
-        if !active_peers.is_empty() {
-            let weights: Vec<_> = active_peers
-                .iter()
-                .map(|(_, peer_info)| peer_info.score)
-                .collect();
-            match WeightedIndex::new(&weights) {
-                Ok(weighted_index) => {
-                    self.weighted_index = Some(weighted_index);
-                }
-                Err(e) => {
-                    error!(
-                        "[state sync] (pick_peer) failed to compute weighted index, {:?}",
-                        e
-                    );
-                }
-            }
-        }
+        // compute weighted index based on updated eligible peers
+        let mut eligible_peers = vec![];
+        let weights: Vec<_> = active_peers
+            .into_iter()
+            .map(|(peer, peer_info)| {
+                eligible_peers.push(peer.clone());
+                peer_info.score
+            })
+            .collect();
+        self.eligible_peers = eligible_peers;
+        self.weighted_index = WeightedIndex::new(&weights)
+            .or_else(|err| {
+                error!(
+                    "[state sync] (pick_peer) failed to compute weighted index, {:?}",
+                    err
+                );
+                Err(err)
+            })
+            .ok();
     }
 
     pub fn pick_peer(&self) -> Option<PeerNetworkId> {
-        let active_peers = self.get_active_upstream_peers();
-        debug!("[state sync] (pick_peer) state: {:?}", self.peers);
-
         if let Some(weighted_index) = &self.weighted_index {
             let mut rng = thread_rng();
-            if let Some(peer) = active_peers.get(weighted_index.sample(&mut rng)) {
-                return Some(peer.0.clone());
+            if let Some(peer) = self.eligible_peers.get(weighted_index.sample(&mut rng)) {
+                return Some(peer.clone());
             }
         }
         None
     }
 
     fn get_active_upstream_peers(&self) -> Vec<(&PeerNetworkId, &PeerInfo)> {
-        self.peers
-            .iter()
-            .filter(|&(peer, peer_info)| peer_info.is_alive && self.is_upstream_peer(peer))
-            .collect()
+        if self.upstream_config.networks.len() > 1 {
+            // failover mode is enabled only if there are multiple upstream networks
+            // in failover mode, we select the network of the highest preference (defined by UpstreamConfig)
+            // with at least one live peer
+            // We failover to the next network (in order of preference defined by UpstreamConfig) if
+            // there are no live peers in each network
+
+            // group active upstream peers by network
+            let active_peers_by_network = self
+                .peers
+                .iter()
+                .filter(|(_peer, peer_info)| peer_info.is_alive)
+                .map(|(peer, peer_info)| (peer.network_id(), (peer, peer_info)))
+                .into_group_map();
+
+            // find the first network with any live peers
+            self.upstream_config
+                .networks
+                .iter()
+                .find_map(|network| active_peers_by_network.get(network))
+                .unwrap_or(&vec![])
+                .to_vec()
+        } else {
+            // no failover option
+            // all upstream peers belong to the same network
+            self.peers
+                .iter()
+                .filter(|&(_peer, peer_info)| peer_info.is_alive)
+                .collect()
+        }
     }
 
     pub fn process_request(&mut self, version: u64, peer: PeerNetworkId) {

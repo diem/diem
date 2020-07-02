@@ -20,6 +20,7 @@ use std::collections::{BTreeMap, HashMap};
 use transaction_builder::encode_transfer_with_metadata_script;
 use vm_genesis::GENESIS_KEYPAIR;
 
+#[derive(Clone)]
 pub struct MockStorage {
     // some mock transactions in the storage
     transactions: Vec<Transaction>,
