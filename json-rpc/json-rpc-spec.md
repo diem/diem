@@ -1362,7 +1362,7 @@ An event emitted during a transaction
 
 **Description**
 
-Event emitted when an account received a payment.
+Event emitted when an account receives a payment.
 
 
 ### Attributes
@@ -1398,7 +1398,15 @@ Event emitted when an account received a payment.
    </td>
    <td>Hex string
    </td>
-   <td>Hex-encoded address of the sender of the transaction that emitted the given event
+   <td>Hex-encoded address of the account whose balance was debited to perform this deposit. If the deposited funds came from a mint, the sender address will be 0x0...0.
+   </td>
+  </tr>
+  <tr>
+   <td><strong>receiver</strong>
+   </td>
+   <td>Hex string
+   </td>
+   <td>Hex-encoded address of the account whose balance was credited by this deposit.
    </td>
   </tr>
   <tr>
@@ -1459,8 +1467,14 @@ Event emitted when an account sends a payment.
    <td><strong>receiver</strong>
    </td>
    <td>string
+    <td>Hex-encoded address of the account whose balance was credited to by this withdrawal. If the withdrawn funds were burned, the received address will be 0x0...0.
    </td>
-   <td>Hex-encoded address of the receiver of an associated transaction
+  </tr>
+ <tr>
+   <td><strong>sender</strong>
+   </td>
+   <td>string
+    <td>Hex-encoded address of the account whose balance was debited by this withdrawal.
    </td>
   </tr>
   <tr>
