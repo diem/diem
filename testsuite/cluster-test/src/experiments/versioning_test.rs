@@ -5,27 +5,23 @@
 
 use crate::{
     cluster::Cluster,
-    experiments::{Context, Experiment, ExperimentParam},
+    experiments::{
+        compatibility_test::update_batch_instance, Context, Experiment, ExperimentParam,
+    },
     instance,
     instance::Instance,
     tx_emitter::{execute_and_wait_transactions, AccountData, EmitJobRequest},
 };
 use anyhow::format_err;
 use async_trait::async_trait;
-use futures::future::try_join_all;
 use libra_logger::prelude::*;
 use libra_types::{
     account_config::{lbr_type_tag, LBR_NAME},
     on_chain_config::LibraVersion,
     transaction::{helpers::create_user_txn, TransactionPayload},
 };
-use std::{
-    collections::HashSet,
-    fmt,
-    time::{Duration, Instant},
-};
+use std::{collections::HashSet, fmt, time::Duration};
 use structopt::StructOpt;
-use tokio::time;
 use transaction_builder::{
     encode_peer_to_peer_with_metadata_script, encode_update_libra_version_script,
 };
@@ -68,44 +64,6 @@ impl ExperimentParam for ValidatorVersioningParams {
             updated_image_tag: self.updated_image_tag,
         }
     }
-}
-
-// Reboot `updated_instance` with newer image tag
-async fn update_batch_instance(
-    context: &mut Context<'_>,
-    updated_instance: &[Instance],
-    updated_tag: String,
-) -> anyhow::Result<()> {
-    let deadline = Instant::now() + Duration::from_secs(2 * 60);
-
-    info!("Stop Existing instances.");
-    let futures: Vec<_> = updated_instance.iter().map(Instance::stop).collect();
-    try_join_all(futures).await?;
-
-    info!("Reinstantiate a set of new nodes.");
-    let futures: Vec<_> = updated_instance
-        .iter()
-        .map(|instance| {
-            let mut newer_config = instance.instance_config().clone();
-            newer_config.replace_tag(updated_tag.clone()).unwrap();
-            context
-                .cluster_swarm
-                .spawn_new_instance(newer_config, false)
-        })
-        .collect();
-    let instances = try_join_all(futures).await?;
-
-    info!("Wait for the instances to recover.");
-    let futures: Vec<_> = instances
-        .iter()
-        .map(|instance| instance.wait_json_rpc(deadline))
-        .collect();
-    try_join_all(futures).await?;
-
-    // Add a timeout to have wait for validators back to healthy mode.
-    // TODO: Replace this with a blocking health check.
-    time::delay_for(Duration::from_secs(20)).await;
-    Ok(())
 }
 
 #[async_trait]

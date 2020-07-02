@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+mod compatibility_test;
 mod cpu_flamegraph;
 mod packet_loss_random_validators;
 mod performance_benchmark;
@@ -12,8 +13,13 @@ mod recovery_time;
 mod twin_validator;
 mod versioning_test;
 
-use std::{collections::HashSet, fmt::Display, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+    time::Duration,
+};
 
+pub use compatibility_test::{ComaptiblityTestParams, CompatibilityTest};
 pub use packet_loss_random_validators::{
     PacketLossRandomValidators, PacketLossRandomValidatorsParams,
 };
@@ -39,7 +45,6 @@ use crate::{
 };
 use async_trait::async_trait;
 pub use cpu_flamegraph::{CpuFlamegraph, CpuFlamegraphParams};
-use std::collections::HashMap;
 use structopt::{clap::AppSettings, StructOpt};
 
 #[async_trait]
@@ -134,6 +139,7 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
     known_experiments.insert("twin", f::<TwinValidatorsParams>());
     known_experiments.insert("generate_cpu_flamegraph", f::<CpuFlamegraphParams>());
     known_experiments.insert("versioning_testing", f::<ValidatorVersioningParams>());
+    known_experiments.insert("compatibility_test", f::<ComaptiblityTestParams>());
 
     let builder = known_experiments.get(name).expect("Experiment not found");
     builder(args, cluster)
