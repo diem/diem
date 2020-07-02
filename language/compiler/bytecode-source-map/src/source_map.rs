@@ -255,6 +255,13 @@ impl<Location: Clone + Eq> FunctionSourceMap<Location> {
             self.add_type_parameter((name, default_loc.clone()))
         }
 
+        // Generate names for each parameter
+        let params = module.signature_at(function_handle.parameters);
+        for i in 0..params.0.len() {
+            let name = format!("Arg{}", i);
+            self.add_parameter_mapping((name, default_loc.clone()))
+        }
+
         if let Some(code) = &function_def.code {
             let locals = module.signature_at(code.locals);
             for i in 0..locals.0.len() {
