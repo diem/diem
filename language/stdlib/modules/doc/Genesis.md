@@ -48,14 +48,9 @@
     <a href="VASP.md#0x1_VASP_initialize">VASP::initialize</a>(lr_account);
 
     // Currency setup
-    <b>let</b> (coin1_mint_cap, coin1_burn_cap) = <a href="Coin1.md#0x1_Coin1_initialize">Coin1::initialize</a>(
-        lr_account,
-        tc_account,
-    );
-    <b>let</b> (coin2_mint_cap, coin2_burn_cap) = <a href="Coin2.md#0x1_Coin2_initialize">Coin2::initialize</a>(
-        lr_account,
-        tc_account,
-    );
+    <a href="Coin1.md#0x1_Coin1_initialize">Coin1::initialize</a>(lr_account, tc_account);
+    <a href="Coin2.md#0x1_Coin2_initialize">Coin2::initialize</a>(lr_account, tc_account);
+
     <a href="LBR.md#0x1_LBR_initialize">LBR::initialize</a>(
         lr_account,
         tc_account,
@@ -76,13 +71,8 @@
     // Create the treasury compliance account
     <a href="LibraAccount.md#0x1_LibraAccount_create_treasury_compliance_account">LibraAccount::create_treasury_compliance_account</a>(
         lr_account,
-        tc_account,
         tc_addr,
         <b>copy</b> dummy_auth_key_prefix,
-        coin1_mint_cap,
-        coin1_burn_cap,
-        coin2_mint_cap,
-        coin2_burn_cap,
     );
 
     <a href="LibraTransactionTimeout.md#0x1_LibraTransactionTimeout_initialize">LibraTransactionTimeout::initialize</a>(lr_account);

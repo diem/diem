@@ -7,10 +7,12 @@ use crate::{
     evaluator::{eval, EvaluationOutput},
     preprocessor::{build_transactions, extract_global_config, split_input},
 };
+use regex::Regex;
 use std::{env, fs::read_to_string, io::Write, iter, path::Path};
 use termcolor::{BufferWriter, Color, ColorChoice, ColorSpec, WriteColor};
 
 pub const PRETTY: &str = "PRETTY";
+pub const FILTER: &str = "FILTER";
 
 fn at_most_n_chars(s: impl IntoIterator<Item = char>, n: usize) -> String {
     let mut it = s.into_iter();
@@ -52,6 +54,15 @@ fn env_var(var_name: &str) -> String {
 fn pretty_mode() -> bool {
     let pretty = env_var(PRETTY);
     pretty == "1" || pretty == "true"
+}
+
+fn print_stage(haystack: &str) -> bool {
+    env::var(FILTER)
+        .map(|needle| {
+            let needle = Regex::new(&needle).unwrap();
+            needle.is_match(haystack)
+        })
+        .unwrap_or(true)
 }
 
 // Runs all tests under the test/testsuite directory.
@@ -153,6 +164,7 @@ pub fn functional_tests<TComp: Compiler>(
                         _ => format!("[{}] {}\n", id, entry),
                     }
                 })
+                .filter(|x| print_stage(&x))
                 .collect::<String>()
                 .lines()
                 .map(|line| format!("    {}\n", line))
@@ -160,12 +172,18 @@ pub fn functional_tests<TComp: Compiler>(
         )?;
     } else {
         for (id, entry) in res.text.iter().enumerate() {
-            writeln!(output, "    [{}] {}", id, entry)?;
+            if print_stage(entry) {
+                writeln!(output, "    [{}] {}", id, entry)?;
+            }
         }
         writeln!(output)?;
         writeln!(
             output,
             "    Note: enable pretty printing by setting 'env PRETTY=1'."
+        )?;
+        writeln!(
+            output,
+            "          You can filter logs by setting 'env FILTER=\"<regex pattern>\"'."
         )?;
         writeln!(output)?;
     }
