@@ -10,7 +10,6 @@ module Compare {
     use 0x1::Vector;
 
     // Compare `v1` and `v2` using
-    // (1) byte-by-byte comparison from right to left until we reach the end of the shorter vector,
     // then
     // (2) vector length to break ties.
     // Returns either `EQUAL` (0u8), `LESS_THAN` (1u8), or `GREATER_THAN` (2u8).

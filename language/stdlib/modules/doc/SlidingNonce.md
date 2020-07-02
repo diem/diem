@@ -5,43 +5,14 @@
 
 ### Table of Contents
 
--  [Resource `CreateSlidingNonce`](#0x1_SlidingNonce_CreateSlidingNonce)
 -  [Resource `SlidingNonce`](#0x1_SlidingNonce_SlidingNonce)
--  [Function `grant_privileges`](#0x1_SlidingNonce_grant_privileges)
 -  [Function `record_nonce_or_abort`](#0x1_SlidingNonce_record_nonce_or_abort)
+-  [Function `has_create_sliding_nonce_privilege`](#0x1_SlidingNonce_has_create_sliding_nonce_privilege)
 -  [Function `try_record_nonce`](#0x1_SlidingNonce_try_record_nonce)
 -  [Function `publish`](#0x1_SlidingNonce_publish)
 -  [Function `publish_nonce_resource`](#0x1_SlidingNonce_publish_nonce_resource)
 
 
-
-<a name="0x1_SlidingNonce_CreateSlidingNonce"></a>
-
-## Resource `CreateSlidingNonce`
-
-
-
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_SlidingNonce_CreateSlidingNonce">CreateSlidingNonce</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>dummy_field: bool</code>
-</dt>
-<dd>
-
-</dd>
-</dl>
-
-
-</details>
 
 <a name="0x1_SlidingNonce_SlidingNonce"></a>
 
@@ -84,34 +55,6 @@ And nonce_mask contains a bitmap for nonce in range [min_nonce; min_nonce+127]
 
 </details>
 
-<a name="0x1_SlidingNonce_grant_privileges"></a>
-
-## Function `grant_privileges`
-
-Grants the
-<code><a href="#0x1_SlidingNonce_CreateSlidingNonce">CreateSlidingNonce</a></code> privilege to the calling
-<code>account</code>.
-Aborts if the calling account does not have the association root role.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_grant_privileges">grant_privileges</a>(account: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_grant_privileges">grant_privileges</a>(account: &signer) {
-    <a href="Roles.md#0x1_Roles_add_privilege_to_account_association_root_role">Roles::add_privilege_to_account_association_root_role</a>(account, <a href="#0x1_SlidingNonce_CreateSlidingNonce">CreateSlidingNonce</a>{});
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_SlidingNonce_record_nonce_or_abort"></a>
 
 ## Function `record_nonce_or_abort`
@@ -131,6 +74,30 @@ Calls try_record_nonce and aborts transaction if returned code is non-0
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_record_nonce_or_abort">record_nonce_or_abort</a>(account: &signer, seq_nonce: u64) <b>acquires</b> <a href="#0x1_SlidingNonce">SlidingNonce</a> {
     <b>let</b> code = <a href="#0x1_SlidingNonce_try_record_nonce">try_record_nonce</a>(account, seq_nonce);
     <b>assert</b>(code == 0, code);
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_SlidingNonce_has_create_sliding_nonce_privilege"></a>
+
+## Function `has_create_sliding_nonce_privilege`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_has_create_sliding_nonce_privilege">has_create_sliding_nonce_privilege</a>(lr_account: &signer): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_has_create_sliding_nonce_privilege">has_create_sliding_nonce_privilege</a>(lr_account: &signer): bool {
+    has_libra_root_role(lr_account)
 }
 </code></pre>
 
@@ -233,7 +200,7 @@ Only association can create this resource for different account
 Alternative is publish_nonce_resource_for_user that publishes resource into current account
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_SlidingNonce_CreateSlidingNonce">SlidingNonce::CreateSlidingNonce</a>&gt;, account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(lr_account: &signer, account: &signer)
 </code></pre>
 
 
@@ -242,7 +209,12 @@ Alternative is publish_nonce_resource_for_user that publishes resource into curr
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(_: &Capability&lt;<a href="#0x1_SlidingNonce_CreateSlidingNonce">CreateSlidingNonce</a>&gt;, account: &signer) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(
+    lr_account: &signer,
+    account: &signer
+) {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(<a href="#0x1_SlidingNonce_has_create_sliding_nonce_privilege">has_create_sliding_nonce_privilege</a>(lr_account), 919423);
     <b>let</b> new_resource = <a href="#0x1_SlidingNonce">SlidingNonce</a> {
         min_nonce: 0,
         nonce_mask: 0,

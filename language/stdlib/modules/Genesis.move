@@ -10,10 +10,10 @@ module Genesis {
     use 0x1::DualAttestationLimit;
     use 0x1::Event;
     use 0x1::LBR;
-    use 0x1::Libra::{Self, RegisterNewCurrency};
+    use 0x1::Libra;
     use 0x1::LibraAccount;
     use 0x1::LibraBlock;
-    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
+    use 0x1::LibraConfig;
     use 0x1::LibraSystem;
     use 0x1::LibraTimestamp;
     use 0x1::LibraTransactionTimeout;
@@ -21,13 +21,12 @@ module Genesis {
     use 0x1::LibraWriteSetManager;
     use 0x1::Signer;
     use 0x1::TransactionFee;
-    use 0x1::Roles::{Self, LibraRootRole, TreasuryComplianceRole};
-    use 0x1::SlidingNonce::{Self, CreateSlidingNonce};
+    use 0x1::Roles;
     use 0x1::LibraVMConfig;
 
 
     fun initialize(
-        association: &signer,
+        lr_account: &signer,
         tc_account: &signer,
         tc_addr: address,
         genesis_auth_key: vector<u8>,
@@ -37,64 +36,52 @@ module Genesis {
     ) {
         let dummy_auth_key_prefix = x"00000000000000000000000000000000";
 
-        Roles::grant_root_association_role(association);
-        LibraConfig::grant_privileges(association);
-        LibraAccount::grant_association_privileges(association);
-        SlidingNonce::grant_privileges(association);
-        let assoc_root_capability = Roles::extract_privilege_to_capability<LibraRootRole>(association);
-        let create_config_capability = Roles::extract_privilege_to_capability<CreateOnChainConfig>(association);
-        let create_sliding_nonce_capability = Roles::extract_privilege_to_capability<CreateSlidingNonce>(association);
+        Roles::grant_root_association_role(lr_account);
+        LibraAccount::grant_association_privileges(lr_account);
+        Roles::grant_treasury_compliance_role(tc_account, lr_account);
 
-        Roles::grant_treasury_compliance_role(tc_account, &assoc_root_capability);
-        LibraAccount::grant_treasury_compliance_privileges(tc_account);
-        Libra::grant_privileges(tc_account);
-        DualAttestationLimit::grant_privileges(tc_account);
-        let currency_registration_capability = Roles::extract_privilege_to_capability<RegisterNewCurrency>(tc_account);
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(tc_account);
-
-        Event::publish_generator(association);
+        Event::publish_generator(lr_account);
 
         // Event and On-chain config setup
         LibraConfig::initialize(
-            association,
-            &create_config_capability,
+            lr_account,
         );
 
         // Currency setup
-        Libra::initialize(association, &create_config_capability);
+        Libra::initialize(
+            lr_account,
+        );
 
         // Currency setup
         let (coin1_mint_cap, coin1_burn_cap) = Coin1::initialize(
-            association,
-            &currency_registration_capability,
+            lr_account,
+            tc_account,
         );
         let (coin2_mint_cap, coin2_burn_cap) = Coin2::initialize(
-            association,
-            &currency_registration_capability,
+            lr_account,
+            tc_account,
         );
         LBR::initialize(
-            association,
-            &currency_registration_capability,
-            &tc_capability,
+            lr_account,
+            tc_account,
         );
 
-        LibraAccount::initialize(association, &assoc_root_capability);
+        LibraAccount::initialize(lr_account);
         LibraAccount::create_root_association_account(
-            Signer::address_of(association),
+            Signer::address_of(lr_account),
             copy dummy_auth_key_prefix,
         );
 
         // Register transaction fee resource
         TransactionFee::initialize(
-            association,
-            &tc_capability,
+            lr_account,
+            tc_account,
         );
 
         // Create the treasury compliance account
         LibraAccount::create_treasury_compliance_account(
-            &assoc_root_capability,
-            &tc_capability,
-            &create_sliding_nonce_capability,
+            lr_account,
+            tc_account,
             tc_addr,
             copy dummy_auth_key_prefix,
             coin1_mint_cap,
@@ -103,31 +90,37 @@ module Genesis {
             coin2_burn_cap,
         );
         AccountLimits::publish_unrestricted_limits(tc_account);
-        AccountLimits::certify_limits_definition(&tc_capability, tc_addr);
+        AccountLimits::certify_limits_definition(tc_account, tc_addr);
 
-        LibraTransactionTimeout::initialize(association);
-        LibraSystem::initialize_validator_set(association, &create_config_capability);
-        LibraVersion::initialize(association, &create_config_capability);
+        LibraTransactionTimeout::initialize(lr_account);
+        LibraSystem::initialize_validator_set(
+            lr_account,
+        );
+        LibraVersion::initialize(
+            lr_account,
+        );
 
-        DualAttestationLimit::initialize(association, tc_account, &create_config_capability);
-        LibraBlock::initialize_block_metadata(association);
-        LibraWriteSetManager::initialize(association);
-        LibraTimestamp::initialize(association);
+        DualAttestationLimit::initialize(
+            lr_account,
+            tc_account,
+        );
+        LibraBlock::initialize_block_metadata(lr_account);
+        LibraWriteSetManager::initialize(lr_account);
+        LibraTimestamp::initialize(lr_account);
 
-        let assoc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(association);
+        let assoc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(lr_account);
         LibraAccount::rotate_authentication_key(&assoc_rotate_key_cap, copy genesis_auth_key);
         LibraAccount::restore_key_rotation_capability(assoc_rotate_key_cap);
 
         LibraVMConfig::initialize(
-            association,
-            association,
-            &create_config_capability,
+            lr_account,
+            lr_account,
             publishing_option,
             instruction_schedule,
             native_schedule,
         );
 
-        let config_rotate_key_cap = LibraAccount::extract_key_rotation_capability(association);
+        let config_rotate_key_cap = LibraAccount::extract_key_rotation_capability(lr_account);
         LibraAccount::rotate_authentication_key(&config_rotate_key_cap, copy genesis_auth_key);
         LibraAccount::restore_key_rotation_capability(config_rotate_key_cap);
 
@@ -136,15 +129,9 @@ module Genesis {
         LibraAccount::restore_key_rotation_capability(tc_rotate_key_cap);
 
         // Restore privileges
-        Roles::restore_capability_to_privilege(association, create_config_capability);
-        Roles::restore_capability_to_privilege(association, create_sliding_nonce_capability);
-        Roles::restore_capability_to_privilege(association, assoc_root_capability);
-
-        Roles::restore_capability_to_privilege(tc_account, currency_registration_capability);
-        Roles::restore_capability_to_privilege(tc_account, tc_capability);
 
         // Mark that genesis has finished. This must appear as the last call.
-        LibraTimestamp::set_time_has_started(association);
+        LibraTimestamp::set_time_has_started(lr_account);
     }
 
 }

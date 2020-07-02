@@ -2,23 +2,20 @@ address 0x1 {
 
 module LibraVersion {
     use 0x1::CoreAddresses;
-    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
+    use 0x1::LibraConfig;
     use 0x1::Signer;
-    use 0x1::Roles::Capability;
 
     struct LibraVersion {
         major: u64,
     }
 
     public fun initialize(
-        account: &signer,
-        create_config_capability: &Capability<CreateOnChainConfig>,
+        lr_account: &signer,
     ) {
-        assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
+        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
 
         LibraConfig::publish_new_config<LibraVersion>(
-            account,
-            create_config_capability,
+            lr_account,
             LibraVersion { major: 1 },
         );
     }

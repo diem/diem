@@ -146,7 +146,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, lr_account: &signer)
 </code></pre>
 
 
@@ -155,12 +155,16 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(account: &signer, _: &Capability&lt;LibraRootRole&gt;) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_publish">publish</a>(
+    account: &signer,
+    lr_account: &signer,
+    ) {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_libra_root_role(lr_account), 919425);
     move_to(account, <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
         config: <a href="Option.md#0x1_Option_none">Option::none</a>(),
         operator_account: <a href="Option.md#0x1_Option_none">Option::none</a>(),
     });
-    <a href="Roles.md#0x1_Roles_add_privilege_to_account_validator_role">Roles::add_privilege_to_account_validator_role</a>(account, <a href="#0x1_ValidatorConfig_UpdateValidatorConfig">UpdateValidatorConfig</a>{})
 }
 </code></pre>
 

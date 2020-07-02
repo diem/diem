@@ -71,7 +71,6 @@
     // The unscaled product has 32 fractional bits (from the multiplier)
     // so rescale it by shifting away the low bits.
     <b>let</b> product = unscaled_product &gt;&gt; 32;
-    // Convert back <b>to</b> u64. If the multiplier is larger than 1.0,
     // the value may be too large, which will cause the cast <b>to</b> fail
     // with an arithmetic error.
     (product <b>as</b> u64)
@@ -101,10 +100,8 @@
     // First convert <b>to</b> 128 bits and then shift left <b>to</b>
     // add 32 fractional zero bits <b>to</b> the dividend.
     <b>let</b> scaled_value = (num <b>as</b> u128) &lt;&lt; 32;
-    // Divide and convert the quotient <b>to</b> 64 bits. If the divisor is zero,
     // this will fail with a divide-by-zero error.
     <b>let</b> quotient = scaled_value / (divisor.value <b>as</b> u128);
-    // Convert back <b>to</b> u64. If the divisor is less than 1.0,
     // the value may be too large, which will cause the cast <b>to</b> fail
     // with an arithmetic error.
     (quotient <b>as</b> u64)
@@ -139,7 +136,6 @@
     // If the denominator is zero, this will fail with a divide-by-zero
     // error.
     <b>let</b> quotient = scaled_numerator / scaled_denominator;
-    // Check for underflow. Truncating <b>to</b> zero might be the desired result,
     // but <b>if</b> you really want a ratio of zero, it is easy <b>to</b> create that
     // from a raw value.
     <b>assert</b>(quotient != 0 || numerator == 0, 16);

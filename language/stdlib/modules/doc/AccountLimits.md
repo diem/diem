@@ -160,7 +160,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_calling_capability">grant_calling_capability</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;): <a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_calling_capability">grant_calling_capability</a>(lr_account: &signer): <a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>
 </code></pre>
 
 
@@ -169,7 +169,9 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_calling_capability">grant_calling_capability</a>(_: &Capability&lt;LibraRootRole&gt;): <a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_calling_capability">grant_calling_capability</a>(lr_account: &signer): <a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a> {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_libra_root_role(lr_account), 919393);
     <a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>{}
 }
 </code></pre>
@@ -370,7 +372,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, new_max_total_flow: u64, new_max_holding_balance: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>(tc_account: &signer, new_max_total_flow: u64, new_max_holding_balance: u64)
 </code></pre>
 
 
@@ -380,10 +382,12 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>(
-    _: &Capability&lt;TreasuryComplianceRole&gt;,
+    tc_account: &signer,
     new_max_total_flow: u64,
     new_max_holding_balance: u64,
 ) <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_treasury_compliance_role(tc_account), 919394);
     // As we don't have Optionals for txn scripts, in update_unhosted_wallet_limits.<b>move</b>
     // we <b>use</b> 0 value <b>to</b> represent a None (ie no <b>update</b> <b>to</b> that variable)
     <b>if</b> (new_max_total_flow != 0) {
@@ -405,7 +409,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_certify_limits_definition">certify_limits_definition</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, limits_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_certify_limits_definition">certify_limits_definition</a>(tc_account: &signer, limits_addr: address)
 </code></pre>
 
 
@@ -414,8 +418,13 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_certify_limits_definition">certify_limits_definition</a>(_: &Capability&lt;TreasuryComplianceRole&gt;, limits_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_certify_limits_definition">certify_limits_definition</a>(
+    tc_account: &signer,
+    limits_addr: address,
+    )
 <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_treasury_compliance_role(tc_account), 919395);
     borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(limits_addr).is_certified = <b>true</b>;
 }
 </code></pre>
@@ -430,7 +439,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_decertify_limits_definition">decertify_limits_definition</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_TreasuryComplianceRole">Roles::TreasuryComplianceRole</a>&gt;, limits_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_decertify_limits_definition">decertify_limits_definition</a>(tc_account: &signer, limits_addr: address)
 </code></pre>
 
 
@@ -439,8 +448,13 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_decertify_limits_definition">decertify_limits_definition</a>(_: &Capability&lt;TreasuryComplianceRole&gt;, limits_addr: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_decertify_limits_definition">decertify_limits_definition</a>(
+    tc_account: &signer,
+    limits_addr: address,
+)
 <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(has_treasury_compliance_role(tc_account), 919396);
     borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&gt;(limits_addr).is_certified = <b>false</b>;
 }
 </code></pre>

@@ -5,12 +5,8 @@
 //! new-transaction
 script {
 use 0x1::LibraSystem;
-use 0x1::LibraConfig::CreateOnChainConfig;
-use 0x1::Roles;
 fun main(account: &signer) {
-    let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
-    LibraSystem::initialize_validator_set(account, &r);
-    Roles::restore_capability_to_privilege(account, r);
+    LibraSystem::initialize_validator_set(account);
 }
 }
 // check: ABORTED
@@ -19,11 +15,8 @@ fun main(account: &signer) {
 //! new-transaction
 script {
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
-        LibraSystem::update_and_reconfigure(&assoc_root_role);
-        Roles::restore_capability_to_privilege(account, assoc_root_role);
+        LibraSystem::update_and_reconfigure(account);
     }
 }
 // check: ABORTED

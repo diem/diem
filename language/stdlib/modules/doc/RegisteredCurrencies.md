@@ -12,7 +12,6 @@
 -  [Specification](#0x1_RegisteredCurrencies_Specification)
     -  [Function `initialize`](#0x1_RegisteredCurrencies_Specification_initialize)
     -  [Function `add_currency_code`](#0x1_RegisteredCurrencies_Specification_add_currency_code)
-    -  [Module specifications](#0x1_RegisteredCurrencies_@Module_specifications)
 
 Module managing the registered currencies in the Libra framework.
 
@@ -84,7 +83,7 @@ A capability which allows updating of the currency on-chain configuration.
 Initializes this module. Can only be called from genesis.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer, create_config_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="LibraConfig.md#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegisteredCurrencies::RegistrationCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegisteredCurrencies::RegistrationCapability</a>
 </code></pre>
 
 
@@ -95,18 +94,15 @@ Initializes this module. Can only be called from genesis.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(
     config_account: &signer,
-    create_config_capability: &Capability&lt;CreateOnChainConfig&gt;,
 ): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> {
     assert_is_genesis();
 
-    // enforce that this is only going <b>to</b> one specific address,
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
         0
     );
     <b>let</b> cap = <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>(
         config_account,
-        create_config_capability,
         <a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a> { currency_codes: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>() }
     );
 
@@ -162,9 +158,14 @@ Adds a new currency code. The currency code must not yet exist.
 ### Function `initialize`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer, create_config_capability: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="LibraConfig.md#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegisteredCurrencies::RegistrationCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(config_account: &signer): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegisteredCurrencies::RegistrationCapability</a>
 </code></pre>
 
+
+
+
+<pre><code>pragma aborts_if_is_partial;
+</code></pre>
 
 
 Function aborts if already initialized or not in genesis.
@@ -224,11 +225,6 @@ The same currency code can be only added once.
 }
 </code></pre>
 
-
-
-<a name="0x1_RegisteredCurrencies_@Module_specifications"></a>
-
-### Module specifications
 
 
 

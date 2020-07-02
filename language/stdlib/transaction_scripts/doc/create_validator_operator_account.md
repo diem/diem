@@ -28,14 +28,11 @@ Create a validator operator account at
 
 
 <pre><code><b>fun</b> <a href="#SCRIPT_create_validator_operator_account">create_validator_operator_account</a>(creator: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;) {
-    <b>let</b> assoc_root_role = <a href="../../modules/doc/Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>&lt;LibraRootRole&gt;(creator);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_validator_operator_account">LibraAccount::create_validator_operator_account</a>(
         creator,
-        &assoc_root_role,
         new_account_address,
         auth_key_prefix
     );
-    <a href="../../modules/doc/Roles.md#0x1_Roles_restore_capability_to_privilege">Roles::restore_capability_to_privilege</a>(creator, assoc_root_role);
 }
 </code></pre>
 

@@ -5,12 +5,10 @@
 
 ### Table of Contents
 
--  [Resource `CreateOnChainConfig`](#0x1_LibraConfig_CreateOnChainConfig)
 -  [Resource `LibraConfig`](#0x1_LibraConfig_LibraConfig)
 -  [Struct `NewEpochEvent`](#0x1_LibraConfig_NewEpochEvent)
 -  [Resource `Configuration`](#0x1_LibraConfig_Configuration)
 -  [Resource `ModifyConfigCapability`](#0x1_LibraConfig_ModifyConfigCapability)
--  [Function `grant_privileges`](#0x1_LibraConfig_grant_privileges)
 -  [Function `initialize`](#0x1_LibraConfig_initialize)
 -  [Function `get`](#0x1_LibraConfig_get)
 -  [Function `set`](#0x1_LibraConfig_set)
@@ -29,34 +27,6 @@
     -  [Function `reconfigure_`](#0x1_LibraConfig_Specification_reconfigure_)
 
 
-
-<a name="0x1_LibraConfig_CreateOnChainConfig"></a>
-
-## Resource `CreateOnChainConfig`
-
-
-
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>dummy_field: bool</code>
-</dt>
-<dd>
-
-</dd>
-</dl>
-
-
-</details>
 
 <a name="0x1_LibraConfig_LibraConfig"></a>
 
@@ -184,38 +154,13 @@
 
 </details>
 
-<a name="0x1_LibraConfig_grant_privileges"></a>
-
-## Function `grant_privileges`
-
-Will fail if the account is not association root
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_grant_privileges">grant_privileges</a>(account: &signer)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_grant_privileges">grant_privileges</a>(account: &signer) {
-    <a href="Roles.md#0x1_Roles_add_privilege_to_account_association_root_role">Roles::add_privilege_to_account_association_root_role</a>(account, <a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>{});
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_LibraConfig_initialize"></a>
 
 ## Function `initialize`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_initialize">initialize</a>(config_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_initialize">initialize</a>(config_account: &signer)
 </code></pre>
 
 
@@ -226,7 +171,6 @@ Will fail if the account is not association root
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_initialize">initialize</a>(
     config_account: &signer,
-    _: &Capability&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>&gt;,
 ) {
     // Operational constraint
     <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 1);
@@ -340,7 +284,7 @@ Will fail if the account is not association root
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, payload: Config): <a href="#0x1_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;Config&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config): <a href="#0x1_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;Config&gt;
 </code></pre>
 
 
@@ -351,9 +295,10 @@ Will fail if the account is not association root
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(
     config_account: &signer,
-    _: &Capability&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>&gt;,
     payload: Config,
 ): <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_on_chain_config_privilege">Roles::has_on_chain_config_privilege</a>(config_account), 919414);
     <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 1);
     move_to(config_account, <a href="#0x1_LibraConfig">LibraConfig</a> { payload });
     // We don't trigger reconfiguration here, instead we'll wait for all validators <b>update</b> the binary
@@ -373,7 +318,7 @@ Will fail if the account is not association root
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_treasury_compliance_config">publish_new_treasury_compliance_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, tc_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, payload: Config)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_treasury_compliance_config">publish_new_treasury_compliance_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, tc_account: &signer, payload: Config)
 </code></pre>
 
 
@@ -385,9 +330,10 @@ Will fail if the account is not association root
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_treasury_compliance_config">publish_new_treasury_compliance_config</a>&lt;Config: <b>copyable</b>&gt;(
     config_account: &signer,
     tc_account: &signer,
-    _: &Capability&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>&gt;,
     payload: Config,
 ) {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_on_chain_config_privilege">Roles::has_on_chain_config_privilege</a>(config_account), 919415);
     move_to(config_account, <a href="#0x1_LibraConfig">LibraConfig</a> { payload });
     move_to(tc_account, <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {});
 }
@@ -403,7 +349,7 @@ Will fail if the account is not association root
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, payload: Config)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config)
 </code></pre>
 
 
@@ -414,9 +360,10 @@ Will fail if the account is not association root
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(
     config_account: &signer,
-    _: &Capability&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>&gt;,
     payload: Config
 ) {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_on_chain_config_privilege">Roles::has_on_chain_config_privilege</a>(config_account), 919416);
     <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 1);
     move_to(config_account, <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt; {});
     move_to(config_account, <a href="#0x1_LibraConfig">LibraConfig</a>{ payload });
@@ -436,7 +383,7 @@ Will fail if the account is not association root
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_delegate">publish_new_config_with_delegate</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, payload: Config, delegate: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_delegate">publish_new_config_with_delegate</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config, delegate: address)
 </code></pre>
 
 
@@ -447,10 +394,11 @@ Will fail if the account is not association root
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_delegate">publish_new_config_with_delegate</a>&lt;Config: <b>copyable</b>&gt;(
     config_account: &signer,
-    _: &Capability&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">CreateOnChainConfig</a>&gt;,
     payload: Config,
     delegate: address,
 ) {
+    // TODO: <b>abort</b> code
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_on_chain_config_privilege">Roles::has_on_chain_config_privilege</a>(config_account), 919417);
     <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 1);
     <a href="Offer.md#0x1_Offer_create">Offer::create</a>(config_account, <a href="#0x1_LibraConfig_ModifyConfigCapability">ModifyConfigCapability</a>&lt;Config&gt;{}, delegate);
     move_to(config_account, <a href="#0x1_LibraConfig">LibraConfig</a> { payload });
@@ -494,7 +442,7 @@ Will fail if the account is not association root
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_reconfigure">reconfigure</a>(_: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="Roles.md#0x1_Roles_LibraRootRole">Roles::LibraRootRole</a>&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_reconfigure">reconfigure</a>(lr_account: &signer)
 </code></pre>
 
 
@@ -504,9 +452,11 @@ Will fail if the account is not association root
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_reconfigure">reconfigure</a>(
-    _: &Capability&lt;LibraRootRole&gt;,
+    lr_account: &signer,
 ) <b>acquires</b> <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
     // Only callable by association address or by the VM internally.
+    // TODO: <b>abort</b> code
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), 919418);
     <a href="#0x1_LibraConfig_reconfigure_">reconfigure_</a>();
 }
 </code></pre>
@@ -595,7 +545,7 @@ Will fail if the account is not association root
 ### Function `publish_new_config_with_capability`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, payload: Config): <a href="#0x1_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;Config&gt;
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config_with_capability">publish_new_config_with_capability</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config): <a href="#0x1_LibraConfig_ModifyConfigCapability">LibraConfig::ModifyConfigCapability</a>&lt;Config&gt;
 </code></pre>
 
 
@@ -615,7 +565,7 @@ aborts_if spec_is_published<Config>();
 ### Function `publish_new_config`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, _: &<a href="Roles.md#0x1_Roles_Capability">Roles::Capability</a>&lt;<a href="#0x1_LibraConfig_CreateOnChainConfig">LibraConfig::CreateOnChainConfig</a>&gt;, payload: Config)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_publish_new_config">publish_new_config</a>&lt;Config: <b>copyable</b>&gt;(config_account: &signer, payload: Config)
 </code></pre>
 
 
@@ -691,5 +641,9 @@ Spec version of
 
 <pre><code><b>define</b> <a href="#0x1_LibraConfig_spec_is_published">spec_is_published</a>&lt;Config&gt;(): bool {
     exists&lt;<a href="#0x1_LibraConfig">LibraConfig</a>&lt;Config&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
+}
+<a name="0x1_LibraConfig_spec_has_on_chain_config_privilege"></a>
+<b>define</b> <a href="#0x1_LibraConfig_spec_has_on_chain_config_privilege">spec_has_on_chain_config_privilege</a>(account: signer): bool {
+    <a href="Roles.md#0x1_Roles_spec_has_libra_root_role">Roles::spec_has_libra_root_role</a>(account)
 }
 </code></pre>

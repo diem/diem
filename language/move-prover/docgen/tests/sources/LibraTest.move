@@ -11,8 +11,7 @@ module LibraTest {
     use 0x1::RegisteredCurrencies::{Self, RegistrationCapability};
     use 0x1::Signer;
     use 0x1::Vector;
-    use 0x1::Roles::{Self, Capability, TreasuryComplianceRole};
-    use 0x1::LibraConfig::CreateOnChainConfig;
+    use 0x1::Roles::{Self, has_register_new_currency_privilege, has_treasury_compliance_role};
     use 0x1::LibraTimestamp;
 
     resource struct RegisterNewCurrency {}
@@ -38,7 +37,6 @@ module LibraTest {
 
     /// The `BurnCapability` resource defines a capability to allow coins
     /// of `CoinType` currency to be burned by the holder of the
-    /// capability. This capability is only held by the `CoreAddresses::TREASURY_COMPLIANCE_ADDRESS()` account,
     /// and the `0x1::LBR` module (and `CoreAddresses::LIBRA_ROOT_ADDRESS()` in testnet).
     resource struct BurnCapability<CoinType> { }
 
@@ -173,7 +171,6 @@ module LibraTest {
     /// contains this address has the authority to initiate a burn request. A burn request can be
     /// resolved by the holder of a `BurnCapability` by either (1) burning the funds, or (2)
     /// returning the funds to the account that initiated the burn request.
-    /// This design supports multiple preburn requests in flight at the same time,
     /// including multiple burn requests from the same account. However, burn requests
     /// (and cancellations) from the same account must be resolved in FIFO order.
     resource struct Preburn<CoinType> {
@@ -189,9 +186,8 @@ module LibraTest {
     /// the calling account as long as it has the correct role (TC).
     /// Aborts if `account` does not have a `RoleId` that corresponds with
     /// the treacury compliance role.
-    public fun grant_privileges(account: &signer) {
-        Roles::add_privilege_to_account_treasury_compliance_role(account, RegisterNewCurrency{});
-    }
+    // public fun grant_privileges(account: &signer) {
+    // }
 
     /// Initialization of the `Libra` module; initializes the set of
     /// registered currencies in the `0x1::RegisteredCurrencies` on-chain
@@ -199,7 +195,6 @@ module LibraTest {
     /// `CoreAddresses::LIBRA_ROOT_ADDRESS()`. This can only be called from genesis.
     public fun initialize(
         config_account: &signer,
-        create_config_capability: &Capability<CreateOnChainConfig>,
     ) {
         LibraTimestamp::assert_is_genesis();
         // Operational constraint
@@ -207,7 +202,7 @@ module LibraTest {
             Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
             0
         );
-        let cap = RegisteredCurrencies::initialize(config_account, create_config_capability);
+        let cap = RegisteredCurrencies::initialize(config_account);
         move_to(config_account, CurrencyRegistrationCapability{ cap })
     }
 
@@ -215,12 +210,14 @@ module LibraTest {
     /// under `account`. `CoinType`  must be a registered currency type.
     /// The caller must pass a `TreasuryComplianceRole` capability.
     public fun publish_mint_capability<CoinType>(
-        account: &signer,
+        publish_account: &signer,
         cap: MintCapability<CoinType>,
-        _: &Capability<TreasuryComplianceRole>,
+        tc_signer: &signer,
     ) {
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tc_signer), 919402);
         assert_is_currency<CoinType>();
-        move_to(account, cap)
+        move_to(publish_account, cap)
     }
 
     /// Publishes the `BurnCapability` `cap` for the `CoinType` currency under `account`. `CoinType`
@@ -229,8 +226,10 @@ module LibraTest {
     public fun publish_burn_capability<CoinType>(
         account: &signer,
         cap: BurnCapability<CoinType>,
-        _: &Capability<TreasuryComplianceRole>,
+        tc_account: &signer,
     ) {
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tc_account), 919403);
         assert_is_currency<CoinType>();
         move_to(account, cap)
     }
@@ -297,12 +296,6 @@ module LibraTest {
         _capability: &MintCapability<CoinType>
     ): Libra<CoinType> acquires CurrencyInfo {
         assert_is_currency<CoinType>();
-        // TODO: temporary measure for testnet only: limit minting to 1B Libra at a time.
-        // this is to prevent the market cap's total value from hitting u64_max due to excessive
-        // minting. This will not be a problem in the production Libra system because coins will
-        // be backed with real-world assets, and thus minting will be correspondingly rarer.
-        // * 1000000 here because the unit is microlibra
-        assert(value <= 1000000000 * 1000000, 11);
         let currency_code = currency_code<CoinType>();
         // update market cap resource to reflect minting
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
@@ -329,7 +322,6 @@ module LibraTest {
         value: u64;
         aborts_if !spec_is_currency<CoinType>();
         aborts_if !spec_currency_info<CoinType>().can_mint;
-        aborts_if value > 1000000000 * 1000000;
         aborts_if spec_currency_info<CoinType>().total_value + value > max_u128();
     }
     spec schema MintEnsures<CoinType> {
@@ -393,8 +385,10 @@ module LibraTest {
 
     /// Create a `Preburn<CoinType>` resource
     public fun create_preburn<CoinType>(
-        _: &Capability<TreasuryComplianceRole>
+        tc_account: &signer
     ): Preburn<CoinType> {
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tc_account), 919404);
         assert(is_currency<CoinType>(), 201);
         Preburn<CoinType> { requests: Vector::empty() }
     }
@@ -405,10 +399,11 @@ module LibraTest {
     /// this resource for the designated dealer.
     public fun publish_preburn_to_account<CoinType>(
         account: &signer,
-        tc_capability: &Capability<TreasuryComplianceRole>,
+        tc_account: &signer
     ) acquires CurrencyInfo {
         assert(!is_synthetic_currency<CoinType>(), 202);
-        move_to(account, create_preburn<CoinType>(tc_capability))
+        // move_to(account, create_preburn<CoinType>(tc_capability))
+        move_to(account, create_preburn<CoinType>(tc_account))
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -621,7 +616,6 @@ module LibraTest {
         ensures coin.value == 0;
     }
 
-    /// Combines the two coins of the same currency `CoinType` passed-in,
     /// and returns a new coin whose value is equal to the sum of the two inputs.
     public fun join<CoinType>(coin1: Libra<CoinType>, coin2: Libra<CoinType>): Libra<CoinType>  {
         deposit(&mut coin1, coin2);
@@ -642,7 +636,6 @@ module LibraTest {
     }
 
     /// Destroy a zero-value coin. Calls will fail if the `value` in the passed-in `coin` is non-zero
-    /// The amount of `Libra` in the system is a tightly controlled property,
     /// so you cannot "burn" any non-zero amount of `Libra` without having
     /// a `BurnCapability` for the specific `CoinType`.
     public fun destroy_zero<CoinType>(coin: Libra<CoinType>) {
@@ -670,7 +663,8 @@ module LibraTest {
     /// `MintCapability<CoinType>` and `BurnCapability<CoinType>` resources.
     public fun register_currency<CoinType>(
         account: &signer,
-        _: &Capability<RegisterNewCurrency>,
+        // DD refactor
+        tc_account: &signer,
         to_lbr_exchange_rate: FixedPoint32,
         is_synthetic: bool,
         scaling_factor: u64,
@@ -678,6 +672,8 @@ module LibraTest {
         currency_code: vector<u8>,
     ): (MintCapability<CoinType>, BurnCapability<CoinType>)
     acquires CurrencyRegistrationCapability {
+        // TODO: abort code
+        assert(has_register_new_currency_privilege(tc_account), 919405);
         // Operational constraint that it must be stored under a specific
         // address.
         assert(
@@ -707,6 +703,7 @@ module LibraTest {
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
     spec fun register_currency {
+        aborts_if !Roles::spec_has_register_new_currency_privilege(tc_account);
         aborts_if Signer::spec_address_of(account) != CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS();
         aborts_if !exists<CurrencyRegistrationCapability>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
         aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(account));
@@ -779,9 +776,11 @@ module LibraTest {
     /// Updates the `to_lbr_exchange_rate` held in the `CurrencyInfo` for
     /// `FromCoinType` to the new passed-in `lbr_exchange_rate`.
     public fun update_lbr_exchange_rate<FromCoinType>(
-        _: &Capability<TreasuryComplianceRole>,
+        tr_account: &signer,
         lbr_exchange_rate: FixedPoint32
     ) acquires CurrencyInfo {
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tr_account), 919406);
         assert_is_currency<FromCoinType>();
         let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
@@ -808,8 +807,13 @@ module LibraTest {
     /// true`, then minting is allowed, if `can_mint = false` then minting is
     /// disallowed until it is turned back on via this function. All coins
     /// start out in the default state of `can_mint = true`.
-    public fun update_minting_ability<CoinType>(_: &Capability<TreasuryComplianceRole>, can_mint: bool)
+    public fun update_minting_ability<CoinType>(
+        tr_account: &signer,
+        can_mint: bool,
+        )
     acquires CurrencyInfo {
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tr_account), 919407);
         assert_is_currency<CoinType>();
         let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.can_mint = can_mint;

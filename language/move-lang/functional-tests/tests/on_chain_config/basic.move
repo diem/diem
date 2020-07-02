@@ -17,16 +17,13 @@ module ConfigHolder {
 
 //! new-transaction
 script {
-    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
-    use 0x1::Roles;
+    use 0x1::LibraConfig::{Self};
     fun main(account: &signer) {
-        let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
-        LibraConfig::initialize(account, &r);
-        Roles::restore_capability_to_privilege(account, r);
+        LibraConfig::initialize(account);
     }
 }
 // check: ABORTED
-// check: 3
+// check: 1
 
 //! new-transaction
 script {
@@ -50,34 +47,29 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
+    use 0x1::LibraConfig::{Self};
     use {{default}}::ConfigHolder;
-    use 0x1::Roles;
     fun main(account: &signer) {
-        let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
         ConfigHolder::hold(
             account,
-            LibraConfig::publish_new_config_with_capability(account, &r, 0)
+            LibraConfig::publish_new_config_with_capability(account, 0)
         );
-        Roles::restore_capability_to_privilege(account, r);
+
     }
 }
 // check: ABORTED
-// check: 3
+// check: 919414
 
 //! new-transaction
 //! sender: association
 script {
-    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
+    use 0x1::LibraConfig::{Self};
     use {{default}}::ConfigHolder;
-    use 0x1::Roles;
     fun main(account: &signer) {
-        let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
         ConfigHolder::hold(
             account,
-            LibraConfig::publish_new_config_with_capability<u64>(account, &r, 0)
+            LibraConfig::publish_new_config_with_capability<u64>(account, 0)
         );
-        Roles::restore_capability_to_privilege(account, r);
     }
 }
 // check: EXECUTED
@@ -96,26 +88,20 @@ script {
 
 //! new-transaction
 script {
-    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
-    use 0x1::Roles;
+    use 0x1::LibraConfig::{Self};
     fun main(account: &signer) {
-        let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
-        LibraConfig::publish_new_config(account, &r, 0);
-        Roles::restore_capability_to_privilege(account, r);
+        LibraConfig::publish_new_config(account, 0);
     }
 }
 // check: ABORTED
-// check: 3
+// check: 919416
 
 //! new-transaction
 script {
-    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
-    use 0x1::Roles;
+    use 0x1::LibraConfig::{Self};
     fun main(account: &signer) {
-        let r = Roles::extract_privilege_to_capability<CreateOnChainConfig>(account);
-        LibraConfig::publish_new_config_with_delegate(account, &r, 0, {{association}});
-        Roles::restore_capability_to_privilege(account, r);
+        LibraConfig::publish_new_config_with_delegate(account, 0, {{association}});
     }
 }
 // check: ABORTED
-// check: 3
+// check: 919417

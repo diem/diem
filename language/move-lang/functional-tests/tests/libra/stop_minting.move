@@ -6,43 +6,36 @@ script {
 use 0x1::LibraAccount;
 use 0x1::Coin1::Coin1;
 use 0x1::Coin2::Coin2;
-use 0x1::Roles::{Self, TreasuryComplianceRole};
 use 0x1::Libra;
 
 // register dd(1|2) as a preburner
 fun main(account: &signer) {
     let prev_mcap1 = Libra::market_cap<Coin1>();
     let prev_mcap2 = Libra::market_cap<Coin2>();
-    let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
     LibraAccount::create_designated_dealer<Coin1>(
         account,
-        &tc_capability,
         {{dd1}},
         {{dd1::auth_key}},
     );
     LibraAccount::create_designated_dealer<Coin2>(
         account,
-        &tc_capability,
         {{dd2}},
         {{dd2::auth_key}},
     );
     LibraAccount::tiered_mint<Coin1>(
         account,
-        &tc_capability,
         {{dd1}},
         10,
         0,
     );
     LibraAccount::tiered_mint<Coin2>(
         account,
-        &tc_capability,
         {{dd2}},
         100,
         0,
     );
     assert(Libra::market_cap<Coin1>() - prev_mcap1 == 10, 7);
     assert(Libra::market_cap<Coin2>() - prev_mcap2 == 100, 8);
-    Roles::restore_capability_to_privilege(account, tc_capability);
 }
 }
 // check: EXECUTED
@@ -103,14 +96,11 @@ fun main(account: &signer) {
 script {
 use 0x1::Libra;
 use 0x1::Coin1::Coin1;
-use 0x1::Roles::{Self, TreasuryComplianceRole};
 
 fun main(account: &signer) {
-    let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
-    Libra::update_minting_ability<Coin1>(&tc_capability, false);
+    Libra::update_minting_ability<Coin1>(account, false);
     let coin = Libra::mint<Coin1>(account, 10); // will abort here
     Libra::destroy_zero(coin);
-    Roles::restore_capability_to_privilege(account, tc_capability);
 }
 }
 // check: ABORTED

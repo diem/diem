@@ -30,8 +30,6 @@ A resource that holds the
 <code>KeyRotationCapability</code>s for several accounts belonging to the
 same VASP. A VASP account that delegates its
 <code>KeyRotationCapability</code> to
-a
-<code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource retains the ability to rotate its own authentication key,
 but also allows the account that stores the
 <code><a href="#0x1_RecoveryAddress">RecoveryAddress</a></code> resource to rotate its
 authentication key.

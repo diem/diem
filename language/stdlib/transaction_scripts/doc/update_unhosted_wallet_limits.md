@@ -36,9 +36,7 @@ If a new threshold is 0, that particular config does not get updated.
     new_max_holding_balance: u64,
 ) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
-    <b>let</b> cap = <a href="../../modules/doc/Roles.md#0x1_Roles_extract_privilege_to_capability">Roles::extract_privilege_to_capability</a>&lt;TreasuryComplianceRole&gt;(tc_account);
-    <a href="../../modules/doc/AccountLimits.md#0x1_AccountLimits_update_limits_definition">AccountLimits::update_limits_definition</a>(&cap, new_max_total_flow, new_max_holding_balance);
-    <a href="../../modules/doc/Roles.md#0x1_Roles_restore_capability_to_privilege">Roles::restore_capability_to_privilege</a>(tc_account, cap);
+    <a href="../../modules/doc/AccountLimits.md#0x1_AccountLimits_update_limits_definition">AccountLimits::update_limits_definition</a>(tc_account, new_max_total_flow, new_max_holding_balance);
 }
 </code></pre>
 

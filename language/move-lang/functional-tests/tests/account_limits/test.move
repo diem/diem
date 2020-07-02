@@ -51,12 +51,9 @@ script {
 //! sender: blessed
 script {
     use 0x1::AccountLimits;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(tc_account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(tc_account);
         let new_max_total_flow = 2;
-        AccountLimits::update_limits_definition(&tc_capability, new_max_total_flow, 0);
-        Roles::restore_capability_to_privilege(tc_account, tc_capability);
+        AccountLimits::update_limits_definition(tc_account, new_max_total_flow, 0);
     }
 }
 
@@ -86,12 +83,9 @@ script {
 //! sender: blessed
 script {
     use 0x1::AccountLimits;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(tc_account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(tc_account);
         let new_max_total_flow = 1000;
-        AccountLimits::update_limits_definition(&tc_capability, new_max_total_flow, 1000);
-        Roles::restore_capability_to_privilege(tc_account, tc_capability);
+        AccountLimits::update_limits_definition(tc_account, new_max_total_flow, 1000);
     }
 }
 
@@ -99,11 +93,8 @@ script {
 //! sender: blessed
 script {
     use 0x1::AccountLimits;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
-        AccountLimits::certify_limits_definition(&tc_capability, {{bob}});
-        Roles::restore_capability_to_privilege(account, tc_capability);
+        AccountLimits::certify_limits_definition(account, {{bob}});
     }
 }
 // check: EXECUTED
@@ -111,11 +102,8 @@ script {
 //! new-transaction
 script {
     use 0x1::AccountLimits;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
-        AccountLimits::decertify_limits_definition(&tc_capability, {{bob}});
-        Roles::restore_capability_to_privilege(account, tc_capability);
+        AccountLimits::decertify_limits_definition(account, {{bob}});
     }
 }
 // check: ABORTED
@@ -124,11 +112,8 @@ script {
 //! sender: blessed
 script {
     use 0x1::AccountLimits;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
-        AccountLimits::decertify_limits_definition(&tc_capability, {{blessed}});
-        Roles::restore_capability_to_privilege(account, tc_capability);
+        AccountLimits::decertify_limits_definition(account, {{blessed}});
     }
 }
 // check: EXECUTED
@@ -189,14 +174,11 @@ script {
 //! sender: blessed
 script {
     use 0x1::AccountLimits;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     // Publish our own limits definition for testing! Make sure we are
     // exercising the unrestricted limits check.
     fun main(account: &signer) {
         AccountLimits::publish_unrestricted_limits(account);
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
-        AccountLimits::certify_limits_definition(&tc_capability, {{blessed}});
-        Roles::restore_capability_to_privilege(account, tc_capability);
+        AccountLimits::certify_limits_definition(account, {{blessed}});
     }
 }
 // check: EXECUTED
@@ -231,11 +213,8 @@ script {
 //! sender: blessed
 script {
     use 0x1::AccountLimits;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
-        AccountLimits::decertify_limits_definition(&tc_capability, {{blessed}});
-        Roles::restore_capability_to_privilege(account, tc_capability);
+        AccountLimits::decertify_limits_definition(account, {{blessed}});
     }
 }
 // check: EXECUTED
@@ -259,10 +238,8 @@ script {
 //! sender: blessed
 script {
     use 0x1::AccountLimits;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     // Publish our own limits definition for testing!
     fun main(account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
         AccountLimits::unpublish_limits_definition(account);
         AccountLimits::publish_limits_definition(
             account,
@@ -270,8 +247,7 @@ script {
             200,
             40000,
         );
-        AccountLimits::certify_limits_definition(&tc_capability, {{blessed}});
-        Roles::restore_capability_to_privilege(account, tc_capability);
+        AccountLimits::certify_limits_definition(account, {{blessed}});
     }
 }
 // check: EXECUTED
@@ -326,11 +302,8 @@ script {
 //! sender: blessed
 script {
     use 0x1::AccountLimits;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
-        AccountLimits::decertify_limits_definition(&tc_capability, {{blessed}});
-        Roles::restore_capability_to_privilege(account, tc_capability);
+        AccountLimits::decertify_limits_definition(account, {{blessed}});
     }
 }
 // check: EXECUTED
@@ -369,16 +342,14 @@ script {
 //! sender: blessed
 script {
     use 0x1::AccountLimits;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
+        // AccountLimits::update_limits_definition(
         AccountLimits::update_limits_definition(
-            &tc_capability,
+            account,
             100,
             200,
         );
-        AccountLimits::certify_limits_definition(&tc_capability, {{blessed}});
-        Roles::restore_capability_to_privilege(account, tc_capability);
+        AccountLimits::certify_limits_definition(account, {{blessed}});
     }
 }
 // check: EXECUTED

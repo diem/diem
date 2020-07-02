@@ -1,9 +1,7 @@
 address 0x1 {
 module SlidingNonce {
     use 0x1::Signer;
-    use 0x1::Roles::{Self, Capability};
-
-    resource struct CreateSlidingNonce {}
+    use 0x1::Roles::{has_libra_root_role};
 
     /// This struct keep last 128 nonce values in a bit map nonce_mask
     /// We assume that nonce are generated incrementally, but certain permutation is allowed when nonce are recorded
@@ -16,16 +14,15 @@ module SlidingNonce {
         nonce_mask: u128,
     }
 
-    /// Grants the `CreateSlidingNonce` privilege to the calling `account`.
-    /// Aborts if the calling account does not have the association root role.
-    public fun grant_privileges(account: &signer) {
-        Roles::add_privilege_to_account_association_root_role(account, CreateSlidingNonce{});
-    }
-
     /// Calls try_record_nonce and aborts transaction if returned code is non-0
     public fun record_nonce_or_abort(account: &signer, seq_nonce: u64) acquires SlidingNonce {
         let code = try_record_nonce(account, seq_nonce);
         assert(code == 0, code);
+    }
+
+
+    public fun has_create_sliding_nonce_privilege(lr_account: &signer): bool {
+        has_libra_root_role(lr_account)
     }
 
     /// Tries to record this nonce in the account.
@@ -76,7 +73,12 @@ module SlidingNonce {
     /// Publishes nonce resource into specific account
     /// Only association can create this resource for different account
     /// Alternative is publish_nonce_resource_for_user that publishes resource into current account
-    public fun publish_nonce_resource(_: &Capability<CreateSlidingNonce>, account: &signer) {
+    public fun publish_nonce_resource(
+        lr_account: &signer,
+        account: &signer
+    ) {
+        // TODO: abort code
+        assert(has_create_sliding_nonce_privilege(lr_account), 919423);
         let new_resource = SlidingNonce {
             min_nonce: 0,
             nonce_mask: 0,

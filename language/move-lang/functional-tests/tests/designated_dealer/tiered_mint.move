@@ -9,13 +9,10 @@ script {
     use 0x1::DesignatedDealer;
     use 0x1::LibraAccount;
     use 0x1::Coin1::Coin1;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(account);
         let dummy_auth_key_prefix = x"00000000000000000000000000000001";
-        LibraAccount::create_designated_dealer<Coin1>(account, &tc_capability, 0xDEADBEEF, dummy_auth_key_prefix);
+        LibraAccount::create_designated_dealer<Coin1>(account, 0xDEADBEEF, dummy_auth_key_prefix);
         assert(DesignatedDealer::exists_at(0xDEADBEEF), 0);
-        Roles::restore_capability_to_privilege(account, tc_capability);
     }
 }
 
@@ -32,17 +29,14 @@ script {
     use 0x1::DesignatedDealer;
     use 0x1::LibraAccount;
     use 0x1::Coin1::Coin1;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(tc_account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(tc_account);
         let designated_dealer_address = 0xDEADBEEF;
-        DesignatedDealer::add_tier(&tc_capability, 0xDEADBEEF, 100); // first Tier, 0th index
+        DesignatedDealer::add_tier(tc_account, 0xDEADBEEF, 100); // first Tier, 0th index
         LibraAccount::tiered_mint<Coin1>(
-            tc_account, &tc_capability, designated_dealer_address, 99, 0
+            tc_account, designated_dealer_address, 99, 0
         );
-        DesignatedDealer::add_tier(&tc_capability, 0xDEADBEEF, 1000); // second Tier
-        DesignatedDealer::add_tier(&tc_capability, 0xDEADBEEF, 10000); // third Tier
-        Roles::restore_capability_to_privilege(tc_account, tc_capability);
+        DesignatedDealer::add_tier(tc_account, 0xDEADBEEF, 1000); // second Tier
+        DesignatedDealer::add_tier(tc_account, 0xDEADBEEF, 10000); // third Tier
     }
 }
 
@@ -58,13 +52,10 @@ script {
 script {
     use 0x1::LibraAccount;
     use 0x1::Coin1::Coin1;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(tc_account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(tc_account);
         LibraAccount::tiered_mint<Coin1>(
-            tc_account, &tc_capability, 0xDEADBEEF, 1001, 1
+            tc_account, 0xDEADBEEF, 1001, 1
         );
-        Roles::restore_capability_to_privilege(tc_account, tc_capability);
     }
 }
 
@@ -77,11 +68,9 @@ script {
 //! sender: blessed
 script {
     use 0x1::DesignatedDealer;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(tc_account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(tc_account);
-        DesignatedDealer::update_tier(&tc_capability, 0xDEADBEEF, 4, 1000000); // invalid tier index (max index 3)
-        Roles::restore_capability_to_privilege(tc_account, tc_capability);
+        // DesignatedDealer::update_tier(&tc_capability, 0xDEADBEEF, 4, 1000000); // invalid tier index (max index 3)
+        DesignatedDealer::update_tier(tc_account, 0xDEADBEEF, 4, 1000000); // invalid tier index (max index 3)
     }
 }
 
@@ -97,13 +86,10 @@ script {
 script {
     use 0x1::LibraAccount;
     use 0x1::Coin1::Coin1;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(tc_account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(tc_account);
         LibraAccount::tiered_mint<Coin1>(
-            tc_account, &tc_capability, 0xDEADBEEF, 1, 0
+            tc_account, 0xDEADBEEF, 1, 0
         );
-        Roles::restore_capability_to_privilege(tc_account, tc_capability);
     }
 }
 
@@ -118,13 +104,10 @@ script {
 script {
     use 0x1::LibraAccount;
     use 0x1::Coin1::Coin1;
-    use 0x1::Roles::{Self, TreasuryComplianceRole};
     fun main(tc_account: &signer) {
-        let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(tc_account);
         LibraAccount::tiered_mint<Coin1>(
-            tc_account, &tc_capability, 0xDEADBEEF, 99999999999, 3
+            tc_account, 0xDEADBEEF, 99999999999, 3
         );
-        Roles::restore_capability_to_privilege(tc_account, tc_capability);
     }
 }
 // check: ReceivedMintEvent

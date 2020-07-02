@@ -1,7 +1,6 @@
 script {
 use 0x1::LibraAccount;
 use 0x1::SlidingNonce;
-use 0x1::Roles::{Self, TreasuryComplianceRole};
 
 /// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.
 /// Max valid tier index is 3 since there are max 4 tiers per DD.
@@ -15,10 +14,8 @@ fun tiered_mint<CoinType>(
     tier_index: u64
 ) {
     SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
-    let tc_capability = Roles::extract_privilege_to_capability<TreasuryComplianceRole>(tc_account);
     LibraAccount::tiered_mint<CoinType>(
-        tc_account, &tc_capability, designated_dealer_address, mint_amount, tier_index
+        tc_account, designated_dealer_address, mint_amount, tier_index
     );
-    Roles::restore_capability_to_privilege(tc_account, tc_capability)
 }
 }

@@ -94,7 +94,6 @@ module Vector {
         pop_back(v)
     }
 
-    // Remove the `i`th element E of the vector by swapping it with the last element,
     // and then popping it off
     // It is O(1), but does not preserve ordering
     public fun swap_remove<Element>(v: &mut vector<Element>, i: u64): Element {

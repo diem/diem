@@ -23,11 +23,8 @@ module Holder {
 //! new-transaction
 script {
     use 0x1::LibraAccount;
-    use 0x1::Roles::{Self, LibraRootRole};
     fun main(sender: &signer) {
-        let cap = Roles::extract_privilege_to_capability<LibraRootRole>(sender);
-        LibraAccount::initialize(sender, &cap);
-        Roles::restore_capability_to_privilege(sender, cap);
+        LibraAccount::initialize(sender);
     }
 }
 // check: ABORTED
@@ -82,11 +79,8 @@ script {
 script {
     use 0x1::LibraAccount;
     use 0x1::LBR::LBR;
-    use 0x1::Roles::{Self, LibraRootRole};
     fun main(account: &signer) {
-        let cap = Roles::extract_privilege_to_capability<LibraRootRole>(account);
-        LibraAccount::create_unhosted_account<LBR>(account, &cap, 0xDEADBEEF, x"", false);
-        Roles::restore_capability_to_privilege(account, cap);
+        LibraAccount::create_unhosted_account<LBR>(account, 0xDEADBEEF, x"", false);
     }
 }
 // check: ABORTED

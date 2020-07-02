@@ -2,19 +2,20 @@ address 0x1 {
 
 module Coin2 {
     use 0x1::FixedPoint32;
-    use 0x1::Libra::{Self, RegisterNewCurrency};
-    use 0x1::Roles::Capability;
+    use 0x1::Libra::{Self,
+    // RegisterNewCurrency
+    };
 
     struct Coin2 { }
 
     public fun initialize(
         account: &signer,
-        cap: &Capability<RegisterNewCurrency>,
+        tc_account: &signer,
     ): (Libra::MintCapability<Coin2>, Libra::BurnCapability<Coin2>) {
         // Register the Coin2 currency.
         Libra::register_currency<Coin2>(
             account,
-            cap,
+            tc_account,
             FixedPoint32::create_from_rational(1, 2), // exchange rate to LBR
             false,   // is_synthetic
             1000000, // scaling_factor = 10^6

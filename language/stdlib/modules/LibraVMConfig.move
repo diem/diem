@@ -1,8 +1,7 @@
 address 0x1 {
 
 module LibraVMConfig {
-    use 0x1::LibraConfig::{Self, CreateOnChainConfig};
-    use 0x1::Roles::Capability;
+    use 0x1::LibraConfig;
     use 0x1::Signer;
 
     // The struct to hold all config data needed to operate the LibraVM.
@@ -63,9 +62,8 @@ module LibraVMConfig {
 
     // Initialize the table under the association account
     public fun initialize(
-        config_account: &signer,
+        lr_account: &signer,
         association_root_account: &signer,
-        create_config_capability: &Capability<CreateOnChainConfig>,
         publishing_option: vector<u8>,
         instruction_schedule: vector<u8>,
         native_schedule: vector<u8>,
@@ -84,8 +82,7 @@ module LibraVMConfig {
 
 
         LibraConfig::publish_new_config_with_delegate<LibraVMConfig>(
-            config_account,
-            create_config_capability,
+            lr_account,
             LibraVMConfig {
                 publishing_option,
                 gas_schedule: GasSchedule {
@@ -96,7 +93,7 @@ module LibraVMConfig {
             },
             Signer::address_of(association_root_account),
         );
-        LibraConfig::claim_delegated_modify_config<LibraVMConfig>(association_root_account, Signer::address_of(config_account));
+        LibraConfig::claim_delegated_modify_config<LibraVMConfig>(association_root_account, Signer::address_of(lr_account));
     }
 
     public fun set_publishing_option(account: &signer, publishing_option: vector<u8>) {

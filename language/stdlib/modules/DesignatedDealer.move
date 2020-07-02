@@ -4,7 +4,7 @@ module DesignatedDealer {
     use 0x1::LibraTimestamp;
     use 0x1::Vector;
     use 0x1::Event;
-    use 0x1::Roles::{Capability, TreasuryComplianceRole};
+    use 0x1::Roles::{has_treasury_compliance_role};
 
     resource struct Dealer {
         /// Time window start in microseconds
@@ -30,7 +30,12 @@ module DesignatedDealer {
     // To-be designated-dealer called functions
     ///////////////////////////////////////////////////////////////////////////
 
-    public fun publish_designated_dealer_credential(dd: &signer, _: &Capability<TreasuryComplianceRole>) {
+    public fun publish_designated_dealer_credential(
+        dd: &signer,
+        tc_account: &signer,
+    ) {
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tc_account), 919397);
         move_to(
             dd,
             Dealer {
@@ -61,10 +66,12 @@ module DesignatedDealer {
     }
 
     public fun add_tier(
-        _: &Capability<TreasuryComplianceRole>,
+        tc_account: &signer,
         addr: address,
         tier_upperbound: u64
     ) acquires Dealer {
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tc_account), 919398);
         let dealer = borrow_global_mut<Dealer>(addr);
         add_tier_(dealer, tier_upperbound)
     }
@@ -87,11 +94,13 @@ module DesignatedDealer {
     }
 
     public fun update_tier(
-        _update_tier_capability: &Capability<TreasuryComplianceRole>,
+        tc_account: &signer,
         addr: address,
         tier_index: u64,
         new_upperbound: u64
     ) acquires Dealer {
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tc_account), 919399);
         let dealer = borrow_global_mut<Dealer>(addr);
         update_tier_(dealer, tier_index, new_upperbound)
     }
@@ -118,13 +127,14 @@ module DesignatedDealer {
     }
 
     public fun tiered_mint<CoinType>(
-        blessed: &signer,
-        _: &Capability<TreasuryComplianceRole>,
+        tc_account: &signer,
         amount: u64,
         dd_addr: address,
         tier_index: u64,
     ): Libra<CoinType> acquires Dealer {
 
+        // TODO: abort code
+        assert(has_treasury_compliance_role(tc_account), 919400);
         // INVALID_MINT_AMOUNT
         assert(amount > 0, 6);
 
@@ -141,7 +151,7 @@ module DesignatedDealer {
                 amount: amount,
             },
         );
-        Libra::mint<CoinType>(blessed, amount)
+        Libra::mint<CoinType>(tc_account, amount)
     }
 
     public fun exists_at(addr: address): bool {

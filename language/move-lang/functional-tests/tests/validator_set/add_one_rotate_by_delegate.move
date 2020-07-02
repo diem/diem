@@ -73,13 +73,10 @@ script {
 //! sender: association
 script {
     use 0x1::LibraSystem;
-    use 0x1::Roles::{Self, LibraRootRole};
     use 0x1::ValidatorConfig;
     fun main(account: &signer) {
-        let assoc_root_role = Roles::extract_privilege_to_capability<LibraRootRole>(account);
         // call update to reconfigure
-        LibraSystem::update_and_reconfigure(&assoc_root_role);
-        Roles::restore_capability_to_privilege(account, assoc_root_role);
+        LibraSystem::update_and_reconfigure(account);
 
         // check bob's public key is updated
         let validator_config = LibraSystem::get_validator_config({{bob}});

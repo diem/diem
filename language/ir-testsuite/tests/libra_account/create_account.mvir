@@ -6,15 +6,12 @@ import 0x1.Roles;
 //! sender: association
 main(account: &signer) {
     let addr: address;
-    let x: Roles.Capability<Roles.LibraRootRole>;
     let pubkey: vector<u8>;
-    x = Roles.extract_privilege_to_capability<Roles.LibraRootRole>(copy(account));
     pubkey = h"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
 
     addr = 0x111101;
     assert(!LibraAccount.exists_at(copy(addr)), 83);
-    LibraAccount.create_parent_vasp_account<LBR.LBR>(copy(account), &x, copy(addr), LCS.to_bytes<address>(&addr), h"aa", h"bb", move(pubkey), false);
-    Roles.restore_capability_to_privilege<Roles.LibraRootRole>(move(account), move(x));
+    LibraAccount.create_parent_vasp_account<LBR.LBR>(copy(account), copy(addr), LCS.to_bytes<address>(&addr), h"aa", h"bb", move(pubkey), false);
     return;
 }
 
