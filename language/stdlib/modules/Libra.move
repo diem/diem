@@ -212,10 +212,10 @@ module Libra {
     public fun publish_mint_capability<CoinType>(
         publish_account: &signer,
         cap: MintCapability<CoinType>,
-        tc_signer: &signer,
+        tc_account: &signer,
     ) {
         // TODO: abort code
-        assert(has_treasury_compliance_role(tc_signer), 919402);
+        assert(has_treasury_compliance_role(tc_account), 919402);
         assert_is_currency<CoinType>();
         move_to(publish_account, cap)
     }

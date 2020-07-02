@@ -504,23 +504,13 @@ module LibraAccount {
     /// `auth_key_prefix` | `new_account_address`
     public fun create_treasury_compliance_account(
         lr_account: &signer,
-        tc_account: &signer,
-
         new_account_address: address,
         auth_key_prefix: vector<u8>,
-        coin1_mint_cap: Libra::MintCapability<Coin1>,
-        coin1_burn_cap: Libra::BurnCapability<Coin1>,
-        coin2_mint_cap: Libra::MintCapability<Coin2>,
-        coin2_burn_cap: Libra::BurnCapability<Coin2>,
     ) {
         LibraTimestamp::assert_is_genesis();
         // TODO: abort code
         assert(Roles::has_libra_root_role(lr_account), 919408);
         let new_account = create_signer(new_account_address);
-        Libra::publish_mint_capability<Coin1>(&new_account, coin1_mint_cap, tc_account);
-        Libra::publish_burn_capability<Coin1>(&new_account, coin1_burn_cap, tc_account);
-        Libra::publish_mint_capability<Coin2>(&new_account, coin2_mint_cap, tc_account);
-        Libra::publish_burn_capability<Coin2>(&new_account, coin2_burn_cap, tc_account);
         SlidingNonce::publish_nonce_resource(lr_account, &new_account);
         Event::publish_generator(&new_account);
         make_account(new_account, auth_key_prefix)

@@ -753,7 +753,7 @@ The caller must pass a
 <code>TreasuryComplianceRole</code> capability.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(publish_account: &signer, cap: <a href="#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, tc_signer: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(publish_account: &signer, cap: <a href="#0x1_Libra_MintCapability">Libra::MintCapability</a>&lt;CoinType&gt;, tc_account: &signer)
 </code></pre>
 
 
@@ -765,10 +765,10 @@ The caller must pass a
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_publish_mint_capability">publish_mint_capability</a>&lt;CoinType&gt;(
     publish_account: &signer,
     cap: <a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;,
-    tc_signer: &signer,
+    tc_account: &signer,
 ) {
     // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tc_signer), 919402);
+    <b>assert</b>(has_treasury_compliance_role(tc_account), 919402);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     move_to(publish_account, cap)
 }

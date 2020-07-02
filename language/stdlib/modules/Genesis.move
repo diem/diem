@@ -49,14 +49,9 @@ module Genesis {
         VASP::initialize(lr_account);
 
         // Currency setup
-        let (coin1_mint_cap, coin1_burn_cap) = Coin1::initialize(
-            lr_account,
-            tc_account,
-        );
-        let (coin2_mint_cap, coin2_burn_cap) = Coin2::initialize(
-            lr_account,
-            tc_account,
-        );
+        Coin1::initialize(lr_account, tc_account);
+        Coin2::initialize(lr_account, tc_account);
+
         LBR::initialize(
             lr_account,
             tc_account,
@@ -77,13 +72,8 @@ module Genesis {
         // Create the treasury compliance account
         LibraAccount::create_treasury_compliance_account(
             lr_account,
-            tc_account,
             tc_addr,
             copy dummy_auth_key_prefix,
-            coin1_mint_cap,
-            coin1_burn_cap,
-            coin2_mint_cap,
-            coin2_burn_cap,
         );
 
         LibraTransactionTimeout::initialize(lr_account);
