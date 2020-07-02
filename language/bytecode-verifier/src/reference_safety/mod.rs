@@ -252,9 +252,7 @@ fn execute_inner(
         | Bytecode::Exists(_)
         | Bytecode::ExistsGeneric(_) => (),
 
-        Bytecode::BrTrue(_)
-        | Bytecode::BrFalse(_)
-        | Bytecode::Abort => {
+        Bytecode::BrTrue(_) | Bytecode::BrFalse(_) | Bytecode::Abort => {
             checked_verify!(verifier.stack.pop().unwrap().is_value());
         }
         Bytecode::MoveTo(_) | Bytecode::MoveToGeneric(_) => {

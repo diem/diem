@@ -17,10 +17,7 @@ use vm::{
 pub(crate) static INITIAL_GAS_SCHEDULE: Lazy<(Vec<u8>, Vec<u8>)> = Lazy::new(|| {
     use Bytecode::*;
     let mut instrs = vec![
-        (
-            MoveTo(StructDefinitionIndex::new(0)),
-            GasCost::new(825, 1),
-        ),
+        (MoveTo(StructDefinitionIndex::new(0)), GasCost::new(825, 1)),
         (
             MoveToGeneric(StructDefInstantiationIndex::new(0)),
             GasCost::new(825, 1),

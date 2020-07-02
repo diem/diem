@@ -605,10 +605,7 @@ impl<Location: Clone + Eq> Disassembler<Location> {
             }
             Bytecode::MoveTo(struct_idx) => {
                 let (name, ty_params) = self.struct_type_info(*struct_idx, &Signature(vec![]))?;
-                Ok(format!(
-                    "MoveTo[{}]({}{})",
-                    struct_idx, name, ty_params
-                ))
+                Ok(format!("MoveTo[{}]({}{})", struct_idx, name, ty_params))
             }
             Bytecode::MoveToGeneric(struct_idx) => {
                 let struct_inst = self

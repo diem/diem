@@ -239,10 +239,8 @@ fn bytecode_moveto() {
         Kind::Copyable,
     ));
     state1.stack_push(create_struct_value(&state1.module.module).0);
-    let (state2, _) = common::run_instruction(
-        Bytecode::MoveTo(StructDefinitionIndex::new(0)),
-        state1,
-    );
+    let (state2, _) =
+        common::run_instruction(Bytecode::MoveTo(StructDefinitionIndex::new(0)), state1);
     assert_eq!(state2.stack_len(), 0, "stack type postcondition not met");
 }
 
@@ -257,10 +255,7 @@ fn bytecode_moveto_struct_is_not_resource() {
         Kind::Copyable,
     ));
     state1.stack_push(create_struct_value(&state1.module.module).0);
-    common::run_instruction(
-        Bytecode::MoveTo(StructDefinitionIndex::new(0)),
-        state1,
-    );
+    common::run_instruction(Bytecode::MoveTo(StructDefinitionIndex::new(0)), state1);
 }
 
 #[test]
@@ -273,10 +268,7 @@ fn bytecode_moveto_no_struct_on_stack() {
         SignatureToken::Reference(Box::new(SignatureToken::Signer)),
         Kind::Copyable,
     ));
-    common::run_instruction(
-        Bytecode::MoveTo(StructDefinitionIndex::new(0)),
-        state1,
-    );
+    common::run_instruction(Bytecode::MoveTo(StructDefinitionIndex::new(0)), state1);
 }
 
 #[test]

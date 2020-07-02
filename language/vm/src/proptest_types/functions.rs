@@ -626,30 +626,8 @@ impl BytecodeGen {
         use Bytecode::*;
 
         static JUST_BYTECODES: &[Bytecode] = &[
-            FreezeRef,
-            Pop,
-            Ret,
-            LdTrue,
-            LdFalse,
-            ReadRef,
-            WriteRef,
-            Add,
-            Sub,
-            Mul,
-            Mod,
-            Div,
-            BitOr,
-            BitAnd,
-            Xor,
-            Or,
-            And,
-            Eq,
-            Neq,
-            Lt,
-            Gt,
-            Le,
-            Ge,
-            Abort,
+            FreezeRef, Pop, Ret, LdTrue, LdFalse, ReadRef, WriteRef, Add, Sub, Mul, Mod, Div,
+            BitOr, BitAnd, Xor, Or, And, Eq, Neq, Lt, Gt, Le, Ge, Abort,
         ];
         select(JUST_BYTECODES)
     }
