@@ -2746,14 +2746,18 @@ dependencies = [
 name = "libra-network-address"
 version = "0.1.0"
 dependencies = [
+ "aes-gcm 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
  "libra-workspace-hack 0.1.0",
+ "move-core-types 0.1.0",
+ "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_bytes 0.11.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ "static_assertions 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
