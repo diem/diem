@@ -4,7 +4,7 @@
 use crate::{BuildSwarm, Error, ValidatorConfig};
 use anyhow::{ensure, Result};
 use libra_config::{
-    config::{DiscoveryMethod, NodeConfig, RoleType, SeedPubkeysConfig},
+    config::{DiscoveryMethod, NodeConfig, RoleType, SeedPublicKeys},
     generator,
     network_id::NetworkId,
     utils,
@@ -148,7 +148,7 @@ impl FullNodeConfig {
 
         let mut rng = StdRng::from_seed(self.full_node_seed);
         let mut configs = Vec::new();
-        let mut seed_pubkeys = SeedPubkeysConfig::default();
+        let mut seed_pubkeys = SeedPublicKeys::default();
 
         // @TODO The last one is the upstream peer, note at some point we'll have to support taking
         // in a genesis instead at which point we may not have an upstream peer config

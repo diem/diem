@@ -6,7 +6,7 @@
 
 use crate::{
     config::{
-        DiscoveryMethod, NetworkConfig, NodeConfig, SeedAddrsConfig, TestConfig, HANDSHAKE_VERSION,
+        DiscoveryMethod, NetworkConfig, NodeConfig, SeedAddresses, TestConfig, HANDSHAKE_VERSION,
     },
     network_id::NetworkId,
 };
@@ -59,20 +59,20 @@ pub fn validator_swarm_for_testing(nodes: usize) -> ValidatorSwarm {
     validator_swarm(&NodeConfig::default(), nodes, [1u8; 32], true)
 }
 
-/// Convenience function that builds a `SeedAddrsConfig` containing a single peer
+/// Convenience function that builds a `SeedAddresses` containing a single peer
 /// with a fully formatted `NetworkAddress` containing its network identity pubkey
 /// and handshake protocol version.
 pub fn build_seed_addrs(
     seed_config: &NetworkConfig,
     seed_base_addr: NetworkAddress,
-) -> SeedAddrsConfig {
+) -> SeedAddresses {
     let seed_pubkey = seed_config
         .identity
         .public_key_from_config()
         .expect("Missing identity key");
     let seed_addr = seed_base_addr.append_prod_protos(seed_pubkey, HANDSHAKE_VERSION);
 
-    let mut seed_addrs = SeedAddrsConfig::default();
+    let mut seed_addrs = SeedAddresses::default();
     seed_addrs.insert(seed_config.peer_id(), vec![seed_addr]);
     seed_addrs
 }
