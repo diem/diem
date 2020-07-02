@@ -135,16 +135,15 @@ impl NetworkBuilder {
             .build()
             .expect("Failed to start runtime. Won't be able to start networking.");
 
-        let identity_key = config.identity_key();
         let peer_id = config.peer_id();
+        let identity_key = config.identity_key();
 
         let authentication_mode = if config.mutual_authentication {
             AuthenticationMode::Mutual(identity_key)
         } else {
             AuthenticationMode::ServerOnly(identity_key)
         };
-
-        let pub_key = authentication_mode.public_key();
+        let pubkey = authentication_mode.public_key();
 
         let mut network_builder = NetworkBuilder::new(
             runtime.handle().clone(),
@@ -155,32 +154,38 @@ impl NetworkBuilder {
             config.listen_address.clone(),
             authentication_mode,
         );
-        network_builder.add_connection_monitoring(
-            // TODO: Move these values into NetworkConfig
-            constants::PING_INTERVAL_MS,
-            constants::PING_TIMEOUT_MS,
-            constants::PING_FAILURES_TOLERATED,
-        );
+        network_builder
+            .seed_addrs(config.seed_addrs.clone())
+            .seed_pubkeys(config.seed_pubkeys.clone())
+            .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
+            .add_connection_monitoring(
+                // TODO: Move these values into NetworkConfig
+                constants::PING_INTERVAL_MS,
+                constants::PING_TIMEOUT_MS,
+                constants::PING_FAILURES_TOLERATED,
+            );
 
-        // Sanity check seed peer addresses.
+        // Sanity check seed addresses.
         config
             .verify_seed_addrs()
-            .expect("Seed peer addresses must be well-formed");
+            .expect("Seed addresses must be well-formed");
 
-        if config.mutual_authentication {
-            network_builder
-                .seed_addrs(config.seed_addrs.clone())
-                .seed_pubkeys(config.seed_pubkeys.clone())
-                .connectivity_check_interval_ms(config.connectivity_check_interval_ms)
-                .add_connectivity_manager();
-        } else {
-            // Enforce the outgoing connection (dialer) verifies the identity of the listener (server)
-            if config.discovery_method == DiscoveryMethod::Onchain || !config.seed_addrs.is_empty()
-            {
-                network_builder
-                    .seed_addrs(config.seed_addrs.clone())
-                    .add_connectivity_manager();
-            }
+        // Don't turn on connectivity manager if we're a public-facing server,
+        // for example.
+        //
+        // Cases that require connectivity manager:
+        //
+        // 1) mutual authentication networks currently require connmgr to set the
+        //    trusted peers set.
+        // 2) networks with a discovery protocol need connmgr to connect to newly
+        //    discovered peers.
+        // 3) if we have seed peers, then we need connmgr to connect to them.
+        // TODO(philiphayes): could probably use a better way to specify these cases
+        if config.mutual_authentication
+            || config.discovery_method != DiscoveryMethod::None
+            || !config.seed_addrs.is_empty()
+        {
+            network_builder.add_connectivity_manager();
         }
 
         match &config.discovery_method {
@@ -188,7 +193,7 @@ impl NetworkBuilder {
                 network_builder.add_gossip_discovery(
                     gossip_config.advertised_address.clone(),
                     gossip_config.discovery_interval_ms,
-                    pub_key,
+                    pubkey,
                 );
                 // HACK: gossip relies on on-chain discovery for the eligible peers update.
                 if role == RoleType::Validator {
