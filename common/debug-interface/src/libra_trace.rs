@@ -80,21 +80,29 @@ macro_rules! send_logs {
 #[macro_export]
 macro_rules! trace_code_block {
     ($stage:expr, $node:tt) => {
-        let trace_guard = $crate::libra_trace::TraceBlockGuard::new_entered(
-            concat!($stage, "::done"),
-            $crate::format_node!($node),
-            module_path!(),
-        );
-        trace_event!($stage, $node);
+        let trace_guard = if $crate::is_selected($crate::node_sampling_data!($node)) {
+            let node = $crate::format_node!($node);
+            trace_event!($stage; {node.clone(), module_path!(), Option::<u64>::None});
+            Some($crate::libra_trace::TraceBlockGuard::new_entered(
+                concat!($stage, "::done"),
+                node,
+                module_path!(),
+            ))
+        } else {
+            None
+        };
     };
     ($stage:expr, $node:tt, $guard_vec:tt) => {
-        let trace_guard = $crate::libra_trace::TraceBlockGuard::new_entered(
-            concat!($stage, "::done"),
-            $crate::format_node!($node),
-            module_path!(),
-        );
-        trace_event!($stage, $node);
-        $guard_vec.push(trace_guard);
+        if $crate::is_selected($crate::node_sampling_data!($node)) {
+            let node = $crate::format_node!($node);
+            let trace_guard = $crate::libra_trace::TraceBlockGuard::new_entered(
+                concat!($stage, "::done"),
+                node.clone(),
+                module_path!(),
+            );
+            trace_event!($stage; {node, module_path!(), Option::<u64>::None});
+            $guard_vec.push(trace_guard);
+        }
     };
 }
 
