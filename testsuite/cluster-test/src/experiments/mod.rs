@@ -3,6 +3,7 @@
 
 #![forbid(unsafe_code)]
 
+mod compatibility_test;
 mod cpu_flamegraph;
 mod packet_loss_random_validators;
 mod performance_benchmark;
@@ -11,8 +12,13 @@ mod reboot_random_validator;
 mod recovery_time;
 mod versioning_test;
 
-use std::{collections::HashSet, fmt::Display, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+    time::{Duration, Instant},
+};
 
+pub use compatibility_test::{ComaptiblityTestParams, CompatibilityTest};
 pub use packet_loss_random_validators::{
     PacketLossRandomValidators, PacketLossRandomValidatorsParams,
 };
@@ -26,6 +32,7 @@ pub use versioning_test::{ValidatorVersioning, ValidatorVersioningParams};
 
 use crate::{
     cluster::Cluster,
+    instance::Instance,
     prometheus::Prometheus,
     report::SuiteReport,
     tx_emitter::{EmitJobRequest, TxEmitter},
@@ -37,8 +44,10 @@ use crate::{
 };
 use async_trait::async_trait;
 pub use cpu_flamegraph::{CpuFlamegraph, CpuFlamegraphParams};
-use std::collections::HashMap;
+use futures::future::try_join_all;
+use libra_logger::prelude::*;
 use structopt::{clap::AppSettings, StructOpt};
+use tokio::time;
 
 #[async_trait]
 pub trait Experiment: Display + Send {
@@ -131,7 +140,46 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
     );
     known_experiments.insert("generate_cpu_flamegraph", f::<CpuFlamegraphParams>());
     known_experiments.insert("versioning_testing", f::<ValidatorVersioningParams>());
+    known_experiments.insert("compatibility_test", f::<ComaptiblityTestParams>());
 
     let builder = known_experiments.get(name).expect("Experiment not found");
     builder(args, cluster)
+}
+
+/// Reboot `updated_instance` with newer image tag
+pub async fn update_batch_instance(
+    context: &mut Context<'_>,
+    updated_instance: &[Instance],
+    updated_tag: String,
+) -> anyhow::Result<()> {
+    let deadline = Instant::now() + Duration::from_secs(2 * 60);
+
+    info!("Stop Existing instances.");
+    let futures: Vec<_> = updated_instance.iter().map(Instance::stop).collect();
+    try_join_all(futures).await?;
+
+    info!("Reinstantiate a set of new nodes.");
+    let futures: Vec<_> = updated_instance
+        .iter()
+        .map(|instance| {
+            let mut newer_config = instance.instance_config().clone();
+            newer_config.replace_tag(updated_tag.clone()).unwrap();
+            context
+                .cluster_swarm
+                .spawn_new_instance(newer_config, false)
+        })
+        .collect();
+    let instances = try_join_all(futures).await?;
+
+    info!("Wait for the instances to recover.");
+    let futures: Vec<_> = instances
+        .iter()
+        .map(|instance| instance.wait_json_rpc(deadline))
+        .collect();
+    try_join_all(futures).await?;
+
+    // Add a timeout to have wait for validators back to healthy mode.
+    // TODO: Replace this with a blocking health check.
+    time::delay_for(Duration::from_secs(20)).await;
+    Ok(())
 }
