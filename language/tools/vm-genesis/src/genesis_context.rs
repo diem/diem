@@ -4,7 +4,6 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Result;
-use bytecode_verifier::VerifiedModule;
 use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
@@ -31,7 +30,7 @@ use move_vm_types::{
     values::{GlobalValue, Value},
 };
 use std::collections::{btree_map::BTreeMap, HashMap};
-use vm::{access::ModuleAccess, errors::VMResult};
+use vm::{errors::VMResult, CompiledModule};
 
 /// A context that holds state for generating the genesis write set
 pub(crate) struct GenesisContext<'a> {
@@ -42,7 +41,7 @@ pub(crate) struct GenesisContext<'a> {
 }
 
 impl<'a> GenesisContext<'a> {
-    pub fn new(data_cache: &'a StateViewCache<'a>, stdlib_modules: &[VerifiedModule]) -> Self {
+    pub fn new(data_cache: &'a StateViewCache<'a>, stdlib_modules: &[CompiledModule]) -> Self {
         let vm = MoveVM::new();
         let mut data_store = GenesisDataCache::new(data_cache);
         data_store.initialize_code(stdlib_modules);
@@ -138,7 +137,7 @@ impl GenesisStateView {
         }
     }
 
-    pub(crate) fn add_module(&mut self, module_id: &ModuleId, module: &VerifiedModule) {
+    pub(crate) fn add_module(&mut self, module_id: &ModuleId, module: &CompiledModule) {
         let access_path = AccessPath::from(module_id);
         let mut blob = vec![];
         module
@@ -181,7 +180,7 @@ impl<'txn> GenesisDataCache<'txn> {
     // that any code reference during execution can be resolved.
     // The modules will not be published in the final `WriteSet`, and one
     // could think of them as the startup code.
-    fn initialize_code(&mut self, stdlib_modules: &[VerifiedModule]) {
+    fn initialize_code(&mut self, stdlib_modules: &[CompiledModule]) {
         for module in stdlib_modules {
             let module_id: ModuleId = module.self_id();
             let mut blob = vec![];

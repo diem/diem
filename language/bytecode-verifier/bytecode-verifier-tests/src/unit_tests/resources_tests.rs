@@ -8,6 +8,6 @@ use vm::file_format::CompiledModule;
 proptest! {
     #[test]
     fn valid_resource_transitivity(module in CompiledModule::valid_strategy(20)) {
-        prop_assert!(ResourceTransitiveChecker::verify(&module).is_ok());
+        prop_assert!(ResourceTransitiveChecker::verify_module(&module).is_ok());
     }
 }

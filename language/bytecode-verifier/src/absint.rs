@@ -1,27 +1,27 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::control_flow_graph::{BlockId, ControlFlowGraph};
-use std::collections::HashMap;
-use vm::{
-    file_format::{Bytecode, CodeUnit, CompiledModule},
-    views::FunctionDefinitionView,
+use crate::{
+    binary_views::FunctionView,
+    control_flow_graph::{BlockId, ControlFlowGraph},
 };
+use std::collections::HashMap;
+use vm::file_format::Bytecode;
 
 /// Trait for finite-height abstract domains. Infinite height domains would require a more complex
 /// trait with widening and a partial order.
-pub trait AbstractDomain: Clone + Sized {
+pub(crate) trait AbstractDomain: Clone + Sized {
     fn join(&mut self, other: &Self) -> JoinResult;
 }
 
 #[derive(Debug)]
-pub enum JoinResult {
+pub(crate) enum JoinResult {
     Changed,
     Unchanged,
 }
 
 #[derive(Clone)]
-pub enum BlockPostcondition<AnalysisError> {
+pub(crate) enum BlockPostcondition<AnalysisError> {
     /// Block not yet analyzed
     Unprocessed,
     /// Analyzing block was successful
@@ -33,21 +33,21 @@ pub enum BlockPostcondition<AnalysisError> {
 
 #[allow(dead_code)]
 #[derive(Clone)]
-pub struct BlockInvariant<State, AnalysisError> {
+pub(crate) struct BlockInvariant<State, AnalysisError> {
     /// Precondition of the block
-    pub pre: State,
+    pub(crate) pre: State,
     /// Postcondition of the block
-    pub post: BlockPostcondition<AnalysisError>,
+    pub(crate) post: BlockPostcondition<AnalysisError>,
 }
 
 /// A map from block id's to the pre/post of each block after a fixed point is reached.
 #[allow(dead_code)]
-pub type InvariantMap<State, AnalysisError> =
+pub(crate) type InvariantMap<State, AnalysisError> =
     HashMap<BlockId, BlockInvariant<State, AnalysisError>>;
 
 /// Take a pre-state + instruction and mutate it to produce a post-state
 /// Auxiliary data can be stored in self.
-pub trait TransferFunctions {
+pub(crate) trait TransferFunctions {
     type State: AbstractDomain;
     type AnalysisError: Clone;
 
@@ -70,16 +70,15 @@ pub trait TransferFunctions {
     ) -> Result<(), Self::AnalysisError>;
 }
 
-pub trait AbstractInterpreter: TransferFunctions {
+pub(crate) trait AbstractInterpreter: TransferFunctions {
     /// Analyze procedure local@function_view starting from pre-state local@initial_state.
     fn analyze_function(
         &mut self,
         initial_state: Self::State,
-        function_view: &FunctionDefinitionView<CompiledModule>,
-        cfg: &dyn ControlFlowGraph,
+        function_view: &FunctionView,
     ) -> InvariantMap<Self::State, Self::AnalysisError> {
         let mut inv_map: InvariantMap<Self::State, Self::AnalysisError> = InvariantMap::new();
-        let entry_block_id = cfg.entry_block_id();
+        let entry_block_id = function_view.cfg().entry_block_id();
         let mut work_list = vec![entry_block_id];
         inv_map.insert(
             entry_block_id,
@@ -96,14 +95,7 @@ pub trait AbstractInterpreter: TransferFunctions {
             };
 
             let pre_state = &block_invariant.pre;
-            let post_state = match self.execute_block(
-                block_id,
-                pre_state,
-                &function_view
-                    .code()
-                    .expect("Abstract interpreter should only run on non-native functions"),
-                cfg,
-            ) {
+            let post_state = match self.execute_block(block_id, pre_state, function_view) {
                 Err(e) => {
                     block_invariant.post = BlockPostcondition::Error(e);
                     continue;
@@ -115,7 +107,7 @@ pub trait AbstractInterpreter: TransferFunctions {
             };
 
             // propagate postcondition of this block to successor blocks
-            for next_block_id in cfg.successors(block_id) {
+            for next_block_id in function_view.cfg().successors(block_id) {
                 match inv_map.get_mut(next_block_id) {
                     Some(next_block_invariant) => {
                         let join_result = {
@@ -156,13 +148,12 @@ pub trait AbstractInterpreter: TransferFunctions {
         &mut self,
         block_id: BlockId,
         pre_state: &Self::State,
-        code: &CodeUnit,
-        cfg: &dyn ControlFlowGraph,
+        function_view: &FunctionView,
     ) -> Result<Self::State, Self::AnalysisError> {
         let mut state_acc = pre_state.clone();
-        let block_end = cfg.block_end(block_id);
-        for offset in cfg.instr_indexes(block_id) {
-            let instr = &code.code[offset as usize];
+        let block_end = function_view.cfg().block_end(block_id);
+        for offset in function_view.cfg().instr_indexes(block_id) {
+            let instr = &function_view.code().code[offset as usize];
             self.execute(&mut state_acc, instr, offset as usize, block_end as usize)?
         }
         Ok(state_acc)

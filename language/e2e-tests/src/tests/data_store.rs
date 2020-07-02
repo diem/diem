@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{account::AccountData, compile::compile_script_with_address, executor::FakeExecutor};
-use bytecode_verifier::VerifiedModule;
+use bytecode_verifier::verify_module;
 use compiler::Compiler;
 use libra_types::{
     account_config::LBR_NAME,
     transaction::{Module, SignedTransaction, Transaction, TransactionPayload, TransactionStatus},
     vm_status::{StatusCode, VMStatus},
 };
+use vm::CompiledModule;
 
 #[test]
 fn move_from_across_blocks() {
@@ -189,7 +190,7 @@ fn change_after_move() {
     executor.apply_write_set(output.write_set());
 }
 
-fn add_module_txn(sender: &AccountData, seq_num: u64) -> (VerifiedModule, SignedTransaction) {
+fn add_module_txn(sender: &AccountData, seq_num: u64) -> (CompiledModule, SignedTransaction) {
     let module_code = String::from(
         "
         module M {
@@ -234,9 +235,9 @@ fn add_module_txn(sender: &AccountData, seq_num: u64) -> (VerifiedModule, Signed
     module
         .serialize(&mut module_blob)
         .expect("Module must serialize");
-    let verified_module = VerifiedModule::new(module).expect("Module must verify");
+    verify_module(&module).expect("Module must verify");
     (
-        verified_module,
+        module,
         sender.account().create_signed_txn_impl(
             *sender.address(),
             TransactionPayload::Module(Module::new(module_blob)),
@@ -251,7 +252,7 @@ fn add_module_txn(sender: &AccountData, seq_num: u64) -> (VerifiedModule, Signed
 fn add_resource_txn(
     sender: &AccountData,
     seq_num: u64,
-    extra_deps: Vec<VerifiedModule>,
+    extra_deps: Vec<CompiledModule>,
 ) -> SignedTransaction {
     let program = format!(
         "
@@ -279,7 +280,7 @@ fn add_resource_txn(
 fn remove_resource_txn(
     sender: &AccountData,
     seq_num: u64,
-    extra_deps: Vec<VerifiedModule>,
+    extra_deps: Vec<CompiledModule>,
 ) -> SignedTransaction {
     let program = format!(
         "
@@ -307,7 +308,7 @@ fn remove_resource_txn(
 fn borrow_resource_txn(
     sender: &AccountData,
     seq_num: u64,
-    extra_deps: Vec<VerifiedModule>,
+    extra_deps: Vec<CompiledModule>,
 ) -> SignedTransaction {
     let program = format!(
         "
@@ -335,7 +336,7 @@ fn borrow_resource_txn(
 fn change_resource_txn(
     sender: &AccountData,
     seq_num: u64,
-    extra_deps: Vec<VerifiedModule>,
+    extra_deps: Vec<CompiledModule>,
 ) -> SignedTransaction {
     let program = format!(
         "

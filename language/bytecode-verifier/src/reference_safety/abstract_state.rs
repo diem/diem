@@ -2,18 +2,17 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! This module defines the abstract state for the type and memory safety analysis.
-use crate::absint::{AbstractDomain, JoinResult};
+use crate::{
+    absint::{AbstractDomain, JoinResult},
+    binary_views::FunctionView,
+};
 use borrow_graph::references::RefID;
 use libra_types::vm_status::StatusCode;
 use mirai_annotations::{checked_postcondition, checked_precondition, checked_verify};
 use std::collections::{BTreeMap, BTreeSet};
 use vm::{
-    access::ModuleAccess,
     errors::{err_at_offset, VMResult},
-    file_format::{
-        CompiledModule, FieldHandleIndex, FunctionDefinition, LocalIndex, Signature,
-        SignatureToken, StructDefinitionIndex,
-    },
+    file_format::{FieldHandleIndex, LocalIndex, Signature, SignatureToken, StructDefinitionIndex},
 };
 
 type BorrowGraph = borrow_graph::graph::BorrowGraph<(), Label>;
@@ -21,7 +20,7 @@ type BorrowGraph = borrow_graph::graph::BorrowGraph<(), Label>;
 /// AbstractValue represents a reference or a non reference value, both on the stack and stored
 /// in a local
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum AbstractValue {
+pub(crate) enum AbstractValue {
     Reference(RefID),
     NonReference,
 }
@@ -51,7 +50,7 @@ impl AbstractValue {
 
 /// Label is an element of a label on an edge in the borrow graph.
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
-pub enum Label {
+enum Label {
     Local(LocalIndex),
     Global(StructDefinitionIndex),
     Field(FieldHandleIndex),
@@ -70,7 +69,7 @@ impl std::fmt::Display for Label {
 
 /// AbstractState is the analysis state over which abstract interpretation is performed.
 #[derive(Clone, Debug, PartialEq)]
-pub struct AbstractState {
+pub(crate) struct AbstractState {
     locals: BTreeMap<LocalIndex, AbstractValue>,
     borrow_graph: BorrowGraph,
     num_locals: usize,
@@ -79,20 +78,8 @@ pub struct AbstractState {
 
 impl AbstractState {
     /// create a new abstract state
-    pub fn new(module: &CompiledModule, function_definition: &FunctionDefinition) -> Self {
-        let func_handle = module.function_handle_at(function_definition.function);
-        let parameter_types = &module.signature_at(func_handle.parameters).0;
-        let additional_local_types = &module
-            .signature_at(
-                function_definition
-                    .code
-                    .as_ref()
-                    .expect("Abstract interpreter should only run on non-native functions")
-                    .locals,
-            )
-            .0;
-
-        let num_locals = parameter_types.len() + additional_local_types.len();
+    pub fn new(function_view: &FunctionView) -> Self {
+        let num_locals = function_view.parameters().len() + function_view.locals().len();
 
         // ids in [0, num_locals) are reserved for constructing canonical state
         // id at num_locals is reserved for the frame root
@@ -104,7 +91,7 @@ impl AbstractState {
             next_id,
         };
 
-        for (param_idx, param_ty) in parameter_types.iter().enumerate() {
+        for (param_idx, param_ty) in function_view.parameters().0.iter().enumerate() {
             let value = if param_ty.is_reference() {
                 let id = state.new_ref(param_ty.is_mutable_reference());
                 AbstractValue::Reference(id)

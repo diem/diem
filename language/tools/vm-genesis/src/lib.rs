@@ -10,7 +10,6 @@ use crate::{
     genesis_context::{GenesisContext, GenesisStateView},
     genesis_gas_schedule::INITIAL_GAS_SCHEDULE,
 };
-use bytecode_verifier::VerifiedModule;
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use libra_config::config::{NodeConfig, HANDSHAKE_VERSION};
 use libra_crypto::{
@@ -31,7 +30,7 @@ use once_cell::sync::Lazy;
 use rand::prelude::*;
 use std::{collections::btree_map::BTreeMap, convert::TryFrom};
 use transaction_builder::encode_create_designated_dealer_script;
-use vm::access::ModuleAccess;
+use vm::CompiledModule;
 
 // The seed is arbitrarily picked to produce a consistent key. XXX make this more formal?
 const GENESIS_SEED: [u8; 32] = [42; 32];
@@ -64,7 +63,7 @@ pub fn encode_genesis_transaction_with_validator(
 pub fn encode_genesis_change_set(
     public_key: &Ed25519PublicKey,
     validators: &[ValidatorRegistration],
-    stdlib_modules: &[VerifiedModule],
+    stdlib_modules: &[CompiledModule],
     vm_publishing_option: VMPublishingOption,
 ) -> (ChangeSet, BTreeMap<Vec<u8>, FatStructType>) {
     // create a data view for move_vm
@@ -115,7 +114,7 @@ pub fn encode_genesis_change_set(
 pub fn encode_genesis_transaction(
     public_key: Ed25519PublicKey,
     validators: &[ValidatorRegistration],
-    stdlib_modules: &[VerifiedModule],
+    stdlib_modules: &[CompiledModule],
     vm_publishing_option: VMPublishingOption,
 ) -> Transaction {
     Transaction::WaypointWriteSet(
@@ -273,14 +272,14 @@ fn create_and_initialize_validators(
     }
 }
 
-fn remove_genesis(stdlib_modules: &[VerifiedModule]) -> impl Iterator<Item = &VerifiedModule> {
+fn remove_genesis(stdlib_modules: &[CompiledModule]) -> impl Iterator<Item = &CompiledModule> {
     stdlib_modules
         .iter()
         .filter(|module| module.self_id().name().as_str() != GENESIS_MODULE_NAME)
 }
 
 /// Publish the standard library.
-fn publish_stdlib(interpreter_context: &mut dyn DataStore, stdlib: &[VerifiedModule]) {
+fn publish_stdlib(interpreter_context: &mut dyn DataStore, stdlib: &[CompiledModule]) {
     for module in remove_genesis(stdlib) {
         assert!(module.self_id().name().as_str() != GENESIS_MODULE_NAME);
         let mut module_vec = vec![];

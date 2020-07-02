@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use bytecode_verifier::{VerifiedModule, VerifiedScript};
+use bytecode_verifier::{verify_module, verify_script};
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use ir_to_bytecode::{
     compiler::{compile_module, compile_script},
@@ -44,9 +44,9 @@ fn compile_script_string_impl(
 
     // Always return a CompiledScript because some callers explicitly care about unverified
     // modules.
-    Ok(match VerifiedScript::new(compiled_script) {
-        Ok(script) => (script.into_inner(), None),
-        Err((script, error)) => (script, Some(error)),
+    Ok(match verify_script(&compiled_script) {
+        Ok(_) => (compiled_script, None),
+        Err(error) => (compiled_script, Some(error)),
     })
 }
 
@@ -96,9 +96,9 @@ fn compile_module_string_impl(
 
     // Always return a CompiledModule because some callers explicitly care about unverified
     // modules.
-    Ok(match VerifiedModule::new(compiled_module) {
-        Ok(module) => (module.into_inner(), None),
-        Err((module, error)) => (module, Some(error)),
+    Ok(match verify_module(&compiled_module) {
+        Ok(_) => (compiled_module, None),
+        Err(error) => (compiled_module, Some(error)),
     })
 }
 
@@ -146,8 +146,5 @@ pub fn compile_script_string_with_stdlib(code: &str) -> Result<CompiledScript> {
 }
 
 fn stdlib() -> Vec<CompiledModule> {
-    stdlib_modules(StdLibOptions::Compiled)
-        .iter()
-        .map(|m| m.clone().into_inner())
-        .collect()
+    stdlib_modules(StdLibOptions::Compiled).to_vec()
 }

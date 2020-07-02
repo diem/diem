@@ -7,7 +7,6 @@ use crate::{
     account::{Account, AccountData},
     data_store::{FakeDataStore, GENESIS_CHANGE_SET, GENESIS_CHANGE_SET_FRESH},
 };
-use bytecode_verifier::VerifiedModule;
 use compiled_stdlib::{stdlib_modules, transaction_scripts::StdlibScript, StdLibOptions};
 use libra_config::generator;
 use libra_crypto::HashValue;
@@ -101,7 +100,7 @@ impl FakeExecutor {
 
     /// Creates fresh genesis from the stdlib modules passed in.
     pub fn custom_genesis(
-        genesis_modules: Vec<VerifiedModule>,
+        genesis_modules: Vec<CompiledModule>,
         validator_accounts: Option<usize>,
         publishing_options: VMPublishingOption,
     ) -> Self {

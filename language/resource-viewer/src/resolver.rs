@@ -31,7 +31,7 @@ impl<'a> Resolver<'a> {
         if use_stdlib {
             let modules = stdlib_modules(StdLibOptions::Compiled);
             for module in modules {
-                cache.insert(module.self_id(), module.clone().into_inner());
+                cache.insert(module.self_id(), module.clone());
             }
         }
         Resolver { state, cache }

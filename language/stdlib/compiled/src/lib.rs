@@ -5,7 +5,7 @@
 
 pub mod transaction_scripts;
 
-use bytecode_verifier::{batch_verify_modules, VerifiedModule};
+use bytecode_verifier::{verify_module, DependencyChecker};
 use once_cell::sync::Lazy;
 use stdlib::build_stdlib;
 use vm::file_format::CompiledModule;
@@ -14,7 +14,7 @@ pub const NO_USE_COMPILED: &str = "MOVE_NO_USE_COMPILED";
 
 // The current stdlib that is freshly built. This will never be used in deployment so we don't need
 // to pull the same trick here in order to include this in the Rust binary.
-static FRESH_MOVELANG_STDLIB: Lazy<Vec<VerifiedModule>> = Lazy::new(build_stdlib);
+static FRESH_MOVELANG_STDLIB: Lazy<Vec<CompiledModule>> = Lazy::new(build_stdlib);
 
 // This needs to be a string literal due to restrictions imposed by include_bytes.
 /// The compiled library needs to be included in the Rust binary due to Docker deployment issues.
@@ -30,13 +30,21 @@ pub const COMPILED_STDLIB_BYTES: &[u8] = std::include_bytes!("../stdlib.mv");
 // regenerate genesis). The compiled version of the stdlib/scripts are used unless otherwise
 // specified either by the MOVE_NO_USE_COMPILED env var, or by passing the "StdLibOptions::Fresh"
 // option to `stdlib_modules`.
-static COMPILED_MOVELANG_STDLIB: Lazy<Vec<VerifiedModule>> = Lazy::new(|| {
-    let modules = lcs::from_bytes::<Vec<Vec<u8>>>(COMPILED_STDLIB_BYTES)
+static COMPILED_MOVELANG_STDLIB: Lazy<Vec<CompiledModule>> = Lazy::new(|| {
+    let modules: Vec<CompiledModule> = lcs::from_bytes::<Vec<Vec<u8>>>(COMPILED_STDLIB_BYTES)
         .unwrap()
         .into_iter()
         .map(|bytes| CompiledModule::deserialize(&bytes).unwrap())
         .collect();
-    batch_verify_modules(modules)
+
+    let mut verified_modules = vec![];
+    for module in modules {
+        verify_module(&module).expect("stdlib module failed to verify");
+        DependencyChecker::verify_module(&module, &verified_modules)
+            .expect("stdlib module dependency failed to verify");
+        verified_modules.push(module)
+    }
+    verified_modules
 });
 
 /// An enum specifying whether the compiled stdlib/scripts should be used or freshly built versions
@@ -50,7 +58,7 @@ pub enum StdLibOptions {
 /// Returns a reference to the standard library. Depending upon the `option` flag passed in
 /// either a compiled version of the standard library will be returned or a new freshly built stdlib
 /// will be used.
-pub fn stdlib_modules(option: StdLibOptions) -> &'static [VerifiedModule] {
+pub fn stdlib_modules(option: StdLibOptions) -> &'static [CompiledModule] {
     match option {
         StdLibOptions::Compiled => &*COMPILED_MOVELANG_STDLIB,
         StdLibOptions::Fresh => &*FRESH_MOVELANG_STDLIB,
@@ -63,7 +71,7 @@ pub fn stdlib_modules(option: StdLibOptions) -> &'static [VerifiedModule] {
 /// The order the modules are presented in is important: later modules depend on earlier ones.
 /// The defualt is to return a compiled version of the stdlib unless it is otherwise specified by the
 /// `MOVE_NO_USE_COMPILED` environment variable.
-pub fn env_stdlib_modules() -> &'static [VerifiedModule] {
+pub fn env_stdlib_modules() -> &'static [CompiledModule] {
     let option = if use_compiled() {
         StdLibOptions::Compiled
     } else {

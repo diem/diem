@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use bytecode_verifier::{SignatureChecker, VerifiedModule};
+use bytecode_verifier::{verify_module, SignatureChecker};
 use invalid_mutations::signature::{FieldRefMutation, SignatureRefMutation};
 use libra_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
@@ -14,14 +14,14 @@ fn test_reference_of_reference() {
     m.signatures[0] = Signature(vec![Reference(Box::new(Reference(Box::new(
         SignatureToken::Bool,
     ))))]);
-    let errors = SignatureChecker::verify(&m.freeze().unwrap());
+    let errors = SignatureChecker::verify_module(&m.freeze().unwrap());
     assert!(errors.is_err());
 }
 
 proptest! {
     #[test]
     fn valid_signatures(module in CompiledModule::valid_strategy(20)) {
-        prop_assert!(SignatureChecker::verify(&module).is_ok())
+        prop_assert!(SignatureChecker::verify_module(&module).is_ok())
     }
 
     #[test]
@@ -34,7 +34,7 @@ proptest! {
         let expected_violations = context.apply();
         let module = module.freeze().expect("should satisfy bounds checker");
 
-        let result = SignatureChecker::verify(&module);
+        let result = SignatureChecker::verify_module(&module);
 
         prop_assert_eq!(expected_violations, result.is_err());
     }
@@ -49,7 +49,7 @@ proptest! {
         let expected_violations = context.apply();
         let module = module.freeze().expect("should satisfy bounds checker");
 
-        let result = SignatureChecker::verify(&module);
+        let result = SignatureChecker::verify_module(&module);
 
         prop_assert_eq!(expected_violations, result.is_err());
     }
@@ -118,5 +118,5 @@ fn no_verify_locals_good() {
             },
         ],
     };
-    assert!(VerifiedModule::new(compiled_module_good.freeze().unwrap()).is_ok());
+    assert!(verify_module(&compiled_module_good.freeze().unwrap()).is_ok());
 }

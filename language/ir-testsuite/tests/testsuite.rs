@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use anyhow::Result;
-use bytecode_verifier::verifier::VerifiedModule;
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use functional_tests::{
     compiler::{Compiler, ScriptOrModule},
@@ -22,12 +21,10 @@ struct IRCompiler {
 }
 
 impl IRCompiler {
-    fn new(stdlib_modules: Vec<VerifiedModule>) -> Self {
-        let deps = stdlib_modules
-            .into_iter()
-            .map(|verified_module| verified_module.into_inner())
-            .collect();
-        IRCompiler { deps }
+    fn new(stdlib_modules: Vec<CompiledModule>) -> Self {
+        IRCompiler {
+            deps: stdlib_modules,
+        }
     }
 }
 

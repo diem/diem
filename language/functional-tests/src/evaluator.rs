@@ -6,10 +6,7 @@ use crate::{
     config::{global::Config as GlobalConfig, transaction::Config as TransactionConfig},
     errors::*,
 };
-use bytecode_verifier::{
-    verifier::{verify_module_dependencies, verify_script_dependencies},
-    VerifiedModule, VerifiedScript,
-};
+use bytecode_verifier::DependencyChecker;
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use language_e2e_tests::executor::FakeExecutor;
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
@@ -235,8 +232,8 @@ fn fetch_dependency(exec: &mut FakeExecutor, ident: ModuleId) -> Option<Compiled
     let ap = AccessPath::from(&ident);
     let blob: Vec<u8> = exec.get_state_view().get(&ap).ok().flatten()?;
     let compiled: CompiledModule = CompiledModule::deserialize(&blob).ok()?;
-    match VerifiedModule::new(compiled) {
-        Ok(verified_module) => Some(verified_module.into_inner()),
+    match bytecode_verifier::verify_module(&compiled) {
+        Ok(_) => Some(compiled),
         Err(_) => None,
     }
 }
@@ -246,11 +243,9 @@ pub fn verify_script(
     script: CompiledScript,
     deps: &[CompiledModule],
 ) -> std::result::Result<CompiledScript, VMStatus> {
-    let verified_script = VerifiedScript::new(script)
-        .map_err(|(_, e)| e)?
-        .into_inner();
-    verify_script_dependencies(&verified_script, deps)?;
-    Ok(verified_script)
+    bytecode_verifier::verify_script(&script)?;
+    DependencyChecker::verify_script(&script, deps)?;
+    Ok(script)
 }
 
 /// Verify a module with its dependencies.
@@ -258,11 +253,9 @@ pub fn verify_module(
     module: CompiledModule,
     deps: &[CompiledModule],
 ) -> std::result::Result<CompiledModule, VMStatus> {
-    let verified_module = VerifiedModule::new(module)
-        .map_err(|(_, e)| e)?
-        .into_inner();
-    verify_module_dependencies(&verified_module, deps)?;
-    Ok(verified_module)
+    bytecode_verifier::verify_module(&module)?;
+    DependencyChecker::verify_module(&module, deps)?;
+    Ok(module)
 }
 
 /// A set of common parameters required to create transactions.

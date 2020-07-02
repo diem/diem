@@ -5,11 +5,11 @@
 
 use compiler::Compiler;
 
-use bytecode_verifier::VerifiedModule;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{Module, Script, TransactionPayload},
 };
+use vm::CompiledModule;
 
 /// Compile the provided Move code into a blob which can be used as the code to be published
 /// (a Module).
@@ -35,12 +35,8 @@ pub fn compile_script_with_address(
     address: &AccountAddress,
     file_name: &str,
     code: &str,
-    deps: Vec<VerifiedModule>,
+    extra_deps: Vec<CompiledModule>,
 ) -> TransactionPayload {
-    let extra_deps = deps
-        .into_iter()
-        .map(|verified_module| verified_module.into_inner())
-        .collect();
     let compiler = Compiler {
         address: *address,
         extra_deps,

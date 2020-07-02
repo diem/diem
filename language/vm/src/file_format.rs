@@ -1515,10 +1515,10 @@ pub struct CompiledModule(CompiledModuleMut);
 /// the bounds checker.
 #[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct CompiledModuleMut {
-    /// Handles to external modules and self.
-    pub module_handles: Vec<ModuleHandle>,
     /// Handle to self.
     pub self_module_handle_idx: ModuleHandleIndex,
+    /// Handles to external modules and self.
+    pub module_handles: Vec<ModuleHandle>,
     /// Handles to external and internal types.
     pub struct_handles: Vec<StructHandle>,
     /// Handles to external and internal functions.

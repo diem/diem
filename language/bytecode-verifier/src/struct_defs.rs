@@ -23,7 +23,7 @@ pub struct RecursiveStructDefChecker<'a> {
 }
 
 impl<'a> RecursiveStructDefChecker<'a> {
-    pub fn verify(module: &'a CompiledModule) -> VMResult<()> {
+    pub fn verify_module(module: &'a CompiledModule) -> VMResult<()> {
         let checker = Self { module };
         let graph = StructDefGraphBuilder::new(checker.module).build()?;
 

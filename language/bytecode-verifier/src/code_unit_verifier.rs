@@ -5,50 +5,84 @@
 //! The overall verification is split between stack_usage_verifier.rs and
 //! abstract_interpreter.rs. CodeUnitVerifier simply orchestrates calls into these two files.
 use crate::{
-    acquires_list_verifier::AcquiresVerifier, control_flow, control_flow_graph::VMControlFlowGraph,
-    locals_safety, reference_safety, stack_usage_verifier::StackUsageVerifier, type_safety,
+    acquires_list_verifier::AcquiresVerifier,
+    binary_views::{BinaryIndexedView, FunctionView},
+    control_flow, locals_safety, reference_safety,
+    stack_usage_verifier::StackUsageVerifier,
+    type_safety,
 };
+use std::collections::HashMap;
 use vm::{
     access::ModuleAccess,
     errors::{append_err_info, VMResult},
-    file_format::{CompiledModule, FunctionDefinition},
+    file_format::{
+        CompiledModule, CompiledScript, FunctionDefinition, FunctionDefinitionIndex,
+        IdentifierIndex,
+    },
     IndexKind,
 };
 
 pub struct CodeUnitVerifier<'a> {
-    module: &'a CompiledModule,
+    resolver: BinaryIndexedView<'a>,
+    function_view: FunctionView<'a>,
+    name_def_map: HashMap<IdentifierIndex, FunctionDefinitionIndex>,
 }
 
 impl<'a> CodeUnitVerifier<'a> {
-    pub fn verify(module: &'a CompiledModule) -> VMResult<()> {
-        let verifier = Self { module };
-        for (idx, function_definition) in verifier.module.function_defs().iter().enumerate() {
-            verifier
-                .verify_function(function_definition)
+    pub fn verify_module(module: &'a CompiledModule) -> VMResult<()> {
+        for (idx, function_definition) in module.function_defs().iter().enumerate() {
+            Self::verify_function(function_definition, module)
                 .map_err(|err| append_err_info(err, IndexKind::FunctionDefinition, idx))?
         }
         Ok(())
     }
 
-    fn verify_function(&self, function_definition: &FunctionDefinition) -> VMResult<()> {
-        let code = match &function_definition.code {
-            Some(code) => &code.code,
-            None => return Ok(()),
+    pub fn verify_script(script: &'a CompiledScript) -> VMResult<()> {
+        // create `FunctionView` and `BinaryIndexedView`
+        let function_view = FunctionView::script(script);
+        let resolver = BinaryIndexedView::Script(script);
+        //verify
+        let code_unit_verifier = CodeUnitVerifier {
+            resolver,
+            function_view,
+            name_def_map: HashMap::new(),
         };
-
-        control_flow::verify(self.module, function_definition)?;
-        self.verify_function_inner(function_definition, &VMControlFlowGraph::new(code))
+        code_unit_verifier.verify_common()
     }
 
-    fn verify_function_inner(
-        &self,
-        function_definition: &FunctionDefinition,
-        cfg: &VMControlFlowGraph,
+    fn verify_function(
+        function_definition: &'a FunctionDefinition,
+        module: &'a CompiledModule,
     ) -> VMResult<()> {
-        StackUsageVerifier::verify(self.module, function_definition, cfg)?;
-        AcquiresVerifier::verify(self.module, function_definition)?;
-        type_safety::verify(self.module, function_definition, cfg)?;
-        locals_safety::verify(self.module, function_definition, cfg)?;
-        reference_safety::verify(self.module, function_definition, cfg)
+        // nothing to verify for native function
+        let code = match &function_definition.code {
+            Some(code) => code,
+            None => return Ok(()),
+        };
+        // create `FunctionView` and `BinaryIndexedView`
+        let function_handle = module.function_handle_at(function_definition.function);
+        let function_view = FunctionView::function(module, code, function_handle);
+        let resolver = BinaryIndexedView::Module(module);
+        let mut name_def_map = HashMap::new();
+        for (idx, func_def) in module.function_defs().iter().enumerate() {
+            let fh = module.function_handle_at(func_def.function);
+            name_def_map.insert(fh.name, FunctionDefinitionIndex(idx as u16));
+        }
+        // verify
+        let code_unit_verifier = CodeUnitVerifier {
+            resolver,
+            function_view,
+            name_def_map,
+        };
+        code_unit_verifier.verify_common()?;
+        AcquiresVerifier::verify(module, function_definition)
+    }
+
+    fn verify_common(&self) -> VMResult<()> {
+        control_flow::verify(self.function_view.code())?;
+        StackUsageVerifier::verify(&self.resolver, &self.function_view)?;
+        type_safety::verify(&self.resolver, &self.function_view)?;
+        locals_safety::verify(&self.resolver, &self.function_view)?;
+        reference_safety::verify(&self.resolver, &self.function_view, &self.name_def_map)
     }
 }
