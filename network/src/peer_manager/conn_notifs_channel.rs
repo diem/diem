@@ -28,84 +28,44 @@ mod test {
     use libra_config::network_id::NetworkContext;
     use libra_network_address::NetworkAddress;
 
+    fn send_new_peer(sender: &mut Sender, peer_id: PeerId) {
+        let notif = ConnectionNotification::NewPeer(
+            peer_id,
+            NetworkAddress::mock(),
+            NetworkContext::mock(),
+        );
+        sender.push(peer_id, notif).unwrap()
+    }
+
+    fn send_lost_peer(sender: &mut Sender, peer_id: PeerId, reason: DisconnectReason) {
+        let notif = ConnectionNotification::LostPeer(peer_id, NetworkAddress::mock(), reason);
+        sender.push(peer_id, notif).unwrap()
+    }
+
     #[test]
     fn send_n_get_1() {
         let (mut sender, mut receiver) = super::new();
         let peer_id_a = PeerId::random();
         let peer_id_b = PeerId::random();
         let task = async move {
-            sender
-                .push(
-                    peer_id_a,
-                    ConnectionNotification::NewPeer(
-                        peer_id_a,
-                        NetworkAddress::mock(),
-                        NetworkContext::mock(),
-                    ),
-                )
-                .unwrap();
-            sender
-                .push(
-                    peer_id_a,
-                    ConnectionNotification::LostPeer(
-                        peer_id_a,
-                        NetworkAddress::mock(),
-                        DisconnectReason::ConnectionLost,
-                    ),
-                )
-                .unwrap();
-            sender
-                .push(
-                    peer_id_a,
-                    ConnectionNotification::NewPeer(
-                        peer_id_a,
-                        NetworkAddress::mock(),
-                        NetworkContext::mock(),
-                    ),
-                )
-                .unwrap();
-            sender
-                .push(
-                    peer_id_a,
-                    ConnectionNotification::LostPeer(
-                        peer_id_a,
-                        NetworkAddress::mock(),
-                        DisconnectReason::Requested,
-                    ),
-                )
-                .unwrap();
+            send_new_peer(&mut sender, peer_id_a);
+            send_lost_peer(&mut sender, peer_id_a, DisconnectReason::ConnectionLost);
+            send_new_peer(&mut sender, peer_id_a);
+            send_lost_peer(&mut sender, peer_id_a, DisconnectReason::Requested);
+
             // Ensure that only the last message is received.
-            assert_eq!(
-                receiver.select_next_some().await,
-                ConnectionNotification::LostPeer(
-                    peer_id_a,
-                    NetworkAddress::mock(),
-                    DisconnectReason::Requested
-                )
+            let notif = ConnectionNotification::LostPeer(
+                peer_id_a,
+                NetworkAddress::mock(),
+                DisconnectReason::Requested,
             );
+            assert_eq!(receiver.select_next_some().await, notif,);
             // Ensures that there is no other value which is ready
             assert_eq!(receiver.select_next_some().now_or_never(), None);
 
-            sender
-                .push(
-                    peer_id_a,
-                    ConnectionNotification::NewPeer(
-                        peer_id_a,
-                        NetworkAddress::mock(),
-                        NetworkContext::mock(),
-                    ),
-                )
-                .unwrap();
-            sender
-                .push(
-                    peer_id_b,
-                    ConnectionNotification::NewPeer(
-                        peer_id_b,
-                        NetworkAddress::mock(),
-                        NetworkContext::mock(),
-                    ),
-                )
-                .unwrap();
+            send_new_peer(&mut sender, peer_id_a);
+            send_new_peer(&mut sender, peer_id_b);
+
             // Assert that we receive 2 updates, since they are sent for different peers.
             let _ = receiver.select_next_some().await;
             let _ = receiver.select_next_some().await;
