@@ -20,7 +20,7 @@ use cluster_test::{
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
     experiments::{get_experiment, Context, Experiment},
     github::GitHub,
-    health::{DebugPortLogWorker, HealthCheckRunner, LogTail, PrintFailures, TraceTail},
+    health::{DebugPortLogWorker, HealthCheckRunner, PrintFailures, TraceTail},
     instance::Instance,
     prometheus::Prometheus,
     report::SuiteReport,
@@ -127,9 +127,9 @@ pub async fn main() {
     } else if args.health_check && args.swarm {
         let util = BasicSwarmUtil::setup(&args);
         let logs = DebugPortLogWorker::spawn_new(&util.cluster).0;
-        let mut health_check_runner = HealthCheckRunner::new_all(util.cluster);
+        let mut health_check_runner = HealthCheckRunner::new_all(logs, util.cluster);
         let duration = Duration::from_secs(args.duration);
-        exit_on_error(run_health_check(&logs, &mut health_check_runner, duration).await);
+        exit_on_error(run_health_check(&mut health_check_runner, duration).await);
         return;
     }
 
@@ -201,7 +201,7 @@ async fn handle_cluster_test_runner_commands(
     let mut perf_msg = None;
     if args.health_check {
         let duration = Duration::from_secs(args.duration);
-        run_health_check(&runner.logs, &mut runner.health_check_runner, duration).await?
+        run_health_check(&mut runner.health_check_runner, duration).await?
     } else if let Some(suite) = args.suite.as_ref() {
         perf_msg = Some(runner.run_named_suite(suite).await?);
     } else if let Some(experiment_name) = args.run.as_ref() {
@@ -250,7 +250,6 @@ struct BasicSwarmUtil {
 }
 
 struct ClusterTestRunner {
-    logs: LogTail,
     trace_tail: TraceTail,
     cluster: Cluster,
     health_check_runner: HealthCheckRunner,
@@ -322,19 +321,17 @@ async fn emit_tx(cluster: &Cluster, args: &Args) -> Result<()> {
 }
 
 async fn run_health_check(
-    logs: &LogTail,
     health_check_runner: &mut HealthCheckRunner,
     duration: Duration,
 ) -> Result<()> {
     let health_check_deadline = Instant::now() + duration;
     loop {
-        let deadline = Instant::now() + Duration::from_secs(1);
         // Receive all events that arrived to log tail within next 1 second
         // This assumes so far that event propagation time is << 1s, this need to be refined
         // in future to account for actual event propagation delay
-        let events = logs.recv_all_until_deadline(deadline);
+        delay_for(Duration::from_secs(1)).await;
         let result = health_check_runner
-            .run(&events, &HashSet::new(), PrintFailures::All)
+            .run(&HashSet::new(), PrintFailures::All)
             .await;
         let now = Instant::now();
         if now > health_check_deadline {
@@ -427,7 +424,7 @@ impl BasicSwarmUtil {
                 if Instant::now() > deadline {
                     bail!("Not all full nodes were updated and transaction expired");
                 }
-                tokio::time::delay_for(Duration::from_secs(1)).await;
+                delay_for(Duration::from_secs(1)).await;
             }
         }
         println!("Looks like all full nodes are healthy!");
@@ -473,7 +470,7 @@ impl ClusterTestRunner {
             "Log tail thread started in {} ms",
             log_tail_startup_time.as_millis()
         );
-        let health_check_runner = HealthCheckRunner::new_all(cluster.clone());
+        let health_check_runner = HealthCheckRunner::new_all(logs, cluster.clone());
         let slack = SlackClient::new();
         let slack_changelog_url = env::var("SLACK_CHANGELOG_URL")
             .map(|u| u.parse().expect("Failed to parse SLACK_CHANGELOG_URL"))
@@ -497,7 +494,6 @@ impl ClusterTestRunner {
                 args.emit_to_validator.unwrap_or(false)
             };
         Ok(Self {
-            logs,
             trace_tail,
             cluster,
             health_check_runner,
@@ -602,10 +598,9 @@ impl ClusterTestRunner {
         experiment: Box<dyn Experiment>,
         global_emit_job_request: Option<EmitJobRequest>,
     ) -> Result<()> {
-        let events = self.logs.recv_all();
         if let Err(s) = self
             .health_check_runner
-            .run(&events, &HashSet::new(), PrintFailures::UnexpectedOnly)
+            .run(&HashSet::new(), PrintFailures::UnexpectedOnly)
             .await
         {
             bail!(
@@ -671,9 +666,7 @@ impl ClusterTestRunner {
                     return result.map_err(|e|format_err!("Failed to run experiment: {}", e));
                 }
                 delay = delay_for(HEALTH_POLL_INTERVAL).fuse() => {
-                    let events = self.logs.recv_all();
                     if let Err(s) = self.health_check_runner.run(
-                        &events,
                         &affected_validators,
                         PrintFailures::UnexpectedOnly,
                     ).await {
@@ -694,11 +687,10 @@ impl ClusterTestRunner {
             if now > deadline {
                 bail!("Nodes did not become healthy after deployment");
             }
-            let deadline = now + HEALTH_POLL_INTERVAL;
-            let events = self.logs.recv_all_until_deadline(deadline);
+            delay_for(HEALTH_POLL_INTERVAL).await;
             if let Ok(failed_instances) = self
                 .health_check_runner
-                .run(&events, &HashSet::new(), PrintFailures::None)
+                .run(&HashSet::new(), PrintFailures::None)
                 .await
             {
                 if failed_instances.is_empty() {

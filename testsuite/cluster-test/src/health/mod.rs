@@ -80,21 +80,24 @@ pub struct HealthCheckRunner {
     cluster: Cluster,
     health_checks: Vec<Box<dyn HealthCheck>>,
     debug: bool,
+    logs: LogTail,
 }
 
 impl HealthCheckRunner {
-    pub fn new(cluster: Cluster, health_checks: Vec<Box<dyn HealthCheck>>) -> Self {
+    pub fn new(logs: LogTail, cluster: Cluster, health_checks: Vec<Box<dyn HealthCheck>>) -> Self {
         Self {
             cluster,
             health_checks,
             debug: env::var("HEALTH_CHECK_DEBUG").is_ok(),
+            logs,
         }
     }
 
-    pub fn new_all(cluster: Cluster) -> Self {
+    pub fn new_all(logs: LogTail, cluster: Cluster) -> Self {
         let liveness_health_check = LivenessHealthCheck::new(&cluster);
         let fullnode_check = FullNodeHealthCheck::new(cluster.clone());
         Self::new(
+            logs,
             cluster,
             vec![
                 Box::new(CommitHistoryHealthCheck::new()),
@@ -111,10 +114,10 @@ impl HealthCheckRunner {
     /// It also takes print_failures parameter that controls level of verbosity of health check
     pub async fn run(
         &mut self,
-        events: &[ValidatorEvent],
         affected_validators_set: &HashSet<String>,
         print_failures: PrintFailures,
     ) -> Result<Vec<String>> {
+        let events = self.logs.recv_all();
         let mut node_health = HashMap::new();
         for instance in self.cluster.validator_instances() {
             node_health.insert(instance.peer_name().clone(), true);
@@ -124,7 +127,7 @@ impl HealthCheckRunner {
         let mut context = HealthCheckContext::new();
         for health_check in self.health_checks.iter_mut() {
             let start = Instant::now();
-            for event in events {
+            for event in &events {
                 health_check.on_event(event, &mut context);
             }
             let events_processed = Instant::now();
