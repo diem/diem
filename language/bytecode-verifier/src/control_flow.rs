@@ -10,30 +10,25 @@ use libra_types::vm_status::{StatusCode, VMStatus};
 use std::{collections::HashSet, convert::TryInto};
 use vm::{
     errors::{err_at_offset, VMResult},
-    file_format::{Bytecode, CodeOffset, CompiledModule, FunctionDefinition},
+    file_format::{Bytecode, CodeOffset, CodeUnit},
 };
 
-pub fn verify(_module: &CompiledModule, function_definition: &FunctionDefinition) -> VMResult<()> {
-    let code = match &function_definition.code {
-        Some(code) => &code.code,
-        None => return Ok(()),
-    };
-
-    // check fall trhough
+pub fn verify(code: &CodeUnit) -> VMResult<()> {
+    // check fall through
     // Check to make sure that the bytecode vector ends with a branching instruction.
-    match code.last() {
+    match code.code.last() {
         None => return Err(VMStatus::new(StatusCode::EMPTY_CODE_UNIT)),
         Some(last) if !last.is_unconditional_branch() => {
             return Err(err_at_offset(
                 StatusCode::INVALID_FALL_THROUGH,
-                code.len() - 1,
+                code.code.len() - 1,
             ))
         }
         Some(_) => (),
     }
 
     // check jumps
-    let context = &ControlFlowVerifier { code };
+    let context = &ControlFlowVerifier { code: &code.code };
     let labels = instruction_labels(context);
     check_jumps(context, labels)
 }

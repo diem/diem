@@ -389,6 +389,7 @@ pub enum StatusCode {
     TOO_MANY_LOCALS = 1089,
     GENERIC_MEMBER_OPCODE_MISMATCH = 1090,
     FUNCTION_RESOLUTION_FAILURE = 1091,
+    INVALID_OPERATION_IN_SCRIPT = 1094,
 
     // These are errors that the VM might raise if a violation of internal
     // invariants takes place.

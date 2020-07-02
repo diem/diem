@@ -10,26 +10,22 @@ mod abstract_state;
 
 use crate::{
     absint::{AbstractInterpreter, BlockInvariant, BlockPostcondition, TransferFunctions},
-    control_flow_graph::VMControlFlowGraph,
+    binary_views::{BinaryIndexedView, FunctionView},
 };
 use abstract_state::{AbstractState, LocalState};
 use libra_types::vm_status::{StatusCode, VMStatus};
 use mirai_annotations::*;
 use vm::{
     errors::{err_at_offset, VMResult},
-    file_format::{Bytecode, CompiledModule, FunctionDefinition, Kind},
-    views::FunctionDefinitionView,
+    file_format::{Bytecode, Kind},
 };
 
-pub fn verify(
-    module: &CompiledModule,
-    function_definition: &FunctionDefinition,
-    cfg: &VMControlFlowGraph,
+pub(crate) fn verify<'a>(
+    resolver: &BinaryIndexedView,
+    function_view: &'a FunctionView<'a>,
 ) -> VMResult<()> {
-    let initial_state = AbstractState::new(module, function_definition);
-    let function_definition_view = FunctionDefinitionView::new(module, function_definition);
-    let inv_map =
-        LocalsSafetyAnalysis().analyze_function(initial_state, &function_definition_view, cfg);
+    let initial_state = AbstractState::new(resolver, function_view);
+    let inv_map = LocalsSafetyAnalysis().analyze_function(initial_state, &function_view);
     // Report all the join failures
     for (_block_id, BlockInvariant { post, .. }) in inv_map {
         match post {

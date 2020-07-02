@@ -65,9 +65,9 @@ fn main() {
             module_path.set_extension(COMPILED_EXTENSION);
             let modules: Vec<Vec<u8>> = build_stdlib()
                 .into_iter()
-                .map(|verified_module| {
+                .map(|module| {
                     let mut ser = Vec::new();
-                    verified_module.into_inner().serialize(&mut ser).unwrap();
+                    module.serialize(&mut ser).unwrap();
                     ser
                 })
                 .collect();

@@ -16,7 +16,7 @@ pub struct ResourceTransitiveChecker<'a> {
 }
 
 impl<'a> ResourceTransitiveChecker<'a> {
-    pub fn verify(module: &'a CompiledModule) -> VMResult<()> {
+    pub fn verify_module(module: &'a CompiledModule) -> VMResult<()> {
         let checker = Self { module };
         for (idx, struct_def) in checker.module.struct_defs().iter().enumerate() {
             let sh = checker.module.struct_handle_at(struct_def.struct_handle);

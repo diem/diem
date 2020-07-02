@@ -114,10 +114,7 @@ impl Compiler {
         if self.skip_stdlib_deps {
             extra_deps
         } else {
-            let mut deps: Vec<_> = stdlib_modules(StdLibOptions::Compiled)
-                .iter()
-                .map(|verified_module| verified_module.as_inner().clone())
-                .collect();
+            let mut deps: Vec<CompiledModule> = stdlib_modules(StdLibOptions::Compiled).to_vec();
             deps.extend(extra_deps);
             deps
         }

@@ -11,7 +11,12 @@ use vm::{
 
 fn verify_module(module: &CompiledModule) -> VMResult<()> {
     for function_definition in module.function_defs().iter().filter(|def| !def.is_native()) {
-        control_flow::verify(&module, &function_definition)?
+        control_flow::verify(
+            function_definition
+                .code
+                .as_ref()
+                .expect("unexpected native function"),
+        )?
     }
     Ok(())
 }

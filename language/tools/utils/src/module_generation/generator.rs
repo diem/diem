@@ -4,7 +4,7 @@
 use crate::module_generation::{
     options::ModuleGeneratorOptions, padding::Pad, utils::random_string,
 };
-use bytecode_verifier::VerifiedModule;
+use bytecode_verifier::verify_module;
 use ir_to_bytecode::compiler::compile_module;
 use libra_types::account_address::AccountAddress;
 use move_ir_types::{ast::*, location::*};
@@ -67,14 +67,13 @@ pub fn generate_verified_modules(
     rng: &mut StdRng,
     number: usize,
     options: ModuleGeneratorOptions,
-) -> (VerifiedModule, Vec<VerifiedModule>) {
+) -> (CompiledModule, Vec<CompiledModule>) {
     let (root, callees) = generate_modules(rng, number, options);
-    let verified_modules = callees
-        .into_iter()
-        .map(|m| VerifiedModule::new(m).unwrap())
-        .collect();
-    let verified_root = VerifiedModule::new(root).unwrap();
-    (verified_root, verified_modules)
+    for callee in &callees {
+        verify_module(callee).unwrap()
+    }
+    verify_module(&root).unwrap();
+    (root, callees)
 }
 
 ///////////////////////////////////////////////////////////////////////////

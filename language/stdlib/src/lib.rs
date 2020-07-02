@@ -3,7 +3,7 @@
 
 #![forbid(unsafe_code)]
 
-use bytecode_verifier::{batch_verify_modules, VerifiedModule};
+use bytecode_verifier::{verify_module, DependencyChecker};
 use log::LevelFilter;
 use move_lang::{compiled_unit::CompiledUnit, move_compile, shared::Address};
 use sha2::{Digest, Sha256};
@@ -12,6 +12,7 @@ use std::{
     io::{Read, Write},
     path::{Path, PathBuf},
 };
+use vm::CompiledModule;
 
 pub const STD_LIB_DIR: &str = "modules";
 pub const MOVE_EXTENSION: &str = "move";
@@ -59,18 +60,22 @@ pub fn stdlib_files() -> Vec<String> {
         .collect()
 }
 
-pub fn build_stdlib() -> Vec<VerifiedModule> {
+pub fn build_stdlib() -> Vec<CompiledModule> {
     let (_, compiled_units) =
         move_compile(&stdlib_files(), &[], Some(Address::LIBRA_CORE)).unwrap();
-    batch_verify_modules(
-        compiled_units
-            .into_iter()
-            .map(|compiled_unit| match compiled_unit {
-                CompiledUnit::Module { module, .. } => module,
-                CompiledUnit::Script { .. } => panic!("Unexpected Script in stdlib"),
-            })
-            .collect(),
-    )
+    let mut modules = vec![];
+    for compiled_unit in compiled_units {
+        match compiled_unit {
+            CompiledUnit::Module { module, .. } => {
+                verify_module(&module).expect("stdlib module failed to verify");
+                DependencyChecker::verify_module(&module, &modules)
+                    .expect("stdlib module dependency failed to verify");
+                modules.push(module)
+            }
+            CompiledUnit::Script { .. } => panic!("Unexpected Script in stdlib"),
+        }
+    }
+    modules
 }
 
 pub fn compile_script(source_file_str: String) -> Vec<u8> {

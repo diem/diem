@@ -84,7 +84,7 @@ impl<'a> InstantiationLoopChecker<'a> {
         }
     }
 
-    pub fn verify(module: &'a CompiledModule) -> VMResult<()> {
+    pub fn verify_module(module: &'a CompiledModule) -> VMResult<()> {
         let mut checker = Self::new(module);
         checker.build_graph();
         let mut components = checker.find_non_trivial_components();

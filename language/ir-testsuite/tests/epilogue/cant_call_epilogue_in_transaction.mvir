@@ -6,4 +6,4 @@ main(account: &signer) {
     return;
 }
 
-// check: VISIBILITY_MISMATCH
+// check: LOOKUP_FAILED

@@ -13,7 +13,6 @@ use libra_types::{
 };
 use move_core_types::language_storage::TypeTag;
 use std::convert::TryFrom;
-use vm::access::ModuleAccess;
 
 /// Generated builders.
 mod generated;

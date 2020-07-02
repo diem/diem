@@ -4,10 +4,7 @@
 #![forbid(unsafe_code)]
 
 use anyhow::Context;
-use bytecode_verifier::{
-    verifier::{verify_module_dependencies, VerifiedScript},
-    VerifiedModule,
-};
+use bytecode_verifier::{verify_module, verify_script, DependencyChecker};
 use compiled_stdlib::{stdlib_modules, StdLibOptions};
 use compiler::{util, Compiler};
 use ir_to_bytecode::parser::{parse_module, parse_script};
@@ -59,13 +56,11 @@ fn print_error_and_exit(verification_error: &VMStatus) -> ! {
 }
 
 fn do_verify_module(module: CompiledModule, dependencies: &[CompiledModule]) -> CompiledModule {
-    let verified_module = VerifiedModule::new(module)
-        .unwrap_or_else(|(_, err)| print_error_and_exit(&err))
-        .into_inner();
-    if let Err(err) = verify_module_dependencies(&verified_module, dependencies) {
+    verify_module(&module).unwrap_or_else(|err| print_error_and_exit(&err));
+    if let Err(err) = DependencyChecker::verify_module(&module, dependencies) {
         print_error_and_exit(&err);
     }
-    verified_module
+    module
 }
 
 fn write_output(path: &PathBuf, buf: &[u8]) {
@@ -128,21 +123,16 @@ fn main() {
             deps_list
                 .into_iter()
                 .map(|module_bytes| {
-                    VerifiedModule::new(
-                        CompiledModule::deserialize(module_bytes.as_slice())
-                            .expect("Downloaded module blob can't be deserialized"),
-                    )
-                    .expect("Downloaded module blob failed verifier")
-                    .into_inner()
+                    let module = CompiledModule::deserialize(module_bytes.as_slice())
+                        .expect("Downloaded module blob can't be deserialized");
+                    verify_module(&module).expect("Downloaded module blob failed verifier");
+                    module
                 })
                 .collect()
         } else if args.no_stdlib {
             vec![]
         } else {
-            stdlib_modules(StdLibOptions::Compiled)
-                .iter()
-                .map(|verified_module| verified_module.as_inner().clone())
-                .collect()
+            stdlib_modules(StdLibOptions::Compiled).to_vec()
         }
     };
 
@@ -158,13 +148,7 @@ fn main() {
             .into_compiled_script_and_source_map(file_name, &source)
             .expect("Failed to compile script");
 
-        let compiled_script = if !args.no_verify {
-            let verified_script =
-                VerifiedScript::new(compiled_script).expect("Failed to verify script");
-            verified_script.into_inner()
-        } else {
-            compiled_script
-        };
+        verify_script(&compiled_script).expect("Failed to verify script");
 
         if args.output_source_maps {
             let source_map_bytes =

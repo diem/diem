@@ -3,11 +3,9 @@
 
 use crate::native_functions::NativeFunction;
 use bytecode_verifier::{
-    constants::ConstantsChecker,
-    instantiation_loops::InstantiationLoopChecker,
-    verifier::{verify_dependencies, verify_script_dependency_map},
-    CodeUnitVerifier, DuplicationChecker, InstructionConsistency, RecursiveStructDefChecker,
-    ResourceTransitiveChecker, SignatureChecker, VerifiedScript,
+    constants, instantiation_loops::InstantiationLoopChecker, verify_main_signature,
+    CodeUnitVerifier, DependencyChecker, DuplicationChecker, InstructionConsistency,
+    RecursiveStructDefChecker, ResourceTransitiveChecker, SignatureChecker,
 };
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
@@ -27,7 +25,7 @@ use move_vm_types::{
     },
 };
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     fmt::Debug,
     hash::Hash,
     sync::{Arc, Mutex},
@@ -213,7 +211,7 @@ impl ModuleCache {
         Ok(())
     }
 
-    fn make_type(&self, binary: &dyn ModuleAccess, tok: &SignatureToken) -> VMResult<Type> {
+    fn make_type(&self, module: &CompiledModule, tok: &SignatureToken) -> VMResult<Type> {
         let res = match tok {
             SignatureToken::Bool => Type::Bool,
             SignatureToken::U8 => Type::U8,
@@ -223,24 +221,24 @@ impl ModuleCache {
             SignatureToken::Signer => Type::Signer,
             SignatureToken::TypeParameter(idx) => Type::TyParam(*idx as usize),
             SignatureToken::Vector(inner_tok) => {
-                let inner_type = self.make_type(binary, inner_tok)?;
+                let inner_type = self.make_type(module, inner_tok)?;
                 Type::Vector(Box::new(inner_type))
             }
             SignatureToken::Reference(inner_tok) => {
-                let inner_type = self.make_type(binary, inner_tok)?;
+                let inner_type = self.make_type(module, inner_tok)?;
                 Type::Reference(Box::new(inner_type))
             }
             SignatureToken::MutableReference(inner_tok) => {
-                let inner_type = self.make_type(binary, inner_tok)?;
+                let inner_type = self.make_type(module, inner_tok)?;
                 Type::MutableReference(Box::new(inner_type))
             }
             SignatureToken::Struct(sh_idx) => {
-                let struct_handle = binary.struct_handle_at(*sh_idx);
-                let struct_name = binary.identifier_at(struct_handle.name);
-                let module_handle = binary.module_handle_at(struct_handle.module);
+                let struct_handle = module.struct_handle_at(*sh_idx);
+                let struct_name = module.identifier_at(struct_handle.name);
+                let module_handle = module.module_handle_at(struct_handle.module);
                 let module_id = ModuleId::new(
-                    *binary.address_identifier_at(module_handle.address),
-                    binary.identifier_at(module_handle.name).to_owned(),
+                    *module.address_identifier_at(module_handle.address),
+                    module.identifier_at(module_handle.name).to_owned(),
                 );
                 let def_idx = self.find_struct_by_name(struct_name, &module_id)?.0;
                 Type::Struct(def_idx)
@@ -248,14 +246,14 @@ impl ModuleCache {
             SignatureToken::StructInstantiation(sh_idx, tys) => {
                 let type_parameters: Vec<_> = tys
                     .iter()
-                    .map(|tok| self.make_type(binary, tok))
+                    .map(|tok| self.make_type(module, tok))
                     .collect::<VMResult<_>>()?;
-                let struct_handle = binary.struct_handle_at(*sh_idx);
-                let struct_name = binary.identifier_at(struct_handle.name);
-                let module_handle = binary.module_handle_at(struct_handle.module);
+                let struct_handle = module.struct_handle_at(*sh_idx);
+                let struct_name = module.identifier_at(struct_handle.name);
+                let module_handle = module.module_handle_at(struct_handle.module);
                 let module_id = ModuleId::new(
-                    *binary.address_identifier_at(module_handle.address),
-                    binary.identifier_at(module_handle.name).to_owned(),
+                    *module.address_identifier_at(module_handle.address),
+                    module.identifier_at(module_handle.name).to_owned(),
                 );
                 let def_idx = self.find_struct_by_name(struct_name, &module_id)?.0;
                 Type::StructInstantiation(def_idx, type_parameters)
@@ -313,7 +311,7 @@ impl ModuleCache {
 // entities. Each cache is protected by a `Mutex`. Operation in the Loader must be thread safe
 // (operating on values on the stack) and when cache needs updating the mutex must be taken.
 // The `pub(crate)` API is what a Loader offers to the runtime.
-pub struct Loader {
+pub(crate) struct Loader {
     scripts: Mutex<ScriptCache>,
     module_cache: Mutex<ModuleCache>,
     libra_cache: Mutex<HashMap<ModuleId, LibraCache>>,
@@ -393,15 +391,24 @@ impl Loader {
     // This step performs all verification steps to load the module without loading it.
     // The module is not added to the code cache. It is simply published to the data cache.
     pub(crate) fn verify_module(&self, module: &CompiledModule) -> VMResult<()> {
-        DuplicationChecker::verify(&module)?;
-        SignatureChecker::verify(&module)?;
-        InstructionConsistency::verify(&module)?;
-        ResourceTransitiveChecker::verify(&module)?;
-        ConstantsChecker::verify(&module)?;
-        RecursiveStructDefChecker::verify(&module)?;
-        InstantiationLoopChecker::verify(&module)?;
-        CodeUnitVerifier::verify(&module)?;
+        DuplicationChecker::verify_module(&module)?;
+        SignatureChecker::verify_module(&module)?;
+        InstructionConsistency::verify_module(&module)?;
+        ResourceTransitiveChecker::verify_module(&module)?;
+        constants::verify_module(&module)?;
+        RecursiveStructDefChecker::verify_module(&module)?;
+        InstantiationLoopChecker::verify_module(&module)?;
+        CodeUnitVerifier::verify_module(&module)?;
         Self::check_natives(&module)
+    }
+
+    fn verify_script(&self, script: &CompiledScript) -> VMResult<()> {
+        DuplicationChecker::verify_script(&script)?;
+        SignatureChecker::verify_script(&script)?;
+        InstructionConsistency::verify_script(&script)?;
+        constants::verify_script(&script)?;
+        CodeUnitVerifier::verify_script(&script)?;
+        verify_main_signature(&script)
     }
 
     fn load_type(&self, type_tag: &TypeTag, data_store: &mut dyn DataStore) -> VMResult<Type> {
@@ -573,33 +580,36 @@ impl Loader {
             }
         };
 
-        let err = match VerifiedScript::new(script) {
-            Ok(script) => {
+        match self.verify_script(&script) {
+            Ok(_) => {
                 // verify dependencies
                 let deps = load_script_dependencies(&script);
                 let mut dependencies = vec![];
                 for dep in &deps {
                     dependencies.push(self.load_module(dep, data_store)?);
                 }
-                let mut dependency_map = BTreeMap::new();
-                for dependency in &dependencies {
-                    dependency_map.insert(dependency.module_id().clone(), dependency.module());
-                }
-                match verify_script_dependency_map(&script, &dependency_map) {
-                    Ok(()) => return Ok(script.into_inner()),
-                    Err(e) => e,
-                }
+                self.verify_script_dependencies(script, dependencies)
             }
-            Err((_, errs)) => errs,
-        };
-        error!(
-            "[VM] bytecode verifier returned errors for script: {:?}",
-            err
-        );
-        // If there are errors there should be at least one otherwise there's an internal
-        // error in the verifier. We only give back the first error. If the user wants to
-        // debug things, they can do that offline.
-        Err(err)
+            Err(err) => {
+                error!(
+                    "[VM] bytecode verifier returned errors for script: {:?}",
+                    err
+                );
+                Err(err)
+            }
+        }
+    }
+
+    fn verify_script_dependencies(
+        &self,
+        script: CompiledScript,
+        dependencies: Vec<Arc<Module>>,
+    ) -> VMResult<CompiledScript> {
+        let mut deps = vec![];
+        for dep in &dependencies {
+            deps.push(dep.module());
+        }
+        DependencyChecker::verify_script(&script, deps).and_then(|_| Ok(script))
     }
 
     fn deserialize_and_verify_module(
@@ -639,11 +649,19 @@ impl Loader {
         for dep in &deps {
             dependencies.push(self.load_module(dep, data_store)?);
         }
-        let mut dependency_map = BTreeMap::new();
-        for dependency in &dependencies {
-            dependency_map.insert(dependency.module_id().clone(), dependency.module());
+        self.verify_module_dependencies(module, dependencies)
+    }
+
+    fn verify_module_dependencies(
+        &self,
+        module: &CompiledModule,
+        dependencies: Vec<Arc<Module>>,
+    ) -> VMResult<()> {
+        let mut deps = vec![];
+        for dep in &dependencies {
+            deps.push(dep.module());
         }
-        verify_dependencies(module, &dependency_map)
+        DependencyChecker::verify_module(module, deps)
     }
 }
 
@@ -908,10 +926,6 @@ impl Module {
             field_handles,
             field_instantiations,
         })
-    }
-
-    fn module_id(&self) -> &ModuleId {
-        &self.id
     }
 
     fn struct_at(&self, idx: StructDefinitionIndex) -> usize {
@@ -1268,27 +1282,27 @@ pub struct FieldInstantiation {
 // Utility functions
 //
 
-fn load_script_dependencies(binary: &dyn ScriptAccess) -> Vec<ModuleId> {
+fn load_script_dependencies(script: &CompiledScript) -> Vec<ModuleId> {
     let mut deps = vec![];
-    for module in binary.module_handles() {
+    for module in script.module_handles() {
         deps.push(ModuleId::new(
-            *binary.address_identifier_at(module.address),
-            binary.identifier_at(module.name).to_owned(),
+            *script.address_identifier_at(module.address),
+            script.identifier_at(module.name).to_owned(),
         ));
     }
     deps
 }
 
-fn load_module_dependencies(binary: &dyn ModuleAccess) -> Vec<ModuleId> {
-    let self_module = binary.self_handle();
+fn load_module_dependencies(module: &CompiledModule) -> Vec<ModuleId> {
+    let self_module = module.self_handle();
     let mut deps = vec![];
-    for module in binary.module_handles() {
-        if module == self_module {
+    for module_handle in module.module_handles() {
+        if module_handle == self_module {
             continue;
         }
         deps.push(ModuleId::new(
-            *binary.address_identifier_at(module.address),
-            binary.identifier_at(module.name).to_owned(),
+            *module.address_identifier_at(module_handle.address),
+            module.identifier_at(module_handle.name).to_owned(),
         ));
     }
     deps

@@ -536,7 +536,7 @@ main() {
     SortedLinkedList.remove_node({{bob}});
     return;
 }
-// check: VISIBILITY_MISMATCH
+// check: LOOKUP_FAILED
 
 //! new-transaction
 //! sender: sys
@@ -546,4 +546,4 @@ main() {
     SortedLinkedList.remove_node({{bob}});
     return;
 }
-// check: VISIBILITY_MISMATCH
+// check: LOOKUP_FAILED

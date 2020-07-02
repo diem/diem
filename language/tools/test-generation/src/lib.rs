@@ -17,7 +17,7 @@ extern crate mirai_annotations;
 
 use crate::config::{Args, EXECUTE_UNVERIFIED_MODULE, RUN_ON_VM};
 use bytecode_generator::BytecodeGenerator;
-use bytecode_verifier::VerifiedModule;
+use bytecode_verifier::verify_module;
 use crossbeam_channel::{bounded, unbounded, Receiver, Sender};
 use getrandom::getrandom;
 use language_e2e_tests::executor::FakeExecutor;
@@ -44,12 +44,13 @@ use vm::{
 
 /// This function calls the Bytecode verifier to test it
 fn run_verifier(module: CompiledModule) -> Result<CompiledModule, String> {
-    let verifier_panic = panic::catch_unwind(|| {
-        VerifiedModule::new(module)
-            .map(|verified_module| verified_module.into_inner())
-            .map_err(|err| format!("Module verification failed: {:#?}", err))
-    });
-    verifier_panic.unwrap_or_else(|err| Err(format!("Verifier panic: {:#?}", err)))
+    match panic::catch_unwind(|| verify_module(&module)) {
+        Ok(res) => match res {
+            Ok(_) => Ok(module),
+            Err(err) => Err(format!("Module verification failed: {:#?}", err)),
+        },
+        Err(err) => Err(format!("Verifier panic: {:#?}", err)),
+    }
 }
 
 /// This function runs a verified module in the VM runtime
