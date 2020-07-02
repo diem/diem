@@ -761,12 +761,12 @@ pub fn encode_unmint_lbr_script(amount_lbr: u64) -> Script {
 }
 
 /// Update the on-chain exchange rate to LBR for the given `currency` to be given by
-/// `new_exchange_rate_denominator/new_exchange_rate_numerator`.
+/// `new_exchange_rate_numerator/new_exchange_rate_denominator`.
 pub fn encode_update_exchange_rate_script(
     currency: TypeTag,
     sliding_nonce: u64,
-    new_exchange_rate_denominator: u64,
     new_exchange_rate_numerator: u64,
+    new_exchange_rate_denominator: u64,
 ) -> Script {
     Script::new(
         vec![
@@ -785,8 +785,8 @@ pub fn encode_update_exchange_rate_script(
         vec![currency],
         vec![
             TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::U64(new_exchange_rate_denominator),
             TransactionArgument::U64(new_exchange_rate_numerator),
+            TransactionArgument::U64(new_exchange_rate_denominator),
         ],
     )
 }
