@@ -29,8 +29,8 @@ use std::{
 // might need to extract into a separate network_constants crate or something.
 pub const HANDSHAKE_VERSION: u8 = 0;
 
-pub type SeedPubkeySetsConfig = HashMap<PeerId, HashSet<x25519::PublicKey>>;
-pub type SeedPeersConfig = HashMap<PeerId, Vec<NetworkAddress>>;
+pub type SeedPublicKeys = HashMap<PeerId, HashSet<x25519::PublicKey>>;
+pub type SeedAddresses = HashMap<PeerId, Vec<NetworkAddress>>;
 
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Clone, PartialEq))]
 #[derive(Debug, Deserialize, Serialize)]
@@ -47,11 +47,14 @@ pub struct NetworkConfig {
     // authentication only occurs for outgoing connections.
     pub mutual_authentication: bool,
     pub network_id: NetworkId,
-    // Leveraged by mutual_authentication for incoming peers that may not have a well-defined
-    // network address.
-    pub seed_pubkey_sets: SeedPubkeySetsConfig,
-    // Initial set of peers to connect to
-    pub seed_peers: SeedPeersConfig,
+    // Addresses of initial peers to connect to. In a mutual_authentication network,
+    // we will extract the public keys from these addresses to set our initial
+    // trusted peers set.
+    pub seed_addrs: SeedAddresses,
+    // Backup for public keys of peers that we'll accept connections from in a
+    // mutual_authentication network. This config field is intended as a fallback
+    // in case some peers don't have well defined addresses.
+    pub seed_pubkeys: SeedPublicKeys,
 }
 
 impl Default for NetworkConfig {
@@ -69,8 +72,8 @@ impl NetworkConfig {
             listen_address: "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
             mutual_authentication: false,
             network_id,
-            seed_pubkey_sets: HashMap::default(),
-            seed_peers: HashMap::default(),
+            seed_pubkeys: HashMap::default(),
+            seed_addrs: HashMap::default(),
         };
         config.prepare_identity();
         config
@@ -88,8 +91,8 @@ impl NetworkConfig {
             listen_address: self.listen_address.clone(),
             mutual_authentication: self.mutual_authentication,
             network_id: self.network_id.clone(),
-            seed_pubkey_sets: self.seed_pubkey_sets.clone(),
-            seed_peers: self.seed_peers.clone(),
+            seed_pubkeys: self.seed_pubkeys.clone(),
+            seed_addrs: self.seed_addrs.clone(),
         }
     }
 
@@ -178,8 +181,8 @@ impl NetworkConfig {
     }
 
     /// Check that all seed peer addresses look like canonical LibraNet addresses
-    pub fn verify_seed_peer_addrs(&self) -> Result<(), Error> {
-        for (peer_id, addrs) in self.seed_peers.iter() {
+    pub fn verify_seed_addrs(&self) -> Result<(), Error> {
+        for (peer_id, addrs) in self.seed_addrs.iter() {
             for addr in addrs {
                 crate::config::invariant(
                     addr.is_libranet_addr(),

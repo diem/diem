@@ -253,7 +253,7 @@ impl SynchronizerEnv {
         mock_network: bool,
     ) {
         let new_peer_idx = self.synchronizers.len();
-        let seed_pubkey_sets: HashMap<_, _> = self
+        let seed_pubkeys: HashMap<_, _> = self
             .public_keys
             .iter()
             .map(|public_keys| {
@@ -306,8 +306,8 @@ impl SynchronizerEnv {
                 authentication_mode,
             );
             network_builder
-                .seed_pubkey_sets(seed_pubkey_sets)
                 .seed_addrs(seed_addrs)
+                .seed_pubkeys(seed_pubkeys)
                 .add_connectivity_manager()
                 .add_gossip_discovery(addr, constants::DISCOVERY_INTERVAL_MS, pub_key);
 

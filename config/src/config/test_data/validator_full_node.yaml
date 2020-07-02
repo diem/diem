@@ -29,7 +29,7 @@ full_node_networks:
     - listen_address: "/ip4/0.0.0.0/tcp/7180"
       network_id:
           private: "vfn"
-      seed_peers:
+      seed_addrs:
           "c227da54069989f283712e4016704660":
               - "/ip4/127.0.0.1/tcp/58259/ln-noise-ik/c998dcd54c3daf48e0ad516d94b7be0b0b7a27caa00541f2b2c14b13500df10b/ln-handshake/0"
 

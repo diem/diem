@@ -77,7 +77,7 @@ impl ValidatorConfig {
             .validator_network
             .as_ref()
             .ok_or(Error::MissingValidatorNetwork)?;
-        let seed_peers = generator::build_seed_peers(&seed_config, self.bootstrap.clone());
+        let seed_addrs = generator::build_seed_addrs(&seed_config, self.bootstrap.clone());
 
         // Pull out this specific node from the generated validator configs.
         let mut config = configs.swap_remove(self.node_index);
@@ -89,7 +89,7 @@ impl ValidatorConfig {
         validator_network.listen_address = self.listen_address.clone();
         validator_network.discovery_method =
             DiscoveryMethod::gossip(self.advertised_address.clone());
-        validator_network.seed_peers = seed_peers;
+        validator_network.seed_addrs = seed_addrs;
 
         self.build_safety_rules(&mut config)?;
 
@@ -249,8 +249,8 @@ mod test {
         let config = validator_config.build().unwrap();
         let network = config.validator_network.as_ref().unwrap();
 
-        network.verify_seed_peer_addrs().unwrap();
-        let (seed_peer_id, seed_addrs) = network.seed_peers.iter().next().unwrap();
+        network.verify_seed_addrs().unwrap();
+        let (seed_peer_id, seed_addrs) = network.seed_addrs.iter().next().unwrap();
         assert_eq!(seed_addrs.len(), 1);
         assert_ne!(&network.peer_id(), seed_peer_id);
         assert_ne!(

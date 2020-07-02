@@ -25,7 +25,10 @@ use network::{
 };
 use rand::{rngs::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 use tokio::runtime::Runtime;
 
 const TEST_RPC_PROTOCOL: ProtocolId = ProtocolId::ConsensusRpc;
@@ -111,25 +114,21 @@ pub fn setup_network() -> DummyNetwork {
     let mut rng = StdRng::from_seed(TEST_SEED);
     let dialer_identity_private_key = x25519::PrivateKey::generate(&mut rng);
     let dialer_identity_public_key = dialer_identity_private_key.public_key();
+    let dialer_pubkeys: HashSet<_> = vec![dialer_identity_public_key].into_iter().collect();
 
     // Setup keys for listener.
     let listener_identity_private_key = x25519::PrivateKey::generate(&mut rng);
     let listener_identity_public_key = listener_identity_private_key.public_key();
+    let listener_pubkeys: HashSet<_> = vec![listener_identity_public_key].into_iter().collect();
 
     // Setup listen addresses
     let dialer_addr: NetworkAddress = "/ip4/127.0.0.1/tcp/0".parse().unwrap();
     let listener_addr: NetworkAddress = "/ip4/127.0.0.1/tcp/0".parse().unwrap();
 
     // Setup trusted peers.
-    let seed_pubkey_sets: HashMap<_, _> = vec![
-        (
-            dialer_peer_id,
-            vec![dialer_identity_public_key].into_iter().collect(),
-        ),
-        (
-            listener_peer_id,
-            vec![listener_identity_public_key].into_iter().collect(),
-        ),
+    let seed_pubkeys: HashMap<_, _> = vec![
+        (dialer_peer_id, dialer_pubkeys),
+        (listener_peer_id, listener_pubkeys),
     ]
     .into_iter()
     .collect();
@@ -147,7 +146,7 @@ pub fn setup_network() -> DummyNetwork {
         authentication_mode,
     );
     network_builder
-        .seed_pubkey_sets(seed_pubkey_sets.clone())
+        .seed_pubkeys(seed_pubkeys.clone())
         .add_connectivity_manager();
     let (listener_sender, mut listener_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());
@@ -171,7 +170,7 @@ pub fn setup_network() -> DummyNetwork {
     );
     network_builder
         .seed_addrs(seed_addrs)
-        .seed_pubkey_sets(seed_pubkey_sets)
+        .seed_pubkeys(seed_pubkeys)
         .add_connectivity_manager();
     let (dialer_sender, mut dialer_events) = network_builder
         .add_protocol_handler::<DummyNetworkSender, DummyNetworkEvents>(network_endpoint_config());

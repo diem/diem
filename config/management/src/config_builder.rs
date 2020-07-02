@@ -4,7 +4,7 @@
 use crate::{constants, layout::Layout, storage_helper::StorageHelper};
 use config_builder::BuildSwarm;
 use libra_config::config::{
-    Identity, NodeConfig, OnDiskStorageConfig, SafetyRulesService, SecureBackend, SeedPeersConfig,
+    Identity, NodeConfig, OnDiskStorageConfig, SafetyRulesService, SecureBackend, SeedAddresses,
     WaypointConfig, HANDSHAKE_VERSION,
 };
 use libra_crypto::ed25519::Ed25519PrivateKey;
@@ -214,11 +214,11 @@ impl FullnodeBuilder {
         let v_vfn_network_address =
             v_vfn_network_address.append_prod_protos(v_vfn_pub_key, HANDSHAKE_VERSION);
         let v_vfn_id = v_vfn.peer_id();
-        let mut seed_peers = SeedPeersConfig::default();
-        seed_peers.insert(v_vfn_id, vec![v_vfn_network_address]);
+        let mut seed_addrs = SeedAddresses::default();
+        seed_addrs.insert(v_vfn_id, vec![v_vfn_network_address]);
 
         let fn_vfn = &mut full_node_config.full_node_networks[1];
-        fn_vfn.seed_peers = seed_peers;
+        fn_vfn.seed_addrs = seed_addrs;
 
         Self::insert_waypoint_and_genesis(&mut full_node_config, &validator_config);
         full_node_config
