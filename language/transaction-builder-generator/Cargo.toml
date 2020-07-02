@@ -28,6 +28,6 @@ tempfile = "3.1.0"
 default = []
 
 [[bin]]
-name = "transaction-builder-generator"
+name = "generate-transaction-builders"
 path = "src/generate.rs"
 test = false
