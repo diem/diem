@@ -16,7 +16,9 @@ use libra_global_constants::{
     PREFERRED_ROUND, WAYPOINT,
 };
 use libra_logger::prelude::*;
-use libra_secure_storage::{CryptoStorage, InMemoryStorage, KVStorage, Storage, Value};
+use libra_secure_storage::{
+    CachedStorage, CryptoStorage, InMemoryStorage, KVStorage, Storage, Value,
+};
 use libra_types::waypoint::Waypoint;
 use std::str::FromStr;
 
@@ -93,6 +95,19 @@ impl PersistentSafetyStorage {
             Value::Bytes(lcs::to_bytes::<Option<Vote>>(&None)?),
         )?;
         Ok(())
+    }
+
+    pub fn into_cached(self) -> PersistentSafetyStorage {
+        // will be an idempotent operation if the underlying storage is already a CachedStorage
+        if let Storage::CachedStorage(cached_storage) = self.internal_store {
+            PersistentSafetyStorage {
+                internal_store: Storage::CachedStorage(cached_storage),
+            }
+        } else {
+            PersistentSafetyStorage {
+                internal_store: Storage::CachedStorage(CachedStorage::new(self.internal_store)),
+            }
+        }
     }
 
     /// Use this to instantiate a PersistentStorage with an existing data store. This is intended
