@@ -261,6 +261,8 @@ fn basic_start_test() {
 /// Run the test:
 /// cargo xtest -p consensus drop_config_test -- --nocapture
 #[test]
+#[ignore]
+/// See https://github.com/libra/libra/issues/4899
 fn drop_config_test() {
     let mut runtime = consensus_runtime();
     let mut playground = NetworkPlayground::new(runtime.handle().clone());
