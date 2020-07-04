@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    config::{Error, SecureBackend},
+    config::{Error, RoleType, SecureBackend},
     keys::KeyPair,
     network_id::NetworkId,
     utils,
@@ -113,11 +113,20 @@ impl NetworkConfig {
         key.expect("identity key should be present")
     }
 
-    pub fn load(&mut self) -> Result<(), Error> {
+    pub fn load(&mut self, role: RoleType) -> Result<(), Error> {
         if self.listen_address.to_string().is_empty() {
             self.listen_address = utils::get_local_ip()
                 .ok_or_else(|| Error::InvariantViolation("No local IP".to_string()))?;
         }
+
+        if role == RoleType::Validator {
+            self.network_id = NetworkId::Validator;
+        } else if self.network_id == NetworkId::Validator {
+            return Err(Error::InvariantViolation(
+                "Set NetworkId::Validator network for a non-validator network".to_string(),
+            ));
+        }
+
         self.prepare_identity();
         Ok(())
     }
