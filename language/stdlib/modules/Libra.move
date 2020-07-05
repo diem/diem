@@ -10,7 +10,6 @@ module Libra {
     use 0x1::FixedPoint32::{Self, FixedPoint32};
     use 0x1::RegisteredCurrencies::{Self, RegistrationCapability};
     use 0x1::Signer;
-    use 0x1::Vector;
     use 0x1::Roles;
     use 0x1::LibraTimestamp;
 
@@ -171,11 +170,11 @@ module Libra {
     /// contains this address has the authority to initiate a burn request. A burn request can be
     /// resolved by the holder of a `BurnCapability` by either (1) burning the funds, or (2)
     /// returning the funds to the account that initiated the burn request.
-    /// including multiple burn requests from the same account. However, burn requests
-    /// (and cancellations) from the same account must be resolved in FIFO order.
+    /// Concurrent preburn requests are not allowed, only one request (in to_burn) can be handled at any time.
     resource struct Preburn<CoinType> {
-        /// The queue of pending burn requests
-        requests: vector<Libra<CoinType>>,
+        /// A single pending burn amount.
+        /// There is no pending burn request if the value in to_burn is 0
+        to_burn: Libra<CoinType>,
     }
 
     const ENOT_GENESIS: u64 = 0;
@@ -275,10 +274,10 @@ module Libra {
         pragma verify=false;
     }
 
-    /// Cancels the oldest burn request in the `Preburn` resource held
+    /// Cancels the current burn request in the `Preburn` resource held
     /// under the `preburn_address`, and returns the coins.
     /// Calls to this will fail if the sender does not have a published
-    /// `BurnCapability<CoinType>`, or if there are no preburn requests
+    /// `BurnCapability<CoinType>`, or if there is no preburn request
     /// outstanding in the `Preburn` resource under `preburn_address`.
     public fun cancel_burn<CoinType>(
         account: &signer,
@@ -288,13 +287,6 @@ module Libra {
             preburn_address,
             borrow_global<BurnCapability<CoinType>>(Signer::address_of(account))
         )
-    }
-
-    /// Create a new `Preburn` resource, and return it back to the sender.
-    /// The `CoinType` must be a registered currency on-chain.
-    public fun new_preburn<CoinType>(): Preburn<CoinType> {
-        assert_is_currency<CoinType>();
-        Preburn<CoinType> { requests: Vector::empty() }
     }
 
     /// Mint a new `Libra` coin of `CoinType` currency worth `value`. The
@@ -342,8 +334,9 @@ module Libra {
         ensures result.value == value;
     }
 
-    /// Add the `coin` to the `preburn` queue in the `Preburn` resource
-    /// held at the address `preburn_address`. Emits a `PreburnEvent` to
+    /// Add the `coin` to the `preburn` to_burn field in the `Preburn` resource
+    /// held at the address `preburn_address` if it is empty, otherwise raise
+    /// a PendingPreburn Error (code 6). Emits a `PreburnEvent` to
     /// the `preburn_events` event stream in the `CurrencyInfo` for the
     /// `CoinType` passed in. However, if the currency being preburned is
     /// `synthetic` then no `PreburnEvent` event will be emitted.
@@ -353,10 +346,9 @@ module Libra {
         preburn_address: address,
     ) acquires CurrencyInfo {
         let coin_value = value(&coin);
-        Vector::push_back(
-            &mut preburn.requests,
-            coin
-        );
+        // Throw if already occupied
+        assert(value(&preburn.to_burn) == 0, 6);
+        deposit(&mut preburn.to_burn, coin);
         let currency_code = currency_code<CoinType>();
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         info.preburn_value = info.preburn_value + coin_value;
@@ -381,10 +373,11 @@ module Libra {
         aborts_if !spec_is_currency<CoinType>();
         aborts_if spec_currency_info<CoinType>().preburn_value + coin.value > max_u64();
     }
+    // TODO change - move prover
     spec schema PreburnEnsures<CoinType> {
         coin: Libra<CoinType>;
         preburn: Preburn<CoinType>;
-        ensures Vector::eq_push_back(preburn.requests, old(preburn.requests), coin);
+        // ensures Vector::eq_push_back(preburn.requests, old(preburn.requests), coin);
         ensures spec_currency_info<CoinType>().preburn_value
                     == old(spec_currency_info<CoinType>().preburn_value) + coin.value;
     }
@@ -399,7 +392,7 @@ module Libra {
     ): Preburn<CoinType> {
         assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
         assert_is_currency<CoinType>();
-        Preburn<CoinType> { requests: Vector::empty() }
+        Preburn<CoinType> { to_burn: zero<CoinType>() }
     }
 
     /// Publishes a `Preburn` resource under `account`. This function is
@@ -431,18 +424,17 @@ module Libra {
         include PreburnEnsures<CoinType>{preburn: global<Preburn<CoinType>>(Signer::spec_address_of(account))};
     }
 
-    /// Permanently removes the coins held in the `Preburn` resource stored at `preburn_address` and
-    /// updates the market cap accordingly. If there are multiple preburn
-    /// requests in progress (i.e. in the preburn queue), this will remove the oldest one.
+    /// Permanently removes the coins held in the `Preburn` resource (in to_burn field)
+    /// stored at `preburn_address` and updates the market cap accordingly.
     /// This function can only be called by the holder of a `BurnCapability<CoinType>`.
     /// Calls to this function will fail if the there is no `Preburn<CoinType>`
-    /// resource under `preburn_address`, or, if the preburn queue for
-    /// `CoinType` has no pending burn requests.
+    /// resource under `preburn_address`, or, if the preburn to_burn area for
+    /// `CoinType` is empty (error code 7).
     public fun burn_with_capability<CoinType>(
         preburn_address: address,
         capability: &BurnCapability<CoinType>
     ) acquires CurrencyInfo, Preburn {
-        // destroy the coin at the head of the preburn queue
+        // destroy the coin in the preburn to_burn area
         burn_with_resource_cap(
             borrow_global_mut<Preburn<CoinType>>(preburn_address),
             preburn_address,
@@ -455,21 +447,22 @@ module Libra {
         include BurnEnsures<CoinType>{preburn: global<Preburn<CoinType>>(preburn_address)};
     }
 
-    /// Permanently removes the coins held in the `Preburn` resource `preburn` stored at `preburn_address` and
-    /// updates the market cap accordingly. If there are multiple preburn
-    /// requests in progress (i.e. in the preburn queue), this will remove the oldest one.
+    /// Permanently removes the coins held in the `Preburn` resource (in to_burn field)
+    /// stored at `preburn_address` and updates the market cap accordingly.
     /// This function can only be called by the holder of a `BurnCapability<CoinType>`.
     /// Calls to this function will fail if the there is no `Preburn<CoinType>`
-    /// resource under `preburn_address`, or, if the preburn queue for
-    /// `CoinType` has no pending burn requests.
+    /// resource under `preburn_address`, or, if the preburn to_burn area for
+    /// `CoinType` is empty (error code 7).
     public fun burn_with_resource_cap<CoinType>(
         preburn: &mut Preburn<CoinType>,
         preburn_address: address,
         _capability: &BurnCapability<CoinType>
     ) acquires CurrencyInfo {
         let currency_code = currency_code<CoinType>();
-        // destroy the coin at the head of the preburn queue
-        let Libra { value } = Vector::remove(&mut preburn.requests, 0);
+        // Abort if no coin present in preburn area
+        assert(preburn.to_burn.value > 0, 7);
+        // destroy the coin in Preburn area
+        let Libra { value } = withdraw_all<CoinType>(&mut preburn.to_burn);
         // update the market cap
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         info.total_value = info.total_value - (value as u128);
@@ -490,38 +483,39 @@ module Libra {
         include BurnAbortsIf<CoinType>;
         include BurnEnsures<CoinType>;
     }
+
     spec schema BurnAbortsIf<CoinType> {
         preburn: Preburn<CoinType>;
         aborts_if !spec_is_currency<CoinType>();
-        aborts_if len(preburn.requests) == 0;
-        aborts_if {
-            let i = spec_currency_info<CoinType>();
-            i.total_value < preburn.requests[0].value || i.preburn_value < preburn.requests[0].value
-        };
+        // TODO(moezinia) made changes to preburn area which affect these abort conditions
+        // aborts_if len(preburn.requests) == 0;
+        // aborts_if {
+        //     let i = spec_currency_info<CoinType>();
+        //     i.total_value < preburn.requests[0].value || i.preburn_value < preburn.requests[0].value
+        // };
     }
     spec schema BurnEnsures<CoinType> {
         preburn: Preburn<CoinType>;
-        ensures Vector::eq_pop_front(preburn.requests, old(preburn.requests));
+        // TODO(moezinia) made changes to preburn area which affect these abort conditions
+        // ensures Vector::eq_pop_front(preburn.requests, old(preburn.requests));
         ensures spec_currency_info<CoinType>().total_value
-                == old(spec_currency_info<CoinType>().total_value) - old(preburn.requests[0].value);
+                == old(spec_currency_info<CoinType>().total_value) - old(preburn.to_burn.value);
         ensures spec_currency_info<CoinType>().preburn_value
-                == old(spec_currency_info<CoinType>().preburn_value) - old(preburn.requests[0].value);
+                == old(spec_currency_info<CoinType>().preburn_value) - old(preburn.to_burn.value);
     }
 
     /// Cancels the burn request in the `Preburn` resource stored at `preburn_address` and
     /// return the coins to the caller.
-    /// If there are multiple preburn requests in progress for `CoinType` (i.e. in the
-    /// preburn queue), this will cancel the oldest one.
     /// This function can only be called by the holder of a
     /// `BurnCapability<CoinType>`, and will fail if the `Preburn<CoinType>` resource
-    /// at `preburn_address` does not contain any pending burn requests.
+    /// at `preburn_address` does not contain a pending burn request.
     public fun cancel_burn_with_capability<CoinType>(
         preburn_address: address,
         _capability: &BurnCapability<CoinType>
     ): Libra<CoinType> acquires CurrencyInfo, Preburn {
-        // destroy the coin at the head of the preburn queue
+        // destroy the coin in the preburn area
         let preburn = borrow_global_mut<Preburn<CoinType>>(preburn_address);
-        let coin = Vector::remove(&mut preburn.requests, 0);
+        let coin = withdraw_all<CoinType>(&mut preburn.to_burn);
         // update the market cap
         let currency_code = currency_code<CoinType>();
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());

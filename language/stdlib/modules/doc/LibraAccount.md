@@ -838,9 +838,6 @@ Sender should be treasury compliance account and receiver authorized DD.
 
 ## Function `cancel_burn`
 
-Cancel the oldest burn request from
-<code>preburn_address</code> and return the funds.
-Fails if the sender does not have a published MintCapability.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address)

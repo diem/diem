@@ -428,8 +428,8 @@ module LibraAccount {
         pragma verify = true;
     }
 
-    /// Cancel the oldest burn request from `preburn_address` and return the funds.
-    /// Fails if the sender does not have a published MintCapability.
+    // Cancel the burn request from `preburn_address` and return the funds.
+    // Fails if the sender does not have a published MintCapability.
     public fun cancel_burn<Token>(
         account: &signer,
         preburn_address: address,

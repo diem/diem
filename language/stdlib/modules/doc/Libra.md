@@ -23,7 +23,6 @@
 -  [Function `mint`](#0x1_Libra_mint)
 -  [Function `burn`](#0x1_Libra_burn)
 -  [Function `cancel_burn`](#0x1_Libra_cancel_burn)
--  [Function `new_preburn`](#0x1_Libra_new_preburn)
 -  [Function `mint_with_capability`](#0x1_Libra_mint_with_capability)
 -  [Function `preburn_with_resource`](#0x1_Libra_preburn_with_resource)
 -  [Function `create_preburn`](#0x1_Libra_create_preburn)
@@ -666,8 +665,7 @@ contains this address has the authority to initiate a burn request. A burn reque
 resolved by the holder of a
 <code><a href="#0x1_Libra_BurnCapability">BurnCapability</a></code> by either (1) burning the funds, or (2)
 returning the funds to the account that initiated the burn request.
-including multiple burn requests from the same account. However, burn requests
-(and cancellations) from the same account must be resolved in FIFO order.
+Concurrent preburn requests are not allowed, only one request (in to_burn) can be handled at any time.
 
 
 <pre><code><b>resource</b> <b>struct</b> <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;
@@ -682,10 +680,11 @@ including multiple burn requests from the same account. However, burn requests
 <dl>
 <dt>
 
-<code>requests: vector&lt;<a href="#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;&gt;</code>
+<code>to_burn: <a href="#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;</code>
 </dt>
 <dd>
- The queue of pending burn requests
+ A single pending burn amount.
+ There is no pending burn request if the value in to_burn is 0
 </dd>
 </dl>
 
@@ -893,12 +892,12 @@ published
 
 ## Function `cancel_burn`
 
-Cancels the oldest burn request in the
+Cancels the current burn request in the
 <code><a href="#0x1_Libra_Preburn">Preburn</a></code> resource held
 under the
 <code>preburn_address</code>, and returns the coins.
 Calls to this will fail if the sender does not have a published
-<code><a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code>, or if there are no preburn requests
+<code><a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code>, or if there is no preburn request
 outstanding in the
 <code><a href="#0x1_Libra_Preburn">Preburn</a></code> resource under
 <code>preburn_address</code>.
@@ -921,35 +920,6 @@ outstanding in the
         preburn_address,
         borrow_global&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account))
     )
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_Libra_new_preburn"></a>
-
-## Function `new_preburn`
-
-Create a new
-<code><a href="#0x1_Libra_Preburn">Preburn</a></code> resource, and return it back to the sender.
-The
-<code>CoinType</code> must be a registered currency on-chain.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_new_preburn">new_preburn</a>&lt;CoinType&gt;(): <a href="#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_new_preburn">new_preburn</a>&lt;CoinType&gt;(): <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; {
-    <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
-    <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; { requests: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>() }
 }
 </code></pre>
 
@@ -1016,10 +986,11 @@ reference.
 
 Add the
 <code>coin</code> to the
-<code>preburn</code> queue in the
+<code>preburn</code> to_burn field in the
 <code><a href="#0x1_Libra_Preburn">Preburn</a></code> resource
 held at the address
-<code>preburn_address</code>. Emits a
+<code>preburn_address</code> if it is empty, otherwise raise
+a PendingPreburn Error (code 6). Emits a
 <code><a href="#0x1_Libra_PreburnEvent">PreburnEvent</a></code> to
 the
 <code>preburn_events</code> event stream in the
@@ -1044,10 +1015,9 @@ the
     preburn_address: address,
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
     <b>let</b> coin_value = <a href="#0x1_Libra_value">value</a>(&coin);
-    <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(
-        &<b>mut</b> preburn.requests,
-        coin
-    );
+    // Throw <b>if</b> already occupied
+    <b>assert</b>(<a href="#0x1_Libra_value">value</a>(&preburn.to_burn) == 0, 6);
+    <a href="#0x1_Libra_deposit">deposit</a>(&<b>mut</b> preburn.to_burn, coin);
     <b>let</b> currency_code = <a href="#0x1_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     info.preburn_value = info.preburn_value + coin_value;
@@ -1091,7 +1061,7 @@ Create a
 ): <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; {
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
-    <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; { requests: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>() }
+    <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; { to_burn: <a href="#0x1_Libra_zero">zero</a>&lt;CoinType&gt;() }
 }
 </code></pre>
 
@@ -1174,17 +1144,16 @@ Calls to this function will fail if
 ## Function `burn_with_capability`
 
 Permanently removes the coins held in the
-<code><a href="#0x1_Libra_Preburn">Preburn</a></code> resource stored at
-<code>preburn_address</code> and
-updates the market cap accordingly. If there are multiple preburn
-requests in progress (i.e. in the preburn queue), this will remove the oldest one.
+<code><a href="#0x1_Libra_Preburn">Preburn</a></code> resource (in to_burn field)
+stored at
+<code>preburn_address</code> and updates the market cap accordingly.
 This function can only be called by the holder of a
 <code><a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code>.
 Calls to this function will fail if the there is no
 <code><a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;</code>
 resource under
-<code>preburn_address</code>, or, if the preburn queue for
-<code>CoinType</code> has no pending burn requests.
+<code>preburn_address</code>, or, if the preburn to_burn area for
+<code>CoinType</code> is empty (error code 7).
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_burn_with_capability">burn_with_capability</a>&lt;CoinType&gt;(preburn_address: address, capability: &<a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
@@ -1200,7 +1169,7 @@ resource under
     preburn_address: address,
     capability: &<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x1_Libra_Preburn">Preburn</a> {
-    // destroy the coin at the head of the preburn queue
+    // destroy the coin in the preburn to_burn area
     <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>(
         borrow_global_mut&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address),
         preburn_address,
@@ -1218,18 +1187,16 @@ resource under
 ## Function `burn_with_resource_cap`
 
 Permanently removes the coins held in the
-<code><a href="#0x1_Libra_Preburn">Preburn</a></code> resource
-<code>preburn</code> stored at
-<code>preburn_address</code> and
-updates the market cap accordingly. If there are multiple preburn
-requests in progress (i.e. in the preburn queue), this will remove the oldest one.
+<code><a href="#0x1_Libra_Preburn">Preburn</a></code> resource (in to_burn field)
+stored at
+<code>preburn_address</code> and updates the market cap accordingly.
 This function can only be called by the holder of a
 <code><a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code>.
 Calls to this function will fail if the there is no
 <code><a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;</code>
 resource under
-<code>preburn_address</code>, or, if the preburn queue for
-<code>CoinType</code> has no pending burn requests.
+<code>preburn_address</code>, or, if the preburn to_burn area for
+<code>CoinType</code> is empty (error code 7).
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_burn_with_resource_cap">burn_with_resource_cap</a>&lt;CoinType&gt;(preburn: &<b>mut</b> <a href="#0x1_Libra_Preburn">Libra::Preburn</a>&lt;CoinType&gt;, preburn_address: address, _capability: &<a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;)
@@ -1247,8 +1214,10 @@ resource under
     _capability: &<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
     <b>let</b> currency_code = <a href="#0x1_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
-    // destroy the coin at the head of the preburn queue
-    <b>let</b> <a href="#0x1_Libra">Libra</a> { value } = <a href="Vector.md#0x1_Vector_remove">Vector::remove</a>(&<b>mut</b> preburn.requests, 0);
+    // Abort <b>if</b> no coin present in preburn area
+    <b>assert</b>(preburn.to_burn.value &gt; 0, 7);
+    // destroy the coin in <a href="#0x1_Libra_Preburn">Preburn</a> area
+    <b>let</b> <a href="#0x1_Libra">Libra</a> { value } = <a href="#0x1_Libra_withdraw_all">withdraw_all</a>&lt;CoinType&gt;(&<b>mut</b> preburn.to_burn);
     // <b>update</b> the market cap
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     info.total_value = info.total_value - (value <b>as</b> u128);
@@ -1279,14 +1248,11 @@ Cancels the burn request in the
 <code><a href="#0x1_Libra_Preburn">Preburn</a></code> resource stored at
 <code>preburn_address</code> and
 return the coins to the caller.
-If there are multiple preburn requests in progress for
-<code>CoinType</code> (i.e. in the
-preburn queue), this will cancel the oldest one.
 This function can only be called by the holder of a
 <code><a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;</code>, and will fail if the
 <code><a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;</code> resource
 at
-<code>preburn_address</code> does not contain any pending burn requests.
+<code>preburn_address</code> does not contain a pending burn request.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_cancel_burn_with_capability">cancel_burn_with_capability</a>&lt;CoinType&gt;(preburn_address: address, _capability: &<a href="#0x1_Libra_BurnCapability">Libra::BurnCapability</a>&lt;CoinType&gt;): <a href="#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
@@ -1302,9 +1268,9 @@ at
     preburn_address: address,
     _capability: &<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;
 ): <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>, <a href="#0x1_Libra_Preburn">Preburn</a> {
-    // destroy the coin at the head of the preburn queue
+    // destroy the coin in the preburn area
     <b>let</b> preburn = borrow_global_mut&lt;<a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;&gt;(preburn_address);
-    <b>let</b> coin = <a href="Vector.md#0x1_Vector_remove">Vector::remove</a>(&<b>mut</b> preburn.requests, 0);
+    <b>let</b> coin = <a href="#0x1_Libra_withdraw_all">withdraw_all</a>&lt;CoinType&gt;(&<b>mut</b> preburn.to_burn);
     // <b>update</b> the market cap
     <b>let</b> currency_code = <a href="#0x1_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
@@ -2327,7 +2293,6 @@ the total_value CurrencyInfo keeps track of.
 <pre><code><b>schema</b> <a href="#0x1_Libra_PreburnEnsures">PreburnEnsures</a>&lt;CoinType&gt; {
     coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;;
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
-    <b>ensures</b> <a href="Vector.md#0x1_Vector_eq_push_back">Vector::eq_push_back</a>(preburn.requests, <b>old</b>(preburn.requests), coin);
     <b>ensures</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value
                 == <b>old</b>(<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value) + coin.value;
 }
@@ -2395,11 +2360,6 @@ the total_value CurrencyInfo keeps track of.
 <pre><code><b>schema</b> <a href="#0x1_Libra_BurnAbortsIf">BurnAbortsIf</a>&lt;CoinType&gt; {
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
     <b>aborts_if</b> !<a href="#0x1_Libra_spec_is_currency">spec_is_currency</a>&lt;CoinType&gt;();
-    <b>aborts_if</b> len(preburn.requests) == 0;
-    <b>aborts_if</b> {
-        <b>let</b> i = <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;();
-        i.total_value &lt; preburn.requests[0].value || i.<a href="#0x1_Libra_preburn_value">preburn_value</a> &lt; preburn.requests[0].value
-    };
 }
 </code></pre>
 
@@ -2411,11 +2371,10 @@ the total_value CurrencyInfo keeps track of.
 
 <pre><code><b>schema</b> <a href="#0x1_Libra_BurnEnsures">BurnEnsures</a>&lt;CoinType&gt; {
     preburn: <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt;;
-    <b>ensures</b> <a href="Vector.md#0x1_Vector_eq_pop_front">Vector::eq_pop_front</a>(preburn.requests, <b>old</b>(preburn.requests));
     <b>ensures</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value
-            == <b>old</b>(<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value) - <b>old</b>(preburn.requests[0].value);
+            == <b>old</b>(<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().total_value) - <b>old</b>(preburn.to_burn.value);
     <b>ensures</b> <a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value
-            == <b>old</b>(<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value) - <b>old</b>(preburn.requests[0].value);
+            == <b>old</b>(<a href="#0x1_Libra_spec_currency_info">spec_currency_info</a>&lt;CoinType&gt;().preburn_value) - <b>old</b>(preburn.to_burn.value);
 }
 </code></pre>
 
