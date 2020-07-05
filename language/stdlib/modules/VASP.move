@@ -361,14 +361,14 @@ module VASP {
     }
 
     spec fun publish_parent_vasp_credential {
-        aborts_if !Roles::spec_has_libra_root_role(lr_account);
+        aborts_if !Roles::spec_has_libra_root_role(Signer::spec_address_of(lr_account));
         aborts_if spec_is_vasp(Signer::spec_address_of(vasp));
         ensures spec_is_parent_vasp(Signer::spec_address_of(vasp));
         ensures spec_get_num_children(Signer::spec_address_of(vasp)) == 0;
     }
 
     spec fun publish_child_vasp_credential {
-        aborts_if !Roles::spec_has_parent_VASP_role(parent);
+        aborts_if !Roles::spec_has_parent_VASP_role(Signer::spec_address_of(parent));
         aborts_if spec_is_vasp(Signer::spec_address_of(child));
         aborts_if !spec_is_parent_vasp(Signer::spec_address_of(parent));
         aborts_if spec_get_num_children(Signer::spec_address_of(parent)) + 1

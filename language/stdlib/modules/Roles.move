@@ -249,13 +249,12 @@ module Roles {
     /// Helper functions
     spec module {
         define spec_get_role_id(account: signer): u64 {
-            let addr = Signer::spec_address_of(account);
-            global<RoleId>(addr).role_id
+            let addr1 = Signer::spec_address_of(account);
+            global<RoleId>(addr1).role_id
         }
 
-        define spec_has_role_id(account: signer, role_id: u64): bool {
-            let addr = Signer::spec_address_of(account);
-            exists<RoleId>(addr) && global<RoleId>(addr).role_id == role_id
+        define spec_has_role_id(addr1: address, role_id: u64): bool {
+            exists<RoleId>(addr1) && global<RoleId>(addr1).role_id == role_id
         }
 
         define SPEC_LIBRA_ROOT_ROLE_ID(): u64 { 0 }
@@ -267,62 +266,72 @@ module Roles {
         define SPEC_CHILD_VASP_ROLE_ID(): u64 { 6 }
         define SPEC_UNHOSTED_ROLE_ID(): u64 { 7 }
 
-        define spec_has_libra_root_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_LIBRA_ROOT_ROLE_ID())
+        define spec_has_libra_root_role(addr1: address): bool {
+            spec_has_role_id(addr1, SPEC_LIBRA_ROOT_ROLE_ID())
         }
 
-        define spec_has_treasury_compliance_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_TREASURY_COMPLIANCE_ROLE_ID())
+        define spec_has_treasury_compliance_role(addr1: address): bool {
+            spec_has_role_id(addr1, SPEC_TREASURY_COMPLIANCE_ROLE_ID())
         }
 
-        define spec_has_designated_dealer_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_DESIGNATED_DEALER_ROLE_ID())
+        define spec_has_designated_dealer_role(addr1: address): bool {
+            spec_has_role_id(addr1, SPEC_DESIGNATED_DEALER_ROLE_ID())
         }
 
-        define spec_has_validator_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_VALIDATOR_ROLE_ID())
+        define spec_has_validator_role(addr1: address): bool {
+            spec_has_role_id(addr1, SPEC_VALIDATOR_ROLE_ID())
         }
 
-        define spec_has_validator_operator_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_VALIDATOR_OPERATOR_ROLE_ID())
+        define spec_has_validator_operator_role(addr1: address): bool {
+            spec_has_role_id(addr1, SPEC_VALIDATOR_OPERATOR_ROLE_ID())
         }
 
-        define spec_has_parent_VASP_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_PARENT_VASP_ROLE_ID())
+        define spec_has_parent_VASP_role(addr1: address): bool {
+            spec_has_role_id(addr1, SPEC_PARENT_VASP_ROLE_ID())
         }
 
-        define spec_has_child_VASP_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_CHILD_VASP_ROLE_ID())
+        define spec_has_child_VASP_role(addr1: address): bool {
+            spec_has_role_id(addr1, SPEC_CHILD_VASP_ROLE_ID())
         }
 
-        define spec_has_unhosted_role(account: signer): bool {
-            spec_has_role_id(account, SPEC_UNHOSTED_ROLE_ID())
+        define spec_has_unhosted_role(addr1: address): bool {
+            spec_has_role_id(addr1, SPEC_UNHOSTED_ROLE_ID())
         }
 
-        define spec_has_register_new_currency_privilege(account: signer): bool {
-            spec_has_treasury_compliance_role(account)
+        define spec_has_register_new_currency_privilege(addr1: address): bool {
+            spec_has_treasury_compliance_role(addr1)
         }
 
-        define spec_has_update_dual_attestation_threshold_privilege(account: signer): bool  {
-            spec_has_treasury_compliance_role(account)
+        define spec_has_update_dual_attestation_threshold_privilege(addr1: address): bool  {
+            spec_has_treasury_compliance_role(addr1)
         }
 
-        define spec_has_on_chain_config_privilege(account: signer): bool {
-            spec_has_treasury_compliance_role(account)
+        define spec_has_on_chain_config_privilege(addr1: address): bool {
+            spec_has_treasury_compliance_role(addr1)
         }
     }
 
     /// **Informally:** Once an account at address `A` is granted a role `R` it
     /// will remain an account with role `R` for all time.
     spec schema RoleIdPersists {
-        ensures forall addr: address where old(exists<RoleId>(addr)):
-            exists<RoleId>(addr)
-                && old(global<RoleId>(addr).role_id) == global<RoleId>(addr).role_id;
+        ensures forall addr1: address where old(exists<RoleId>(addr1)):
+            exists<RoleId>(addr1)
+                && old(global<RoleId>(addr1).role_id) == global<RoleId>(addr1).role_id;
     }
 
     spec module {
         apply RoleIdPersists to *<T>, *;
     }
+
+    /// Asserts that accounts with unique roles, such as LIBRA_ROOT and TREASURY_COMPLIANCE
+    spec schema AccountsHaveCorrectRoles {
+        invariant module forall addr1: address:
+            spec_has_libra_root_role(addr1) == (addr1 == CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
+    }
+    spec module {
+        apply AccountsHaveCorrectRoles to *<T>, *;
+    }
+
 
     // TODO: Role is supposed to be set by end of genesis?
 

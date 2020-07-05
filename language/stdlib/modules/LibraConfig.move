@@ -216,10 +216,6 @@ module LibraConfig {
         define spec_is_published<Config>(): bool {
             exists<LibraConfig<Config>>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
         }
-
-        define spec_has_on_chain_config_privilege(account: signer): bool {
-            Roles::spec_has_libra_root_role(account)
-        }
     }
 
     // check spec_is_published

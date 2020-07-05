@@ -702,7 +702,7 @@ module Libra {
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
     spec fun register_currency {
-        aborts_if !Roles::spec_has_register_new_currency_privilege(tc_account);
+        aborts_if !Roles::spec_has_register_new_currency_privilege(Signer::spec_address_of(tc_account));
         aborts_if Signer::spec_address_of(account) != CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS();
         aborts_if !exists<CurrencyRegistrationCapability>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
         aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(account));
