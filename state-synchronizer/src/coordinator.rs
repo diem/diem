@@ -155,7 +155,7 @@ pub(crate) struct SyncCoordinator<T> {
     role: RoleType,
     // An initial waypoint: for as long as the local version is less than a version determined by
     // waypoint a node is not going to be abl
-    waypoint: Option<Waypoint>,
+    waypoint: Waypoint,
     // network senders - (k, v) = (network ID, network sender)
     network_senders: HashMap<NetworkId, StateSynchronizerSender>,
     // peers used for synchronization
@@ -179,7 +179,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
         state_sync_to_mempool_sender: mpsc::Sender<CommitNotification>,
         network_senders: HashMap<NetworkId, StateSynchronizerSender>,
         role: RoleType,
-        waypoint: Option<Waypoint>,
+        waypoint: Waypoint,
         config: StateSyncConfig,
         upstream_config: UpstreamConfig,
         executor_proxy: T,
@@ -324,9 +324,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
 
     /// In case waypoint is set verify that the local LI has reached the waypoint version.
     fn is_initialized(&self) -> bool {
-        self.waypoint.as_ref().map_or(true, |w| {
-            w.version() <= self.local_state.highest_local_li.ledger_info().version()
-        })
+        self.waypoint.version() <= self.local_state.highest_local_li.ledger_info().version()
     }
 
     fn set_initialization_listener(&mut self, cb_sender: oneshot::Sender<Result<()>>) {
@@ -848,16 +846,11 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     self.local_state.epoch()
                 }
             });
-        if new_version < self.waypoint.as_ref().map_or(0, |w| w.version()) {
+        if new_version < self.waypoint.version() {
             self.send_chunk_request(new_version, new_epoch)?;
         }
 
-        self.waypoint
-            .as_ref()
-            .ok_or_else(|| {
-                format_err!("No waypoint found to process a response with a waypoint LI")
-            })
-            .and_then(|w| w.verify(waypoint_li.ledger_info()))?;
+        self.waypoint.verify(waypoint_li.ledger_info())?;
         self.validate_and_store_chunk(txn_list_with_proof, waypoint_li, end_of_epoch_li)
     }
 
@@ -951,10 +944,7 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             .ok_or_else(|| format_err!("No peers found for chunk request."))?;
 
         let target = if !self.is_initialized() {
-            let waypoint_version =
-                self.waypoint.as_ref().map(|w| w.version()).ok_or_else(|| {
-                    format_err!("No waypoint found but coordinator is not initialized.")
-                })?;
+            let waypoint_version = self.waypoint.version();
             TargetType::Waypoint(waypoint_version)
         } else {
             match self.sync_request.as_ref() {
