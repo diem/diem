@@ -5,15 +5,60 @@
 
 use crate::{
     cluster::Cluster,
-    experiments::{update_batch_instance, Context, Experiment, ExperimentParam},
+    experiments::{Context, Experiment, ExperimentParam},
     instance,
     instance::Instance,
     tx_emitter::EmitJobRequest,
 };
 use async_trait::async_trait;
+use futures::future::try_join_all;
 use libra_logger::prelude::*;
-use std::{collections::HashSet, fmt, iter::once, time::Duration};
+use std::{
+    collections::HashSet,
+    fmt,
+    iter::once,
+    time::{Duration, Instant},
+};
 use structopt::StructOpt;
+use tokio::time;
+
+/// Reboot `updated_instance` with newer image tag
+pub async fn update_batch_instance(
+    context: &mut Context<'_>,
+    updated_instance: &[Instance],
+    updated_tag: String,
+) -> anyhow::Result<()> {
+    let deadline = Instant::now() + Duration::from_secs(2 * 60);
+
+    info!("Stop Existing instances.");
+    let futures: Vec<_> = updated_instance.iter().map(Instance::stop).collect();
+    try_join_all(futures).await?;
+
+    info!("Reinstantiate a set of new nodes.");
+    let futures: Vec<_> = updated_instance
+        .iter()
+        .map(|instance| {
+            let mut newer_config = instance.instance_config().clone();
+            newer_config.replace_tag(updated_tag.clone()).unwrap();
+            context
+                .cluster_swarm
+                .spawn_new_instance(newer_config, false)
+        })
+        .collect();
+    let instances = try_join_all(futures).await?;
+
+    info!("Wait for the instances to recover.");
+    let futures: Vec<_> = instances
+        .iter()
+        .map(|instance| instance.wait_json_rpc(deadline))
+        .collect();
+    try_join_all(futures).await?;
+
+    // Add a timeout to have wait for validators back to healthy mode.
+    // TODO: Replace this with a blocking health check.
+    time::delay_for(Duration::from_secs(20)).await;
+    Ok(())
+}
 
 #[derive(StructOpt, Debug)]
 pub struct ComaptiblityTestParams {

@@ -5,7 +5,9 @@
 
 use crate::{
     cluster::Cluster,
-    experiments::{update_batch_instance, Context, Experiment, ExperimentParam},
+    experiments::{
+        compatibility_test::update_batch_instance, Context, Experiment, ExperimentParam,
+    },
     instance,
     instance::Instance,
     tx_emitter::{execute_and_wait_transactions, AccountData, EmitJobRequest},
