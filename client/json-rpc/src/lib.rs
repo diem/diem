@@ -10,4 +10,5 @@ pub use client::{
     get_response_from_batch, process_batch_response, JsonRpcAsyncClient, JsonRpcBatch,
 };
 pub use libra_json_rpc_types::{errors, views};
+pub use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 pub use response::{JsonRpcResponse, ResponseAsView};
