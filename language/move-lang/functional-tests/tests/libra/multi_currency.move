@@ -23,6 +23,31 @@ fun main(account: &signer) {
 }
 // check: EXECUTED
 
+// Adding a bogus currency should abort
+//! new-transaction
+//! sender: alice
+script {
+use 0x1::LibraAccount;
+fun main(account: &signer) {
+    LibraAccount::add_currency<u64>(account);
+}
+}
+// check: ABORTED
+// check: 16
+
+// Adding Coin1 a second time should fail with ADD_EXISTING_CURRENCY
+//! new-transaction
+//! sender: alice
+script {
+use 0x1::LibraAccount;
+use 0x1::Coin1::Coin1;
+fun main(account: &signer) {
+    LibraAccount::add_currency<Coin1>(account);
+}
+}
+// check: ABORTED
+// check: 17
+
 //! new-transaction
 //! sender: alice
 script {

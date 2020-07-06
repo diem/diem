@@ -162,11 +162,9 @@ module VASP {
              == TRACE(Signer::spec_address_of(parent));
     }
 
-
     /// If the account passed in is not a VASP account, this returns true since
     /// we don't need to ensure account limits exist for those accounts.
-    /// If the account is a child VASP account, this returns true only if a
-    /// `LimitsDefinition<CoinType>` (and hence a `Window<CoinType>`) is
+    /// If the account is a child VASP account, this returns true only if a `Window<CoinType>` is
     /// published in the parent's account.
     /// If the account is a child VASP account, this will always return true;
     /// either a `LimitsDefinition`/`Window` exist for `CoinType`, or these

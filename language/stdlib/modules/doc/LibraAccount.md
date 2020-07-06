@@ -1777,6 +1777,12 @@ a limits definition and window.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_add_currency">add_currency</a>&lt;Token&gt;(account: &signer) {
+    // aborts <b>if</b> `Token` is not a currency type in the system
+    <b>assert</b>(<a href="Libra.md#0x1_Libra_is_currency">Libra::is_currency</a>&lt;Token&gt;(), ENOT_A_CURRENCY);
+    // aborts <b>if</b> this account already has a balance in `Token`
+    <b>assert</b>(!exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account)), EADD_EXISTING_CURRENCY);
+    // aborts <b>if</b> this is a child <a href="VASP.md#0x1_VASP">VASP</a> whose parent does not have an <a href="AccountLimits.md#0x1_AccountLimits">AccountLimits</a> <b>resource</b> for
+    // `Token`
     <b>assert</b>(<a href="VASP.md#0x1_VASP_try_allow_currency">VASP::try_allow_currency</a>&lt;Token&gt;(account), EPARENT_VASP_CURRENCY_LIMITS_DNE);
     move_to(account, <a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;{ coin: <a href="Libra.md#0x1_Libra_zero">Libra::zero</a>&lt;Token&gt;() })
 }
