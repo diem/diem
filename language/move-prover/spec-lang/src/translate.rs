@@ -37,13 +37,13 @@ use vm::{
 
 use crate::{
     ast::{
-        Condition, ConditionKind, Exp, LocalVarDecl, ModuleName, Operation, QualifiedSymbol, Spec,
-        SpecBlockInfo, SpecBlockTarget, SpecFunDecl, SpecVarDecl, Value,
+        Condition, ConditionKind, Exp, LocalVarDecl, ModuleName, Operation, PropertyBag,
+        QualifiedSymbol, Spec, SpecBlockInfo, SpecBlockTarget, SpecFunDecl, SpecVarDecl, Value,
     },
     env::{
         FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, MoveIrLoc, NodeId, SchemaId,
         SpecFunId, SpecVarId, StructData, StructId, TypeConstraint, TypeParameter,
-        SCRIPT_BYTECODE_FUN_NAME,
+        CONDITION_INJECTED_PROP, SCRIPT_BYTECODE_FUN_NAME,
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
@@ -1180,15 +1180,20 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 for member in &spec_block.value.members {
                     let loc = &self.parent.env.to_loc(&member.loc);
                     match &member.value {
-                        EA::SpecBlockMember_::Condition { kind, exp } => {
+                        EA::SpecBlockMember_::Condition {
+                            kind,
+                            properties,
+                            exp,
+                        } => {
                             let context = SpecBlockContext::FunctionCode(
                                 qsym.clone(),
                                 &fun_spec_info[spec_id],
                             );
+                            let properties = self.translate_properties(properties);
                             if let Some((kind, exp)) =
                                 self.extract_condition_kind(&context, kind, exp)
                             {
-                                self.def_ana_condition(loc, &context, kind, exp);
+                                self.def_ana_condition(loc, &context, kind, properties, exp);
                             }
                         }
                         _ => {
@@ -1252,17 +1257,26 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         for member in &block.value.members {
             let loc = &self.parent.env.to_loc(&member.loc);
             match &member.value {
-                Condition { kind, exp } => {
+                Condition {
+                    kind,
+                    properties,
+                    exp,
+                } => {
                     if let Some((kind, exp)) = self.extract_condition_kind(context, kind, exp) {
-                        self.def_ana_condition(loc, context, kind, exp)
+                        let properties = self.translate_properties(properties);
+                        self.def_ana_condition(loc, context, kind, properties, exp)
                     }
                 }
                 Function {
                     signature, body, ..
                 } => self.def_ana_spec_fun(signature, body),
-                Include { exp } => {
-                    self.def_ana_schema_inclusion_outside_schema(loc, context, None, exp)
-                }
+                Include { exp } => self.def_ana_schema_inclusion_outside_schema(
+                    loc,
+                    context,
+                    None,
+                    PropertyBag::default(),
+                    exp,
+                ),
                 Apply {
                     exp,
                     patterns,
@@ -1285,8 +1299,16 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         context: &SpecBlockContext,
         properties: &[EA::PragmaProperty],
     ) {
+        let properties = self.translate_properties(properties);
+        self.update_spec(context, move |spec| {
+            spec.properties.extend(properties);
+        });
+    }
+
+    fn translate_properties(&mut self, properties: &[EA::PragmaProperty]) -> PropertyBag {
         // For now we pass properties just on. We may want to check against a set of known
-        // property names and types.
+        // property names and types in the future.
+        let mut props = PropertyBag::default();
         for prop in properties {
             let prop_name = self.symbol_pool().make(&prop.value.name.value);
             let value = if let Some(pv) = &prop.value.value {
@@ -1300,10 +1322,15 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             } else {
                 Value::Bool(true)
             };
-            self.update_spec(context, move |spec| {
-                spec.properties.insert(prop_name, value);
-            });
+            props.insert(prop_name, value);
         }
+        props
+    }
+
+    fn add_bool_property(&self, mut properties: PropertyBag, name: &str, val: bool) -> PropertyBag {
+        let sym = self.symbol_pool().make(name);
+        properties.insert(sym, Value::Bool(val));
+        properties
     }
 }
 
@@ -1532,6 +1559,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         context: &SpecBlockContext,
         loc: &Loc,
         conditions: Vec<Condition>,
+        context_properties: PropertyBag,
         error_msg: &str,
     ) {
         for cond in conditions {
@@ -1541,11 +1569,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 Condition {
                     loc,
                     kind: kind @ ConditionKind::Invariant,
+                    properties,
                     exp,
                 }
                 | Condition {
                     loc,
                     kind: kind @ ConditionKind::InvariantModule,
+                    properties,
                     exp,
                 } if matches!(context, SpecBlockContext::Function(..)) => {
                     let requires_kind = if kind == ConditionKind::InvariantModule {
@@ -1553,20 +1583,38 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     } else {
                         ConditionKind::Requires
                     };
+                    let mut merged_properties = context_properties.clone();
+                    merged_properties.extend(properties);
                     vec![
                         Condition {
                             loc: loc.clone(),
                             kind: requires_kind,
+                            properties: merged_properties.clone(),
                             exp: exp.clone(),
                         },
                         Condition {
                             loc,
                             kind: ConditionKind::Ensures,
+                            properties: merged_properties,
                             exp,
                         },
                     ]
                 }
-                _ => vec![cond],
+                Condition {
+                    loc,
+                    kind,
+                    properties,
+                    exp,
+                } => {
+                    let mut merged_properties = context_properties.clone();
+                    merged_properties.extend(properties);
+                    vec![Condition {
+                        loc,
+                        kind,
+                        properties: merged_properties,
+                        exp,
+                    }]
+                }
             };
             for derived_cond in derived_conds {
                 if self.check_condition_is_valid(context, loc, &derived_cond.kind, error_msg) {
@@ -1582,6 +1630,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         loc: &Loc,
         context: &SpecBlockContext,
         kind: ConditionKind,
+        properties: PropertyBag,
         exp: &EA::Exp,
     ) {
         if kind == ConditionKind::Decreases {
@@ -1599,8 +1648,10 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             vec![Condition {
                 loc: loc.clone(),
                 kind,
+                properties,
                 exp: translated,
             }],
+            PropertyBag::default(),
             "",
         );
     }
@@ -1876,10 +1927,15 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     is_global: false, ..
                 } => { /* handled during decl analysis */ }
                 EA::SpecBlockMember_::Include { .. } => { /* handled above */ }
-                EA::SpecBlockMember_::Condition { kind, exp } => {
+                EA::SpecBlockMember_::Condition {
+                    kind,
+                    properties,
+                    exp,
+                } => {
                     let context = SpecBlockContext::Schema(name.clone());
                     if let Some((kind, exp)) = self.extract_condition_kind(&context, kind, exp) {
-                        self.def_ana_condition(&member_loc, &context, kind, exp);
+                        let properties = self.translate_properties(properties);
+                        self.def_ana_condition(&member_loc, &context, kind, properties, exp);
                     } else {
                         // Error reported.
                     }
@@ -2179,7 +2235,12 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         et.finalize_types();
 
         // Go over all conditions in the schema, rewrite them, and add to the inclusion conditions.
-        for Condition { loc, kind, exp } in schema_entry
+        for Condition {
+            loc,
+            kind,
+            properties,
+            exp,
+        } in schema_entry
             .spec
             .conditions
             .iter()
@@ -2213,6 +2274,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
             spec.conditions.push(Condition {
                 loc: loc.clone(),
                 kind: kind.clone(),
+                properties: properties.clone(),
                 exp,
             });
         }
@@ -2269,6 +2331,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         loc: &Loc,
         context: &SpecBlockContext,
         alt_context_type_params: Option<&[(Symbol, Type)]>,
+        context_properties: PropertyBag,
         exp: &EA::Exp,
     ) {
         // Compute the type parameters and variables this spec block uses. We do this by constructing
@@ -2312,7 +2375,13 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 
         // Write the conditions to the context item.
         // TODO: merge pragma properties as well?
-        self.add_conditions_to_context(context, loc, spec.conditions, "(included from schema)");
+        self.add_conditions_to_context(
+            context,
+            loc,
+            spec.conditions,
+            context_properties,
+            "(included from schema)",
+        );
     }
 
     /// Analyzes a schema apply weaving operator.
@@ -2357,10 +2426,14 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                     et.analyze_and_add_type_params(&matched.value.type_parameters);
                     et.extract_type_params()
                 };
+                // Create a property marking this as injected.
+                let context_properties =
+                    self.add_bool_property(PropertyBag::default(), CONDITION_INJECTED_PROP, true);
                 self.def_ana_schema_inclusion_outside_schema(
                     loc,
                     &SpecBlockContext::Function(fun_name),
                     Some(&type_params),
+                    context_properties,
                     exp,
                 );
             }
@@ -2535,11 +2608,18 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
                 let entry = self.parent.fun_table.get(&qname).unwrap();
                 if entry.is_public {
                     let context = SpecBlockContext::Function(qname);
+                    // Create a property marking this as injected.
+                    let context_properties = self.add_bool_property(
+                        PropertyBag::default(),
+                        CONDITION_INJECTED_PROP,
+                        true,
+                    );
                     // The below should not generate an error because of the above assert.
                     self.add_conditions_to_context(
                         &context,
                         &cond.loc.clone(),
                         vec![cond.clone()],
+                        context_properties,
                         "[internal] (included via module level invariant) not allowed in this context",
                     )
                 }

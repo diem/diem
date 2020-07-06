@@ -36,17 +36,3 @@ error: precondition does not hold at this call
     =     at tests/sources/functional/mut_ref_accross_modules.move:94:5: private_to_public_caller
     =         r = <redacted>
     =     at tests/sources/functional/mut_ref_accross_modules.move:51:5: increment (entry)
-
-error: precondition does not hold at this call
-
-    ┌── tests/sources/functional/mut_ref_accross_modules.move:30:9 ───
-    │
- 30 │         invariant global<TSum>(0x0).sum == spec_sum;
-    │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    ·
- 51 │     public fun increment(x: &mut T) acquires TSum {
-    │                --------- called function
-    │
-    =     at tests/sources/functional/mut_ref_accross_modules.move:110:6: private_to_public_caller_invalid_precondition
-    =         r = <redacted>
-    =     at tests/sources/functional/mut_ref_accross_modules.move:51:5: increment (entry)

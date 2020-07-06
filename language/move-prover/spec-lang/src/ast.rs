@@ -11,14 +11,13 @@ use crate::{
     ty::Type,
 };
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fmt,
     fmt::{Error, Formatter},
 };
 use vm::file_format::CodeOffset;
 
 use crate::env::{FunId, SchemaId, TypeParameter};
-use std::collections::BTreeSet;
 
 // =================================================================================================
 /// # Declarations
@@ -145,6 +144,7 @@ impl std::fmt::Display for ConditionKind {
 pub struct Condition {
     pub loc: Loc,
     pub kind: ConditionKind,
+    pub properties: PropertyBag,
     pub exp: Exp,
 }
 

@@ -13,7 +13,7 @@ error: post-condition does not hold
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
     =     at tests/sources/functional/return_values.move:3:9: one_two
-    =     at tests/sources/functional/return_values.move:2:5: one_two (exit)
+    =     at tests/sources/functional/return_values.move:2:16: one_two
     =     at tests/sources/functional/return_values.move:30:9: one_two_wrapper_incorrect
 
 error: post-condition does not hold
@@ -30,5 +30,5 @@ error: post-condition does not hold
     =         result_1 = <redacted>,
     =         result_2 = <redacted>
     =     at tests/sources/functional/return_values.move:39:9: true_one
-    =     at tests/sources/functional/return_values.move:38:5: true_one (exit)
+    =     at tests/sources/functional/return_values.move:38:16: true_one
     =     at tests/sources/functional/return_values.move:56:9: true_one_wrapper_incorrect

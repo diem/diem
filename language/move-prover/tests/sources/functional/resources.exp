@@ -8,9 +8,4 @@ error: post-condition does not hold
     │
     =     at tests/sources/functional/resources.move:32:5: create_resource_incorrect
     =         account = <redacted>
-    =     at ../stdlib/modules/Signer.move:13:5: address_of (entry)
-    =     at ../stdlib/modules/Signer.move:10:23: borrow_address
-    =     at ../stdlib/modules/Signer.move:14:9: address_of
-    =         s = <redacted>,
-    =         result = <redacted>
     =     at tests/sources/functional/resources.move:33:30: create_resource_incorrect

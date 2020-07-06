@@ -111,6 +111,10 @@ module LibraSystem {
 
         set_validator_set(validator_set);
     }
+    spec fun remove_validator {
+        /// TODO(wrwg): function needs long to verify, only enable it with large timeout.
+        pragma verify_duration_estimate = 60;
+    }
 
     // For all of the validators the information from ValidatorConfig gets copied into the ValidatorSet.
     // This function makes no changes to the size of the set or the members of the set.
@@ -285,9 +289,7 @@ module LibraSystem {
     }
 
     spec fun add_validator {
-        /// > TODO(tzakian): Turn this back on once this no longer times
-        /// > out in tests
-        pragma verify = false;
+        pragma verify_duration_estimate = 50;
         aborts_if !Roles::spec_has_libra_root_role(lr_account);
         aborts_if !LibraConfig::spec_is_published<LibraSystem>();
         aborts_if spec_is_validator(account_address);
@@ -299,9 +301,6 @@ module LibraSystem {
     }
 
     spec fun remove_validator {
-        /// > TODO(tzakian): Turn this back on once this no longer times
-        /// > out in tests
-        pragma verify = false;
         aborts_if !Roles::spec_has_libra_root_role(lr_account);
         aborts_if !LibraConfig::spec_is_published<LibraSystem>();
         aborts_if !spec_is_validator(account_address);

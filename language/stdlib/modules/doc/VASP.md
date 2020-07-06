@@ -349,7 +349,7 @@ Returns true if
 
 ## Function `is_child`
 
-Returns true of
+Returns true if
 <code>addr</code> is a child VASP.
 
 
@@ -508,14 +508,8 @@ Aborts if
 
 
 
-TODO(wrwg): The prover hangs if we do not declare this has opaque. However, we
-can still verify it (in contrast to is_child). Reason why the prover hangs
-is likely related to why proving the
-<code><a href="#0x1_VASP_ChildHasParent">ChildHasParent</a></code> invariant hangs.
-
 
 <pre><code>pragma opaque = <b>true</b>;
-<b>aborts_if</b> !<a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(addr);
 <b>ensures</b> result == <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr);
 </code></pre>
 
@@ -531,10 +525,8 @@ Spec version of
 <pre><code><b>define</b> <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr: address): address {
     <b>if</b> (<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(addr)) {
         addr
-    } <b>else</b> <b>if</b> (<a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(addr)) {
-        <b>global</b>&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr).parent_vasp_addr
     } <b>else</b> {
-        0xFFFFFFFFF
+        <b>global</b>&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr).parent_vasp_addr
     }
 }
 </code></pre>
@@ -639,6 +631,29 @@ Spec version of
 </code></pre>
 
 
+This is a stronger version of
+<code><a href="#0x1_VASP_is_vasp">Self::is_vasp</a></code> which also handles the potential abortion
+if the VASP under
+<code>addr</code> would not be well-formed (i.e. a child which has not parent).
+This is used in specification of callers for e.g.
+<code><a href="#0x1_VASP_parent_address">Self::parent_address</a></code>.
+
+> TODO(wrwg): We would really like to have the fact that each child has a parent encoded
+> as a data invariant. We currently have formulated it as a module invariant, but this is
+> not clean because this invariant is only enforced after program points we have made a
+> a call to VASP functions.
+
+
+<a name="0x1_VASP_spec_is_valid_vasp"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_VASP_spec_is_valid_vasp">spec_is_valid_vasp</a>(addr: address): bool {
+    <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(addr)
+        || <a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(addr) && <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<b>global</b>&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr).parent_vasp_addr)
+}
+</code></pre>
+
+
 
 <a name="0x1_VASP_Specification_is_same_vasp"></a>
 
@@ -681,16 +696,6 @@ Spec version of
 </code></pre>
 
 
-TODO(wrwg): currently most global invariants make the prover hang or run very long if applied
-to simple helper functions like
-<code><a href="#0x1_VASP_is_vasp">Self::is_vasp</a></code>. The cause of this might be that functions
-for which the invariants do not make sense (e.g. state does not change) z3 may repeatedly try
-to instantiate this "dead code (dead invariants)" anyway, without getting closer to a solution.
-Perhaps we may also need to generate more restricted triggers for spec lang quantifiers.
-One data point seems to be that this happens only for invariants which involve the
-<code><b>old</b></code>
-expression. For now we have deactivated most invariants in this module, until we nail down
-the problem better.
 
 <a name="0x1_VASP_@Each_children_has_a_parent"></a>
 
@@ -700,9 +705,12 @@ the problem better.
 
 <a name="0x1_VASP_ChildHasParent"></a>
 
+> TODO(wrwg): this property currently causes timeouts/long running verification for multiple
+> functions in this module. Investigate why.
+
 
 <pre><code><b>schema</b> <a href="#0x1_VASP_ChildHasParent">ChildHasParent</a> {
-    <b>invariant</b> <b>module</b> forall a: address: <a href="#0x1_VASP_spec_child_has_parent">spec_child_has_parent</a>(a);
+    <b>invariant</b> <b>module</b> <b>true</b> /*forall a: address: <a href="#0x1_VASP_spec_child_has_parent">spec_child_has_parent</a>(a)*/;
 }
 </code></pre>
 
@@ -739,18 +747,18 @@ child VASP.
 
 **Informally:** A child is at an address iff it was there in the
 previous state.
-TODO(wrwg): this currently lets LibraAccount hang if injected.
 
 
 <pre><code><b>schema</b> <a href="#0x1_VASP_ChildVASPsDontChange">ChildVASPsDontChange</a> {
-    <b>ensures</b> <b>true</b> /* forall a: address : exists&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(a) == <b>old</b>(exists&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(a)) */;
+    <b>ensures</b> forall a: address : exists&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(a) == <b>old</b>(exists&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(a));
 }
 </code></pre>
 
 
 
 
-<pre><code><b>apply</b> <a href="#0x1_VASP_ChildVASPsDontChange">ChildVASPsDontChange</a> <b>to</b> *&lt;T&gt;, * <b>except</b> publish_child_vasp_credential;
+<pre><code><b>apply</b> <a href="#0x1_VASP_ChildVASPsDontChange">ChildVASPsDontChange</a> <b>to</b> *&lt;T&gt;, * <b>except</b>
+    publish_child_vasp_credential;
 </code></pre>
 
 
@@ -772,13 +780,11 @@ TODO(wrwg): this currently lets LibraAccount hang if injected.
 
 <a name="0x1_VASP_NumChildrenRemainsSame"></a>
 
-TODO(wrwg): this currently lets LibraAccount hang if injected.
-
 
 <pre><code><b>schema</b> <a href="#0x1_VASP_NumChildrenRemainsSame">NumChildrenRemainsSame</a> {
-    <b>ensures</b> <b>true</b> /* forall parent: address
+    <b>ensures</b> forall parent: address
         where <b>old</b>(<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(parent)):
-            <b>old</b>(<a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent)) == <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent) */;
+            <b>old</b>(<a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent)) == <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(parent);
 }
 </code></pre>
 
@@ -811,14 +817,11 @@ Returns the number of children under
 
 <a name="0x1_VASP_ParentRemainsSame"></a>
 
-TODO(wrwg): this currently lets LibraAccount hang if injected.
-
 
 <pre><code><b>schema</b> <a href="#0x1_VASP_ParentRemainsSame">ParentRemainsSame</a> {
-    <b>ensures</b> <b>true</b> /* forall child_addr: address
+    <b>ensures</b> forall child_addr: address
         where <b>old</b>(<a href="#0x1_VASP_spec_is_child_vasp">spec_is_child_vasp</a>(child_addr)):
-            <b>old</b>(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(child_addr))
-             == <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(child_addr) */;
+            <b>old</b>(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(child_addr)) == <a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(child_addr);
 }
 </code></pre>
 
@@ -841,7 +844,7 @@ TODO(wrwg): this currently lets LibraAccount hang if injected.
 
 <pre><code><b>schema</b> <a href="#0x1_VASP_AbortsIfNotVASP">AbortsIfNotVASP</a> {
     addr: address;
-    <b>aborts_if</b> !<a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(addr);
+    <b>aborts_if</b> [export] !<a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(addr);
 }
 </code></pre>
 
@@ -859,7 +862,7 @@ TODO(wrwg): this currently lets LibraAccount hang if injected.
 
 <pre><code><b>schema</b> <a href="#0x1_VASP_AbortsIfParentIsNotParentVASP">AbortsIfParentIsNotParentVASP</a> {
     addr: address;
-    <b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr));
+    <b>aborts_if</b> [export] !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr));
 }
 </code></pre>
 

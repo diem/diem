@@ -344,7 +344,7 @@ module Roles {
     }
 
     spec module {
-        apply RoleIdPersists to *<T>, *;
+        apply RoleIdPersists to *<T>, * except has*;
     }
 
 

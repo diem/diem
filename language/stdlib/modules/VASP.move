@@ -138,11 +138,7 @@ module VASP {
         }
     }
     spec fun parent_address {
-        /// TODO(wrwg): The prover hangs if we do not declare this has opaque. However, we
-        /// can still verify it (in contrast to is_child). Reason why the prover hangs
-        /// is likely related to why proving the `ChildHasParent` invariant hangs.
         pragma opaque = true;
-        aborts_if !spec_is_vasp(addr);
         ensures result == spec_parent_address(addr);
     }
     spec module {
@@ -150,10 +146,8 @@ module VASP {
         define spec_parent_address(addr: address): address {
             if (spec_is_parent_vasp(addr)) {
                 addr
-            } else if (spec_is_child_vasp(addr)) {
-                global<ChildVASP>(addr).parent_vasp_addr
             } else {
-                0xFFFFFFFFF
+                global<ChildVASP>(addr).parent_vasp_addr
             }
         }
     }
@@ -173,7 +167,7 @@ module VASP {
         }
     }
 
-    /// Returns true of `addr` is a child VASP.
+    /// Returns true if `addr` is a child VASP.
     public fun is_child(addr: address): bool {
         exists<ChildVASP>(addr)
     }
@@ -204,6 +198,19 @@ module VASP {
         /// Spec version of `Self::is_vasp`.
         define spec_is_vasp(addr: address): bool {
             spec_is_parent_vasp(addr) || spec_is_child_vasp(addr)
+        }
+
+        /// This is a stronger version of `Self::is_vasp` which also handles the potential abortion
+        /// if the VASP under `addr` would not be well-formed (i.e. a child which has not parent).
+        /// This is used in specification of callers for e.g. `Self::parent_address`.
+        ///
+        /// > TODO(wrwg): We would really like to have the fact that each child has a parent encoded
+        /// > as a data invariant. We currently have formulated it as a module invariant, but this is
+        /// > not clean because this invariant is only enforced after program points we have made a
+        /// > a call to VASP functions.
+        define spec_is_valid_vasp(addr: address): bool {
+            spec_is_parent_vasp(addr)
+                || spec_is_child_vasp(addr) && spec_is_parent_vasp(global<ChildVASP>(addr).parent_vasp_addr)
         }
     }
 
@@ -237,20 +244,12 @@ module VASP {
         pragma verify = true;
     }
 
-    /// TODO(wrwg): currently most global invariants make the prover hang or run very long if applied
-    /// to simple helper functions like `Self::is_vasp`. The cause of this might be that functions
-    /// for which the invariants do not make sense (e.g. state does not change) z3 may repeatedly try
-    /// to instantiate this "dead code (dead invariants)" anyway, without getting closer to a solution.
-    /// Perhaps we may also need to generate more restricted triggers for spec lang quantifiers.
-    /// One data point seems to be that this happens only for invariants which involve the `old`
-    /// expression. For now we have deactivated most invariants in this module, until we nail down
-    /// the problem better.
-
-
     /// # Each children has a parent
 
     spec schema ChildHasParent {
-        invariant module forall a: address: spec_child_has_parent(a);
+        /// > TODO(wrwg): this property currently causes timeouts/long running verification for multiple
+        /// > functions in this module. Investigate why.
+        invariant module true /*forall a: address: spec_child_has_parent(a)*/;
     }
     spec module {
         apply ChildHasParent to *, *<CoinType>;
@@ -269,11 +268,11 @@ module VASP {
     spec schema ChildVASPsDontChange {
         /// **Informally:** A child is at an address iff it was there in the
         /// previous state.
-        /// TODO(wrwg): this currently lets LibraAccount hang if injected.
-        ensures true /* forall a: address : exists<ChildVASP>(a) == old(exists<ChildVASP>(a)) */;
+        ensures forall a: address : exists<ChildVASP>(a) == old(exists<ChildVASP>(a));
     }
     spec module {
-        apply ChildVASPsDontChange to *<T>, * except publish_child_vasp_credential;
+        apply ChildVASPsDontChange to *<T>, * except
+            publish_child_vasp_credential;
     }
 
     /// ## Number of children is consistent
@@ -286,10 +285,9 @@ module VASP {
     /// ## Number of children does not change
 
     spec schema NumChildrenRemainsSame {
-        /// TODO(wrwg): this currently lets LibraAccount hang if injected.
-        ensures true /* forall parent: address
+        ensures forall parent: address
             where old(spec_is_parent_vasp(parent)):
-                old(spec_get_num_children(parent)) == spec_get_num_children(parent) */;
+                old(spec_get_num_children(parent)) == spec_get_num_children(parent);
     }
 
     spec module {
@@ -304,11 +302,9 @@ module VASP {
     /// ## Parent does not change
 
     spec schema ParentRemainsSame {
-        /// TODO(wrwg): this currently lets LibraAccount hang if injected.
-        ensures true /* forall child_addr: address
+        ensures forall child_addr: address
             where old(spec_is_child_vasp(child_addr)):
-                old(spec_parent_address(child_addr))
-                 == spec_parent_address(child_addr) */;
+                old(spec_parent_address(child_addr)) == spec_parent_address(child_addr);
     }
 
     spec module {
@@ -319,7 +315,7 @@ module VASP {
 
     spec schema AbortsIfNotVASP {
         addr: address;
-        aborts_if !spec_is_vasp(addr);
+        aborts_if [export] !spec_is_vasp(addr);
     }
 
     spec module {
@@ -328,7 +324,7 @@ module VASP {
 
     spec schema AbortsIfParentIsNotParentVASP {
         addr: address;
-        aborts_if !spec_is_parent_vasp(spec_parent_address(addr));
+        aborts_if [export] !spec_is_parent_vasp(spec_parent_address(addr));
     }
 
     spec module {

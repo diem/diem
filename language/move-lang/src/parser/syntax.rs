@@ -1797,7 +1797,8 @@ fn parse_spec_block_member<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlo
 
 // Parse a specification condition:
 //    SpecCondition =
-//        ("assert" | "assume" | "decreases" | "aborts_if" | "ensures" | "requires" ) <Exp> ";"
+//        ("assert" | "assume" | "decreases" | "aborts_if" | "ensures" | "requires" )
+//        <ConditionProperties> <Exp> ";"
 fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
     let kind = match tokens.content() {
@@ -1818,6 +1819,7 @@ fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
         _ => unreachable!(),
     };
     tokens.advance()?;
+    let properties = parse_condition_properties(tokens)?;
     let exp = parse_exp(tokens)?;
     consume_token(tokens, Tok::Semicolon)?;
     let end_loc = tokens.previous_end_loc();
@@ -1825,12 +1827,36 @@ fn parse_condition<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
         tokens.file_name(),
         start_loc,
         end_loc,
-        SpecBlockMember_::Condition { kind, exp },
+        SpecBlockMember_::Condition {
+            kind,
+            properties,
+            exp,
+        },
     ))
 }
 
+// Parse properties in a condition.
+//   ConditionProperties = ( "[" Comma<SpecPragmaProperty> "]" )?
+fn parse_condition_properties<'input>(
+    tokens: &mut Lexer<'input>,
+) -> Result<Vec<PragmaProperty>, Error> {
+    let properties = if tokens.peek() == Tok::LBracket {
+        parse_comma_list(
+            tokens,
+            Tok::LBracket,
+            Tok::RBracket,
+            parse_spec_property,
+            "a condition property",
+        )?
+    } else {
+        vec![]
+    };
+    Ok(properties)
+}
+
 // Parse an invariant:
-//     Invariant = "invariant" ( "update" | "pack" | "unpack" | "module" )? <Exp> ";"
+//     Invariant = "invariant" ( "update" | "pack" | "unpack" | "module" )?
+//                 <ConditionProperties> <Exp> ";"
 fn parse_invariant<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember, Error> {
     let start_loc = tokens.start_loc();
     consume_token(tokens, Tok::Invariant)?;
@@ -1861,13 +1887,18 @@ fn parse_invariant<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMember
         }
         _ => SpecConditionKind::Invariant,
     };
+    let properties = parse_condition_properties(tokens)?;
     let exp = parse_exp(tokens)?;
     consume_token(tokens, Tok::Semicolon)?;
     Ok(spanned(
         tokens.file_name(),
         start_loc,
         tokens.previous_end_loc(),
-        SpecBlockMember_::Condition { kind, exp },
+        SpecBlockMember_::Condition {
+            kind,
+            properties,
+            exp,
+        },
     ))
 }
 
@@ -2095,7 +2126,7 @@ fn parse_spec_pragma<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMemb
         start_loc,
         Tok::IdentifierValue,
         Tok::Semicolon,
-        parse_spec_pragma_property,
+        parse_spec_property,
         "a pragma property",
     )?;
     Ok(spanned(
@@ -2108,7 +2139,7 @@ fn parse_spec_pragma<'input>(tokens: &mut Lexer<'input>) -> Result<SpecBlockMemb
 
 // Parse a specification pragma property:
 //    SpecPragmaProperty = <Identifier> ( "=" Value )?
-fn parse_spec_pragma_property<'input>(tokens: &mut Lexer<'input>) -> Result<PragmaProperty, Error> {
+fn parse_spec_property<'input>(tokens: &mut Lexer<'input>) -> Result<PragmaProperty, Error> {
     let start_loc = tokens.start_loc();
     let name = parse_identifier(tokens)?;
     let value = if tokens.peek() == Tok::Equal {

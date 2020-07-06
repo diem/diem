@@ -106,10 +106,6 @@ module TestMutRefs {
         };
     }
 
-     // The next function fails because module invariant doesn't hold before calling public function.
-     fun private_to_public_caller_invalid_precondition(r: &mut T) acquires TSum {
-         increment(r);
-     }
 
      // TODO: This function should fail because the data invariant does not hold at the call to increment. But, currently it does not fail since there is no data invariant assertion at the call to increment (due to my changes?).
      fun private_to_public_caller_invalid_data_invariant() acquires TSum {

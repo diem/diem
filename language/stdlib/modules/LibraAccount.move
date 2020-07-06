@@ -168,7 +168,7 @@ module LibraAccount {
         }
     }
     spec fun should_track_limits_for_account {
-        pragma opaque = true, verify = true;
+        pragma opaque = true;
         ensures result == spec_should_track_limits_for_account(payer, payee, is_withdrawal);
     }
     spec module {
@@ -207,10 +207,6 @@ module LibraAccount {
         deposit(cap_address, cap_address, coin1, x"", x"");
         deposit(cap_address, cap_address, coin2, x"", x"")
     }
-    spec fun staple_lbr {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
-    }
 
     /// Use `cap` to withdraw `amount_lbr`, burn the LBR, withdraw the corresponding assets from the
     /// LBR reserve, and deposit them to `cap.address`.
@@ -227,10 +223,6 @@ module LibraAccount {
         let payee_address = cap.account_address;
         deposit(payer_address, payee_address, coin1, x"", x"");
         deposit(payer_address, payee_address, coin2, x"", x"")
-    }
-    spec fun unstaple_lbr {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
     }
 
     /// Record a payment of `to_deposit` from `payer` to `payee` with the attached `metadata`
@@ -278,7 +270,6 @@ module LibraAccount {
         );
     }
     spec fun deposit {
-        pragma verify = true;
         include DepositAbortsIf<Token>;
         include DepositEnsures<Token>;
     }
@@ -329,9 +320,6 @@ module LibraAccount {
         // balance
         deposit(CoreAddresses::VM_RESERVED_ADDRESS(), designated_dealer_address, coin, x"", x"")
     }
-    spec fun tiered_mint {
-        pragma verify = true;
-    }
 
     // Cancel the burn request from `preburn_address` and return the funds.
     // Fails if the sender does not have a published MintCapability.
@@ -343,10 +331,6 @@ module LibraAccount {
         // record both sender and recipient as `preburn_address`: the coins are moving from
         // `preburn_address`'s `Preburn` resource to its balance
         deposit(preburn_address, preburn_address, coin, x"", x"")
-    }
-    spec fun cancel_burn {
-        // TODO(shb): this times out; investigate
-        pragma verify = false;
     }
 
     /// Helper to withdraw `amount` from the given account balance and return the withdrawn Libra<Token>
@@ -368,9 +352,6 @@ module LibraAccount {
             assert(can_withdraw, EWITHDRAWAL_EXCEEDS_LIMITS);
         };
         Libra::withdraw(&mut balance.coin, amount)
-    }
-    spec fun withdraw_from_balance {
-        pragma verify = true;
     }
 
     /// Withdraw `amount` `Libra<Token>`'s from the account balance under
@@ -395,9 +376,6 @@ module LibraAccount {
         );
         withdraw_from_balance<Token>(payer, payee, account_balance, amount)
     }
-    spec fun withdraw_from {
-        pragma verify = true;
-    }
 
     /// Withdraw `amount` `Libra<Token>`'s from `cap.address` and send them to the `Preburn`
     /// resource under `dd`.
@@ -420,9 +398,6 @@ module LibraAccount {
         assert(!delegated_withdraw_capability(sender_addr), EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED);
         let account = borrow_global_mut<LibraAccount>(sender_addr);
         Option::extract(&mut account.withdrawal_capability)
-    }
-    spec fun extract_withdraw_capability {
-        pragma verify = true;
     }
 
     /// Return the withdraw capability to the account it originally came from
@@ -452,9 +427,6 @@ module LibraAccount {
             metadata_signature
         );
     }
-    spec fun pay_from {
-        pragma verify = true;
-    }
 
     /// Rotate the authentication key for the account under cap.account_address
     public fun rotate_authentication_key(
@@ -466,9 +438,6 @@ module LibraAccount {
         assert(Vector::length(&new_authentication_key) == 32, EMALFORMED_AUTHENTICATION_KEY);
         sender_account_resource.authentication_key = new_authentication_key;
     }
-    spec fun rotate_authentication_key {
-        pragma verify = true;
-    }
 
     /// Return a unique capability granting permission to rotate the sender's authentication key
     public fun extract_key_rotation_capability(account: &signer): KeyRotationCapability
@@ -479,18 +448,12 @@ module LibraAccount {
         let account = borrow_global_mut<LibraAccount>(account_address);
         Option::extract(&mut account.key_rotation_capability)
     }
-    spec fun extract_key_rotation_capability {
-        pragma verify = true;
-    }
 
     /// Return the key rotation capability to the account it originally came from
     public fun restore_key_rotation_capability(cap: KeyRotationCapability)
     acquires LibraAccount {
         let account = borrow_global_mut<LibraAccount>(cap.account_address);
         Option::fill(&mut account.key_rotation_capability, cap)
-    }
-    spec fun restore_key_rotation_capability {
-        pragma verify = true;
     }
 
     fun add_currencies_for_account<Token>(
@@ -510,10 +473,6 @@ module LibraAccount {
                 add_currency<LBR>(new_account);
             };
         };
-    }
-    spec fun add_currencies_for_account {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
     }
 
     /// Creates a new account with account at `new_account_address` with a balance of
@@ -558,9 +517,6 @@ module LibraAccount {
         // (2) TODO: publish account limits?
         destroy_signer(new_account);
     }
-    spec fun make_account {
-        pragma verify = true;
-    }
 
     /// Creates the libra root account in genesis.
     public fun create_libra_root_account(
@@ -571,9 +527,6 @@ module LibraAccount {
         assert(new_account_address == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
         let new_account = create_signer(new_account_address);
         make_account(new_account, auth_key_prefix)
-    }
-    spec fun create_libra_root_account {
-        pragma verify = true;
     }
 
     /// Create a treasury/compliance account at `new_account_address` with authentication key
@@ -590,10 +543,6 @@ module LibraAccount {
         Event::publish_generator(&new_account);
         make_account(new_account, auth_key_prefix)
     }
-    spec fun create_treasury_compliance_account {
-        pragma verify = true;
-    }
-
 
     ///////////////////////////////////////////////////////////////////////////
     // Designated Dealer API
@@ -622,9 +571,6 @@ module LibraAccount {
         );
         make_account(new_dd_account, auth_key_prefix)
     }
-    spec fun create_designated_dealer {
-        pragma verify = true;
-    }
 
     ///////////////////////////////////////////////////////////////////////////
     // VASP methods
@@ -652,10 +598,6 @@ module LibraAccount {
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
     }
-    spec fun create_parent_vasp_account {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
-    }
 
     /// Create an account with the ChildVASP role at `new_account_address` with authentication key
     /// `auth_key_prefix` | `new_account_address` and a 0 balance of type `Token`. If
@@ -676,10 +618,6 @@ module LibraAccount {
         Event::publish_generator(&new_account);
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
-    }
-    spec fun create_child_vasp_account {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -702,10 +640,6 @@ module LibraAccount {
         Event::publish_generator(&new_account);
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
         make_account(new_account, auth_key_prefix)
-    }
-    spec fun create_unhosted_account {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -737,9 +671,6 @@ module LibraAccount {
         // `Token`
         assert(VASP::try_allow_currency<Token>(account), EPARENT_VASP_CURRENCY_LIMITS_DNE);
         move_to(account, Balance<Token>{ coin: Libra::zero<Token>() })
-    }
-    spec fun add_currency {
-        pragma verify = true;
     }
 
     /// Return whether the account at `addr` accepts `Token` type coins
@@ -832,10 +763,6 @@ module LibraAccount {
         assert(txn_sequence_number == sender_account.sequence_number, EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW);
         assert(LibraTransactionTimeout::is_valid_transaction_timestamp(txn_expiration_time), EPROLOGUE_TRANSACTION_EXPIRED);
     }
-    spec fun prologue {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
-    }
 
     /// Collects gas and bumps the sequence number for executing a transaction
     fun epilogue<Token>(
@@ -861,9 +788,6 @@ module LibraAccount {
             )
         }
     }
-    spec fun epilogue {
-        pragma verify = true;
-    }
 
     /// The success_epilogue is invoked at the end of successfully executed transactions.
     fun success_epilogue<Token>(
@@ -883,10 +807,6 @@ module LibraAccount {
         assert(sender_balance >= transaction_fee_amount, EPROLOGUE_CANT_PAY_GAS_DEPOSIT);
         epilogue<Token>(sender, transaction_fee_amount, txn_sequence_number);
     }
-    spec fun success_epilogue {
-        pragma verify = true;
-    }
-
 
     /// The failure_epilogue is invoked at the end of transactions when the transaction is aborted during execution or
     /// during `success_epilogue`.
@@ -902,9 +822,6 @@ module LibraAccount {
         let transaction_fee_amount = txn_gas_price * (txn_max_gas_units - gas_units_remaining);
 
         epilogue<Token>(sender, transaction_fee_amount, txn_sequence_number);
-    }
-    spec fun failure_epilogue {
-        pragma verify = true;
     }
 
     /// Bump the sequence number of an account. This function should be used only for bumping the sequence number when
@@ -929,9 +846,6 @@ module LibraAccount {
         ValidatorConfig::publish(&new_account, creator_account);
         make_account(new_account, auth_key_prefix)
     }
-    spec fun create_validator_account {
-        pragma verify = true;
-    }
 
     public fun create_validator_operator_account(
         creator_account: &signer,
@@ -942,9 +856,6 @@ module LibraAccount {
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
         make_account(new_account, auth_key_prefix)
-    }
-    spec fun create_validator_operator_account {
-        pragma verify = true;
     }
 
     ///////////////////////////////////////////////////////////////////////////

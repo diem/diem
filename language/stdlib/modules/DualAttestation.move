@@ -167,7 +167,6 @@ module DualAttestation {
         if (VASP::is_child(addr)) VASP::parent_address(addr) else addr
     }
     spec fun credential_address {
-        pragma verify = true;
         aborts_if false;
         ensures result == spec_credential_address(addr);
     }
@@ -216,7 +215,7 @@ module DualAttestation {
             (is_payer_dd && is_payee_vasp) // (4) DD -> VASP
     }
     spec fun dual_attestation_required {
-        pragma verify = true, opaque = true;
+        pragma opaque = true;
         include TravelRuleAppliesAbortsIf<Token>;
         ensures result == spec_dual_attestation_required<Token>(payer, payee, deposit_value);
     }
@@ -225,8 +224,6 @@ module DualAttestation {
         aborts_if !DualAttestationLimit::spec_is_published();
     }
     spec module {
-        // TODO(sblackshear): this times out; investigate
-        pragma verify = false;
         define spec_is_inter_vasp(payer: address, payee: address): bool {
             VASP::spec_is_vasp(payer) && VASP::spec_is_vasp(payee)
                 && VASP::spec_parent_address(payer) != VASP::spec_parent_address(payee)
@@ -300,7 +297,7 @@ module DualAttestation {
         );
     }
     spec fun assert_signature_is_valid {
-        pragma verify = true, opaque = true;
+        pragma opaque = true;
         aborts_if !exists<Credential>(spec_credential_address(payee));
         aborts_if !signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value);
     }
@@ -340,6 +337,10 @@ module DualAttestation {
         if (dual_attestation_required<Currency>(payer, payee, value)) {
           assert_signature_is_valid(payer, payee, metadata_signature, metadata, value)
         }
+    }
+
+    spec module {
+        pragma verify = true;
     }
 
 }
