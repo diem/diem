@@ -742,7 +742,7 @@ impl ClusterTestRunner {
             .cluster
             .find_instance_by_pod(pod)
             .ok_or_else(|| format_err!("Can not find instance with pod {}", pod))?;
-        instance.exec(cmd).await
+        instance.exec(cmd, false).await
     }
 }
 
