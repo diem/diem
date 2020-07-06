@@ -89,17 +89,15 @@ Aborts if
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_publish">publish</a>(recovery_account: &signer) {
     // Only VASPs can create a recovery address
-    // TODO: proper error code
-    <b>assert</b>(<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(recovery_account)), 2222);
+    <b>assert</b>(<a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(recovery_account)), ENOT_A_VASP);
     // put the rotation capability for the recovery account itself in `rotation_caps`. This
     // <b>ensures</b> two things:
     // (1) It's not possible <b>to</b> get into a "recovery cycle" where A is the recovery account for
     //     B and B is the recovery account for A
     // (2) rotation_caps is always nonempty
     <b>let</b> rotation_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(recovery_account);
-    // TODO: proper error code
     <b>assert</b>(*<a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(&rotation_cap)
-         == <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(recovery_account), 2222);
+         == <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(recovery_account), EKEY_ROTATION_DEPENDENCY_CYCLE);
     move_to(
         recovery_account,
         <a href="#0x1_RecoveryAddress">RecoveryAddress</a> { rotation_caps: <a href="Vector.md#0x1_Vector_singleton">Vector::singleton</a>(rotation_cap) }
@@ -144,8 +142,7 @@ Aborts if
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     // Both the original owner `to_recover` of the KeyRotationCapability and the
     // `recovery_address` can rotate the authentication key
-    // TODO: proper error code
-    <b>assert</b>(sender == recovery_address || sender == to_recover, 3333);
+    <b>assert</b>(sender == recovery_address || sender == to_recover, ECANNOT_ROTATE_KEY);
 
     <b>let</b> caps = &borrow_global&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps;
     <b>let</b> i = 0;
@@ -170,8 +167,7 @@ Aborts if
         <b>assert</b> forall j in 0..len: caps[j].account_address != to_recover;
     };
     // Couldn't find `to_recover` in the account recovery <b>resource</b>; <b>abort</b>
-    // TODO: proper error code
-    <b>abort</b>(555)
+    <b>abort</b> EACCOUNT_NOT_RECOVERABLE
 }
 </code></pre>
 
@@ -215,14 +211,13 @@ Aborts if
     <b>assert</b>(
         <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(recovery_address) ==
             <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(addr),
-        444 // TODO: proper error code
+        EINVALID_KEY_ROTATION_DELEGATION
     );
 
     <b>let</b> caps = &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_RecoveryAddress">RecoveryAddress</a>&gt;(recovery_address).rotation_caps;
     <b>let</b> rotation_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(to_recover_account);
-    // TODO: proper error code
     <b>assert</b>(*<a href="LibraAccount.md#0x1_LibraAccount_key_rotation_capability_address">LibraAccount::key_rotation_capability_address</a>(&rotation_cap)
-         == <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(to_recover_account), 2222);
+         == <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(to_recover_account), EINVALID_KEY_ROTATION_DELEGATION);
     <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(caps, rotation_cap);
 }
 </code></pre>

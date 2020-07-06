@@ -16,6 +16,12 @@ module Roles {
     use 0x1::CoreAddresses;
     use 0x1::LibraTimestamp;
 
+    const ENOT_GENESIS: u64 = 0;
+    const EINVALID_ROOT_ADDRESS: u64 = 1;
+    const EINVALID_TC_ADDRESS: u64 = 2;
+    const EINVALID_PARENT_ROLE: u64 = 3;
+    const EROLE_ALREADY_ASSIGNED: u64 = 4;
+
     ///////////////////////////////////////////////////////////////////////////
     // Role ID constants
     ///////////////////////////////////////////////////////////////////////////
@@ -46,9 +52,9 @@ module Roles {
     public fun grant_root_association_role(
         association: &signer,
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         let owner_address = Signer::address_of(association);
-        assert(owner_address == CoreAddresses::LIBRA_ROOT_ADDRESS(), 0);
+        assert(owner_address == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_ROOT_ADDRESS);
         // Grant the role to the association root account
         move_to(association, RoleId { role_id: LIBRA_ROOT_ROLE_ID });
     }
@@ -60,10 +66,10 @@ module Roles {
         treasury_compliance_account: &signer,
         lr_account: &signer,
     ) acquires RoleId {
-        assert(LibraTimestamp::is_genesis(), 0);
-        assert(has_libra_root_role(lr_account), 999);
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
+        assert(has_libra_root_role(lr_account), EINVALID_PARENT_ROLE);
         let owner_address = Signer::address_of(treasury_compliance_account);
-        assert(owner_address == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), 0);
+        assert(owner_address == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), EINVALID_TC_ADDRESS);
         // Grant the TC role to the treasury_compliance_account
         move_to(treasury_compliance_account, RoleId { role_id: TREASURY_COMPLIANCE_ROLE_ID });
     }
@@ -81,8 +87,8 @@ module Roles {
     ) acquires RoleId {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
-        assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID, 0);
+        assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);
+        assert(calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID, EINVALID_PARENT_ROLE);
         move_to(new_account, RoleId { role_id: DESIGNATED_DEALER_ROLE_ID });
     }
 
@@ -94,8 +100,8 @@ module Roles {
     ) acquires RoleId {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
-        assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID, 0);
+        assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);
+        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID, EINVALID_PARENT_ROLE);
         move_to(new_account, RoleId { role_id: VALIDATOR_ROLE_ID });
     }
 
@@ -107,8 +113,8 @@ module Roles {
     ) acquires RoleId {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
-        assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID, 0);
+        assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);
+        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID, EINVALID_PARENT_ROLE);
         move_to(new_account, RoleId { role_id: VALIDATOR_OPERATOR_ROLE_ID });
     }
 
@@ -120,8 +126,8 @@ module Roles {
     ) acquires RoleId {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
-        assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID, 0);
+        assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);
+        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID, EINVALID_PARENT_ROLE);
         move_to(new_account, RoleId { role_id: PARENT_VASP_ROLE_ID });
     }
 
@@ -133,8 +139,8 @@ module Roles {
     ) acquires RoleId {
         let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
         // A role cannot have previously been assigned to `new_account`.
-        assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
-        assert(calling_role.role_id == PARENT_VASP_ROLE_ID, 0);
+        assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);
+        assert(calling_role.role_id == PARENT_VASP_ROLE_ID, EINVALID_PARENT_ROLE);
         move_to(new_account, RoleId { role_id: CHILD_VASP_ROLE_ID });
     }
 
@@ -143,7 +149,7 @@ module Roles {
     // assoc root can create.
     public fun new_unhosted_role(_creating_account: &signer, new_account: &signer) {
         // A role cannot have previously been assigned to `new_account`.
-        assert(!exists<RoleId>(Signer::address_of(new_account)), 1);
+        assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);
         move_to(new_account, RoleId { role_id: UNHOSTED_ROLE_ID });
     }
 

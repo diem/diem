@@ -150,7 +150,7 @@ not in the range 2^-32 .. 2^32-1.
     <b>let</b> quotient = scaled_numerator / scaled_denominator;
     // but <b>if</b> you really want a ratio of zero, it is easy <b>to</b> create that
     // from a raw value.
-    <b>assert</b>(quotient != 0 || numerator == 0, 16);
+    <b>assert</b>(quotient != 0 || numerator == 0, EINVALID_DIVISION);
     // Return the quotient <b>as</b> a fixed-point number. The cast will fail
     // with an arithmetic error <b>if</b> the number is too large.
     <a href="#0x1_FixedPoint32">FixedPoint32</a> { value: (quotient <b>as</b> u64) }

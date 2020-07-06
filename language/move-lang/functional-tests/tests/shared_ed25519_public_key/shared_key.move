@@ -45,7 +45,7 @@ fun main(account: &signer) {
 }
 }
 // check: ABORTED
-// check: 9003
+// check: 0
 
 // publishing a key with a bad length should fail
 //! new-transaction
@@ -58,7 +58,7 @@ fun main(account: &signer) {
 }
 }
 // check: ABORTED
-// check: 9003
+// check: 0
 
 
 // rotating to a key with a bad length should fail
@@ -76,7 +76,7 @@ fun main(account: &signer) {
 }
 }
 // check: ABORTED
-// check: 9003
+// check: 0
 
 // rotating to a key with a good length but bad contents should fail
 //! new-transaction
@@ -92,4 +92,4 @@ fun main(account: &signer) {
 }
 }
 // check: ABORTED
-// check: 9003
+// check: 0

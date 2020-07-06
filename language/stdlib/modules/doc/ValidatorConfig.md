@@ -160,8 +160,7 @@
     account: &signer,
     lr_account: &signer,
     ) {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_libra_root_role(lr_account), 919425);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
     move_to(account, <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
         config: <a href="Option.md#0x1_Option_none">Option::none</a>(),
         operator_account: <a href="Option.md#0x1_Option_none">Option::none</a>(),
@@ -250,9 +249,9 @@
 ) <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(signer) == <a href="#0x1_ValidatorConfig_get_operator">get_operator</a>(validator_account),
-        1101
+        EINVALID_TRANSACTION_SENDER
     );
-    <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> consensus_pubkey), 1108);
+    <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> consensus_pubkey), EINVALID_CONSENSUS_KEY);
     // TODO(valerini): verify the proof of posession for consensus_pubkey
     <b>let</b> t_ref = borrow_global_mut&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(validator_account);
     t_ref.config = <a href="Option.md#0x1_Option_some">Option::some</a>(<a href="#0x1_ValidatorConfig_Config">Config</a> {
@@ -309,7 +308,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_config">get_config</a>(addr: address): <a href="#0x1_ValidatorConfig_Config">Config</a> <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>assert</b>(exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr), 1106);
+    <b>assert</b>(exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
     <b>let</b> config = &borrow_global&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr).config;
     *<a href="Option.md#0x1_Option_borrow">Option::borrow</a>(config)
 }
@@ -335,7 +334,7 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_ValidatorConfig_get_operator">get_operator</a>(addr: address): address <b>acquires</b> <a href="#0x1_ValidatorConfig">ValidatorConfig</a> {
-    <b>assert</b>(exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr), 1106);
+    <b>assert</b>(exists&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
     <b>let</b> t_ref = borrow_global&lt;<a href="#0x1_ValidatorConfig">ValidatorConfig</a>&gt;(addr);
     *<a href="Option.md#0x1_Option_borrow_with_default">Option::borrow_with_default</a>(&t_ref.operator_account, &addr)
 }

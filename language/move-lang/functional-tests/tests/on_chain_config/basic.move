@@ -23,7 +23,7 @@ script {
     }
 }
 // check: ABORTED
-// check: 1
+// check: 0
 
 //! new-transaction
 script {
@@ -33,7 +33,7 @@ script {
     }
 }
 // check: ABORTED
-// check: 24
+// check: 3
 
 //! new-transaction
 script {
@@ -43,7 +43,7 @@ script {
     }
 }
 // check: ABORTED
-// check: 24
+// check: 3
 
 //! new-transaction
 script {
@@ -58,7 +58,7 @@ script {
     }
 }
 // check: ABORTED
-// check: 919414
+// check: 5
 
 //! new-transaction
 //! sender: association
@@ -94,7 +94,7 @@ script {
     }
 }
 // check: ABORTED
-// check: 919416
+// check: 5
 
 //! new-transaction
 script {
@@ -104,4 +104,4 @@ script {
     }
 }
 // check: ABORTED
-// check: 919417
+// check: 5

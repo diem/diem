@@ -26,4 +26,4 @@ main(account: &signer) {
 }
 
 // check: ABORTED
-// check: 10
+// check: 5

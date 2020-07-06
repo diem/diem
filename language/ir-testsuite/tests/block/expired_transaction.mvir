@@ -60,7 +60,7 @@ main() {
 // check: TRANSACTION_EXPIRED
 
 //! new-transaction
-//! expiration-time: 9223372036855
+//! expiration-time: 18446744073710
 import 0x1.LibraSystem;
 import 0x1.LibraTimestamp;
 

@@ -45,10 +45,10 @@ module AccountLimits {
         limit_address: address,
     }
 
-    const NOT_GENESIS: u64 = 0;
-    const INVALID_INITIALIZATION_ADDRESS: u64 = 1;
-    const NOT_LIBRA_ROOT: u64 = 2;
-    const NOT_TREASURY_COMPLIANCE: u64 = 3;
+    const ENOT_GENESIS: u64 = 0;
+    const EINVALID_INITIALIZATION_ADDRESS: u64 = 1;
+    const ENOT_LIBRA_ROOT: u64 = 2;
+    const ENOT_TREASURY_COMPLIANCE: u64 = 3;
 
     /// 24 hours in microseconds
     const ONE_DAY: u64 = 86400000000;
@@ -57,15 +57,15 @@ module AccountLimits {
     /// Grant a capability to call this module. This does not necessarily
     /// need to be a unique capability.
     public fun grant_calling_capability(lr_account: &signer): CallingCapability {
-        assert(LibraTimestamp::is_genesis(), NOT_GENESIS);
-        assert(has_libra_root_role(lr_account), NOT_LIBRA_ROOT);
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
+        assert(has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         CallingCapability{}
     }
 
     /// Initializes the account limits for unhosted accounts.
     public fun initialize(lr_account: &signer, calling_cap: &CallingCapability) {
-        assert(LibraTimestamp::is_genesis(), NOT_GENESIS);
-        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), INVALID_INITIALIZATION_ADDRESS);
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
+        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_INITIALIZATION_ADDRESS);
         publish_unrestricted_limits<LBR>(lr_account, calling_cap);
         publish_unrestricted_limits<Coin1>(lr_account, calling_cap);
         publish_unrestricted_limits<Coin2>(lr_account, calling_cap);
@@ -166,7 +166,7 @@ module AccountLimits {
         new_max_outflow: u64,
         new_max_holding_balance: u64,
     ) acquires LimitsDefinition {
-        assert(has_treasury_compliance_role(tc_account), NOT_TREASURY_COMPLIANCE);
+        assert(has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
         // As we don't have Optionals for txn scripts, in update_unhosted_wallet_limits.move
         // we use 0 value to represent a None (ie no update to that variable)
         let limits_def = borrow_global_mut<LimitsDefinition<CoinType>>(limit_address);
@@ -183,7 +183,7 @@ module AccountLimits {
         window_address: address,
         aggregate_balance: u64,
     ) acquires Window {
-        assert(has_treasury_compliance_role(tc_account), NOT_TREASURY_COMPLIANCE);
+        assert(has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
         borrow_global_mut<Window<CoinType>>(window_address).tracked_balance = aggregate_balance;
     }
 

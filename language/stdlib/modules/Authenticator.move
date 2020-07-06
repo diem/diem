@@ -16,6 +16,10 @@ module Authenticator {
         threshold: u8,
     }
 
+    const EZERO_THRESHOLD: u64 = 0;
+    const ENOT_ENOUGH_KEYS_FOR_THRESHOLD: u64 = 1;
+    const ENUM_KEYS_ABOVE_MAX_THRESHOLD: u64 = 2;
+
     // Create a a multisig policy from a vector of ed25519 public keys and a threshold.
     // Note: this does *not* check uniqueness of keys. Repeated keys are convenient to
     // encode weighted multisig policies. For example Alice AND 1 of Bob or Carol is
@@ -27,11 +31,11 @@ module Authenticator {
     ): MultiEd25519PublicKey {
         // check theshold requirements
         let len = Vector::length(&public_keys);
-        assert(threshold != 0, 7001);
-        assert((threshold as u64) <= len, 7002);
+        assert(threshold != 0, EZERO_THRESHOLD);
+        assert((threshold as u64) <= len, ENOT_ENOUGH_KEYS_FOR_THRESHOLD);
         // TODO: add constant MULTI_ED25519_MAX_KEYS
         // the multied25519 signature scheme allows at most 32 keys
-        assert(len <= 32, 7003);
+        assert(len <= 32, ENUM_KEYS_ABOVE_MAX_THRESHOLD);
 
         MultiEd25519PublicKey { public_keys, threshold }
     }

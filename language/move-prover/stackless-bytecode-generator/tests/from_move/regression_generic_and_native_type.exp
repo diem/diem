@@ -257,7 +257,7 @@ pub fun Vector::remove<$tv0>(v: &mut vector<#0>, i: u64): #0 {
     L0:
     $t11 := move(v)
     destroy($t11)
-    $t12 := 10
+    $t12 := 0
     abort($t12)
     L2:
     $t13 := copy(len)

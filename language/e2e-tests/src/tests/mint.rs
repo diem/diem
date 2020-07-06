@@ -101,7 +101,7 @@ fn tiered_mint_designated_dealer() {
     ));
     assert!(transaction_status_eq(
         &output.status(),
-        &TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(66))
+        &TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(3))
     ));
 }
 
@@ -142,7 +142,7 @@ fn mint_to_existing_not_dd() {
         output.status().vm_status().major_status,
         StatusCode::ABORTED
     );
-    assert_eq!(output.status().vm_status().sub_status, Some(1));
+    assert_eq!(output.status().vm_status().sub_status, Some(5));
 }
 
 #[test]
@@ -173,7 +173,7 @@ fn mint_to_new_account() {
         output.status().vm_status().major_status,
         StatusCode::ABORTED
     );
-    assert_eq!(output.status().vm_status().sub_status, Some(1));
+    assert_eq!(output.status().vm_status().sub_status, Some(5));
 }
 
 #[test]

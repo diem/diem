@@ -191,9 +191,9 @@ A singleton resource allowing this module to publish limits definitions and acco
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_initialize">initialize</a>(lr_account: &signer) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), NOT_GENESIS);
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), NOT_LIBRA_ROOT);
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), INVALID_INITIALIZATION_ADDRESS);
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
     <b>let</b> limits_cap = <a href="AccountLimits.md#0x1_AccountLimits_grant_calling_capability">AccountLimits::grant_calling_capability</a>(lr_account);
     move_to(lr_account, <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a> { limits_cap })
 }
@@ -311,12 +311,10 @@ or if there is already a VASP (child or parent) at this account.
     base_url: vector&lt;u8&gt;,
     compliance_public_key: vector&lt;u8&gt;
 ) {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), 383838);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
     <b>let</b> vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(vasp);
-    // TODO: proper error code
-    <b>assert</b>(!<a href="#0x1_VASP_is_vasp">is_vasp</a>(vasp_addr), 7000);
-    <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> compliance_public_key), 7004);
+    <b>assert</b>(!<a href="#0x1_VASP_is_vasp">is_vasp</a>(vasp_addr), ENOT_A_VASP);
+    <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> compliance_public_key), EINVALID_PUBLIC_KEY);
     move_to(
         vasp,
         <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
@@ -363,13 +361,11 @@ Aborts if
     // DD: Since it checks for a <a href="#0x1_VASP_ParentVASP">ParentVASP</a> property, anyway, checking
     // for role might be a bit redundant (would need <b>invariant</b> that only
     // Parent Role has <a href="#0x1_VASP_ParentVASP">ParentVASP</a>)
-    // TODO: <b>abort</b> code
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_parent_VASP_role">Roles::has_parent_VASP_role</a>(parent), 234234);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_parent_VASP_role">Roles::has_parent_VASP_role</a>(parent), ENOT_A_PARENT_VASP);
     <b>let</b> child_vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(child);
-    // TODO: proper error code
-    <b>assert</b>(!<a href="#0x1_VASP_is_vasp">is_vasp</a>(child_vasp_addr), 7000);
+    <b>assert</b>(!<a href="#0x1_VASP_is_vasp">is_vasp</a>(child_vasp_addr), EALREADY_A_VASP);
     <b>let</b> parent_vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(parent);
-    <b>assert</b>(<a href="#0x1_VASP_is_parent">is_parent</a>(parent_vasp_addr), 7000);
+    <b>assert</b>(<a href="#0x1_VASP_is_parent">is_parent</a>(parent_vasp_addr), ENOT_A_PARENT_VASP);
     <b>let</b> num_children = &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent_vasp_addr).num_children;
     *num_children = *num_children + 1;
     move_to(child, <a href="#0x1_VASP_ChildVASP">ChildVASP</a> { parent_vasp_addr });
@@ -409,7 +405,7 @@ will be published under the account.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_try_allow_currency">try_allow_currency</a>&lt;CoinType&gt;(account: &signer): bool
 <b>acquires</b> <a href="#0x1_VASP_ChildVASP">ChildVASP</a>, <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a> {
-    <b>assert</b>(<a href="Libra.md#0x1_Libra_is_currency">Libra::is_currency</a>&lt;CoinType&gt;(), NOT_A_REGISTERED_CURRENCY);
+    <b>assert</b>(<a href="Libra.md#0x1_Libra_is_currency">Libra::is_currency</a>&lt;CoinType&gt;(), ENOT_A_REGISTERED_CURRENCY);
     <b>let</b> account_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>if</b> (!<a href="#0x1_VASP_is_vasp">is_vasp</a>(account_address)) <b>return</b> <b>true</b>;
     <b>let</b> parent_address = <a href="#0x1_VASP_parent_address">parent_address</a>(account_address);
@@ -756,7 +752,7 @@ Rotate the compliance public key for
     parent_vasp: &signer,
     new_key: vector&lt;u8&gt;
 ) <b>acquires</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
-    <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_key), 7004);
+    <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_key), EINVALID_PUBLIC_KEY);
     <b>let</b> parent_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(parent_vasp);
     borrow_global_mut&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent_addr).compliance_public_key = new_key
 }

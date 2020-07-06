@@ -6,7 +6,7 @@ fun main(account: &signer) {
 }
 }
 // check: ABORTED
-// check: 1
+// check: 0
 
 //! new-transaction
 script{
@@ -16,4 +16,4 @@ fun main(account: &signer) {
 }
 }
 // check: ABORTED
-// check: 25
+// check: 1

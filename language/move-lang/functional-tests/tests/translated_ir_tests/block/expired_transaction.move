@@ -50,7 +50,7 @@ fun main() {
 // check: TRANSACTION_EXPIRED
 
 //! new-transaction
-//! expiration-time: 9223372036855
+//! expiration-time: 18446744073710
 script{
 fun main() {
 }

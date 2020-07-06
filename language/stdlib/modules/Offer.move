@@ -6,6 +6,8 @@ module Offer {
   // A wrapper around value `offered` that can be claimed by the address stored in `for`.
   resource struct Offer<Offered> { offered: Offered, for: address }
 
+  const EOFFER_DNE_FOR_ACCOUNT: u64 = 0;
+
   // Publish a value of type `Offered` under the sender's account. The value can be claimed by
   // either the `for` address or the transaction sender.
   public fun create<Offered>(account: &signer, offered: Offered, for: address) {
@@ -19,8 +21,7 @@ module Offer {
   public fun redeem<Offered>(account: &signer, offer_address: address): Offered acquires Offer {
     let Offer<Offered> { offered, for } = move_from<Offer<Offered>>(offer_address);
     let sender = Signer::address_of(account);
-    // fail with INSUFFICIENT_PRIVILEGES
-    assert(sender == for || sender == offer_address, 11);
+    assert(sender == for || sender == offer_address, EOFFER_DNE_FOR_ACCOUNT);
     offered
   }
 

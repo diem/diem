@@ -1,9 +1,3 @@
-// Error codes:
-// 7000 -> INSUFFICIENT_PRIVILEGES
-// 7001 -> INVALID_PARENT_VASP_ACCOUNT
-// 7002 -> INVALID_CHILD_VASP_ACCOUNT
-// 7003 -> CHILD_ACCOUNT_STILL_PARENT
-// 7004 -> INVALID_PUBLIC_KEY
 address 0x1 {
 
 module VASP {
@@ -43,15 +37,19 @@ module VASP {
     /// A singleton resource allowing this module to publish limits definitions and accounting windows
     resource struct VASPOperationsResource { limits_cap: CallingCapability }
 
-    const NOT_GENESIS: u64 = 0;
-    const NOT_A_REGISTERED_CURRENCY: u64 = 1;
-    const INVALID_INITIALIZATION_ADDRESS: u64 = 2;
-    const NOT_LIBRA_ROOT: u64 = 3;
+    const ENOT_GENESIS: u64 = 0;
+    const ENOT_A_REGISTERED_CURRENCY: u64 = 1;
+    const EINVALID_SINGLETON_ADDRESS: u64 = 2;
+    const ENOT_LIBRA_ROOT: u64 = 3;
+    const ENOT_A_PARENT_VASP: u64 = 4;
+    const ENOT_A_VASP: u64 = 5;
+    const EINVALID_PUBLIC_KEY: u64 = 6;
+    const EALREADY_A_VASP: u64 = 7;
 
     public fun initialize(lr_account: &signer) {
-        assert(LibraTimestamp::is_genesis(), NOT_GENESIS);
-        assert(Roles::has_libra_root_role(lr_account), NOT_LIBRA_ROOT);
-        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), INVALID_INITIALIZATION_ADDRESS);
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
+        assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
+        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
         let limits_cap = AccountLimits::grant_calling_capability(lr_account);
         move_to(lr_account, VASPOperationsResource { limits_cap })
     }
@@ -107,12 +105,10 @@ module VASP {
         base_url: vector<u8>,
         compliance_public_key: vector<u8>
     ) {
-        // TODO: abort code
-        assert(Roles::has_libra_root_role(lr_account), 383838);
+        assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         let vasp_addr = Signer::address_of(vasp);
-        // TODO: proper error code
-        assert(!is_vasp(vasp_addr), 7000);
-        assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), 7004);
+        assert(!is_vasp(vasp_addr), ENOT_A_VASP);
+        assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), EINVALID_PUBLIC_KEY);
         move_to(
             vasp,
             ParentVASP {
@@ -144,13 +140,11 @@ module VASP {
         // DD: Since it checks for a ParentVASP property, anyway, checking
         // for role might be a bit redundant (would need invariant that only
         // Parent Role has ParentVASP)
-        // TODO: abort code
-        assert(Roles::has_parent_VASP_role(parent), 234234);
+        assert(Roles::has_parent_VASP_role(parent), ENOT_A_PARENT_VASP);
         let child_vasp_addr = Signer::address_of(child);
-        // TODO: proper error code
-        assert(!is_vasp(child_vasp_addr), 7000);
+        assert(!is_vasp(child_vasp_addr), EALREADY_A_VASP);
         let parent_vasp_addr = Signer::address_of(parent);
-        assert(is_parent(parent_vasp_addr), 7000);
+        assert(is_parent(parent_vasp_addr), ENOT_A_PARENT_VASP);
         let num_children = &mut borrow_global_mut<ParentVASP>(parent_vasp_addr).num_children;
         *num_children = *num_children + 1;
         move_to(child, ChildVASP { parent_vasp_addr });
@@ -179,7 +173,7 @@ module VASP {
     /// will be published under the account.
     public fun try_allow_currency<CoinType>(account: &signer): bool
     acquires ChildVASP, VASPOperationsResource {
-        assert(Libra::is_currency<CoinType>(), NOT_A_REGISTERED_CURRENCY);
+        assert(Libra::is_currency<CoinType>(), ENOT_A_REGISTERED_CURRENCY);
         let account_address = Signer::address_of(account);
         if (!is_vasp(account_address)) return true;
         let parent_address = parent_address(account_address);
@@ -349,7 +343,7 @@ module VASP {
         parent_vasp: &signer,
         new_key: vector<u8>
     ) acquires ParentVASP {
-        assert(Signature::ed25519_validate_pubkey(copy new_key), 7004);
+        assert(Signature::ed25519_validate_pubkey(copy new_key), EINVALID_PUBLIC_KEY);
         let parent_addr = Signer::address_of(parent_vasp);
         borrow_global_mut<ParentVASP>(parent_addr).compliance_public_key = new_key
     }

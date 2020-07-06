@@ -39,7 +39,7 @@ main(account: &signer) {
     return;
 }
 // check: ABORTED
-// check: 33
+// check: Some(2)
 
 //! new-transaction
 //! sender: vivian
@@ -51,4 +51,4 @@ main(account: &signer) {
     return;
 }
 // check: ABORTED
-// check: 33
+// check: Some(2)

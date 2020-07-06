@@ -7,6 +7,7 @@ module LibraWriteSetManager {
     use 0x1::Hash;
     use 0x1::Signer;
     use 0x1::LibraConfig;
+    use 0x1::LibraTimestamp;
 
     resource struct LibraWriteSetManager {
         upgrade_events: Event::EventHandle<Self::UpgradeEvent>,
@@ -16,9 +17,17 @@ module LibraWriteSetManager {
         writeset_payload: vector<u8>,
     }
 
+    const ENOT_GENESIS: u64 = 0;
+    const EINVALID_SINGLETON_ADDRESS: u64 = 1;
+    const EINVALID_WRITESET_SENDER: u64 = 33;
+    const EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY: u64 = 1;
+    const EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD: u64 = 2;
+    const EWS_PROLOGUE_SEQUENCE_NUMBER_TOO_NEW: u64 = 11;
+
     public fun initialize(account: &signer) {
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         // Operational constraint
-        assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
+        assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
 
         move_to(
             account,
@@ -34,17 +43,17 @@ module LibraWriteSetManager {
         writeset_public_key: vector<u8>,
     ) {
         let sender = Signer::address_of(account);
-        assert(sender == CoreAddresses::LIBRA_ROOT_ADDRESS(), 33);
+        assert(sender == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_WRITESET_SENDER);
 
         let association_auth_key = LibraAccount::authentication_key(sender);
         let sequence_number = LibraAccount::sequence_number(sender);
 
-        assert(writeset_sequence_number >= sequence_number, 3);
+        assert(writeset_sequence_number >= sequence_number, EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD);
 
-        assert(writeset_sequence_number == sequence_number, 11);
+        assert(writeset_sequence_number == sequence_number, EWS_PROLOGUE_SEQUENCE_NUMBER_TOO_NEW);
         assert(
             Hash::sha3_256(writeset_public_key) == association_auth_key,
-            2
+            EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY
         );
     }
 

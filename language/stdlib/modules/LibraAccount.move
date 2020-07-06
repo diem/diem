@@ -23,7 +23,7 @@ module LibraAccount {
     use 0x1::Libra::{Self, Libra};
     use 0x1::Option::{Self, Option};
     use 0x1::DualAttestationLimit;
-    use 0x1::Roles::{Self, has_libra_root_role, has_treasury_compliance_role};
+    use 0x1::Roles;
 
     resource struct PublishModule {}
 
@@ -125,9 +125,33 @@ module LibraAccount {
         unfrozen_address: address,
     }
 
-    const PARENT_VASP_CURRENCY_LIMITS_DNE: u64 = 0;
-    const NOT_GENESIS: u64 = 0;
-    const ACCOUNT_NOT_LIBRA_ROOT: u64 = 1;
+    const ENOT_GENESIS: u64 = 0;
+    const EINVALID_SINGLETON_ADDRESS: u64 = 1;
+    const ECOIN_DEPOSIT_IS_ZERO: u64 = 2;
+    const EDEPOSIT_EXCEEDS_LIMITS: u64 = 3;
+    const EMALFORMED_METADATA_SIGNATURE: u64 = 4;
+    const EINVALID_METADATA_SIGNATURE: u64 = 5;
+    const EWITHDRAWAL_EXCEEDS_LIMITS: u64 = 6;
+    const EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED: u64 = 7;
+    const EMALFORMED_AUTHENTICATION_KEY: u64 = 8;
+    const EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED: u64 = 9;
+    const ECANNOT_CREATE_AT_VM_RESERVED: u64 = 10;
+    const ENOT_LIBRA_ROOT: u64 = 11;
+    const EACCOUNT_ALREADY_EXISTS: u64 = 12;
+    const EPARENT_VASP_CURRENCY_LIMITS_DNE: u64 = 13;
+    const ENOT_TREASURY_COMPLIANCE: u64 = 14;
+    const EACCOUNT_CANNOT_BE_FROZEN: u64 = 15;
+
+    /// Prologue errors. These are separated out from the other errors in this
+    /// module since they are mapped separately to major VM statuses, and are
+    /// important to the semantics of the system.
+    const EPROLOGUE_ACCOUNT_FROZEN: u64 = 0;
+    const EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY: u64 = 1;
+    const EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD: u64 = 2;
+    const EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW: u64 = 3;
+    const EPROLOGUE_ACCOUNT_DNE: u64 = 4;
+    const EPROLOGUE_CANT_PAY_GAS_DEPOSIT: u64 = 5;
+    const EPROLOGUE_TRANSACTION_EXPIRED: u64 = 6;
 
     /// Grants the ability to publish modules to the libra root account. The VM
     /// will look for this resource to determine whether the sending account can publish modules.
@@ -136,7 +160,8 @@ module LibraAccount {
         // This is also an operational constraint since the VM will look for
         // this specific address and publish these modules under the core code
         // address.
-        assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), ACCOUNT_NOT_LIBRA_ROOT);
+        assert(Roles::has_libra_root_role(account), ENOT_LIBRA_ROOT);
+        assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
         move_to(account, PublishModule{});
     }
 
@@ -144,10 +169,9 @@ module LibraAccount {
     public fun initialize(
         lr_account: &signer,
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         // Operational constraint, not a privilege constraint.
-        assert(LibraTimestamp::is_genesis(), NOT_GENESIS);
-        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 0);
+        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
         let limits_cap = AccountLimits::grant_calling_capability(lr_account);
         AccountLimits::initialize(lr_account, &limits_cap);
         move_to(
@@ -247,7 +271,7 @@ module LibraAccount {
     ) acquires LibraAccount, Balance, AccountOperationsCapability {
         // Check that the `to_deposit` coin is non-zero
         let deposit_value = Libra::value(&to_deposit);
-        assert(deposit_value > 0, 7);
+        assert(deposit_value > 0, ECOIN_DEPOSIT_IS_ZERO);
         if (dual_attestation_required<Token>(payer, payee, deposit_value)) {
             assert_signature_is_valid(payer, payee, &metadata_signature, &metadata, deposit_value);
         };
@@ -261,7 +285,7 @@ module LibraAccount {
                     VASP::parent_address(payee),
                     &borrow_global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).limits_cap
                 ),
-                9
+                EDEPOSIT_EXCEEDS_LIMITS
             )
         };
 
@@ -322,7 +346,7 @@ module LibraAccount {
         deposit_value: u64
     ) {
         // sanity check of signature validity
-        assert(Vector::length(metadata_signature) == 64, 9001);
+        assert(Vector::length(metadata_signature) == 64, EMALFORMED_METADATA_SIGNATURE);
         // cryptographic check of signature validity
         let message = dual_attestation_message(payer, metadata, deposit_value);
         assert(
@@ -331,7 +355,7 @@ module LibraAccount {
                 VASP::compliance_public_key(payee),
                 message
             ),
-            9002, // TODO: proper error code
+            EINVALID_METADATA_SIGNATURE
         );
     }
     spec fun assert_signature_is_valid {
@@ -460,7 +484,7 @@ module LibraAccount {
                     VASP::parent_address(payer),
                     &borrow_global<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).limits_cap
             );
-            assert(can_withdraw, 11);
+            assert(can_withdraw, EWITHDRAWAL_EXCEEDS_LIMITS);
         };
         Libra::withdraw(&mut balance.coin, amount)
     }
@@ -508,7 +532,7 @@ module LibraAccount {
     ): WithdrawCapability acquires LibraAccount {
         let sender_addr = Signer::address_of(sender);
         // Abort if we already extracted the unique withdraw capability for this account.
-        assert(!delegated_withdraw_capability(sender_addr), 11);
+        assert(!delegated_withdraw_capability(sender_addr), EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED);
         let account = borrow_global_mut<LibraAccount>(sender_addr);
         Option::extract(&mut account.withdrawal_capability)
     }
@@ -554,7 +578,7 @@ module LibraAccount {
     ) acquires LibraAccount  {
         let sender_account_resource = borrow_global_mut<LibraAccount>(cap.account_address);
         // Don't allow rotating to clearly invalid key
-        assert(Vector::length(&new_authentication_key) == 32, 12);
+        assert(Vector::length(&new_authentication_key) == 32, EMALFORMED_AUTHENTICATION_KEY);
         sender_account_resource.authentication_key = new_authentication_key;
     }
     spec fun rotate_authentication_key {
@@ -566,7 +590,7 @@ module LibraAccount {
     acquires LibraAccount {
         let account_address = Signer::address_of(account);
         // Abort if we already extracted the unique key rotation capability for this account.
-        assert(!delegated_key_rotation_capability(account_address), 11);
+        assert(!delegated_key_rotation_capability(account_address), EKEY_ROTATION_CAPABILITY_ALREADY_EXTRACTED);
         let account = borrow_global_mut<LibraAccount>(account_address);
         Option::extract(&mut account.key_rotation_capability)
     }
@@ -619,14 +643,14 @@ module LibraAccount {
     ) {
         let new_account_addr = Signer::address_of(&new_account);
         // cannot create an account at the reserved address 0x0
-        assert(new_account_addr != CoreAddresses::VM_RESERVED_ADDRESS(), 0);
+        assert(new_account_addr != CoreAddresses::VM_RESERVED_ADDRESS(), ECANNOT_CREATE_AT_VM_RESERVED);
 
         // (1) publish LibraAccount
         let authentication_key = auth_key_prefix;
         Vector::append(
             &mut authentication_key, LCS::to_bytes(Signer::borrow_address(&new_account))
         );
-        assert(Vector::length(&authentication_key) == 32, 12);
+        assert(Vector::length(&authentication_key) == 32, EMALFORMED_AUTHENTICATION_KEY);
         move_to(
             &new_account,
             LibraAccount {
@@ -658,8 +682,8 @@ module LibraAccount {
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
-        assert(new_account_address == CoreAddresses::LIBRA_ROOT_ADDRESS(), 0);
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
+        assert(new_account_address == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
         let new_account = create_signer(new_account_address);
         make_account(new_account, auth_key_prefix)
     }
@@ -674,9 +698,8 @@ module LibraAccount {
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
-        // TODO: abort code
-        assert(Roles::has_libra_root_role(lr_account), 919408);
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
+        assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         let new_account = create_signer(new_account_address);
         SlidingNonce::publish_nonce_resource(lr_account, &new_account);
         Event::publish_generator(&new_account);
@@ -783,9 +806,8 @@ module LibraAccount {
         auth_key_prefix: vector<u8>,
         add_all_currencies: bool
     ) {
-        // TODO: abort code
-        assert(has_libra_root_role(creator_account), 919409);
-        assert(!exists_at(new_account_address), 777777);
+        assert(Roles::has_libra_root_role(creator_account), ENOT_LIBRA_ROOT);
+        assert(!exists_at(new_account_address), EACCOUNT_ALREADY_EXISTS);
         let new_account = create_signer(new_account_address);
         Roles::new_unhosted_role(creator_account, &new_account);
         Event::publish_generator(&new_account);
@@ -818,7 +840,7 @@ module LibraAccount {
     /// If the account is a VASP account, it must have (or be able to publish)
     /// a limits definition and window.
     public fun add_currency<Token>(account: &signer) {
-        assert(VASP::try_allow_currency<Token>(account), PARENT_VASP_CURRENCY_LIMITS_DNE);
+        assert(VASP::try_allow_currency<Token>(account), EPARENT_VASP_CURRENCY_LIMITS_DNE);
         move_to(account, Balance<Token>{ coin: Libra::zero<Token>() })
     }
     spec fun add_currency {
@@ -872,14 +894,6 @@ module LibraAccount {
         exists<LibraAccount>(check_addr)
     }
 
-    public fun has_account_freezing_privilege(tc_account: &signer): bool {
-        has_treasury_compliance_role(tc_account)
-    }
-
-    public fun has_account_unfreezing_privilege(tc_account: &signer): bool {
-        has_treasury_compliance_role(tc_account)
-    }
-
     ///////////////////////////////////////////////////////////////////////////
     // Freezing
     ///////////////////////////////////////////////////////////////////////////
@@ -890,11 +904,11 @@ module LibraAccount {
         frozen_address: address,
     )
     acquires LibraAccount, AccountOperationsCapability {
-        // TODO: abort code
-        assert(has_account_freezing_privilege(account), 919410);
+        assert(Roles::has_treasury_compliance_role(account), ENOT_TREASURY_COMPLIANCE);
         let initiator_address = Signer::address_of(account);
-        // The root association account cannot be frozen
-        assert(frozen_address != CoreAddresses::LIBRA_ROOT_ADDRESS(), 14);
+        // The libra root and TC accounts cannot be frozen
+        assert(frozen_address != CoreAddresses::LIBRA_ROOT_ADDRESS(), EACCOUNT_CANNOT_BE_FROZEN);
+        assert(frozen_address != CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), EACCOUNT_CANNOT_BE_FROZEN);
         borrow_global_mut<LibraAccount>(frozen_address).is_frozen = true;
         Event::emit_event<FreezeAccountEvent>(
             &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).freeze_event_handle,
@@ -915,8 +929,7 @@ module LibraAccount {
         unfrozen_address: address,
     )
     acquires LibraAccount, AccountOperationsCapability {
-        // TODO: abort code
-        assert(has_account_unfreezing_privilege(account), 919411);
+        assert(Roles::has_treasury_compliance_role(account), ENOT_TREASURY_COMPLIANCE);
         let initiator_address = Signer::address_of(account);
         borrow_global_mut<LibraAccount>(unfrozen_address).is_frozen = false;
         Event::emit_event<UnfreezeAccountEvent>(
@@ -955,9 +968,9 @@ module LibraAccount {
 
         // FUTURE: Make these error codes sequential
         // Verify that the transaction sender's account exists
-        assert(exists_at(transaction_sender), 5);
+        assert(exists_at(transaction_sender), EPROLOGUE_ACCOUNT_DNE);
 
-        assert(!account_is_frozen(transaction_sender), 0);
+        assert(!account_is_frozen(transaction_sender), EPROLOGUE_ACCOUNT_FROZEN);
 
         // Load the transaction sender's account
         let sender_account = borrow_global_mut<LibraAccount>(transaction_sender);
@@ -965,7 +978,7 @@ module LibraAccount {
         // Check that the hash of the transaction's public key matches the account's auth key
         assert(
             Hash::sha3_256(txn_public_key) == *&sender_account.authentication_key,
-            2
+            EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY
         );
 
         // Check that the account has enough balance for all of the gas
@@ -973,13 +986,13 @@ module LibraAccount {
         // Don't grab the balance if the transaction fee is zero
         if (max_transaction_fee > 0) {
             let balance_amount = balance<Token>(transaction_sender);
-            assert(balance_amount >= max_transaction_fee, 6);
+            assert(balance_amount >= max_transaction_fee, EPROLOGUE_CANT_PAY_GAS_DEPOSIT);
         };
 
         // Check that the transaction sequence number matches the sequence number of the account
-        assert(txn_sequence_number >= sender_account.sequence_number, 3);
-        assert(txn_sequence_number == sender_account.sequence_number, 4);
-        assert(LibraTransactionTimeout::is_valid_transaction_timestamp(txn_expiration_time), 7);
+        assert(txn_sequence_number >= sender_account.sequence_number, EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD);
+        assert(txn_sequence_number == sender_account.sequence_number, EPROLOGUE_SEQUENCE_NUMBER_TOO_NEW);
+        assert(LibraTransactionTimeout::is_valid_transaction_timestamp(txn_expiration_time), EPROLOGUE_TRANSACTION_EXPIRED);
     }
     spec fun prologue {
         /// TODO(wrwg): function takes very long to verify; investigate why
@@ -1029,7 +1042,7 @@ module LibraAccount {
 
         // Load the transaction sender's balance resource only if it exists. If it doesn't we default the value to 0
         let sender_balance = if (exists<Balance<Token>>(sender)) balance<Token>(sender) else 0;
-        assert(sender_balance >= transaction_fee_amount, 6);
+        assert(sender_balance >= transaction_fee_amount, EPROLOGUE_CANT_PAY_GAS_DEPOSIT);
         epilogue<Token>(sender, transaction_fee_amount, txn_sequence_number);
     }
     spec fun success_epilogue {
@@ -1072,8 +1085,7 @@ module LibraAccount {
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
-        // TODO: abort code
-        assert(has_libra_root_role(creator_account), 919412);
+        assert(Roles::has_libra_root_role(creator_account), ENOT_LIBRA_ROOT);
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
         ValidatorConfig::publish(&new_account, creator_account);
@@ -1088,8 +1100,7 @@ module LibraAccount {
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
-        // TODO: abort code
-        assert(has_libra_root_role(creator_account), 919413);
+        assert(Roles::has_libra_root_role(creator_account), ENOT_LIBRA_ROOT);
         let new_account = create_signer(new_account_address);
         Event::publish_generator(&new_account);
         make_account(new_account, auth_key_prefix)

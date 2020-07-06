@@ -24,11 +24,17 @@ module LibraBlock {
       time_microseconds: u64,
     }
 
+    const ENOT_GENESIS: u64 = 0;
+    const EINVALID_SINGLETON_ADDRESS: u64 = 1;
+    const ESENDER_NOT_VM: u64 = 2;
+    const EPROPOSER_NOT_A_VALIDATOR: u64 = 3;
+
     // This can only be invoked by the Association address, and only a single time.
     // Currently, it is invoked in the genesis transaction
     public fun initialize_block_metadata(account: &signer) {
+      assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
       // Operational constraint, only callable by the Association address
-      assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
+      assert(Signer::address_of(account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
 
       move_to<BlockMetadata>(
           account,
@@ -52,7 +58,7 @@ module LibraBlock {
         proposer: address
     ) acquires BlockMetadata {
         // Can only be invoked by LibraVM privilege.
-        assert(Signer::address_of(vm) == CoreAddresses::VM_RESERVED_ADDRESS(), 33);
+        assert(Signer::address_of(vm) == CoreAddresses::VM_RESERVED_ADDRESS(), ESENDER_NOT_VM);
 
         process_block_prologue(vm,  round, timestamp, previous_block_votes, proposer);
 
@@ -69,8 +75,7 @@ module LibraBlock {
     ) acquires BlockMetadata {
         let block_metadata_ref = borrow_global_mut<BlockMetadata>(CoreAddresses::LIBRA_ROOT_ADDRESS());
 
-        // TODO: Figure out a story for errors in the system transactions.
-        if(proposer != CoreAddresses::VM_RESERVED_ADDRESS()) assert(LibraSystem::is_validator(proposer), 5002);
+        if(proposer != CoreAddresses::VM_RESERVED_ADDRESS()) assert(LibraSystem::is_validator(proposer), EPROPOSER_NOT_A_VALIDATOR);
         LibraTimestamp::update_global_time(vm, proposer, timestamp);
         block_metadata_ref.height = block_metadata_ref.height + 1;
         Event::emit_event<NewBlockEvent>(

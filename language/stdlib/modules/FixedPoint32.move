@@ -7,6 +7,8 @@ module FixedPoint32 {
     /// make a unique type.
     struct FixedPoint32 { value: u64 }
 
+    const EINVALID_DIVISION: u64 = 0;
+
     /// Multiply a u64 integer by a fixed-point number, truncating any
     /// fractional part of the product. This will abort if the product
     /// overflows.
@@ -71,7 +73,7 @@ module FixedPoint32 {
         let quotient = scaled_numerator / scaled_denominator;
         // but if you really want a ratio of zero, it is easy to create that
         // from a raw value.
-        assert(quotient != 0 || numerator == 0, 16);
+        assert(quotient != 0 || numerator == 0, EINVALID_DIVISION);
         // Return the quotient as a fixed-point number. The cast will fail
         // with an arithmetic error if the number is too large.
         FixedPoint32 { value: (quotient as u64) }

@@ -16,14 +16,12 @@ pub struct Location {}
 /// they are raised during the prologue. However, they can also be raised by user code during
 /// execution of a transaction script. They have no significance to the VM in that case.
 pub const EACCOUNT_FROZEN: u64 = 0; // sending account is frozen
-pub const EBAD_SIGNATURE: u64 = 1; // signature on transaction is invalid
-pub const EBAD_ACCOUNT_AUTHENTICATION_KEY: u64 = 2; // auth key in transaction is invalid
-pub const ESEQUENCE_NUMBER_TOO_OLD: u64 = 3; // transaction sequence number is too old
-pub const ESEQUENCE_NUMBER_TOO_NEW: u64 = 4; // transaction sequence number is too new
-pub const EACCOUNT_DOES_NOT_EXIST: u64 = 5; // transaction sender's account does not exist
-pub const ECANT_PAY_GAS_DEPOSIT: u64 = 6; // insufficient balance to pay for gas deposit
-pub const ETRANSACTION_EXPIRED: u64 = 7; // transaction expiration time exceeds block time.
-pub const ENO_ACCOUNT_ROLE: u64 = 8; // Account does not have a role
+pub const EBAD_ACCOUNT_AUTHENTICATION_KEY: u64 = 1; // auth key in transaction is invalid
+pub const ESEQUENCE_NUMBER_TOO_OLD: u64 = 2; // transaction sequence number is too old
+pub const ESEQUENCE_NUMBER_TOO_NEW: u64 = 3; // transaction sequence number is too new
+pub const EACCOUNT_DOES_NOT_EXIST: u64 = 4; // transaction sender's account does not exist
+pub const ECANT_PAY_GAS_DEPOSIT: u64 = 5; // insufficient balance to pay for gas deposit
+pub const ETRANSACTION_EXPIRED: u64 = 6; // transaction expiration time exceeds block time.
 
 /// Generic error codes. These codes don't have any special meaning for the VM, but they are useful
 /// conventions for debugging
@@ -75,7 +73,6 @@ pub fn convert_prologue_runtime_error(err: &VMStatus, txn_sender: &AccountAddres
                 VMStatus::new(StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE)
             }
             Some(ETRANSACTION_EXPIRED) => VMStatus::new(StatusCode::TRANSACTION_EXPIRED),
-            Some(ENO_ACCOUNT_ROLE) => VMStatus::new(StatusCode::NO_ACCOUNT_ROLE),
             // This should never happen...
             _ => err.clone(),
         }

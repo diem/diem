@@ -74,12 +74,12 @@ Called in genesis. Sets up the needed resources to collect transaction fees from
     assoc_account: &signer,
     tc_account: &signer,
 ) {
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(assoc_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
-        0
+        EINVALID_SINGLETON_ADDRESS
     );
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tc_account), 919424);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
     // accept fees in all the currencies
     <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(assoc_account, tc_account);
     <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(assoc_account, tc_account);

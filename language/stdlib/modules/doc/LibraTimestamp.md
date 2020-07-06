@@ -113,7 +113,7 @@ Initializes the global wall clock time resource. This can only be called from ge
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_initialize">initialize</a>(association: &signer) {
     // Operational constraint, only callable by the Association address
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 1);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
 
     // TODO: Should the initialized value be passed in <b>to</b> genesis?
     <b>let</b> timer = <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> { microseconds: 0 };
@@ -142,12 +142,12 @@ Marks that time has started and genesis has finished. This can only be called fr
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_set_time_has_started">set_time_has_started</a>(association: &signer) <b>acquires</b> <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 1);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
 
     // Current time must have been initialized.
     <b>assert</b>(
         exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) && <a href="#0x1_LibraTimestamp_now_microseconds">now_microseconds</a>() == 0,
-        2
+        ETIME_NOT_INITIALIZED
     );
     move_to(association, <a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>{});
 }
@@ -206,15 +206,15 @@ Updates the wall clock time by consensus. Requires VM privilege and will be invo
     timestamp: u64
 ) <b>acquires</b> <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
     // Can only be invoked by LibraVM privilege.
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(), 33);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(), ENOT_VM);
 
     <b>let</b> global_timer = borrow_global_mut&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
     <b>if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>()) {
         // NIL block with null address <b>as</b> proposer. Timestamp must be equal.
-        <b>assert</b>(timestamp == global_timer.microseconds, 5001);
+        <b>assert</b>(timestamp == global_timer.microseconds, EINVALID_TIMESTAMP);
     } <b>else</b> {
         // Normal block. Time must advance
-        <b>assert</b>(global_timer.microseconds &lt; timestamp, 5001);
+        <b>assert</b>(global_timer.microseconds &lt; timestamp, EINVALID_TIMESTAMP);
     };
     global_timer.microseconds = timestamp;
 }

@@ -194,8 +194,8 @@ need to be a unique capability.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_calling_capability">grant_calling_capability</a>(lr_account: &signer): <a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a> {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), NOT_GENESIS);
-    <b>assert</b>(has_libra_root_role(lr_account), NOT_LIBRA_ROOT);
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
+    <b>assert</b>(has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
     <a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>{}
 }
 </code></pre>
@@ -221,8 +221,8 @@ Initializes the account limits for unhosted accounts.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_initialize">initialize</a>(lr_account: &signer, calling_cap: &<a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), NOT_GENESIS);
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), INVALID_INITIALIZATION_ADDRESS);
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_INITIALIZATION_ADDRESS);
     <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(lr_account, calling_cap);
     <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(lr_account, calling_cap);
     <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(lr_account, calling_cap);
@@ -446,7 +446,7 @@ If any of the field arguments is
     new_max_outflow: u64,
     new_max_holding_balance: u64,
 ) <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-    <b>assert</b>(has_treasury_compliance_role(tc_account), NOT_TREASURY_COMPLIANCE);
+    <b>assert</b>(has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
     // As we don't have Optionals for txn scripts, in update_unhosted_wallet_limits.<b>move</b>
     // we <b>use</b> 0 value <b>to</b> represent a None (ie no <b>update</b> <b>to</b> that variable)
     <b>let</b> limits_def = borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address);
@@ -484,7 +484,7 @@ the entity across all of its accounts will need to be set by the association.
     window_address: address,
     aggregate_balance: u64,
 ) <b>acquires</b> <a href="#0x1_AccountLimits_Window">Window</a> {
-    <b>assert</b>(has_treasury_compliance_role(tc_account), NOT_TREASURY_COMPLIANCE);
+    <b>assert</b>(has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
     borrow_global_mut&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(window_address).tracked_balance = aggregate_balance;
 }
 </code></pre>

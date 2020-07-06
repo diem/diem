@@ -4,7 +4,7 @@ module DesignatedDealer {
     use 0x1::LibraTimestamp;
     use 0x1::Vector;
     use 0x1::Event;
-    use 0x1::Roles::{has_treasury_compliance_role};
+    use 0x1::Roles;
 
     resource struct Dealer {
         /// Time window start in microseconds
@@ -26,6 +26,14 @@ module DesignatedDealer {
         amount: u64,
     }
 
+    const EACCOUNT_NOT_TREASURY_COMPLIANCE: u64 = 0;
+    const EINVALID_TIER_ADDITION: u64 = 1;
+    const EINVALID_TIER_START: u64 = 2;
+    const EINVALID_TIER_INDEX: u64 = 3;
+    const EINVALID_MINT_AMOUNT: u64 = 4;
+    const ENOT_A_DD: u64 = 5;
+    const EINVALID_AMOUNT_FOR_TIER: u64 = 6;
+
     ///////////////////////////////////////////////////////////////////////////
     // To-be designated-dealer called functions
     ///////////////////////////////////////////////////////////////////////////
@@ -34,8 +42,7 @@ module DesignatedDealer {
         dd: &signer,
         tc_account: &signer,
     ) {
-        // TODO: abort code
-        assert(has_treasury_compliance_role(tc_account), 919397);
+        assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
         move_to(
             dd,
             Dealer {
@@ -55,12 +62,10 @@ module DesignatedDealer {
     fun add_tier_(dealer: &mut Dealer, next_tier_upperbound: u64) {
         let tiers = &mut dealer.tiers;
         let number_of_tiers: u64 = Vector::length(tiers);
-        // INVALID_TIER_ADDITION
-        assert(number_of_tiers <= 4, 31);
+        assert(number_of_tiers <= 4, EINVALID_TIER_ADDITION);
         if (number_of_tiers > 1) {
             let prev_tier = *Vector::borrow(tiers, number_of_tiers - 1);
-            // INVALID_TIER_START
-            assert(prev_tier < next_tier_upperbound, 4);
+            assert(prev_tier < next_tier_upperbound, EINVALID_TIER_START);
         };
         Vector::push_back(tiers, next_tier_upperbound);
     }
@@ -70,8 +75,7 @@ module DesignatedDealer {
         addr: address,
         tier_upperbound: u64
     ) acquires Dealer {
-        // TODO: abort code
-        assert(has_treasury_compliance_role(tc_account), 919398);
+        assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
         let dealer = borrow_global_mut<Dealer>(addr);
         add_tier_(dealer, tier_upperbound)
     }
@@ -79,15 +83,13 @@ module DesignatedDealer {
     fun update_tier_(dealer: &mut Dealer, tier_index: u64, new_upperbound: u64) {
         let tiers = &mut dealer.tiers;
         let number_of_tiers = Vector::length(tiers);
-        // INVALID_TIER_INDEX
-        assert(tier_index <= 3, 3); // max 4 tiers allowed
-        assert(tier_index < number_of_tiers, 3);
+        assert(tier_index <= 3, EINVALID_TIER_INDEX); // max 4 tiers allowed
+        assert(tier_index < number_of_tiers, EINVALID_TIER_INDEX);
         // Make sure that this new start for the tier is consistent
         // with the tier above it.
         let next_tier = tier_index + 1;
         if (next_tier < number_of_tiers) {
-            // INVALID_TIER_START
-            assert(new_upperbound < *Vector::borrow(tiers, next_tier), 4);
+            assert(new_upperbound < *Vector::borrow(tiers, next_tier), EINVALID_TIER_START);
         };
         let tier_mut = Vector::borrow_mut(tiers, tier_index);
         *tier_mut = new_upperbound;
@@ -99,15 +101,14 @@ module DesignatedDealer {
         tier_index: u64,
         new_upperbound: u64
     ) acquires Dealer {
-        // TODO: abort code
-        assert(has_treasury_compliance_role(tc_account), 919399);
+        assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
         let dealer = borrow_global_mut<Dealer>(addr);
         update_tier_(dealer, tier_index, new_upperbound)
     }
 
     fun tiered_mint_(dealer: &mut Dealer, amount: u64, tier_index: u64): bool {
-        // INVALID TIER_INDEX (if tier is 4, can mint unlimited)
-        assert(tier_index <= 4, 66);
+        // if tier is 4, can mint unlimited
+        assert(tier_index <= 4, EINVALID_TIER_INDEX);
         reset_window(dealer);
         let cur_inflow = *&dealer.window_inflow;
         let tiers = &mut dealer.tiers;
@@ -133,16 +134,12 @@ module DesignatedDealer {
         tier_index: u64,
     ): Libra<CoinType> acquires Dealer {
 
-        // TODO: abort code
-        assert(has_treasury_compliance_role(tc_account), 919400);
-        // INVALID_MINT_AMOUNT
-        assert(amount > 0, 6);
+        assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
+        assert(amount > 0, EINVALID_MINT_AMOUNT);
 
-        // NOT_A_DD
-        assert(exists_at(dd_addr), 1);
+        assert(exists_at(dd_addr), ENOT_A_DD);
         let tier_check = tiered_mint_(borrow_global_mut<Dealer>(dd_addr), amount, tier_index);
-        // INVALID_AMOUNT_FOR_TIER
-        assert(tier_check, 5);
+        assert(tier_check, EINVALID_AMOUNT_FOR_TIER);
         // Send ReceivedMintEvent
         Event::emit_event<ReceivedMintEvent>(
             &mut borrow_global_mut<Dealer>(dd_addr).mint_event_handle,

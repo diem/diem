@@ -18,6 +18,8 @@ module SharedEd25519PublicKey {
         rotation_cap: LibraAccount::KeyRotationCapability,
     }
 
+    const EMALFORMED_PUBLIC_KEY: u64 = 0;
+
     // (1) Rotate the authentication key of the sender to `key`
     // (2) Publish a resource containing a 32-byte ed25519 public key and the rotation capability
     //     of the sender under the `account`'s address.
@@ -36,7 +38,7 @@ module SharedEd25519PublicKey {
         // Cryptographic check of public key validity
         assert(
             Signature::ed25519_validate_pubkey(copy new_public_key),
-            9003, // TODO: proper error code
+            EMALFORMED_PUBLIC_KEY
         );
         LibraAccount::rotate_authentication_key(
             &shared_key.rotation_cap,

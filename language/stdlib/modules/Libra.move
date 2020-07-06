@@ -11,7 +11,7 @@ module Libra {
     use 0x1::RegisteredCurrencies::{Self, RegistrationCapability};
     use 0x1::Signer;
     use 0x1::Vector;
-    use 0x1::Roles::{Self, has_register_new_currency_privilege, has_treasury_compliance_role};
+    use 0x1::Roles;
     use 0x1::LibraTimestamp;
 
     resource struct RegisterNewCurrency {}
@@ -178,6 +178,16 @@ module Libra {
         requests: vector<Libra<CoinType>>,
     }
 
+    const ENOT_GENESIS: u64 = 0;
+    const EINVALID_SINGLETON_ADDRESS: u64 = 1;
+    const ENOT_TREASURY_COMPLIANCE: u64 = 2;
+    const EMINTING_NOT_ALLOWED: u64 = 3;
+    const EIS_SYNTHETIC_CURRENCY: u64 = 4;
+    const EAMOUNT_EXCEEDS_COIN_VALUE: u64 = 5;
+    const EDESTRUCTION_OF_NONZERO_COIN: u64 = 6;
+    const EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE: u64 = 7;
+    const ENOT_A_REGISTERED_CURRENCY: u64 = 8;
+
     ///////////////////////////////////////////////////////////////////////////
     // Initialization and granting of privileges
     ///////////////////////////////////////////////////////////////////////////
@@ -196,11 +206,11 @@ module Libra {
     public fun initialize(
         config_account: &signer,
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         // Operational constraint
         assert(
             Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
-            0
+            EINVALID_SINGLETON_ADDRESS
         );
         let cap = RegisteredCurrencies::initialize(config_account);
         move_to(config_account, CurrencyRegistrationCapability{ cap })
@@ -214,8 +224,7 @@ module Libra {
         cap: MintCapability<CoinType>,
         tc_account: &signer,
     ) {
-        // TODO: abort code
-        assert(has_treasury_compliance_role(tc_account), 919402);
+        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
         assert_is_currency<CoinType>();
         move_to(publish_account, cap)
     }
@@ -228,8 +237,7 @@ module Libra {
         cap: BurnCapability<CoinType>,
         tc_account: &signer,
     ) {
-        // TODO: abort code
-        assert(has_treasury_compliance_role(tc_account), 919403);
+        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
         assert_is_currency<CoinType>();
         move_to(account, cap)
     }
@@ -297,7 +305,7 @@ module Libra {
         let currency_code = currency_code<CoinType>();
         // update market cap resource to reflect minting
         let info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
-        assert(info.can_mint, 4);
+        assert(info.can_mint, EMINTING_NOT_ALLOWED);
         info.total_value = info.total_value + (value as u128);
         // don't emit mint events for synthetic currenices
         if (!info.is_synthetic) {
@@ -385,9 +393,8 @@ module Libra {
     public fun create_preburn<CoinType>(
         tc_account: &signer
     ): Preburn<CoinType> {
-        // TODO: abort code
-        assert(has_treasury_compliance_role(tc_account), 919404);
-        assert(is_currency<CoinType>(), 201);
+        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
+        assert_is_currency<CoinType>();
         Preburn<CoinType> { requests: Vector::empty() }
     }
 
@@ -399,8 +406,7 @@ module Libra {
         account: &signer,
         tc_account: &signer
     ) acquires CurrencyInfo {
-        assert(!is_synthetic_currency<CoinType>(), 202);
-        // move_to(account, create_preburn<CoinType>(tc_capability))
+        assert(!is_synthetic_currency<CoinType>(), EIS_SYNTHETIC_CURRENCY);
         move_to(account, create_preburn<CoinType>(tc_account))
     }
 
@@ -592,7 +598,7 @@ module Libra {
     /// value of the passed-in `coin`.
     public fun withdraw<CoinType>(coin: &mut Libra<CoinType>, amount: u64): Libra<CoinType> {
         // Check that `amount` is less than the coin's value
-        assert(coin.value >= amount, 10);
+        assert(coin.value >= amount, EAMOUNT_EXCEEDS_COIN_VALUE);
         coin.value = coin.value - amount;
         Libra { value: amount }
     }
@@ -638,7 +644,7 @@ module Libra {
     /// a `BurnCapability` for the specific `CoinType`.
     public fun destroy_zero<CoinType>(coin: Libra<CoinType>) {
         let Libra { value } = coin;
-        assert(value == 0, 5)
+        assert(value == 0, EDESTRUCTION_OF_NONZERO_COIN)
     }
     spec fun destroy_zero {
         aborts_if coin.value > 0;
@@ -669,13 +675,11 @@ module Libra {
         currency_code: vector<u8>,
     ): (MintCapability<CoinType>, BurnCapability<CoinType>)
     acquires CurrencyRegistrationCapability {
-        // TODO: abort code
-        assert(has_register_new_currency_privilege(tc_account), 919405);
-        // Operational constraint that it must be stored under a specific
-        // address.
+        assert(Roles::has_register_new_currency_privilege(tc_account), EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE);
+        // Operational constraint that it must be stored under a specific address.
         assert(
             Signer::address_of(account) == CoreAddresses::CURRENCY_INFO_ADDRESS(),
-            8
+            EINVALID_SINGLETON_ADDRESS
         );
 
         move_to(account, CurrencyInfo<CoinType> {
@@ -776,8 +780,7 @@ module Libra {
         tr_account: &signer,
         lbr_exchange_rate: FixedPoint32
     ) acquires CurrencyInfo {
-        // TODO: abort code
-        assert(has_treasury_compliance_role(tr_account), 919406);
+        assert(Roles::has_treasury_compliance_role(tr_account), ENOT_TREASURY_COMPLIANCE);
         assert_is_currency<FromCoinType>();
         let currency_info = borrow_global_mut<CurrencyInfo<FromCoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
@@ -809,8 +812,7 @@ module Libra {
         can_mint: bool,
         )
     acquires CurrencyInfo {
-        // TODO: abort code
-        assert(has_treasury_compliance_role(tr_account), 919407);
+        assert(Roles::has_treasury_compliance_role(tr_account), ENOT_TREASURY_COMPLIANCE);
         assert_is_currency<CoinType>();
         let currency_info = borrow_global_mut<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS());
         currency_info.can_mint = can_mint;
@@ -822,7 +824,7 @@ module Libra {
 
     /// Asserts that `CoinType` is a registered currency.
     fun assert_is_currency<CoinType>() {
-        assert(is_currency<CoinType>(), 1);
+        assert(is_currency<CoinType>(), ENOT_A_REGISTERED_CURRENCY);
     }
 
     /// **************** MODULE SPECIFICATION ****************

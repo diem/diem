@@ -164,9 +164,10 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_initialize_validator_set">initialize_validator_set</a>(
     config_account: &signer,
 ) {
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
-        1
+        EINVALID_SINGLETON_ADDRESS
     );
 
     <b>let</b> cap = <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;(
@@ -227,14 +228,13 @@
     lr_account: &signer,
     account_address: address
 ) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_libra_root_role(lr_account), 919419);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
     // A prospective validator must have a validator config <b>resource</b>
-    <b>assert</b>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(account_address), 33);
+    <b>assert</b>(<a href="ValidatorConfig.md#0x1_ValidatorConfig_is_valid">ValidatorConfig::is_valid</a>(account_address), EINVALID_PROSPECTIVE_VALIDATOR);
 
     <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
     // Ensure that this address is not already a validator
-    <b>assert</b>(!<a href="#0x1_LibraSystem_is_validator_">is_validator_</a>(account_address, &validator_set.validators), 18);
+    <b>assert</b>(!<a href="#0x1_LibraSystem_is_validator_">is_validator_</a>(account_address, &validator_set.validators), EALREADY_A_VALIDATOR);
     // it is guaranteed that the config is non-empty
     <b>let</b> config = <a href="ValidatorConfig.md#0x1_ValidatorConfig_get_config">ValidatorConfig::get_config</a>(account_address);
     <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> validator_set.validators, <a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a> {
@@ -270,12 +270,11 @@
     lr_account: &signer,
     account_address: address
 ) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_libra_root_role(lr_account), 919420);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
     <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
     // Ensure that this address is an active validator
     <b>let</b> to_remove_index_vec = <a href="#0x1_LibraSystem_get_validator_index_">get_validator_index_</a>(&validator_set.validators, account_address);
-    <b>assert</b>(<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(&to_remove_index_vec), 21);
+    <b>assert</b>(<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(&to_remove_index_vec), ENOT_AN_ACTIVE_VALIDATOR);
     <b>let</b> to_remove_index = *<a href="Option.md#0x1_Option_borrow">Option::borrow</a>(&to_remove_index_vec);
     // Remove corresponding <a href="#0x1_LibraSystem_ValidatorInfo">ValidatorInfo</a> from the validator set
     _  = <a href="Vector.md#0x1_Vector_swap_remove">Vector::swap_remove</a>(&<b>mut</b> validator_set.validators, to_remove_index);
@@ -306,8 +305,7 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_update_and_reconfigure">update_and_reconfigure</a>(
     lr_account: &signer
     ) <b>acquires</b> <a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a> {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_libra_root_role(lr_account), 919421);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
     <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
     <b>let</b> validators = &<b>mut</b> validator_set.validators;
     <b>let</b> configs_changed = <b>false</b>;
@@ -395,7 +393,7 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_get_validator_config">get_validator_config</a>(addr: address): <a href="ValidatorConfig.md#0x1_ValidatorConfig_Config">ValidatorConfig::Config</a> {
     <b>let</b> validator_set = <a href="#0x1_LibraSystem_get_validator_set">get_validator_set</a>();
     <b>let</b> validator_index_vec = <a href="#0x1_LibraSystem_get_validator_index_">get_validator_index_</a>(&validator_set.validators, addr);
-    <b>assert</b>(<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(&validator_index_vec), 33);
+    <b>assert</b>(<a href="Option.md#0x1_Option_is_some">Option::is_some</a>(&validator_index_vec), ENOT_AN_ACTIVE_VALIDATOR);
     *&(<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(&validator_set.validators, *<a href="Option.md#0x1_Option_borrow">Option::borrow</a>(&validator_index_vec))).config
 }
 </code></pre>
@@ -661,6 +659,7 @@ meaning that all the validators have unique addresses.
     != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
 <b>aborts_if</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>aborts_if</b> exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account));
+<b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>();
 <b>ensures</b> exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account));
 <b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>ensures</b> len(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>()) == 0;
@@ -699,8 +698,12 @@ meaning that all the validators have unique addresses.
 
 
 
+> TODO(tzakian): Turn this back on once this no longer times
+> out in tests
 
-<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role">Roles::spec_has_libra_root_role</a>(lr_account);
+
+<pre><code>pragma verify = <b>false</b>;
+<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role">Roles::spec_has_libra_root_role</a>(lr_account);
 <b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>aborts_if</b> <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
 <b>aborts_if</b> !<a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_is_valid">ValidatorConfig::spec_is_valid</a>(account_address);
@@ -722,8 +725,12 @@ meaning that all the validators have unique addresses.
 
 
 
+> TODO(tzakian): Turn this back on once this no longer times
+> out in tests
 
-<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role">Roles::spec_has_libra_root_role</a>(lr_account);
+
+<pre><code>pragma verify = <b>false</b>;
+<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role">Roles::spec_has_libra_root_role</a>(lr_account);
 <b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>aborts_if</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
 <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(
@@ -852,8 +859,12 @@ meaning that all the validators have unique addresses.
 
 
 
+> TODO(tzakian): Turn this back on once this no longer times
+> out in tests
 
-<pre><code>pragma opaque = <b>true</b>;
+
+<pre><code>pragma verify = <b>false</b>;
+pragma opaque = <b>true</b>;
 <b>requires</b> <b>module</b> <a href="#0x1_LibraSystem_spec_validators_is_set">spec_validators_is_set</a>(validators);
 <b>aborts_if</b> <b>false</b>;
 <b>ensures</b> <a href="Option.md#0x1_Option_spec_is_none">Option::spec_is_none</a>(result) ==

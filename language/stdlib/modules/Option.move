@@ -10,6 +10,8 @@ module Option {
     // zero or one because Move bytecode does not have ADTs.
     struct Option<Element> { vec: vector<Element> }
 
+    const EOPTION_ALREADY_FILLED: u64 = 0;
+
     // Return an empty `Option`
     public fun none<Element>(): Option<Element> {
         Option { vec: Vector::empty() }
@@ -63,7 +65,7 @@ module Option {
     public fun fill<Element>(t: &mut Option<Element>, e: Element) {
         let vec_ref = &mut t.vec;
         if (Vector::is_empty(vec_ref)) Vector::push_back(vec_ref, e)
-        else abort(99)
+        else abort EOPTION_ALREADY_FILLED
     }
 
     // Convert a `some` option to a `none` by removing and returning the value stored inside `t`
