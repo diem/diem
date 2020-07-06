@@ -3415,7 +3415,6 @@ dependencies = [
 name = "move-vm-natives"
 version = "0.1.0"
 dependencies = [
- "bit-vec 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-crypto 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",

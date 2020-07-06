@@ -759,6 +759,9 @@ Return whether the
 
 
 
+> TODO(wrwg): this is currently abstracted as uninterpreted function
+> because of termination issue. Need to investigate why.
+
 
 <pre><code>pragma verify = <b>false</b>;
 pragma opaque = <b>true</b>;
