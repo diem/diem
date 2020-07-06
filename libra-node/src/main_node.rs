@@ -169,10 +169,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
 
     // Build the configured networks.
     for network_builder in &mut network_builders {
-        debug!(
-            "Creating runtime for {:?}",
-            network_builder.network_context()
-        );
+        debug!("Creating runtime for {}", network_builder.network_context());
         let runtime = Builder::new()
             .thread_name("network-")
             .threaded_scheduler()
