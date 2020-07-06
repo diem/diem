@@ -110,7 +110,6 @@ mod tests {
             None,
             EventHandle::new(EventKey::new_from_address(&addr, 0), 777),
             EventHandle::new(EventKey::new_from_address(&addr, 0), 888),
-            false,
         );
         let br = BalanceResource::new(100);
 

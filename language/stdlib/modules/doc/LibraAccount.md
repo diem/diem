@@ -13,9 +13,6 @@
 -  [Resource `AccountOperationsCapability`](#0x1_LibraAccount_AccountOperationsCapability)
 -  [Struct `SentPaymentEvent`](#0x1_LibraAccount_SentPaymentEvent)
 -  [Struct `ReceivedPaymentEvent`](#0x1_LibraAccount_ReceivedPaymentEvent)
--  [Struct `FreezingPrivilege`](#0x1_LibraAccount_FreezingPrivilege)
--  [Struct `FreezeAccountEvent`](#0x1_LibraAccount_FreezeAccountEvent)
--  [Struct `UnfreezeAccountEvent`](#0x1_LibraAccount_UnfreezeAccountEvent)
 -  [Function `grant_module_publishing_privilege`](#0x1_LibraAccount_grant_module_publishing_privilege)
 -  [Function `initialize`](#0x1_LibraAccount_initialize)
 -  [Function `should_track_limits_for_account`](#0x1_LibraAccount_should_track_limits_for_account)
@@ -58,9 +55,6 @@
 -  [Function `withdraw_capability_address`](#0x1_LibraAccount_withdraw_capability_address)
 -  [Function `key_rotation_capability_address`](#0x1_LibraAccount_key_rotation_capability_address)
 -  [Function `exists_at`](#0x1_LibraAccount_exists_at)
--  [Function `freeze_account`](#0x1_LibraAccount_freeze_account)
--  [Function `unfreeze_account`](#0x1_LibraAccount_unfreeze_account)
--  [Function `account_is_frozen`](#0x1_LibraAccount_account_is_frozen)
 -  [Function `prologue`](#0x1_LibraAccount_prologue)
 -  [Function `epilogue`](#0x1_LibraAccount_epilogue)
 -  [Function `success_epilogue`](#0x1_LibraAccount_success_epilogue)
@@ -93,8 +87,6 @@
     -  [Function `create_child_vasp_account`](#0x1_LibraAccount_Specification_create_child_vasp_account)
     -  [Function `create_unhosted_account`](#0x1_LibraAccount_Specification_create_unhosted_account)
     -  [Function `add_currency`](#0x1_LibraAccount_Specification_add_currency)
-    -  [Function `freeze_account`](#0x1_LibraAccount_Specification_freeze_account)
-    -  [Function `unfreeze_account`](#0x1_LibraAccount_Specification_unfreeze_account)
     -  [Function `prologue`](#0x1_LibraAccount_Specification_prologue)
     -  [Function `epilogue`](#0x1_LibraAccount_Specification_epilogue)
     -  [Function `success_epilogue`](#0x1_LibraAccount_Specification_success_epilogue)
@@ -203,13 +195,6 @@ Every Libra account has a LibraAccount resource
 <dd>
  The current sequence number.
  Incremented by one each time a transaction is submitted
-</dd>
-<dt>
-
-<code>is_frozen: bool</code>
-</dt>
-<dd>
- If true, the account cannot be used to send transactions or receive funds
 </dd>
 </dl>
 
@@ -333,20 +318,6 @@ and to record freeze/unfreeze events.
 <dd>
 
 </dd>
-<dt>
-
-<code>freeze_event_handle: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_LibraAccount_FreezeAccountEvent">LibraAccount::FreezeAccountEvent</a>&gt;</code>
-</dt>
-<dd>
-
-</dd>
-<dt>
-
-<code>unfreeze_event_handle: <a href="Event.md#0x1_Event_EventHandle">Event::EventHandle</a>&lt;<a href="#0x1_LibraAccount_UnfreezeAccountEvent">LibraAccount::UnfreezeAccountEvent</a>&gt;</code>
-</dt>
-<dd>
-
-</dd>
 </dl>
 
 
@@ -452,107 +423,6 @@ Message for received events
 
 </details>
 
-<a name="0x1_LibraAccount_FreezingPrivilege"></a>
-
-## Struct `FreezingPrivilege`
-
-A privilege to allow the freezing of accounts.
-
-
-<pre><code><b>struct</b> <a href="#0x1_LibraAccount_FreezingPrivilege">FreezingPrivilege</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>dummy_field: bool</code>
-</dt>
-<dd>
-
-</dd>
-</dl>
-
-
-</details>
-
-<a name="0x1_LibraAccount_FreezeAccountEvent"></a>
-
-## Struct `FreezeAccountEvent`
-
-Message for freeze account events
-
-
-<pre><code><b>struct</b> <a href="#0x1_LibraAccount_FreezeAccountEvent">FreezeAccountEvent</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>initiator_address: address</code>
-</dt>
-<dd>
- The address that initiated freeze txn
-</dd>
-<dt>
-
-<code>frozen_address: address</code>
-</dt>
-<dd>
- The address that was frozen
-</dd>
-</dl>
-
-
-</details>
-
-<a name="0x1_LibraAccount_UnfreezeAccountEvent"></a>
-
-## Struct `UnfreezeAccountEvent`
-
-Message for unfreeze account events
-
-
-<pre><code><b>struct</b> <a href="#0x1_LibraAccount_UnfreezeAccountEvent">UnfreezeAccountEvent</a>
-</code></pre>
-
-
-
-<details>
-<summary>Fields</summary>
-
-
-<dl>
-<dt>
-
-<code>initiator_address: address</code>
-</dt>
-<dd>
- The address that initiated unfreeze txn
-</dd>
-<dt>
-
-<code>unfrozen_address: address</code>
-</dt>
-<dd>
- The address that was unfrozen
-</dd>
-</dl>
-
-
-</details>
-
 <a name="0x1_LibraAccount_grant_module_publishing_privilege"></a>
 
 ## Function `grant_module_publishing_privilege`
@@ -614,8 +484,6 @@ Initialize this module. This is only callable from genesis.
         lr_account,
         <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
             limits_cap,
-            freeze_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>(lr_account),
-            unfreeze_event_handle: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>(lr_account),
         }
     );
 }
@@ -1408,9 +1276,9 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
             received_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraAccount_ReceivedPaymentEvent">ReceivedPaymentEvent</a>&gt;(&new_account),
             sent_events: <a href="Event.md#0x1_Event_new_event_handle">Event::new_event_handle</a>&lt;<a href="#0x1_LibraAccount_SentPaymentEvent">SentPaymentEvent</a>&gt;(&new_account),
             sequence_number: 0,
-            is_frozen: <b>false</b>,
         }
     );
+    <a href="AccountFreezing.md#0x1_AccountFreezing_create">AccountFreezing::create</a>(&new_account);
 
     // (2) TODO: publish account limits?
     <a href="#0x1_LibraAccount_destroy_signer">destroy_signer</a>(new_account);
@@ -2027,114 +1895,6 @@ Checks if an account exists at
 
 </details>
 
-<a name="0x1_LibraAccount_freeze_account"></a>
-
-## Function `freeze_account`
-
-Freeze the account at
-<code>addr</code>.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_freeze_account">freeze_account</a>(account: &signer, frozen_address: address)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_freeze_account">freeze_account</a>(
-    account: &signer,
-    frozen_address: address,
-)
-<b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(account), ENOT_TREASURY_COMPLIANCE);
-    <b>let</b> initiator_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    // The libra root and TC accounts cannot be frozen
-    <b>assert</b>(frozen_address != <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EACCOUNT_CANNOT_BE_FROZEN);
-    <b>assert</b>(frozen_address != <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>(), EACCOUNT_CANNOT_BE_FROZEN);
-    borrow_global_mut&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(frozen_address).is_frozen = <b>true</b>;
-    <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x1_LibraAccount_FreezeAccountEvent">FreezeAccountEvent</a>&gt;(
-        &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).freeze_event_handle,
-        <a href="#0x1_LibraAccount_FreezeAccountEvent">FreezeAccountEvent</a> {
-            initiator_address,
-            frozen_address
-        },
-    );
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraAccount_unfreeze_account"></a>
-
-## Function `unfreeze_account`
-
-Unfreeze the account at
-<code>addr</code>.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_unfreeze_account">unfreeze_account</a>(account: &signer, unfrozen_address: address)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_unfreeze_account">unfreeze_account</a>(
-    account: &signer,
-    unfrozen_address: address,
-)
-<b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(account), ENOT_TREASURY_COMPLIANCE);
-    <b>let</b> initiator_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    borrow_global_mut&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(unfrozen_address).is_frozen = <b>false</b>;
-    <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x1_LibraAccount_UnfreezeAccountEvent">UnfreezeAccountEvent</a>&gt;(
-        &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).unfreeze_event_handle,
-        <a href="#0x1_LibraAccount_UnfreezeAccountEvent">UnfreezeAccountEvent</a> {
-            initiator_address,
-            unfrozen_address
-        },
-    );
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraAccount_account_is_frozen"></a>
-
-## Function `account_is_frozen`
-
-Returns if the account at
-<code>addr</code> is frozen.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_account_is_frozen">account_is_frozen</a>(addr: address): bool
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_account_is_frozen">account_is_frozen</a>(addr: address): bool
-<b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a> {
-    borrow_global&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(addr).is_frozen
- }
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_LibraAccount_prologue"></a>
 
 ## Function `prologue`
@@ -2165,11 +1925,14 @@ It verifies:
 ) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a> {
     <b>let</b> transaction_sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(sender);
 
-    // FUTURE: Make these error codes sequential
     // Verify that the transaction sender's account exists
     <b>assert</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(transaction_sender), EPROLOGUE_ACCOUNT_DNE);
 
-    <b>assert</b>(!<a href="#0x1_LibraAccount_account_is_frozen">account_is_frozen</a>(transaction_sender), EPROLOGUE_ACCOUNT_FROZEN);
+    // We check whether this account is frozen, and also, <b>if</b> it's a <a href="VASP.md#0x1_VASP">VASP</a>
+    // account <b>if</b> its parent account is frozen. Freezing a parent <a href="VASP.md#0x1_VASP">VASP</a>
+    // account should effectively freeze all child accounts <b>as</b> well.
+    <b>assert</b>(!<a href="AccountFreezing.md#0x1_AccountFreezing_account_is_frozen">AccountFreezing::account_is_frozen</a>(transaction_sender), EPROLOGUE_ACCOUNT_FROZEN);
+    <b>assert</b>(!<a href="VASP.md#0x1_VASP_is_frozen">VASP::is_frozen</a>(transaction_sender), EPROLOGUE_ACCOUNT_FROZEN);
 
     // Load the transaction sender's account
     <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(transaction_sender);
@@ -2950,42 +2713,6 @@ TODO(wrwg): function takes very long to verify; investigate why
 
 
 <pre><code>pragma verify = <b>true</b>;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_freeze_account"></a>
-
-### Function `freeze_account`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_freeze_account">freeze_account</a>(account: &signer, frozen_address: address)
-</code></pre>
-
-
-
-TODO(wrwg): function takes very long to verify; investigate why
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_unfreeze_account"></a>
-
-### Function `unfreeze_account`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_unfreeze_account">unfreeze_account</a>(account: &signer, unfrozen_address: address)
-</code></pre>
-
-
-
-TODO(wrwg): function takes very long to verify; investigate why
-
-
-<pre><code>pragma verify = <b>false</b>;
 </code></pre>
 
 

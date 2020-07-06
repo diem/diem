@@ -4,6 +4,7 @@
 // genesis (for now).
 address 0x1 {
 module Genesis {
+    use 0x1::AccountFreezing;
     use 0x1::VASP;
     use 0x1::Coin1;
     use 0x1::Coin2;
@@ -23,7 +24,6 @@ module Genesis {
     use 0x1::TransactionFee;
     use 0x1::Roles;
     use 0x1::LibraVMConfig;
-
 
     fun initialize(
         lr_account: &signer,
@@ -57,6 +57,7 @@ module Genesis {
             tc_account,
         );
 
+        AccountFreezing::initialize(lr_account);
         LibraAccount::initialize(lr_account);
         LibraAccount::create_root_association_account(
             Signer::address_of(lr_account),

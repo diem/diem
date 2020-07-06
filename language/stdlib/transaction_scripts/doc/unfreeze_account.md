@@ -29,7 +29,7 @@ Unfreeze account
 
 <pre><code><b>fun</b> <a href="#SCRIPT_unfreeze_account">unfreeze_account</a>(account: &signer, sliding_nonce: u64, to_unfreeze_account: address) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(account, sliding_nonce);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_unfreeze_account">LibraAccount::unfreeze_account</a>(account, to_unfreeze_account);
+    <a href="../../modules/doc/AccountFreezing.md#0x1_AccountFreezing_unfreeze_account">AccountFreezing::unfreeze_account</a>(account, to_unfreeze_account);
 }
 </code></pre>
 

@@ -56,6 +56,7 @@
         tc_account,
     );
 
+    <a href="AccountFreezing.md#0x1_AccountFreezing_initialize">AccountFreezing::initialize</a>(lr_account);
     <a href="LibraAccount.md#0x1_LibraAccount_initialize">LibraAccount::initialize</a>(lr_account);
     <a href="LibraAccount.md#0x1_LibraAccount_create_root_association_account">LibraAccount::create_root_association_account</a>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account),

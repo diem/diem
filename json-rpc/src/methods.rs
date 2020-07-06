@@ -118,7 +118,14 @@ async fn get_account_state(
         if let Some(account) = account_state.get_account_resource()? {
             let balances = account_state.get_balance_resources(&currencies)?;
             if let Some(account_role) = account_state.get_account_role()? {
-                return Ok(Some(AccountView::new(&account, balances, account_role)));
+                if let Some(freezing_bit) = account_state.get_freezing_bit()? {
+                    return Ok(Some(AccountView::new(
+                        &account,
+                        balances,
+                        account_role,
+                        freezing_bit,
+                    )));
+                }
             }
         }
     }

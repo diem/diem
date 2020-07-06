@@ -41,7 +41,6 @@ impl AccountData {
                         sent_events_count,
                         received_events_count,
                         AccountRoleSpecifier::default(), // TODO: Vary account type?
-                        false,
                     )
                 },
             )

@@ -664,7 +664,6 @@ pub struct AccountData {
     sequence_number: u64,
     sent_events: EventHandle,
     received_events: EventHandle,
-    is_frozen: bool,
 
     balances: BTreeMap<Identifier, Balance>,
     event_generator: EventHandleGenerator,
@@ -725,7 +724,6 @@ impl AccountData {
             0,
             0,
             account_specifier,
-            false,
         )
     }
 
@@ -757,7 +755,6 @@ impl AccountData {
         sent_events_count: u64,
         received_events_count: u64,
         account_specifier: AccountRoleSpecifier,
-        is_frozen: bool,
     ) -> Self {
         let mut balances = BTreeMap::new();
         balances.insert(balance_currency_code, Balance::new(balance));
@@ -769,7 +766,6 @@ impl AccountData {
             account,
             balances,
             sequence_number,
-            is_frozen,
             sent_events: new_event_handle(sent_events_count),
             received_events: new_event_handle(received_events_count),
         }
@@ -849,7 +845,6 @@ impl AccountData {
                     Box::new(Self::received_payment_event_type()),
                 )))),
                 FatType::U64,
-                FatType::Bool,
             ],
         }
     }
@@ -890,7 +885,6 @@ impl AccountData {
                     true,
                 )),
                 Value::u64(self.sequence_number),
-                Value::bool(self.is_frozen),
             ],
             true,
         ));
@@ -937,6 +931,17 @@ impl AccountData {
                 .unwrap();
             write_set.push((self.make_balance_access_path(code), WriteOp::Value(balance)));
         }
+
+        let freezing_bit = FreezingBit::value()
+            .value_as::<Struct>()
+            .unwrap()
+            .simple_serialize(&FreezingBit::type_())
+            .unwrap();
+        write_set.push((
+            self.account
+                .make_access_path(account_config::FreezingBit::struct_tag()),
+            WriteOp::Value(freezing_bit),
+        ));
 
         let role_id = role_id_blob
             .value_as::<Struct>()
@@ -1063,5 +1068,27 @@ impl KeyRotationCapability {
             vec![Value::address(self.account_address)],
             true,
         ))])
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FreezingBit {
+    is_frozen: bool,
+}
+
+impl FreezingBit {
+    pub fn type_() -> FatStructType {
+        FatStructType {
+            address: account_config::CORE_CODE_ADDRESS,
+            module: account_config::FreezingBit::module_identifier(),
+            name: account_config::FreezingBit::struct_identifier(),
+            is_resource: true,
+            ty_args: vec![],
+            layout: vec![FatType::Bool],
+        }
+    }
+
+    pub fn value() -> Value {
+        Value::struct_(Struct::pack(vec![Value::bool(false)], true))
     }
 }

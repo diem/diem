@@ -144,7 +144,6 @@ fn get_mock_account_state_blob() -> AccountStateBlob {
         None,
         EventHandle::random_handle(0),
         EventHandle::random_handle(0),
-        false,
     );
 
     let mut account_state = AccountState::default();
