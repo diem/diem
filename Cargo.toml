@@ -17,7 +17,6 @@ members = [
     "common/metrics",
     "common/nibble",
     "common/num-variants",
-    "common/option-future",
     "common/proptest-helpers",
     "common/retrier",
     "common/stream-ratelimiter",
