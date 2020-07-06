@@ -13,6 +13,7 @@ use serde_json::Value;
 use std::{
     collections::HashSet,
     fmt,
+    process::Stdio,
     str::FromStr,
     time::{Duration, Instant},
 };
@@ -304,9 +305,9 @@ impl Instance {
     }
 
     /// Unlike util_cmd, exec runs command inside the container
-    pub async fn exec(&self, command: &str) -> Result<()> {
-        let child = Command::new("kubectl")
-            .arg("exec")
+    pub async fn exec(&self, command: &str, mute: bool) -> Result<()> {
+        let mut cmd = Command::new("kubectl");
+        cmd.arg("exec")
             .arg(&self.peer_name)
             .arg("--container")
             .arg("main")
@@ -314,16 +315,18 @@ impl Instance {
             .arg("sh")
             .arg("-c")
             .arg(command)
-            .kill_on_drop(true)
-            .spawn()
-            .map_err(|e| {
-                format_err!(
-                    "Failed to spawn child process {} on {}: {}",
-                    command,
-                    self.peer_name(),
-                    e
-                )
-            })?;
+            .kill_on_drop(true);
+        if mute {
+            cmd.stdout(Stdio::null()).stderr(Stdio::null());
+        }
+        let child = cmd.spawn().map_err(|e| {
+            format_err!(
+                "Failed to spawn child process {} on {}: {}",
+                command,
+                self.peer_name(),
+                e
+            )
+        })?;
         let status = child
             .await
             .map_err(|e| format_err!("Error running {} on {}: {}", command, self.peer_name(), e))?;

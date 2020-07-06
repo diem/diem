@@ -10,11 +10,12 @@ use crate::{
     tx_emitter::EmitJobRequest,
     util::unix_timestamp_now,
 };
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use debug_interface::trace::LibraTraceClient;
 use futures::{future::try_join_all, join};
 use libra_logger::{info, warn};
+use rand::{rngs::ThreadRng, seq::SliceRandom};
 use serde_json::Value;
 use std::{
     collections::HashSet,
@@ -22,6 +23,7 @@ use std::{
     time::Duration,
 };
 use structopt::StructOpt;
+use tokio::task::JoinHandle;
 
 #[derive(StructOpt, Debug)]
 pub struct PerformanceBenchmarkParams {
@@ -46,6 +48,11 @@ pub struct PerformanceBenchmarkParams {
     pub duration: u64,
     #[structopt(long, help = "Set fixed tps during perf experiment")]
     pub tps: Option<u64>,
+    #[structopt(
+        long,
+        help = "Whether benchmark should pick one node to run DB backup."
+    )]
+    pub backup: bool,
 }
 
 pub struct PerformanceBenchmark {
@@ -57,6 +64,7 @@ pub struct PerformanceBenchmark {
     trace: bool,
     tps: Option<u64>,
     use_logs_for_trace: bool,
+    backup: bool,
 }
 
 pub const DEFAULT_BENCH_DURATION: u64 = 120;
@@ -69,6 +77,7 @@ impl PerformanceBenchmarkParams {
             trace: false,
             tps: None,
             use_logs_for_trace: false,
+            backup: false,
         }
     }
 
@@ -79,6 +88,7 @@ impl PerformanceBenchmarkParams {
             trace: false,
             tps: Some(fixed_tps),
             use_logs_for_trace: false,
+            backup: false,
         }
     }
 }
@@ -109,6 +119,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
             trace: self.trace,
             tps: self.tps,
             use_logs_for_trace: self.use_logs_for_trace,
+            backup: self.backup,
         }
     }
 }
@@ -122,6 +133,8 @@ impl Experiment for PerformanceBenchmark {
     async fn run(&mut self, context: &mut Context<'_>) -> Result<()> {
         let futures: Vec<_> = self.down_validators.iter().map(Instance::stop).collect();
         try_join_all(futures).await?;
+
+        let backup = self.maybe_start_backup()?;
         let buffer = Duration::from_secs(60);
         let window = self.duration + buffer * 2;
         let instances = if context.emit_to_validator {
@@ -162,6 +175,7 @@ impl Experiment for PerformanceBenchmark {
                 }
             };
         }
+        drop(backup);
         let stats = stats?;
         if let Some(trace) = trace {
             info!("Traced {} events", trace.len());
@@ -211,6 +225,39 @@ impl Experiment for PerformanceBenchmark {
 
     fn deadline(&self) -> Duration {
         Duration::from_secs(600) + self.duration
+    }
+}
+
+impl PerformanceBenchmark {
+    fn maybe_start_backup(&self) -> Result<Option<JoinHandle<()>>> {
+        if !self.backup {
+            return Ok(None);
+        }
+
+        let mut rng = ThreadRng::default();
+        let validator = self
+            .up_validators
+            .choose(&mut rng)
+            .ok_or_else(|| anyhow!("No up validator."))?
+            .clone();
+
+        const COMMAND: &str = "while true; do \
+            /opt/libra/bin/db-backup one-shot backup \
+            --max-chunk-size 1073741824 --backup-service-port 7777 \
+            --state-version $(/opt/libra/bin/db-backup one-shot query  --backup-service-port 7777 --latest-version | sed -n 's/latest-version: //p') \
+            local-fs --dir $(mktemp -d -t libra_backup_XXXXXXXX); \
+            done";
+
+        Ok(Some(tokio::spawn(async move {
+            validator.exec(COMMAND, true).await.unwrap_or_else(|e| {
+                let err_msg = e.to_string();
+                if err_msg.ends_with("exit code Some(137)") {
+                    info!("db-backup killed.");
+                } else {
+                    warn!("db-backup failed: {}", err_msg);
+                }
+            })
+        })))
     }
 }
 
