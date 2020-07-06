@@ -2926,6 +2926,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "libra-trace"
+version = "0.1.0"
+dependencies = [
+ "chrono 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "debug-interface 0.1.0",
+ "libra-logger 0.1.0",
+ "libra-workspace-hack 0.1.0",
+ "serde_json 1.0.56 (registry+https://github.com/rust-lang/crates.io-index)",
+ "structopt 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tokio 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "libra-transaction-scripts"
 version = "0.1.0"
 dependencies = [
