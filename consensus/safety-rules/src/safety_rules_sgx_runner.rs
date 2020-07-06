@@ -57,6 +57,13 @@ impl SyncListener for SafetyRulesSGXListener {
             "runner:: bind -- local_address is {}, peer_address is {}",
             local_addr_tcp, peer_address_tcp
             );
+
+        if let Some(local_addr) = local_addr {
+            *local_addr = local_addr_tcp.to_string();
+        }
+        if let Some(peer_addr) = peer_addr {
+            *peer_addr  = peer_address_tcp.to_string();
+        }
         Ok(Box::new(stream))
     }
 }

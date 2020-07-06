@@ -2796,7 +2796,6 @@ dependencies = [
 name = "libra-nibble"
 version = "0.1.0"
 dependencies = [
- "libra-workspace-hack 0.1.0",
  "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -3194,6 +3193,8 @@ dependencies = [
 name = "lsr-sgx"
 version = "0.1.0"
 dependencies = [
+ "consensus-types 0.1.0",
+ "libra-canonical-serialization 0.1.0",
  "libra-types 0.1.0",
 ]
 
