@@ -6,6 +6,7 @@
 
 //! A library supplying various cryptographic primitives
 
+pub mod compat;
 pub mod ed25519;
 pub mod error;
 pub mod hash;

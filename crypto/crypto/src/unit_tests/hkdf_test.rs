@@ -1,9 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::hkdf::*;
+use crate::{compat::Sha3_256, hkdf::*};
 use sha2::{Sha256, Sha512};
-use sha3::Sha3_256;
 
 // Testing against sha256 test vectors. Unfortunately the rfc does not provide test vectors for
 // sha3 and sha512.
