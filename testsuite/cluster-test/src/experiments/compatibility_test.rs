@@ -123,7 +123,7 @@ impl Experiment for CompatibilityTest {
     }
 
     fn deadline(&self) -> Duration {
-        Duration::from_secs(9 * 60)
+        Duration::from_secs(20 * 60)
     }
 }
 
