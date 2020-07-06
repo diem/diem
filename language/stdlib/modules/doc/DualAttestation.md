@@ -677,8 +677,7 @@ Spec version of
 
 
 
-<pre><code>pragma verify = <b>true</b>;
-<b>aborts_if</b> <b>false</b>;
+<pre><code><b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(addr);
 </code></pre>
 
@@ -710,7 +709,7 @@ Spec version of
 
 
 
-<pre><code>pragma verify = <b>true</b>, opaque = <b>true</b>;
+<pre><code>pragma opaque = <b>true</b>;
 <b>include</b> <a href="#0x1_DualAttestation_TravelRuleAppliesAbortsIf">TravelRuleAppliesAbortsIf</a>&lt;Token&gt;;
 <b>ensures</b> result == <a href="#0x1_DualAttestation_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Token&gt;(payer, payee, deposit_value);
 </code></pre>
@@ -730,9 +729,10 @@ Spec version of
 
 
 
-<pre><code>pragma verify = <b>false</b>;
 <a name="0x1_DualAttestation_spec_is_inter_vasp"></a>
-<b>define</b> <a href="#0x1_DualAttestation_spec_is_inter_vasp">spec_is_inter_vasp</a>(payer: address, payee: address): bool {
+
+
+<pre><code><b>define</b> <a href="#0x1_DualAttestation_spec_is_inter_vasp">spec_is_inter_vasp</a>(payer: address, payee: address): bool {
     <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payer) && <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payee)
         && <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer) != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee)
 }
@@ -819,7 +819,7 @@ Uninterpreted function for
 
 
 
-<pre><code>pragma verify = <b>true</b>, opaque = <b>true</b>;
+<pre><code>pragma opaque = <b>true</b>;
 <b>aborts_if</b> !exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="#0x1_DualAttestation_spec_credential_address">spec_credential_address</a>(payee));
 <b>aborts_if</b> !<a href="#0x1_DualAttestation_signature_is_valid">signature_is_valid</a>(payer, payee, metadata_signature, metadata, deposit_value);
 </code></pre>
@@ -846,4 +846,10 @@ Returns true if signature is valid.
                 <a href="#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value)
            )
 }
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>true</b>;
 </code></pre>

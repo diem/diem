@@ -6,7 +6,7 @@ use crate::{
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
 };
 use spec_lang::{
-    ast::{Condition, ConditionKind, Exp, Spec, Value},
+    ast::{Condition, ConditionKind, Exp, PropertyBag, Spec, Value},
     env::{ConditionInfo, FunctionEnv, VerificationScope, ALWAYS_ABORTS_TEST_PRAGMA},
     ty::BOOL_TYPE,
 };
@@ -100,6 +100,7 @@ impl TestInstrumenter {
         Condition {
             loc: func_env.get_loc(),
             kind,
+            properties: PropertyBag::default(),
             exp,
         }
     }

@@ -932,7 +932,7 @@ will remain an account with role
 
 
 
-<pre><code><b>apply</b> <a href="#0x1_Roles_RoleIdPersists">RoleIdPersists</a> <b>to</b> *&lt;T&gt;, *;
+<pre><code><b>apply</b> <a href="#0x1_Roles_RoleIdPersists">RoleIdPersists</a> <b>to</b> *&lt;T&gt;, * <b>except</b> has*;
 </code></pre>
 
 

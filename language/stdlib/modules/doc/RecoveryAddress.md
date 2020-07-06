@@ -10,15 +10,15 @@
 -  [Function `rotate_authentication_key`](#0x1_RecoveryAddress_rotate_authentication_key)
 -  [Function `add_rotation_capability`](#0x1_RecoveryAddress_add_rotation_capability)
 -  [Specification](#0x1_RecoveryAddress_Specification)
-    -  [Function `publish`](#0x1_RecoveryAddress_Specification_publish)
-    -  [Specifications for individual functions](#0x1_RecoveryAddress_@Specifications_for_individual_functions)
-    -  [Function `rotate_authentication_key`](#0x1_RecoveryAddress_Specification_rotate_authentication_key)
-    -  [Function `add_rotation_capability`](#0x1_RecoveryAddress_Specification_add_rotation_capability)
     -  [Module specifications](#0x1_RecoveryAddress_@Module_specifications)
         -  [RecoveryAddress has its own KeyRotationCapability](#0x1_RecoveryAddress_@RecoveryAddress_has_its_own_KeyRotationCapability)
         -  [RecoveryAddress resource stays](#0x1_RecoveryAddress_@RecoveryAddress_resource_stays)
         -  [RecoveryAddress remains same](#0x1_RecoveryAddress_@RecoveryAddress_remains_same)
         -  [Only VASPs can be RecoveryAddress](#0x1_RecoveryAddress_@Only_VASPs_can_be_RecoveryAddress)
+    -  [Function `publish`](#0x1_RecoveryAddress_Specification_publish)
+    -  [Specifications for individual functions](#0x1_RecoveryAddress_@Specifications_for_individual_functions)
+    -  [Function `rotate_authentication_key`](#0x1_RecoveryAddress_Specification_rotate_authentication_key)
+    -  [Function `add_rotation_capability`](#0x1_RecoveryAddress_Specification_add_rotation_capability)
 
 
 
@@ -231,80 +231,6 @@ Aborts if
 ## Specification
 
 
-<a name="0x1_RecoveryAddress_Specification_publish"></a>
-
-### Function `publish`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_publish">publish</a>(recovery_account: &signer)
-</code></pre>
-
-
-
-TODO(wrwg): function takes very long to verify; investigate why
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
-<a name="0x1_RecoveryAddress_@Specifications_for_individual_functions"></a>
-
-### Specifications for individual functions
-
-
-
-<pre><code><b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
-<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
-<b>aborts_if</b> !<a href="LibraAccount.md#0x1_LibraAccount_spec_holds_own_key_rotation_cap">LibraAccount::spec_holds_own_key_rotation_cap</a>(
-    <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
-<b>aborts_if</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
-<b>ensures</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
-</code></pre>
-
-
-
-<a name="0x1_RecoveryAddress_Specification_rotate_authentication_key"></a>
-
-### Function `rotate_authentication_key`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_rotate_authentication_key">rotate_authentication_key</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
-</code></pre>
-
-
-
-
-<pre><code><b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address);
-<b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover);
-<b>aborts_if</b> len(new_key) != 32;
-<b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_address, to_recover);
-<b>aborts_if</b> !(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) == recovery_address
-            || <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) == to_recover);
-<b>ensures</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover).authentication_key == new_key;
-</code></pre>
-
-
-
-<a name="0x1_RecoveryAddress_Specification_add_rotation_capability"></a>
-
-### Function `add_rotation_capability`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability">add_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
-</code></pre>
-
-
-
-TODO(wrwg): function takes very long to verify; investigate why
-
-
-<pre><code>pragma verify = <b>false</b>;
-</code></pre>
-
-
-
 <a name="0x1_RecoveryAddress_@Module_specifications"></a>
 
 ### Module specifications
@@ -464,6 +390,64 @@ Returns true if
 
 
 <pre><code><b>apply</b> <a href="#0x1_RecoveryAddress_RecoveryAddressIsVASP">RecoveryAddressIsVASP</a> <b>to</b> *;
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_Specification_publish"></a>
+
+### Function `publish`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_publish">publish</a>(recovery_account: &signer)
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_@Specifications_for_individual_functions"></a>
+
+### Specifications for individual functions
+
+
+
+<pre><code><b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
+<b>aborts_if</b> !<a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
+<b>aborts_if</b> !<a href="LibraAccount.md#0x1_LibraAccount_spec_holds_own_key_rotation_cap">LibraAccount::spec_holds_own_key_rotation_cap</a>(
+    <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
+<b>aborts_if</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
+<b>ensures</b> <a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(recovery_account));
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_Specification_rotate_authentication_key"></a>
+
+### Function `rotate_authentication_key`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_rotate_authentication_key">rotate_authentication_key</a>(account: &signer, recovery_address: address, to_recover: address, new_key: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_is_recovery_address">spec_is_recovery_address</a>(recovery_address);
+<b>aborts_if</b> !exists&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover);
+<b>aborts_if</b> len(new_key) != 32;
+<b>aborts_if</b> !<a href="#0x1_RecoveryAddress_spec_holds_key_rotation_cap_for">spec_holds_key_rotation_cap_for</a>(recovery_address, to_recover);
+<b>aborts_if</b> !(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) == recovery_address
+            || <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) == to_recover);
+<b>ensures</b> <b>global</b>&lt;<a href="LibraAccount.md#0x1_LibraAccount_LibraAccount">LibraAccount::LibraAccount</a>&gt;(to_recover).authentication_key == new_key;
+</code></pre>
+
+
+
+<a name="0x1_RecoveryAddress_Specification_add_rotation_capability"></a>
+
+### Function `add_rotation_capability`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_RecoveryAddress_add_rotation_capability">add_rotation_capability</a>(to_recover_account: &signer, recovery_address: address)
 </code></pre>
 
 

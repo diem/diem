@@ -271,7 +271,12 @@ pub fn boogie_requires_well_formed(
 ) -> String {
     let expr = boogie_well_formed_expr(env, name, ty, mode);
     if !expr.is_empty() {
-        format!("{} {};\n", type_requires_str, expr)
+        let assert_kind = if type_requires_str.starts_with("free") {
+            "assume"
+        } else {
+            "assert"
+        };
+        format!("{} {};\n", assert_kind, expr)
     } else {
         "".to_string()
     }

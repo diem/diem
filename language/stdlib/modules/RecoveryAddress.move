@@ -43,10 +43,6 @@ module RecoveryAddress {
             RecoveryAddress { rotation_caps: Vector::singleton(rotation_cap) }
         )
     }
-    spec fun publish {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
-    }
 
     /// Rotate the authentication key of `to_recover` to `new_key`. Can be invoked by either
     /// `recovery_address` or `to_recover`.
@@ -108,10 +104,6 @@ module RecoveryAddress {
         assert(*LibraAccount::key_rotation_capability_address(&rotation_cap)
              == Signer::address_of(to_recover_account), EINVALID_KEY_ROTATION_DELEGATION);
         Vector::push_back(caps, rotation_cap);
-    }
-    spec fun add_rotation_capability {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
     }
 
     // ****************** SPECIFICATIONS *******************

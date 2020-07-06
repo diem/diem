@@ -22,13 +22,13 @@
 -  [Function `update_ith_validator_info_`](#0x1_LibraSystem_update_ith_validator_info_)
 -  [Function `is_validator_`](#0x1_LibraSystem_is_validator_)
 -  [Specification](#0x1_LibraSystem_Specification)
-    -  [Module specifications](#0x1_LibraSystem_@Module_specifications)
-        -  [Validator set is indeed a set](#0x1_LibraSystem_@Validator_set_is_indeed_a_set)
     -  [Function `initialize_validator_set`](#0x1_LibraSystem_Specification_initialize_validator_set)
     -  [Specifications for individual functions](#0x1_LibraSystem_@Specifications_for_individual_functions)
     -  [Function `set_validator_set`](#0x1_LibraSystem_Specification_set_validator_set)
     -  [Function `add_validator`](#0x1_LibraSystem_Specification_add_validator)
     -  [Function `remove_validator`](#0x1_LibraSystem_Specification_remove_validator)
+    -  [Module specifications](#0x1_LibraSystem_@Module_specifications)
+        -  [Validator set is indeed a set](#0x1_LibraSystem_@Validator_set_is_indeed_a_set)
     -  [Function `update_and_reconfigure`](#0x1_LibraSystem_Specification_update_and_reconfigure)
     -  [Function `get_validator_set`](#0x1_LibraSystem_Specification_get_validator_set)
     -  [Function `is_validator`](#0x1_LibraSystem_Specification_is_validator)
@@ -564,6 +564,97 @@
 ## Specification
 
 
+<a name="0x1_LibraSystem_Specification_initialize_validator_set"></a>
+
+### Function `initialize_validator_set`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_initialize_validator_set">initialize_validator_set</a>(config_account: &signer)
+</code></pre>
+
+
+
+<a name="0x1_LibraSystem_@Specifications_for_individual_functions"></a>
+
+### Specifications for individual functions
+
+
+
+<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_on_chain_config_privilege">Roles::spec_has_on_chain_config_privilege</a>(config_account);
+<b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account)
+    != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+<b>aborts_if</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
+<b>aborts_if</b> exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account));
+<b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>();
+<b>ensures</b> exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account));
+<b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
+<b>ensures</b> len(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>()) == 0;
+</code></pre>
+
+
+
+<a name="0x1_LibraSystem_Specification_set_validator_set"></a>
+
+### Function `set_validator_set`
+
+
+<pre><code><b>fun</b> <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(value: <a href="#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>)
+</code></pre>
+
+
+
+
+<pre><code>pragma assume_no_abort_from_here = <b>true</b>;
+<b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
+<b>aborts_if</b> !exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(
+    <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()
+);
+<b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;() == value;
+</code></pre>
+
+
+
+<a name="0x1_LibraSystem_Specification_add_validator"></a>
+
+### Function `add_validator`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_add_validator">add_validator</a>(lr_account: &signer, account_address: address)
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role">Roles::spec_has_libra_root_role</a>(lr_account);
+<b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
+<b>aborts_if</b> <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
+<b>aborts_if</b> !<a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_is_valid">ValidatorConfig::spec_is_valid</a>(account_address);
+<b>aborts_if</b> !exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(
+    <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()
+);
+<b>ensures</b> <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
+</code></pre>
+
+
+
+<a name="0x1_LibraSystem_Specification_remove_validator"></a>
+
+### Function `remove_validator`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_remove_validator">remove_validator</a>(lr_account: &signer, account_address: address)
+</code></pre>
+
+
+
+TODO(wrwg): function needs long to verify, only enable it with large timeout.
+
+
+<pre><code>pragma verify_duration_estimate = 60;
+</code></pre>
+
+
+
 <a name="0x1_LibraSystem_@Module_specifications"></a>
 
 ### Module specifications
@@ -638,99 +729,8 @@ meaning that all the validators have unique addresses.
 
 
 
-<a name="0x1_LibraSystem_Specification_initialize_validator_set"></a>
 
-### Function `initialize_validator_set`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_initialize_validator_set">initialize_validator_set</a>(config_account: &signer)
-</code></pre>
-
-
-
-<a name="0x1_LibraSystem_@Specifications_for_individual_functions"></a>
-
-### Specifications for individual functions
-
-
-
-<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_on_chain_config_privilege">Roles::spec_has_on_chain_config_privilege</a>(config_account);
-<b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account)
-    != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
-<b>aborts_if</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
-<b>aborts_if</b> exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account));
-<b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>();
-<b>ensures</b> exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(config_account));
-<b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
-<b>ensures</b> len(<a href="#0x1_LibraSystem_spec_get_validator_set">spec_get_validator_set</a>()) == 0;
-</code></pre>
-
-
-
-<a name="0x1_LibraSystem_Specification_set_validator_set"></a>
-
-### Function `set_validator_set`
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraSystem_set_validator_set">set_validator_set</a>(value: <a href="#0x1_LibraSystem_LibraSystem">LibraSystem::LibraSystem</a>)
-</code></pre>
-
-
-
-
-<pre><code>pragma assume_no_abort_from_here = <b>true</b>;
-<b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
-<b>aborts_if</b> !exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(
-    <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()
-);
-<b>ensures</b> <a href="LibraConfig.md#0x1_LibraConfig_spec_get">LibraConfig::spec_get</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;() == value;
-</code></pre>
-
-
-
-<a name="0x1_LibraSystem_Specification_add_validator"></a>
-
-### Function `add_validator`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_add_validator">add_validator</a>(lr_account: &signer, account_address: address)
-</code></pre>
-
-
-
-> TODO(tzakian): Turn this back on once this no longer times
-> out in tests
-
-
-<pre><code>pragma verify = <b>false</b>;
-<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role">Roles::spec_has_libra_root_role</a>(lr_account);
-<b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
-<b>aborts_if</b> <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
-<b>aborts_if</b> !<a href="ValidatorConfig.md#0x1_ValidatorConfig_spec_is_valid">ValidatorConfig::spec_is_valid</a>(account_address);
-<b>aborts_if</b> !exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(
-    <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()
-);
-<b>ensures</b> <a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
-</code></pre>
-
-
-
-<a name="0x1_LibraSystem_Specification_remove_validator"></a>
-
-### Function `remove_validator`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraSystem_remove_validator">remove_validator</a>(lr_account: &signer, account_address: address)
-</code></pre>
-
-
-
-> TODO(tzakian): Turn this back on once this no longer times
-> out in tests
-
-
-<pre><code>pragma verify = <b>false</b>;
-<b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role">Roles::spec_has_libra_root_role</a>(lr_account);
+<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role">Roles::spec_has_libra_root_role</a>(lr_account);
 <b>aborts_if</b> !<a href="LibraConfig.md#0x1_LibraConfig_spec_is_published">LibraConfig::spec_is_published</a>&lt;<a href="#0x1_LibraSystem">LibraSystem</a>&gt;();
 <b>aborts_if</b> !<a href="#0x1_LibraSystem_spec_is_validator">spec_is_validator</a>(account_address);
 <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraSystem_CapabilityHolder">CapabilityHolder</a>&gt;(

@@ -70,6 +70,7 @@ module TestModuleInvariants {
     spec fun private_calls_public {
         requires global<SCounter>(0x0).n == spec_count;
     }
+
 }
 
 module TestModuleInvariantsExternal {

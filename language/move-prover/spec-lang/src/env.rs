@@ -5,7 +5,7 @@
 //! to interpret metadata about the translation target.
 
 #[allow(unused_imports)]
-use log::info;
+use log::{info, warn};
 
 use std::cell::RefCell;
 
@@ -15,7 +15,7 @@ use codespan_reporting::{
     term::{emit, termcolor::WriteColor, Config},
 };
 use itertools::Itertools;
-use num::{BigUint, Num};
+use num::{BigUint, Num, ToPrimitive};
 
 use bytecode_source_map::source_map::SourceMap;
 use move_core_types::{account_address::AccountAddress, language_storage, value::MoveValue};
@@ -56,6 +56,10 @@ pub const SCRIPT_BYTECODE_FUN_NAME: &str = "<SELF>";
 /// Pragma indicating whether verification should be performed for a function.
 pub const VERIFY_PRAGMA: &str = "verify";
 
+/// Pragma indicating an estimate how long verification takes. Verification
+/// is skipped if the timeout is smaller than this.
+pub const VERIFY_DURATION_ESTIMATE: &str = "verify_duration_estimate";
+
 /// Pragma indicating whether implementation of function should be ignored and
 /// instead treated to be like a native function.
 pub const INTRINSIC_PRAGMA: &str = "intrinsic";
@@ -83,6 +87,14 @@ pub const ADDITION_OVERFLOW_UNCHECKED_PRAGMA: &str = "addition_overflow_unchecke
 
 /// Pragma indicating that aborts from this function shall be ignored.
 pub const ASSUME_NO_ABORT_FROM_HERE_PRAGMA: &str = "assume_no_abort_from_here";
+
+/// Internal property attached to conditions if they are injected via an apply or a module
+/// invariant.
+pub const CONDITION_INJECTED_PROP: &str = "$injected";
+
+/// Property which can be attached to conditions to make them exported into the VC context
+/// even if they are injected.
+pub const CONDITION_EXPORT: &str = "export";
 
 // =================================================================================================
 /// # Locations
@@ -856,6 +868,24 @@ impl GlobalEnv {
             .borrow()
             .iter()
             .for_each(|(l, i)| f(l, i))
+    }
+
+    /// Returns true if the boolean property is true.
+    pub fn is_property_true(&self, properties: &PropertyBag, name: &str) -> Option<bool> {
+        let sym = &self.symbol_pool().make(name);
+        if let Some(Value::Bool(b)) = properties.get(sym) {
+            return Some(*b);
+        }
+        None
+    }
+
+    /// Returns the value of a number property.
+    pub fn get_num_property(&self, properties: &PropertyBag, name: &str) -> Option<usize> {
+        let sym = &self.symbol_pool().make(name);
+        if let Some(Value::Number(n)) = properties.get(sym) {
+            return n.to_usize();
+        }
+        None
     }
 }
 
@@ -1691,12 +1721,12 @@ impl<'env> FunctionEnv<'env> {
     /// pragma in this function, then the enclosing module, and finally uses the provided default.
     /// value
     pub fn is_pragma_true(&self, name: &str, default: impl FnOnce() -> bool) -> bool {
-        let name = &self.symbol_pool().make(name);
-        if let Some(Value::Bool(b)) = self.get_spec().properties.get(name) {
-            return *b;
+        let env = self.module_env.env;
+        if let Some(b) = env.is_property_true(&self.get_spec().properties, name) {
+            return b;
         }
-        if let Some(Value::Bool(b)) = self.module_env.get_spec().properties.get(name) {
-            return *b;
+        if let Some(b) = env.is_property_true(&self.module_env.get_spec().properties, name) {
+            return b;
         }
         default()
     }

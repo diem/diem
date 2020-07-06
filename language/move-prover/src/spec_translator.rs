@@ -28,7 +28,7 @@ use spec_lang::{
     emit, emitln,
     env::{
         ConditionInfo, GlobalEnv, SpecVarId, ABORTS_IF_IS_PARTIAL_PRAGMA,
-        ABORTS_IF_IS_STRICT_PRAGMA, REQUIRES_IF_ABORTS,
+        ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_EXPORT, CONDITION_INJECTED_PROP, REQUIRES_IF_ABORTS,
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
@@ -65,6 +65,43 @@ impl<'env> Into<SpecEnv<'env>> for StructEnv<'env> {
 impl<'env> Into<SpecEnv<'env>> for ModuleEnv<'env> {
     fn into(self) -> SpecEnv<'env> {
         SpecEnv::Module(self)
+    }
+}
+
+/// Different kinds of function entry points.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FunctionEntryPoint {
+    /// Definition without pre/post conditions. Used by the others below.
+    /// Functions called from here use the Indirect stub.
+    Definition,
+    /// Definition without pre/post condition for verification. Differs from the
+    /// above in that DirectInter/IntraModule is used for called functions.
+    VerificationDefinition,
+    /// Inlined or opaque stub for calls to this function from the currently verified function,
+    /// if this function is in another module. Preconditions are asserted for such calls as long as
+    /// they do not stem from injected conditions (module invariants) or are exported.
+    DirectInterModule,
+    /// Inlined or opaque stub for calls to this function from the currently verified function,
+    /// if this function is in the same module. Asserts all preconditions, explicit or injected.
+    DirectIntraModule,
+    /// Stub for indirect calls, that is functions which are called from functions which are
+    /// not subject of verification.
+    Indirect,
+    /// Variant used for verification.
+    Verification,
+}
+
+impl FunctionEntryPoint {
+    pub fn suffix(self) -> &'static str {
+        use FunctionEntryPoint::*;
+        match self {
+            Definition => "_$def",
+            VerificationDefinition => "_$def_verify",
+            DirectInterModule => "_$direct_inter",
+            DirectIntraModule => "_$direct_intra",
+            Indirect => "",
+            Verification => "_$verify",
+        }
     }
 }
 
@@ -161,12 +198,6 @@ impl<'env> SpecTranslator<'env> {
             type_args_opt: None,
             traced_items: Default::default(),
         }
-    }
-
-    /// Sets type arguments in which context this translator works.
-    pub fn set_type_args(mut self, type_args: Vec<Type>) -> Self {
-        self.type_args_opt = Some(type_args);
-        self
     }
 
     /// Emits a translation error.
@@ -387,30 +418,35 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    /// Generates boogie for pre/post conditions.
-    pub fn translate_conditions(&self, free_ensures: bool) {
-        // Generate pre-conditions
-        // For this transaction to be executed, it MUST have had
-        // a valid signature for the sender's account. Therefore,
-        // the senders account resource (which contains the pubkey)
-        // must have existed! So we can assume txn_sender account
-        // exists in pre-condition.
+    /// Generates boogie for pre/post conditions. Conditions are generated depending on
+    /// the kind of entry point.
+    /// Note: since `free requires` seems to be broken with inlined functions in Boogie,
+    /// we do not deal with them in this function but instead in
+    /// `translate_free_requires_conditions`.
+    pub fn translate_conditions(&self, for_entry_point: FunctionEntryPoint, opaque: bool) {
+        use FunctionEntryPoint::*;
+        assert!(!matches!(
+            for_entry_point,
+            Definition | VerificationDefinition
+        ));
         let func_target = self.function_target();
         let spec = func_target.get_spec();
-        let ensures_mod = if free_ensures { "free " } else { "" };
 
         // Get all aborts_if conditions.
-        let aborts_if = spec.filter_kind(ConditionKind::AbortsIf).collect_vec();
+        let aborts_if = self.filter_conditions(
+            for_entry_point,
+            opaque,
+            &[ConditionKind::AbortsIf],
+            &spec.conditions,
+        );
 
         // Generate requires.
-        let requires = spec
-            .filter(|c| {
-                matches!(
-                    c.kind,
-                    ConditionKind::Requires | ConditionKind::RequiresModule
-                )
-            })
-            .collect_vec();
+        let requires = self.filter_conditions(
+            for_entry_point,
+            opaque,
+            &[ConditionKind::Requires, ConditionKind::RequiresModule],
+            &spec.conditions,
+        );
         if !requires.is_empty() {
             // Each requires condition is or-ed with the aborts condition (unless pragma
             // `requires_if_aborts` is true). That is, the requires only needs to hold if the
@@ -442,11 +478,12 @@ impl<'env> SpecTranslator<'env> {
         if aborts_if.is_empty() {
             if !aborts_if_is_partial
                 && func_target.is_pragma_true(ABORTS_IF_IS_STRICT_PRAGMA, || false)
+                && for_entry_point == Verification
             {
                 // No user provided aborts_if and pragma is set for handling this
                 // as s.t. the function must never abort.
                 self.writer.set_location(&func_target.get_loc());
-                emitln!(self.writer, "{}ensures !$abort_flag;", ensures_mod);
+                emitln!(self.writer, "ensures !$abort_flag;");
             }
         } else {
             // Emit `ensures P1 ==> abort_flag; ... ensures PN ==> abort_flag;`. This gives us
@@ -455,7 +492,7 @@ impl<'env> SpecTranslator<'env> {
             for c in &aborts_if {
                 self.writer.set_location(&c.loc);
                 self.set_condition_info(&c.loc, ABORTS_IF_FAILS_MESSAGE, false);
-                emit!(self.writer, "{}ensures b#$Boolean(old(", ensures_mod);
+                emit!(self.writer, "ensures b#$Boolean(old(");
                 self.translate_exp(&c.exp);
                 emitln!(self.writer, ")) ==> $abort_flag;")
             }
@@ -467,7 +504,7 @@ impl<'env> SpecTranslator<'env> {
             // because reporting on (non-covering) aborts_if conditions is misleading.
             if !aborts_if_is_partial {
                 self.writer.set_location(&func_target.get_loc());
-                emit!(self.writer, "{}ensures $abort_flag ==> (", ensures_mod);
+                emit!(self.writer, "ensures $abort_flag ==> (");
                 self.translate_seq(aborts_if.iter(), "\n    || ", |c| {
                     emit!(self.writer, "b#$Boolean(old(");
                     self.translate_exp_parenthesised(&c.exp);
@@ -479,33 +516,144 @@ impl<'env> SpecTranslator<'env> {
 
         // Generate succeeds_if.
         // Emits `ensures S1 ==> !abort_flag; ... ensures Sn ==> !abort_flag;`.
-        let succeeds_if = spec.filter_kind(ConditionKind::SucceedsIf).collect_vec();
+        let succeeds_if = self.filter_conditions(
+            for_entry_point,
+            opaque,
+            &[ConditionKind::SucceedsIf],
+            &spec.conditions,
+        );
         for c in succeeds_if {
             self.writer.set_location(&c.loc);
             self.set_condition_info(&c.loc, SUCCEEDS_IF_FAILS_MESSAGE, false);
-            emit!(self.writer, "{}ensures b#$Boolean(old(", ensures_mod);
+            emit!(self.writer, "ensures b#$Boolean(old(");
             self.translate_exp(&c.exp);
             emitln!(self.writer, ")) ==> !$abort_flag;")
         }
 
         // Generate ensures
-        let ensures = spec.filter_kind(ConditionKind::Ensures).collect_vec();
+        let ensures = self.filter_conditions(
+            for_entry_point,
+            opaque,
+            &[ConditionKind::Ensures],
+            &spec.conditions,
+        );
         if !ensures.is_empty() {
             *self.in_ensures.borrow_mut() = true;
             self.translate_seq(ensures.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
                 self.set_condition_info(&cond.loc, ENSURES_FAILS_MESSAGE, false);
-                emit!(
-                    self.writer,
-                    "{}ensures !$abort_flag ==> (b#$Boolean(",
-                    ensures_mod
-                );
+                emit!(self.writer, "ensures !$abort_flag ==> (b#$Boolean(");
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, "));")
             });
             *self.in_ensures.borrow_mut() = false;
             emitln!(self.writer);
         }
+    }
+
+    /// Generates assumptions to make at function entry points.
+    pub fn translate_entry_point_assumptions(&self, for_entry_point: FunctionEntryPoint) {
+        use FunctionEntryPoint::*;
+        assert!(!matches!(
+            for_entry_point,
+            Definition | VerificationDefinition
+        ));
+        let func_target = self.function_target();
+        if for_entry_point == Verification {
+            // Generate assumes for top-level verification entry
+            // (a) init prelude specific stuff.
+            emitln!(self.writer, "call $InitVerification();");
+
+            // (b) assume implicit preconditions.
+            self.assume_preconditions();
+
+            // (c) assume reference parameters to be based on the Param(i) Location, ensuring
+            // they are disjoint from all other references. This prevents aliasing and is justified as
+            // follows:
+            // - for mutual references, by their exclusive access in Move.
+            // - for immutable references, by that mutation is not possible, and they are equivalent
+            //   to some given but arbitrary value.
+            for i in 0..func_target.get_parameter_count() {
+                let ty = func_target.get_local_type(i);
+                if ty.is_reference() {
+                    let name = func_target
+                        .symbol_pool()
+                        .string(func_target.get_local_name(i));
+                    emitln!(
+                        self.writer,
+                        "assume l#$Reference({}) == $Param({});",
+                        name,
+                        i
+                    );
+                    emitln!(
+                        self.writer,
+                        "assume size#Path(p#$Reference({})) == 0;",
+                        name
+                    );
+                }
+            }
+        }
+    }
+
+    /// A helper for filtering conditions based on function entry point and whether the
+    /// function is opaque or not.
+    fn filter_conditions<'c>(
+        &self,
+        entry_point: FunctionEntryPoint,
+        opaque: bool,
+        kinds: &[ConditionKind],
+        conditions: &'c [Condition],
+    ) -> Vec<&'c Condition> {
+        use ConditionKind::*;
+        use FunctionEntryPoint::*;
+        conditions
+            .iter()
+            .filter(|cond| {
+                if !kinds.contains(&cond.kind) {
+                    return false;
+                }
+                match entry_point {
+                    DirectIntraModule => {
+                        // For intra-module calls, all Requires and RequiresModule are visible.
+                        // Ensures are only visible if the function is opaque.
+                        match &cond.kind {
+                            Requires | RequiresModule => true,
+                            Ensures | AbortsIf | SucceedsIf => opaque,
+                            _ => false,
+                        }
+                    }
+                    DirectInterModule => {
+                        // For inter-module calls, all exported Requires are visible. Ensures are
+                        // only visible if the function is opaque and the condition is exported
+                        match &cond.kind {
+                            Requires => self.is_exported(cond),
+                            Ensures | AbortsIf | SucceedsIf => opaque && self.is_exported(cond),
+                            _ => false,
+                        }
+                    }
+                    Indirect => match &cond.kind {
+                        // For indirect calls, only ensures is visible if the condition is
+                        // opaque and exported.
+                        Ensures | AbortsIf | SucceedsIf => opaque && self.is_exported(cond),
+                        _ => false,
+                    },
+                    Verification => true,
+                    _ => false,
+                }
+            })
+            .collect_vec()
+    }
+
+    /// Returns true if the condition is visible between modules. A condition is visible if
+    /// it either is not injected (by apply or a module invariant), or if its marked as
+    /// exported.
+    fn is_exported(&self, cond: &Condition) -> bool {
+        let env = self.module_env().env;
+        !env.is_property_true(&cond.properties, CONDITION_INJECTED_PROP)
+            .unwrap_or(false)
+            || env
+                .is_property_true(&cond.properties, CONDITION_EXPORT)
+                .unwrap_or(false)
     }
 
     /// Sets info for verification condition so it can be later retrieved by the boogie wrapper.
@@ -556,27 +704,6 @@ impl<'env> SpecTranslator<'env> {
                 emit!(self.writer, ");")
             });
             emitln!(self.writer);
-        }
-    }
-
-    /// Assume module requires of a function. This is used when the function is called from
-    /// outside of a module.
-    pub fn assume_module_preconditions(&self) {
-        let func_target = self.function_target();
-        if func_target.is_public() {
-            let requires = func_target
-                .get_spec()
-                .filter(|c| matches!(c.kind, ConditionKind::RequiresModule))
-                .collect_vec();
-            if !requires.is_empty() {
-                self.translate_seq(requires.iter(), "\n", |cond| {
-                    self.writer.set_location(&cond.loc);
-                    emit!(self.writer, "assume b#$Boolean(");
-                    self.translate_exp(&cond.exp);
-                    emit!(self.writer, ");")
-                });
-                emitln!(self.writer);
-            }
         }
     }
 }
