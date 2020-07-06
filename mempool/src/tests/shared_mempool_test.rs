@@ -26,6 +26,7 @@ use libra_config::{
 };
 use libra_network_address::NetworkAddress;
 use libra_types::{transaction::SignedTransaction, PeerId};
+use netcore::transport::ConnectionOrigin;
 use network::{
     peer_manager::{
         conn_notifs_channel, ConnectionNotification, ConnectionRequestSender,
@@ -275,6 +276,7 @@ impl SharedMempoolNetwork {
         let notif = ConnectionNotification::NewPeer(
             *new_peer,
             NetworkAddress::mock(),
+            ConnectionOrigin::Inbound,
             NetworkContext::mock(),
         );
         self.send_connection_event(reciever, notif)
@@ -284,6 +286,7 @@ impl SharedMempoolNetwork {
         let notif = ConnectionNotification::LostPeer(
             *lost_peer,
             NetworkAddress::mock(),
+            ConnectionOrigin::Inbound,
             DisconnectReason::ConnectionLost,
         );
         self.send_connection_event(reciever, notif)
@@ -759,14 +762,7 @@ fn test_fn_failover() {
     smp.assert_no_message_sent(&fn_0_fallback_network_id);
 
     // bring v down
-    smp.send_connection_event(
-        &fn_0,
-        ConnectionNotification::LostPeer(
-            v_0,
-            NetworkAddress::mock(),
-            DisconnectReason::ConnectionLost,
-        ),
-    );
+    smp.send_lost_peer_event(&fn_0, &v_0);
 
     // add txn to fn_0
     smp.add_txns(&fn_0, vec![TestTransaction::new(1, 1, 1)]);
@@ -794,14 +790,7 @@ fn test_fn_failover() {
     smp.assert_no_message_sent(&fn_0);
 
     // bring down fallback peer
-    smp.send_connection_event(
-        &fn_0_fallback_network_id,
-        ConnectionNotification::LostPeer(
-            first_fallback_recipient,
-            NetworkAddress::mock(),
-            DisconnectReason::ConnectionLost,
-        ),
-    );
+    smp.send_lost_peer_event(&fn_0_fallback_network_id, &first_fallback_recipient);
 
     // add txn
     smp.add_txns(&fn_0, vec![TestTransaction::new(1, 4, 1)]);

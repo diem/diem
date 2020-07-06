@@ -250,13 +250,13 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                     match network_event {
                         Ok(event) => {
                             match event {
-                                Event::NewPeer(peer_id) => {
+                                Event::NewPeer(peer_id, _origin) => {
                                     let peer = PeerNetworkId(network_id, peer_id);
                                     debug!("[state sync] new peer {:?}", peer);
                                     self.peer_manager.enable_peer(peer);
                                     self.check_progress();
                                 }
-                                Event::LostPeer(peer_id) => {
+                                Event::LostPeer(peer_id, _origin) => {
                                     let peer = PeerNetworkId(network_id, peer_id);
                                     debug!("[state sync] lost peer {:?}", peer);
                                     self.peer_manager.disable_peer(&peer);

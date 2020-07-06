@@ -94,7 +94,7 @@ pub(crate) async fn coordinator<V>(
                 match event {
                     Ok(network_event) => {
                         match network_event {
-                            Event::NewPeer(peer_id) => {
+                            Event::NewPeer(peer_id, _origin) => {
                                 counters::SHARED_MEMPOOL_EVENTS
                                     .with_label_values(&["new_peer".to_string().deref()])
                                     .inc();
@@ -105,7 +105,7 @@ pub(crate) async fn coordinator<V>(
                                     tasks::execute_broadcast(peer, false, &mut smp, &mut scheduled_broadcasts, executor.clone());
                                 }
                             }
-                            Event::LostPeer(peer_id) => {
+                            Event::LostPeer(peer_id, _origin) => {
                                 counters::SHARED_MEMPOOL_EVENTS
                                     .with_label_values(&["lost_peer".to_string().deref()])
                                     .inc();

@@ -276,10 +276,10 @@ impl NetworkTask {
                         continue;
                     }
                 },
-                Event::NewPeer(peer_id) => {
+                Event::NewPeer(peer_id, _origin) => {
                     debug!("Peer {} connected", peer_id);
                 }
-                Event::LostPeer(peer_id) => {
+                Event::LostPeer(peer_id, _origin) => {
                     debug!("Peer {} disconnected", peer_id);
                 }
             }

@@ -27,18 +27,25 @@ mod test {
     use futures::{executor::block_on, future::FutureExt, stream::StreamExt};
     use libra_config::network_id::NetworkContext;
     use libra_network_address::NetworkAddress;
+    use netcore::transport::ConnectionOrigin;
 
     fn send_new_peer(sender: &mut Sender, peer_id: PeerId) {
         let notif = ConnectionNotification::NewPeer(
             peer_id,
             NetworkAddress::mock(),
+            ConnectionOrigin::Inbound,
             NetworkContext::mock(),
         );
         sender.push(peer_id, notif).unwrap()
     }
 
     fn send_lost_peer(sender: &mut Sender, peer_id: PeerId, reason: DisconnectReason) {
-        let notif = ConnectionNotification::LostPeer(peer_id, NetworkAddress::mock(), reason);
+        let notif = ConnectionNotification::LostPeer(
+            peer_id,
+            NetworkAddress::mock(),
+            ConnectionOrigin::Inbound,
+            reason,
+        );
         sender.push(peer_id, notif).unwrap()
     }
 
@@ -57,6 +64,7 @@ mod test {
             let notif = ConnectionNotification::LostPeer(
                 peer_id_a,
                 NetworkAddress::mock(),
+                ConnectionOrigin::Inbound,
                 DisconnectReason::Requested,
             );
             assert_eq!(receiver.select_next_some().await, notif,);

@@ -21,6 +21,7 @@ use futures::{
 };
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
+use netcore::transport::ConnectionOrigin;
 use pin_project::pin_project;
 use serde::{de::DeserializeOwned, Serialize};
 use std::{marker::PhantomData, pin::Pin, time::Duration};
@@ -46,9 +47,9 @@ pub enum Event<TMessage> {
     /// layer will handle sending the response over-the-wire.
     RpcRequest((PeerId, TMessage, oneshot::Sender<Result<Bytes, RpcError>>)),
     /// Peer which we have a newly established connection with.
-    NewPeer(PeerId),
+    NewPeer(PeerId, ConnectionOrigin),
     /// Peer with which we've lost our connection.
-    LostPeer(PeerId),
+    LostPeer(PeerId, ConnectionOrigin),
 }
 
 /// impl PartialEq for simpler testing
@@ -61,8 +62,10 @@ impl<TMessage: PartialEq> PartialEq for Event<TMessage> {
             (RpcRequest((pid1, msg1, _)), RpcRequest((pid2, msg2, _))) => {
                 pid1 == pid2 && msg1 == msg2
             }
-            (NewPeer(pid1), NewPeer(pid2)) => pid1 == pid2,
-            (LostPeer(pid1), LostPeer(pid2)) => pid1 == pid2,
+            (NewPeer(pid1, origin1), NewPeer(pid2, origin2)) => pid1 == pid2 && origin1 == origin2,
+            (LostPeer(pid1, origin1), LostPeer(pid2, origin2)) => {
+                pid1 == pid2 && origin1 == origin2
+            }
             _ => false,
         }
     }
@@ -149,8 +152,12 @@ fn control_msg_to_event<TMessage>(
     notif: ConnectionNotification,
 ) -> Result<Event<TMessage>, NetworkError> {
     match notif {
-        ConnectionNotification::NewPeer(peer_id, _addr, _context) => Ok(Event::NewPeer(peer_id)),
-        ConnectionNotification::LostPeer(peer_id, _addr, _reason) => Ok(Event::LostPeer(peer_id)),
+        ConnectionNotification::NewPeer(peer_id, _addr, origin, _context) => {
+            Ok(Event::NewPeer(peer_id, origin))
+        }
+        ConnectionNotification::LostPeer(peer_id, _addr, origin, _reason) => {
+            Ok(Event::LostPeer(peer_id, origin))
+        }
     }
 }
 

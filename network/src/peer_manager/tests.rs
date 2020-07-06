@@ -586,7 +586,7 @@ fn test_dial_disconnect() {
         let conn_notif = conn_status_rx.next().await.unwrap();
         assert!(matches!(
             conn_notif,
-            ConnectionNotification::NewPeer(_, _, _)
+            ConnectionNotification::NewPeer(_, _, _, _)
         ));
 
         // Send DisconnectPeer request to PeerManager.
@@ -616,7 +616,7 @@ fn test_dial_disconnect() {
         let conn_notif = conn_status_rx.next().await.unwrap();
         assert!(matches!(
             conn_notif,
-            ConnectionNotification::LostPeer(_, _, _)
+            ConnectionNotification::LostPeer(_, _, _, _)
         ));
 
         // Sender of disconnect request should receive acknowledgement once connection is closed.

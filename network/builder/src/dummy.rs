@@ -11,6 +11,7 @@ use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
+use netcore::transport::ConnectionOrigin;
 use network::{
     constants::NETWORK_CHANNEL_SIZE,
     error::NetworkError,
@@ -178,9 +179,15 @@ pub fn setup_network() -> DummyNetwork {
 
     // Wait for establishing connection
     let first_dialer_event = block_on(dialer_events.next()).unwrap().unwrap();
-    assert_eq!(first_dialer_event, Event::NewPeer(listener_peer_id));
+    assert_eq!(
+        first_dialer_event,
+        Event::NewPeer(listener_peer_id, ConnectionOrigin::Outbound)
+    );
     let first_listener_event = block_on(listener_events.next()).unwrap().unwrap();
-    assert_eq!(first_listener_event, Event::NewPeer(dialer_peer_id));
+    assert_eq!(
+        first_listener_event,
+        Event::NewPeer(dialer_peer_id, ConnectionOrigin::Inbound)
+    );
 
     DummyNetwork {
         runtime,

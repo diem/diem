@@ -13,6 +13,7 @@ use libra_config::{config::RoleType, network_id::NetworkId};
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use libra_logger::info;
 use libra_network_address::NetworkAddress;
+use netcore::transport::ConnectionOrigin;
 use rand::rngs::StdRng;
 use std::{io, num::NonZeroUsize};
 use tokio::runtime::Runtime;
@@ -118,6 +119,7 @@ async fn send_new_peer_await_delivery(
     let notif = peer_manager::ConnectionNotification::NewPeer(
         notif_peer_id,
         address,
+        ConnectionOrigin::Inbound,
         NetworkContext::mock(),
     );
     send_notification_await_delivery(connection_notifs_tx, peer_id, notif).await;
@@ -130,7 +132,12 @@ async fn send_lost_peer_await_delivery(
     address: NetworkAddress,
     reason: DisconnectReason,
 ) {
-    let notif = peer_manager::ConnectionNotification::LostPeer(notif_peer_id, address, reason);
+    let notif = peer_manager::ConnectionNotification::LostPeer(
+        notif_peer_id,
+        address,
+        ConnectionOrigin::Inbound,
+        reason,
+    );
     send_notification_await_delivery(connection_notifs_tx, peer_id, notif).await;
 }
 
