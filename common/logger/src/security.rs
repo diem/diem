@@ -26,16 +26,10 @@ pub fn security_log(name: &'static str) -> StructuredLogEntry {
 
 /// Security events that are possible
 pub mod security_events {
-    // JSON-RPC server
-    // ---------------
-
-    /// Admission Control received a transaction with an invalid signature
-    pub const INVALID_TRANSACTION_AC: &str = "InvalidTransactionAC";
-
     // Mempool
     // -------
 
-    /// Mempool received a transaction with an invalid signature
+    /// Mempool received a transaction from another peer with an invalid signature
     pub const INVALID_TRANSACTION_MP: &str = "InvalidTransactionMP";
 
     /// Mempool received an invalid network event

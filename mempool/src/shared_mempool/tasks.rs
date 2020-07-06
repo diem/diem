@@ -236,8 +236,29 @@ pub(crate) async fn process_transaction_broadcast<V>(
 ) where
     V: TransactionValidation,
 {
-    let results = process_incoming_transactions(&smp, transactions, timeline_state).await;
+    // process transactions and log the result
+    let results = process_incoming_transactions(&smp, transactions.clone(), timeline_state).await;
     log_txn_process_results(&results, Some(peer.peer_id()));
+
+    // we assume that the results contains a vec of the same length of transactions
+    debug_assert_eq!(results.len(), transactions.len());
+
+    // security log all the failed transactions
+    let failed_transactions = results
+        .iter()
+        // create iterator of tuple (VM status, transaction)
+        .map(|(_, maybe_vm_status)| maybe_vm_status)
+        .zip(transactions.iter())
+        // VM status will be set if the transaction failed
+        .filter(|(maybe_vm_status, _)| maybe_vm_status.is_some());
+
+    for (maybe_vm_status, failed_transaction) in failed_transactions {
+        send_struct_log!(security_log(security_events::INVALID_TRANSACTION_MP)
+            .data("failed_transaction", &failed_transaction)
+            .data("vm_status", &maybe_vm_status)
+            .data("from_peer", &peer));
+    }
+
     // send back ACK
     let ack_response = gen_ack_response(request_id, results);
     let mut network_sender = smp
