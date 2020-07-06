@@ -30,7 +30,6 @@ sha2 = "0.9.1"
 static_assertions = "1.1.0"
 thiserror = "1.0.20"
 tiny-keccak = { version = "2.0.2", features = ["sha3"] }
-sha3 = "0.9.1"
 x25519-dalek = { git = "https://github.com/calibra/x25519-dalek.git", branch = "fiat2", default-features = false }
 aes-gcm = "0.6.0"
 libra-crypto-derive = { path = "../crypto-derive", version = "0.1.0" }

@@ -20,6 +20,7 @@ use anyhow::Result;
 use byteorder::{ByteOrder, LittleEndian};
 use hmac::Hmac;
 use libra_crypto::{
+    compat::Sha3_256,
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     hash::HashValue,
     hkdf::Hkdf,
@@ -29,7 +30,6 @@ use libra_types::{account_address::AccountAddress, transaction::authenticator::A
 use mirai_annotations::*;
 use pbkdf2::pbkdf2;
 use serde::{Deserialize, Serialize};
-use sha3::Sha3_256;
 use std::{convert::TryFrom, ops::AddAssign};
 
 /// Master is a set of raw bytes that are used for child key derivation
