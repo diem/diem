@@ -23,7 +23,6 @@ pub struct AccountResource {
     received_events: EventHandle,
     sent_events: EventHandle,
     sequence_number: u64,
-    is_frozen: bool,
 }
 
 impl AccountResource {
@@ -35,7 +34,6 @@ impl AccountResource {
         key_rotation_capability: Option<KeyRotationCapabilityResource>,
         sent_events: EventHandle,
         received_events: EventHandle,
-        is_frozen: bool,
     ) -> Self {
         AccountResource {
             sequence_number,
@@ -44,7 +42,6 @@ impl AccountResource {
             authentication_key,
             sent_events,
             received_events,
-            is_frozen,
         }
     }
 
@@ -76,11 +73,6 @@ impl AccountResource {
     /// Return the received_events handle for the given AccountResource
     pub fn received_events(&self) -> &EventHandle {
         &self.received_events
-    }
-
-    /// Return the the is_frozen flag for the given AccountResource
-    pub fn is_frozen(&self) -> bool {
-        self.is_frozen
     }
 }
 

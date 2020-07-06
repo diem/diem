@@ -23,6 +23,7 @@ module LibraAccount {
     use 0x1::Libra::{Self, Libra};
     use 0x1::Option::{Self, Option};
     use 0x1::DualAttestationLimit;
+    use 0x1::AccountFreezing;
     use 0x1::Roles;
 
     resource struct PublishModule {}
@@ -51,8 +52,6 @@ module LibraAccount {
         /// The current sequence number.
         /// Incremented by one each time a transaction is submitted
         sequence_number: u64,
-        /// If true, the account cannot be used to send transactions or receive funds
-        is_frozen: bool,
     }
 
     /// A resource that holds the coins stored in this account
@@ -78,8 +77,6 @@ module LibraAccount {
     /// and to record freeze/unfreeze events.
     resource struct AccountOperationsCapability {
         limits_cap: AccountLimits::CallingCapability,
-        freeze_event_handle: EventHandle<FreezeAccountEvent>,
-        unfreeze_event_handle: EventHandle<UnfreezeAccountEvent>,
     }
 
     /// Message for sent events
@@ -106,26 +103,6 @@ module LibraAccount {
         metadata: vector<u8>,
     }
 
-    /// A privilege to allow the freezing of accounts.
-    struct FreezingPrivilege { }
-
-    /// Message for freeze account events
-    struct FreezeAccountEvent {
-        /// The address that initiated freeze txn
-        initiator_address: address,
-        /// The address that was frozen
-        frozen_address: address,
-    }
-
-    /// Message for unfreeze account events
-    struct UnfreezeAccountEvent {
-        /// The address that initiated unfreeze txn
-        initiator_address: address,
-        /// The address that was unfrozen
-        unfrozen_address: address,
-    }
-
-
     const ENOT_GENESIS: u64 = 0;
     const EINVALID_SINGLETON_ADDRESS: u64 = 1;
     const ECOIN_DEPOSIT_IS_ZERO: u64 = 2;
@@ -140,10 +117,8 @@ module LibraAccount {
     const ENOT_LIBRA_ROOT: u64 = 11;
     const EACCOUNT_ALREADY_EXISTS: u64 = 12;
     const EPARENT_VASP_CURRENCY_LIMITS_DNE: u64 = 13;
-    const ENOT_TREASURY_COMPLIANCE: u64 = 14;
-    const EACCOUNT_CANNOT_BE_FROZEN: u64 = 15;
-    const ENOT_A_CURRENCY: u64 = 16;
-    const EADD_EXISTING_CURRENCY: u64 = 17;
+    const ENOT_A_CURRENCY: u64 = 14;
+    const EADD_EXISTING_CURRENCY: u64 = 15;
 
     /// Prologue errors. These are separated out from the other errors in this
     /// module since they are mapped separately to major VM statuses, and are
@@ -181,8 +156,6 @@ module LibraAccount {
             lr_account,
             AccountOperationsCapability {
                 limits_cap,
-                freeze_event_handle: Event::new_event_handle(lr_account),
-                unfreeze_event_handle: Event::new_event_handle(lr_account),
             }
         );
     }
@@ -669,9 +642,9 @@ module LibraAccount {
                 received_events: Event::new_event_handle<ReceivedPaymentEvent>(&new_account),
                 sent_events: Event::new_event_handle<SentPaymentEvent>(&new_account),
                 sequence_number: 0,
-                is_frozen: false,
             }
         );
+        AccountFreezing::create(&new_account);
 
         // (2) TODO: publish account limits?
         destroy_signer(new_account);
@@ -904,63 +877,6 @@ module LibraAccount {
         exists<LibraAccount>(check_addr)
     }
 
-    ///////////////////////////////////////////////////////////////////////////
-    // Freezing
-    ///////////////////////////////////////////////////////////////////////////
-
-    /// Freeze the account at `addr`.
-    public fun freeze_account(
-        account: &signer,
-        frozen_address: address,
-    )
-    acquires LibraAccount, AccountOperationsCapability {
-        assert(Roles::has_treasury_compliance_role(account), ENOT_TREASURY_COMPLIANCE);
-        let initiator_address = Signer::address_of(account);
-        // The libra root and TC accounts cannot be frozen
-        assert(frozen_address != CoreAddresses::LIBRA_ROOT_ADDRESS(), EACCOUNT_CANNOT_BE_FROZEN);
-        assert(frozen_address != CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), EACCOUNT_CANNOT_BE_FROZEN);
-        borrow_global_mut<LibraAccount>(frozen_address).is_frozen = true;
-        Event::emit_event<FreezeAccountEvent>(
-            &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).freeze_event_handle,
-            FreezeAccountEvent {
-                initiator_address,
-                frozen_address
-            },
-        );
-    }
-    spec fun freeze_account {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
-    }
-
-    /// Unfreeze the account at `addr`.
-    public fun unfreeze_account(
-        account: &signer,
-        unfrozen_address: address,
-    )
-    acquires LibraAccount, AccountOperationsCapability {
-        assert(Roles::has_treasury_compliance_role(account), ENOT_TREASURY_COMPLIANCE);
-        let initiator_address = Signer::address_of(account);
-        borrow_global_mut<LibraAccount>(unfrozen_address).is_frozen = false;
-        Event::emit_event<UnfreezeAccountEvent>(
-            &mut borrow_global_mut<AccountOperationsCapability>(CoreAddresses::LIBRA_ROOT_ADDRESS()).unfreeze_event_handle,
-            UnfreezeAccountEvent {
-                initiator_address,
-                unfrozen_address
-            },
-        );
-    }
-    spec fun unfreeze_account {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
-    }
-
-    /// Returns if the account at `addr` is frozen.
-    public fun account_is_frozen(addr: address): bool
-    acquires LibraAccount {
-        borrow_global<LibraAccount>(addr).is_frozen
-     }
-
     /// The prologue is invoked at the beginning of every transaction
     /// It verifies:
     /// - The account's auth key matches the transaction's public key
@@ -976,11 +892,14 @@ module LibraAccount {
     ) acquires LibraAccount, Balance {
         let transaction_sender = Signer::address_of(sender);
 
-        // FUTURE: Make these error codes sequential
         // Verify that the transaction sender's account exists
         assert(exists_at(transaction_sender), EPROLOGUE_ACCOUNT_DNE);
 
-        assert(!account_is_frozen(transaction_sender), EPROLOGUE_ACCOUNT_FROZEN);
+        // We check whether this account is frozen, and also, if it's a VASP
+        // account if its parent account is frozen. Freezing a parent VASP
+        // account should effectively freeze all child accounts as well.
+        assert(!AccountFreezing::account_is_frozen(transaction_sender), EPROLOGUE_ACCOUNT_FROZEN);
+        assert(!VASP::is_frozen(transaction_sender), EPROLOGUE_ACCOUNT_FROZEN);
 
         // Load the transaction sender's account
         let sender_account = borrow_global_mut<LibraAccount>(transaction_sender);

@@ -20,10 +20,6 @@ use libra_types::{
     transaction::{authenticator::AuthenticationKey, TransactionStatus},
     vm_status::{StatusCode, VMStatus},
 };
-use move_core_types::{
-    identifier::Identifier,
-    language_storage::{StructTag, TypeTag},
-};
 use transaction_builder::*;
 
 #[test]
@@ -31,19 +27,30 @@ fn freeze_unfreeze_account() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_file();
 
-    let account = {
-        let data = AccountData::new(1_000_000, 0);
-        executor.add_account_data(&data);
-        data.into_account()
-    };
+    let account = Account::new();
 
-    let _lbr_ty = TypeTag::Struct(StructTag {
-        address: account_config::CORE_CODE_ADDRESS,
-        module: Identifier::new("LibraAccount").unwrap(),
-        name: Identifier::new("FreezingPrivilege").unwrap(),
-        type_params: vec![],
-    });
+    let mut keygen = KeyGen::from_seed([9u8; 32]);
+    let (_, cpubkey) = keygen.generate_keypair();
+
     let blessed = Account::new_blessed_tc();
+    let assoc = Account::new_association();
+
+    executor.execute_and_apply(
+        assoc
+            .transaction()
+            .script(encode_create_parent_vasp_account_script(
+                account_config::coin1_tag(),
+                *account.address(),
+                account.auth_key_prefix(),
+                vec![],
+                vec![],
+                cpubkey.to_bytes().to_vec(),
+                true,
+            ))
+            .sequence_number(1)
+            .sign(),
+    );
+
     // Execute freeze on account
     executor.execute_and_apply(
         blessed.signed_script_txn(encode_freeze_account_script(3, *account.address()), 0),

@@ -5,7 +5,7 @@ use crate::{
     account_address::AccountAddress,
     account_config::{
         type_tag_for_currency_code, AccountResource, AccountRole, BalanceResource, ChildVASP,
-        ParentVASP, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
+        FreezingBit, ParentVASP, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
     block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
     event::EventHandle,
@@ -59,6 +59,10 @@ impl AccountState {
 
     pub fn get_validator_config_resource(&self) -> Result<Option<ValidatorConfigResource>> {
         self.get_resource(&ValidatorConfigResource::resource_path())
+    }
+
+    pub fn get_freezing_bit(&self) -> Result<Option<FreezingBit>> {
+        self.get_resource(&FreezingBit::resource_path())
     }
 
     pub fn get_account_role(&self) -> Result<Option<AccountRole>> {

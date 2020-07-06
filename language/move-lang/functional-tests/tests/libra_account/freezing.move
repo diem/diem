@@ -4,10 +4,10 @@
 //! new-transaction
 //! sender: bob
 script {
-use 0x1::LibraAccount;
+use 0x1::AccountFreezing;
 // not frozen
 fun main() {
-    assert(!LibraAccount::account_is_frozen({{bob}}), 0);
+    assert(!AccountFreezing::account_is_frozen({{bob}}), 0);
 }
 }
 // check: EXECUTED
@@ -15,10 +15,10 @@ fun main() {
 //! new-transaction
 //! sender: association
 script {
-use 0x1::LibraAccount;
+use 0x1::AccountFreezing;
 // A special association privilege is needed for freezing an account
 fun main(account: &signer) {
-    LibraAccount::freeze_account(account, {{bob}});
+    AccountFreezing::freeze_account(account, {{bob}});
 }
 }
 // check: ABORTED
@@ -27,14 +27,14 @@ fun main(account: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::LibraAccount;
+use 0x1::AccountFreezing;
 // Make sure we can freeze and unfreeze accounts.
 fun main(account: &signer) {
-    LibraAccount::freeze_account(account, {{bob}});
-    assert(LibraAccount::account_is_frozen({{bob}}), 1);
-    LibraAccount::unfreeze_account(account, {{bob}});
-    assert(!LibraAccount::account_is_frozen({{bob}}), 2);
-    LibraAccount::freeze_account(account, {{bob}});
+    AccountFreezing::freeze_account(account, {{bob}});
+    assert(AccountFreezing::account_is_frozen({{bob}}), 1);
+    AccountFreezing::unfreeze_account(account, {{bob}});
+    assert(!AccountFreezing::account_is_frozen({{bob}}), 2);
+    AccountFreezing::freeze_account(account, {{bob}});
 }
 }
 
@@ -53,9 +53,9 @@ fun main() { }
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::LibraAccount::{Self};
+use 0x1::AccountFreezing::{Self};
 fun main(account: &signer) {
-    LibraAccount::unfreeze_account(account, {{bob}});
+    AccountFreezing::unfreeze_account(account, {{bob}});
 }
 }
 // check: UnfreezeAccountEvent
@@ -70,9 +70,9 @@ fun main() { }
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::LibraAccount::{Self};
+use 0x1::AccountFreezing::{Self};
 fun main(account: &signer) {
-    LibraAccount::freeze_account(account, {{association}});
+    AccountFreezing::freeze_account(account, {{association}});
 }
 }
 // check: ABORTED
@@ -116,23 +116,46 @@ fun main(parent_vasp: &signer) {
 //! new-transaction
 //! sender: blessed
 script {
-use 0x1::LibraAccount;
+use 0x1::AccountFreezing;
 // Freezing a child account doesn't freeze the root, freezing the root
 // doesn't freeze the child
 fun main(account: &signer) {
-    LibraAccount::freeze_account(account, 0xAA);
-    assert(LibraAccount::account_is_frozen(0xAA), 3);
-    assert(!LibraAccount::account_is_frozen({{vasp}}), 4);
-    LibraAccount::unfreeze_account(account, 0xAA);
-    assert(!LibraAccount::account_is_frozen(0xAA), 5);
-    LibraAccount::freeze_account(account, {{vasp}});
-    assert(LibraAccount::account_is_frozen({{vasp}}), 6);
-    assert(!LibraAccount::account_is_frozen(0xAA), 7);
-    LibraAccount::unfreeze_account(account, {{vasp}});
-    assert(!LibraAccount::account_is_frozen({{vasp}}), 8);
+    AccountFreezing::freeze_account(account, 0xAA);
+    assert(AccountFreezing::account_is_frozen(0xAA), 3);
+    assert(!AccountFreezing::account_is_frozen({{vasp}}), 4);
+    AccountFreezing::unfreeze_account(account, 0xAA);
+    assert(!AccountFreezing::account_is_frozen(0xAA), 5);
+    AccountFreezing::freeze_account(account, {{vasp}});
+    assert(AccountFreezing::account_is_frozen({{vasp}}), 6);
+    assert(!AccountFreezing::account_is_frozen(0xAA), 7);
+    AccountFreezing::unfreeze_account(account, {{vasp}});
+    assert(!AccountFreezing::account_is_frozen({{vasp}}), 8);
 }
 }
 
 // check: FreezeAccountEvent
 // check: UnfreezeAccountEvent
 // check: EXECUTED
+
+//! new-transaction
+//! sender: blessed
+script {
+use 0x1::AccountFreezing;
+use 0x1::VASP;
+// Freezing a child account doesn't freeze the root, freezing the root
+// freezes the child according to the VASP module.
+fun main(account: &signer) {
+    AccountFreezing::freeze_account(account, {{vasp}});
+    assert(AccountFreezing::account_is_frozen({{vasp}}), 9);
+    assert(!AccountFreezing::account_is_frozen(0xAA), 10);
+    assert(VASP::is_frozen({{vasp}}), 11);
+    assert(VASP::is_frozen(0xAA), 12);
+
+    AccountFreezing::unfreeze_account(account, {{vasp}});
+    AccountFreezing::freeze_account(account, 0xAA);
+    assert(!AccountFreezing::account_is_frozen({{vasp}}), 13);
+    assert(AccountFreezing::account_is_frozen(0xAA), 14);
+    assert(!VASP::is_frozen({{vasp}}), 15);
+    assert(VASP::is_frozen(0xAA), 16);
+}
+}

@@ -467,7 +467,6 @@ mod test {
             None,
             EventHandle::random_handle(100),
             EventHandle::random_handle(100),
-            false,
         )
     }
 

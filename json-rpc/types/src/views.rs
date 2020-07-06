@@ -6,7 +6,7 @@ use libra_crypto::HashValue;
 use libra_types::{
     account_config::{
         AccountResource, AccountRole, BalanceResource, BurnEvent, CancelBurnEvent,
-        CurrencyInfoResource, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent,
+        CurrencyInfoResource, FreezingBit, MintEvent, NewBlockEvent, NewEpochEvent, PreburnEvent,
         ReceivedPaymentEvent, SentPaymentEvent, ToLBRExchangeRateUpdateEvent, UpgradeEvent,
     },
     account_state_blob::AccountStateWithProof,
@@ -79,6 +79,7 @@ impl AccountView {
         account: &AccountResource,
         balances: BTreeMap<Identifier, BalanceResource>,
         account_role: AccountRole,
+        freezing_bit: FreezingBit,
     ) -> Self {
         Self {
             balances: balances
@@ -93,7 +94,7 @@ impl AccountView {
             received_events_key: BytesView::from(account.received_events().key().as_bytes()),
             delegated_key_rotation_capability: account.has_delegated_key_rotation_capability(),
             delegated_withdrawal_capability: account.has_delegated_withdrawal_capability(),
-            is_frozen: account.is_frozen(),
+            is_frozen: freezing_bit.is_frozen(),
             role: AccountRoleView::from(account_role),
         }
     }

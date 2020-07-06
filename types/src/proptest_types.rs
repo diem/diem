@@ -623,7 +623,6 @@ impl AccountResourceGen {
             self.key_rotation_capability,
             account_info.sent_event_handle.clone(),
             account_info.received_event_handle.clone(),
-            false,
         )
     }
 }

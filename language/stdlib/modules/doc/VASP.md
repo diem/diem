@@ -18,6 +18,7 @@
 -  [Function `parent_address`](#0x1_VASP_parent_address)
 -  [Function `is_parent`](#0x1_VASP_is_parent)
 -  [Function `is_child`](#0x1_VASP_is_child)
+-  [Function `is_frozen`](#0x1_VASP_is_frozen)
 -  [Function `is_vasp`](#0x1_VASP_is_vasp)
 -  [Function `is_same_vasp`](#0x1_VASP_is_same_vasp)
 -  [Function `human_name`](#0x1_VASP_human_name)
@@ -507,6 +508,35 @@ Returns true of
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_is_child">is_child</a>(addr: address): bool {
     exists&lt;<a href="#0x1_VASP_ChildVASP">ChildVASP</a>&gt;(addr)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_VASP_is_frozen"></a>
+
+## Function `is_frozen`
+
+A VASP account is frozen if itself is frozen, or if its parent account is frozen.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_is_frozen">is_frozen</a>(addr: address): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_is_frozen">is_frozen</a>(addr: address): bool
+<b>acquires</b> <a href="#0x1_VASP_ChildVASP">ChildVASP</a> {
+    <a href="#0x1_VASP_is_vasp">is_vasp</a>(addr) && (
+        <a href="AccountFreezing.md#0x1_AccountFreezing_account_is_frozen">AccountFreezing::account_is_frozen</a>(<a href="#0x1_VASP_parent_address">parent_address</a>(addr)) ||
+        <a href="AccountFreezing.md#0x1_AccountFreezing_account_is_frozen">AccountFreezing::account_is_frozen</a>(addr)
+    )
 }
 </code></pre>
 
