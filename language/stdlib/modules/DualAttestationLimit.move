@@ -7,7 +7,7 @@ module DualAttestationLimit {
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
     use 0x1::CoreAddresses;
-    use 0x1::Roles::{has_update_dual_attestation_threshold_privilege};
+    use 0x1::Roles;
 
 
     resource struct UpdateDualAttestationThreshold {}
@@ -21,22 +21,23 @@ module DualAttestationLimit {
         cap: LibraConfig::ModifyConfigCapability<Self::DualAttestationLimit>,
     }
 
-    // Will fail if `account` does not have the treasury-compliance role
-    // public fun grant_privileges(account: &signer) {
-    // }
+    const INITIAL_DUAL_ATTESTATION_THRESHOLD: u64 = 1000;
+
+    const ENOT_GENESIS: u64 = 0;
+    const EACCOUNT_NOT_TREASURY_COMPLIANCE: u64 = 1;
+    const ECANNOT_UPDATE_THRESHOLD: u64 = 2;
+    const ETHRESHOLD_TOO_LOW: u64 = 3;
 
     /// Travel rule limit set during genesis
-    ///
-    /// >TODO: add in_genesis assertion here.
     public fun initialize(
         lr_account: &signer,
         tc_account: &signer,
     ) {
-        assert(LibraTimestamp::is_genesis(), 0);
-        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
+        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EACCOUNT_NOT_TREASURY_COMPLIANCE);
         let cap = LibraConfig::publish_new_config_with_capability<DualAttestationLimit>(
             lr_account,
-            DualAttestationLimit { micro_lbr_limit: 1000 * Libra::scaling_factor<LBR>() },
+            DualAttestationLimit { micro_lbr_limit: INITIAL_DUAL_ATTESTATION_THRESHOLD * Libra::scaling_factor<LBR>() },
         );
         move_to(tc_account, ModifyLimitCapability { cap })
     }
@@ -50,12 +51,8 @@ module DualAttestationLimit {
         tc_account: &signer,
         micro_lbr_limit: u64
     ) acquires ModifyLimitCapability {
-        // TODO: abort code
-        assert(has_update_dual_attestation_threshold_privilege(tc_account), 919401);
-        assert(
-            micro_lbr_limit >= 1000,
-            4
-        );
+        assert(Roles::has_update_dual_attestation_threshold_privilege(tc_account), ECANNOT_UPDATE_THRESHOLD);
+        assert(micro_lbr_limit >= 1000, ETHRESHOLD_TOO_LOW);
         let tc_address = Signer::address_of(tc_account);
         let modify_cap = &borrow_global<ModifyLimitCapability>(tc_address).cap;
         LibraConfig::set_with_capability<DualAttestationLimit>(

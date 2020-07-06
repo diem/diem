@@ -380,7 +380,7 @@ fn dual_attestation_payment() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(9001));
+        assert_eq!(output.status().vm_status().sub_status, Some(4));
     }
 
     {
@@ -417,7 +417,7 @@ fn dual_attestation_payment() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(9002));
+        assert_eq!(output.status().vm_status().sub_status, Some(5));
     }
 
     {
@@ -454,7 +454,7 @@ fn dual_attestation_payment() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(9002));
+        assert_eq!(output.status().vm_status().sub_status, Some(5));
     }
     {
         // Intra-VASP transaction >= 1000 threshold, should go through with any signature since
@@ -627,7 +627,7 @@ fn dual_attestation_payment() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(9002));
+        assert_eq!(output.status().vm_status().sub_status, Some(5));
     }
 }
 
@@ -763,7 +763,7 @@ fn recovery_address() {
         output.status().vm_status().major_status,
         StatusCode::ABORTED
     );
-    assert_eq!(output.status().vm_status().sub_status, Some(444));
+    assert_eq!(output.status().vm_status().sub_status, Some(3));
 
     // try to rotate child's key from other_vasp--should abort
     let (_, pubkey3) = keygen.generate_keypair();
@@ -780,7 +780,7 @@ fn recovery_address() {
         output.status().vm_status().major_status,
         StatusCode::ABORTED
     );
-    assert_eq!(output.status().vm_status().sub_status, Some(3333));
+    assert_eq!(output.status().vm_status().sub_status, Some(2));
 }
 
 #[test]
@@ -931,7 +931,7 @@ fn account_limits() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(9));
+        assert_eq!(output.status().vm_status().sub_status, Some(3));
     }
 
     {
@@ -954,7 +954,7 @@ fn account_limits() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(9));
+        assert_eq!(output.status().vm_status().sub_status, Some(3));
     }
 
     // Intra-vasp transfer isn't limited
@@ -1022,7 +1022,7 @@ fn account_limits() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(9));
+        assert_eq!(output.status().vm_status().sub_status, Some(3));
 
         // Reset the window
         let prev_block_time = executor.get_block_time();
@@ -1119,7 +1119,7 @@ fn account_limits() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(11));
+        assert_eq!(output.status().vm_status().sub_status, Some(6));
     }
 
     {
@@ -1142,7 +1142,7 @@ fn account_limits() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(11));
+        assert_eq!(output.status().vm_status().sub_status, Some(6));
     }
 
     {
@@ -1165,7 +1165,7 @@ fn account_limits() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(11));
+        assert_eq!(output.status().vm_status().sub_status, Some(6));
 
         // update block time
         let prev_block_time = executor.get_block_time();
@@ -1256,7 +1256,7 @@ fn account_limits() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(9));
+        assert_eq!(output.status().vm_status().sub_status, Some(3));
     }
 
     // Fine since A can still send
@@ -1311,7 +1311,7 @@ fn account_limits() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(9));
+        assert_eq!(output.status().vm_status().sub_status, Some(3));
     }
 
     // intra-vasp: OK since it isn't checked/contributes to the total balance
@@ -1347,7 +1347,7 @@ fn account_limits() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(9));
+        assert_eq!(output.status().vm_status().sub_status, Some(3));
 
         // Reset window
         let prev_block_time = executor.get_block_time();
@@ -1371,7 +1371,7 @@ fn account_limits() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(9));
+        assert_eq!(output.status().vm_status().sub_status, Some(3));
     }
 }
 
@@ -1441,7 +1441,7 @@ fn add_child_currencies() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(0));
+        assert_eq!(output.status().vm_status().sub_status, Some(13));
     }
 
     {
@@ -1463,7 +1463,7 @@ fn add_child_currencies() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(0));
+        assert_eq!(output.status().vm_status().sub_status, Some(13));
     }
 
     executor.execute_and_apply(

@@ -85,8 +85,9 @@
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraWriteSetManager_initialize">initialize</a>(account: &signer) {
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
     // Operational constraint
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 1);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
 
     move_to(
         account,
@@ -122,17 +123,17 @@
     writeset_public_key: vector&lt;u8&gt;,
 ) {
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-    <b>assert</b>(sender == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 33);
+    <b>assert</b>(sender == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_WRITESET_SENDER);
 
     <b>let</b> association_auth_key = <a href="LibraAccount.md#0x1_LibraAccount_authentication_key">LibraAccount::authentication_key</a>(sender);
     <b>let</b> sequence_number = <a href="LibraAccount.md#0x1_LibraAccount_sequence_number">LibraAccount::sequence_number</a>(sender);
 
-    <b>assert</b>(writeset_sequence_number &gt;= sequence_number, 3);
+    <b>assert</b>(writeset_sequence_number &gt;= sequence_number, EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD);
 
-    <b>assert</b>(writeset_sequence_number == sequence_number, 11);
+    <b>assert</b>(writeset_sequence_number == sequence_number, EWS_PROLOGUE_SEQUENCE_NUMBER_TOO_NEW);
     <b>assert</b>(
         <a href="Hash.md#0x1_Hash_sha3_256">Hash::sha3_256</a>(writeset_public_key) == association_auth_key,
-        2
+        EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY
     );
 }
 </code></pre>

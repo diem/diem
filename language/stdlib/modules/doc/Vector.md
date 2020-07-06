@@ -396,7 +396,7 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Vector_remove">remove</a>&lt;Element&gt;(v: &<b>mut</b> vector&lt;Element&gt;, i: u64): Element {
     <b>let</b> len = <a href="#0x1_Vector_length">length</a>(v);
     // i out of bounds; <b>abort</b>
-    <b>if</b> (i &gt;= len) <b>abort</b> 10;
+    <b>if</b> (i &gt;= len) <b>abort</b> EINDEX_OUT_OF_BOUNDS;
 
     len = len - 1;
     <b>while</b> (i &lt; len) <a href="#0x1_Vector_swap">swap</a>(v, i, { i = i + 1; i });

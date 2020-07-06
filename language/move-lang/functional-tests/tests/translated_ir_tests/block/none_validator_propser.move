@@ -22,4 +22,4 @@ fun main() {
 //! block-time: 1000000
 
 // check: ABORTED
-// check: 5002
+// check: 3

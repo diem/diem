@@ -105,8 +105,6 @@
 
 Travel rule limit set during genesis
 
->TODO: add in_genesis assertion here.
-
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestationLimit_initialize">initialize</a>(lr_account: &signer, tc_account: &signer)
 </code></pre>
@@ -121,11 +119,11 @@ Travel rule limit set during genesis
     lr_account: &signer,
     tc_account: &signer,
 ) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 1);
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EACCOUNT_NOT_TREASURY_COMPLIANCE);
     <b>let</b> cap = <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>&lt;<a href="#0x1_DualAttestationLimit">DualAttestationLimit</a>&gt;(
         lr_account,
-        <a href="#0x1_DualAttestationLimit">DualAttestationLimit</a> { micro_lbr_limit: 1000 * <a href="Libra.md#0x1_Libra_scaling_factor">Libra::scaling_factor</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;() },
+        <a href="#0x1_DualAttestationLimit">DualAttestationLimit</a> { micro_lbr_limit: INITIAL_DUAL_ATTESTATION_THRESHOLD * <a href="Libra.md#0x1_Libra_scaling_factor">Libra::scaling_factor</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;() },
     );
     move_to(tc_account, <a href="#0x1_DualAttestationLimit_ModifyLimitCapability">ModifyLimitCapability</a> { cap })
 }
@@ -178,12 +176,8 @@ Travel rule limit set during genesis
     tc_account: &signer,
     micro_lbr_limit: u64
 ) <b>acquires</b> <a href="#0x1_DualAttestationLimit_ModifyLimitCapability">ModifyLimitCapability</a> {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_update_dual_attestation_threshold_privilege(tc_account), 919401);
-    <b>assert</b>(
-        micro_lbr_limit &gt;= 1000,
-        4
-    );
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_update_dual_attestation_threshold_privilege">Roles::has_update_dual_attestation_threshold_privilege</a>(tc_account), ECANNOT_UPDATE_THRESHOLD);
+    <b>assert</b>(micro_lbr_limit &gt;= 1000, ETHRESHOLD_TOO_LOW);
     <b>let</b> tc_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(tc_account);
     <b>let</b> modify_cap = &borrow_global&lt;<a href="#0x1_DualAttestationLimit_ModifyLimitCapability">ModifyLimitCapability</a>&gt;(tc_address).cap;
     <a href="LibraConfig.md#0x1_LibraConfig_set_with_capability">LibraConfig::set_with_capability</a>&lt;<a href="#0x1_DualAttestationLimit">DualAttestationLimit</a>&gt;(

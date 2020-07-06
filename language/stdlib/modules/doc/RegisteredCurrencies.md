@@ -95,11 +95,11 @@ Initializes this module. Can only be called from genesis.
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_RegisteredCurrencies_initialize">initialize</a>(
     config_account: &signer,
 ): <a href="#0x1_RegisteredCurrencies_RegistrationCapability">RegistrationCapability</a> {
-    <b>assert</b>(is_genesis(), 0);
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
 
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
-        0
+        EINVALID_SINGLETON_ADDRESS
     );
     <b>let</b> cap = <a href="LibraConfig.md#0x1_LibraConfig_publish_new_config_with_capability">LibraConfig::publish_new_config_with_capability</a>(
         config_account,
@@ -137,7 +137,7 @@ Adds a new currency code. The currency code must not yet exist.
     <b>let</b> config = <a href="LibraConfig.md#0x1_LibraConfig_get">LibraConfig::get</a>&lt;<a href="#0x1_RegisteredCurrencies">RegisteredCurrencies</a>&gt;();
     <b>assert</b>(
         !<a href="Vector.md#0x1_Vector_contains">Vector::contains</a>(&config.currency_codes, &currency_code),
-        1
+        ECURRENCY_CODE_ALREADY_TAKEN
     );
     <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(&<b>mut</b> config.currency_codes, currency_code);
     <a href="LibraConfig.md#0x1_LibraConfig_set_with_capability">LibraConfig::set_with_capability</a>(&cap.cap, config);

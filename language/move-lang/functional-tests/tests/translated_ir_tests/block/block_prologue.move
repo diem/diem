@@ -38,7 +38,7 @@ fun main(account: &signer) {
 }
 }
 // check: ABORTED
-// check: 33
+// check: 2
 
 //! new-transaction
 //! sender: vivian
@@ -50,4 +50,4 @@ fun main(account: &signer) {
 }
 }
 // check: ABORTED
-// check: 33
+// check: 2

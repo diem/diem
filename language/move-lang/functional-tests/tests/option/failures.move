@@ -57,4 +57,4 @@ fun main() {
 }
 
 // check: ABORTED
-// check: 99
+// check: 0

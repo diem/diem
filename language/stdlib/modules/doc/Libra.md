@@ -723,11 +723,11 @@ config, and publishes the
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_initialize">initialize</a>(
     config_account: &signer,
 ) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
     // Operational constraint
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(config_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
-        0
+        EINVALID_SINGLETON_ADDRESS
     );
     <b>let</b> cap = <a href="RegisteredCurrencies.md#0x1_RegisteredCurrencies_initialize">RegisteredCurrencies::initialize</a>(config_account);
     move_to(config_account, <a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a>{ cap })
@@ -767,8 +767,7 @@ The caller must pass a
     cap: <a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;,
     tc_account: &signer,
 ) {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tc_account), 919402);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     move_to(publish_account, cap)
 }
@@ -807,8 +806,7 @@ The caller must pass a
     cap: <a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;,
     tc_account: &signer,
 ) {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tc_account), 919403);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     move_to(account, cap)
 }
@@ -990,7 +988,7 @@ reference.
     <b>let</b> currency_code = <a href="#0x1_Libra_currency_code">currency_code</a>&lt;CoinType&gt;();
     // <b>update</b> market cap <b>resource</b> <b>to</b> reflect minting
     <b>let</b> info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
-    <b>assert</b>(info.can_mint, 4);
+    <b>assert</b>(info.can_mint, EMINTING_NOT_ALLOWED);
     info.total_value = info.total_value + (value <b>as</b> u128);
     // don't emit mint events for synthetic currenices
     <b>if</b> (!info.is_synthetic) {
@@ -1090,9 +1088,8 @@ Create a
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(
     tc_account: &signer
 ): <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tc_account), 919404);
-    <b>assert</b>(<a href="#0x1_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(), 201);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
+    <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     <a href="#0x1_Libra_Preburn">Preburn</a>&lt;CoinType&gt; { requests: <a href="Vector.md#0x1_Vector_empty">Vector::empty</a>() }
 }
 </code></pre>
@@ -1128,8 +1125,7 @@ this resource for the designated dealer.
     account: &signer,
     tc_account: &signer
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
-    <b>assert</b>(!<a href="#0x1_Libra_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;(), 202);
-    // move_to(account, <a href="#0x1_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(tc_capability))
+    <b>assert</b>(!<a href="#0x1_Libra_is_synthetic_currency">is_synthetic_currency</a>&lt;CoinType&gt;(), EIS_SYNTHETIC_CURRENCY);
     move_to(account, <a href="#0x1_Libra_create_preburn">create_preburn</a>&lt;CoinType&gt;(tc_account))
 }
 </code></pre>
@@ -1548,7 +1544,7 @@ value of the passed-in
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_withdraw">withdraw</a>&lt;CoinType&gt;(coin: &<b>mut</b> <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;, amount: u64): <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt; {
     // Check that `amount` is less than the coin's value
-    <b>assert</b>(coin.value &gt;= amount, 10);
+    <b>assert</b>(coin.value &gt;= amount, EAMOUNT_EXCEEDS_COIN_VALUE);
     coin.value = coin.value - amount;
     <a href="#0x1_Libra">Libra</a> { value: amount }
 }
@@ -1669,7 +1665,7 @@ a
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_destroy_zero">destroy_zero</a>&lt;CoinType&gt;(coin: <a href="#0x1_Libra">Libra</a>&lt;CoinType&gt;) {
     <b>let</b> <a href="#0x1_Libra">Libra</a> { value } = coin;
-    <b>assert</b>(value == 0, 5)
+    <b>assert</b>(value == 0, EDESTRUCTION_OF_NONZERO_COIN)
 }
 </code></pre>
 
@@ -1724,13 +1720,11 @@ adds the currency to the set of
     currency_code: vector&lt;u8&gt;,
 ): (<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;, <a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;)
 <b>acquires</b> <a href="#0x1_Libra_CurrencyRegistrationCapability">CurrencyRegistrationCapability</a> {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_register_new_currency_privilege(tc_account), 919405);
-    // Operational constraint that it must be stored under a specific
-    // address.
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_register_new_currency_privilege">Roles::has_register_new_currency_privilege</a>(tc_account), EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE);
+    // Operational constraint that it must be stored under a specific address.
     <b>assert</b>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account) == <a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>(),
-        8
+        EINVALID_SINGLETON_ADDRESS
     );
 
     move_to(account, <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt; {
@@ -2018,8 +2012,7 @@ Updates the
     tr_account: &signer,
     lbr_exchange_rate: <a href="FixedPoint32.md#0x1_FixedPoint32">FixedPoint32</a>
 ) <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tr_account), 919406);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tr_account), ENOT_TREASURY_COMPLIANCE);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;FromCoinType&gt;();
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;FromCoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.to_lbr_exchange_rate = lbr_exchange_rate;
@@ -2096,8 +2089,7 @@ start out in the default state of
     can_mint: bool,
     )
 <b>acquires</b> <a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a> {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tr_account), 919407);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tr_account), ENOT_TREASURY_COMPLIANCE);
     <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;();
     <b>let</b> currency_info = borrow_global_mut&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_CURRENCY_INFO_ADDRESS">CoreAddresses::CURRENCY_INFO_ADDRESS</a>());
     currency_info.can_mint = can_mint;
@@ -2126,7 +2118,7 @@ Asserts that
 
 
 <pre><code><b>fun</b> <a href="#0x1_Libra_assert_is_currency">assert_is_currency</a>&lt;CoinType&gt;() {
-    <b>assert</b>(<a href="#0x1_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(), 1);
+    <b>assert</b>(<a href="#0x1_Libra_is_currency">is_currency</a>&lt;CoinType&gt;(), ENOT_A_REGISTERED_CURRENCY);
 }
 </code></pre>
 

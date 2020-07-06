@@ -123,8 +123,7 @@
     dd: &signer,
     tc_account: &signer,
 ) {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tc_account), 919397);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
     move_to(
         dd,
         <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
@@ -159,12 +158,10 @@
 <pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_add_tier_">add_tier_</a>(dealer: &<b>mut</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a>, next_tier_upperbound: u64) {
     <b>let</b> tiers = &<b>mut</b> dealer.tiers;
     <b>let</b> number_of_tiers: u64 = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
-    // INVALID_TIER_ADDITION
-    <b>assert</b>(number_of_tiers &lt;= 4, 31);
+    <b>assert</b>(number_of_tiers &lt;= 4, EINVALID_TIER_ADDITION);
     <b>if</b> (number_of_tiers &gt; 1) {
         <b>let</b> prev_tier = *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, number_of_tiers - 1);
-        // INVALID_TIER_START
-        <b>assert</b>(prev_tier &lt; next_tier_upperbound, 4);
+        <b>assert</b>(prev_tier &lt; next_tier_upperbound, EINVALID_TIER_START);
     };
     <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(tiers, next_tier_upperbound);
 }
@@ -194,8 +191,7 @@
     addr: address,
     tier_upperbound: u64
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tc_account), 919398);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
     <b>let</b> dealer = borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr);
     <a href="#0x1_DesignatedDealer_add_tier_">add_tier_</a>(dealer, tier_upperbound)
 }
@@ -223,15 +219,13 @@
 <pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_update_tier_">update_tier_</a>(dealer: &<b>mut</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a>, tier_index: u64, new_upperbound: u64) {
     <b>let</b> tiers = &<b>mut</b> dealer.tiers;
     <b>let</b> number_of_tiers = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
-    // INVALID_TIER_INDEX
-    <b>assert</b>(tier_index &lt;= 3, 3); // max 4 tiers allowed
-    <b>assert</b>(tier_index &lt; number_of_tiers, 3);
+    <b>assert</b>(tier_index &lt;= 3, EINVALID_TIER_INDEX); // max 4 tiers allowed
+    <b>assert</b>(tier_index &lt; number_of_tiers, EINVALID_TIER_INDEX);
     // Make sure that this new start for the tier is consistent
     // with the tier above it.
     <b>let</b> next_tier = tier_index + 1;
     <b>if</b> (next_tier &lt; number_of_tiers) {
-        // INVALID_TIER_START
-        <b>assert</b>(new_upperbound &lt; *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, next_tier), 4);
+        <b>assert</b>(new_upperbound &lt; *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, next_tier), EINVALID_TIER_START);
     };
     <b>let</b> tier_mut = <a href="Vector.md#0x1_Vector_borrow_mut">Vector::borrow_mut</a>(tiers, tier_index);
     *tier_mut = new_upperbound;
@@ -263,8 +257,7 @@
     tier_index: u64,
     new_upperbound: u64
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tc_account), 919399);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
     <b>let</b> dealer = borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr);
     <a href="#0x1_DesignatedDealer_update_tier_">update_tier_</a>(dealer, tier_index, new_upperbound)
 }
@@ -290,8 +283,8 @@
 
 
 <pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint_">tiered_mint_</a>(dealer: &<b>mut</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a>, amount: u64, tier_index: u64): bool {
-    // INVALID TIER_INDEX (<b>if</b> tier is 4, can mint unlimited)
-    <b>assert</b>(tier_index &lt;= 4, 66);
+    // <b>if</b> tier is 4, can mint unlimited
+    <b>assert</b>(tier_index &lt;= 4, EINVALID_TIER_INDEX);
     <a href="#0x1_DesignatedDealer_reset_window">reset_window</a>(dealer);
     <b>let</b> cur_inflow = *&dealer.window_inflow;
     <b>let</b> tiers = &<b>mut</b> dealer.tiers;
@@ -337,16 +330,12 @@
     tier_index: u64,
 ): <a href="Libra.md#0x1_Libra">Libra</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
 
-    // TODO: <b>abort</b> code
-    <b>assert</b>(has_treasury_compliance_role(tc_account), 919400);
-    // INVALID_MINT_AMOUNT
-    <b>assert</b>(amount &gt; 0, 6);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
+    <b>assert</b>(amount &gt; 0, EINVALID_MINT_AMOUNT);
 
-    // NOT_A_DD
-    <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr), 1);
+    <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr), ENOT_A_DD);
     <b>let</b> tier_check = <a href="#0x1_DesignatedDealer_tiered_mint_">tiered_mint_</a>(borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr), amount, tier_index);
-    // INVALID_AMOUNT_FOR_TIER
-    <b>assert</b>(tier_check, 5);
+    <b>assert</b>(tier_check, EINVALID_AMOUNT_FOR_TIER);
     // Send <a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>
     <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>&gt;(
         &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr).mint_event_handle,

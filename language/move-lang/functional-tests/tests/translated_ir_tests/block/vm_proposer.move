@@ -3,4 +3,4 @@
 //! block-time: 1000000
 
 // check: ABORTED
-// check: 5001
+// check: 2

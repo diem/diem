@@ -85,9 +85,8 @@ script{
         assert(old_num_validators == LibraSystem::validator_set_size(), 98);
     }
 }
-
-// check: ABORT
-// check: 23
+// check: ABORTED
+// check: 6
 
 //! new-transaction
 //! sender: blessed

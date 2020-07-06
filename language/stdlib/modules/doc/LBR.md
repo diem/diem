@@ -232,7 +232,7 @@ restrictions are enforced in the
     tc_account: &signer,
 ) {
     // Operational constraint
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="#0x1_LBR_reserve_address">reserve_address</a>(), 0);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="#0x1_LBR_reserve_address">reserve_address</a>(), EINVALID_SINGLETON_ADDRESS);
     // Register the `<a href="#0x1_LBR">LBR</a>` currency.
     <b>let</b> (mint_cap, burn_cap) = <a href="Libra.md#0x1_Libra_register_currency">Libra::register_currency</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;(
         association,

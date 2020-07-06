@@ -11,4 +11,4 @@ fun main() {
 }
 }
 // check: ABORTED
-// check: 16
+// check: 0

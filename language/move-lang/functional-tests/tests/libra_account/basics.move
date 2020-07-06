@@ -28,7 +28,7 @@ script {
     }
 }
 // check: ABORTED
-// check: 3
+// check: 0
 
 //! new-transaction
 //! sender: bob
@@ -54,7 +54,7 @@ script {
     }
 }
 // check: ABORTED
-// check: 12
+// check: 8
 
 //! new-transaction
 script {
@@ -72,7 +72,7 @@ script {
     }
 }
 // check: ABORTED
-// check: 11
+// check: 9
 
 //! new-transaction
 //! sender: association
@@ -84,7 +84,7 @@ script {
     }
 }
 // check: ABORTED
-// check: 12
+// check: 8
 
 //! new-transaction
 script {

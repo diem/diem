@@ -23,10 +23,15 @@ module LibraTimestamp {
     /// is called at the end of genesis.
     resource struct TimeHasStarted {}
 
+    const EINVALID_SINGLETON_ADDRESS: u64 = 0;
+    const ETIME_NOT_INITIALIZED: u64 = 1;
+    const ENOT_VM: u64 = 2;
+    const EINVALID_TIMESTAMP: u64 = 3;
+
     /// Initializes the global wall clock time resource. This can only be called from genesis.
     public fun initialize(association: &signer) {
         // Operational constraint, only callable by the Association address
-        assert(Signer::address_of(association) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
+        assert(Signer::address_of(association) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
 
         // TODO: Should the initialized value be passed in to genesis?
         let timer = CurrentTimeMicroseconds { microseconds: 0 };
@@ -35,12 +40,12 @@ module LibraTimestamp {
 
     /// Marks that time has started and genesis has finished. This can only be called from genesis.
     public fun set_time_has_started(association: &signer) acquires CurrentTimeMicroseconds {
-        assert(Signer::address_of(association) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
+        assert(Signer::address_of(association) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
 
         // Current time must have been initialized.
         assert(
             exists<CurrentTimeMicroseconds>(CoreAddresses::LIBRA_ROOT_ADDRESS()) && now_microseconds() == 0,
-            2
+            ETIME_NOT_INITIALIZED
         );
         move_to(association, TimeHasStarted{});
     }
@@ -59,15 +64,15 @@ module LibraTimestamp {
         timestamp: u64
     ) acquires CurrentTimeMicroseconds {
         // Can only be invoked by LibraVM privilege.
-        assert(Signer::address_of(account) == CoreAddresses::VM_RESERVED_ADDRESS(), 33);
+        assert(Signer::address_of(account) == CoreAddresses::VM_RESERVED_ADDRESS(), ENOT_VM);
 
         let global_timer = borrow_global_mut<CurrentTimeMicroseconds>(CoreAddresses::LIBRA_ROOT_ADDRESS());
         if (proposer == CoreAddresses::VM_RESERVED_ADDRESS()) {
             // NIL block with null address as proposer. Timestamp must be equal.
-            assert(timestamp == global_timer.microseconds, 5001);
+            assert(timestamp == global_timer.microseconds, EINVALID_TIMESTAMP);
         } else {
             // Normal block. Time must advance
-            assert(global_timer.microseconds < timestamp, 5001);
+            assert(global_timer.microseconds < timestamp, EINVALID_TIMESTAMP);
         };
         global_timer.microseconds = timestamp;
     }

@@ -94,9 +94,9 @@ privileges need to be created before accounts can be made
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_grant_root_association_role">grant_root_association_role</a>(
     association: &signer,
 ) {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
     <b>let</b> owner_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association);
-    <b>assert</b>(owner_address == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), 0);
+    <b>assert</b>(owner_address == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_ROOT_ADDRESS);
     // Grant the role <b>to</b> the association root account
     move_to(association, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: LIBRA_ROOT_ROLE_ID });
 }
@@ -129,10 +129,10 @@ and roles.
     treasury_compliance_account: &signer,
     lr_account: &signer,
 ) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
-    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), 0);
-    <b>assert</b>(<a href="#0x1_Roles_has_libra_root_role">has_libra_root_role</a>(lr_account), 999);
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
+    <b>assert</b>(<a href="#0x1_Roles_has_libra_root_role">has_libra_root_role</a>(lr_account), EINVALID_PARENT_ROLE);
     <b>let</b> owner_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(treasury_compliance_account);
-    <b>assert</b>(owner_address == <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>(), 0);
+    <b>assert</b>(owner_address == <a href="CoreAddresses.md#0x1_CoreAddresses_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::TREASURY_COMPLIANCE_ADDRESS</a>(), EINVALID_TC_ADDRESS);
     // Grant the TC role <b>to</b> the treasury_compliance_account
     move_to(treasury_compliance_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: TREASURY_COMPLIANCE_ROLE_ID });
 }
@@ -173,8 +173,8 @@ The
 ) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
     <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
     // A role cannot have previously been assigned <b>to</b> `new_account`.
-    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
-    <b>assert</b>(calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID, 0);
+    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), EROLE_ALREADY_ASSIGNED);
+    <b>assert</b>(calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID, EINVALID_PARENT_ROLE);
     move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: DESIGNATED_DEALER_ROLE_ID });
 }
 </code></pre>
@@ -209,8 +209,8 @@ The
 ) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
     <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
     // A role cannot have previously been assigned <b>to</b> `new_account`.
-    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
-    <b>assert</b>(calling_role.role_id == LIBRA_ROOT_ROLE_ID, 0);
+    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), EROLE_ALREADY_ASSIGNED);
+    <b>assert</b>(calling_role.role_id == LIBRA_ROOT_ROLE_ID, EINVALID_PARENT_ROLE);
     move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: VALIDATOR_ROLE_ID });
 }
 </code></pre>
@@ -245,8 +245,8 @@ The
 ) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
     <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
     // A role cannot have previously been assigned <b>to</b> `new_account`.
-    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
-    <b>assert</b>(calling_role.role_id == LIBRA_ROOT_ROLE_ID, 0);
+    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), EROLE_ALREADY_ASSIGNED);
+    <b>assert</b>(calling_role.role_id == LIBRA_ROOT_ROLE_ID, EINVALID_PARENT_ROLE);
     move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: VALIDATOR_OPERATOR_ROLE_ID });
 }
 </code></pre>
@@ -281,8 +281,8 @@ The
 ) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
     <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
     // A role cannot have previously been assigned <b>to</b> `new_account`.
-    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
-    <b>assert</b>(calling_role.role_id == LIBRA_ROOT_ROLE_ID, 0);
+    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), EROLE_ALREADY_ASSIGNED);
+    <b>assert</b>(calling_role.role_id == LIBRA_ROOT_ROLE_ID, EINVALID_PARENT_ROLE);
     move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: PARENT_VASP_ROLE_ID });
 }
 </code></pre>
@@ -317,8 +317,8 @@ The
 ) <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
     <b>let</b> calling_role = borrow_global&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(creating_account));
     // A role cannot have previously been assigned <b>to</b> `new_account`.
-    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
-    <b>assert</b>(calling_role.role_id == PARENT_VASP_ROLE_ID, 0);
+    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), EROLE_ALREADY_ASSIGNED);
+    <b>assert</b>(calling_role.role_id == PARENT_VASP_ROLE_ID, EINVALID_PARENT_ROLE);
     move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: CHILD_VASP_ROLE_ID });
 }
 </code></pre>
@@ -347,7 +347,7 @@ Publish an Unhosted
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_new_unhosted_role">new_unhosted_role</a>(_creating_account: &signer, new_account: &signer) {
     // A role cannot have previously been assigned <b>to</b> `new_account`.
-    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), 1);
+    <b>assert</b>(!exists&lt;<a href="#0x1_Roles_RoleId">RoleId</a>&gt;(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(new_account)), EROLE_ALREADY_ASSIGNED);
     move_to(new_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: UNHOSTED_ROLE_ID });
 }
 </code></pre>

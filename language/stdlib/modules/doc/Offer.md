@@ -98,8 +98,7 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Offer_redeem">redeem</a>&lt;Offered&gt;(account: &signer, offer_address: address): Offered <b>acquires</b> <a href="#0x1_Offer">Offer</a> {
   <b>let</b> <a href="#0x1_Offer">Offer</a>&lt;Offered&gt; { offered, for } = move_from&lt;<a href="#0x1_Offer">Offer</a>&lt;Offered&gt;&gt;(offer_address);
   <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
-  // fail with INSUFFICIENT_PRIVILEGES
-  <b>assert</b>(sender == for || sender == offer_address, 11);
+  <b>assert</b>(sender == for || sender == offer_address, EOFFER_DNE_FOR_ACCOUNT);
   offered
 }
 </code></pre>

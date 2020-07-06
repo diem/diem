@@ -24,13 +24,22 @@ module LibraConfig {
     // Accounts with this privilege can modify config of type TypeName under default_address
     resource struct ModifyConfigCapability<TypeName> {}
 
+    const ENOT_GENESIS: u64 = 0;
+    const ENOT_LIBRA_ROOT: u64 = 1;
+    const EINVALID_SINGLETON_ADDRESS: u64 = 2;
+    const ECONFIG_DOES_NOT_EXIST: u64 = 3;
+    const EMODIFY_CAPABILITY_NOT_HELD: u64 = 4;
+    const ENO_CONFIG_PRIVILEGE: u64 = 5;
+    const EINVALID_BLOCK_TIME: u64 = 6;
+
     // This can only be invoked by the config address, and only a single time.
     // Currently, it is invoked in the genesis transaction
     public fun initialize(
         config_account: &signer,
     ) {
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         // Operational constraint
-        assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
+        assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
         move_to<Configuration>(
             config_account,
             Configuration {
@@ -42,19 +51,21 @@ module LibraConfig {
     }
 
     // Get a copy of `Config` value stored under `addr`.
-    public fun get<Config: copyable>(): Config acquires LibraConfig {
+    public fun get<Config: copyable>(): Config
+    acquires LibraConfig {
         let addr = CoreAddresses::LIBRA_ROOT_ADDRESS();
-        assert(exists<LibraConfig<Config>>(addr), 24);
+        assert(exists<LibraConfig<Config>>(addr), ECONFIG_DOES_NOT_EXIST);
         *&borrow_global<LibraConfig<Config>>(addr).payload
     }
 
     // Set a config item to a new value with the default capability stored under config address and trigger a
     // reconfiguration.
-    public fun set<Config: copyable>(account: &signer, payload: Config) acquires LibraConfig, Configuration {
+    public fun set<Config: copyable>(account: &signer, payload: Config)
+    acquires LibraConfig, Configuration {
         let addr = CoreAddresses::LIBRA_ROOT_ADDRESS();
-        assert(exists<LibraConfig<Config>>(addr), 24);
+        assert(exists<LibraConfig<Config>>(addr), ECONFIG_DOES_NOT_EXIST);
         let signer_address = Signer::address_of(account);
-        assert(exists<ModifyConfigCapability<Config>>(signer_address), 24);
+        assert(exists<ModifyConfigCapability<Config>>(signer_address), EMODIFY_CAPABILITY_NOT_HELD);
 
         let config = borrow_global_mut<LibraConfig<Config>>(addr);
         config.payload = payload;
@@ -68,7 +79,7 @@ module LibraConfig {
         payload: Config
     ) acquires LibraConfig, Configuration {
         let addr = CoreAddresses::LIBRA_ROOT_ADDRESS();
-        assert(exists<LibraConfig<Config>>(addr), 24);
+        assert(exists<LibraConfig<Config>>(addr), ECONFIG_DOES_NOT_EXIST);
         let config = borrow_global_mut<LibraConfig<Config>>(addr);
         config.payload = payload;
         reconfigure_();
@@ -80,9 +91,8 @@ module LibraConfig {
         config_account: &signer,
         payload: Config,
     ): ModifyConfigCapability<Config> {
-        // TODO: abort code
-        assert(Roles::has_on_chain_config_privilege(config_account), 919414);
-        assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
+        assert(Roles::has_on_chain_config_privilege(config_account), ENO_CONFIG_PRIVILEGE);
+        assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
         move_to(config_account, LibraConfig { payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the binary
         // to register this config into ON_CHAIN_CONFIG_REGISTRY then send another transaction to change
@@ -96,8 +106,7 @@ module LibraConfig {
         tc_account: &signer,
         payload: Config,
     ) {
-        // TODO: abort code
-        assert(Roles::has_on_chain_config_privilege(config_account), 919415);
+        assert(Roles::has_on_chain_config_privilege(config_account), ENO_CONFIG_PRIVILEGE);
         move_to(config_account, LibraConfig { payload });
         move_to(tc_account, ModifyConfigCapability<Config> {});
     }
@@ -107,9 +116,8 @@ module LibraConfig {
         config_account: &signer,
         payload: Config
     ) {
-        // TODO: abort code
-        assert(Roles::has_on_chain_config_privilege(config_account), 919416);
-        assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
+        assert(Roles::has_on_chain_config_privilege(config_account), ENO_CONFIG_PRIVILEGE);
+        assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
         move_to(config_account, ModifyConfigCapability<Config> {});
         move_to(config_account, LibraConfig{ payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the binary
@@ -123,9 +131,8 @@ module LibraConfig {
         payload: Config,
         delegate: address,
     ) {
-        // TODO: abort code
-        assert(Roles::has_on_chain_config_privilege(config_account), 919417);
-        assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), 1);
+        assert(Roles::has_on_chain_config_privilege(config_account), ENO_CONFIG_PRIVILEGE);
+        assert(Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
         Offer::create(config_account, ModifyConfigCapability<Config>{}, delegate);
         move_to(config_account, LibraConfig { payload });
         // We don't trigger reconfiguration here, instead we'll wait for all validators update the
@@ -142,8 +149,7 @@ module LibraConfig {
         lr_account: &signer,
     ) acquires Configuration {
         // Only callable by association address or by the VM internally.
-        // TODO: abort code
-        assert(Roles::has_libra_root_role(lr_account), 919418);
+        assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         reconfigure_();
     }
 
@@ -159,7 +165,7 @@ module LibraConfig {
        // correspondence between system reconfigurations and emitted ReconfigurationEvents.
 
        let current_block_time = LibraTimestamp::now_microseconds();
-       assert(current_block_time > config_ref.last_reconfiguration_time, 23);
+       assert(current_block_time > config_ref.last_reconfiguration_time, EINVALID_BLOCK_TIME);
        config_ref.last_reconfiguration_time = current_block_time;
 
        emit_reconfiguration_event();

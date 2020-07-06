@@ -17,23 +17,27 @@ module RecoveryAddress {
         rotation_caps: vector<LibraAccount::KeyRotationCapability>
     }
 
+    const ENOT_A_VASP: u64 = 0;
+    const EKEY_ROTATION_DEPENDENCY_CYCLE: u64 = 1;
+    const ECANNOT_ROTATE_KEY: u64 = 2;
+    const EINVALID_KEY_ROTATION_DELEGATION: u64 = 3;
+    const EACCOUNT_NOT_RECOVERABLE: u64 = 4;
+
     /// Extract the `KeyRotationCapability` for `recovery_account` and publish it in a
     /// `RecoveryAddress` resource under  `recovery_account`.
     /// Aborts if `recovery_account` has delegated its `KeyRotationCapability`, already has a
     /// `RecoveryAddress` resource, or is not a VASP.
     public fun publish(recovery_account: &signer) {
         // Only VASPs can create a recovery address
-        // TODO: proper error code
-        assert(VASP::is_vasp(Signer::address_of(recovery_account)), 2222);
+        assert(VASP::is_vasp(Signer::address_of(recovery_account)), ENOT_A_VASP);
         // put the rotation capability for the recovery account itself in `rotation_caps`. This
         // ensures two things:
         // (1) It's not possible to get into a "recovery cycle" where A is the recovery account for
         //     B and B is the recovery account for A
         // (2) rotation_caps is always nonempty
         let rotation_cap = LibraAccount::extract_key_rotation_capability(recovery_account);
-        // TODO: proper error code
         assert(*LibraAccount::key_rotation_capability_address(&rotation_cap)
-             == Signer::address_of(recovery_account), 2222);
+             == Signer::address_of(recovery_account), EKEY_ROTATION_DEPENDENCY_CYCLE);
         move_to(
             recovery_account,
             RecoveryAddress { rotation_caps: Vector::singleton(rotation_cap) }
@@ -56,8 +60,7 @@ module RecoveryAddress {
         let sender = Signer::address_of(account);
         // Both the original owner `to_recover` of the KeyRotationCapability and the
         // `recovery_address` can rotate the authentication key
-        // TODO: proper error code
-        assert(sender == recovery_address || sender == to_recover, 3333);
+        assert(sender == recovery_address || sender == to_recover, ECANNOT_ROTATE_KEY);
 
         let caps = &borrow_global<RecoveryAddress>(recovery_address).rotation_caps;
         let i = 0;
@@ -82,8 +85,7 @@ module RecoveryAddress {
             assert forall j in 0..len: caps[j].account_address != to_recover;
         };
         // Couldn't find `to_recover` in the account recovery resource; abort
-        // TODO: proper error code
-        abort(555)
+        abort EACCOUNT_NOT_RECOVERABLE
     }
 
     /// Add the `KeyRotationCapability` for `to_recover_account` to the `RecoveryAddress`
@@ -98,14 +100,13 @@ module RecoveryAddress {
         assert(
             VASP::parent_address(recovery_address) ==
                 VASP::parent_address(addr),
-            444 // TODO: proper error code
+            EINVALID_KEY_ROTATION_DELEGATION
         );
 
         let caps = &mut borrow_global_mut<RecoveryAddress>(recovery_address).rotation_caps;
         let rotation_cap = LibraAccount::extract_key_rotation_capability(to_recover_account);
-        // TODO: proper error code
         assert(*LibraAccount::key_rotation_capability_address(&rotation_cap)
-             == Signer::address_of(to_recover_account), 2222);
+             == Signer::address_of(to_recover_account), EINVALID_KEY_ROTATION_DELEGATION);
         Vector::push_back(caps, rotation_cap);
     }
     spec fun add_rotation_capability {

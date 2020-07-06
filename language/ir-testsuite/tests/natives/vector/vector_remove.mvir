@@ -54,7 +54,7 @@ main() {
 }
 
 // check: ABORTED
-// check: Some(10)
+// check: Some(0)
 
 //! new-transaction
 import 0x1.Vector;
@@ -70,4 +70,4 @@ main() {
 }
 
 // check: ABORTED
-// check: Some(10)
+// check: Some(0)

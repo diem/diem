@@ -104,4 +104,4 @@ fun main(account: &signer) {
 }
 }
 // check: ABORTED
-// check: 4
+// check: 3

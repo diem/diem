@@ -59,6 +59,8 @@ module LBR {
         coin2: ReserveComponent<Coin2>,
     }
 
+    const EINVALID_SINGLETON_ADDRESS: u64 = 0;
+
     /// Initializes the `LBR` module. This sets up the initial `LBR` ratios and
     /// reserve components, and creates the mint, preburn, and burn
     /// capabilities for `LBR` coins. The `LBR` currency must not already be
@@ -71,7 +73,7 @@ module LBR {
         tc_account: &signer,
     ) {
         // Operational constraint
-        assert(Signer::address_of(association) == reserve_address(), 0);
+        assert(Signer::address_of(association) == reserve_address(), EINVALID_SINGLETON_ADDRESS);
         // Register the `LBR` currency.
         let (mint_cap, burn_cap) = Libra::register_currency<LBR>(
             association,

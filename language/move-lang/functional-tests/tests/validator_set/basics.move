@@ -10,7 +10,7 @@ fun main(account: &signer) {
 }
 }
 // check: ABORTED
-// check: 1
+// check: 0
 
 //! new-transaction
 script {
@@ -20,7 +20,7 @@ script {
     }
 }
 // check: ABORTED
-// check: 22
+// check: 1
 
 //! new-transaction
 //! sender: bob
@@ -66,7 +66,7 @@ script {
     }
 }
 // check: ABORTED
-// check: 1101
+// check: 1
 
 //! new-transaction
 //! sender: bob
@@ -77,4 +77,4 @@ script {
     }
 }
 // check: ABORTED
-// check: 1101
+// check: 1

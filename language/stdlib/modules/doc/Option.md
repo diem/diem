@@ -285,7 +285,7 @@ This module defines the Option type and its methods to represent and handle an o
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_fill">fill</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x1_Option">Option</a>&lt;Element&gt;, e: Element) {
     <b>let</b> vec_ref = &<b>mut</b> t.vec;
     <b>if</b> (<a href="Vector.md#0x1_Vector_is_empty">Vector::is_empty</a>(vec_ref)) <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(vec_ref, e)
-    <b>else</b> <b>abort</b>(99)
+    <b>else</b> <b>abort</b> EOPTION_ALREADY_FILLED
 }
 </code></pre>
 

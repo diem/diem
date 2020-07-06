@@ -4,7 +4,7 @@ address 0x1 {
 module RegisteredCurrencies {
     use 0x1::CoreAddresses;
     use 0x1::LibraConfig;
-    use 0x1::LibraTimestamp::{is_genesis, spec_is_genesis};
+    use 0x1::LibraTimestamp::{Self, spec_is_genesis};
     use 0x1::Signer;
     use 0x1::Vector;
 
@@ -20,15 +20,19 @@ module RegisteredCurrencies {
         cap: LibraConfig::ModifyConfigCapability<Self::RegisteredCurrencies>,
     }
 
+    const ENOT_GENESIS: u64 = 0;
+    const EINVALID_SINGLETON_ADDRESS: u64 = 1;
+    const ECURRENCY_CODE_ALREADY_TAKEN: u64 = 2;
+
     /// Initializes this module. Can only be called from genesis.
     public fun initialize(
         config_account: &signer,
     ): RegistrationCapability {
-        assert(is_genesis(), 0);
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
 
         assert(
             Signer::address_of(config_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
-            0
+            EINVALID_SINGLETON_ADDRESS
         );
         let cap = LibraConfig::publish_new_config_with_capability(
             config_account,
@@ -58,7 +62,7 @@ module RegisteredCurrencies {
         let config = LibraConfig::get<RegisteredCurrencies>();
         assert(
             !Vector::contains(&config.currency_codes, &currency_code),
-            1
+            ECURRENCY_CODE_ALREADY_TAKEN
         );
         Vector::push_back(&mut config.currency_codes, currency_code);
         LibraConfig::set_with_capability(&cap.cap, config);

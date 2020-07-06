@@ -7,7 +7,8 @@ module TransactionFee {
     use 0x1::LBR::{Self, LBR};
     use 0x1::Libra::{Self, Libra, Preburn, BurnCapability};
     use 0x1::Signer;
-    use 0x1::Roles::{has_treasury_compliance_role};
+    use 0x1::Roles;
+    use 0x1::LibraTimestamp;
 
     /// The `TransactionFee` resource holds a preburn resource for each
     /// fiat `CoinType` that can be collected as a transaction fee.
@@ -16,18 +17,22 @@ module TransactionFee {
         preburn: Preburn<CoinType>,
     }
 
+    const ENOT_GENESIS: u64 = 0;
+    const ENOT_TREASURY_COMPLIANCE: u64 = 1;
+    const EINVALID_SINGLETON_ADDRESS: u64 = 2;
+
     /// Called in genesis. Sets up the needed resources to collect transaction fees from the
     /// `TransactionFee` resource with the TreasuryCompliance account.
     public fun initialize(
         assoc_account: &signer,
         tc_account: &signer,
     ) {
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         assert(
             Signer::address_of(assoc_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
-            0
+            EINVALID_SINGLETON_ADDRESS
         );
-        // TODO: abort code
-        assert(has_treasury_compliance_role(tc_account), 919424);
+        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
         // accept fees in all the currencies
         add_txn_fee_currency<Coin1>(assoc_account, tc_account);
         add_txn_fee_currency<Coin2>(assoc_account, tc_account);

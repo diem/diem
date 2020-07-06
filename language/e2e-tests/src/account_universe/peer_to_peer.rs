@@ -90,7 +90,7 @@ impl AUTransactionGen for P2PTransferGen {
                 sender.balance -= gas_used * txn.gas_unit_price();
                 // 10 means the balance was insufficient while trying to transfer.
                 status =
-                    TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(10));
+                    TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED).with_sub_status(5));
             }
             (false, _, _) => {
                 // Not enough gas to pass validation. Nothing will happen.

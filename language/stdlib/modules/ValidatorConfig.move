@@ -1,20 +1,10 @@
-// Error codes:
-// 1100 -> OPERATOR_ACCOUNT_DOES_NOT_EXIST
-// 1101 -> INVALID_TRANSACTION_SENDER
-// 1102 -> VALIDATOR_NOT_CERTIFIED
-// 1103 -> VALIDATOR_OPERATOR_NOT_CERTIFIED
-// 1104 -> VALIDATOR_CONFIG_IS_NOT_SET
-// 1105 -> VALIDATOR_OPERATOR_IS_NOT_SET
-// 1106 -> VALIDATOR_RESOURCE_DOES_NOT_EXIST
-// 1107 -> INVALID_NET
-// 1108 -> INVALID_CONSENSUS_KEY
 address 0x1 {
 
 module ValidatorConfig {
     use 0x1::Option::{Self, Option};
     use 0x1::Signature;
     use 0x1::Signer;
-    use 0x1::Roles::{has_libra_root_role};
+    use 0x1::Roles;
 
     resource struct UpdateValidatorConfig {}
 
@@ -37,6 +27,11 @@ module ValidatorConfig {
 
     // TODO(valerini): add events here
 
+    const ENOT_LIBRA_ROOT: u64 = 0;
+    const EINVALID_TRANSACTION_SENDER: u64 = 1;
+    const EVALIDATOR_RESOURCE_DOES_NOT_EXIST: u64 = 2;
+    const EINVALID_CONSENSUS_KEY: u64 = 3;
+
     ///////////////////////////////////////////////////////////////////////////
     // Validator setup methods
     ///////////////////////////////////////////////////////////////////////////
@@ -45,8 +40,7 @@ module ValidatorConfig {
         account: &signer,
         lr_account: &signer,
         ) {
-        // TODO: abort code
-        assert(has_libra_root_role(lr_account), 919425);
+        assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         move_to(account, ValidatorConfig {
             config: Option::none(),
             operator_account: Option::none(),
@@ -89,9 +83,9 @@ module ValidatorConfig {
     ) acquires ValidatorConfig {
         assert(
             Signer::address_of(signer) == get_operator(validator_account),
-            1101
+            EINVALID_TRANSACTION_SENDER
         );
-        assert(Signature::ed25519_validate_pubkey(copy consensus_pubkey), 1108);
+        assert(Signature::ed25519_validate_pubkey(copy consensus_pubkey), EINVALID_CONSENSUS_KEY);
         // TODO(valerini): verify the proof of posession for consensus_pubkey
         let t_ref = borrow_global_mut<ValidatorConfig>(validator_account);
         t_ref.config = Option::some(Config {
@@ -118,7 +112,7 @@ module ValidatorConfig {
     // Get Config
     // Aborts if there is no ValidatorConfig resource of if its config is empty
     public fun get_config(addr: address): Config acquires ValidatorConfig {
-        assert(exists<ValidatorConfig>(addr), 1106);
+        assert(exists<ValidatorConfig>(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
         let config = &borrow_global<ValidatorConfig>(addr).config;
         *Option::borrow(config)
     }
@@ -127,7 +121,7 @@ module ValidatorConfig {
     // Aborts if there is no ValidatorConfig resource, if its operator_account is
     // empty, returns the input
     public fun get_operator(addr: address): address acquires ValidatorConfig {
-        assert(exists<ValidatorConfig>(addr), 1106);
+        assert(exists<ValidatorConfig>(addr), EVALIDATOR_RESOURCE_DOES_NOT_EXIST);
         let t_ref = borrow_global<ValidatorConfig>(addr);
         *Option::borrow_with_default(&t_ref.operator_account, &addr)
     }
