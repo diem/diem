@@ -141,12 +141,12 @@ pub fn setup_network() -> DummyNetwork {
 
     let authentication_mode = AuthenticationMode::Mutual(listener_identity_private_key);
 
+    // Set up the listener network
     let network_context = Arc::new(NetworkContext::new(
         network_id.clone(),
         RoleType::Validator,
         listener_peer_id,
     ));
-    // Set up the listener network
     let mut network_builder = NetworkBuilder::new(
         chain_id,
         trusted_peers.clone(),
