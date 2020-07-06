@@ -19,6 +19,7 @@ use channel::{libra_channel, libra_channel::ElementStatus, message_queues::Queue
 use futures::channel::oneshot;
 use libra_config::{config::RoleType, network_id::NetworkId};
 use libra_network_address::NetworkAddress;
+use netcore::transport::ConnectionOrigin;
 use std::{num::NonZeroUsize, str::FromStr};
 use tokio::runtime::Runtime;
 
@@ -89,8 +90,12 @@ fn send_new_peer_with_feedback(
     address: NetworkAddress,
     delivered_tx: oneshot::Sender<ElementStatus<ConnectionNotification>>,
 ) {
-    let notif =
-        peer_manager::ConnectionNotification::NewPeer(peer_id, address, NetworkContext::mock());
+    let notif = peer_manager::ConnectionNotification::NewPeer(
+        peer_id,
+        address,
+        ConnectionOrigin::Inbound,
+        NetworkContext::mock(),
+    );
     connection_notifs_tx
         .push_with_feedback(peer_id, notif, Some(delivered_tx))
         .unwrap();

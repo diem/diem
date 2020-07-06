@@ -26,6 +26,7 @@ use libra_types::{
     validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
     validator_verifier::random_validator_verifier, waypoint::Waypoint, PeerId,
 };
+use netcore::transport::{ConnectionOrigin, ConnectionOrigin::*};
 use network::{
     constants,
     peer_manager::{
@@ -541,18 +542,21 @@ impl SynchronizerEnv {
         sender: (usize, usize),
         receiver: (usize, usize),
         new_peer: bool,
+        direction: ConnectionOrigin,
     ) {
         let sender_id = self.get_peer_network_id(sender);
         let notif = if new_peer {
             ConnectionNotification::NewPeer(
                 sender_id,
                 NetworkAddress::mock(),
+                direction,
                 NetworkContext::mock(),
             )
         } else {
             ConnectionNotification::LostPeer(
                 sender_id,
                 NetworkAddress::mock(),
+                direction,
                 DisconnectReason::ConnectionLost,
             )
         };
@@ -813,21 +817,14 @@ fn test_sync_pending_ledger_infos() {
         None,
     );
 
-    let validator = env.get_peer_network_id((0, 0));
-    let full_node = env.get_peer_network_id((1, 0));
+    let validator = (0, 0);
+    let full_node = (1, 0);
 
     // validator discovers fn
-    env.send_connection_event(
-        (0, 1),
-        full_node,
-        ConnectionNotification::NewPeer(full_node, NetworkAddress::mock(), NetworkContext::mock()),
-    );
+    env.send_peer_event(full_node, validator, true, Inbound);
+
     // fn discovers validator
-    env.send_connection_event(
-        (1, 0),
-        validator,
-        ConnectionNotification::NewPeer(validator, NetworkAddress::mock(), NetworkContext::mock()),
-    );
+    env.send_peer_event(validator, full_node, true, Outbound);
 
     let commit_versions = vec![
         900, 1800, 2800, 3100, 3200, 3300, 3325, 3350, 3400, 3450, 3650, 4300,
@@ -916,16 +913,16 @@ fn test_fn_failover() {
 
     // vfn network:
     // validator discovers fn_0
-    env.send_peer_event(fn_0_vfn, validator, true);
+    env.send_peer_event(fn_0_vfn, validator, true, Inbound);
     // fn_0 discovers validator
-    env.send_peer_event(validator, fn_0_vfn, true);
+    env.send_peer_event(validator, fn_0_vfn, true, Outbound);
 
     // public network:
     // fn_0 sends new peer event to all its upstream public peers
     let upstream_peers = [fn_1, fn_2, fn_3];
     for peer in upstream_peers.iter() {
-        env.send_peer_event(fn_0_public, *peer, true);
-        env.send_peer_event(*peer, fn_0_public, true);
+        env.send_peer_event(fn_0_public, *peer, true, Inbound);
+        env.send_peer_event(*peer, fn_0_public, true, Outbound);
     }
 
     // commit some txns on v
@@ -948,8 +945,8 @@ fn test_fn_failover() {
     }
 
     // bring down v
-    env.send_peer_event(fn_0_vfn, validator, false);
-    env.send_peer_event(validator, fn_0_vfn, false);
+    env.send_peer_event(fn_0_vfn, validator, false, Inbound);
+    env.send_peer_event(validator, fn_0_vfn, false, Outbound);
 
     // deliver chunk response to fn_0 after the lost peer event
     // so that the next chunk request is guaranteed to be sent after the lost peer event
@@ -984,12 +981,12 @@ fn test_fn_failover() {
 
     // bring down two public fallback
     // disconnect fn_1 and fn_0
-    env.send_peer_event(fn_0_public, fn_1, false);
-    env.send_peer_event(fn_1, fn_0_public, false);
+    env.send_peer_event(fn_0_public, fn_1, false, Inbound);
+    env.send_peer_event(fn_1, fn_0_public, false, Outbound);
 
     // disconnect fn_2 and fn_0
-    env.send_peer_event(fn_0_public, fn_2, false);
-    env.send_peer_event(fn_2, fn_0_public, false);
+    env.send_peer_event(fn_0_public, fn_2, false, Inbound);
+    env.send_peer_event(fn_2, fn_0_public, false, Outbound);
 
     // deliver chunk response to fn_0 after the lost peer events
     // so that the next chunk request is guaranteed to be sent after the lost peer events
@@ -1022,8 +1019,8 @@ fn test_fn_failover() {
 
     // bring down everyone
     // disconnect fn_3 and fn_0
-    env.send_peer_event(fn_3, fn_0_public, false);
-    env.send_peer_event(fn_0_public, fn_3, false);
+    env.send_peer_event(fn_3, fn_0_public, false, Outbound);
+    env.send_peer_event(fn_0_public, fn_3, false, Inbound);
 
     // deliver chunk response to fn_0 after the lost peer events
     // so that the next chunk request is guaranteed to be sent after the lost peer events
@@ -1038,8 +1035,8 @@ fn test_fn_failover() {
     env.assert_no_message_sent(fn_0_public);
 
     // bring back one fallback (fn_2)
-    env.send_peer_event(fn_2, fn_0_public, true);
-    env.send_peer_event(fn_0_public, fn_2, true);
+    env.send_peer_event(fn_2, fn_0_public, true, Outbound);
+    env.send_peer_event(fn_0_public, fn_2, true, Inbound);
 
     // check we only broadcast to the single live fallback peer (fn_2)
     for num_commit in 16..=20 {
@@ -1062,8 +1059,8 @@ fn test_fn_failover() {
     }
 
     // bring back v again
-    env.send_peer_event(fn_0_vfn, validator, true);
-    env.send_peer_event(validator, fn_0_vfn, true);
+    env.send_peer_event(fn_0_vfn, validator, true, Inbound);
+    env.send_peer_event(validator, fn_0_vfn, true, Outbound);
 
     let chunk_response_recipient = env.deliver_msg(fn_2);
     assert_eq!(
@@ -1090,8 +1087,8 @@ fn test_fn_failover() {
     // bring back all fallback
     let upstream_peers_to_revive = [(2, 1), (4, 1)];
     for peer in upstream_peers_to_revive.iter() {
-        env.send_peer_event(fn_0_public, *peer, true);
-        env.send_peer_event(*peer, fn_0_public, true);
+        env.send_peer_event(fn_0_public, *peer, true, Inbound);
+        env.send_peer_event(*peer, fn_0_public, true, Outbound);
     }
 
     // deliver validator's chunk response after fallback peers are revived

@@ -24,7 +24,7 @@ pub mod tcp;
 pub mod timeout;
 
 /// Origin of how a Connection was established.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Serialize)]
 pub enum ConnectionOrigin {
     /// `Inbound` indicates that we are the listener for this connection.
     Inbound,

@@ -187,10 +187,10 @@ where
             futures::select! {
                 event = self.network_rx.select_next_some() => {
                     match event {
-                        Ok(Event::NewPeer(peer_id)) => {
+                        Ok(Event::NewPeer(peer_id, _origin)) => {
                             self.connected.insert(peer_id, (self.round, 0));
                         },
-                        Ok(Event::LostPeer(peer_id)) => {
+                        Ok(Event::LostPeer(peer_id, _origin)) => {
                             self.connected.remove(&peer_id);
                         },
                         Ok(Event::RpcRequest((peer_id, msg, res_tx))) => {

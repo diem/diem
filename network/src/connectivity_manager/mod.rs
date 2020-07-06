@@ -593,13 +593,15 @@ where
 
     fn handle_control_notification(&mut self, notif: peer_manager::ConnectionNotification) {
         match notif {
-            peer_manager::ConnectionNotification::NewPeer(peer_id, addr, _context) => {
+            peer_manager::ConnectionNotification::NewPeer(peer_id, addr, _origin, _context) => {
+                // TODO(gnazario): Keep track of inbound and outbound separately?  Somehow handle limits between both
                 self.connected.insert(peer_id, addr);
+
                 // Cancel possible queued dial to this peer.
                 self.dial_states.remove(&peer_id);
                 self.dial_queue.remove(&peer_id);
             }
-            peer_manager::ConnectionNotification::LostPeer(peer_id, addr, _reason) => {
+            peer_manager::ConnectionNotification::LostPeer(peer_id, addr, _origin, _reason) => {
                 match self.connected.get(&peer_id) {
                     Some(curr_addr) if *curr_addr == addr => {
                         // Remove node from connected peers list.

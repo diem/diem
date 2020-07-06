@@ -246,11 +246,11 @@ where
         match event {
             Ok(e) => {
                 match e {
-                    Event::NewPeer(peer_id) => {
+                    Event::NewPeer(peer_id, _origin) => {
                         // Add peer to connected peer list.
                         self.connected_peers.insert(peer_id);
                     }
-                    Event::LostPeer(peer_id) => {
+                    Event::LostPeer(peer_id, _origin) => {
                         // Remove peer from connected peer list.
                         self.connected_peers.remove(&peer_id);
                     }
