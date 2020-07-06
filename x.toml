@@ -68,6 +68,7 @@ members = [
     "common/libradoc",
     "common/proptest-helpers",
     "common/retrier",
+    "common/trace",
     "common/workspace-builder",
     "devtools/x",
     "devtools/x-core",
