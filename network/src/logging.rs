@@ -12,7 +12,6 @@ use libra_types::PeerId;
 /// This file contains constants used for structured logging data types so that there is
 /// consistency among structured logs.
 pub const CONNECTIVITY_MANAGER_LOOP: &str = "connectivity_manager_loop";
-pub const ONCHAIN_DISCOVERY_LOOP: &str = "onchain_discovery_loop";
 pub const PEER_MANAGER_LOOP: &str = "peer_manager_loop";
 
 /// Common terms
