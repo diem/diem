@@ -200,6 +200,10 @@ pub struct FunId(Symbol);
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct SchemaId(Symbol);
 
+/// Identifier for a constant.
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
+pub struct ConstId(Symbol);
+
 /// Identifier for a specification function, relative to module.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct SpecFunId(RawIndex);
@@ -255,6 +259,16 @@ impl StructId {
 }
 
 impl FieldId {
+    pub fn new(sym: Symbol) -> Self {
+        Self(sym)
+    }
+
+    pub fn symbol(self) -> Symbol {
+        self.0
+    }
+}
+
+impl ConstId {
     pub fn new(sym: Symbol) -> Self {
         Self(sym)
     }

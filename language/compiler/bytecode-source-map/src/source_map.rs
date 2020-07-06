@@ -72,8 +72,8 @@ pub struct SourceMap<Location: Clone + Eq> {
     // A mapping of FunctionDefinitionIndex to the soure map for that function.
     function_map: BTreeMap<TableIndex, FunctionSourceMap<Location>>,
 
-    // A mapping of ConstantPoolIndex to a vector of constant names.
-    pub constant_map: BTreeMap<TableIndex, Vec<ConstantName>>,
+    // A mapping of constant name to its ConstantPoolIndex.
+    pub constant_map: BTreeMap<ConstantName, TableIndex>,
 }
 
 pub fn remap_locations_source_name<Location: Clone + Eq, Other: Clone + Eq>(
@@ -453,11 +453,18 @@ impl<Location: Clone + Eq> SourceMap<Location> {
                 )) })
     }
 
-    pub fn add_const_mapping(&mut self, const_idx: ConstantPoolIndex, name: ConstantName) {
+    pub fn add_const_mapping(
+        &mut self,
+        const_idx: ConstantPoolIndex,
+        name: ConstantName,
+    ) -> Result<()> {
         self.constant_map
-            .entry(const_idx.0)
-            .or_insert_with(Vec::new)
-            .push(name);
+            .insert(name, const_idx.0)
+            .map_or(Ok(()), |_| {
+                Err(format_err!(
+                    "Multiple constans with same name encountered when constructing source map"
+                ))
+            })
     }
 
     pub fn add_struct_field_mapping(
@@ -564,7 +571,7 @@ impl<Location: Clone + Eq> SourceMap<Location> {
             empty_source_map.add_const_mapping(
                 ConstantPoolIndex(const_idx as TableIndex),
                 ConstantName::new(format!("CONST{}", const_idx)),
-            );
+            )?;
         }
 
         Ok(empty_source_map)

@@ -81,7 +81,7 @@ macro_rules! record_src_loc {
             .add_top_level_struct_mapping($context.current_struct_definition_index(), $location)?;
     };
     (const_decl: $context:expr, $const_index:expr, $name:expr) => {
-        $context.source_map.add_const_mapping($const_index, $name);
+        $context.source_map.add_const_mapping($const_index, $name)?;
     };
 }
 
