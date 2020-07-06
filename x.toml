@@ -86,7 +86,6 @@ members = [
     "language/tools/test-generation",
     "language/tools/utils",
     "language/vm/serializer-tests",
-    "network/onchain-discovery",
     "network/socket-bench-server",
     "testsuite",
     "testsuite/cluster-test",
