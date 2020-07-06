@@ -336,6 +336,7 @@ module LibraAccount {
     }
     spec fun assert_signature_is_valid {
         pragma verify = true, opaque = true;
+        aborts_if !VASP::spec_is_valid_vasp(payee);
         aborts_if !signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value);
     }
     spec module {

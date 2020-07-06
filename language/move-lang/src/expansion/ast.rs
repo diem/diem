@@ -131,6 +131,7 @@ pub type SpecBlock = Spanned<SpecBlock_>;
 pub enum SpecBlockMember_ {
     Condition {
         kind: SpecConditionKind,
+        properties: Vec<PragmaProperty>,
         exp: Exp,
     },
     Function {
@@ -464,7 +465,11 @@ impl AstDebug for SpecBlock_ {
 impl AstDebug for SpecBlockMember_ {
     fn ast_debug(&self, w: &mut AstWriter) {
         match self {
-            SpecBlockMember_::Condition { kind, exp } => {
+            SpecBlockMember_::Condition {
+                kind,
+                properties: _,
+                exp,
+            } => {
                 kind.ast_debug(w);
                 exp.ast_debug(w);
             }

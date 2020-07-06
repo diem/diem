@@ -22,6 +22,7 @@ use crate::{
     cli::Options,
 };
 use itertools::Itertools;
+use spec_lang::env::{CONDITION_INJECTED_PROP, CONDITION_PUBLIC};
 use spec_lang::{
     ast::{Condition, ConditionKind, Exp, LocalVarDecl, Operation, Value},
     code_writer::CodeWriter,
@@ -65,6 +66,31 @@ impl<'env> Into<SpecEnv<'env>> for StructEnv<'env> {
 impl<'env> Into<SpecEnv<'env>> for ModuleEnv<'env> {
     fn into(self) -> SpecEnv<'env> {
         SpecEnv::Module(self)
+    }
+}
+
+/// Different kinds of function entry points.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FunctionEntryPoint {
+    /// Inlined variant without pre/post conditions. Used by the others below.
+    Definition,
+    /// Inlined or opaque variant for callers from one module into another.
+    InterCall,
+    /// Inlined or opaque variant for callers in the same module.
+    IntraCall,
+    /// Verified variant with full pre/post conditions.
+    Verified,
+}
+
+impl FunctionEntryPoint {
+    pub fn suffix(self) -> &'static str {
+        use FunctionEntryPoint::*;
+        match self {
+            Definition => "_def",
+            InterCall => "",
+            IntraCall => "_intra",
+            Verified => "_verify",
+        }
     }
 }
 
@@ -161,12 +187,6 @@ impl<'env> SpecTranslator<'env> {
             type_args_opt: None,
             traced_items: Default::default(),
         }
-    }
-
-    /// Sets type arguments in which context this translator works.
-    pub fn set_type_args(mut self, type_args: Vec<Type>) -> Self {
-        self.type_args_opt = Some(type_args);
-        self
     }
 
     /// Emits a translation error.
@@ -387,8 +407,9 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
-    /// Generates boogie for pre/post conditions.
-    pub fn translate_conditions(&self, free_ensures: bool) {
+    /// Generates boogie for pre/post conditions. Conditions are generated depending on
+    /// the kind of entry point.
+    pub fn translate_conditions(&self, for_entry_point: FunctionEntryPoint) {
         // Generate pre-conditions
         // For this transaction to be executed, it MUST have had
         // a valid signature for the sender's account. Therefore,
@@ -397,19 +418,50 @@ impl<'env> SpecTranslator<'env> {
         // exists in pre-condition.
         let func_target = self.function_target();
         let spec = func_target.get_spec();
-        let ensures_mod = if free_ensures { "free " } else { "" };
+
+        let scope_filter = |c: &&Condition| {
+            use FunctionEntryPoint::*;
+            match for_entry_point {
+                IntraCall | Verified => true,
+                InterCall => {
+                    !self
+                        .module_env()
+                        .env
+                        .is_property_true(&c.properties, CONDITION_INJECTED_PROP)
+                        || self
+                            .module_env()
+                            .env
+                            .is_property_true(&c.properties, CONDITION_PUBLIC)
+                }
+                _ => unreachable!(),
+            }
+        };
+        let kind_filter = |k: ConditionKind| -> Box<dyn Fn(&&Condition) -> bool> {
+            Box::new(move |c: &&Condition| c.kind == k && scope_filter(c))
+        };
+        let kind2_filter = |k1, k2: ConditionKind| -> Box<dyn Fn(&&Condition) -> bool> {
+            Box::new(move |c: &&Condition| (c.kind == k1 || c.kind == k2) && scope_filter(c))
+        };
+
+        // Mode in which ensures (and abort_if) are emitted.
+        let ensures_mod = if for_entry_point != FunctionEntryPoint::Verified {
+            // For all entry points except the verified one ensures is free.
+            "free "
+        } else {
+            ""
+        };
 
         // Get all aborts_if conditions.
-        let aborts_if = spec.filter_kind(ConditionKind::AbortsIf).collect_vec();
+        let aborts_if = spec
+            .filter(kind_filter(ConditionKind::AbortsIf))
+            .collect_vec();
 
         // Generate requires.
         let requires = spec
-            .filter(|c| {
-                matches!(
-                    c.kind,
-                    ConditionKind::Requires | ConditionKind::RequiresModule
-                )
-            })
+            .filter(kind2_filter(
+                ConditionKind::Requires,
+                ConditionKind::RequiresModule,
+            ))
             .collect_vec();
         if !requires.is_empty() {
             // Each requires condition is or-ed with the aborts condition (unless pragma
@@ -418,6 +470,12 @@ impl<'env> SpecTranslator<'env> {
             self.translate_seq(requires.iter(), "\n", |cond| {
                 self.writer.set_location(&cond.loc);
                 self.set_condition_info(&cond.loc, REQUIRES_FAILS_MESSAGE, true);
+                if cond.kind == ConditionKind::RequiresModule
+                    && for_entry_point == FunctionEntryPoint::InterCall
+                {
+                    // Only for inter-module calls requires module is free.
+                    emit!(self.writer, "free ");
+                }
                 emit!(self.writer, "requires b#$Boolean(");
                 self.translate_exp(&cond.exp);
                 emit!(self.writer, ")");
@@ -479,7 +537,9 @@ impl<'env> SpecTranslator<'env> {
 
         // Generate succeeds_if.
         // Emits `ensures S1 ==> !abort_flag; ... ensures Sn ==> !abort_flag;`.
-        let succeeds_if = spec.filter_kind(ConditionKind::SucceedsIf).collect_vec();
+        let succeeds_if = spec
+            .filter(kind_filter(ConditionKind::SucceedsIf))
+            .collect_vec();
         for c in succeeds_if {
             self.writer.set_location(&c.loc);
             self.set_condition_info(&c.loc, SUCCEEDS_IF_FAILS_MESSAGE, false);
@@ -489,7 +549,10 @@ impl<'env> SpecTranslator<'env> {
         }
 
         // Generate ensures
-        let ensures = spec.filter_kind(ConditionKind::Ensures).collect_vec();
+
+        let ensures = spec
+            .filter(kind_filter(ConditionKind::Ensures))
+            .collect_vec();
         if !ensures.is_empty() {
             *self.in_ensures.borrow_mut() = true;
             self.translate_seq(ensures.iter(), "\n", |cond| {
@@ -556,27 +619,6 @@ impl<'env> SpecTranslator<'env> {
                 emit!(self.writer, ");")
             });
             emitln!(self.writer);
-        }
-    }
-
-    /// Assume module requires of a function. This is used when the function is called from
-    /// outside of a module.
-    pub fn assume_module_preconditions(&self) {
-        let func_target = self.function_target();
-        if func_target.is_public() {
-            let requires = func_target
-                .get_spec()
-                .filter(|c| matches!(c.kind, ConditionKind::RequiresModule))
-                .collect_vec();
-            if !requires.is_empty() {
-                self.translate_seq(requires.iter(), "\n", |cond| {
-                    self.writer.set_location(&cond.loc);
-                    emit!(self.writer, "assume b#$Boolean(");
-                    self.translate_exp(&cond.exp);
-                    emit!(self.writer, ");")
-                });
-                emitln!(self.writer);
-            }
         }
     }
 }

@@ -804,9 +804,21 @@ fn spec_member(
     use E::SpecBlockMember_ as EM;
     use P::SpecBlockMember_ as PM;
     let em = match pm {
-        PM::Condition { kind, exp } => {
+        PM::Condition {
+            kind,
+            properties: pproperties,
+            exp,
+        } => {
+            let properties = pproperties
+                .into_iter()
+                .map(|p| pragma_property(context, p))
+                .collect();
             let exp = exp_(context, exp);
-            EM::Condition { kind, exp }
+            EM::Condition {
+                kind,
+                properties,
+                exp,
+            }
         }
         PM::Function {
             name,

@@ -5,7 +5,7 @@
 //! to interpret metadata about the translation target.
 
 #[allow(unused_imports)]
-use log::info;
+use log::{info, warn};
 
 use std::cell::RefCell;
 
@@ -83,6 +83,13 @@ pub const ADDITION_OVERFLOW_UNCHECKED_PRAGMA: &str = "addition_overflow_unchecke
 
 /// Pragma indicating that aborts from this function shall be ignored.
 pub const ASSUME_NO_ABORT_FROM_HERE_PRAGMA: &str = "assume_no_abort_from_here";
+
+/// Internal property attached to conditions if they are injected via an apply or a module
+/// invariant.
+pub const CONDITION_INJECTED_PROP: &str = "$injected";
+
+/// Property which can be attached to conditions to make them public even if they are injected.
+pub const CONDITION_PUBLIC: &str = "public";
 
 // =================================================================================================
 /// # Locations
@@ -856,6 +863,27 @@ impl GlobalEnv {
             .borrow()
             .iter()
             .for_each(|(l, i)| f(l, i))
+    }
+
+    /// Returns true if the boolean property is true.
+    pub fn is_property_true(&self, properties: &PropertyBag, name: &str) -> bool {
+        let res = {
+            let sym = &self.symbol_pool().make(name);
+            if let Some(Value::Bool(b)) = properties.get(sym) {
+                return *b;
+            }
+            false
+        };
+        warn!(
+            "{} = {} ({:?})",
+            name,
+            res,
+            properties
+                .iter()
+                .map(|(s, v)| format!("{} = {:?}", self.symbol_pool().string(*s), v))
+                .join(", ")
+        );
+        res
     }
 }
 
@@ -1691,14 +1719,10 @@ impl<'env> FunctionEnv<'env> {
     /// pragma in this function, then the enclosing module, and finally uses the provided default.
     /// value
     pub fn is_pragma_true(&self, name: &str, default: impl FnOnce() -> bool) -> bool {
-        let name = &self.symbol_pool().make(name);
-        if let Some(Value::Bool(b)) = self.get_spec().properties.get(name) {
-            return *b;
-        }
-        if let Some(Value::Bool(b)) = self.module_env.get_spec().properties.get(name) {
-            return *b;
-        }
-        default()
+        let env = self.module_env.env;
+        env.is_property_true(&self.get_spec().properties, name)
+            || env.is_property_true(&self.module_env.get_spec().properties, name)
+            || default()
     }
 
     /// Returns true if this function is native. The function is also marked as native

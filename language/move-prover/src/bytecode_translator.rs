@@ -28,6 +28,7 @@ use stackless_bytecode_generator::{
 };
 use vm::file_format::CodeOffset;
 
+use crate::spec_translator::FunctionEntryPoint;
 use crate::{
     boogie_helpers::{
         boogie_byte_blob, boogie_field_name, boogie_function_name, boogie_local_type,
@@ -53,29 +54,6 @@ pub struct ModuleTranslator<'env> {
     options: &'env Options,
     module_env: ModuleEnv<'env>,
     targets: &'env FunctionTargetsHolder,
-}
-
-/// For each function, we generate multiple entry points.
-#[derive(Clone, Copy, PartialEq, Eq)]
-enum FunctionEntryPoint {
-    /// Inlined variant without pre/post conditions. Used by the other two below.
-    Definition,
-    /// Inlined variant with pre conditions and free post conditions. Used by
-    /// callers.
-    Called,
-    /// Verified variant with full pre/post conditions.
-    Verified,
-}
-
-impl FunctionEntryPoint {
-    fn suffix(self) -> &'static str {
-        use FunctionEntryPoint::*;
-        match self {
-            Definition => "_def",
-            Called => "",
-            Verified => "_verify",
-        }
-    }
 }
 
 /// A struct encapsulating information which is threaded through translating the bytecodes of
@@ -534,9 +512,9 @@ impl<'env> ModuleTranslator<'env> {
     fn translate_function(&self, func_target: &FunctionTarget<'_>) {
         if func_target.is_native() {
             if self.options.prover.native_stubs {
-                self.generate_function_sig(func_target, FunctionEntryPoint::Called);
+                self.generate_function_sig(func_target, FunctionEntryPoint::InterCall);
                 emit!(self.writer, ";");
-                self.generate_function_spec(func_target, FunctionEntryPoint::Called);
+                self.generate_function_spec(func_target, FunctionEntryPoint::InterCall);
                 emitln!(self.writer);
             }
             return;
@@ -546,16 +524,18 @@ impl<'env> ModuleTranslator<'env> {
         self.generate_function_sig(func_target, FunctionEntryPoint::Definition);
         self.generate_inline_function_body(func_target);
 
-        // generate called function with pre and free post conditions.
+        // generate public and private entry points
         let opaque = func_target.is_pragma_true(OPAQUE_PRAGMA, || false);
-        self.generate_function_sig(func_target, FunctionEntryPoint::Called);
-        if opaque {
-            emit!(self.writer, ";");
-        }
-        self.generate_function_args_requires_well_formed(func_target);
-        self.generate_function_spec(func_target, FunctionEntryPoint::Called);
-        if !opaque {
-            self.generate_function_forward_body(func_target, FunctionEntryPoint::Called);
+        for entry_point in &[FunctionEntryPoint::InterCall, FunctionEntryPoint::IntraCall] {
+            self.generate_function_sig(func_target, *entry_point);
+            if opaque {
+                emit!(self.writer, ";");
+            }
+            self.generate_function_args_requires_well_formed(func_target);
+            self.generate_function_spec(func_target, *entry_point);
+            if !opaque {
+                self.generate_function_forward_body(func_target, *entry_point);
+            }
         }
 
         // If the function should not have a `_verify` entry point, stop here.
@@ -582,7 +562,9 @@ impl<'env> ModuleTranslator<'env> {
     ) {
         let (args, rets) = self.generate_function_args_and_returns(func_target);
         let inline = match entry_point {
-            FunctionEntryPoint::Definition | FunctionEntryPoint::Called => "{:inline 1} ",
+            FunctionEntryPoint::Definition
+            | FunctionEntryPoint::InterCall
+            | FunctionEntryPoint::IntraCall => "{:inline 1} ",
             _ => "",
         };
         let suffix = entry_point.suffix();
@@ -661,7 +643,7 @@ impl<'env> ModuleTranslator<'env> {
         entry_point: FunctionEntryPoint,
     ) {
         SpecTranslator::new(self.writer, func_target.clone(), self.options, true)
-            .translate_conditions(entry_point == FunctionEntryPoint::Called);
+            .translate_conditions(entry_point);
     }
 
     /// Emit code for spec inside function implementation.
@@ -1101,23 +1083,15 @@ impl<'env> ModuleTranslator<'env> {
                     FreezeRef => unreachable!(), // eliminated by eliminate_imm_refs
                     Function(mid, fid, type_actuals) => {
                         let callee_env = self.module_env.env.get_module(*mid).into_function(*fid);
-                        // If this is a call to a function from another module, assume the module invariants
-                        // if any. This is correct because module invariants are guaranteed to hold whenever
-                        // code outside of the module is executed.
-                        if callee_env.module_env.get_id()
-                            != func_target.func_env.module_env.get_id()
+                        // Determine the type of entry point to call.
+                        let entry_point = if callee_env.is_native()
+                            || callee_env.module_env.get_id()
+                                != func_target.func_env.module_env.get_id()
                         {
-                            let callee_target = self.targets.get_target(&callee_env).clone();
-                            let spec_translator = SpecTranslator::new(
-                                self.writer,
-                                callee_target,
-                                self.options,
-                                false,
-                            )
-                            .set_type_args(type_actuals.clone());
-                            spec_translator.assume_module_preconditions();
-                        }
-
+                            FunctionEntryPoint::InterCall
+                        } else {
+                            FunctionEntryPoint::IntraCall
+                        };
                         let mut dest_str = String::new();
                         let mut args_str = String::new();
                         let mut dest_type_assumptions = vec![];
@@ -1153,16 +1127,18 @@ impl<'env> ModuleTranslator<'env> {
                         if dest_str == "" {
                             emitln!(
                                 self.writer,
-                                "call {}({});",
+                                "call {}{}({});",
                                 boogie_function_name(&callee_env),
+                                entry_point.suffix(),
                                 args_str
                             );
                         } else {
                             emitln!(
                                 self.writer,
-                                "call {} := {}({});",
+                                "call {} := {}{}({});",
                                 dest_str,
                                 boogie_function_name(&callee_env),
+                                entry_point.suffix(),
                                 args_str
                             );
                         }

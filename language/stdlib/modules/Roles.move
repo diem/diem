@@ -292,7 +292,7 @@ module Roles {
     }
 
     spec module {
-        apply RoleIdPersists to *<T>, *;
+        apply RoleIdPersists to *<T>, * except has*;
     }
 
     // TODO: Role is supposed to be set by end of genesis?
