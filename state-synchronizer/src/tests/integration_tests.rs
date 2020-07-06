@@ -244,7 +244,7 @@ impl SynchronizerEnv {
         &mut self,
         handler: MockRpcHandler,
         role: RoleType,
-        waypoint: Option<Waypoint>,
+        waypoint: Waypoint,
         mock_network: bool,
         upstream_networks: Option<Vec<NetworkId>>,
     ) {
@@ -262,7 +262,7 @@ impl SynchronizerEnv {
         &mut self,
         handler: MockRpcHandler,
         role: RoleType,
-        waypoint: Option<Waypoint>,
+        waypoint: Waypoint,
         timeout_ms: u64,
         mock_network: bool,
         upstream_networks: Option<Vec<NetworkId>>,
@@ -571,14 +571,14 @@ fn test_basic_catch_up() {
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
-        None,
+        Waypoint::default(),
         false,
         None,
     );
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
-        None,
+        Waypoint::default(),
         false,
         None,
     );
@@ -618,11 +618,17 @@ fn test_flaky_peer_sync() {
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
-        None,
+        Waypoint::default(),
         false,
         None,
     );
-    env.start_next_synchronizer(handler, RoleType::Validator, None, false, None);
+    env.start_next_synchronizer(
+        handler,
+        RoleType::Validator,
+        Waypoint::default(),
+        false,
+        None,
+    );
     env.commit(0, 20);
     env.sync_to(1, env.latest_li(0));
     assert_eq!(env.latest_li(1).ledger_info().version(), 20);
@@ -634,11 +640,17 @@ fn test_request_timeout() {
     let handler =
         Box::new(move |_| -> Result<TransactionListWithProof> { bail!("chunk fetch failed") });
     let mut env = SynchronizerEnv::new(2);
-    env.start_next_synchronizer(handler, RoleType::Validator, None, false, None);
+    env.start_next_synchronizer(
+        handler,
+        RoleType::Validator,
+        Waypoint::default(),
+        false,
+        None,
+    );
     env.setup_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
-        None,
+        Waypoint::default(),
         100,
         false,
         None,
@@ -653,14 +665,14 @@ fn test_full_node() {
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
-        None,
+        Waypoint::default(),
         false,
         None,
     );
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
-        None,
+        Waypoint::default(),
         false,
         None,
     );
@@ -679,14 +691,14 @@ fn catch_up_through_epochs_validators() {
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
-        None,
+        Waypoint::default(),
         false,
         None,
     );
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
-        None,
+        Waypoint::default(),
         false,
         None,
     );
@@ -718,7 +730,7 @@ fn catch_up_through_epochs_full_node() {
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
-        None,
+        Waypoint::default(),
         false,
         None,
     );
@@ -732,7 +744,7 @@ fn catch_up_through_epochs_full_node() {
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
-        None,
+        Waypoint::default(),
         false,
         None,
     );
@@ -743,7 +755,7 @@ fn catch_up_through_epochs_full_node() {
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
-        None,
+        Waypoint::default(),
         false,
         None,
     );
@@ -757,7 +769,7 @@ fn catch_up_with_waypoints() {
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
-        None,
+        Waypoint::default(),
         false,
         None,
     );
@@ -774,7 +786,7 @@ fn catch_up_with_waypoints() {
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
-        Some(waypoint),
+        waypoint,
         false,
         None,
     );
@@ -790,7 +802,7 @@ fn catch_up_with_waypoints() {
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
-        None,
+        Waypoint::default(),
         false,
         None,
     );
@@ -805,14 +817,14 @@ fn test_sync_pending_ledger_infos() {
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
-        None,
+        Waypoint::default(),
         true,
         None,
     );
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
-        None,
+        Waypoint::default(),
         true,
         None,
     );
@@ -880,14 +892,14 @@ fn test_fn_failover() {
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::Validator,
-        None,
+        Waypoint::default(),
         true,
         None,
     );
     env.start_next_synchronizer(
         SynchronizerEnv::default_handler(),
         RoleType::FullNode,
-        None,
+        Waypoint::default(),
         true,
         Some(vec![NetworkId::vfn_network(), NetworkId::Public]),
     );
@@ -897,7 +909,7 @@ fn test_fn_failover() {
         env.start_next_synchronizer(
             SynchronizerEnv::default_handler(),
             RoleType::FullNode,
-            None,
+            Waypoint::default(),
             true,
             None,
         );
