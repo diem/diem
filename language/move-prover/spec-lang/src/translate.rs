@@ -19,7 +19,8 @@ use num::{BigUint, FromPrimitive, Num};
 use regex::Regex;
 
 use bytecode_source_map::source_map::SourceMap;
-use move_ir_types::location::Spanned;
+use move_core_types::value::MoveValue;
+use move_ir_types::{ast::ConstantName, location::Spanned};
 use move_lang::{
     compiled_unit::{FunctionInfo, SpecInfo},
     expansion::ast as EA,
@@ -30,7 +31,7 @@ use move_lang::{
 };
 use vm::{
     access::ModuleAccess,
-    file_format::{FunctionDefinitionIndex, StructDefinitionIndex},
+    file_format::{Constant, FunctionDefinitionIndex, StructDefinitionIndex},
     views::{FunctionHandleView, StructHandleView},
     CompiledModule,
 };
@@ -42,9 +43,9 @@ use crate::{
         SpecVarDecl, Value,
     },
     env::{
-        FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleId, MoveIrLoc, NodeId, QualifiedId,
-        SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeConstraint, TypeParameter,
-        CONDITION_GLOBAL_PROP, CONDITION_INJECTED_PROP, SCRIPT_BYTECODE_FUN_NAME,
+        ConstId, FieldId, FunId, FunctionData, GlobalEnv, Loc, ModuleEnv, ModuleId, MoveIrLoc,
+        NodeId, QualifiedId, SchemaId, SpecFunId, SpecVarId, StructData, StructId, TypeConstraint,
+        TypeParameter, CONDITION_GLOBAL_PROP, CONDITION_INJECTED_PROP, SCRIPT_BYTECODE_FUN_NAME,
     },
     project_1st, project_2nd,
     symbol::{Symbol, SymbolPool},
@@ -79,6 +80,8 @@ pub struct Translator<'env> {
     reverse_struct_table: BTreeMap<(ModuleId, StructId), QualifiedSymbol>,
     /// A symbol table for functions.
     fun_table: BTreeMap<QualifiedSymbol, FunEntry>,
+    /// A symbol table for constants.
+    const_table: BTreeMap<QualifiedSymbol, ConstEntry>,
 }
 
 /// A declaration of a specification function or operator in the translator state.
@@ -141,6 +144,15 @@ struct FunEntry {
     result_type: Type,
 }
 
+#[derive(Debug, Clone)]
+struct ConstEntry {
+    loc: Loc,
+    module_id: ModuleId,
+    const_id: ConstId,
+    ty: Type,
+    value: Value,
+}
+
 /// ## General
 
 impl<'env> Translator<'env> {
@@ -155,6 +167,7 @@ impl<'env> Translator<'env> {
             struct_table: BTreeMap::new(),
             reverse_struct_table: BTreeMap::new(),
             fun_table: BTreeMap::new(),
+            const_table: BTreeMap::new(),
         };
         translator.declare_builtins();
         translator
@@ -300,6 +313,27 @@ impl<'env> Translator<'env> {
         };
         // Duplicate declarations have been checked by the move compiler.
         assert!(self.fun_table.insert(name, entry).is_none());
+    }
+
+    /// Defines a constant.
+    fn define_const(
+        &mut self,
+        loc: Loc,
+        name: QualifiedSymbol,
+        module_id: ModuleId,
+        const_id: ConstId,
+        ty: Type,
+        value: Value,
+    ) {
+        let entry = ConstEntry {
+            loc,
+            module_id,
+            const_id,
+            ty,
+            value,
+        };
+        // Duplicate declarations have been checked by the move compiler.
+        assert!(self.const_table.insert(name, entry).is_none());
     }
 
     /// Looks up a type (struct), reporting an error if it is not found.
@@ -787,7 +821,7 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
         source_map: SourceMap<MoveIrLoc>,
         function_infos: UniqueMap<FunctionName, FunctionInfo>,
     ) {
-        self.decl_ana(&module_def);
+        self.decl_ana(&module_def, &compiled_module, &source_map);
         self.def_ana(&module_def, function_infos);
         self.collect_spec_block_infos(&module_def);
         self.populate_env_from_result(loc, compiled_module, source_map);
@@ -923,16 +957,51 @@ impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
 /// # Declaration Analysis
 
 impl<'env, 'translator> ModuleTranslator<'env, 'translator> {
-    fn decl_ana(&mut self, module_def: &EA::ModuleDefinition) {
+    fn decl_ana(
+        &mut self,
+        module_def: &EA::ModuleDefinition,
+        compiled_module: &CompiledModule,
+        source_map: &SourceMap<MoveIrLoc>,
+    ) {
         for (name, struct_def) in &module_def.structs {
             self.decl_ana_struct(&name, struct_def);
         }
         for (name, fun_def) in &module_def.functions {
             self.decl_ana_fun(&name, fun_def);
         }
+        for (name, const_def) in &module_def.constants {
+            self.decl_ana_const(&name, const_def, compiled_module, source_map);
+        }
         for spec in &module_def.specs {
             self.decl_ana_spec_block(spec);
         }
+    }
+
+    fn decl_ana_const(
+        &mut self,
+        name: &PA::ConstantName,
+        def: &EA::Constant,
+        compiled_module: &CompiledModule,
+        source_map: &SourceMap<MoveIrLoc>,
+    ) {
+        let qsym = self.qualified_by_module_from_name(&name.0);
+        let name = qsym.symbol;
+        let const_name = ConstantName::new(self.symbol_pool().string(name).to_string());
+        let const_idx = source_map
+            .constant_map
+            .get(&const_name)
+            .expect("constant not in source map");
+        let move_value =
+            Constant::deserialize_constant(&compiled_module.constant_pool()[*const_idx as usize])
+                .unwrap();
+        let const_id = ConstId::new(name);
+        let mut et = ExpTranslator::new(self);
+        let loc = et.to_loc(&def.loc);
+        let value = et.translate_from_move_value(&loc, &move_value);
+        let ty = et.translate_type(&def.signature);
+        et.parent
+            .parent
+            .define_const(loc, qsym, et.parent.module_id, const_id, ty, value);
     }
 
     fn decl_ana_struct(&mut self, name: &PA::StructName, def: &EA::StructDefinition) {
@@ -3678,6 +3747,14 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
                 self.parent.qualified_by_module(sym)
             }
         };
+        if let Some(entry) = self.parent.parent.const_table.get(&spec_var_sym) {
+            let ty = entry.ty.clone();
+            let value = entry.value.clone();
+            let ty = self.check_type(loc, &ty, expected_type, "in const expression");
+            let id = self.new_node_id_with_type_loc(&ty, loc);
+            return Exp::Value(id, value);
+        }
+
         if let Some(entry) = self.parent.parent.spec_var_table.get(&spec_var_sym) {
             let type_args = type_args.unwrap_or(&[]);
             if entry.type_params.len() != type_args.len() {
@@ -4176,6 +4253,34 @@ impl<'env, 'translator, 'module_translator> ExpTranslator<'env, 'translator, 'mo
         };
         self.subs = subs;
         result
+    }
+
+    pub fn translate_from_move_value(&self, loc: &Loc, value: &MoveValue) -> Value {
+        match value {
+            MoveValue::U8(n) => Value::Number(BigUint::from_u8(*n).unwrap()),
+            MoveValue::U64(n) => Value::Number(BigUint::from_u64(*n).unwrap()),
+            MoveValue::U128(n) => Value::Number(BigUint::from_u128(*n).unwrap()),
+            MoveValue::Bool(b) => Value::Bool(*b),
+            MoveValue::Address(a) => Value::Address(ModuleEnv::addr_to_big_uint(a)),
+            MoveValue::Signer(a) => Value::Address(ModuleEnv::addr_to_big_uint(a)),
+            MoveValue::Vector(vs) => {
+                let b = vs
+                    .iter()
+                    .filter_map(|v| match v {
+                        MoveValue::U8(n) => Some(*n),
+                        _ => {
+                            self.error(
+                                loc,
+                                &format!("Not yet supported constant vector value: {:?}", v),
+                            );
+                            None
+                        }
+                    })
+                    .collect::<Vec<u8>>();
+                Value::ByteArray(b)
+            }
+            _ => unimplemented!("Not yet supported constant move value {:?}", value),
+        }
     }
 }
 
