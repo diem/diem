@@ -11,8 +11,12 @@ use libra_types::{
 };
 use move_core_types::language_storage::TypeTag;
 
-/// Add the currency identified by the type `currency` to the sending accounts. Aborts if
-/// the account already holds a balance fo `currency` type.
+/// Add a `Currency` balance to `account`, which will enable `account` to send and receive
+/// `Libra<Currency>`. Aborts with NOT_A_CURRENCY if `Currency` is not an accepted
+/// currency type in the Libra system Aborts with `LibraAccount::ADD_EXISTING_CURRENCY` if
+/// the account already holds a balance in `Currency`. Aborts with
+/// `LibraAccount::PARENT_VASP_CURRENCY_LIMITS_DNE` if `account` is a `ChildVASP` whose
+/// parent does not have an `AccountLimits<Currency>` resource.
 pub fn encode_add_currency_to_account_script(currency: TypeTag) -> Script {
     Script::new(
         vec![

@@ -125,6 +125,7 @@ module LibraAccount {
         unfrozen_address: address,
     }
 
+
     const ENOT_GENESIS: u64 = 0;
     const EINVALID_SINGLETON_ADDRESS: u64 = 1;
     const ECOIN_DEPOSIT_IS_ZERO: u64 = 2;
@@ -141,6 +142,8 @@ module LibraAccount {
     const EPARENT_VASP_CURRENCY_LIMITS_DNE: u64 = 13;
     const ENOT_TREASURY_COMPLIANCE: u64 = 14;
     const EACCOUNT_CANNOT_BE_FROZEN: u64 = 15;
+    const ENOT_A_CURRENCY: u64 = 16;
+    const EADD_EXISTING_CURRENCY: u64 = 17;
 
     /// Prologue errors. These are separated out from the other errors in this
     /// module since they are mapped separately to major VM statuses, and are
@@ -840,6 +843,12 @@ module LibraAccount {
     /// If the account is a VASP account, it must have (or be able to publish)
     /// a limits definition and window.
     public fun add_currency<Token>(account: &signer) {
+        // aborts if `Token` is not a currency type in the system
+        assert(Libra::is_currency<Token>(), ENOT_A_CURRENCY);
+        // aborts if this account already has a balance in `Token`
+        assert(!exists<Balance<Token>>(Signer::address_of(account)), EADD_EXISTING_CURRENCY);
+        // aborts if this is a child VASP whose parent does not have an AccountLimits resource for
+        // `Token`
         assert(VASP::try_allow_currency<Token>(account), EPARENT_VASP_CURRENCY_LIMITS_DNE);
         move_to(account, Balance<Token>{ coin: Libra::zero<Token>() })
     }

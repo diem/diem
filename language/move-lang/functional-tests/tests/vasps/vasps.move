@@ -52,13 +52,11 @@ fun main(parent_vasp: &signer) {
     let add_all_currencies = false;
     assert(VASP::num_children({{parent}}) == 0, 2010);
     LibraAccount::create_child_vasp_account<LBR>(
-//        parent_vasp, &r, 0xAA, copy dummy_auth_key_prefix, add_all_currencies
         parent_vasp, 0xAA, copy dummy_auth_key_prefix, add_all_currencies
     );
     assert(VASP::num_children({{parent}}) == 1, 2011);
     assert(VASP::parent_address(0xAA) == {{parent}}, 2012);
     LibraAccount::create_child_vasp_account<LBR>(
-//        parent_vasp, &r, 0xBB, dummy_auth_key_prefix, add_all_currencies
         parent_vasp, 0xBB, dummy_auth_key_prefix, add_all_currencies
     );
     assert(VASP::num_children({{parent}}) == 2, 2013);

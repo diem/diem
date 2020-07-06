@@ -383,8 +383,7 @@ Aborts if
 If the account passed in is not a VASP account, this returns true since
 we don't need to ensure account limits exist for those accounts.
 If the account is a child VASP account, this returns true only if a
-<code>LimitsDefinition&lt;CoinType&gt;</code> (and hence a
-<code>Window&lt;CoinType&gt;</code>) is
+<code>Window&lt;CoinType&gt;</code> is
 published in the parent's account.
 If the account is a child VASP account, this will always return true;
 either a
