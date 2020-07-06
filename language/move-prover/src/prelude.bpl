@@ -1300,18 +1300,12 @@ procedure {:inline 1} $Signer_borrow_address(signer: $Value) returns (res: $Valu
 function $Signature_spec_ed25519_validate_pubkey($m: $Memory, $txn: $Transaction, public_key: $Value): $Value;
 function $Signature_spec_ed25519_verify($m: $Memory, $txn: $Transaction,
                                         signature: $Value, public_key: $Value, message: $Value): $Value;
-function $Signature_spec_ed25519_threshold_verify($m: $Memory, $txn: $Transaction,
-                                                  bitmap: $Value, signature: $Value,
-                                                  public_key: $Value, message: $Value): $Value;
 
 axiom (forall $m: $Memory, $txn: $Transaction, public_key: $Value ::
         is#$Boolean($Signature_spec_ed25519_validate_pubkey($m, $txn, public_key)));
 
 axiom (forall $m: $Memory, $txn: $Transaction, signature, public_key, message: $Value ::
         is#$Boolean($Signature_spec_ed25519_verify($m, $txn, signature, public_key, message)));
-
-axiom (forall $m: $Memory, $txn: $Transaction, bitmap, signature, public_key, message: $Value ::
-        is#$Boolean($Signature_spec_ed25519_threshold_verify($m, $txn, bitmap, signature, public_key, message)));
 
 
 procedure {:inline 1} $Signature_ed25519_validate_pubkey(public_key: $Value) returns (res: $Value) {
@@ -1321,11 +1315,6 @@ procedure {:inline 1} $Signature_ed25519_validate_pubkey(public_key: $Value) ret
 procedure {:inline 1} $Signature_ed25519_verify(
         signature: $Value, public_key: $Value, message: $Value) returns (res: $Value) {
     res := $Signature_spec_ed25519_verify($m, $txn, signature, public_key, message);
-}
-
-procedure {:inline 1} Signature_ed25519_threshold_verify(
-        bitmap: $Value, signature: $Value, public_key: $Value, message: $Value) returns (res: $Value) {
-    res := $Signature_spec_ed25519_threshold_verify($m, $txn, bitmap, signature, public_key, message);
 }
 
 // ==================================================================================

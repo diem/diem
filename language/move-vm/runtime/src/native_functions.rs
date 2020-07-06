@@ -31,7 +31,6 @@ pub(crate) enum NativeFunction {
     LCSToBytes,
     PubED25519Validate,
     SigED25519Verify,
-    SigED25519ThresholdVerify,
     VectorLength,
     VectorEmpty,
     VectorBorrow,
@@ -63,9 +62,6 @@ impl NativeFunction {
             (&CORE_CODE_ADDRESS, "LCS", "to_bytes") => LCSToBytes,
             (&CORE_CODE_ADDRESS, "Signature", "ed25519_validate_pubkey") => PubED25519Validate,
             (&CORE_CODE_ADDRESS, "Signature", "ed25519_verify") => SigED25519Verify,
-            (&CORE_CODE_ADDRESS, "Signature", "ed25519_threshold_verify") => {
-                SigED25519ThresholdVerify
-            }
             (&CORE_CODE_ADDRESS, "Vector", "length") => VectorLength,
             (&CORE_CODE_ADDRESS, "Vector", "empty") => VectorEmpty,
             (&CORE_CODE_ADDRESS, "Vector", "borrow") => VectorBorrow,
@@ -96,9 +92,6 @@ impl NativeFunction {
             Self::HashSha3_256 => hash::native_sha3_256(ctx, t, v),
             Self::PubED25519Validate => signature::native_ed25519_publickey_validation(ctx, t, v),
             Self::SigED25519Verify => signature::native_ed25519_signature_verification(ctx, t, v),
-            Self::SigED25519ThresholdVerify => {
-                signature::native_ed25519_threshold_signature_verification(ctx, t, v)
-            }
             Self::VectorLength => vector::native_length(ctx, t, v),
             Self::VectorEmpty => vector::native_empty(ctx, t, v),
             Self::VectorBorrow => vector::native_borrow(ctx, t, v),
