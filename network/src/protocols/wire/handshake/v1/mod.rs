@@ -28,8 +28,6 @@ pub enum ProtocolId {
     StateSynchronizerDirectSend = 3,
     DiscoveryDirectSend = 4,
     HealthCheckerRpc = 5,
-    IdentityDirectSend = 6,
-    OnchainDiscoveryRpc = 7,
 }
 
 impl ProtocolId {
@@ -42,8 +40,6 @@ impl ProtocolId {
             StateSynchronizerDirectSend => "StateSynchronizerDirectSend",
             DiscoveryDirectSend => "DiscoveryDirectSend",
             HealthCheckerRpc => "HealthCheckerRpc",
-            IdentityDirectSend => "IdentityDirectSend",
-            OnchainDiscoveryRpc => "OnchainDiscoveryRpc",
         }
     }
 }

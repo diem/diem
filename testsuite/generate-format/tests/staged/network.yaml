@@ -132,10 +132,6 @@ ProtocolId:
       DiscoveryDirectSend: UNIT
     5:
       HealthCheckerRpc: UNIT
-    6:
-      IdentityDirectSend: UNIT
-    7:
-      OnchainDiscoveryRpc: UNIT
 PublicKey:
   NEWTYPESTRUCT: BYTES
 RawNetworkAddress:
