@@ -8,6 +8,9 @@ use crate::{
 };
 use futures::future::join_all;
 use libra_config::config::{NodeConfig, RoleType};
+use libra_json_rpc_types::views::{
+    JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS, JSONRPC_LIBRA_LEDGER_VERSION,
+};
 use libra_mempool::MempoolClientSender;
 use libra_types::ledger_info::LedgerInfoWithSignatures;
 use serde_json::{map::Map, Value};
@@ -87,7 +90,8 @@ async fn rpc_endpoint(
     let ledger_info = service
         .get_latest_ledger_info()
         .map_err(|_| reject::custom(DatabaseError))?;
-    if let Value::Array(requests) = data {
+
+    let resp = Ok(if let Value::Array(requests) = data {
         // batch API call
         let futures = requests.into_iter().map(|req| {
             rpc_request_handler(
@@ -98,12 +102,14 @@ async fn rpc_endpoint(
             )
         });
         let responses = join_all(futures).await;
-        Ok(Box::new(warp::reply::json(&Value::Array(responses))))
+        warp::reply::json(&Value::Array(responses))
     } else {
         // single API call
         let resp = rpc_request_handler(data, service, registry, ledger_info).await;
-        Ok(Box::new(warp::reply::json(&resp)))
-    }
+        warp::reply::json(&resp)
+    });
+
+    Ok(Box::new(resp) as Box<dyn warp::Reply>)
 }
 
 /// Handler of single RPC request
@@ -116,10 +122,20 @@ async fn rpc_request_handler(
 ) -> Value {
     let request: Map<String, Value>;
     let mut response = Map::new();
+    let version = ledger_info.ledger_info().version();
+    let timestamp = ledger_info.ledger_info().timestamp_usecs();
 
     // set defaults: protocol version to 2.0, request id to null
     response.insert("jsonrpc".to_string(), Value::String("2.0".to_string()));
     response.insert("id".to_string(), Value::Null);
+    response.insert(
+        JSONRPC_LIBRA_LEDGER_VERSION.to_string(),
+        Value::Number(version.into()),
+    );
+    response.insert(
+        JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS.to_string(),
+        Value::Number(timestamp.into()),
+    );
 
     match req {
         Value::Object(data) => {
