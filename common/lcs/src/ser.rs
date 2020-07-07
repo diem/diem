@@ -61,7 +61,7 @@ where
     W: std::io::Write,
     T: ?Sized + Serialize,
 {
-    let serializer = Serializer::new(write);
+    let serializer = Serializer::new(write, crate::MAX_CONTAINER_DEPTH);
     value.serialize(serializer)
 }
 
@@ -91,13 +91,14 @@ where
 
 pub fn is_human_readable() -> bool {
     let mut output = Vec::new();
-    let serializer = Serializer::new(&mut output);
+    let serializer = Serializer::new(&mut output, crate::MAX_CONTAINER_DEPTH);
     ser::Serializer::is_human_readable(&serializer)
 }
 
 /// Serialization implementation for LCS
 struct Serializer<'a, W> {
     output: &'a mut W,
+    max_remaining_depth: usize,
 }
 
 impl<'a, W> Serializer<'a, W>
@@ -105,8 +106,11 @@ where
     W: std::io::Write,
 {
     /// Creates a new `Serializer` which will emit LCS.
-    fn new(output: &'a mut W) -> Self {
-        Self { output }
+    fn new(output: &'a mut W, max_remaining_depth: usize) -> Self {
+        Self {
+            output,
+            max_remaining_depth,
+        }
     }
 
     fn output_u32_as_uleb128(&mut self, mut value: u32) -> Result<()> {
@@ -131,6 +135,14 @@ where
             return Err(Error::ExceededMaxLen(len));
         }
         self.output_u32_as_uleb128(len as u32)
+    }
+
+    fn enter_named_container(&mut self, name: &'static str) -> Result<()> {
+        if self.max_remaining_depth == 0 {
+            return Err(Error::ExceededContainerDepthLimit(name));
+        }
+        self.max_remaining_depth -= 1;
+        Ok(())
     }
 }
 
@@ -239,7 +251,8 @@ where
         Ok(())
     }
 
-    fn serialize_unit_struct(self, _name: &'static str) -> Result<()> {
+    fn serialize_unit_struct(mut self, name: &'static str) -> Result<()> {
+        self.enter_named_container(name)?;
         self.serialize_unit()
     }
 
@@ -252,16 +265,17 @@ where
         self.output_variant_index(variant_index)
     }
 
-    fn serialize_newtype_struct<T>(self, _name: &'static str, value: &T) -> Result<()>
+    fn serialize_newtype_struct<T>(mut self, name: &'static str, value: &T) -> Result<()>
     where
         T: ?Sized + Serialize,
     {
+        self.enter_named_container(name)?;
         value.serialize(self)
     }
 
     fn serialize_newtype_variant<T>(
         mut self,
-        _name: &'static str,
+        name: &'static str,
         variant_index: u32,
         _variant: &'static str,
         value: &T,
@@ -269,6 +283,7 @@ where
     where
         T: ?Sized + Serialize,
     {
+        self.enter_named_container(name)?;
         self.output_variant_index(variant_index)?;
         value.serialize(self)
     }
@@ -292,20 +307,22 @@ where
     }
 
     fn serialize_tuple_struct(
-        self,
-        _name: &'static str,
+        mut self,
+        name: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleStruct> {
+        self.enter_named_container(name)?;
         Ok(self)
     }
 
     fn serialize_tuple_variant(
         mut self,
-        _name: &'static str,
+        name: &'static str,
         variant_index: u32,
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeTupleVariant> {
+        self.enter_named_container(name)?;
         self.output_variant_index(variant_index)?;
         Ok(self)
     }
@@ -314,17 +331,23 @@ where
         Ok(MapSerializer::new(self))
     }
 
-    fn serialize_struct(self, _name: &'static str, _len: usize) -> Result<Self::SerializeStruct> {
+    fn serialize_struct(
+        mut self,
+        name: &'static str,
+        _len: usize,
+    ) -> Result<Self::SerializeStruct> {
+        self.enter_named_container(name)?;
         Ok(self)
     }
 
     fn serialize_struct_variant(
         mut self,
-        _name: &'static str,
+        name: &'static str,
         variant_index: u32,
         _variant: &'static str,
         _len: usize,
     ) -> Result<Self::SerializeStructVariant> {
+        self.enter_named_container(name)?;
         self.output_variant_index(variant_index)?;
         Ok(self)
     }
@@ -346,7 +369,7 @@ where
     where
         T: ?Sized + Serialize,
     {
-        value.serialize(Serializer::new(self.output))
+        value.serialize(Serializer::new(self.output, self.max_remaining_depth))
     }
 
     fn end(self) -> Result<()> {
@@ -365,7 +388,7 @@ where
     where
         T: ?Sized + Serialize,
     {
-        value.serialize(Serializer::new(self.output))
+        value.serialize(Serializer::new(self.output, self.max_remaining_depth))
     }
 
     fn end(self) -> Result<()> {
@@ -384,7 +407,7 @@ where
     where
         T: ?Sized + Serialize,
     {
-        value.serialize(Serializer::new(self.output))
+        value.serialize(Serializer::new(self.output, self.max_remaining_depth))
     }
 
     fn end(self) -> Result<()> {
@@ -403,7 +426,7 @@ where
     where
         T: ?Sized + Serialize,
     {
-        value.serialize(Serializer::new(self.output))
+        value.serialize(Serializer::new(self.output, self.max_remaining_depth))
     }
 
     fn end(self) -> Result<()> {
@@ -444,7 +467,10 @@ where
         }
 
         let mut output = Vec::new();
-        key.serialize(Serializer::new(&mut output))?;
+        key.serialize(Serializer::new(
+            &mut output,
+            self.serializer.max_remaining_depth,
+        ))?;
         self.next_key = Some(output);
         Ok(())
     }
@@ -456,7 +482,10 @@ where
         match self.next_key.take() {
             Some(key) => {
                 let mut output = Vec::new();
-                value.serialize(Serializer::new(&mut output))?;
+                value.serialize(Serializer::new(
+                    &mut output,
+                    self.serializer.max_remaining_depth,
+                ))?;
                 self.entries.push((key, output));
                 Ok(())
             }
@@ -494,7 +523,7 @@ where
     where
         T: ?Sized + Serialize,
     {
-        value.serialize(Serializer::new(self.output))
+        value.serialize(Serializer::new(self.output, self.max_remaining_depth))
     }
 
     fn end(self) -> Result<()> {
@@ -513,7 +542,7 @@ where
     where
         T: ?Sized + Serialize,
     {
-        value.serialize(Serializer::new(self.output))
+        value.serialize(Serializer::new(self.output, self.max_remaining_depth))
     }
 
     fn end(self) -> Result<()> {

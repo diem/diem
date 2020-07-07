@@ -13,8 +13,10 @@ pub enum Error {
     Eof,
     #[error("I/O error: {0}")]
     Io(String),
-    #[error("exceeded max sequence length")]
+    #[error("exceeded max sequence length: {0}")]
     ExceededMaxLen(usize),
+    #[error("exceeded max container depth while entering: {0}")]
+    ExceededContainerDepthLimit(&'static str),
     #[error("expected boolean")]
     ExpectedBoolean,
     #[error("expected map key")]
