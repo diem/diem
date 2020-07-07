@@ -90,14 +90,26 @@ commands:
           command: rustup install nightly
   install_sccache:
     steps:
+      - restore_cache:
+          name: Restore sccache binary
+          key: sccache-0.2.13
       - run:
           name: Install scccache
           command: |
-            cargo install sccache
-            echo 'export SCCACHE_CACHE_SIZE=3G' >> $BASH_ENV
+            if ! [ -e /usr/local/cargo/bin/sccache ]; then
+              cargo install sccache --version=0.2.13
+            else
+              echo 'sccache binary is found. Skipping install.'
+            fi
+            echo 'export SCCACHE_CACHE_SIZE=4G' >> $BASH_ENV
             echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
             echo 'export CC="sccache cc"' >> $BASH_ENV
             echo 'export CXX="sccache c++"' >> $BASH_ENV
+      - save_cache:
+          name: Save sccache binary
+          key: sccache-0.2.13
+          paths:
+            - "/usr/local/cargo/bin/sccache"
   save_sccache:
     description: Save shared compilation cache for future jobs
     steps:
@@ -143,9 +155,9 @@ commands:
           key: cargo-package-cache-{{ checksum "Cargo.lock" }}
           # paths are relative to /home/circleci/project/
           paths:
-            - ../../../usr/local/cargo/git
-            - ../../../usr/local/cargo/registry
-            - ../../../usr/local/cargo/.package-cache
+            - "/usr/local/cargo/git"
+            - "/usr/local/cargo/registry"
+            - "/usr/local/cargo/.package-cache"
   restore_cargo_package_cache:
     description: Restore Cargo package cache from prev job
     steps:
@@ -245,6 +257,7 @@ jobs:
           name: Git Hooks and Checks
           command: ./scripts/git-checks.sh
       - restore_cargo_package_cache
+      - install_sccache
       - run:
           name: Fetch workspace dependencies over network
           command: cargo fetch
@@ -255,6 +268,8 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
+      - install_sccache
+      - restore_sccache
       - run:
           name: cargo lint
           command: cargo x lint
@@ -264,6 +279,7 @@ jobs:
       - run:
           name: cargo fmt
           command: cargo xfmt --check
+      - save_sccache
   build-dev:
     executor: build-executor
     description: Development Build
@@ -315,6 +331,8 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
+      - install_sccache
+      - restore_sccache
       - run:
           name: Determine test targets for this container.
           # NOTE Currently the tests are distributed by name order. Once test
@@ -361,6 +379,7 @@ jobs:
               echo -e "$num_fails test(s) failed:\n$failed_tests"
             fi
             exit $num_fails
+      - save_sccache
       - send_message:
           payload_file: "${MESSAGE_PAYLOAD_FILE}"
           build_url: "${CIRCLE_BUILD_URL}#tests/containers/${CIRCLE_NODE_INDEX}"
@@ -546,6 +565,8 @@ jobs:
     steps:
       - build_setup
       - restore_cargo_package_cache
+      - install_sccache
+      - restore_sccache
       - run:
           name: Generate documentation
           command: |
@@ -555,6 +576,7 @@ jobs:
       - persist_to_workspace:
           root: target
           paths: doc
+      - save_sccache
   deploy-docs:
     docker:
       - image: node:8.10.0
