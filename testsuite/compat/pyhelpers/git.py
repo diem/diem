@@ -9,6 +9,7 @@ TAG_PREFIX = "master_"
 LBT_SHORT_LEN = 8
 LBT_TAG_PREFIX = "land_"
 
+
 def _fetch(remote: str = "origin") -> None:
     execute_cmd_with_text_output(
         ["git", "fetch", remote],

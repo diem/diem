@@ -38,13 +38,7 @@ def get_task_defs(workspace: str, num_validators: int, num_fullnodes: int) -> di
     for fam in def_fams:
         print(f"Fetching task definition for {fam}")
         task_def = execute_cmd_with_json_output(
-            [
-                "aws",
-                "ecs",
-                "describe-task-definition",
-                "--task-definition",
-                fam,
-            ],
+            ["aws", "ecs", "describe-task-definition", "--task-definition", fam,],
             err=f"could not get task definition for {fam}",
         )
         key = task_def.get("taskDefinition").get("family")
