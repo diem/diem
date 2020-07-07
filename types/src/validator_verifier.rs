@@ -6,7 +6,7 @@ use anyhow::{ensure, Result};
 use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
-    HashValue, Signature, VerifyingKey,
+    Signature, VerifyingKey,
 };
 use mirai_annotations::*;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -129,30 +129,6 @@ impl ValidatorVerifier {
         Self::new(author_to_validator_info)
     }
 
-    /// Verify the correctness of a signature of a hash by a known author.
-    #[deprecated(
-        since = "0.1.0",
-        note = "please use ValidatorVerifier::verify instead."
-    )]
-    pub fn verify_signature(
-        &self,
-        author: AccountAddress,
-        hash: HashValue,
-        signature: &Ed25519Signature,
-    ) -> std::result::Result<(), VerifyError> {
-        match self.get_public_key(&author) {
-            #[allow(deprecated)]
-            Some(public_key) => {
-                if public_key.verify_signature(&hash, signature).is_err() {
-                    Err(VerifyError::InvalidSignature)
-                } else {
-                    Ok(())
-                }
-            }
-            None => Err(VerifyError::UnknownAuthor),
-        }
-    }
-
     /// Verify the correctness of a signature of a message by a known author.
     pub fn verify<T: Serialize + CryptoHash>(
         &self,
@@ -180,29 +156,6 @@ impl ValidatorVerifier {
     /// attached signatures is invalid or it does not correspond to a known author. The latter is to
     /// prevent malicious users from adding arbitrary content to the signature payload that would go
     /// unnoticed.
-    #[deprecated(
-        since = "0.1.0",
-        note = "please use ValidatorVerifier::verify_aggregated_struct_signature instead."
-    )]
-    pub fn verify_aggregated_signature(
-        &self,
-        hash: HashValue,
-        aggregated_signature: &BTreeMap<AccountAddress, Ed25519Signature>,
-    ) -> std::result::Result<(), VerifyError> {
-        self.check_num_of_signatures(aggregated_signature)?;
-        self.check_voting_power(aggregated_signature.keys())?;
-        for (author, signature) in aggregated_signature {
-            #[allow(deprecated)]
-            self.verify_signature(*author, hash, &signature.clone())?;
-        }
-        Ok(())
-    }
-
-    /// This function will successfully return when at least quorum_size signatures of known authors
-    /// are successfully verified. Also, an aggregated signature is considered invalid if any of the
-    /// attached signatures is invalid or it does not correspond to a known author. The latter is to
-    /// prevent malicious users from adding arbitrary content to the signature payload that would go
-    /// unnoticed.
     pub fn verify_aggregated_struct_signature<T: CryptoHash + Serialize>(
         &self,
         message: &T,
@@ -212,34 +165,6 @@ impl ValidatorVerifier {
         self.check_voting_power(aggregated_signature.keys())?;
         for (author, signature) in aggregated_signature {
             self.verify(*author, message, &signature.clone())?;
-        }
-        Ok(())
-    }
-
-    /// This function will try batch signature verification and falls back to normal
-    /// iterated verification if batching fails.
-    #[deprecated(
-        since = "0.1.0",
-        note = "please use ValidatorVerifier::batch_verify_aggregated_struct_signature instead."
-    )]
-    pub fn batch_verify_aggregated_signature(
-        &self,
-        hash: HashValue,
-        aggregated_signature: &BTreeMap<AccountAddress, Ed25519Signature>,
-    ) -> std::result::Result<(), VerifyError> {
-        self.check_num_of_signatures(aggregated_signature)?;
-        self.check_voting_power(aggregated_signature.keys())?;
-        let keys_and_signatures: Vec<(Ed25519PublicKey, Ed25519Signature)> = aggregated_signature
-            .iter()
-            .flat_map(|(address, signature)| {
-                let sig = signature.clone();
-                self.get_public_key(&address).map(|pub_key| (pub_key, sig))
-            })
-            .collect();
-        // Fallback is required to identify the source of the problem if batching fails.
-        if Ed25519PublicKey::batch_verify_signatures(&hash, keys_and_signatures).is_err() {
-            #[allow(deprecated)]
-            self.verify_aggregated_signature(hash, aggregated_signature)?
         }
         Ok(())
     }
