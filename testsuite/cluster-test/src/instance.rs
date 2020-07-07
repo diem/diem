@@ -18,9 +18,15 @@ use std::{
 };
 use tokio::{process::Command, time};
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ValidatorGroup {
+    pub index: u32,
+    pub twin_index: Option<u32>,
+}
+
 #[derive(Debug, Clone)]
 pub struct InstanceConfig {
-    pub validator_group: u32,
+    pub validator_group: ValidatorGroup,
     pub application_config: ApplicationConfig,
 }
 
@@ -83,6 +89,22 @@ struct K8sInstanceInfo {
     kube: ClusterSwarmKube,
 }
 
+impl ValidatorGroup {
+    pub fn new_for_index(index: u32) -> ValidatorGroup {
+        Self {
+            index,
+            twin_index: None,
+        }
+    }
+
+    pub fn index_only(&self) -> u32 {
+        match self.twin_index {
+            None => self.index,
+            _ => panic!("Only validator has twin index"),
+        }
+    }
+}
+
 impl InstanceConfig {
     pub fn replace_tag(&mut self, new_tag: String) -> Result<()> {
         match &mut self.application_config {
@@ -106,14 +128,25 @@ impl InstanceConfig {
 
     pub fn pod_name(&self) -> String {
         match &self.application_config {
-            ApplicationConfig::Validator(_) => format!("val-{}", self.validator_group),
+            ApplicationConfig::Validator(_) => match self.validator_group.twin_index {
+                None => format!("val-{}", self.validator_group.index),
+                twin_index => format!(
+                    "val-{}-twin-{}",
+                    self.validator_group.index,
+                    twin_index.unwrap()
+                ),
+            },
             ApplicationConfig::Fullnode(fullnode_config) => format!(
                 "fn-{}-{}",
-                self.validator_group, fullnode_config.fullnode_index
+                self.validator_group.index, fullnode_config.fullnode_index
             ),
-            ApplicationConfig::LSR(_) => format!("lsr-{}", self.validator_group),
-            ApplicationConfig::Vault(_) => format!("vault-{}", self.validator_group),
+            ApplicationConfig::LSR(_) => format!("lsr-{}", self.validator_group.index),
+            ApplicationConfig::Vault(_) => format!("vault-{}", self.validator_group.index),
         }
+    }
+
+    pub fn make_twin(&mut self, twin_index: u32) {
+        self.validator_group.twin_index = Some(twin_index);
     }
 }
 
@@ -205,9 +238,8 @@ impl Instance {
         &self.peer_name
     }
 
-    pub fn validator_group(&self) -> u32 {
-        let backend = self.k8s_backend();
-        backend.instance_config.validator_group
+    pub fn validator_group(&self) -> ValidatorGroup {
+        self.k8s_backend().instance_config.validator_group.clone()
     }
 
     pub fn ip(&self) -> &String {

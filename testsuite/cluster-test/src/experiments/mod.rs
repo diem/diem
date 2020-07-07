@@ -9,6 +9,7 @@ mod performance_benchmark;
 mod performance_benchmark_three_region_simulation;
 mod reboot_random_validator;
 mod recovery_time;
+mod twin_validator;
 mod versioning_test;
 
 use std::{collections::HashSet, fmt::Display, time::Duration};
@@ -33,6 +34,7 @@ use crate::{
 
 use crate::{
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
+    experiments::twin_validator::TwinValidatorsParams,
     health::TraceTail,
 };
 use async_trait::async_trait;
@@ -129,6 +131,7 @@ pub fn get_experiment(name: &str, args: &[String], cluster: &Cluster) -> Box<dyn
         "reboot_random_validators",
         f::<RebootRandomValidatorsParams>(),
     );
+    known_experiments.insert("twin", f::<TwinValidatorsParams>());
     known_experiments.insert("generate_cpu_flamegraph", f::<CpuFlamegraphParams>());
     known_experiments.insert("versioning_testing", f::<ValidatorVersioningParams>());
 

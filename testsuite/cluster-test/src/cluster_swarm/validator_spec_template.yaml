@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Pod
 metadata:
-  name: val-{index}
+  name: {pod_name}
   labels:
     app: libra-validator
     libra-node: "true"
-    peer_id: val-{index}
+    peer_id: {pod_name}
   annotations:
     prometheus.io/should_be_scraped: "true"
 spec:
@@ -71,7 +71,7 @@ spec:
       [FILTER]
           Name record_modifier
           Match *
-          Record kubernetes.pod_name val-{index}
+          Record kubernetes.pod_name {pod_name}
 
       [OUTPUT]
           Name            es

@@ -142,6 +142,7 @@ impl ClusterSwarmKube {
     fn validator_spec(
         &self,
         index: u32,
+        pod_name: &str,
         num_validators: u32,
         num_fullnodes: u32,
         enable_lsr: bool,
@@ -159,6 +160,7 @@ impl ClusterSwarmKube {
         let pod_yaml = format!(
             include_str!("validator_spec_template.yaml"),
             index = index,
+            pod_name = pod_name,
             num_validators = num_validators,
             num_fullnodes = num_fullnodes,
             enable_lsr = enable_lsr,
@@ -456,7 +458,8 @@ impl ClusterSwarmKube {
         let (p, s): (Pod, Service) = match &instance_config.application_config {
             Validator(validator_config) => (
                 self.validator_spec(
-                    instance_config.validator_group,
+                    instance_config.validator_group.index,
+                    pod_name.as_str(),
                     validator_config.num_validators,
                     validator_config.num_fullnodes,
                     validator_config.enable_lsr,
@@ -465,24 +468,26 @@ impl ClusterSwarmKube {
                     &validator_config.config_overrides.iter().join(","),
                     delete_data,
                 )?,
-                self.service_spec(instance_config.pod_name()),
+                self.service_spec(pod_name.clone()),
             ),
             Fullnode(fullnode_config) => (
                 self.fullnode_spec(
                     fullnode_config.fullnode_index,
                     fullnode_config.num_fullnodes_per_validator,
-                    instance_config.validator_group,
+                    instance_config.validator_group.index_only(),
                     fullnode_config.num_validators,
                     &node.name,
                     &fullnode_config.image_tag,
                     &fullnode_config.config_overrides.iter().join(","),
                     delete_data,
                 )?,
-                self.service_spec(instance_config.pod_name()),
+                self.service_spec(pod_name.clone()),
             ),
-            Vault(_vault_config) => self.vault_spec(instance_config.validator_group, &node.name)?,
+            Vault(_vault_config) => {
+                self.vault_spec(instance_config.validator_group.index_only(), &node.name)?
+            }
             LSR(lsr_config) => self.lsr_spec(
-                instance_config.validator_group,
+                instance_config.validator_group.index_only(),
                 lsr_config.num_validators,
                 &node.name,
                 &lsr_config.image_tag,
@@ -528,7 +533,7 @@ impl ClusterSwarmKube {
         }
         let ac_port = DEFAULT_JSON_RPC_PORT as u32;
         let instance = Instance::new_k8s(
-            pod_name,
+            pod_name.clone(),
             node.internal_ip,
             ac_port,
             node.name.clone(),

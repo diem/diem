@@ -1,8 +1,9 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::tx_emitter::TxStats;
 use serde::Serialize;
-use std::fmt;
+use std::{fmt, time::Duration};
 
 #[derive(Default, Debug, Serialize)]
 pub struct SuiteReport {
@@ -40,6 +41,28 @@ impl SuiteReport {
             self.text.push_str("\n");
         }
         self.text.push_str(&text);
+    }
+
+    pub fn report_txn_stats(&mut self, experiment: String, stats: TxStats, window: Duration) {
+        let submitted_txn = stats.submitted;
+        let expired_txn = stats.expired;
+        let avg_tps = stats.committed / window.as_secs();
+        let avg_latency_client = stats.latency / stats.committed;
+        let p99_latency = stats.latency_buckets.percentile(99, 100);
+        self.report_metric(experiment.clone(), "submitted_txn", submitted_txn as f64);
+        self.report_metric(experiment.clone(), "expired_txn", expired_txn as f64);
+        self.report_metric(experiment.clone(), "avg_tps", avg_tps as f64);
+        self.report_metric(experiment.clone(), "avg_latency", avg_latency_client as f64);
+        self.report_metric(experiment.clone(), "p99_latency", p99_latency as f64);
+        let expired_text = if expired_txn == 0 {
+            "no expired txns".to_string()
+        } else {
+            format!("(!) expired {} out of {} txns", expired_txn, submitted_txn)
+        };
+        self.report_text(format!(
+            "{} : {:.0} TPS, {:.1} ms latency, {:.1} ms p99 latency, {}",
+            experiment, avg_tps, avg_latency_client, p99_latency, expired_text
+        ));
     }
 }
 
