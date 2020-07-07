@@ -111,7 +111,5 @@ pub struct TestLibraCrypto(pub String);
 /// Produces a random TestLibraCrypto signable / verifiable struct.
 #[cfg(any(test, feature = "fuzzing"))]
 pub fn random_serializable_struct() -> impl Strategy<Value = TestLibraCrypto> {
-    (String::arbitrary())
-        .prop_map(|string| TestLibraCrypto(string))
-        .no_shrink()
+    (String::arbitrary()).prop_map(TestLibraCrypto).no_shrink()
 }

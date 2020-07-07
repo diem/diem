@@ -11,7 +11,6 @@ use crate::{
     traits::*,
 };
 
-use crate::hash::HashValue;
 use libra_crypto_derive::{
     PrivateKey, PublicKey, Signature, SigningKey, SilentDebug, ValidCryptoMaterial, VerifyingKey,
 };
