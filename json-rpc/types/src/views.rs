@@ -64,6 +64,7 @@ pub enum AccountRoleView {
         base_url: String,
         expiration_time: u64,
         compliance_key: BytesView,
+        preburn_balances: Vec<AmountView>,
     },
 }
 
@@ -485,11 +486,20 @@ impl From<AccountRole> for AccountRoleView {
                 compliance_key: BytesView::from(credential.compliance_public_key()),
                 num_children: vasp.num_children(),
             },
-            AccountRole::DesignatedDealer(dd) => AccountRoleView::DesignatedDealer {
-                human_name: dd.human_name().to_string(),
-                base_url: dd.base_url().to_string(),
-                expiration_time: dd.expiration_date(),
-                compliance_key: BytesView::from(dd.compliance_public_key()),
+            AccountRole::DesignatedDealer {
+                dd_credential,
+                preburn_balances,
+            } => AccountRoleView::DesignatedDealer {
+                human_name: dd_credential.human_name().to_string(),
+                base_url: dd_credential.base_url().to_string(),
+                expiration_time: dd_credential.expiration_date(),
+                compliance_key: BytesView::from(dd_credential.compliance_public_key()),
+                preburn_balances: preburn_balances
+                    .iter()
+                    .map(|(currency_code, balance)| {
+                        AmountView::new(balance.coin(), &currency_code.as_str())
+                    })
+                    .collect(),
             },
         }
     }

@@ -117,7 +117,7 @@ async fn get_account(
         let account_state = AccountState::try_from(&blob)?;
         if let Some(account) = account_state.get_account_resource()? {
             let balances = account_state.get_balance_resources(&currencies)?;
-            if let Some(account_role) = account_state.get_account_role()? {
+            if let Some(account_role) = account_state.get_account_role(&currencies)? {
                 if let Some(freezing_bit) = account_state.get_freezing_bit()? {
                     return Ok(Some(AccountView::new(
                         &account,
