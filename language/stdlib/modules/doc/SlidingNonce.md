@@ -166,8 +166,7 @@ This is required before other functions in this module can be called for `accoun
 ## Function `publish_nonce_resource`
 
 Publishes nonce resource into specific account
-Only association can create this resource for different account
-Alternative is publish_nonce_resource_for_user that publishes resource into current account
+Only the libra root account can create this resource for different accounts
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_SlidingNonce_publish_nonce_resource">publish_nonce_resource</a>(lr_account: &signer, account: &signer)

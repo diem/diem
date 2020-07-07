@@ -35,7 +35,7 @@
 -  [Function `restore_key_rotation_capability`](#0x1_LibraAccount_restore_key_rotation_capability)
 -  [Function `add_currencies_for_account`](#0x1_LibraAccount_add_currencies_for_account)
 -  [Function `make_account`](#0x1_LibraAccount_make_account)
--  [Function `create_root_association_account`](#0x1_LibraAccount_create_root_association_account)
+-  [Function `create_libra_root_account`](#0x1_LibraAccount_create_libra_root_account)
 -  [Function `create_treasury_compliance_account`](#0x1_LibraAccount_create_treasury_compliance_account)
 -  [Function `create_designated_dealer`](#0x1_LibraAccount_create_designated_dealer)
 -  [Function `create_parent_vasp_account`](#0x1_LibraAccount_create_parent_vasp_account)
@@ -80,7 +80,7 @@
     -  [Function `restore_key_rotation_capability`](#0x1_LibraAccount_Specification_restore_key_rotation_capability)
     -  [Function `add_currencies_for_account`](#0x1_LibraAccount_Specification_add_currencies_for_account)
     -  [Function `make_account`](#0x1_LibraAccount_Specification_make_account)
-    -  [Function `create_root_association_account`](#0x1_LibraAccount_Specification_create_root_association_account)
+    -  [Function `create_libra_root_account`](#0x1_LibraAccount_Specification_create_libra_root_account)
     -  [Function `create_treasury_compliance_account`](#0x1_LibraAccount_Specification_create_treasury_compliance_account)
     -  [Function `create_designated_dealer`](#0x1_LibraAccount_Specification_create_designated_dealer)
     -  [Function `create_parent_vasp_account`](#0x1_LibraAccount_Specification_create_parent_vasp_account)
@@ -1289,14 +1289,14 @@ Creating an account at address 0x0 will abort as it is a reserved address for th
 
 </details>
 
-<a name="0x1_LibraAccount_create_root_association_account"></a>
+<a name="0x1_LibraAccount_create_libra_root_account"></a>
 
-## Function `create_root_association_account`
+## Function `create_libra_root_account`
 
-Creates the root association account in genesis.
+Creates the libra root account in genesis.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_root_association_account">create_root_association_account</a>(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_libra_root_account">create_libra_root_account</a>(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -1305,7 +1305,7 @@ Creates the root association account in genesis.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_root_association_account">create_root_association_account</a>(
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_libra_root_account">create_libra_root_account</a>(
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
 ) {
@@ -1495,7 +1495,7 @@ also be added. This account will be a child of
 
 ## Function `create_unhosted_account`
 
-For now, only the association root can create an unhosted account, and it will choose not to
+For now, only the libra root account can create an unhosted account, and it will choose not to
 on mainnet
 > TODO(tzakian): eventually, anyone will be able to create an unhosted wallet accunt
 
@@ -2599,12 +2599,12 @@ TODO(wrwg): function takes very long to verify; investigate why
 
 
 
-<a name="0x1_LibraAccount_Specification_create_root_association_account"></a>
+<a name="0x1_LibraAccount_Specification_create_libra_root_account"></a>
 
-### Function `create_root_association_account`
+### Function `create_libra_root_account`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_root_association_account">create_root_association_account</a>(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_libra_root_account">create_libra_root_account</a>(new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
 </code></pre>
 
 

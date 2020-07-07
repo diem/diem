@@ -19,7 +19,7 @@ module GenericBug {
     }
 
     // Remove the `Privilege` from the address at `addr`. The sender must
-    // be the root association account.
+    // be the libra root account.
     public fun remove_privilege<Privilege>(sender: &signer, addr: address)
     acquires PrivilegedCapability {
         assert(Signer::address_of(sender) == root_address(), 1001);

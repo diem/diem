@@ -17,7 +17,7 @@ use libra_crypto::{
     x25519, HashValue,
 };
 use libra_types::{
-    account_config::{association_address, lbr_type_tag},
+    account_config::{lbr_type_tag, libra_root_address},
     on_chain_config::{OnChainConfig, VMConfig, VMPublishingOption},
 };
 use libra_vm::LibraVM;
@@ -76,7 +76,7 @@ fn test_on_chain_config_pub_sub() {
     //////////////////////////////////////////////////
     // Case 2: publish if subscribed config changed //
     //////////////////////////////////////////////////
-    let genesis_account = association_address();
+    let genesis_account = libra_root_address();
     let network_config = config.validator_network.as_ref().unwrap();
     let validator_account = network_config.peer_id();
     let keys = config
@@ -185,7 +185,7 @@ fn test_on_chain_config_pub_sub() {
 
     // reconfigure the system with a new consensus key
     let txn6 = get_test_signed_transaction(
-        association_address(),
+        libra_root_address(),
         /* sequence_number = */ 3,
         genesis_key.clone(),
         genesis_key.public_key(),

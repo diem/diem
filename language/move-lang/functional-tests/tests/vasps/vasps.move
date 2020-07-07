@@ -3,18 +3,18 @@
 
 // create a parent VASP
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
 use 0x1::LBR::LBR;
 use 0x1::LibraAccount;
 use 0x1::LibraTimestamp;
 use 0x1::VASP;
-fun main(assoc: &signer) {
+fun main(lr_account: &signer) {
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     let add_all_currencies = false;
 
     LibraAccount::create_parent_vasp_account<LBR>(
-        assoc,
+        lr_account,
         {{parent}},
         {{parent::auth_key}},
         x"A1",

@@ -65,7 +65,7 @@ fn test_validate_transaction() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let program =
         encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
@@ -88,7 +88,7 @@ fn test_validate_invalid_signature() {
     let other_private_key = Ed25519PrivateKey::generate(&mut rng);
     // Submit with an account using an different private/public keypair
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let program =
         encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_unchecked_txn(
@@ -110,7 +110,7 @@ fn test_validate_known_script_too_large_args() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
@@ -141,7 +141,7 @@ fn test_validate_max_gas_units_above_max() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
@@ -165,7 +165,7 @@ fn test_validate_max_gas_units_below_min() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
@@ -189,7 +189,7 @@ fn test_validate_max_gas_price_above_bounds() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_transaction(
         address,
         1,
@@ -216,7 +216,7 @@ fn test_validate_max_gas_price_below_bounds() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let program =
         encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_transaction(
@@ -245,7 +245,7 @@ fn test_validate_unknown_script() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_txn(
         address,
         1,
@@ -268,7 +268,7 @@ fn test_validate_module_publishing() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let transaction = transaction_test_helpers::get_test_signed_module_publishing_transaction(
         address,
         1,
@@ -312,7 +312,7 @@ fn test_validate_invalid_auth_key() {
     let other_private_key = Ed25519PrivateKey::generate(&mut rng);
     // Submit with an account using an different private/public keypair
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let program =
         encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
@@ -334,7 +334,7 @@ fn test_validate_account_doesnt_exist() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let random_account_addr = account_address::AccountAddress::random();
     let program =
         encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
@@ -361,7 +361,7 @@ fn test_validate_sequence_number_too_new() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let program =
         encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![]);
     let transaction = transaction_test_helpers::get_test_signed_txn(
@@ -380,7 +380,7 @@ fn test_validate_invalid_arguments() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let (program_script, _) =
         encode_peer_to_peer_with_metadata_script(lbr_type_tag(), address, 100, vec![], vec![])
             .into_inner();
@@ -402,7 +402,7 @@ fn test_validate_non_genesis_write_set() {
     let (config, key) = config_builder::test_config();
     let vm_validator = TestValidator::new(&config);
 
-    let address = account_config::association_address();
+    let address = account_config::libra_root_address();
     let transaction =
         transaction_test_helpers::get_write_set_txn(address, 2, &key, key.public_key(), None)
             .into_inner();

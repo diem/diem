@@ -18,10 +18,10 @@ use libra_types::{
 #[test]
 fn validator_add() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let assoc_root_account = Account::new_association();
+    let libra_root_account = Account::new_libra_root();
     let validator_account = Account::new();
 
-    let txn = create_validator_account_txn(&assoc_root_account, &validator_account, 1);
+    let txn = create_validator_account_txn(&libra_root_account, &validator_account, 1);
     executor.execute_and_apply(txn);
     executor.new_block();
 
@@ -42,7 +42,7 @@ fn validator_add() {
     );
     executor.execute_and_apply(txn);
 
-    let txn = add_validator_txn(&assoc_root_account, &validator_account, 2);
+    let txn = add_validator_txn(&libra_root_account, &validator_account, 2);
     let output = executor.execute_and_apply(txn);
 
     assert_eq!(
@@ -58,10 +58,10 @@ fn validator_add() {
 #[test]
 fn validator_rotate_key_and_reconfigure() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let assoc_root_account = Account::new_association();
+    let libra_root_account = Account::new_libra_root();
     let validator_account = Account::new();
 
-    let txn = create_validator_account_txn(&assoc_root_account, &validator_account, 1);
+    let txn = create_validator_account_txn(&libra_root_account, &validator_account, 1);
     executor.execute_and_apply(txn);
     executor.new_block();
 
@@ -86,7 +86,7 @@ fn validator_rotate_key_and_reconfigure() {
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
 
-    let txn = add_validator_txn(&assoc_root_account, &validator_account, 2);
+    let txn = add_validator_txn(&libra_root_account, &validator_account, 2);
     let output = executor.execute_and_apply(txn);
 
     assert_eq!(
@@ -124,7 +124,7 @@ fn validator_rotate_key_and_reconfigure() {
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
 
-    let txn = reconfigure_txn(&assoc_root_account, 3);
+    let txn = reconfigure_txn(&libra_root_account, 3);
     let output = executor.execute_transaction(txn);
 
     assert_eq!(
@@ -140,18 +140,18 @@ fn validator_rotate_key_and_reconfigure() {
 #[test]
 fn validator_set_operator_set_key_reconfigure() {
     let mut executor = FakeExecutor::from_genesis_file();
-    let assoc_root_account = Account::new_association();
+    let libra_root_account = Account::new_libra_root();
     let validator_account = Account::new();
     let operator_account = Account::new();
 
-    let txn = create_validator_operator_account_txn(&assoc_root_account, &operator_account, 1);
+    let txn = create_validator_operator_account_txn(&libra_root_account, &operator_account, 1);
     let output = executor.execute_and_apply(txn);
     assert_eq!(
         output.status(),
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
 
-    let txn = create_validator_account_txn(&assoc_root_account, &validator_account, 2);
+    let txn = create_validator_account_txn(&libra_root_account, &validator_account, 2);
     let output = executor.execute_and_apply(txn);
     assert_eq!(
         output.status(),
@@ -187,7 +187,7 @@ fn validator_set_operator_set_key_reconfigure() {
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
 
-    let txn = add_validator_txn(&assoc_root_account, &validator_account, 3);
+    let txn = add_validator_txn(&libra_root_account, &validator_account, 3);
     let output = executor.execute_and_apply(txn);
 
     assert_eq!(
@@ -225,7 +225,7 @@ fn validator_set_operator_set_key_reconfigure() {
         &TransactionStatus::Keep(VMStatus::new(StatusCode::EXECUTED))
     );
 
-    let txn = reconfigure_txn(&assoc_root_account, 4);
+    let txn = reconfigure_txn(&libra_root_account, 4);
     let output = executor.execute_transaction(txn);
 
     assert_eq!(

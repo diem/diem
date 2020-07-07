@@ -22,7 +22,7 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
-        association_address, from_currency_code_string, testnet_dd_account_address,
+        from_currency_code_string, libra_root_address, testnet_dd_account_address,
         type_tag_for_currency_code, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, LBR_NAME,
     },
     account_state::AccountState,
@@ -105,8 +105,8 @@ pub struct ClientProxy {
     address_to_ref_id: HashMap<AccountAddress, usize>,
     /// Host that operates a faucet service
     faucet_server: String,
-    /// Account used for AssocRoot operations (e.g., adding a new transaction script)
-    pub assoc_root_account: Option<AccountData>,
+    /// Account used for Libra Root operations (e.g., adding a new transaction script)
+    pub libra_root_account: Option<AccountData>,
     /// Account used for "minting" operations
     pub testnet_designated_dealer_account: Option<AccountData>,
     /// Wallet library managing user accounts.
@@ -122,7 +122,7 @@ impl ClientProxy {
     /// Construct a new TestClient.
     pub fn new(
         url: &str,
-        assoc_root_account_file: &str,
+        libra_root_account_file: &str,
         testnet_designated_dealer_account_file: &str,
         sync_on_wallet_recovery: bool,
         faucet_server: Option<String>,
@@ -135,18 +135,18 @@ impl ClientProxy {
 
         let accounts = vec![];
 
-        let assoc_root_account = if assoc_root_account_file.is_empty() {
+        let libra_root_account = if libra_root_account_file.is_empty() {
             None
         } else {
-            let assoc_root_account_key = generate_key::load_key(assoc_root_account_file);
-            let assoc_root_account_data = Self::get_account_data_from_address(
+            let libra_root_account_key = generate_key::load_key(libra_root_account_file);
+            let libra_root_account_data = Self::get_account_data_from_address(
                 &mut client,
-                association_address(),
+                libra_root_address(),
                 true,
-                Some(KeyPair::from(assoc_root_account_key)),
+                Some(KeyPair::from(libra_root_account_key)),
                 None,
             )?;
-            Some(assoc_root_account_data)
+            Some(libra_root_account_data)
         };
         let dd_account = if testnet_designated_dealer_account_file.is_empty() {
             None
@@ -181,7 +181,7 @@ impl ClientProxy {
             accounts,
             address_to_ref_id,
             faucet_server,
-            assoc_root_account,
+            libra_root_account,
             testnet_designated_dealer_account: dd_account,
             wallet: Self::get_libra_wallet(mnemonic_file)?,
             sync_on_wallet_recovery,
@@ -238,12 +238,12 @@ impl ClientProxy {
             }
         }
 
-        if let Some(assoc_root_account) = &self.assoc_root_account {
+        if let Some(libra_root_account) = &self.libra_root_account {
             println!(
                 "AssocRoot account address: {}, sequence_number: {}, status: {:?}",
-                hex::encode(&assoc_root_account.address),
-                assoc_root_account.sequence_number,
-                assoc_root_account.status,
+                hex::encode(&libra_root_account.address),
+                libra_root_account.sequence_number,
+                libra_root_account.status,
             );
         }
         if let Some(testnet_dd_account) = &self.testnet_designated_dealer_account {
@@ -334,9 +334,9 @@ impl ClientProxy {
             false
         };
         if reset_sequence_number {
-            if let Some(assoc_root_account) = &mut self.assoc_root_account {
-                if assoc_root_account.address == address {
-                    assoc_root_account.sequence_number = sequence_number;
+            if let Some(libra_root_account) = &mut self.libra_root_account {
+                if libra_root_account.address == address {
+                    libra_root_account.sequence_number = sequence_number;
                     return Ok(sequence_number);
                 }
             }
@@ -452,7 +452,7 @@ impl ClientProxy {
 
         ensure!(num_coins > 0, "Invalid number of coins to mint.");
 
-        if self.assoc_root_account.is_some() {
+        if self.libra_root_account.is_some() {
             let script = transaction_builder::encode_create_testing_account_script(
                 type_tag_for_currency_code(currency_code.clone()),
                 receiver,
@@ -468,7 +468,7 @@ impl ClientProxy {
                 let status = &self.accounts.get(pos).unwrap().status;
                 if &AccountStatus::Local == status {
                     // This needs to be blocking since the mint can't happen until it completes
-                    self.association_transaction_with_local_assoc_root_account(
+                    self.association_transaction_with_local_libra_root_account(
                         TransactionPayload::Script(script),
                         true,
                     )?;
@@ -477,7 +477,7 @@ impl ClientProxy {
             } else {
                 // We can't determine the account state. So try and create the account, but
                 // if it already exists don't error.
-                let _ = self.association_transaction_with_local_assoc_root_account(
+                let _ = self.association_transaction_with_local_libra_root_account(
                     TransactionPayload::Script(script),
                     true,
                 );
@@ -520,8 +520,8 @@ impl ClientProxy {
             space_delim_strings.len() == 1,
             "Invalid number of arguments for setting publishing option"
         );
-        match self.assoc_root_account {
-            Some(_) => self.association_transaction_with_local_assoc_root_account(
+        match self.libra_root_account {
+            Some(_) => self.association_transaction_with_local_libra_root_account(
                 TransactionPayload::Script(
                     transaction_builder::encode_modify_publishing_option_script(
                         VMPublishingOption::CustomScripts,
@@ -548,8 +548,8 @@ impl ClientProxy {
             space_delim_strings.len() == 1,
             "Invalid number of arguments for setting publishing option"
         );
-        match self.assoc_root_account {
-            Some(_) => self.association_transaction_with_local_assoc_root_account(
+        match self.libra_root_account {
+            Some(_) => self.association_transaction_with_local_libra_root_account(
                 TransactionPayload::Script(
                     transaction_builder::encode_modify_publishing_option_script(
                         VMPublishingOption::Locked(StdlibScript::whitelist()),
@@ -577,8 +577,8 @@ impl ClientProxy {
             "Invalid number of arguments for upgrading_stdlib_transaction"
         );
 
-        match self.assoc_root_account {
-            Some(_) => self.association_transaction_with_local_assoc_root_account(
+        match self.libra_root_account {
+            Some(_) => self.association_transaction_with_local_libra_root_account(
                 TransactionPayload::WriteSet(
                     transaction_builder::encode_stdlib_upgrade_transaction(StdLibOptions::Fresh),
                 ),
@@ -605,8 +605,8 @@ impl ClientProxy {
         );
         let (account_address, _) =
             self.get_account_address_from_parameter(space_delim_strings[1])?;
-        match self.assoc_root_account {
-            Some(_) => self.association_transaction_with_local_assoc_root_account(
+        match self.libra_root_account {
+            Some(_) => self.association_transaction_with_local_libra_root_account(
                 TransactionPayload::Script(transaction_builder::encode_remove_validator_script(
                     account_address,
                 )),
@@ -629,8 +629,8 @@ impl ClientProxy {
         );
         let (account_address, _) =
             self.get_account_address_from_parameter(space_delim_strings[1])?;
-        match self.assoc_root_account {
-            Some(_) => self.association_transaction_with_local_assoc_root_account(
+        match self.libra_root_account {
+            Some(_) => self.association_transaction_with_local_libra_root_account(
                 TransactionPayload::Script(transaction_builder::encode_add_validator_script(
                     account_address,
                 )),
@@ -1401,24 +1401,24 @@ impl ClientProxy {
         Ok(auth_key)
     }
 
-    fn association_transaction_with_local_assoc_root_account(
+    fn association_transaction_with_local_libra_root_account(
         &mut self,
         payload: TransactionPayload,
         is_blocking: bool,
     ) -> Result<()> {
         ensure!(
-            self.assoc_root_account.is_some(),
+            self.libra_root_account.is_some(),
             "No assoc root account loaded"
         );
-        let sender = self.assoc_root_account.as_ref().unwrap();
+        let sender = self.libra_root_account.as_ref().unwrap();
         let sender_address = sender.address;
         let txn = self.create_txn_to_submit(payload, sender, None, None, None)?;
-        let mut sender_mut = self.assoc_root_account.as_mut().unwrap();
+        let mut sender_mut = self.libra_root_account.as_mut().unwrap();
         let resp = self.client.submit_transaction(Some(&mut sender_mut), txn);
         if is_blocking {
             self.wait_for_transaction(
                 sender_address,
-                self.assoc_root_account.as_ref().unwrap().sequence_number,
+                self.libra_root_account.as_ref().unwrap().sequence_number,
             )?;
         }
         resp

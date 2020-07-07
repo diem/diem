@@ -22,7 +22,7 @@ use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
     account_address::AccountAddress,
     account_config,
-    account_config::{association_address, LBR_NAME},
+    account_config::{libra_root_address, LBR_NAME},
     account_state::AccountState,
     block_info::BlockInfo,
     block_metadata::{BlockMetadata, LibraBlockResource},
@@ -148,7 +148,7 @@ impl<T: LibraInterface> LibraInterfaceTestHarness<T> {
 
     /// Returns the libra block resource associated with the association address.
     fn retrieve_libra_block_resource(&self) -> Result<LibraBlockResource, Error> {
-        let account = account_config::association_address();
+        let account = account_config::libra_root_address();
         let account_state = self.libra.retrieve_account_state(account)?;
         account_state
             .get_libra_block_resource()?
@@ -222,7 +222,7 @@ impl MockLibraInterface {
 
 impl LibraInterface for MockLibraInterface {
     fn libra_timestamp(&self) -> Result<u64, Error> {
-        let account = account_config::association_address();
+        let account = account_config::libra_root_address();
         let blob = self
             .storage
             .get_latest_account_state(account)?
@@ -522,7 +522,7 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
 
     let association_prikey = get_test_association_key();
     let txn2 = build_reconfiguration_transaction(
-        account_config::association_address(),
+        account_config::libra_root_address(),
         1,
         &association_prikey,
         Duration::from_secs(node.time.now() + TXN_EXPIRATION_SECS),
@@ -708,7 +708,7 @@ fn verify_execute_error<T: LibraInterface>(mut node: Node<T>) {
 // Creates and submits a reconfiguration transaction to the given libra interface.
 fn submit_reconfiguration_transaction<T: LibraInterface>(node: &Node<T>) {
     let association_prikey = get_test_association_key();
-    let association_account = association_address();
+    let association_account = libra_root_address();
     let seq_id = node
         .libra
         .retrieve_sequence_number(association_account)

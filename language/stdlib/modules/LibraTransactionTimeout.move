@@ -20,12 +20,12 @@ module LibraTransactionTimeout {
     const EINVALID_SINGLETON_ADDRESS: u64 = 1;
     const ENOT_LIBRA_ROOT: u64 = 2;
 
-  public fun initialize(association: &signer) {
+  public fun initialize(lr_account: &signer) {
     assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
-    // Operational constraint, only callable by the Association address
-    assert(Signer::address_of(association) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
+    // Operational constraint, only callable by the libra root account
+    assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
     // Currently set to 1day.
-    move_to(association, TTL {duration_microseconds: ONE_DAY_MICROS});
+    move_to(lr_account, TTL {duration_microseconds: ONE_DAY_MICROS});
   }
 
   // TODO (dd): is this called anywhere?

@@ -25,7 +25,7 @@ use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_types::{
     account_address::AccountAddress,
-    account_config::{association_address, testnet_dd_account_address, COIN1_NAME},
+    account_config::{libra_root_address, testnet_dd_account_address, COIN1_NAME},
     ledger_info::LedgerInfo,
     transaction::{
         authenticator::AuthenticationKey, RawTransaction, Script, SignedTransaction, Transaction,
@@ -890,7 +890,7 @@ fn test_full_node_basic_flow() {
     // ensure the client has up-to-date sequence number after test_smoke_script(3 minting)
     //let sender_account = treasury_compliance_account_address();
     let sender_account = testnet_dd_account_address();
-    let creation_account = association_address();
+    let creation_account = libra_root_address();
     full_node_client
         .wait_for_transaction(sender_account, 3)
         .unwrap();
@@ -1426,7 +1426,7 @@ fn test_network_key_rotation() {
     let key = swarm.faucet_key.0;
     let association_info = AccountContext {
         private_key: key,
-        address: association_address(),
+        address: libra_root_address(),
     };
 
     // Load the node configs

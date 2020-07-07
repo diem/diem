@@ -19,9 +19,9 @@ use libra_types::{account_config, transaction::SignedTransaction, vm_status::VMS
 
 fn txn(seq_num: u64) -> SignedTransaction {
     let account = Account::new();
-    let assoc = Account::new_association();
+    let libra_root = Account::new_libra_root();
     create_account_txn(
-        &assoc,
+        &libra_root,
         &account,
         seq_num + 1,
         0,

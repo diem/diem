@@ -125,14 +125,14 @@
     <b>let</b> sender = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>assert</b>(sender == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_WRITESET_SENDER);
 
-    <b>let</b> association_auth_key = <a href="LibraAccount.md#0x1_LibraAccount_authentication_key">LibraAccount::authentication_key</a>(sender);
+    <b>let</b> lr_auth_key = <a href="LibraAccount.md#0x1_LibraAccount_authentication_key">LibraAccount::authentication_key</a>(sender);
     <b>let</b> sequence_number = <a href="LibraAccount.md#0x1_LibraAccount_sequence_number">LibraAccount::sequence_number</a>(sender);
 
     <b>assert</b>(writeset_sequence_number &gt;= sequence_number, EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD);
 
     <b>assert</b>(writeset_sequence_number == sequence_number, EWS_PROLOGUE_SEQUENCE_NUMBER_TOO_NEW);
     <b>assert</b>(
-        <a href="Hash.md#0x1_Hash_sha3_256">Hash::sha3_256</a>(writeset_public_key) == association_auth_key,
+        <a href="Hash.md#0x1_Hash_sha3_256">Hash::sha3_256</a>(writeset_public_key) == lr_auth_key,
         EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY
     );
 }

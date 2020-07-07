@@ -26,7 +26,7 @@ module FooConfig {
 //! block-time: 2
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 // Publish a new config item.
 script {
 use {{alice}}::FooConfig;
@@ -41,7 +41,7 @@ fun main(account: &signer) {
 //! block-time: 3
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 // Update the value.
 script {
 use {{alice}}::FooConfig;

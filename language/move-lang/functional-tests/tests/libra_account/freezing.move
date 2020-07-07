@@ -13,7 +13,7 @@ fun main() {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
 use 0x1::AccountFreezing;
 // A special association privilege is needed for freezing an account
@@ -72,7 +72,7 @@ fun main() { }
 script {
 use 0x1::AccountFreezing::{Self};
 fun main(account: &signer) {
-    AccountFreezing::freeze_account(account, {{association}});
+    AccountFreezing::freeze_account(account, {{libraroot}});
 }
 }
 // check: ABORTED
@@ -81,14 +81,14 @@ fun main(account: &signer) {
 // TODO: this can go away once //! account works
 // create a parent VASPx
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
 use 0x1::LibraAccount;
 use 0x1::LBR::LBR;
-fun main(association: &signer) {
+fun main(lr_account: &signer) {
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     LibraAccount::create_parent_vasp_account<LBR>(
-        association,
+        lr_account,
         {{vasp}},
         {{vasp::auth_key}},
         x"A",

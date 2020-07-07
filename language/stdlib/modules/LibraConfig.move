@@ -148,7 +148,7 @@ module LibraConfig {
     public fun reconfigure(
         lr_account: &signer,
     ) acquires Configuration {
-        // Only callable by association address or by the VM internally.
+        // Only callable by libra root account or by the VM internally.
         assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         reconfigure_();
     }

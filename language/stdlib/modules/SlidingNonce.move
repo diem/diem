@@ -73,8 +73,7 @@ module SlidingNonce {
     }
 
     /// Publishes nonce resource into specific account
-    /// Only association can create this resource for different account
-    /// Alternative is publish_nonce_resource_for_user that publishes resource into current account
+    /// Only the libra root account can create this resource for different accounts
     public fun publish_nonce_resource(
         lr_account: &signer,
         account: &signer

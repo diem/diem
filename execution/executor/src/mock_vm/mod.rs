@@ -9,7 +9,7 @@ use libra_state_view::StateView;
 use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
-    account_config::{association_address, validator_set_address, LBR_NAME},
+    account_config::{libra_root_address, validator_set_address, LBR_NAME},
     contract_event::ContractEvent,
     event::EventKey,
     on_chain_config::{
@@ -145,7 +145,7 @@ impl VMExecutor for MockVM {
                 }
                 MockVMTransaction::Reconfiguration => {
                     read_balance_from_storage(state_view, &balance_ap(validator_set_address()));
-                    read_balance_from_storage(state_view, &balance_ap(association_address()));
+                    read_balance_from_storage(state_view, &balance_ap(libra_root_address()));
                     outputs.push(TransactionOutput::new(
                         // WriteSet cannot be empty so use genesis writeset only for testing.
                         gen_genesis_writeset(),

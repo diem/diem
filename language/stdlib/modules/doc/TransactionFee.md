@@ -61,7 +61,7 @@ Called in genesis. Sets up the needed resources to collect transaction fees from
 <code><a href="#0x1_TransactionFee">TransactionFee</a></code> resource with the TreasuryCompliance account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_initialize">initialize</a>(assoc_account: &signer, tc_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_initialize">initialize</a>(lr_account: &signer, tc_account: &signer)
 </code></pre>
 
 
@@ -71,19 +71,19 @@ Called in genesis. Sets up the needed resources to collect transaction fees from
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_TransactionFee_initialize">initialize</a>(
-    assoc_account: &signer,
+    lr_account: &signer,
     tc_account: &signer,
 ) {
     <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
     <b>assert</b>(
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(assoc_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
         EINVALID_SINGLETON_ADDRESS
     );
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
     // accept fees in all the currencies
-    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(assoc_account, tc_account);
-    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(assoc_account, tc_account);
-    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(assoc_account, tc_account);
+    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(lr_account, tc_account);
+    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(lr_account, tc_account);
+    <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(lr_account, tc_account);
 }
 </code></pre>
 
@@ -105,7 +105,7 @@ Sets ups the needed transaction fee state for a given
 <code>fee_account</code>
 
 
-<pre><code><b>fun</b> <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(assoc_account: &signer, tc_account: &signer)
+<pre><code><b>fun</b> <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(lr_account: &signer, tc_account: &signer)
 </code></pre>
 
 
@@ -115,11 +115,11 @@ Sets ups the needed transaction fee state for a given
 
 
 <pre><code><b>fun</b> <a href="#0x1_TransactionFee_add_txn_fee_currency">add_txn_fee_currency</a>&lt;CoinType&gt;(
-    assoc_account: &signer,
+    lr_account: &signer,
     tc_account: &signer,
 ) {
     move_to(
-        assoc_account,
+        lr_account,
         <a href="#0x1_TransactionFee">TransactionFee</a>&lt;CoinType&gt; {
             balance: <a href="Libra.md#0x1_Libra_zero">Libra::zero</a>(),
             preburn: <a href="Libra.md#0x1_Libra_create_preburn">Libra::create_preburn</a>(tc_account)

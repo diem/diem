@@ -6,7 +6,7 @@
 ### Table of Contents
 
 -  [Resource `RoleId`](#0x1_Roles_RoleId)
--  [Function `grant_root_association_role`](#0x1_Roles_grant_root_association_role)
+-  [Function `grant_libra_root_role`](#0x1_Roles_grant_libra_root_role)
 -  [Function `grant_treasury_compliance_role`](#0x1_Roles_grant_treasury_compliance_role)
 -  [Function `new_designated_dealer_role`](#0x1_Roles_new_designated_dealer_role)
 -  [Function `new_validator_role`](#0x1_Roles_new_validator_role)
@@ -72,9 +72,9 @@ to an account as a top-level resource, and is otherwise immovable.
 
 </details>
 
-<a name="0x1_Roles_grant_root_association_role"></a>
+<a name="0x1_Roles_grant_libra_root_role"></a>
 
-## Function `grant_root_association_role`
+## Function `grant_libra_root_role`
 
 Granted in genesis. So there cannot be any pre-existing privileges
 and roles. This is _not_ called from within LibraAccount -- these
@@ -82,7 +82,7 @@ privileges need to be created before accounts can be made
 (specifically, initialization of currency)
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_grant_root_association_role">grant_root_association_role</a>(association: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_grant_libra_root_role">grant_libra_root_role</a>(lr_account: &signer)
 </code></pre>
 
 
@@ -91,14 +91,14 @@ privileges need to be created before accounts can be made
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_grant_root_association_role">grant_root_association_role</a>(
-    association: &signer,
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_grant_libra_root_role">grant_libra_root_role</a>(
+    lr_account: &signer,
 ) {
     <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
-    <b>let</b> owner_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association);
+    <b>let</b> owner_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account);
     <b>assert</b>(owner_address == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_ROOT_ADDRESS);
-    // Grant the role <b>to</b> the association root account
-    move_to(association, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: LIBRA_ROOT_ROLE_ID });
+    // Grant the role <b>to</b> the libra root account
+    move_to(lr_account, <a href="#0x1_Roles_RoleId">RoleId</a> { role_id: LIBRA_ROOT_ROLE_ID });
 }
 </code></pre>
 

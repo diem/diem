@@ -29,25 +29,25 @@ module LibraTimestamp {
     const EINVALID_TIMESTAMP: u64 = 3;
 
     /// Initializes the global wall clock time resource. This can only be called from genesis.
-    public fun initialize(association: &signer) {
-        // Operational constraint, only callable by the Association address
-        assert(Signer::address_of(association) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
+    public fun initialize(lr_account: &signer) {
+        // Operational constraint, only callable by the libra root account
+        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
 
         // TODO: Should the initialized value be passed in to genesis?
         let timer = CurrentTimeMicroseconds { microseconds: 0 };
-        move_to(association, timer);
+        move_to(lr_account, timer);
     }
 
     /// Marks that time has started and genesis has finished. This can only be called from genesis.
-    public fun set_time_has_started(association: &signer) acquires CurrentTimeMicroseconds {
-        assert(Signer::address_of(association) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
+    public fun set_time_has_started(lr_account: &signer) acquires CurrentTimeMicroseconds {
+        assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
 
         // Current time must have been initialized.
         assert(
             exists<CurrentTimeMicroseconds>(CoreAddresses::LIBRA_ROOT_ADDRESS()) && now_microseconds() == 0,
             ETIME_NOT_INITIALIZED
         );
-        move_to(association, TimeHasStarted{});
+        move_to(lr_account, TimeHasStarted{});
     }
 
     /// Helper functions for tests to reset the time-has-started, and pretend to be in genesis.
@@ -110,7 +110,7 @@ module LibraTimestamp {
             !root_ctm_initialized() || spec_now_microseconds() == 0
         }
 
-        /// True if the association root account has a CurrentTimeMicroseconds.
+        /// True if the libra root account has a CurrentTimeMicroseconds.
         define root_ctm_initialized(): bool {
             exists<CurrentTimeMicroseconds>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
         }
@@ -150,14 +150,14 @@ module LibraTimestamp {
     // **************** FUNCTION SPECIFICATIONS ****************
 
     spec fun initialize {
-        aborts_if Signer::spec_address_of(association) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+        aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
         aborts_if root_ctm_initialized();
         ensures root_ctm_initialized();
         ensures spec_now_microseconds() == 0;
     }
 
     spec fun set_time_has_started {
-        aborts_if Signer::spec_address_of(association) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+        aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
         aborts_if !spec_is_genesis();
         aborts_if !root_ctm_initialized();
         aborts_if spec_now_microseconds() != 0;

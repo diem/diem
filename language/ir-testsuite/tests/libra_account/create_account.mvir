@@ -3,7 +3,7 @@ import 0x1.LBR;
 import 0x1.LCS;
 import 0x1.Roles;
 
-//! sender: association
+//! sender: libraroot
 main(account: &signer) {
     let addr: address;
     let pubkey: vector<u8>;

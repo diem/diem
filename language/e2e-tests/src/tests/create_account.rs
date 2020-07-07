@@ -16,7 +16,7 @@ use libra_types::{
 fn create_account() {
     let mut executor = FakeExecutor::from_genesis_file();
     // create and publish a sender with 1_000_000 coins
-    let sender = Account::new_association();
+    let sender = Account::new_libra_root();
     let new_account = Account::new();
 
     // define the arguments to the create account transaction

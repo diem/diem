@@ -966,7 +966,7 @@ Mint a new
 <code>value</code>. The
 caller must have a reference to a
 <code><a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;</code>. Only
-the Association account or the
+the treasury compliance account or the
 <code><a href="LBR.md#0x1_LBR">0x1::LBR</a></code> module can acquire such a
 reference.
 
@@ -2065,7 +2065,7 @@ Returns the (rough) exchange rate between
 
 There may be situations in which we disallow the further minting of
 coins in the system without removing the currency. This function
-allows the association to control whether or not further coins of
+allows the association TC account to control whether or not further coins of
 <code>CoinType</code> can be minted or not. If this is called with
 <code>can_mint =
 <b>true</b></code>, then minting is allowed, if

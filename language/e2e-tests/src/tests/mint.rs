@@ -113,12 +113,12 @@ fn mint_to_existing_not_dd() {
     // mint transaction.
     let mut executor = FakeExecutor::from_genesis_file();
     let tc = Account::new_blessed_tc();
-    let association = Account::new_association();
+    let libra_root = Account::new_libra_root();
 
     // create and publish a sender with 1_000_000 coins
     let receiver = Account::new();
 
-    executor.execute_and_apply(association.signed_script_txn(
+    executor.execute_and_apply(libra_root.signed_script_txn(
         encode_create_testing_account_script(
             account_config::coin1_tag(),
             *receiver.address(),
@@ -153,13 +153,13 @@ fn mint_to_new_account() {
     // mint transaction.
 
     let executor = FakeExecutor::from_genesis_file();
-    let association = Account::new_blessed_tc();
+    let tc = Account::new_blessed_tc();
 
     // create and publish a sender with TXN_RESERVED coins
     let new_account = Account::new();
 
     let mint_amount = TXN_RESERVED;
-    let output = executor.execute_transaction(association.signed_script_txn(
+    let output = executor.execute_transaction(tc.signed_script_txn(
         encode_tiered_mint_script(
             account_config::coin1_tag(),
             0,

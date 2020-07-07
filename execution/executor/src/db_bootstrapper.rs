@@ -11,7 +11,7 @@ use libra_logger::prelude::*;
 use libra_state_view::{StateView, StateViewId};
 use libra_types::{
     access_path::AccessPath,
-    account_config::association_address,
+    account_config::libra_root_address,
     block_info::{BlockInfo, GENESIS_EPOCH, GENESIS_ROUND, GENESIS_TIMESTAMP_USECS},
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     libra_timestamp::LibraTimestampResource,
@@ -143,7 +143,7 @@ pub fn calculate_genesis<V: VMExecutor>(
 fn get_state_timestamp(state_view: &VerifiedStateView) -> Result<u64> {
     let rsrc_bytes = &state_view
         .get(&AccessPath::new(
-            association_address(),
+            libra_root_address(),
             LibraTimestampResource::resource_path(),
         ))?
         .ok_or_else(|| format_err!("LibraTimestampResource missing."))?;

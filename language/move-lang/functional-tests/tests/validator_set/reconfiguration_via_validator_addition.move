@@ -8,7 +8,7 @@
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script{
     use 0x1::LibraSystem;
     fun main(account: &signer) {
@@ -28,7 +28,7 @@ script{
 
 //! new-transaction
 //! sender: bob
-// bob cannot remove itself, only the association can remove validators from the set
+// bob cannot remove itself, only the libra root account can remove validators from the set
 script{
     use 0x1::LibraSystem;
     fun main(account: &signer) {
@@ -44,7 +44,7 @@ script{
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script{
     use 0x1::LibraSystem;
     fun main(account: &signer) {

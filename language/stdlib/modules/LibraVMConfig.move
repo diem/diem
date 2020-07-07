@@ -20,7 +20,7 @@ module LibraVMConfig {
     // 1. In the case that an instruction is deleted from the bytecode, that part of the cost schedule
     //    still needs to remain the same; once a slot in the table is taken by an instruction, that is its
     //    slot for the rest of time (since that instruction could already exist in a module on-chain).
-    // 2. The initialization of the module will publish the instruction table to the association
+    // 2. The initialization of the module will publish the instruction table to the libra root account
     //    address, and will preload the vector with the gas schedule for instructions. The VM will then
     //    load this into memory at the startup of each block.
     struct GasSchedule {
@@ -60,10 +60,9 @@ module LibraVMConfig {
         max_transaction_size_in_bytes: u64,
     }
 
-    // Initialize the table under the association account
+    // Initialize the table under the libra root account
     public fun initialize(
         lr_account: &signer,
-        association_root_account: &signer,
         publishing_option: vector<u8>,
         instruction_schedule: vector<u8>,
         native_schedule: vector<u8>,
@@ -91,9 +90,9 @@ module LibraVMConfig {
                     gas_constants,
                 }
             },
-            Signer::address_of(association_root_account),
+            Signer::address_of(lr_account),
         );
-        LibraConfig::claim_delegated_modify_config<LibraVMConfig>(association_root_account, Signer::address_of(lr_account));
+        LibraConfig::claim_delegated_modify_config<LibraVMConfig>(lr_account, Signer::address_of(lr_account));
     }
 
     public fun set_publishing_option(account: &signer, publishing_option: vector<u8>) {

@@ -1,6 +1,6 @@
 import 0x1.CoreAddresses;
 import 0x1.Signer;
-//! sender: association
+//! sender: libraroot
 main(account: &signer) {
     assert(Signer.address_of(move(account)) == CoreAddresses.LIBRA_ROOT_ADDRESS(), 0);
     return;

@@ -45,14 +45,14 @@ module LibraWriteSetManager {
         let sender = Signer::address_of(account);
         assert(sender == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_WRITESET_SENDER);
 
-        let association_auth_key = LibraAccount::authentication_key(sender);
+        let lr_auth_key = LibraAccount::authentication_key(sender);
         let sequence_number = LibraAccount::sequence_number(sender);
 
         assert(writeset_sequence_number >= sequence_number, EPROLOGUE_SEQUENCE_NUMBER_TOO_OLD);
 
         assert(writeset_sequence_number == sequence_number, EWS_PROLOGUE_SEQUENCE_NUMBER_TOO_NEW);
         assert(
-            Hash::sha3_256(writeset_public_key) == association_auth_key,
+            Hash::sha3_256(writeset_public_key) == lr_auth_key,
             EPROLOGUE_INVALID_ACCOUNT_AUTH_KEY
         );
     }

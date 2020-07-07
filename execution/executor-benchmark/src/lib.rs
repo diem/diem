@@ -13,7 +13,7 @@ use libra_logger::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     account_config::{
-        association_address, coin1_tag, testnet_dd_account_address, AccountResource, COIN1_NAME,
+        coin1_tag, libra_root_address, testnet_dd_account_address, AccountResource, COIN1_NAME,
     },
     block_info::BlockInfo,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
@@ -107,7 +107,7 @@ impl TransactionGenerator {
     }
 
     fn gen_account_creations(&self, block_size: usize) {
-        let assoc_account = association_address();
+        let assoc_account = libra_root_address();
 
         for (i, block) in self.accounts.chunks(block_size).enumerate() {
             let mut transactions = Vec::with_capacity(block_size);
