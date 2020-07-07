@@ -31,8 +31,8 @@ use libra_types::{
 };
 use network::protocols::network::Event;
 use std::{
-    collections::{BTreeMap, HashMap},
-    ops::Bound::Included,
+    collections::{BTreeMap, Bound, HashMap},
+    ops::Bound::{Excluded, Included},
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use tokio::time::{interval, timeout};
@@ -102,31 +102,58 @@ impl PendingLedgerInfos {
         }
     }
 
+    // Update self based on a locally synced state:
+    // * remove outdated LIs
+    // * update target_li
     fn update(&mut self, sync_state: &SynchronizerState, chunk_limit: u64) {
-        let highest_committed_li = sync_state.highest_local_li.ledger_info().version();
-        let highest_synced = sync_state.highest_version_in_local_storage();
-
         // prune any pending LIs that were successfully committed
+        let highest_committed_li = sync_state.highest_local_li.ledger_info().version();
         self.pending_li_queue = self.pending_li_queue.split_off(&(highest_committed_li + 1));
 
-        // pick target LI to use for sending ProgressiveTargetType requests.
-        self.target_li = if highest_committed_li == highest_synced {
-            // try to find LI with max version that will fit in a single chunk
-            self.pending_li_queue
-                .range((Included(0), Included(highest_synced + chunk_limit)))
-                .rev()
-                .next()
-                .map(|(_version, ledger_info)| ledger_info.clone())
-        } else {
-            self.pending_li_queue
-                .iter()
-                .next()
-                .map(|(_version, ledger_info)| ledger_info.clone())
-        };
+        // pick target LI to use for sending ProgressiveTargetType requests
+        let highest_synced = sync_state.highest_version_in_local_storage();
+        self.target_li = self.get_next_target_li(highest_synced, chunk_limit);
     }
 
-    fn target_li(&self) -> Option<LedgerInfoWithSignatures> {
-        self.target_li.clone()
+    // Chooses a target li for a chunk request, under the (possibly optimistic) assumption that
+    // the locally synced version is (or will be) `sync_version`
+    fn get_next_target_li(
+        &self,
+        sync_version: u64,
+        chunk_limit: u64,
+    ) -> Option<LedgerInfoWithSignatures> {
+        let target_version = self
+            .target_li
+            .as_ref()
+            .map_or(0, |li| li.ledger_info().version());
+        if sync_version == target_version {
+            // current target version is satisfied, so pick the next target
+
+            // first, try to find LI with max version that will fit in a single chunk
+            let li_within_single_chunk = self
+                .pending_li_queue
+                .range((Excluded(sync_version), Included(sync_version + chunk_limit)))
+                .rev()
+                .next()
+                .map(|(_version, ledger_info)| ledger_info.clone());
+
+            if li_within_single_chunk.is_some() {
+                li_within_single_chunk
+            } else {
+                // resort to choosing the next available LI greater than the synced version
+                self.pending_li_queue
+                    .range((Excluded(sync_version), Bound::Unbounded))
+                    .next()
+                    .map(|(_version, ledger_info)| ledger_info.clone())
+            }
+        } else {
+            // either return the current target_version that is not satisfied by this sync_version
+            // or choose the first pending LI in the queue if there is no target LI set
+            self.pending_li_queue
+                .range((Included(target_version), Bound::Unbounded))
+                .next()
+                .map(|(_version, ledger_info)| ledger_info.clone())
+        }
     }
 }
 
@@ -813,14 +840,9 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             // Remain in the current epoch
             self.local_state.epoch()
         };
+        self.send_chunk_request(new_version, new_epoch)?;
         self.local_state.trusted_epoch.verify(&response_li)?;
-        self.validate_and_store_chunk(txn_list_with_proof, response_li, None)?;
-
-        // need to sync with local storage to see whether response LI was actually committed
-        // and update pending_ledger_infos accordingly
-        self.sync_state_with_local_storage()?;
-        let new_version = self.local_state.highest_version_in_local_storage();
-        self.send_chunk_request(new_version, new_epoch)
+        self.validate_and_store_chunk(txn_list_with_proof, response_li, None)
     }
 
     /// Processing chunk responses that carry a LedgerInfo corresponding to the waypoint.
@@ -958,14 +980,12 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
             TargetType::Waypoint(waypoint_version)
         } else {
             match self.sync_request.as_ref() {
-                None => {
-                    TargetType::HighestAvailable {
-                        // here, we need to ensure pending_ledger_infos is up-to-date with storage
-                        // this is the responsibility of the caller of send_chunk_request
-                        target_li: self.pending_ledger_infos.target_li(),
-                        timeout_ms: self.config.long_poll_timeout_ms,
-                    }
-                }
+                None => TargetType::HighestAvailable {
+                    target_li: self
+                        .pending_ledger_infos
+                        .get_next_target_li(known_version, self.config.chunk_limit),
+                    timeout_ms: self.config.long_poll_timeout_ms,
+                },
                 Some(sync_req) => {
                     if sync_req.target.ledger_info().version() <= known_version {
                         debug!(
