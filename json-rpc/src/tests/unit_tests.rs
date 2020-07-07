@@ -15,6 +15,9 @@ use libra_json_rpc_client::{
     },
     JsonRpcAsyncClient, JsonRpcBatch, JsonRpcResponse, ResponseAsView,
 };
+use libra_json_rpc_types::views::{
+    JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS, JSONRPC_LIBRA_LEDGER_VERSION,
+};
 use libra_proptest_helpers::ValueGenerator;
 use libra_types::{
     account_address::AccountAddress,
@@ -165,6 +168,14 @@ fn test_json_rpc_protocol() {
     let resp = client.post(&url).json(&request).send().unwrap();
     assert_eq!(resp.status(), 200);
     assert_eq!(fetch_error(resp), -32000);
+
+    // Response includes two mandatory field, regardless of errors
+    let request = serde_json::json!({"jsonrpc": "2.0", "method": "get_account_state", "params": [1, 2], "id": 1});
+    let resp = client.post(&url).json(&request).send().unwrap();
+    assert_eq!(resp.status(), 200);
+    let data: JsonMap = resp.json().unwrap();
+    assert!(data.get(JSONRPC_LIBRA_LEDGER_VERSION).is_some());
+    assert!(data.get(JSONRPC_LIBRA_LEDGER_TIMESTAMPUSECS).is_some());
 }
 
 #[test]
