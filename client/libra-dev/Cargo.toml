@@ -24,7 +24,7 @@ transaction-builder = { path = "../../language/transaction-builder", version = "
 rand = "0.7.3"
 
 [build-dependencies]
-bindgen = "0.54.0"
+bindgen = "0.54.1"
 
 [lib]
 crate-type = ["staticlib", "cdylib"]
