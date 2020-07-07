@@ -183,7 +183,7 @@ impl Block {
         validator_signer: &ValidatorSigner,
     ) -> Self {
         let id = block_data.hash();
-        let signature = validator_signer.sign_message(id);
+        let signature = validator_signer.sign(&block_data);
 
         Block {
             id,
@@ -203,7 +203,7 @@ impl Block {
                     .signature
                     .as_ref()
                     .ok_or_else(|| format_err!("Missing signature in Proposal"))?;
-                validator.verify_signature(*author, self.id(), signature)?;
+                validator.verify(*author, &self.block_data, signature)?;
                 self.quorum_cert().verify(validator)
             }
         }

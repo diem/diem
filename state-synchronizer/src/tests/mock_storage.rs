@@ -4,7 +4,7 @@
 use crate::SynchronizerState;
 use anyhow::{anyhow, bail, Result};
 use executor_types::ExecutedTrees;
-use libra_crypto::{hash::CryptoHash, HashValue};
+use libra_crypto::HashValue;
 use libra_types::{
     account_address::AccountAddress,
     account_config::lbr_type_tag,
@@ -197,7 +197,7 @@ impl MockStorage {
             ),
             HashValue::zero(),
         );
-        let signature = self.signer.sign_message(ledger_info.hash());
+        let signature = self.signer.sign(&ledger_info);
         let mut signatures = BTreeMap::new();
         signatures.insert(self.signer.author(), signature);
         self.ledger_infos.insert(

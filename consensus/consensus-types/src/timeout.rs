@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::common::Round;
-use libra_crypto::{ed25519::Ed25519Signature, hash::CryptoHash};
+use libra_crypto::ed25519::Ed25519Signature;
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_types::validator_signer::ValidatorSigner;
 use serde::{Deserialize, Serialize};
@@ -32,7 +32,7 @@ impl Timeout {
     }
 
     pub fn sign(&self, signer: &ValidatorSigner) -> Ed25519Signature {
-        signer.sign_message(self.hash())
+        signer.sign(self)
     }
 }
 

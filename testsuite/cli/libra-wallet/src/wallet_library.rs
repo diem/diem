@@ -18,7 +18,6 @@ use crate::{
     mnemonic::Mnemonic,
 };
 use anyhow::Result;
-use libra_crypto::hash::CryptoHash;
 use libra_types::{
     account_address::AccountAddress,
     transaction::{
@@ -161,7 +160,7 @@ impl WalletLibrary {
     pub fn sign_txn(&self, txn: RawTransaction) -> Result<SignedTransaction> {
         if let Some(child) = self.addr_map.get(&txn.sender()) {
             let child_key = self.key_factory.private_child(*child)?;
-            let signature = child_key.sign(txn.hash());
+            let signature = child_key.sign(&txn);
             Ok(SignedTransaction::new(
                 txn,
                 child_key.get_public(),

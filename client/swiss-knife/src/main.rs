@@ -315,6 +315,7 @@ fn sign_payload_using_ed25519(
             ))
         })
         .unwrap();
+    #[allow(deprecated)]
     let signature = private_key.sign_message(&hash_value);
     SignPayloadUsingEd25519Response {
         signature: signature
@@ -367,7 +368,7 @@ fn verify_signature_using_ed25519(
             ))
         })
         .unwrap();
-    VerifyEd25519SignatureResponse {
-        valid_signature: signature.verify(&hash_value, &public_key).is_ok(),
-    }
+    #[allow(deprecated)]
+    let valid_signature = signature.verify(&hash_value, &public_key).is_ok();
+    VerifyEd25519SignatureResponse { valid_signature }
 }

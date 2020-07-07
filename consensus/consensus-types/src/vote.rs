@@ -52,7 +52,7 @@ impl Vote {
         validator_signer: &ValidatorSigner,
     ) -> Self {
         ledger_info_placeholder.set_consensus_data_hash(vote_data.hash());
-        let li_sig = validator_signer.sign_message(ledger_info_placeholder.hash());
+        let li_sig = validator_signer.sign(&ledger_info_placeholder);
         Self {
             vote_data,
             author,
@@ -124,11 +124,11 @@ impl Vote {
             "Vote's hash mismatch with LedgerInfo"
         );
         validator
-            .verify_signature(self.author(), self.ledger_info.hash(), &self.signature)
+            .verify(self.author(), &self.ledger_info, &self.signature)
             .context("Failed to verify Vote")?;
         if let Some(timeout_signature) = &self.timeout_signature {
             validator
-                .verify_signature(self.author(), self.timeout().hash(), timeout_signature)
+                .verify(self.author(), &self.timeout(), timeout_signature)
                 .context("Failed to verify Timeout Vote")?;
         }
         Ok(())

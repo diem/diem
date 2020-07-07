@@ -210,11 +210,24 @@ pub trait VerifyingKey:
     }
 
     /// We provide the implementation which dispatches to the signature.
+    #[deprecated(
+        since = "0.1.0",
+        note = "please use VerifyingKey::batch_verify_struct_signatures instead."
+    )]
     fn batch_verify_signatures(
         message: &HashValue,
         keys_and_signatures: Vec<(Self, Self::SignatureMaterial)>,
     ) -> Result<()> {
+        #[allow(deprecated)]
         Self::SignatureMaterial::batch_verify_signatures(message, keys_and_signatures)
+    }
+
+    /// We provide the implementation which dispatches to the signature.
+    fn batch_verify_struct_signatures<T: CryptoHash + Serialize>(
+        message: &T,
+        keys_and_signatures: Vec<(Self, Self::SignatureMaterial)>,
+    ) -> Result<()> {
+        Self::SignatureMaterial::batch_verify_struct_signatures(message, keys_and_signatures)
     }
 }
 
@@ -275,6 +288,10 @@ pub trait Signature:
     /// The implementer can override a batch verification implementation
     /// that by default iterates over each signature. More efficient
     /// implementations exist and should be implemented for many schemes.
+    #[deprecated(
+        since = "0.1.0",
+        note = "please use Signature::batch_verify_struct_signatures instead."
+    )]
     fn batch_verify_signatures(
         message: &HashValue,
         keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,
@@ -282,6 +299,20 @@ pub trait Signature:
         for (key, signature) in keys_and_signatures {
             #[allow(deprecated)]
             signature.verify(message, &key)?
+        }
+        Ok(())
+    }
+
+    /// The implementer can override a batch verification implementation
+    /// that by default iterates over each signature. More efficient
+    /// implementations exist and should be implemented for many schemes.
+    fn batch_verify_struct_signatures<T: CryptoHash + Serialize>(
+        message: &T,
+        keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,
+    ) -> Result<()> {
+        for (key, signature) in keys_and_signatures {
+            #[allow(deprecated)]
+            signature.verify_struct_msg(message, &key)?
         }
         Ok(())
     }

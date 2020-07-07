@@ -7,7 +7,7 @@ use crate::{
     transaction::{Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction},
     write_set::WriteSet,
 };
-use libra_crypto::{ed25519::*, hash::CryptoHash, traits::*};
+use libra_crypto::{ed25519::*, traits::*};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const MAX_GAS_AMOUNT: u64 = 1_000_000;
@@ -38,7 +38,7 @@ pub fn get_test_signed_module_publishing_transaction(
         Duration::from_secs(expiration_time),
     );
 
-    let signature = private_key.sign_message(&raw_txn.hash());
+    let signature = private_key.sign(&raw_txn);
 
     SignedTransaction::new(raw_txn, public_key, signature)
 }
@@ -65,7 +65,7 @@ pub fn get_test_signed_transaction(
         Duration::from_secs(expiration_time),
     );
 
-    let signature = private_key.sign_message(&raw_txn.hash());
+    let signature = private_key.sign(&raw_txn);
 
     SignedTransaction::new(raw_txn, public_key, signature)
 }
@@ -92,7 +92,7 @@ pub fn get_test_unchecked_transaction(
         Duration::from_secs(expiration_time),
     );
 
-    let signature = private_key.sign_message(&raw_txn.hash());
+    let signature = private_key.sign(&raw_txn);
 
     SignedTransaction::new(raw_txn, public_key, signature)
 }

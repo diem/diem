@@ -26,7 +26,6 @@ use crate::{
 };
 use libra_crypto::{
     ed25519::{self, Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    hash::CryptoHash,
     test_utils::KeyPair,
     traits::*,
     HashValue,
@@ -484,6 +483,12 @@ prop_compose! {
     }
 }
 
+prop_compose! {
+    fn arb_pubkey()(keypair in ed25519::keypair_strategy()) -> AccountAddress {
+            account_address::from_public_key(&keypair.public_key)
+    }
+}
+
 impl Arbitrary for TransactionStatus {
     type Parameters = ();
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
@@ -539,11 +544,11 @@ impl Arbitrary for Module {
 }
 
 prop_compose! {
-    fn arb_validator_signature_for_hash(hash: HashValue)(
-        hash in Just(hash),
+    fn arb_validator_signature_for_ledger_info(ledger_info: LedgerInfo)(
+        ledger_info in Just(ledger_info),
         keypair in ed25519::keypair_strategy(),
     ) -> (AccountAddress, Ed25519Signature) {
-        let signature = keypair.private_key.sign_message(&hash);
+        let signature = keypair.private_key.sign(&ledger_info);
         (account_address::from_public_key(&keypair.public_key), signature)
     }
 }
@@ -553,11 +558,10 @@ impl Arbitrary for LedgerInfoWithSignatures {
     fn arbitrary_with(num_validators_range: Self::Parameters) -> Self::Strategy {
         (any::<LedgerInfo>(), Just(num_validators_range))
             .prop_flat_map(|(ledger_info, num_validators_range)| {
-                let hash = ledger_info.hash();
                 (
-                    Just(ledger_info),
+                    Just(ledger_info.clone()),
                     prop::collection::vec(
-                        arb_validator_signature_for_hash(hash),
+                        arb_validator_signature_for_ledger_info(ledger_info),
                         num_validators_range,
                     ),
                 )
@@ -869,26 +873,18 @@ impl Arbitrary for TransactionListWithProof {
 impl Arbitrary for BlockMetadata {
     type Parameters = SizeRange;
     fn arbitrary_with(num_validators_range: Self::Parameters) -> Self::Strategy {
-        let signature_strategy = (any::<HashValue>(), Just(num_validators_range)).prop_flat_map(
-            |(hash, num_validators_range)| {
-                prop::collection::vec(arb_validator_signature_for_hash(hash), num_validators_range)
-            },
-        );
+        let addr_strategy = (Just(num_validators_range)).prop_flat_map(|num_validator_range| {
+            prop::collection::vec(arb_pubkey(), num_validator_range)
+        });
         (
             any::<HashValue>(),
             any::<u64>(),
             any::<u64>(),
-            signature_strategy,
+            addr_strategy,
             any::<AccountAddress>(),
         )
-            .prop_map(|(id, round, timestamp, signatures, proposer)| {
-                BlockMetadata::new(
-                    id,
-                    round,
-                    timestamp,
-                    signatures.into_iter().map(|(addr, _)| addr).collect(),
-                    proposer,
-                )
+            .prop_map(|(id, round, timestamp, addresses, proposer)| {
+                BlockMetadata::new(id, round, timestamp, addresses, proposer)
             })
             .boxed()
     }
@@ -999,13 +995,12 @@ impl LedgerInfoWithSignaturesGen {
         block_size: usize,
     ) -> LedgerInfoWithSignatures {
         let ledger_info = self.ledger_info_gen.materialize(universe, block_size);
-        let ledger_info_hash = ledger_info.hash();
         let signatures = self
             .signers
             .into_iter()
             .map(|signer_index| {
                 let account = universe.get_account_info(signer_index);
-                let signature = account.private_key.sign_message(&ledger_info_hash);
+                let signature = account.private_key.sign(&ledger_info);
                 (account.address, signature)
             })
             .collect();

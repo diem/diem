@@ -20,7 +20,7 @@
 #![forbid(unsafe_code)]
 
 use crate::{counters::COUNTERS, libra_interface::LibraInterface};
-use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519};
+use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_logger::{error, info};
 use libra_network_address::RawNetworkAddress;
@@ -238,7 +238,7 @@ where
         );
 
         let operator_pubkey = self.storage.get_public_key(OPERATOR_KEY)?.public_key;
-        let txn_signature = self.storage.sign_message(OPERATOR_KEY, &txn.hash())?;
+        let txn_signature = self.storage.sign(OPERATOR_KEY, &txn)?;
         let signed_txn = SignedTransaction::new(txn, operator_pubkey, txn_signature);
 
         self.libra

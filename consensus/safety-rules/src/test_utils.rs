@@ -74,7 +74,7 @@ pub fn make_proposal_with_qc_and_proof(
         ),
         None,
     );
-    let signature = exec_key.map(|key| key.sign_message(&vote_proposal.hash()));
+    let signature = exec_key.map(|key| key.sign(&vote_proposal));
     MaybeSignedVoteProposal {
         vote_proposal,
         signature,

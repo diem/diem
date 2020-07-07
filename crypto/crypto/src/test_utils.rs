@@ -77,6 +77,10 @@ where
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
+use crate as libra_crypto;
+#[cfg(any(test, feature = "fuzzing"))]
+use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use rand::{rngs::StdRng, SeedableRng};
@@ -95,5 +99,19 @@ where
             let mut rng = StdRng::from_seed(seed);
             KeyPair::<Priv, Pub>::generate(&mut rng)
         })
+        .no_shrink()
+}
+
+/// This struct provides a means of testing signing and verification through
+/// LCS serialization and domain separation
+#[cfg(any(test, feature = "fuzzing"))]
+#[derive(Debug, CryptoHasher, LCSCryptoHash, Serialize, Deserialize)]
+pub struct TestLibraCrypto(pub String);
+
+/// Produces a random TestLibraCrypto signable / verifiable struct.
+#[cfg(any(test, feature = "fuzzing"))]
+pub fn random_serializable_struct() -> impl Strategy<Value = TestLibraCrypto> {
+    (String::arbitrary())
+        .prop_map(|string| TestLibraCrypto(string))
         .no_shrink()
 }

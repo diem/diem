@@ -1666,6 +1666,7 @@ dependencies = [
  "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-crypto-derive 0.1.0",
  "libra-network-address 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
@@ -2360,6 +2361,7 @@ version = "0.1.0"
 dependencies = [
  "criterion 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-crypto 0.1.0",
+ "libra-crypto-derive 0.1.0",
  "libra-workspace-hack 0.1.0",
  "proptest 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "proptest-derive 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2847,6 +2849,7 @@ dependencies = [
  "enum_dispatch 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
  "libra-crypto 0.1.0",
+ "libra-crypto-derive 0.1.0",
  "libra-github-client 0.1.0",
  "libra-global-constants 0.1.0",
  "libra-secure-time 0.1.0",

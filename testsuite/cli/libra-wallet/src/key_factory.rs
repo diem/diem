@@ -22,7 +22,7 @@ use hmac::Hmac;
 use libra_crypto::{
     compat::Sha3_256,
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    hash::HashValue,
+    hash::CryptoHash,
     hkdf::Hkdf,
     traits::SigningKey,
 };
@@ -116,8 +116,9 @@ impl ExtendedPrivKey {
     /// In other words: In Libra, the message used for signature and verification is the sha3 hash
     /// of the transaction. This sha3 hash is then hashed again using SHA512 to arrive at the
     /// deterministic nonce for the EdDSA.
-    pub fn sign(&self, msg: HashValue) -> Ed25519Signature {
-        self.private_key.sign_message(&msg)
+    /// TODO: rewrite this comment
+    pub fn sign<T: CryptoHash + Serialize>(&self, msg: &T) -> Ed25519Signature {
+        self.private_key.sign(msg)
     }
 }
 

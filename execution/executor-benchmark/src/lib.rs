@@ -6,7 +6,7 @@ use executor_types::BlockExecutor;
 use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    hash::{CryptoHash, HashValue},
+    hash::HashValue,
     PrivateKey, SigningKey, Uniform,
 };
 use libra_logger::prelude::*;
@@ -376,7 +376,7 @@ fn create_transaction(
         expiration_time,
     );
 
-    let signature = private_key.sign_message(&raw_txn.hash());
+    let signature = private_key.sign(&raw_txn);
     let signed_txn = SignedTransaction::new(raw_txn, public_key, signature);
     Transaction::UserTransaction(signed_txn)
 }

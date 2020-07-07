@@ -4,9 +4,11 @@
 use crate::{CryptoStorage, Error, KVStorage, PublicKeyResponse, Value};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    HashValue, PrivateKey, SigningKey, Uniform,
+    hash::CryptoHash,
+    PrivateKey, SigningKey, Uniform,
 };
 use rand::{rngs::OsRng, Rng, SeedableRng};
+use serde::ser::Serialize;
 
 /// CryptoKVStorage offers a CryptoStorage implementation by extending a key value store (KVStorage)
 /// to create and manage cryptographic keys. This is useful for providing a simple CryptoStorage
@@ -84,19 +86,23 @@ impl<T: CryptoKVStorage> CryptoStorage for T {
         }
     }
 
-    fn sign_message(&mut self, name: &str, message: &HashValue) -> Result<Ed25519Signature, Error> {
+    fn sign<U: CryptoHash + Serialize>(
+        &mut self,
+        name: &str,
+        message: &U,
+    ) -> Result<Ed25519Signature, Error> {
         let private_key = self.export_private_key(name)?;
-        Ok(private_key.sign_message(message))
+        Ok(private_key.sign(message))
     }
 
-    fn sign_message_using_version(
+    fn sign_using_version<U: CryptoHash + Serialize>(
         &mut self,
         name: &str,
         version: Ed25519PublicKey,
-        message: &HashValue,
+        message: &U,
     ) -> Result<Ed25519Signature, Error> {
         let private_key = self.export_private_key_for_version(name, version)?;
-        Ok(private_key.sign_message(message))
+        Ok(private_key.sign(message))
     }
 }
 

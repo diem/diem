@@ -8,7 +8,7 @@ use crate::{
     },
     quorum_cert::QuorumCert,
 };
-use libra_crypto::hash::{CryptoHash, HashValue};
+use libra_crypto::hash::HashValue;
 use libra_types::{validator_signer::ValidatorSigner, validator_verifier::ValidatorVerifier};
 use std::{collections::BTreeMap, panic, sync::Arc};
 
@@ -115,7 +115,7 @@ fn test_same_qc_different_authors() {
         &signer,
     );
 
-    let signature = signer.sign_message(genesis_qc.ledger_info().ledger_info().hash());
+    let signature = signer.sign(genesis_qc.ledger_info().ledger_info());
     let mut ledger_info_altered = genesis_qc.ledger_info().clone();
     ledger_info_altered.add_signature(signer.author(), signature);
     let genesis_qc_altered = QuorumCert::new(genesis_qc.vote_data().clone(), ledger_info_altered);

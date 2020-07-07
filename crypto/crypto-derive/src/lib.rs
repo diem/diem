@@ -349,6 +349,7 @@ pub fn hasher_dispatch(input: TokenStream) -> TokenStream {
     };
 
     let out = quote!(
+        /// Cryptographic hasher for an LCS-serializable #item
         #[derive(Clone)]
         pub struct #hasher_name(libra_crypto::hash::DefaultHasher);
 

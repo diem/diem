@@ -8,9 +8,10 @@ use crate::{
 use chrono::DateTime;
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    HashValue,
+    hash::CryptoHash,
 };
 use libra_vault_client::{self as vault, Client};
+use serde::ser::Serialize;
 
 const LIBRA_DEFAULT: &str = "libra_default";
 
@@ -280,22 +281,32 @@ impl CryptoStorage for VaultStorage {
         self.get_public_key(name).map(|v| v.public_key)
     }
 
-    fn sign_message(&mut self, name: &str, message: &HashValue) -> Result<Ed25519Signature, Error> {
+    fn sign<T: CryptoHash + Serialize>(
+        &mut self,
+        name: &str,
+        message: &T,
+    ) -> Result<Ed25519Signature, Error> {
         let name = self.crypto_name(name);
-        Ok(self.client.sign_ed25519(&name, message.as_ref(), None)?)
+        let mut bytes = <T::Hasher as libra_crypto::hash::CryptoHasher>::seed().to_vec();
+        lcs::serialize_into(&mut bytes, &message)
+            .map_err(|_| libra_crypto::traits::CryptoMaterialError::SerializationError)
+            .expect("Serialization of signable material should not fail.");
+        Ok(self.client.sign_ed25519(&name, &bytes, None)?)
     }
 
-    fn sign_message_using_version(
+    fn sign_using_version<T: CryptoHash + Serialize>(
         &mut self,
         name: &str,
         version: Ed25519PublicKey,
-        message: &HashValue,
+        message: &T,
     ) -> Result<Ed25519Signature, Error> {
-        let name = self.crypto_name(name);
         let vers = self.key_version(&name, &version)?;
-        Ok(self
-            .client
-            .sign_ed25519(&name, message.as_ref(), Some(vers))?)
+        let name = self.crypto_name(name);
+        let mut bytes = <T::Hasher as libra_crypto::hash::CryptoHasher>::seed().to_vec();
+        lcs::serialize_into(&mut bytes, &message)
+            .map_err(|_| libra_crypto::traits::CryptoMaterialError::SerializationError)
+            .expect("Serialization of signable material should not fail.");
+        Ok(self.client.sign_ed25519(&name, &bytes, Some(vers))?)
     }
 }
 
