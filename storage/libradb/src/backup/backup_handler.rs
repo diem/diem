@@ -42,7 +42,7 @@ impl BackupHandler {
     pub fn get_transaction_iter(
         &self,
         start_version: Version,
-        num_transactions: u64,
+        num_transactions: usize,
     ) -> Result<TransactionIter> {
         self.transaction_store
             .get_transaction_iter(start_version, num_transactions)
