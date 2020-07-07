@@ -226,7 +226,7 @@ impl LedgerStore {
     fn get_transaction_info_iter(
         &self,
         start_version: Version,
-        num_transaction_infos: u64,
+        num_transaction_infos: usize,
     ) -> Result<TransactionInfoIter> {
         let mut iter = self
             .db
@@ -236,7 +236,7 @@ impl LedgerStore {
             inner: iter,
             expected_next_version: start_version,
             end_version: start_version
-                .checked_add(num_transaction_infos)
+                .checked_add(num_transaction_infos as u64)
                 .ok_or_else(|| format_err!("Too many transaction infos requested."))?,
         })
     }

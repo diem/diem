@@ -62,7 +62,7 @@ proptest! {
         let store = &db.transaction_store;
         let txns = init_store(universe, gens, &store);
 
-        let total_num_txns = txns.len() as u64;
+        let total_num_txns = txns.len();
 
         let actual = store
             .get_transaction_iter(0, total_num_txns)
@@ -100,7 +100,7 @@ proptest! {
             );
         }
 
-        prop_assert!(store.get_transaction_iter(10, u64::max_value()).is_err());
+        prop_assert!(store.get_transaction_iter(10, usize::max_value()).is_err());
     }
 
     #[test]

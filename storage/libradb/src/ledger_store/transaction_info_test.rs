@@ -80,7 +80,7 @@ proptest! {
                 })
                 .prop_flat_map(|(infos, start_version)| {
                     let num_infos = infos.len() as u64;
-                    (Just(infos), Just(start_version), 0..num_infos * 2)
+                    (Just(infos), Just(start_version), 0..num_infos as usize * 2)
                 })
     ) {
         let tmp_dir = TempPath::new();

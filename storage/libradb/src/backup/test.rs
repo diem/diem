@@ -34,7 +34,7 @@ proptest! {
 
         let actual = db
             .get_backup_handler()
-            .get_transaction_iter(0, cur_ver)
+            .get_transaction_iter(0, cur_ver as usize)
             .unwrap()
             .collect::<Result<Vec<_>>>()
             .unwrap();
