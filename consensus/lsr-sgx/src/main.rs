@@ -9,6 +9,8 @@ use consensus_types::{
     timeout::Timeout,
 };
 
+mod safety_rules;
+
 pub const LSR_SGX_ADDRESS: &str = "localhost:8888";
 
 
@@ -80,6 +82,7 @@ fn process_safety_rules_reqs(stream: TcpStream) -> Result<()> {
 
 fn main() -> Result<()> {
     test_data_types();
+    let safety_rules = safety_rules::SafetyRules::new();
     let listener = TcpListener::bind(LSR_SGX_ADDRESS)?;
     eprintln!("Ready to accept...");
     for stream in listener.incoming() {

@@ -70,8 +70,8 @@ impl SyncListener for SafetyRulesSGXListener {
 
 /* lwg: the dummy struct is kind of ugly but has to exist for "initialize" the binding process */
 #[derive(Debug)]
-struct SGXWrapper;
-impl UsercallExtension for SGXWrapper {
+struct SGXService;
+impl UsercallExtension for SGXService{
     /* lwg: this is more like a stub, agreed upon Fortanix ABI to communicate with enclave */
     fn bind_stream(
         &self,
@@ -99,7 +99,7 @@ fn run_server(file: String) -> Result<(), ()> {
         .build();
     let mut enclave_builder = EnclaveBuilder::new(file.as_ref());
     enclave_builder.dummy_signature();
-    enclave_builder.usercall_extension(SGXWrapper);
+    enclave_builder.usercall_extension(SGXService);
     let enclave = enclave_builder.build(&mut device).unwrap();
     enclave.run().map_err(|e| {
         eprintln!("Error in running enclave {}", e);
