@@ -39,8 +39,8 @@
 //! * Fixed and variable length sequences
 //! * UTF-8 Encoded Strings
 //! * Tuples
-//! * Structures
-//! * Externally tagged enumerations
+//! * Structures (aka "structs")
+//! * Externally tagged enumerations (aka "enums")
 //! * Maps
 //!
 //! ## General structure
@@ -49,6 +49,24 @@
 //! know the message type and layout ahead of time.
 //!
 //! Unless specified, all numbers are stored in little endian, two's complement format.
+//!
+//! ## Recursion and Depth of LCS Data
+//!
+//! Recursive data-structures (e.g. trees) are allowed. However, because of the possibility of stack
+//! overflow during (de)serialization, the *container depth* of any valid LCS data cannot exceed the constant
+//! `MAX_CONTAINER_DEPTH`. Formally, we define *container depth* as the number of structs and enums traversed
+//! during (de)serialization.
+//!
+//! This definition aims to minimize the number of operations while ensuring that
+//! (de)serialization of a known LCS format cannot cause arbitrarily large stack allocations.
+//!
+//! As an example, if `v1` and `v2` are values of depth `n1` and `n2`,
+//! * a struct value `Foo { v1, v2 }` has depth `1 + max(n1, n2)`;
+//! * an enum value `E::Foo { v1, v2 }` has depth `1 + max(n1, n2)`;
+//! * a pair `(v1, v2)` has depth `max(n1, n2)`;
+//! * the value `Some(v1)` has depth `n1`.
+//!
+//! All string and integer values have depths `0`.
 //!
 //! ### Booleans and Integers
 //!
@@ -281,6 +299,9 @@ pub mod test_helpers;
 
 /// Variable length sequences in LCS are limited to max length of 2^31
 pub const MAX_SEQUENCE_LENGTH: usize = 1 << 31;
+
+/// Maximal allowed depth of LCS data, counting only structs and enums.
+pub const MAX_CONTAINER_DEPTH: usize = 500;
 
 pub use de::{from_bytes, from_bytes_seed};
 pub use error::{Error, Result};

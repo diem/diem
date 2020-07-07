@@ -16,7 +16,7 @@ use rand::{rngs::StdRng, SeedableRng};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 use libra_canonical_serialization::{
-    from_bytes, serialized_size, to_bytes, Error, MAX_SEQUENCE_LENGTH,
+    from_bytes, serialized_size, to_bytes, Error, MAX_CONTAINER_DEPTH, MAX_SEQUENCE_LENGTH,
 };
 use libra_crypto::{
     ed25519::{
@@ -580,6 +580,79 @@ fn serde_known_vector() {
     // make sure we can deserialize the test vector into expected struct
     let deserialized_foo: Foo = from_bytes(&test_vector).unwrap();
     assert_eq!(f, deserialized_foo);
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
+struct List {
+    next: Option<(usize, Box<List>)>,
+}
+
+impl List {
+    fn empty() -> Self {
+        Self { next: None }
+    }
+
+    fn cons(value: usize, tail: List) -> Self {
+        Self {
+            next: Some((value, Box::new(tail))),
+        }
+    }
+
+    fn integers(len: usize) -> Self {
+        if len == 0 {
+            Self::empty()
+        } else {
+            Self::cons(len - 1, Self::integers(len - 1))
+        }
+    }
+}
+
+#[test]
+fn test_recursion_limit() {
+    let l1 = List::integers(4);
+    let b1 = to_bytes(&l1).unwrap();
+    assert_eq!(
+        b1,
+        vec![
+            1, 3, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+        ]
+    );
+    assert_eq!(from_bytes::<List>(&b1).unwrap(), l1);
+
+    let l2 = List::integers(MAX_CONTAINER_DEPTH - 1);
+    let b2 = to_bytes(&l2).unwrap();
+    assert_eq!(from_bytes::<List>(&b2).unwrap(), l2);
+
+    let l3 = List::integers(MAX_CONTAINER_DEPTH);
+    assert_eq!(
+        to_bytes(&l3),
+        Err(Error::ExceededContainerDepthLimit("List"))
+    );
+    let mut b3 = vec![1, 243, 1, 0, 0, 0, 0, 0, 0];
+    b3.extend(b2);
+    assert_eq!(
+        from_bytes::<List>(&b3),
+        Err(Error::ExceededContainerDepthLimit("List"))
+    );
+
+    let b2_pair = to_bytes(&(&l2, &l2)).unwrap();
+    assert_eq!(
+        from_bytes::<(List, List)>(&b2_pair).unwrap(),
+        (l2.clone(), l2.clone())
+    );
+    assert_eq!(
+        to_bytes(&(&l2, &l3)),
+        Err(Error::ExceededContainerDepthLimit("List"))
+    );
+    assert_eq!(
+        to_bytes(&(&l3, &l2)),
+        Err(Error::ExceededContainerDepthLimit("List"))
+    );
+    assert_eq!(
+        to_bytes(&(&l3, &l3)),
+        Err(Error::ExceededContainerDepthLimit("List"))
+    );
 }
 
 #[test]
