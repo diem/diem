@@ -109,14 +109,17 @@ impl ExtendedPrivKey {
         AuthenticationKey::ed25519(&self.get_public())
     }
 
-    /// Libra specific sign function that is capable of signing an arbitrary HashValue
-    /// NOTE: In Libra, we do not sign the raw bytes of a transaction, instead we sign the raw
-    /// bytes of the sha3 hash of the raw bytes of a transaction. It is important to note that the
-    /// raw bytes of the sha3 hash will be hashed again as part of the ed25519 signature algorithm.
-    /// In other words: In Libra, the message used for signature and verification is the sha3 hash
-    /// of the transaction. This sha3 hash is then hashed again using SHA512 to arrive at the
-    /// deterministic nonce for the EdDSA.
-    /// TODO: rewrite this comment
+    /// Libra specific sign function that is capable of signing an arbitrary
+    /// Serializable value.
+    ///
+    /// NOTE: In Libra, we do not sign the raw bytes of a transaction, but
+    /// those raw bytes prefixed by a domain separation hash.
+    /// Informally signed_bytes = sha3(domain_separator) || lcs_serialization_bytes
+    ///
+    /// The domain separator hash is derived automatically from a `#[derive(CryptoHasher,
+    /// LCSCryptoHash)]` annotation, or can be declared manually in a process
+    /// described in `libra_crypto::hash`.
+    ///
     pub fn sign<T: CryptoHash + Serialize>(&self, msg: &T) -> Ed25519Signature {
         self.private_key.sign(msg)
     }
