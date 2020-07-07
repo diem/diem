@@ -103,13 +103,13 @@ proptest! {
         let mut signatures: Vec<(Ed25519PublicKey, Ed25519Signature)> = keypairs.iter().map(|keypair| {
             (keypair.public_key.clone(), keypair.private_key.sign(&message))
         }).collect();
-        prop_assert!(Ed25519Signature::batch_verify_struct_signatures(&message, signatures.clone()).is_ok());
+        prop_assert!(Ed25519Signature::batch_verify(&message, signatures.clone()).is_ok());
         // We swap message and signature for the last element,
         // resulting in an incorrect signature
         let (key, _sig) = signatures.pop().unwrap();
         let other_sig = signatures.last().unwrap().clone().1;
         signatures.push((key, other_sig));
-        prop_assert!(Ed25519Signature::batch_verify_struct_signatures(&message, signatures).is_err());
+        prop_assert!(Ed25519Signature::batch_verify(&message, signatures).is_err());
     }
 
     #[test]
@@ -139,7 +139,7 @@ proptest! {
         let serialized: &[u8] = &(signature.to_bytes());
         prop_assert_eq!(ED25519_SIGNATURE_LENGTH, serialized.len());
         let deserialized = Ed25519Signature::try_from(serialized).unwrap();
-        prop_assert!(deserialized.verify_struct_msg(&message, &keypair.public_key).is_ok());
+        prop_assert!(deserialized.verify(&message, &keypair.public_key).is_ok());
     }
 
     #[test]
@@ -165,7 +165,7 @@ proptest! {
         let serialized: &[u8] = &(signature.to_bytes());
         prop_assert_eq!(ED25519_SIGNATURE_LENGTH, serialized.len());
         let deserialized = Ed25519Signature::try_from(serialized).unwrap();
-        prop_assert!(deserialized.verify_struct_msg(&hashable, &keypair.public_key).is_ok());
+        prop_assert!(deserialized.verify(&hashable, &keypair.public_key).is_ok());
     }
 
     // Check for canonical S.

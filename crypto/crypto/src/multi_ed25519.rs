@@ -467,7 +467,7 @@ impl Signature for MultiEd25519Signature {
     type VerifyingKeyMaterial = MultiEd25519PublicKey;
     type SigningKeyMaterial = MultiEd25519PrivateKey;
 
-    fn verify_struct_msg<T: CryptoHash + Serialize>(
+    fn verify<T: CryptoHash + Serialize>(
         &self,
         message: &T,
         public_key: &MultiEd25519PublicKey,

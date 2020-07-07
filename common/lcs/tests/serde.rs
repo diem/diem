@@ -610,7 +610,7 @@ fn ed25519_material() {
     assert_eq!(deserialized_signature, signature);
 
     // Verify signature
-    let verified_signature = signature.verify_struct_msg(&message, &public_key);
+    let verified_signature = signature.verify(&message, &public_key);
     assert!(verified_signature.is_ok())
 }
 
@@ -671,6 +671,6 @@ fn multi_ed25519_material() {
 
     // Verify signature
     assert!(multi_signature_7of10
-        .verify_struct_msg(&message, &multi_public_key_7of10)
+        .verify(&message, &multi_public_key_7of10)
         .is_ok());
 }

@@ -439,6 +439,6 @@ fn verify_transaction_signature_using_ed25519(
             ))
         })
         .unwrap();
-    let valid_signature = signature.verify_struct_msg(&raw_txn, &public_key).is_ok();
+    let valid_signature = signature.verify(&raw_txn, &public_key).is_ok();
     VerifyTransactionEd25519SignatureResponse { valid_signature }
 }

@@ -281,7 +281,7 @@ impl TSafetyRules for SafetyRules {
         if let Some(public_key) = self.execution_public_key.as_ref() {
             execution_signature
                 .ok_or_else(|| Error::VoteProposalSignatureNotFound)?
-                .verify_struct_msg(vote_proposal, public_key)?
+                .verify(vote_proposal, public_key)?
         }
 
         let proposed_block = vote_proposal.block();

@@ -85,7 +85,7 @@ proptest! {
         let signature = ed_key.sign(&message);
 
         // This is business as usual
-        prop_assert!(signature.verify_struct_msg(&message, &ed_keypair1.public_key).is_ok());
+        prop_assert!(signature.verify(&message, &ed_keypair1.public_key).is_ok());
 
         // This is impossible to write, and generates:
         // expected struct `ed25519::Ed25519PublicKey`, found struct `med12381::MultiEd25519PublicKey`
@@ -100,12 +100,12 @@ proptest! {
 
         // This is still business as usual
         let ed_pubkey2 = PublicK::Ed(ed_keypair2.public_key);
-        let good_sigver = ed_signature.verify_struct_msg(&message, &ed_pubkey2);
+        let good_sigver = ed_signature.verify(&message, &ed_pubkey2);
         prop_assert!(good_sigver.is_ok(), "{:?}", good_sigver);
 
         // but this still fails, as expected
         let med_pubkey = PublicK::MultiEd(med_keypair.public_key);
-        let bad_sigver = ed_signature.verify_struct_msg(&message, &med_pubkey);
+        let bad_sigver = ed_signature.verify(&message, &med_pubkey);
         prop_assert!(bad_sigver.is_err(), "{:?}", bad_sigver);
 
         // And now just in case we're confused again, we pop in the
@@ -114,11 +114,11 @@ proptest! {
         let med_signature = med_key.sign(&message);
 
         // This is still business as usual
-        let good_sigver = med_signature.verify_struct_msg(&message, &med_pubkey);
+        let good_sigver = med_signature.verify(&message, &med_pubkey);
         prop_assert!(good_sigver.is_ok(), "{:?}", good_sigver);
 
         // but this still fails, as expected
-        let bad_sigver = med_signature.verify_struct_msg(&message, &ed_pubkey2);
+        let bad_sigver = med_signature.verify(&message, &ed_pubkey2);
         prop_assert!(bad_sigver.is_err(), "{:?}", bad_sigver);
     }
 }
