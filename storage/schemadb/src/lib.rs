@@ -149,13 +149,22 @@ where
 
         let raw_key = self.db_iter.key().expect("Iterator must be valid.");
         let raw_value = self.db_iter.value().expect("Iterator must be valid.");
+        OP_COUNTER.observe(
+            &format!("db_iter_bytes_{}", S::COLUMN_FAMILY_NAME),
+            (raw_key.len() + raw_value.len()) as f64,
+        );
         let key = <S::Key as KeyCodec<S>>::decode_key(raw_key)?;
         let value = <S::Value as ValueCodec<S>>::decode_value(raw_value)?;
 
+        let time = std::time::Instant::now();
         match self.direction {
             ScanDirection::Forward => self.db_iter.next(),
             ScanDirection::Backward => self.db_iter.prev(),
         }
+        OP_COUNTER.observe_duration(
+            &format!("db_iter_{}", S::COLUMN_FAMILY_NAME),
+            time.elapsed(),
+        );
 
         Ok(Some((key, value)))
     }
@@ -274,6 +283,10 @@ impl DB {
 
         let result = self.inner.get_cf(cf_handle, &k)?;
         OP_COUNTER.observe_duration(&format!("db_get_{}", S::COLUMN_FAMILY_NAME), time.elapsed());
+        OP_COUNTER.observe(
+            &format!("db_get_bytes_{}", S::COLUMN_FAMILY_NAME),
+            result.as_ref().map_or(0.0, |v| v.len() as f64),
+        );
         result
             .map(|raw_value| <S::Value as ValueCodec<S>>::decode_value(&raw_value))
             .transpose()
