@@ -5,8 +5,8 @@ use crate::{
     account_address::AccountAddress,
     account_config::{
         type_tag_for_currency_code, AccountResource, AccountRole, BalanceResource, ChildVASP,
-        Credential, DesignatedDealer, FreezingBit, ParentVASP, ACCOUNT_RECEIVED_EVENT_PATH,
-        ACCOUNT_SENT_EVENT_PATH,
+        Credential, DesignatedDealer, FreezingBit, ParentVASP, PreburnResource,
+        ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
     },
     block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
     event::EventHandle,
@@ -50,6 +50,23 @@ impl AccountState {
             .collect()
     }
 
+    pub fn get_preburn_balances(
+        &self,
+        currency_codes: &[Identifier],
+    ) -> Result<BTreeMap<Identifier, PreburnResource>> {
+        currency_codes
+            .iter()
+            .filter_map(|currency_code| {
+                let currency_type_tag = type_tag_for_currency_code(currency_code.to_owned());
+                // TODO: update this to use PreburnResource::resource_path once that takes type
+                // parameters
+                self.get_resource(&PreburnResource::access_path_for(currency_type_tag))
+                    .transpose()
+                    .map(|preburn_balance| preburn_balance.map(|b| (currency_code.to_owned(), b)))
+            })
+            .collect()
+    }
+
     pub fn get_configuration_resource(&self) -> Result<Option<ConfigurationResource>> {
         self.get_resource(&ConfigurationResource::resource_path())
     }
@@ -66,7 +83,7 @@ impl AccountState {
         self.get_resource(&FreezingBit::resource_path())
     }
 
-    pub fn get_account_role(&self) -> Result<Option<AccountRole>> {
+    pub fn get_account_role(&self, currency_codes: &[Identifier]) -> Result<Option<AccountRole>> {
         if self.0.contains_key(&ParentVASP::resource_path()) {
             match (
                 self.get_resource(&ParentVASP::resource_path()),
@@ -81,8 +98,18 @@ impl AccountState {
             self.get_resource(&ChildVASP::resource_path())
                 .map(|r_opt| r_opt.map(AccountRole::ChildVASP))
         } else if self.0.contains_key(&DesignatedDealer::resource_path()) {
-            self.get_resource(&Credential::resource_path())
-                .map(|r_opt| r_opt.map(AccountRole::DesignatedDealer))
+            match (
+                self.get_resource(&Credential::resource_path()),
+                self.get_preburn_balances(&currency_codes),
+            ) {
+                (Ok(Some(dd_credential)), Ok(preburn_balances)) => {
+                    Ok(Some(AccountRole::DesignatedDealer {
+                        dd_credential,
+                        preburn_balances,
+                    }))
+                }
+                _ => Ok(None),
+            }
         } else {
             // TODO: add role_id to Unknown
             Ok(Some(AccountRole::Unknown))
