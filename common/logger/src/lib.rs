@@ -47,7 +47,7 @@
 //! }
 //!
 //! // Usage:
-//! send_struct_log!(StructuredLogEntry::new_named("Committed")
+//! send_struct_log!(StructuredLogEntry::new_named("category", "Committed")
 //!    .data("block", &block)
 //!    .data("autor", &author))
 //! ```

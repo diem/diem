@@ -36,9 +36,8 @@ const INITIALIZING: usize = 1;
 const INITIALIZED: usize = 2;
 
 // severity level - lower is worse
-const SEVERITY_SECURITY: usize = 1;
-const SEVERITY_CRITICAL: usize = 2;
-const SEVERITY_WARNING: usize = 3;
+const SEVERITY_CRITICAL: usize = 1;
+const SEVERITY_WARNING: usize = 2;
 
 #[derive(Default, Serialize)]
 pub struct StructuredLogEntry {
@@ -48,6 +47,9 @@ pub struct StructuredLogEntry {
     /// description of the log
     #[serde(skip_serializing_if = "Option::is_none")]
     pattern: Option<&'static str>,
+    /// category of the event
+    #[serde(skip_serializing_if = "Option::is_none")]
+    category: Option<&'static str>,
     /// name of the event
     #[serde(skip_serializing_if = "Option::is_none")]
     name: Option<&'static str>,
@@ -63,7 +65,7 @@ pub struct StructuredLogEntry {
     /// time of the log
     #[serde(skip_serializing_if = "Option::is_none")]
     timestamp: Option<String>,
-    /// warning, critical, or security
+    /// warning or critical
     #[serde(skip_serializing_if = "Option::is_none")]
     severity: Option<usize>,
     /// arbitrary data that can be logged
@@ -79,17 +81,12 @@ impl StructuredLogEntry {
         ret
     }
 
-    pub fn new_named(name: &'static str) -> Self {
+    pub fn new_named(category: &'static str, name: &'static str) -> Self {
         let mut ret = Self::default();
+        ret.category = Some(category);
         ret.name = Some(name);
         ret.timestamp = Some(Utc::now().format("%F %T").to_string());
         ret
-    }
-
-    /// refer to security_log() to create security logs
-    pub(crate) fn security(mut self) -> Self {
-        self.severity = Some(SEVERITY_SECURITY);
-        self
     }
 
     pub fn critical(mut self) -> Self {
