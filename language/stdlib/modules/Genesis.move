@@ -36,7 +36,7 @@ module Genesis {
     ) {
         let dummy_auth_key_prefix = x"00000000000000000000000000000000";
 
-        Roles::grant_root_association_role(lr_account);
+        Roles::grant_libra_root_role(lr_account);
         LibraAccount::grant_module_publishing_privilege(lr_account);
         Roles::grant_treasury_compliance_role(tc_account, lr_account);
 
@@ -59,7 +59,7 @@ module Genesis {
 
         AccountFreezing::initialize(lr_account);
         LibraAccount::initialize(lr_account);
-        LibraAccount::create_root_association_account(
+        LibraAccount::create_libra_root_account(
             Signer::address_of(lr_account),
             copy dummy_auth_key_prefix,
         );
@@ -93,12 +93,11 @@ module Genesis {
         LibraWriteSetManager::initialize(lr_account);
         LibraTimestamp::initialize(lr_account);
 
-        let assoc_rotate_key_cap = LibraAccount::extract_key_rotation_capability(lr_account);
-        LibraAccount::rotate_authentication_key(&assoc_rotate_key_cap, copy genesis_auth_key);
-        LibraAccount::restore_key_rotation_capability(assoc_rotate_key_cap);
+        let lr_rotate_key_cap = LibraAccount::extract_key_rotation_capability(lr_account);
+        LibraAccount::rotate_authentication_key(&lr_rotate_key_cap, copy genesis_auth_key);
+        LibraAccount::restore_key_rotation_capability(lr_rotate_key_cap);
 
         LibraVMConfig::initialize(
-            lr_account,
             lr_account,
             publishing_option,
             instruction_schedule,

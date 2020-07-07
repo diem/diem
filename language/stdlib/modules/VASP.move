@@ -97,7 +97,7 @@ module VASP {
     ///////////////////////////////////////////////////////////////////////////
 
     /// Create a new `ParentVASP` resource under `vasp`
-    /// Aborts if `association` is not an Association account,
+    /// Aborts if `lr_account` is not the libra root account,
     /// or if there is already a VASP (child or parent) at this account.
     public fun publish_parent_vasp_credential(
         vasp: &signer,

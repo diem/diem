@@ -653,8 +653,8 @@ module LibraAccount {
         pragma verify = true;
     }
 
-    /// Creates the root association account in genesis.
-    public fun create_root_association_account(
+    /// Creates the libra root account in genesis.
+    public fun create_libra_root_account(
         new_account_address: address,
         auth_key_prefix: vector<u8>,
     ) {
@@ -663,7 +663,7 @@ module LibraAccount {
         let new_account = create_signer(new_account_address);
         make_account(new_account, auth_key_prefix)
     }
-    spec fun create_root_association_account {
+    spec fun create_libra_root_account {
         pragma verify = true;
     }
 
@@ -774,7 +774,7 @@ module LibraAccount {
     // Unhosted methods
     ///////////////////////////////////////////////////////////////////////////
 
-    /// For now, only the association root can create an unhosted account, and it will choose not to
+    /// For now, only the libra root account can create an unhosted account, and it will choose not to
     /// on mainnet
     /// > TODO(tzakian): eventually, anyone will be able to create an unhosted wallet accunt
     public fun create_unhosted_account<Token>(

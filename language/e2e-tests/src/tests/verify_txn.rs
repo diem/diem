@@ -406,7 +406,7 @@ pub fn test_arbitrary_script_execution() {
 }
 
 #[test]
-pub fn test_publish_from_assoc() {
+pub fn test_publish_from_libra_root() {
     // create a FakeExecutor with a genesis from file
     let mut executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
 
@@ -447,12 +447,12 @@ pub fn test_publish_from_assoc() {
 }
 
 #[test]
-pub fn test_no_publishing_assoc_sender() {
+pub fn test_no_publishing_libra_root_sender() {
     // create a FakeExecutor with a genesis from file
     let executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
 
     // create a transaction trying to publish a new module.
-    let sender = Account::new_association();
+    let sender = Account::new_libra_root();
 
     let module = String::from(
         "

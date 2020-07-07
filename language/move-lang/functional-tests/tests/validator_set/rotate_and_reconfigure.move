@@ -1,5 +1,5 @@
 // Make sure bob can rotate his key locally.
-// An association may trigger bulk update to incorporate
+// The libra root account may trigger bulk update to incorporate
 // bob's key key into the validator set.
 
 //! account: bob, 1000000, 0, validator
@@ -32,7 +32,7 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
     use 0x1::LibraSystem;
     use 0x1::ValidatorConfig;

@@ -137,19 +137,19 @@ fn create_and_initialize_main_accounts(
 ) {
     let genesis_auth_key = AuthenticationKey::ed25519(public_key);
 
-    let root_association_address = account_config::association_address();
+    let root_libra_root_address = account_config::libra_root_address();
     let tc_account_address = account_config::treasury_compliance_account_address();
 
     let option_bytes =
         lcs::to_bytes(&publishing_option).expect("Cannot serialize publishing option");
 
-    context.set_sender(root_association_address);
+    context.set_sender(root_libra_root_address);
     context.exec(
         GENESIS_MODULE_NAME,
         "initialize",
         vec![],
         vec![
-            Value::transaction_argument_signer_reference(root_association_address),
+            Value::transaction_argument_signer_reference(root_libra_root_address),
             Value::transaction_argument_signer_reference(tc_account_address),
             Value::address(tc_account_address),
             Value::vector_u8(genesis_auth_key.to_vec()),
@@ -159,7 +159,7 @@ fn create_and_initialize_main_accounts(
         ],
     );
 
-    context.set_sender(root_association_address);
+    context.set_sender(root_libra_root_address);
     // Bump the sequence number for the Association account. If we don't do this and a
     // subsequent transaction (e.g., minting) is sent from the Assocation account, a problem
     // arises: both the genesis transaction and the subsequent transaction have sequence
@@ -169,7 +169,7 @@ fn create_and_initialize_main_accounts(
         "success_epilogue",
         vec![lbr_ty.clone()],
         vec![
-            Value::transaction_argument_signer_reference(root_association_address),
+            Value::transaction_argument_signer_reference(root_libra_root_address),
             Value::u64(/* txn_sequence_number */ 0),
             Value::u64(/* txn_gas_price */ 0),
             Value::u64(/* txn_max_gas_units */ 0),
@@ -236,7 +236,7 @@ fn create_and_initialize_validators(
     validators: &[ValidatorRegistration],
 ) {
     for (account_key, registration) in validators {
-        context.set_sender(account_config::association_address());
+        context.set_sender(account_config::libra_root_address());
 
         let auth_key = AuthenticationKey::ed25519(&account_key);
         let account = auth_key.derived_address();
@@ -251,13 +251,13 @@ fn create_and_initialize_validators(
         context.exec_script(registration);
 
         // Add validator to the set
-        context.set_sender(account_config::association_address());
+        context.set_sender(account_config::libra_root_address());
         context.exec(
             "LibraSystem",
             "add_validator",
             vec![],
             vec![
-                Value::transaction_argument_signer_reference(account_config::association_address()),
+                Value::transaction_argument_signer_reference(account_config::libra_root_address()),
                 Value::address(account),
             ],
         );
@@ -284,7 +284,7 @@ fn publish_stdlib(interpreter_context: &mut dyn DataStore, stdlib: &[CompiledMod
 
 /// Trigger a reconfiguration. This emits an event that will be passed along to the storage layer.
 fn reconfigure(context: &mut GenesisContext) {
-    context.set_sender(account_config::association_address());
+    context.set_sender(account_config::libra_root_address());
     context.exec("LibraConfig", "emit_reconfiguration_event", vec![], vec![]);
 }
 

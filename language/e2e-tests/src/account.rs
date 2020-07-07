@@ -99,12 +99,12 @@ impl Account {
         }
     }
 
-    /// Creates a new account representing the association in memory.
+    /// Creates a new account representing the libra root account in memory.
     ///
-    /// The address will be [`association_address`][account_config::association_address], and
+    /// The address will be [`libra_root_address`][account_config::libra_root_address], and
     /// the account will use [`GENESIS_KEYPAIR`][struct@GENESIS_KEYPAIR] as its keypair.
-    pub fn new_association() -> Self {
-        Self::new_genesis_account(account_config::association_address())
+    pub fn new_libra_root() -> Self {
+        Self::new_genesis_account(account_config::libra_root_address())
     }
 
     /// Creates a new account representing treasury compliance in memory.
@@ -517,7 +517,7 @@ impl Balance {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AccountRoleSpecifier {
-    AssocRoot,
+    LibraRoot,
     TreasuryCompliance,
     DesignatedDealer,
     Validator,
@@ -530,7 +530,7 @@ pub enum AccountRoleSpecifier {
 impl AccountRoleSpecifier {
     pub fn id(&self) -> u64 {
         match self {
-            Self::AssocRoot => 0,
+            Self::LibraRoot => 0,
             Self::TreasuryCompliance => 1,
             Self::DesignatedDealer => 2,
             Self::Validator => 3,
@@ -571,7 +571,7 @@ impl FromStr for AccountRoleSpecifier {
 
     fn from_str(s: &str) -> Result<Self> {
         match s {
-            "empty" => Ok(AccountRoleSpecifier::AssocRoot), // TODO: rename from empty
+            "empty" => Ok(AccountRoleSpecifier::LibraRoot), // TODO: rename from empty
             "unhosted" => Ok(AccountRoleSpecifier::Unhosted),
             "vasp" => Ok(AccountRoleSpecifier::ParentVASP), // TODO: rename from vasp
             other => Err(Error::msg(format!(
@@ -688,13 +688,13 @@ impl AccountData {
         )
     }
 
-    pub fn new_assoc_root() -> Self {
+    pub fn new_libra_root() -> Self {
         Self::with_account(
             Account::new(),
             0,
             lbr_currency_code(),
             0,
-            AccountRoleSpecifier::AssocRoot,
+            AccountRoleSpecifier::LibraRoot,
         )
     }
 

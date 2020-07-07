@@ -66,7 +66,7 @@ impl JsonRpcLibraInterface {
 
 impl LibraInterface for JsonRpcLibraInterface {
     fn libra_timestamp(&self) -> Result<u64, Error> {
-        let account = account_config::association_address();
+        let account = account_config::libra_root_address();
         let libra_timestamp_resource = self
             .retrieve_account_state(account)?
             .get_libra_timestamp_resource();

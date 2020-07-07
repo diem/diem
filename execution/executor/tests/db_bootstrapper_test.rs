@@ -22,7 +22,7 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{
-        association_address, coin1_tag, from_currency_code_string, testnet_dd_account_address,
+        coin1_tag, from_currency_code_string, libra_root_address, testnet_dd_account_address,
         BalanceResource, COIN1_NAME,
     },
     account_state::AccountState,
@@ -129,32 +129,32 @@ fn get_demo_accounts() -> (
 }
 
 fn get_mint_transaction(
-    association_key: &Ed25519PrivateKey,
-    association_seq_num: u64,
+    libra_root_key: &Ed25519PrivateKey,
+    libra_root_seq_num: u64,
     account: &AccountAddress,
     amount: u64,
 ) -> Transaction {
     get_test_signed_transaction(
         testnet_dd_account_address(),
-        /* sequence_number = */ association_seq_num,
-        association_key.clone(),
-        association_key.public_key(),
+        /* sequence_number = */ libra_root_seq_num,
+        libra_root_key.clone(),
+        libra_root_key.public_key(),
         Some(encode_testnet_mint_script(coin1_tag(), *account, amount)),
     )
 }
 
 fn get_account_transaction(
-    association_key: &Ed25519PrivateKey,
-    association_seq_num: u64,
+    libra_root_key: &Ed25519PrivateKey,
+    libra_root_seq_num: u64,
     account: &AccountAddress,
     account_key: &Ed25519PrivateKey,
 ) -> Transaction {
     let account_auth_key = AuthenticationKey::ed25519(&account_key.public_key());
     get_test_signed_transaction(
-        association_address(),
-        /* sequence_number = */ association_seq_num,
-        association_key.clone(),
-        association_key.public_key(),
+        libra_root_address(),
+        /* sequence_number = */ libra_root_seq_num,
+        libra_root_key.clone(),
+        libra_root_key.public_key(),
         Some(encode_create_testing_account_script(
             coin1_tag(),
             *account,

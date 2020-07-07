@@ -24,30 +24,30 @@ module TransactionFee {
     /// Called in genesis. Sets up the needed resources to collect transaction fees from the
     /// `TransactionFee` resource with the TreasuryCompliance account.
     public fun initialize(
-        assoc_account: &signer,
+        lr_account: &signer,
         tc_account: &signer,
     ) {
         assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         assert(
-            Signer::address_of(assoc_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
+            Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
             EINVALID_SINGLETON_ADDRESS
         );
         assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
         // accept fees in all the currencies
-        add_txn_fee_currency<Coin1>(assoc_account, tc_account);
-        add_txn_fee_currency<Coin2>(assoc_account, tc_account);
-        add_txn_fee_currency<LBR>(assoc_account, tc_account);
+        add_txn_fee_currency<Coin1>(lr_account, tc_account);
+        add_txn_fee_currency<Coin2>(lr_account, tc_account);
+        add_txn_fee_currency<LBR>(lr_account, tc_account);
     }
 
     /// Sets ups the needed transaction fee state for a given `CoinType` currency by
     /// (1) configuring `fee_account` to accept `CoinType`
     /// (2) publishing a wrapper of the `Preburn<CoinType>` resource under `fee_account`
     fun add_txn_fee_currency<CoinType>(
-        assoc_account: &signer,
+        lr_account: &signer,
         tc_account: &signer,
     ) {
         move_to(
-            assoc_account,
+            lr_account,
             TransactionFee<CoinType> {
                 balance: Libra::zero(),
                 preburn: Libra::create_preburn(tc_account)

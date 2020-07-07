@@ -49,14 +49,14 @@ module Roles {
     /// and roles. This is _not_ called from within LibraAccount -- these
     /// privileges need to be created before accounts can be made
     /// (specifically, initialization of currency)
-    public fun grant_root_association_role(
-        association: &signer,
+    public fun grant_libra_root_role(
+        lr_account: &signer,
     ) {
         assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
-        let owner_address = Signer::address_of(association);
+        let owner_address = Signer::address_of(lr_account);
         assert(owner_address == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_ROOT_ADDRESS);
-        // Grant the role to the association root account
-        move_to(association, RoleId { role_id: LIBRA_ROOT_ROLE_ID });
+        // Grant the role to the libra root account
+        move_to(lr_account, RoleId { role_id: LIBRA_ROOT_ROLE_ID });
     }
 
     /// NB: currency-related privileges are defined in the `Libra` module.
@@ -146,7 +146,7 @@ module Roles {
 
     /// Publish an Unhosted `RoleId` under `new_account`.
     // TODO(tzakian): remove unhosted creation/guard so that only
-    // assoc root can create.
+    // libra root can create.
     public fun new_unhosted_role(_creating_account: &signer, new_account: &signer) {
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);

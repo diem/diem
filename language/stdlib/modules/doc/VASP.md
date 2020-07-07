@@ -292,7 +292,7 @@ Create a new
 <code><a href="#0x1_VASP_ParentVASP">ParentVASP</a></code> resource under
 <code>vasp</code>
 Aborts if
-<code>association</code> is not an Association account,
+<code>lr_account</code> is not the libra root account,
 or if there is already a VASP (child or parent) at this account.
 
 

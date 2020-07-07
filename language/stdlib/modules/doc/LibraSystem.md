@@ -574,7 +574,7 @@
 </code></pre>
 
 
-Returns the validator set stored under association address.
+Returns the validator set stored under libra root address.
 
 
 <a name="0x1_LibraSystem_spec_get_validator_set"></a>

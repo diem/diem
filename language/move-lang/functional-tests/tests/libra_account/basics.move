@@ -75,7 +75,7 @@ script {
 // check: 9
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
     use 0x1::LibraAccount;
     use 0x1::LBR::LBR;

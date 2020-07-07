@@ -13,7 +13,7 @@ use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, x25519, HashValue, PrivateKey, Uniform};
 use libra_types::{
     account_config::{
-        association_address, coin1_tag, from_currency_code_string, testnet_dd_account_address,
+        coin1_tag, from_currency_code_string, libra_root_address, testnet_dd_account_address,
         treasury_compliance_account_address, COIN1_NAME,
     },
     account_state::AccountState,
@@ -60,12 +60,12 @@ fn test_genesis() {
     let li = li.ledger_info();
     assert_eq!(li.version(), 0);
 
-    let association_account = db
+    let libra_root_account = db
         .reader
-        .get_account_state_with_proof(association_address(), 0, 0)
+        .get_account_state_with_proof(libra_root_address(), 0, 0)
         .unwrap();
-    association_account
-        .verify(li, 0, association_address())
+    libra_root_account
+        .verify(li, 0, libra_root_address())
         .unwrap();
 }
 
@@ -104,12 +104,12 @@ fn test_reconfiguration() {
         .reader
         .get_account_state_with_proof(validator_account, current_version, current_version)
         .unwrap();
-    let association_account_state_with_proof = db
+    let libra_root_account_state_with_proof = db
         .reader
-        .get_account_state_with_proof(association_address(), current_version, current_version)
+        .get_account_state_with_proof(libra_root_address(), current_version, current_version)
         .unwrap();
     assert_eq!(
-        AccountState::try_from(&association_account_state_with_proof.blob.unwrap())
+        AccountState::try_from(&libra_root_account_state_with_proof.blob.unwrap())
             .unwrap()
             .get_validator_set()
             .unwrap()
@@ -215,12 +215,12 @@ fn test_reconfiguration() {
         .reader
         .get_account_state_with_proof(validator_account, current_version, current_version)
         .unwrap();
-    let association_account_state_with_proof = db
+    let libra_root_account_state_with_proof = db
         .reader
-        .get_account_state_with_proof(association_address(), current_version, current_version)
+        .get_account_state_with_proof(libra_root_address(), current_version, current_version)
         .unwrap();
     assert_ne!(
-        AccountState::try_from(&association_account_state_with_proof.blob.unwrap())
+        AccountState::try_from(&libra_root_account_state_with_proof.blob.unwrap())
             .unwrap()
             .get_validator_set()
             .unwrap()
@@ -239,7 +239,7 @@ fn test_reconfiguration() {
 
     // txn4 = reconfigure the system with a new consensus key
     let txn4 = get_test_signed_transaction(
-        association_address(),
+        libra_root_address(),
         /* sequence_number = */ 1,
         genesis_key.clone(),
         genesis_key.public_key(),
@@ -272,17 +272,17 @@ fn test_reconfiguration() {
 
     let t4 = db
         .reader
-        .get_txn_by_account(association_address(), 1, current_version, true)
+        .get_txn_by_account(libra_root_address(), 1, current_version, true)
         .unwrap();
     verify_committed_txn_status(t4.as_ref(), &txn_block[0]).unwrap();
     assert_eq!(t4.unwrap().events.unwrap().len(), 1);
 
     // test validator's key in the validator set is as expected
-    let association_account_state_with_proof = db
+    let libra_root_account_state_with_proof = db
         .reader
-        .get_account_state_with_proof(association_address(), current_version, current_version)
+        .get_account_state_with_proof(libra_root_address(), current_version, current_version)
         .unwrap();
-    let blob = &association_account_state_with_proof.blob.unwrap();
+    let blob = &libra_root_account_state_with_proof.blob.unwrap();
     assert_eq!(
         AccountState::try_from(blob)
             .unwrap()
@@ -304,7 +304,7 @@ fn test_change_publishing_option_to_custom() {
     let parent_block_id = executor.committed_block_id();
 
     let treasury_compliance_account = treasury_compliance_account_address();
-    let genesis_account = association_address();
+    let genesis_account = libra_root_address();
     let network_config = config.validator_network.as_ref().unwrap();
     let validator_account = network_config.peer_id();
     let keys = config
@@ -473,7 +473,7 @@ fn test_extend_whitelist() {
     let parent_block_id = executor.committed_block_id();
 
     let treasury_compliance_account = treasury_compliance_account_address();
-    let genesis_account = association_address();
+    let genesis_account = libra_root_address();
     let network_config = config.validator_network.as_ref().unwrap();
     let validator_account = network_config.peer_id();
     let keys = config
@@ -680,7 +680,7 @@ fn test_execution_with_storage() {
     let account4_auth_key = AuthenticationKey::ed25519(&pubkey4); // non-existent account
     let account4 = account4_auth_key.derived_address();
     let genesis_account = testnet_dd_account_address();
-    let root_account = association_address();
+    let root_account = libra_root_address();
 
     let tx1 = get_test_signed_transaction(
         root_account,

@@ -46,7 +46,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_initialize">initialize</a>(association: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_initialize">initialize</a>(lr_account: &signer)
 </code></pre>
 
 
@@ -55,12 +55,12 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_initialize">initialize</a>(association: &signer) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTransactionTimeout_initialize">initialize</a>(lr_account: &signer) {
   <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
-  // Operational constraint, only callable by the Association address
-  <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
+  // Operational constraint, only callable by the libra root account
+  <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
   // Currently set <b>to</b> 1day.
-  move_to(association, <a href="#0x1_LibraTransactionTimeout_TTL">TTL</a> {duration_microseconds: ONE_DAY_MICROS});
+  move_to(lr_account, <a href="#0x1_LibraTransactionTimeout_TTL">TTL</a> {duration_microseconds: ONE_DAY_MICROS});
 }
 </code></pre>
 

@@ -102,7 +102,7 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
     use 0x1::Libra;
     use 0x1::LibraTimestamp;

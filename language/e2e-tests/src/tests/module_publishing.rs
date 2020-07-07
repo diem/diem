@@ -156,7 +156,7 @@ pub fn test_publishing_no_modules_non_whitelist_script_proper_sender() {
     let executor = FakeExecutor::from_genesis_with_options(VMPublishingOption::CustomScripts);
 
     // create a transaction trying to publish a new module.
-    let sender = Account::new_association();
+    let sender = Account::new_libra_root();
 
     let program = String::from(
         "
@@ -188,7 +188,7 @@ pub fn test_publishing_no_modules_proper_sender() {
     let executor = FakeExecutor::whitelist_genesis();
 
     // create a transaction trying to publish a new module.
-    let sender = Account::new_association();
+    let sender = Account::new_libra_root();
 
     let program = String::from(
         "
@@ -220,7 +220,7 @@ pub fn test_publishing_no_modules_core_code_sender() {
     let executor = FakeExecutor::whitelist_genesis();
 
     // create a transaction trying to publish a new module.
-    let sender = Account::new_association();
+    let sender = Account::new_libra_root();
 
     let program = String::from(
         "

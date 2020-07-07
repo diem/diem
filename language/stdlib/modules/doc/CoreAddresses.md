@@ -17,7 +17,7 @@
 
 ## Function `LIBRA_ROOT_ADDRESS`
 
-The address of the root association account. This account is
+The address of the libra root account. This account is
 created in genesis, and cannot be changed. This address has
 ultimate authority over the permissions granted (or removed) from
 accounts on-chain.

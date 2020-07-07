@@ -102,7 +102,7 @@ is called at the end of genesis.
 Initializes the global wall clock time resource. This can only be called from genesis.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_initialize">initialize</a>(association: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_initialize">initialize</a>(lr_account: &signer)
 </code></pre>
 
 
@@ -111,13 +111,13 @@ Initializes the global wall clock time resource. This can only be called from ge
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_initialize">initialize</a>(association: &signer) {
-    // Operational constraint, only callable by the Association address
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_initialize">initialize</a>(lr_account: &signer) {
+    // Operational constraint, only callable by the libra root account
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
 
     // TODO: Should the initialized value be passed in <b>to</b> genesis?
     <b>let</b> timer = <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> { microseconds: 0 };
-    move_to(association, timer);
+    move_to(lr_account, timer);
 }
 </code></pre>
 
@@ -132,7 +132,7 @@ Initializes the global wall clock time resource. This can only be called from ge
 Marks that time has started and genesis has finished. This can only be called from genesis.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_set_time_has_started">set_time_has_started</a>(association: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_set_time_has_started">set_time_has_started</a>(lr_account: &signer)
 </code></pre>
 
 
@@ -141,15 +141,15 @@ Marks that time has started and genesis has finished. This can only be called fr
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_set_time_has_started">set_time_has_started</a>(association: &signer) <b>acquires</b> <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_set_time_has_started">set_time_has_started</a>(lr_account: &signer) <b>acquires</b> <a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a> {
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
 
     // Current time must have been initialized.
     <b>assert</b>(
         exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()) && <a href="#0x1_LibraTimestamp_now_microseconds">now_microseconds</a>() == 0,
         ETIME_NOT_INITIALIZED
     );
-    move_to(association, <a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>{});
+    move_to(lr_account, <a href="#0x1_LibraTimestamp_TimeHasStarted">TimeHasStarted</a>{});
 }
 </code></pre>
 
@@ -343,7 +343,7 @@ Specification version of the
 </code></pre>
 
 
-True if the association root account has a CurrentTimeMicroseconds.
+True if the libra root account has a CurrentTimeMicroseconds.
 
 
 <a name="0x1_LibraTimestamp_root_ctm_initialized"></a>
@@ -434,13 +434,13 @@ The global wall clock time never decreases.
 ### Function `initialize`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_initialize">initialize</a>(association: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_initialize">initialize</a>(lr_account: &signer)
 </code></pre>
 
 
 
 
-<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(association) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
 <b>aborts_if</b> <a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>();
 <b>ensures</b> <a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>();
 <b>ensures</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() == 0;
@@ -453,13 +453,13 @@ The global wall clock time never decreases.
 ### Function `set_time_has_started`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_set_time_has_started">set_time_has_started</a>(association: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraTimestamp_set_time_has_started">set_time_has_started</a>(lr_account: &signer)
 </code></pre>
 
 
 
 
-<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(association) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
 <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_spec_is_genesis">spec_is_genesis</a>();
 <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>();
 <b>aborts_if</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() != 0;

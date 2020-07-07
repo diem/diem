@@ -268,7 +268,7 @@ impl TxEmitter {
 
     pub async fn load_libra_root_account(&self, instance: &Instance) -> Result<AccountData> {
         let client = instance.json_rpc_client();
-        let address = account_config::association_address();
+        let address = account_config::libra_root_address();
         let sequence_number = query_sequence_numbers(&client, &[address])
             .await
             .map_err(|e| {

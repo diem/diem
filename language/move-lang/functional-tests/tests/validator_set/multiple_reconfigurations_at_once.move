@@ -9,7 +9,7 @@
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script{
     use 0x1::LibraSystem;
     // Decertify two validators to make sure we can remove both
@@ -49,7 +49,7 @@ script{
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script{
     use 0x1::LibraSystem;
     fun main(account: &signer) {
@@ -76,7 +76,7 @@ script{
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script{
     use 0x1::LibraSystem;
     fun main(account: &signer) {

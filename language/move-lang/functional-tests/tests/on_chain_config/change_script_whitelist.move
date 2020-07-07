@@ -20,7 +20,7 @@ module FooConfig {
 //! block-time: 2
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 //! args: b"01",
 // Step 2: Change option to CustomScript
 script {

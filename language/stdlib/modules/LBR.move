@@ -69,14 +69,14 @@ module LBR {
     /// correct permissions (`&Capability<RegisterNewCurrency>`). Both of these
     /// restrictions are enforced in the `Libra::register_currency` function, but also enforced here.
     public fun initialize(
-        association: &signer,
+        lr_account: &signer,
         tc_account: &signer,
     ) {
         // Operational constraint
-        assert(Signer::address_of(association) == reserve_address(), EINVALID_SINGLETON_ADDRESS);
+        assert(Signer::address_of(lr_account) == reserve_address(), EINVALID_SINGLETON_ADDRESS);
         // Register the `LBR` currency.
         let (mint_cap, burn_cap) = Libra::register_currency<LBR>(
-            association,
+            lr_account,
             tc_account,
             FixedPoint32::create_from_rational(1, 1), // exchange rate to LBR
             true,    // is_synthetic
@@ -93,7 +93,7 @@ module LBR {
             ratio: FixedPoint32::create_from_rational(1, 2),
             backing: Libra::zero<Coin2>(),
         };
-        move_to(association, Reserve { mint_cap, burn_cap, preburn_cap, coin1, coin2 });
+        move_to(lr_account, Reserve { mint_cap, burn_cap, preburn_cap, coin1, coin2 });
     }
 
     /// Returns true if `CoinType` is `LBR::LBR`

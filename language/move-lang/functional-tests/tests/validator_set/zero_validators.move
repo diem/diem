@@ -5,7 +5,7 @@
 //! block-time: 3
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
     use 0x1::LibraSystem;
     fun main() {
@@ -15,7 +15,7 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
     use 0x1::LibraSystem;
     fun main(account: &signer) {
@@ -32,7 +32,7 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
     use 0x1::LibraSystem;
     fun main(account: &signer) {
@@ -46,7 +46,7 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
     use 0x1::LibraSystem;
     fun main() {

@@ -97,7 +97,7 @@ pub trait ConfigStorage {
 /// Trait to be implemented by a Rust struct representation of an on-chain config
 /// that is stored in storage as a serialized byte array
 pub trait OnChainConfig: Send + Sync + DeserializeOwned {
-    // association_address
+    // libra_root_address
     const ADDRESS: &'static str = CONFIG_ADDRESS_STR;
     const IDENTIFIER: &'static str;
     const CONFIG_ID: ConfigID = ConfigID(Self::ADDRESS, Self::IDENTIFIER);
@@ -194,10 +194,7 @@ impl Default for ConfigurationResource {
         Self {
             epoch: 0,
             last_reconfiguration_time: 0,
-            events: EventHandle::new_from_address(
-                &crate::account_config::association_address(),
-                16,
-            ),
+            events: EventHandle::new_from_address(&crate::account_config::libra_root_address(), 16),
         }
     }
 }

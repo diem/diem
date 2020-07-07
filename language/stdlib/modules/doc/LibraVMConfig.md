@@ -184,7 +184,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(lr_account: &signer, association_root_account: &signer, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(lr_account: &signer, publishing_option: vector&lt;u8&gt;, instruction_schedule: vector&lt;u8&gt;, native_schedule: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -195,7 +195,6 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraVMConfig_initialize">initialize</a>(
     lr_account: &signer,
-    association_root_account: &signer,
     publishing_option: vector&lt;u8&gt;,
     instruction_schedule: vector&lt;u8&gt;,
     native_schedule: vector&lt;u8&gt;,
@@ -223,9 +222,9 @@
                 gas_constants,
             }
         },
-        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association_root_account),
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account),
     );
-    <a href="LibraConfig.md#0x1_LibraConfig_claim_delegated_modify_config">LibraConfig::claim_delegated_modify_config</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;(association_root_account, <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account));
+    <a href="LibraConfig.md#0x1_LibraConfig_claim_delegated_modify_config">LibraConfig::claim_delegated_modify_config</a>&lt;<a href="#0x1_LibraVMConfig">LibraVMConfig</a>&gt;(lr_account, <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account));
 }
 </code></pre>
 

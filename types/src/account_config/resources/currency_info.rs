@@ -4,7 +4,7 @@
 use crate::{
     access_path::AccessPath,
     account_config::constants::{
-        association_address, type_tag_for_currency_code, CORE_CODE_ADDRESS,
+        libra_root_address, type_tag_for_currency_code, CORE_CODE_ADDRESS,
     },
     event::EventHandle,
 };
@@ -76,7 +76,7 @@ impl CurrencyInfoResource {
 
     pub fn resource_path_for(currency_code: Identifier) -> AccessPath {
         let resource_key = ResourceKey::new(
-            association_address(),
+            libra_root_address(),
             CurrencyInfoResource::struct_tag_for(currency_code),
         );
         AccessPath::resource_access_path(&resource_key)

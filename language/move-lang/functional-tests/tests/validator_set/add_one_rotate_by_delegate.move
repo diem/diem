@@ -70,7 +70,7 @@ script {
 // check: EXECUTED
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
     use 0x1::LibraSystem;
     use 0x1::ValidatorConfig;

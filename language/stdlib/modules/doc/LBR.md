@@ -218,7 +218,7 @@ restrictions are enforced in the
 <code><a href="Libra.md#0x1_Libra_register_currency">Libra::register_currency</a></code> function, but also enforced here.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_initialize">initialize</a>(association: &signer, tc_account: &signer)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_initialize">initialize</a>(lr_account: &signer, tc_account: &signer)
 </code></pre>
 
 
@@ -228,14 +228,14 @@ restrictions are enforced in the
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_initialize">initialize</a>(
-    association: &signer,
+    lr_account: &signer,
     tc_account: &signer,
 ) {
     // Operational constraint
-    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(association) == <a href="#0x1_LBR_reserve_address">reserve_address</a>(), EINVALID_SINGLETON_ADDRESS);
+    <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="#0x1_LBR_reserve_address">reserve_address</a>(), EINVALID_SINGLETON_ADDRESS);
     // Register the `<a href="#0x1_LBR">LBR</a>` currency.
     <b>let</b> (mint_cap, burn_cap) = <a href="Libra.md#0x1_Libra_register_currency">Libra::register_currency</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;(
-        association,
+        lr_account,
         tc_account,
         <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 1), // exchange rate <b>to</b> <a href="#0x1_LBR">LBR</a>
         <b>true</b>,    // is_synthetic
@@ -252,7 +252,7 @@ restrictions are enforced in the
         ratio: <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 2),
         backing: <a href="Libra.md#0x1_Libra_zero">Libra::zero</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(),
     };
-    move_to(association, <a href="#0x1_LBR_Reserve">Reserve</a> { mint_cap, burn_cap, preburn_cap, coin1, coin2 });
+    move_to(lr_account, <a href="#0x1_LBR_Reserve">Reserve</a> { mint_cap, burn_cap, preburn_cap, coin1, coin2 });
 }
 </code></pre>
 

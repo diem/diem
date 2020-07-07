@@ -295,7 +295,7 @@ module Libra {
 
     /// Mint a new `Libra` coin of `CoinType` currency worth `value`. The
     /// caller must have a reference to a `MintCapability<CoinType>`. Only
-    /// the Association account or the `0x1::LBR` module can acquire such a
+    /// the treasury compliance account or the `0x1::LBR` module can acquire such a
     /// reference.
     public fun mint_with_capability<CoinType>(
         value: u64,
@@ -802,7 +802,7 @@ module Libra {
 
     /// There may be situations in which we disallow the further minting of
     /// coins in the system without removing the currency. This function
-    /// allows the association to control whether or not further coins of
+    /// allows the association TC account to control whether or not further coins of
     /// `CoinType` can be minted or not. If this is called with `can_mint =
     /// true`, then minting is allowed, if `can_mint = false` then minting is
     /// disallowed until it is turned back on via this function. All coins

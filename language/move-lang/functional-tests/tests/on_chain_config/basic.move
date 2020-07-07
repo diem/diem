@@ -10,7 +10,7 @@ module ConfigHolder {
 
     public fun get<T>(): LibraConfig::ModifyConfigCapability<T>
     acquires Holder {
-        let Holder<T>{ cap } = move_from<Holder<T>>({{association}});
+        let Holder<T>{ cap } = move_from<Holder<T>>({{libraroot}});
         cap
     }
 }
@@ -61,7 +61,7 @@ script {
 // check: 5
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
     use 0x1::LibraConfig::{Self};
     use {{default}}::ConfigHolder;
@@ -100,7 +100,7 @@ script {
 script {
     use 0x1::LibraConfig::{Self};
     fun main(account: &signer) {
-        LibraConfig::publish_new_config_with_delegate(account, 0, {{association}});
+        LibraConfig::publish_new_config_with_delegate(account, 0, {{libraroot}});
     }
 }
 // check: ABORTED

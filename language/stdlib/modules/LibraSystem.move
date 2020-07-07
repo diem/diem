@@ -67,7 +67,7 @@ module LibraSystem {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // Methods operating the Validator Set config callable by the Association only
+    // Methods operating the Validator Set config callable by the libra root account
     ///////////////////////////////////////////////////////////////////////////
 
     // Adds a new validator, this validator should met the validity conditions
@@ -94,7 +94,7 @@ module LibraSystem {
         set_validator_set(validator_set);
     }
 
-    // Removes a validator, only callable by the LibraAssociation address
+    // Removes a validator, only callable by the libra root account
     // If successful, a NewEpochEvent is fired
     public fun remove_validator(
         lr_account: &signer,
@@ -232,7 +232,7 @@ module LibraSystem {
 
         pragma verify = true, aborts_if_is_strict = true;
 
-        /// Returns the validator set stored under association address.
+        /// Returns the validator set stored under libra root address.
         define spec_get_validator_set(): vector<ValidatorInfo> {
             LibraConfig::spec_get<LibraSystem>().validators
         }

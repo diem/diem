@@ -453,7 +453,7 @@
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraConfig_reconfigure">reconfigure</a>(
     lr_account: &signer,
 ) <b>acquires</b> <a href="#0x1_LibraConfig_Configuration">Configuration</a> {
-    // Only callable by association address or by the VM internally.
+    // Only callable by libra root account or by the VM internally.
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
     <a href="#0x1_LibraConfig_reconfigure_">reconfigure_</a>();
 }

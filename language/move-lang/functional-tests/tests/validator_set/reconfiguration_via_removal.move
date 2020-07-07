@@ -10,7 +10,7 @@
 //! block-time: 2
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script{
     use 0x1::LibraSystem;
     fun main(account: &signer) {

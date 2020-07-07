@@ -29,7 +29,7 @@ script {
 // check: 3
 
 //! new-transaction
-//! sender: association
+//! sender: libraroot
 script {
     use 0x1::LibraTransactionTimeout;
     fun main(account: &signer) {

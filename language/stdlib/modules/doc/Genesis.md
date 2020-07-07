@@ -35,7 +35,7 @@
 ) {
     <b>let</b> dummy_auth_key_prefix = x"00000000000000000000000000000000";
 
-    <a href="Roles.md#0x1_Roles_grant_root_association_role">Roles::grant_root_association_role</a>(lr_account);
+    <a href="Roles.md#0x1_Roles_grant_libra_root_role">Roles::grant_libra_root_role</a>(lr_account);
     <a href="LibraAccount.md#0x1_LibraAccount_grant_module_publishing_privilege">LibraAccount::grant_module_publishing_privilege</a>(lr_account);
     <a href="Roles.md#0x1_Roles_grant_treasury_compliance_role">Roles::grant_treasury_compliance_role</a>(tc_account, lr_account);
 
@@ -58,7 +58,7 @@
 
     <a href="AccountFreezing.md#0x1_AccountFreezing_initialize">AccountFreezing::initialize</a>(lr_account);
     <a href="LibraAccount.md#0x1_LibraAccount_initialize">LibraAccount::initialize</a>(lr_account);
-    <a href="LibraAccount.md#0x1_LibraAccount_create_root_association_account">LibraAccount::create_root_association_account</a>(
+    <a href="LibraAccount.md#0x1_LibraAccount_create_libra_root_account">LibraAccount::create_libra_root_account</a>(
         <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account),
         <b>copy</b> dummy_auth_key_prefix,
     );
@@ -92,12 +92,11 @@
     <a href="LibraWriteSetManager.md#0x1_LibraWriteSetManager_initialize">LibraWriteSetManager::initialize</a>(lr_account);
     <a href="LibraTimestamp.md#0x1_LibraTimestamp_initialize">LibraTimestamp::initialize</a>(lr_account);
 
-    <b>let</b> assoc_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(lr_account);
-    <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&assoc_rotate_key_cap, <b>copy</b> genesis_auth_key);
-    <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(assoc_rotate_key_cap);
+    <b>let</b> lr_rotate_key_cap = <a href="LibraAccount.md#0x1_LibraAccount_extract_key_rotation_capability">LibraAccount::extract_key_rotation_capability</a>(lr_account);
+    <a href="LibraAccount.md#0x1_LibraAccount_rotate_authentication_key">LibraAccount::rotate_authentication_key</a>(&lr_rotate_key_cap, <b>copy</b> genesis_auth_key);
+    <a href="LibraAccount.md#0x1_LibraAccount_restore_key_rotation_capability">LibraAccount::restore_key_rotation_capability</a>(lr_rotate_key_cap);
 
     <a href="LibraVMConfig.md#0x1_LibraVMConfig_initialize">LibraVMConfig::initialize</a>(
-        lr_account,
         lr_account,
         publishing_option,
         instruction_schedule,

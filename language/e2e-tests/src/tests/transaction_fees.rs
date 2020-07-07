@@ -24,9 +24,9 @@ fn burn_txn_fees() {
     let sender = Account::new();
     let dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
     let tc = Account::new_blessed_tc();
-    let association = Account::new_association();
+    let libra_root = Account::new_libra_root();
 
-    executor.execute_and_apply(association.signed_script_txn(
+    executor.execute_and_apply(libra_root.signed_script_txn(
         encode_create_testing_account_script(
             account_config::coin1_tag(),
             *sender.address(),
