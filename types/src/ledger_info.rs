@@ -244,7 +244,7 @@ impl LedgerInfoWithV0 {
         &self,
         validator: &ValidatorVerifier,
     ) -> ::std::result::Result<(), VerifyError> {
-        validator.batch_verify_aggregated_struct_signature(self.ledger_info(), self.signatures())
+        validator.batch_verify_aggregated_signatures(self.ledger_info(), self.signatures())
     }
 }
 

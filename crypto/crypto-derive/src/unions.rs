@@ -264,7 +264,7 @@ pub fn impl_enum_signature(
 
         match_struct_arms.extend(quote! {
             (#name::#variant_ident(sig), #pub_kt::#variant_ident(pk)) => {
-                sig.verify_struct_msg(message, pk)
+                sig.verify(message, pk)
             }
         })
     }
@@ -275,7 +275,7 @@ pub fn impl_enum_signature(
             type VerifyingKeyMaterial = #pub_kt;
             type SigningKeyMaterial = #priv_kt;
 
-            fn verify_struct_msg<T: libra_crypto::hash::CryptoHash + serde::Serialize>(&self, message: &T, public_key: &Self::VerifyingKeyMaterial) -> std::result::Result<(), libra_crypto::error::Error> {
+            fn verify<T: libra_crypto::hash::CryptoHash + serde::Serialize>(&self, message: &T, public_key: &Self::VerifyingKeyMaterial) -> std::result::Result<(), libra_crypto::error::Error> {
                 match (self, public_key) {
                     #match_struct_arms
                     _ => libra_crypto::error::bail!(

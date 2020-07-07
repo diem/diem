@@ -245,6 +245,6 @@ fn test_vault_crypto_policies() {
     signer_store.get_public_key(key_name).unwrap_err();
     signer_store.rotate_key(key_name).unwrap_err();
     let signature = signer_store.sign(key_name, &message).unwrap();
-    signature.verify_struct_msg(&message, &pubkey).unwrap_err();
-    signature.verify_struct_msg(&message, &new_pubkey).unwrap();
+    signature.verify(&message, &pubkey).unwrap_err();
+    signature.verify(&message, &new_pubkey).unwrap();
 }

@@ -25,7 +25,7 @@
 //! let private_key = Ed25519PrivateKey::generate(&mut rng);
 //! let public_key: Ed25519PublicKey = (&private_key).into();
 //! let signature = private_key.sign(&message);
-//! assert!(signature.verify_struct_msg(&message, &public_key).is_ok());
+//! assert!(signature.verify(&message, &public_key).is_ok());
 //! ```
 //! **Note**: The above example generates a private key using a private function intended only for
 //! testing purposes. Production code should find an alternate means for secure key generation.
@@ -391,7 +391,7 @@ impl Signature for Ed25519Signature {
     type VerifyingKeyMaterial = Ed25519PublicKey;
     type SigningKeyMaterial = Ed25519PrivateKey;
 
-    fn verify_struct_msg<T: CryptoHash + Serialize>(
+    fn verify<T: CryptoHash + Serialize>(
         &self,
         message: &T,
         public_key: &Ed25519PublicKey,
@@ -423,7 +423,7 @@ impl Signature for Ed25519Signature {
     /// Batch signature verification as described in the original EdDSA article
     /// by Bernstein et al. "High-speed high-security signatures". Current implementation works for
     /// signatures on the same message and it checks for malleability.
-    fn batch_verify_struct_signatures<T: CryptoHash + Serialize>(
+    fn batch_verify<T: CryptoHash + Serialize>(
         message: &T,
         keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,
     ) -> Result<()> {

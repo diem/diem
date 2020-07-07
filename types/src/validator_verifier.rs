@@ -171,7 +171,7 @@ impl ValidatorVerifier {
 
     /// This function will try batch signature verification and falls back to normal
     /// iterated verification if batching fails.
-    pub fn batch_verify_aggregated_struct_signature<T: CryptoHash + Serialize>(
+    pub fn batch_verify_aggregated_signatures<T: CryptoHash + Serialize>(
         &self,
         message: &T,
         aggregated_signature: &BTreeMap<AccountAddress, Ed25519Signature>,
@@ -186,7 +186,7 @@ impl ValidatorVerifier {
             })
             .collect();
         // Fallback is required to identify the source of the problem if batching fails.
-        if Ed25519Signature::batch_verify_struct_signatures(message, keys_and_signatures).is_err() {
+        if Ed25519Signature::batch_verify(message, keys_and_signatures).is_err() {
             self.verify_aggregated_struct_signature(message, aggregated_signature)?
         }
         Ok(())
@@ -446,7 +446,7 @@ mod tests {
         // Check against signatures == N; this will pass.
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
+                .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Ok(())
         );
 
@@ -457,7 +457,7 @@ mod tests {
             .insert(unknown_validator_signer.author(), unknown_signature.clone());
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
+                .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::TooManySignatures {
                 num_of_signatures: 8,
                 num_of_authors: 7
@@ -471,7 +471,7 @@ mod tests {
         }
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
+                .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Ok(())
         );
 
@@ -481,7 +481,7 @@ mod tests {
             .insert(unknown_validator_signer.author(), unknown_signature.clone());
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
+                .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::UnknownAuthor)
         );
 
@@ -492,7 +492,7 @@ mod tests {
         }
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
+                .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::TooLittleVotingPower {
                 voting_power: 4,
                 quorum_voting_power: 5
@@ -503,7 +503,7 @@ mod tests {
         author_to_signature_map.insert(unknown_validator_signer.author(), unknown_signature);
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
+                .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::UnknownAuthor)
         );
     }
@@ -540,7 +540,7 @@ mod tests {
         // Check against all signatures (6 voting power); this will pass.
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
+                .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Ok(())
         );
 
@@ -551,7 +551,7 @@ mod tests {
             .insert(unknown_validator_signer.author(), unknown_signature.clone());
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
+                .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::TooManySignatures {
                 num_of_signatures: 5,
                 num_of_authors: 4
@@ -565,7 +565,7 @@ mod tests {
         }
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
+                .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Ok(())
         );
 
@@ -575,7 +575,7 @@ mod tests {
             .insert(unknown_validator_signer.author(), unknown_signature.clone());
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
+                .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::UnknownAuthor)
         );
 
@@ -586,7 +586,7 @@ mod tests {
         }
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
+                .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::TooLittleVotingPower {
                 voting_power: 3,
                 quorum_voting_power: 5
@@ -597,7 +597,7 @@ mod tests {
         author_to_signature_map.insert(unknown_validator_signer.author(), unknown_signature);
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
+                .batch_verify_aggregated_signatures(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::UnknownAuthor)
         );
     }

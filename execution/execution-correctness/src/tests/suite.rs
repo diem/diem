@@ -25,7 +25,7 @@ pub fn run_test_suite(executor_pair: (Box<dyn ExecutionCorrectness>, Option<Ed25
             block,
             result.epoch_state().clone(),
         );
-        sig.verify_struct_msg(&vote_proposal, &execution_pubkey.unwrap())
+        sig.verify(&vote_proposal, &execution_pubkey.unwrap())
             .unwrap();
     }
 

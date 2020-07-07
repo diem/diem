@@ -97,11 +97,11 @@ impl TransactionAuthenticator {
             Self::Ed25519 {
                 public_key,
                 signature,
-            } => signature.verify_struct_msg(message, public_key),
+            } => signature.verify(message, public_key),
             Self::MultiEd25519 {
                 public_key,
                 signature,
-            } => signature.verify_struct_msg(message, public_key),
+            } => signature.verify(message, public_key),
         }
     }
 

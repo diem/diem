@@ -184,15 +184,15 @@ pub trait VerifyingKey:
         message: &T,
         signature: &Self::SignatureMaterial,
     ) -> Result<()> {
-        signature.verify_struct_msg(message, self)
+        signature.verify(message, self)
     }
 
     /// We provide the implementation which dispatches to the signature.
-    fn batch_verify_struct_signatures<T: CryptoHash + Serialize>(
+    fn batch_verify<T: CryptoHash + Serialize>(
         message: &T,
         keys_and_signatures: Vec<(Self, Self::SignatureMaterial)>,
     ) -> Result<()> {
-        Self::SignatureMaterial::batch_verify_struct_signatures(message, keys_and_signatures)
+        Self::SignatureMaterial::batch_verify(message, keys_and_signatures)
     }
 }
 
@@ -227,7 +227,7 @@ pub trait Signature:
 
     /// Verification for a struct we unabmiguously know how to serialize and
     /// that we have a domain separation prefix for.
-    fn verify_struct_msg<T: CryptoHash + Serialize>(
+    fn verify<T: CryptoHash + Serialize>(
         &self,
         message: &T,
         public_key: &Self::VerifyingKeyMaterial,
@@ -246,12 +246,12 @@ pub trait Signature:
     /// The implementer can override a batch verification implementation
     /// that by default iterates over each signature. More efficient
     /// implementations exist and should be implemented for many schemes.
-    fn batch_verify_struct_signatures<T: CryptoHash + Serialize>(
+    fn batch_verify<T: CryptoHash + Serialize>(
         message: &T,
         keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,
     ) -> Result<()> {
         for (key, signature) in keys_and_signatures {
-            signature.verify_struct_msg(message, &key)?
+            signature.verify(message, &key)?
         }
         Ok(())
     }

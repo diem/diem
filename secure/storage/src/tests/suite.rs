@@ -149,7 +149,7 @@ fn test_import_key(storage: &mut Storage) {
     let message = TestLibraCrypto("Hello, World".to_string());
     let message_signature = storage.sign(imported_key_name, &message).unwrap();
     message_signature
-        .verify_struct_msg(&message, &imported_public_key)
+        .verify(&message, &imported_public_key)
         .unwrap();
 
     // Ensure rotation still works
@@ -163,7 +163,7 @@ fn test_import_key(storage: &mut Storage) {
 
     let rotated_message_signature = storage.sign(imported_key_name, &message).unwrap();
     rotated_message_signature
-        .verify_struct_msg(&message, &rotated_imported_public_key)
+        .verify(&message, &rotated_imported_public_key)
         .unwrap();
 
     assert_ne!(imported_key, rotated_imported_key);
@@ -283,9 +283,7 @@ fn test_create_sign_rotate_sign(storage: &mut Storage) {
     // Create then sign message and verify correct signature
     let message = TestLibraCrypto("Hello, World".to_string());
     let message_signature = storage.sign(CRYPTO_NAME, &message).unwrap();
-    assert!(message_signature
-        .verify_struct_msg(&message, &public_key)
-        .is_ok());
+    assert!(message_signature.verify(&message, &public_key).is_ok());
 
     // Rotate the key pair and sign the message again using the previous key pair version
     let _ = storage.rotate_key(CRYPTO_NAME).unwrap();
