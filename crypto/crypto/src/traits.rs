@@ -6,7 +6,7 @@
 //! For examples on how to use these traits, see the implementations of the [`ed25519`] or
 //! [`bls12381`] modules.
 
-use crate::{hash::CryptoHash, HashValue};
+use crate::hash::CryptoHash;
 use anyhow::Result;
 use core::convert::{From, TryFrom};
 use rand::{rngs::StdRng, CryptoRng, RngCore, SeedableRng};
@@ -121,17 +121,9 @@ pub trait SigningKey:
     /// The associated signature type for this signing key.
     type SignatureMaterial: Signature<SigningKeyMaterial = Self>;
 
-    /// Signs an input message, represented by its `HashValue`
-    #[deprecated(since = "0.1.0", note = "please use SigningKey::sign instead.")]
-    fn sign_message(&self, message: &HashValue) -> Self::SignatureMaterial;
-
     /// Signs an object that has an distinct domain-separation hasher and
     /// that we know how to serialize. There is no pre-hashing into a
     /// `HashValue` to be done by the caller.
-    ///
-    /// For the moment, this signature is incompatible with the conversion into
-    /// a `HashValue` above. We intend to deprecate `sign message` in favor of
-    /// the present function soon.
     ///
     /// Note: this assumes serialization is unfaillible. See libra_common::lcs::ser
     /// for a discussion of this assumption.
@@ -196,19 +188,6 @@ pub trait VerifyingKey:
     }
 
     /// We provide the implementation which dispatches to the signature.
-    #[deprecated(
-        since = "0.1.0",
-        note = "please use VerifyingKey::batch_verify_struct_signatures instead."
-    )]
-    fn batch_verify_signatures(
-        message: &HashValue,
-        keys_and_signatures: Vec<(Self, Self::SignatureMaterial)>,
-    ) -> Result<()> {
-        #[allow(deprecated)]
-        Self::SignatureMaterial::batch_verify_signatures(message, keys_and_signatures)
-    }
-
-    /// We provide the implementation which dispatches to the signature.
     fn batch_verify_struct_signatures<T: CryptoHash + Serialize>(
         message: &T,
         keys_and_signatures: Vec<(Self, Self::SignatureMaterial)>,
@@ -246,15 +225,8 @@ pub trait Signature:
     /// The associated signing key type for this signature
     type SigningKeyMaterial: SigningKey<SignatureMaterial = Self>;
 
-    /// The verification function.
-    #[deprecated(
-        since = "0.1.0",
-        note = "please use Signature::verify_struct_msg instead."
-    )]
-    fn verify(&self, message: &HashValue, public_key: &Self::VerifyingKeyMaterial) -> Result<()>;
-
     /// Verification for a struct we unabmiguously know how to serialize and
-    /// that we have a domain separation prefix for..
+    /// that we have a domain separation prefix for.
     fn verify_struct_msg<T: CryptoHash + Serialize>(
         &self,
         message: &T,
@@ -274,30 +246,11 @@ pub trait Signature:
     /// The implementer can override a batch verification implementation
     /// that by default iterates over each signature. More efficient
     /// implementations exist and should be implemented for many schemes.
-    #[deprecated(
-        since = "0.1.0",
-        note = "please use Signature::batch_verify_struct_signatures instead."
-    )]
-    fn batch_verify_signatures(
-        message: &HashValue,
-        keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,
-    ) -> Result<()> {
-        for (key, signature) in keys_and_signatures {
-            #[allow(deprecated)]
-            signature.verify(message, &key)?
-        }
-        Ok(())
-    }
-
-    /// The implementer can override a batch verification implementation
-    /// that by default iterates over each signature. More efficient
-    /// implementations exist and should be implemented for many schemes.
     fn batch_verify_struct_signatures<T: CryptoHash + Serialize>(
         message: &T,
         keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,
     ) -> Result<()> {
         for (key, signature) in keys_and_signatures {
-            #[allow(deprecated)]
             signature.verify_struct_msg(message, &key)?
         }
         Ok(())

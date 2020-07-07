@@ -96,7 +96,6 @@ proptest! {
     }
 
     #[test]
-    #[allow(deprecated)]
     fn test_batch_verify(
         message in random_serializable_struct(),
         keypairs in proptest::array::uniform10(uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>())

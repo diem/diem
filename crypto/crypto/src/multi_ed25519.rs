@@ -13,7 +13,6 @@ use crate::{
     },
     hash::{CryptoHash, CryptoHasher},
     traits::*,
-    HashValue,
 };
 use anyhow::{anyhow, Result};
 use core::convert::TryFrom;
@@ -138,24 +137,6 @@ impl PrivateKey for MultiEd25519PrivateKey {
 impl SigningKey for MultiEd25519PrivateKey {
     type VerifyingKeyMaterial = MultiEd25519PublicKey;
     type SignatureMaterial = MultiEd25519Signature;
-
-    // Sign a message with the minimum amount of keys to meet threshold (starting from left-most keys).
-    fn sign_message(&self, message: &HashValue) -> MultiEd25519Signature {
-        let mut signatures: Vec<Ed25519Signature> = Vec::with_capacity(self.threshold as usize);
-        let mut bitmap = [0u8; BITMAP_NUM_OF_BYTES];
-        signatures.extend(
-            self.private_keys
-                .iter()
-                .take(self.threshold as usize)
-                .enumerate()
-                .map(|(i, item)| {
-                    bitmap_set_bit(&mut bitmap, i);
-                    #[allow(deprecated)]
-                    item.sign_message(message)
-                }),
-        );
-        MultiEd25519Signature { signatures, bitmap }
-    }
 
     fn sign<T: CryptoHash + Serialize>(&self, message: &T) -> MultiEd25519Signature {
         let mut bitmap = [0u8; BITMAP_NUM_OF_BYTES];
@@ -485,11 +466,6 @@ impl ValidCryptoMaterial for MultiEd25519Signature {
 impl Signature for MultiEd25519Signature {
     type VerifyingKeyMaterial = MultiEd25519PublicKey;
     type SigningKeyMaterial = MultiEd25519PrivateKey;
-
-    /// Checks that `self` is valid for `message` using `public_key`.
-    fn verify(&self, message: &HashValue, public_key: &MultiEd25519PublicKey) -> Result<()> {
-        self.verify_arbitrary_msg(message.as_ref(), public_key)
-    }
 
     fn verify_struct_msg<T: CryptoHash + Serialize>(
         &self,

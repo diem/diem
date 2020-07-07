@@ -50,7 +50,6 @@ fn test_failed_public_key_serialization(
     assert_eq!(result.err().unwrap(), expected_error);
 }
 
-#[allow(deprecated)]
 fn test_successful_signature_serialization(private_keys: &[Ed25519PrivateKey], threshold: u8) {
     let multi_private_key = MultiEd25519PrivateKey::new(private_keys.to_vec(), threshold).unwrap();
     let multi_public_key = MultiEd25519PublicKey::from(&multi_private_key);
@@ -176,7 +175,6 @@ fn test_publickey_smallorder() {
 
 // Test multi-sig Ed25519 signature serialization.
 #[test]
-#[allow(deprecated)]
 fn test_multi_ed25519_signature_serialization() {
     let priv_keys_3 = generate_keys(3);
 
@@ -268,7 +266,6 @@ fn test_multi_ed25519_signature_serialization() {
 
 // Test multi-sig Ed25519 signature verification.
 #[test]
-#[allow(deprecated)]
 fn test_multi_ed25519_signature_verification() {
     let priv_keys_10 = generate_keys(10);
     let pub_keys_10: Vec<_> = priv_keys_10.iter().map(|x| x.public_key()).collect();
