@@ -18,9 +18,9 @@ use crate::StructuredLogEntry;
 
 /// helper function to create a security log
 pub fn security_log(name: &'static str) -> StructuredLogEntry {
-    StructuredLogEntry::new_named(&name)
-        // set the category to security
-        .security()
+    StructuredLogEntry::new_named("security", &name)
+        // set the level to critical
+        .critical()
     // set the error description
 }
 

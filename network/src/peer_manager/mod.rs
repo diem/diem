@@ -13,7 +13,7 @@
 use crate::{
     counters,
     interface::{NetworkNotification, NetworkProvider, NetworkRequest},
-    logging,
+    logging::*,
     peer::DisconnectReason,
     protocols::{
         direct_send::Message,
@@ -33,7 +33,7 @@ use futures::{
     stream::{Fuse, FuturesUnordered, StreamExt},
 };
 use libra_config::network_id::NetworkContext;
-use libra_logger::{prelude::*, StructuredLogEntry};
+use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use netcore::transport::{ConnectionOrigin, Transport};
@@ -336,41 +336,38 @@ where
     /// Start listening on the set address and return a future which runs PeerManager
     pub async fn start(mut self) {
         // Start listening for connections.
-        send_struct_log!(StructuredLogEntry::new_named(logging::PEER_MANAGER_LOOP)
-            .data(logging::TYPE, logging::START)
-            .field(&logging::NETWORK_CONTEXT, &self.network_context));
+        send_struct_log!(
+            network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                .data(network_events::TYPE, network_events::START)
+        );
         self.start_connection_listener();
         loop {
             ::futures::select! {
                 connection_event = self.transport_notifs_rx.select_next_some() => {
-                    send_struct_log!(StructuredLogEntry::new_named(logging::PEER_MANAGER_LOOP)
-                        .data(logging::TYPE, "connection_event")
-                        .data(logging::EVENT, &connection_event)
-                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                    send_struct_log!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                        .data(network_events::TYPE, "connection_event")
+                        .data(network_events::EVENT, &connection_event)
                     );
                     self.handle_connection_event(connection_event);
                 }
                 request = self.requests_rx.select_next_some() => {
-                    send_struct_log!(StructuredLogEntry::new_named(logging::PEER_MANAGER_LOOP)
-                        .data(logging::TYPE, "request")
-                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
-                        .field(&logging::PEER_MANAGER_REQUEST, &request)
+                    send_struct_log!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                        .data(network_events::TYPE, "request")
+                        .field(network_events::PEER_MANAGER_REQUEST, &request)
                     );
                     self.handle_request(request).await;
                 }
                 connection_request = self.connection_reqs_rx.select_next_some() => {
-                    send_struct_log!(StructuredLogEntry::new_named(logging::PEER_MANAGER_LOOP)
-                        .data(logging::TYPE, "connection_request")
-                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
-                        .field(&logging::CONNECTION_REQUEST, &connection_request)
+                    send_struct_log!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                        .data(network_events::TYPE, "connection_request")
+                        .field(network_events::CONNECTION_REQUEST, &connection_request)
                     );
                     self.handle_connection_request(connection_request).await;
                 }
                 complete => {
                     // TODO: This should be ok when running in client mode.
-                    send_struct_log!(StructuredLogEntry::new_named(logging::PEER_MANAGER_LOOP)
-                        .data(logging::TYPE, logging::TERMINATION)
-                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                    send_struct_log!(network_log(network_events::PEER_MANAGER_LOOP, &self.network_context)
+                        .data(network_events::TYPE, network_events::TERMINATION)
                         .critical()
                     );
                     crit!("{} Peer manager actor terminated", self.network_context);

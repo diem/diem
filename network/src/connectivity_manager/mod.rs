@@ -28,7 +28,7 @@
 //! using a relay protocol.
 
 use crate::{
-    logging,
+    logging::*,
     peer_manager::{self, conn_notifs_channel, ConnectionRequestSender, PeerManagerError},
 };
 use futures::{
@@ -38,7 +38,7 @@ use futures::{
 };
 use libra_config::network_id::NetworkContext;
 use libra_crypto::x25519;
-use libra_logger::{prelude::*, StructuredLogEntry};
+use libra_logger::prelude::*;
 use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use num_variants::NumVariants;
@@ -225,53 +225,48 @@ where
 
         // When we first startup, let's attempt to connect with our seed peers.
         self.check_connectivity(&mut pending_dials).await;
-        send_struct_log!(
-            StructuredLogEntry::new_named(logging::CONNECTIVITY_MANAGER_LOOP)
-                .data(logging::TYPE, logging::START)
-                .field(&logging::NETWORK_CONTEXT, &self.network_context)
-        );
+        send_struct_log!(network_log(
+            network_events::CONNECTIVITY_MANAGER_LOOP,
+            &self.network_context
+        )
+        .data(network_events::TYPE, network_events::START));
         loop {
             self.event_id = self.event_id.wrapping_add(1);
             ::futures::select! {
                 _ = self.ticker.select_next_some() => {
-                    send_struct_log!(StructuredLogEntry::new_named(logging::CONNECTIVITY_MANAGER_LOOP)
-                        .data(logging::TYPE, "tick")
-                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
-                        .field(&logging::EVENT_ID, &self.event_id)
+                    send_struct_log!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
+                        .data(network_events::TYPE, "tick")
+                        .field(network_events::EVENT_ID, &self.event_id)
                     );
                     self.check_connectivity(&mut pending_dials).await;
                 },
                 req = self.requests_rx.select_next_some() => {
-                    send_struct_log!(StructuredLogEntry::new_named(logging::CONNECTIVITY_MANAGER_LOOP)
-                        .data(logging::TYPE, "connectivity_request")
-                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
-                        .field(&logging::CONNECTIVITY_REQUEST, &req)
-                        .field(&logging::EVENT_ID, &self.event_id)
+                    send_struct_log!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
+                        .data(network_events::TYPE, "connectivity_request")
+                        .field(network_events::CONNECTIVITY_REQUEST, &req)
+                        .field(network_events::EVENT_ID, &self.event_id)
                     );
                     self.handle_request(req);
                 },
                 notif = self.connection_notifs_rx.select_next_some() => {
-                    send_struct_log!(StructuredLogEntry::new_named(logging::CONNECTIVITY_MANAGER_LOOP)
-                        .data(logging::TYPE, "connection_notification")
-                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
-                        .field(&logging::EVENT_ID, &self.event_id)
-                        .field(&logging::CONNECTION_NOTIFICATION, &notif)
+                    send_struct_log!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
+                        .data(network_events::TYPE, "connection_notification")
+                        .field(network_events::EVENT_ID, &self.event_id)
+                        .field(network_events::CONNECTION_NOTIFICATION, &notif)
                     );
                     self.handle_control_notification(notif);
                 },
                 peer_id = pending_dials.select_next_some() => {
-                    send_struct_log!(StructuredLogEntry::new_named(logging::CONNECTIVITY_MANAGER_LOOP)
-                        .data(logging::TYPE, "dial_complete")
-                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
-                        .field(&logging::EVENT_ID, &self.event_id)
-                        .field(&logging::REMOTE_PEER, &peer_id)
+                    send_struct_log!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
+                        .data(network_events::TYPE, "dial_complete")
+                        .field(network_events::EVENT_ID, &self.event_id)
+                        .field(network_events::REMOTE_PEER, &peer_id)
                     );
                     self.dial_queue.remove(&peer_id);
                 },
                 complete => {
-                    send_struct_log!(StructuredLogEntry::new_named(logging::CONNECTIVITY_MANAGER_LOOP)
-                        .data(logging::TYPE, logging::TERMINATION)
-                        .field(&logging::NETWORK_CONTEXT, &self.network_context)
+                    send_struct_log!(network_log(network_events::CONNECTIVITY_MANAGER_LOOP, &self.network_context)
+                        .data(network_events::TYPE, network_events::TERMINATION)
                         .critical()
                     );
                     crit!("{} Connectivity manager actor terminated", &self.network_context);

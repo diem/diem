@@ -71,6 +71,7 @@ macro_rules! send_logs {
         let log_entry = $crate::json_log::JsonLogEntry::new($name, $json);
         $crate::json_log::send_json_log(log_entry.clone());
         libra_logger::send_struct_log!(libra_logger::StructuredLogEntry::new_named(
+            $crate::libra_trace::LIBRA_TRACE,
             $crate::libra_trace::LIBRA_TRACE
         )
         .data($name, log_entry));
