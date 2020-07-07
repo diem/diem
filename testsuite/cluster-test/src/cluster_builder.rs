@@ -7,7 +7,8 @@ use crate::{
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
     instance::{
         ApplicationConfig::{Fullnode, Validator, Vault, LSR},
-        FullnodeConfig, Instance, InstanceConfig, LSRConfig, ValidatorConfig, VaultConfig,
+        FullnodeConfig, Instance, InstanceConfig, LSRConfig, ValidatorConfig, ValidatorGroup,
+        VaultConfig,
     },
 };
 use anyhow::{format_err, Result};
@@ -137,7 +138,7 @@ impl ClusterBuilder {
                         let vault_config = VaultConfig {};
                         self.cluster_swarm.spawn_new_instance(
                             InstanceConfig {
-                                validator_group: i,
+                                validator_group: ValidatorGroup::new_for_index(i),
                                 application_config: Vault(vault_config),
                             },
                             delete_data,
@@ -155,7 +156,7 @@ impl ClusterBuilder {
                     };
                     self.cluster_swarm.spawn_new_instance(
                         InstanceConfig {
-                            validator_group: i,
+                            validator_group: ValidatorGroup::new_for_index(i),
                             application_config: LSR(lsr_config),
                         },
                         delete_data,
@@ -174,7 +175,7 @@ impl ClusterBuilder {
             };
             self.cluster_swarm.spawn_new_instance(
                 InstanceConfig {
-                    validator_group: i,
+                    validator_group: ValidatorGroup::new_for_index(i),
                     application_config: Validator(validator_config),
                 },
                 delete_data,
@@ -205,7 +206,7 @@ impl ClusterBuilder {
                 };
                 self.cluster_swarm.spawn_new_instance(
                     InstanceConfig {
-                        validator_group: validator_index,
+                        validator_group: ValidatorGroup::new_for_index(validator_index),
                         application_config: Fullnode(fullnode_config),
                     },
                     delete_data,

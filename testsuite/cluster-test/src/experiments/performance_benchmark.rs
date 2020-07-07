@@ -162,7 +162,6 @@ impl Experiment for PerformanceBenchmark {
                 }
             };
         }
-
         let stats = stats?;
         if let Some(trace) = trace {
             info!("Traced {} events", trace.len());
@@ -189,16 +188,9 @@ impl Experiment for PerformanceBenchmark {
         let avg_txns_per_block = avg_txns_per_block
             .map_err(|e| warn!("Failed to query avg_txns_per_block: {}", e))
             .ok();
-        let avg_latency_client = stats.latency / stats.committed;
-        let p99_latency = stats.latency_buckets.percentile(99, 100);
-        let avg_tps = stats.committed / window.as_secs();
         info!(
             "Link to dashboard : {}",
             context.prometheus.link_to_dashboard(start, end)
-        );
-        info!(
-            "Tx status: txn {}, avg latency {}",
-            stats.committed as u64, avg_latency_client
         );
         let futures: Vec<_> = self
             .down_validators
@@ -206,14 +198,6 @@ impl Experiment for PerformanceBenchmark {
             .map(|ic| ic.start(false))
             .collect();
         try_join_all(futures).await?;
-        let submitted_txn = stats.submitted;
-        let expired_txn = stats.expired;
-        context
-            .report
-            .report_metric(&self, "submitted_txn", submitted_txn as f64);
-        context
-            .report
-            .report_metric(&self, "expired_txn", expired_txn as f64);
         if let Some(avg_txns_per_block) = avg_txns_per_block {
             context
                 .report
@@ -221,22 +205,7 @@ impl Experiment for PerformanceBenchmark {
         }
         context
             .report
-            .report_metric(&self, "avg_tps", avg_tps as f64);
-        context
-            .report
-            .report_metric(&self, "avg_latency", avg_latency_client as f64);
-        context
-            .report
-            .report_metric(&self, "p99_latency", p99_latency as f64);
-        let expired_text = if expired_txn == 0 {
-            "no expired txns".to_string()
-        } else {
-            format!("(!) expired {} out of {} txns", expired_txn, submitted_txn)
-        };
-        context.report.report_text(format!(
-            "{} : {:.0} TPS, {:.1} ms latency, {:.1} ms p99 latency, {}",
-            self, avg_tps, avg_latency_client, p99_latency, expired_text
-        ));
+            .report_txn_stats(self.to_string(), stats, window);
         Ok(())
     }
 
