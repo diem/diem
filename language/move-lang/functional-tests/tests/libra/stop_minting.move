@@ -16,11 +16,13 @@ fun main(account: &signer) {
         account,
         {{dd1}},
         {{dd1::auth_key}},
+        false,
     );
     LibraAccount::create_designated_dealer<Coin2>(
         account,
         {{dd2}},
         {{dd2::auth_key}},
+        false,
     );
     LibraAccount::tiered_mint<Coin1>(
         account,
