@@ -999,9 +999,17 @@ impl<'env> SpecTranslator<'env> {
         }
     }
 
+    pub fn assume_cond(&self, cond: &Condition) {
+        self.writer.set_location(&cond.loc);
+        emit!(self.writer, "assume b#$Boolean(");
+        self.translate_exp(&cond.exp);
+        emit!(self.writer, ");");
+        emitln!(self.writer);
+    }
+
     /// Assert the given postcondition. This is used for the top-level
     /// `_smoke_test` function.
-    pub fn ensure_smoke_test_postcondition(&self, cond: &Condition) {
+    pub fn ensure_postcondition(&self, cond: &Condition) {
         self.writer.set_location(&cond.loc);
         emit!(self.writer, "ensures b#$Boolean(");
         self.translate_exp(&cond.exp);
@@ -1446,7 +1454,7 @@ impl<'env> SpecTranslator<'env> {
 // ===========
 
 impl<'env> SpecTranslator<'env> {
-    fn translate_exp(&self, exp: &Exp) {
+    pub fn translate_exp(&self, exp: &Exp) {
         match exp {
             Exp::Value(node_id, val) => {
                 self.set_writer_location(*node_id);

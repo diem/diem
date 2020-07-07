@@ -68,6 +68,7 @@ pub enum ConditionKind {
     Requires,
     RequiresModule,
     RequiresSmokeTest,
+    RequiresSmokeTestAssert,
     Invariant,
     InvariantModule,
     InvariantUpdate,
@@ -141,10 +142,11 @@ impl std::fmt::Display for ConditionKind {
             AbortsWith => write!(f, "aborts_with"),
             SucceedsIf => write!(f, "succeeds_if"),
             Ensures => write!(f, "ensures"),
-            EnsuresSmokeTest => write!(f, "ensures smoketest"),
+            EnsuresSmokeTest => write!(f, "ensures"),
             Requires => write!(f, "requires"),
             RequiresModule => write!(f, "requires module"),
-            RequiresSmokeTest => write!(f, "requires smoketest"),
+            RequiresSmokeTest => write!(f, "assume"),
+            RequiresSmokeTestAssert => write!(f, "assert"),
             Invariant => write!(f, "invariant"),
             InvariantModule => write!(f, "invariant module"),
             InvariantUpdate => write!(f, "invariant update"),
@@ -697,6 +699,11 @@ impl Exp {
         let node_type = module_env.get_node_type(exp.node_id());
         let old_id = Self::new_node(module_env, node_type);
         Exp::Call(old_id, Operation::Old, vec![exp])
+    }
+    pub fn make_call_not(module_env: &ModuleEnv<'_>, exp: Exp) -> Exp {
+        let node_type = module_env.get_node_type(exp.node_id());
+        let not_id = Self::new_node(module_env, node_type);
+        Exp::Call(not_id, Operation::Not, vec![exp])
     }
     // Call (quantifiers)
     pub fn make_call_all(module_env: &ModuleEnv<'_>, vars: Vec<LocalVarDecl>, body: Exp) -> Exp {

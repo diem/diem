@@ -574,28 +574,11 @@ impl<'env> ModuleTranslator<'env> {
             // generate the _smoke_test version of the function which creates a new procedure
             // for condition `EnsuresSmokeTest` so that ALL the errors will be reported
             for (i, spec) in func_target.data.rewritten_spec.iter().enumerate() {
-                let ensure_spec_checks = spec
-                    .conditions
-                    .iter()
-                    .filter(|cond| cond.kind == ConditionKind::EnsuresSmokeTest)
-                    .collect_vec();
-                // Check that there is at most one ensures specification
-                // Boogie is not gauranteed to return all errors
-                assert!(ensure_spec_checks.len() <= 1, "There should only be at most one EnsuresSmokeTest condition kind.");
-                if let Some(cond) = &ensure_spec_checks.first() {
-                    // > TODO(kkmc): Generate a function with the rewritten code.
-                    self.generate_smoke_test_function_sig(i, func_target);
-                    self.generate_function_args_well_formed(func_target);
-                    self.generate_smoke_test_ensure(func_target, &cond);
-                    let st = self.new_spec_translator(func_target.clone(), false);
-                    let distribution = self.generate_function_spec(&st, FunctionEntryPoint::Verification);
-                    self.generate_function_stub(
-                        &st,
-                        FunctionEntryPoint::Verification,
-                        FunctionEntryPoint::VerificationDefinition,
-                        distribution,
-                    );
-                }
+                let conds = &spec.conditions;
+                // > TODO(kkmc): Generate a function with the rewritten code.
+                self.generate_smoke_test_function_sig(i, func_target);
+                self.generate_function_args_well_formed(func_target);
+                self.generate_function_spec_check_body(func_target, conds);
             }
 
             return;
@@ -617,12 +600,6 @@ impl<'env> ModuleTranslator<'env> {
             distribution,
         );
         emitln!(self.writer);
-    }
-
-    fn generate_smoke_test_ensure(&self, func_target: &FunctionTarget<'_>, cond: &Condition) {
-        let spec_translator =
-            self.new_spec_translator(func_target.clone(), true);
-        spec_translator.ensure_smoke_test_postcondition(cond);
     }
 
     /// Return a string for a boogie procedure smoke test header.
@@ -809,6 +786,117 @@ impl<'env> ModuleTranslator<'env> {
                 def_entry_point.suffix(),
                 args
             )
+        }
+
+        self.writer.unindent();
+        emitln!(self.writer, "}");
+        emitln!(self.writer);
+    }
+
+    /// Spec check body
+    fn generate_function_spec_check_body(
+        &self,
+        func_target: &FunctionTarget<'_>,
+        conds: &Vec<Condition>,
+    ) {
+        let spec_check_opt = conds
+            .iter()
+            .find(|cond| match cond.kind {
+                ConditionKind::RequiresSmokeTestAssert
+                | ConditionKind::EnsuresSmokeTest => true,
+                _ => false,
+            });
+        // Check that there is at most one ensures specification
+        // Boogie is not gauranteed to return all errors
+        let spec_check = spec_check_opt
+            .expect("There should be at least one assertion for the specification check.");
+
+        let spec_translator = self.new_spec_translator_for_module();
+
+        spec_translator.ensure_postcondition(spec_check);
+
+        // Set the location to internal so it won't be counted for execution traces
+        self.writer
+            .set_location(&self.module_env.env.internal_loc());
+        emitln!(self.writer, "{");
+        self.writer.indent();
+
+        // Generate assumes for top-level verification entry
+        // (a) init prelude specific stuff.
+        emitln!(self.writer, "call $InitVerification();");
+
+        // (b) assume implicit preconditions.
+
+        for cond in conds {
+            match cond.kind {
+                ConditionKind::RequiresSmokeTest => spec_translator.assume_cond(cond),
+                _ => (),
+            }
+        }
+
+        if spec_check.kind != ConditionKind::RequiresSmokeTestAssert {
+        // (c) assume reference parameters to be based on the Param(i) Location, ensuring
+        // they are disjoint from all other references. This prevents aliasing and is justified as
+        // follows:
+        // - for mutual references, by their exclusive access in Move.
+        // - for immutable references, by that mutation is not possible, and they are equivalent
+        //   to some given but arbitrary value.
+        for i in 0..func_target.get_parameter_count() {
+            let ty = func_target.get_local_type(i);
+            if ty.is_reference() {
+                let name = func_target
+                    .symbol_pool()
+                    .string(func_target.get_local_name(i));
+                emitln!(
+                    self.writer,
+                    "assume l#$Reference({}) == $Param({});",
+                    name,
+                    i
+                );
+                emitln!(
+                    self.writer,
+                    "assume size#Path(p#$Reference({})) == 0;",
+                    name
+                );
+            }
+        }
+
+        // Generate call to inlined function.
+        let args = func_target
+            .get_type_parameters()
+            .iter()
+            .map(|TypeParameter(s, _)| format!("{}", s.display(func_target.symbol_pool())))
+            .chain((0..func_target.get_parameter_count()).map(|i| {
+                format!(
+                    "{}",
+                    func_target
+                        .get_local_name(i)
+                        .display(func_target.symbol_pool())
+                )
+            }))
+            .join(", ");
+        let rets = (0..func_target.get_return_count())
+            .map(|i| format!("$ret{}", i))
+            .join(", ");
+        if rets.is_empty() {
+            emitln!(
+                self.writer,
+                "call {}{}({});",
+                boogie_function_name(func_target.func_env),
+                FunctionEntryPoint::Definition.suffix(),
+                args
+            )
+        } else {
+            emitln!(
+                self.writer,
+                "call {} := {}{}({});",
+                rets,
+                boogie_function_name(func_target.func_env),
+                FunctionEntryPoint::Definition.suffix(),
+                args
+            )
+        }
+
         }
 
         self.writer.unindent();

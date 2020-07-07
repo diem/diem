@@ -1,0 +1,33 @@
+Move prover returns: exiting with boogie verification errors
+error: subexpression is always false: Call(NodeId(14), Not, [Call(NodeId(8), Neq, [LocalVar(NodeId(6), Symbol(40)), Value(NodeId(7), Number(BigUint { data: [4] }))])])
+
+    ┌── tests/sources/functional/const_subexp_spec_check.move:32:11 ───
+    │
+ 32 │       public fun zar(x: u64): u64 {
+    │ ╭───────────^
+ 33 │ │         x + x
+ 34 │ │     }
+    │ ╰─────^
+    │
+
+error: subexpression is always true: Call(NodeId(11), Eq, [LocalVar(NodeId(9), Symbol(40)), Value(NodeId(10), Number(BigUint { data: [4] }))])
+
+    ┌── tests/sources/functional/const_subexp_spec_check.move:32:12 ───
+    │
+ 32 │       public fun zar(x: u64): u64 {
+    │ ╭────────────^
+ 33 │ │         x + x
+ 34 │ │     }
+    │ ╰─────^
+    │
+
+error: subexpression is always false: Call(NodeId(15), Not, [Call(NodeId(11), Eq, [LocalVar(NodeId(9), Symbol(40)), Value(NodeId(10), Number(BigUint { data: [4] }))])])
+
+    ┌── tests/sources/functional/const_subexp_spec_check.move:32:13 ───
+    │
+ 32 │       public fun zar(x: u64): u64 {
+    │ ╭─────────────^
+ 33 │ │         x + x
+ 34 │ │     }
+    │ ╰─────^
+    │

@@ -29,6 +29,7 @@ use spec_lang::{
         ALWAYS_ABORTS_TEST_PRAGMA,
         CONST_FIELD_TEST_PRAGMA,
         CONST_SC_ADDR,
+        CONST_SUBEXP_TEST_PRAGMA,
     },
     ty::{
         BOOL_TYPE,
@@ -70,6 +71,11 @@ impl FunctionTargetProcessor for TestInstrumenter {
         }
         if func_env.is_pragma_true(CONST_FIELD_TEST_PRAGMA, || false) {
             self.instrument_const_fields(func_env, &mut data, targets);
+        }
+        if func_env.is_pragma_true(CONST_SUBEXP_TEST_PRAGMA, || false) {
+            let mut count = 0;
+            self.instrument_const_precond_subexp(func_env, &mut data, &mut count);
+            self.instrument_const_postcond_subexp(func_env, &mut data, &mut count);
         }
         data
     }
@@ -278,6 +284,98 @@ impl TestInstrumenter {
         let sc_addr_var = Exp::make_localvar(module_env, "$sc_addr", ADDRESS_TYPE.clone());
         let const_addr = Exp::make_value_address(module_env, const_addr);
         Exp::make_call_eq(module_env, sc_addr_var, const_addr)
+    }
+}
+
+// ==============================================================================
+// Constant expression checker
+
+impl TestInstrumenter {
+    /// Instrument the function to check for constant predicate subexpressions in
+    /// the requires specifications
+    fn instrument_const_precond_subexp(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData, count: &mut i64) {
+        let preconds = self.get_smoke_test_preconditions(func_env);
+        let mut conds = vec![];
+        for precond in preconds {
+            self.create_const_subexp_condition(&ConditionKind::RequiresSmokeTestAssert, func_env, &precond.exp, data, count, true, &conds);
+            conds.push(precond.clone());
+        }
+    }
+
+    /// Instrument the function to check for constant predicate subexpressions in
+    /// the ensures specifications
+    fn instrument_const_postcond_subexp(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData, count: &mut i64) {
+        let preconds = self.get_smoke_test_preconditions(func_env);
+        for cond in &func_env.get_spec().conditions {
+            self.create_const_subexp_condition(&ConditionKind::EnsuresSmokeTest, func_env, &cond.exp, data, count, true, &preconds);
+        }
+    }
+
+    fn create_const_subexp_condition(
+        &self,
+        kind: &ConditionKind,
+        func_env: &FunctionEnv<'_>,
+        exp: &Exp,
+        data: &mut FunctionTargetData,
+        count: &mut i64,
+        first_level: bool,
+        preconds: &Vec<Condition>) {
+        let module_env = &func_env.module_env;
+        if func_env.module_env.get_node_type(exp.node_id()) == BOOL_TYPE && (!first_level || *kind == ConditionKind::RequiresSmokeTestAssert) {
+            let exp_is_true = exp.clone();
+            let exp_is_false = Exp::make_call_not(&module_env, exp.clone());
+            let exps = vec![exp_is_true, exp_is_false];
+
+            // Create a specification check for each boolean polarity true and false
+            for (i, exp) in exps.iter().enumerate() {
+                let mut conds = preconds.clone();
+
+                *count = *count + 1;
+                let span = Span::new(func_env.get_loc().span().start() + ByteOffset(*count), func_env.get_loc().span().end());
+                let loc = Loc::new(func_env.get_loc().file_id(), span);
+
+                let cond = self.make_condition(
+                    loc.clone(),
+                    kind.clone(),
+                    exp.clone(),
+                );
+                conds.push(cond);
+                let info = ConditionInfo {
+                    message: if i == 0 {
+                        format!("subexpression is always true: {:?}", exp)
+                    } else {
+                        format!("subexpression is always false: {:?}", exp)
+                    },
+                    omit_trace: true,
+                    negative_cond: true,
+                };
+
+                func_env.module_env.env.set_condition_info(loc, ConditionTag::NegativeTest, info);
+                data.add_spec_check(Spec {
+                    conditions: conds,
+                    properties: Default::default(),
+                    on_impl: Default::default(),
+                    rewritten_code_index: None,
+                }, None);
+            }
+        }
+        use Exp::*;
+        match exp {
+            Call(_, _, exps) => {
+                for exp in exps {
+                    self.create_const_subexp_condition(kind, func_env, &exp, data, count, false, preconds);
+                }
+            }
+            Block(_, _, exp) => {
+                self.create_const_subexp_condition(kind, func_env, &exp, data, count, false, preconds);
+            }
+            IfElse(_, cond, then_, else_) => {
+                self.create_const_subexp_condition(kind, func_env, &cond, data, count, false, preconds);
+                self.create_const_subexp_condition(kind, func_env, &then_, data, count, false, preconds);
+                self.create_const_subexp_condition(kind, func_env, &else_, data, count, false, preconds);
+            }
+            _ => ()
+        }
     }
 }
 

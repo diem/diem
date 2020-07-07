@@ -175,7 +175,7 @@ impl<'env> BoogieWrapper<'env> {
     fn try_get_negative_error(&self, error: &BoogieError) -> Option<Loc> {
         // Find the source location of the error
         let (_, loc_opt) = self.get_locations(error.position);
-        let source_loc = self.to_proper_source_location(loc_opt).and_then(|loc| {
+        let source_loc = loc_opt.and_then(|loc| {
             if error.kind.is_from_verification() {
                 Some(loc)
             } else {

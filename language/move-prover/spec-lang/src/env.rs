@@ -141,6 +141,9 @@ pub const CONST_FIELD_TEST_PRAGMA: &str = "const_exp_test";
 /// Pragma listing the addresses that the constant field check will check against
 pub const CONST_SC_ADDR: &str = "const_sc_addr";
 
+/// Pragma indicating that the function will run the constant subexpression specification check
+pub const CONST_SUBEXP_TEST_PRAGMA: &str = "const_sub_exp";
+
 // =================================================================================================
 /// # Locations
 
