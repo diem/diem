@@ -24,8 +24,8 @@ use libra_crypto::{
         ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH,
     },
     multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey, MultiEd25519Signature},
-    test_utils::TEST_SEED,
-    HashValue, Signature, SigningKey, Uniform,
+    test_utils::{TestLibraCrypto, TEST_SEED},
+    Signature, SigningKey, Uniform,
 };
 
 fn is_same<T>(t: T)
@@ -598,8 +598,8 @@ fn ed25519_material() {
     let deserialized_public_key: Ed25519PublicKey = from_bytes(&serialized_public_key).unwrap();
     assert_eq!(deserialized_public_key, public_key);
 
-    let message_hash = HashValue::sha3_256_of(&[2u8; 8]);
-    let signature: Ed25519Signature = private_key.sign_message(&message_hash);
+    let message = TestLibraCrypto("Hello, World".to_string());
+    let signature: Ed25519Signature = private_key.sign(&message);
 
     let serialized_signature = to_bytes(&Cow::Borrowed(&signature)).unwrap();
     // Expected size should be 1 byte due to LCS length prefix + 64 bytes for the raw signature bytes
@@ -610,7 +610,7 @@ fn ed25519_material() {
     assert_eq!(deserialized_signature, signature);
 
     // Verify signature
-    let verified_signature = signature.verify(&message_hash, &public_key);
+    let verified_signature = signature.verify_struct_msg(&message, &public_key);
     assert!(verified_signature.is_ok())
 }
 
@@ -647,11 +647,10 @@ fn multi_ed25519_material() {
         from_bytes(&serialized_multi_public_key).unwrap();
     assert_eq!(deserialized_multi_public_key, multi_public_key_7of10);
 
-    let message_hash = HashValue::sha3_256_of(&[2u8; 8]);
+    let message = TestLibraCrypto("Hello, World".to_string());
 
     // Verifying a 7-of-10 signature against a public key with the same threshold should pass.
-    let multi_signature_7of10: MultiEd25519Signature =
-        multi_private_key_7of10.sign_message(&message_hash);
+    let multi_signature_7of10: MultiEd25519Signature = multi_private_key_7of10.sign(&message);
 
     let serialized_multi_signature = to_bytes(&Cow::Borrowed(&multi_signature_7of10)).unwrap();
     // Expected size due to specialization is
@@ -672,6 +671,6 @@ fn multi_ed25519_material() {
 
     // Verify signature
     assert!(multi_signature_7of10
-        .verify(&message_hash, &multi_public_key_7of10)
+        .verify_struct_msg(&message, &multi_public_key_7of10)
         .is_ok());
 }

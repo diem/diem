@@ -17,7 +17,7 @@ use consensus_types::{
 };
 use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
-    hash::{CryptoHash, HashValue},
+    hash::HashValue,
     traits::Signature,
 };
 use libra_logger::debug;
@@ -281,7 +281,7 @@ impl TSafetyRules for SafetyRules {
         if let Some(public_key) = self.execution_public_key.as_ref() {
             execution_signature
                 .ok_or_else(|| Error::VoteProposalSignatureNotFound)?
-                .verify(&vote_proposal.hash(), public_key)?
+                .verify_struct_msg(vote_proposal, public_key)?
         }
 
         let proposed_block = vote_proposal.block();

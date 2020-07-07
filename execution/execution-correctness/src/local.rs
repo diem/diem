@@ -4,7 +4,7 @@
 use crate::{execution_correctness::ExecutionCorrectness, id_and_transactions_from_block};
 use consensus_types::{block::Block, vote_proposal::VoteProposal};
 use executor_types::{BlockExecutor, Error, StateComputeResult};
-use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, traits::SigningKey, HashValue};
+use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, HashValue};
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures, transaction::Transaction,
 };
@@ -68,7 +68,7 @@ impl ExecutionCorrectness for LocalClient {
                 block,
                 result.epoch_state().clone(),
             );
-            let signature = prikey.sign_message(&vote_proposal.hash());
+            let signature = prikey.sign(&vote_proposal);
             result.set_signature(signature);
         }
         Ok(result)

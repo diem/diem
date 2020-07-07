@@ -4,7 +4,7 @@
 use crate::execution_correctness::ExecutionCorrectness;
 use consensus_types::{block::Block, vote_proposal::VoteProposal};
 use executor_test_helpers::{extract_signer, gen_ledger_info_with_sigs};
-use libra_crypto::{ed25519::*, hash::CryptoHash, traits::Signature};
+use libra_crypto::{ed25519::*, traits::Signature};
 
 pub fn run_test_suite(executor_pair: (Box<dyn ExecutionCorrectness>, Option<Ed25519PublicKey>)) {
     let (mut config, _genesis_key) = config_builder::test_config();
@@ -25,7 +25,7 @@ pub fn run_test_suite(executor_pair: (Box<dyn ExecutionCorrectness>, Option<Ed25
             block,
             result.epoch_state().clone(),
         );
-        sig.verify(&vote_proposal.hash(), &execution_pubkey.unwrap())
+        sig.verify_struct_msg(&vote_proposal, &execution_pubkey.unwrap())
             .unwrap();
     }
 

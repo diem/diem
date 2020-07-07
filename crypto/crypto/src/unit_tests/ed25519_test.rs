@@ -7,7 +7,7 @@ use crate::{
         Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature, ED25519_PRIVATE_KEY_LENGTH,
         ED25519_PUBLIC_KEY_LENGTH, ED25519_SIGNATURE_LENGTH,
     },
-    test_utils::uniform_keypair_strategy,
+    test_utils::{random_serializable_struct, uniform_keypair_strategy},
     traits::*,
     x25519,
 };
@@ -17,7 +17,6 @@ use core::{
     ops::{Index, IndexMut},
 };
 
-use crate::hash::HashValue;
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use proptest::{collection::vec, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -99,18 +98,19 @@ proptest! {
     #[test]
     #[allow(deprecated)]
     fn test_batch_verify(
-        hash in any::<HashValue>(),
-        keypairs in proptest::array::uniform10(uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>())) {
+        message in random_serializable_struct(),
+        keypairs in proptest::array::uniform10(uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>())
+    ) {
         let mut signatures: Vec<(Ed25519PublicKey, Ed25519Signature)> = keypairs.iter().map(|keypair| {
-            (keypair.public_key.clone(), keypair.private_key.sign_message(&hash))
+            (keypair.public_key.clone(), keypair.private_key.sign(&message))
         }).collect();
-        prop_assert!(Ed25519Signature::batch_verify_signatures(&hash, signatures.clone()).is_ok());
+        prop_assert!(Ed25519Signature::batch_verify_struct_signatures(&message, signatures.clone()).is_ok());
         // We swap message and signature for the last element,
         // resulting in an incorrect signature
         let (key, _sig) = signatures.pop().unwrap();
         let other_sig = signatures.last().unwrap().clone().1;
         signatures.push((key, other_sig));
-        prop_assert!(Ed25519Signature::batch_verify_signatures(&hash, signatures).is_err());
+        prop_assert!(Ed25519Signature::batch_verify_struct_signatures(&message, signatures).is_err());
     }
 
     #[test]
@@ -132,16 +132,15 @@ proptest! {
     }
 
     #[test]
-    #[allow(deprecated)]
     fn test_signature_verification_custom_serialisation(
-        hash in any::<HashValue>(),
+        message in random_serializable_struct(),
         keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
     ) {
-        let signature = keypair.private_key.sign_message(&hash);
+        let signature = keypair.private_key.sign(&message);
         let serialized: &[u8] = &(signature.to_bytes());
         prop_assert_eq!(ED25519_SIGNATURE_LENGTH, serialized.len());
         let deserialized = Ed25519Signature::try_from(serialized).unwrap();
-        prop_assert!(keypair.public_key.verify_signature(&hash, &deserialized).is_ok());
+        prop_assert!(deserialized.verify_struct_msg(&message, &keypair.public_key).is_ok());
     }
 
     #[test]
@@ -172,12 +171,11 @@ proptest! {
 
     // Check for canonical S.
     #[test]
-    #[allow(deprecated)]
     fn test_signature_malleability(
-        hash in any::<HashValue>(),
+        message in random_serializable_struct(),
         keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
     ) {
-        let signature = keypair.private_key.sign_message(&hash);
+        let signature = keypair.private_key.sign(&message);
         let mut serialized = signature.to_bytes();
 
         let mut r_bytes: [u8; 32] = [0u8; 32];

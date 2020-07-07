@@ -3,10 +3,7 @@
 
 use crate::Error;
 use enum_dispatch::enum_dispatch;
-use libra_crypto::{
-    ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
-    HashValue,
-};
+use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature};
 use serde::{Deserialize, Serialize};
 
 /// CryptoStorage provides an abstraction for secure generation and handling of cryptographic keys.
@@ -45,16 +42,23 @@ pub trait CryptoStorage: Send + Sync {
     /// the version. At most two versions are expected to be retained.
     fn rotate_key(&mut self, name: &str) -> Result<Ed25519PublicKey, Error>;
 
-    /// Signs the provided message using the 'named' private key.
-    fn sign_message(&mut self, name: &str, message: &HashValue) -> Result<Ed25519Signature, Error>;
+    /// Signs the provided securely-hashable struct, using the 'named' private
+    /// key.
+    // The FQDNs on the next line help macros don't remove them
+    fn sign<T: libra_crypto::hash::CryptoHash + serde::Serialize>(
+        &mut self,
+        name: &str,
+        message: &T,
+    ) -> Result<Ed25519Signature, Error>;
 
-    /// Signs the provided message using the 'named' and 'versioned' private key. This may fail
+    /// Signs the provided securely-hashable struct, using the 'named' and 'versioned' private key. This may fail
     /// even if the 'named' key exists but the version is not present.
-    fn sign_message_using_version(
+    // The FQDNs on the next line help macros, don't remove them
+    fn sign_using_version<T: libra_crypto::hash::CryptoHash + serde::Serialize>(
         &mut self,
         name: &str,
         version: Ed25519PublicKey,
-        message: &HashValue,
+        message: &T,
     ) -> Result<Ed25519Signature, Error>;
 }
 

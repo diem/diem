@@ -646,7 +646,7 @@ pub unsafe extern "C" fn libra_LibraSignedTransaction_from(
 mod test {
     use super::*;
     use lcs::from_bytes;
-    use libra_crypto::{hash::CryptoHash, PrivateKey, SigningKey, Uniform};
+    use libra_crypto::{PrivateKey, SigningKey, Uniform};
     use libra_types::{
         account_config::COIN1_NAME,
         transaction::{SignedTransaction, TransactionArgument},
@@ -1063,7 +1063,7 @@ mod test {
         let raw_txn_bytes: &[u8] = unsafe { slice::from_raw_parts(buf_ptr, len) };
         let deserialized_raw_txn: RawTransaction =
             from_bytes(raw_txn_bytes).expect("LCS deserialization failed for raw transaction");
-        let signature = private_key.sign_message(&deserialized_raw_txn.hash());
+        let signature = private_key.sign(&deserialized_raw_txn);
 
         // get signed transaction by signing raw transaction
         let mut signed_txn_buf: u8 = 0;

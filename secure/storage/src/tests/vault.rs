@@ -6,7 +6,7 @@ use crate::{
     vault::{VaultEngine, VaultStorage},
     Capability, CryptoStorage, Error, Identity, KVStorage, Permission, Policy, Storage, Value,
 };
-use libra_crypto::{HashValue, Signature};
+use libra_crypto::{test_utils::TestLibraCrypto, Signature};
 
 /// VaultStorage test constants
 const VAULT_HOST: &str = "http://localhost:8200";
@@ -196,15 +196,15 @@ fn test_vault_crypto_policies() {
         .unwrap();
     assert_eq!(storage.get_public_key(key_name).unwrap().public_key, pubkey);
 
+    let message = TestLibraCrypto("Hello, World".to_string());
+
     // Verify exporter policy
     let exporter_token = storage.create_token(vec![&exporter]).unwrap();
     let mut exporter_store = VaultStorage::new(VAULT_HOST.into(), exporter_token, None, None);
     exporter_store.export_private_key(key_name).unwrap();
     exporter_store.get_public_key(key_name).unwrap_err();
     exporter_store.rotate_key(key_name).unwrap_err();
-    exporter_store
-        .sign_message(key_name, &HashValue::zero())
-        .unwrap_err();
+    exporter_store.sign(key_name, &message).unwrap_err();
 
     // Verify noone policy
     let noone_token = storage.create_token(vec![&noone]).unwrap();
@@ -212,9 +212,7 @@ fn test_vault_crypto_policies() {
     noone_store.export_private_key(key_name).unwrap_err();
     noone_store.get_public_key(key_name).unwrap_err();
     noone_store.rotate_key(key_name).unwrap_err();
-    noone_store
-        .sign_message(key_name, &HashValue::zero())
-        .unwrap_err();
+    noone_store.sign(key_name, &message).unwrap_err();
 
     // Verify reader policy
     let reader_token = storage.create_token(vec![&reader]).unwrap();
@@ -225,9 +223,7 @@ fn test_vault_crypto_policies() {
         pubkey
     );
     reader_store.rotate_key(key_name).unwrap_err();
-    reader_store
-        .sign_message(key_name, &HashValue::zero())
-        .unwrap_err();
+    reader_store.sign(key_name, &message).unwrap_err();
 
     // Verify rotater policy
     let rotater_token = storage.create_token(vec![&rotater]).unwrap();
@@ -238,9 +234,7 @@ fn test_vault_crypto_policies() {
         pubkey
     );
     assert_ne!(rotater_store.rotate_key(key_name).unwrap(), pubkey);
-    rotater_store
-        .sign_message(key_name, &HashValue::zero())
-        .unwrap_err();
+    rotater_store.sign(key_name, &message).unwrap_err();
 
     let new_pubkey = storage.get_public_key(key_name).unwrap().public_key;
 
@@ -250,9 +244,7 @@ fn test_vault_crypto_policies() {
     signer_store.export_private_key(key_name).unwrap_err();
     signer_store.get_public_key(key_name).unwrap_err();
     signer_store.rotate_key(key_name).unwrap_err();
-    let signature = signer_store
-        .sign_message(key_name, &HashValue::zero())
-        .unwrap();
-    signature.verify(&HashValue::zero(), &pubkey).unwrap_err();
-    signature.verify(&HashValue::zero(), &new_pubkey).unwrap();
+    let signature = signer_store.sign(key_name, &message).unwrap();
+    signature.verify_struct_msg(&message, &pubkey).unwrap_err();
+    signature.verify_struct_msg(&message, &new_pubkey).unwrap();
 }

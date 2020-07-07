@@ -3,9 +3,8 @@
 
 use crate::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, ED25519_PUBLIC_KEY_LENGTH},
-    hash::HashValue,
     multi_ed25519::{MultiEd25519PrivateKey, MultiEd25519PublicKey},
-    test_utils::TEST_SEED,
+    test_utils::{TestLibraCrypto, TEST_SEED},
     traits::*,
     CryptoMaterialError::{ValidationError, WrongLengthError},
 };
@@ -15,7 +14,10 @@ use core::convert::TryFrom;
 use once_cell::sync::Lazy;
 use rand::{rngs::StdRng, SeedableRng};
 
-static MESSAGE_HASH: Lazy<HashValue> = Lazy::new(|| HashValue::sha3_256_of(b"Test Message"));
+static MESSAGE: Lazy<TestLibraCrypto> = Lazy::new(|| TestLibraCrypto("Test Message".to_string()));
+fn message() -> &'static TestLibraCrypto {
+    &MESSAGE
+}
 
 // Helper function to generate N ed25519 private keys.
 fn generate_keys(n: usize) -> Vec<Ed25519PrivateKey> {
@@ -52,7 +54,7 @@ fn test_failed_public_key_serialization(
 fn test_successful_signature_serialization(private_keys: &[Ed25519PrivateKey], threshold: u8) {
     let multi_private_key = MultiEd25519PrivateKey::new(private_keys.to_vec(), threshold).unwrap();
     let multi_public_key = MultiEd25519PublicKey::from(&multi_private_key);
-    let multi_signature = multi_private_key.sign_message(&MESSAGE_HASH);
+    let multi_signature = multi_private_key.sign(message());
 
     // Serialize then Deserialize.
     let multi_signature_serialized =
@@ -62,7 +64,7 @@ fn test_successful_signature_serialization(private_keys: &[Ed25519PrivateKey], t
     assert_eq!(multi_signature, multi_signature_serialized_unwrapped);
     // Ensure that the signature verifies.
     assert!(multi_signature
-        .verify(&MESSAGE_HASH, &multi_public_key)
+        .verify_struct_msg(message(), &multi_public_key)
         .is_ok());
 }
 
@@ -192,7 +194,7 @@ fn test_multi_ed25519_signature_serialization() {
     test_successful_signature_serialization(&priv_keys_32, 32);
 
     // Construct from single Ed25519Signature.
-    let single_signature = priv_keys_3[0].sign_message(&MESSAGE_HASH);
+    let single_signature = priv_keys_3[0].sign(message());
     let multi_signature = MultiEd25519Signature::from(single_signature.clone());
     assert_eq!(1, multi_signature.signatures().len());
     assert_eq!(multi_signature.signatures()[0], single_signature);
@@ -200,7 +202,7 @@ fn test_multi_ed25519_signature_serialization() {
     let multi_priv_key_1of3 = MultiEd25519PrivateKey::new(priv_keys_3.to_vec(), 1).unwrap();
     let multi_pub_key_1of3 = MultiEd25519PublicKey::from(&multi_priv_key_1of3);
     assert!(multi_signature
-        .verify(&MESSAGE_HASH, &multi_pub_key_1of3)
+        .verify_struct_msg(message(), &multi_pub_key_1of3)
         .is_ok());
 
     // We can construct signatures from 32 single signatures.
@@ -218,7 +220,7 @@ fn test_multi_ed25519_signature_serialization() {
     let pub_key_32 = vec![priv_keys_3[0].public_key(); 32];
     let multi_pub_key_32 = MultiEd25519PublicKey::new(pub_key_32, 32).unwrap();
     assert!(multi_sig32_unwrapped
-        .verify(&MESSAGE_HASH, &multi_pub_key_32)
+        .verify_struct_msg(message(), &multi_pub_key_32)
         .is_ok());
 
     // Fail to construct a MultiEd25519Signature object from 33 or more single signatures.
@@ -275,25 +277,25 @@ fn test_multi_ed25519_signature_verification() {
     let multi_public_key_7of10 = MultiEd25519PublicKey::from(&multi_private_key_7of10);
 
     // Verifying a 7-of-10 signature against a public key with the same threshold should pass.
-    let multi_signature_7of10 = multi_private_key_7of10.sign_message(&MESSAGE_HASH);
+    let multi_signature_7of10 = multi_private_key_7of10.sign(message());
     assert_eq!(
         multi_signature_7of10.bitmap(),
         &[0b1111_1110, 0u8, 0u8, 0u8]
     );
     assert!(multi_signature_7of10
-        .verify(&MESSAGE_HASH, &multi_public_key_7of10)
+        .verify_struct_msg(message(), &multi_public_key_7of10)
         .is_ok());
 
     // Verifying a 7-of-10 signature against a public key with bigger threshold (i.e., 8) should fail.
     let multi_public_key_8of10 = MultiEd25519PublicKey::new(pub_keys_10.clone(), 8).unwrap();
     assert!(multi_signature_7of10
-        .verify(&MESSAGE_HASH, &multi_public_key_8of10)
+        .verify_struct_msg(message(), &multi_public_key_8of10)
         .is_err());
 
     // Verifying a 7-of-10 signature against a public key with smaller threshold (i.e., 6) should pass.
     let multi_public_key_6of10 = MultiEd25519PublicKey::new(pub_keys_10.clone(), 6).unwrap();
     assert!(multi_signature_7of10
-        .verify(&MESSAGE_HASH, &multi_public_key_6of10)
+        .verify_struct_msg(message(), &multi_public_key_6of10)
         .is_ok());
 
     // Verifying a 7-of-10 signature against a reordered MultiEd25519PublicKey should fail.
@@ -304,7 +306,7 @@ fn test_multi_ed25519_signature_verification() {
     let multi_public_key_7of10_reversed =
         MultiEd25519PublicKey::new(pub_keys_10_reversed, 7).unwrap();
     assert!(multi_signature_7of10
-        .verify(&MESSAGE_HASH, &multi_public_key_7of10_reversed)
+        .verify_struct_msg(message(), &multi_public_key_7of10_reversed)
         .is_err());
 
     let priv_keys_3 = generate_keys(3);
@@ -313,7 +315,7 @@ fn test_multi_ed25519_signature_verification() {
     let multi_public_key_1of3 = MultiEd25519PublicKey::from(&multi_private_key_1of3);
 
     // Signing with the 2nd key must succeed.
-    let sig_with_2nd_key = priv_keys_3[1].sign_message(&MESSAGE_HASH);
+    let sig_with_2nd_key = priv_keys_3[1].sign(message());
     let multi_sig_signed_by_2nd_key = MultiEd25519Signature::new(vec![(sig_with_2nd_key, 1)]);
     assert!(multi_sig_signed_by_2nd_key.is_ok());
     let multi_sig_signed_by_2nd_key_unwrapped = multi_sig_signed_by_2nd_key.unwrap();
@@ -322,21 +324,21 @@ fn test_multi_ed25519_signature_verification() {
         &[0b0100_0000, 0u8, 0u8, 0u8]
     );
     assert!(multi_sig_signed_by_2nd_key_unwrapped
-        .verify(&MESSAGE_HASH, &multi_public_key_1of3)
+        .verify_struct_msg(message(), &multi_public_key_1of3)
         .is_ok());
 
     // Signing with the 2nd key but using wrong index will fail.
-    let sig_with_2nd_key = priv_keys_3[1].sign_message(&MESSAGE_HASH);
+    let sig_with_2nd_key = priv_keys_3[1].sign(message());
     let multi_sig_signed_by_2nd_key_wrong_index =
         MultiEd25519Signature::new(vec![(sig_with_2nd_key.clone(), 2)]);
     assert!(multi_sig_signed_by_2nd_key_wrong_index.is_ok());
     let failed_multi_sig_signed_by_2nd_key_wrong_index = multi_sig_signed_by_2nd_key_wrong_index
         .unwrap()
-        .verify(&MESSAGE_HASH, &multi_public_key_1of3);
+        .verify_struct_msg(message(), &multi_public_key_1of3);
     assert!(failed_multi_sig_signed_by_2nd_key_wrong_index.is_err());
 
     // Signing with the 2nd and 3rd keys must succeed, even if we surpass the threshold.
-    let sig_with_3rd_key = priv_keys_3[2].sign_message(&MESSAGE_HASH);
+    let sig_with_3rd_key = priv_keys_3[2].sign(message());
     let multi_sig_signed_by_2nd_and_3rd_key = MultiEd25519Signature::new(vec![
         (sig_with_2nd_key.clone(), 1),
         (sig_with_3rd_key.clone(), 2),
@@ -349,7 +351,7 @@ fn test_multi_ed25519_signature_verification() {
         &[0b0110_0000, 0u8, 0u8, 0u8]
     );
     assert!(multi_sig_signed_by_2nd_and_3rd_key_unwrapped
-        .verify(&MESSAGE_HASH, &multi_public_key_1of3)
+        .verify_struct_msg(message(), &multi_public_key_1of3)
         .is_ok());
 
     // Signing with the 2nd and 3rd keys will fail if we swap indexes.
@@ -360,12 +362,12 @@ fn test_multi_ed25519_signature_verification() {
     let failed_multi_sig_signed_by_2nd_and_3rd_key_swapped =
         multi_sig_signed_by_2nd_and_3rd_key_swapped
             .unwrap()
-            .verify(&MESSAGE_HASH, &multi_public_key_1of3);
+            .verify_struct_msg(message(), &multi_public_key_1of3);
     assert!(failed_multi_sig_signed_by_2nd_and_3rd_key_swapped.is_err());
 
     // Signing with the 2nd and an unrelated key. Although threshold is met, it should fail as
     // we don't accept invalid signatures.
-    let sig_with_unrelated_key = priv_keys_10[9].sign_message(&MESSAGE_HASH);
+    let sig_with_unrelated_key = priv_keys_10[9].sign(message());
     let multi_sig_signed_by_2nd_and_unrelated_key = MultiEd25519Signature::new(vec![
         (sig_with_2nd_key.clone(), 1),
         (sig_with_unrelated_key, 2),
@@ -373,14 +375,14 @@ fn test_multi_ed25519_signature_verification() {
     assert!(multi_sig_signed_by_2nd_and_unrelated_key.is_ok());
     let failed_verified_sig = multi_sig_signed_by_2nd_and_unrelated_key
         .unwrap()
-        .verify(&MESSAGE_HASH, &multi_public_key_1of3);
+        .verify_struct_msg(message(), &multi_public_key_1of3);
     assert!(failed_verified_sig.is_err());
 
     // Testing all combinations for 2 of 3.
     let multi_private_key_2of3 = MultiEd25519PrivateKey::new(priv_keys_3.clone(), 2).unwrap();
     let multi_public_key_2of3 = MultiEd25519PublicKey::from(&multi_private_key_2of3);
 
-    let sig_with_1st_key = priv_keys_3[0].sign_message(&MESSAGE_HASH);
+    let sig_with_1st_key = priv_keys_3[0].sign(message());
 
     // Signing with the 1st and 2nd keys must succeed.
     let signed_by_1st_and_2nd_key = MultiEd25519Signature::new(vec![
@@ -394,7 +396,7 @@ fn test_multi_ed25519_signature_verification() {
         &[0b1100_0000, 0u8, 0u8, 0u8]
     );
     assert!(signed_by_1st_and_2nd_key_unwrapped
-        .verify(&MESSAGE_HASH, &multi_public_key_2of3)
+        .verify_struct_msg(message(), &multi_public_key_2of3)
         .is_ok());
 
     // Signing with the 1st and 3rd keys must succeed.
@@ -409,7 +411,7 @@ fn test_multi_ed25519_signature_verification() {
         &[0b1010_0000, 0u8, 0u8, 0u8]
     );
     assert!(signed_by_1st_and_3rd_key_unwrapped
-        .verify(&MESSAGE_HASH, &multi_public_key_2of3)
+        .verify_struct_msg(message(), &multi_public_key_2of3)
         .is_ok());
 
     // Signing with the 2nd and 3rd keys must succeed.
@@ -424,7 +426,7 @@ fn test_multi_ed25519_signature_verification() {
         &[0b0110_0000, 0u8, 0u8, 0u8]
     );
     assert!(signed_by_2nd_and_3rd_key_unwrapped
-        .verify(&MESSAGE_HASH, &multi_public_key_2of3)
+        .verify_struct_msg(message(), &multi_public_key_2of3)
         .is_ok());
 
     // Signing with the 2nd and 3rd keys must succeed.
@@ -440,7 +442,7 @@ fn test_multi_ed25519_signature_verification() {
         &[0b1110_0000, 0u8, 0u8, 0u8]
     );
     assert!(signed_by_all_3_keys_unwrapped
-        .verify(&MESSAGE_HASH, &multi_public_key_2of3)
+        .verify_struct_msg(message(), &multi_public_key_2of3)
         .is_ok());
 
     // Signing with the 2nd only will fail.
@@ -452,6 +454,6 @@ fn test_multi_ed25519_signature_verification() {
         &[0b0100_0000, 0u8, 0u8, 0u8]
     );
     assert!(signed_by_2nd_key_unwrapped
-        .verify(&MESSAGE_HASH, &multi_public_key_2of3)
+        .verify_struct_msg(message(), &multi_public_key_2of3)
         .is_err());
 }

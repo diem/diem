@@ -5,7 +5,8 @@ use crate::{account_address::AccountAddress, on_chain_config::ValidatorSet};
 use anyhow::{ensure, Result};
 use libra_crypto::{
     ed25519::{Ed25519PublicKey, Ed25519Signature},
-    HashValue, VerifyingKey,
+    hash::CryptoHash,
+    HashValue, Signature, VerifyingKey,
 };
 use mirai_annotations::*;
 #[cfg(any(test, feature = "fuzzing"))]
@@ -129,6 +130,10 @@ impl ValidatorVerifier {
     }
 
     /// Verify the correctness of a signature of a hash by a known author.
+    #[deprecated(
+        since = "0.1.0",
+        note = "please use ValidatorVerifier::verify instead."
+    )]
     pub fn verify_signature(
         &self,
         author: AccountAddress,
@@ -136,8 +141,31 @@ impl ValidatorVerifier {
         signature: &Ed25519Signature,
     ) -> std::result::Result<(), VerifyError> {
         match self.get_public_key(&author) {
+            #[allow(deprecated)]
             Some(public_key) => {
                 if public_key.verify_signature(&hash, signature).is_err() {
+                    Err(VerifyError::InvalidSignature)
+                } else {
+                    Ok(())
+                }
+            }
+            None => Err(VerifyError::UnknownAuthor),
+        }
+    }
+
+    /// Verify the correctness of a signature of a message by a known author.
+    pub fn verify<T: Serialize + CryptoHash>(
+        &self,
+        author: AccountAddress,
+        message: &T,
+        signature: &Ed25519Signature,
+    ) -> std::result::Result<(), VerifyError> {
+        match self.get_public_key(&author) {
+            Some(public_key) => {
+                if public_key
+                    .verify_struct_signature(message, signature)
+                    .is_err()
+                {
                     Err(VerifyError::InvalidSignature)
                 } else {
                     Ok(())
@@ -152,6 +180,10 @@ impl ValidatorVerifier {
     /// attached signatures is invalid or it does not correspond to a known author. The latter is to
     /// prevent malicious users from adding arbitrary content to the signature payload that would go
     /// unnoticed.
+    #[deprecated(
+        since = "0.1.0",
+        note = "please use ValidatorVerifier::verify_aggregated_struct_signature instead."
+    )]
     pub fn verify_aggregated_signature(
         &self,
         hash: HashValue,
@@ -160,13 +192,36 @@ impl ValidatorVerifier {
         self.check_num_of_signatures(aggregated_signature)?;
         self.check_voting_power(aggregated_signature.keys())?;
         for (author, signature) in aggregated_signature {
+            #[allow(deprecated)]
             self.verify_signature(*author, hash, &signature.clone())?;
+        }
+        Ok(())
+    }
+
+    /// This function will successfully return when at least quorum_size signatures of known authors
+    /// are successfully verified. Also, an aggregated signature is considered invalid if any of the
+    /// attached signatures is invalid or it does not correspond to a known author. The latter is to
+    /// prevent malicious users from adding arbitrary content to the signature payload that would go
+    /// unnoticed.
+    pub fn verify_aggregated_struct_signature<T: CryptoHash + Serialize>(
+        &self,
+        message: &T,
+        aggregated_signature: &BTreeMap<AccountAddress, Ed25519Signature>,
+    ) -> std::result::Result<(), VerifyError> {
+        self.check_num_of_signatures(aggregated_signature)?;
+        self.check_voting_power(aggregated_signature.keys())?;
+        for (author, signature) in aggregated_signature {
+            self.verify(*author, message, &signature.clone())?;
         }
         Ok(())
     }
 
     /// This function will try batch signature verification and falls back to normal
     /// iterated verification if batching fails.
+    #[deprecated(
+        since = "0.1.0",
+        note = "please use ValidatorVerifier::batch_verify_aggregated_struct_signature instead."
+    )]
     pub fn batch_verify_aggregated_signature(
         &self,
         hash: HashValue,
@@ -183,7 +238,31 @@ impl ValidatorVerifier {
             .collect();
         // Fallback is required to identify the source of the problem if batching fails.
         if Ed25519PublicKey::batch_verify_signatures(&hash, keys_and_signatures).is_err() {
+            #[allow(deprecated)]
             self.verify_aggregated_signature(hash, aggregated_signature)?
+        }
+        Ok(())
+    }
+
+    /// This function will try batch signature verification and falls back to normal
+    /// iterated verification if batching fails.
+    pub fn batch_verify_aggregated_struct_signature<T: CryptoHash + Serialize>(
+        &self,
+        message: &T,
+        aggregated_signature: &BTreeMap<AccountAddress, Ed25519Signature>,
+    ) -> std::result::Result<(), VerifyError> {
+        self.check_num_of_signatures(aggregated_signature)?;
+        self.check_voting_power(aggregated_signature.keys())?;
+        let keys_and_signatures: Vec<(Ed25519PublicKey, Ed25519Signature)> = aggregated_signature
+            .iter()
+            .flat_map(|(address, signature)| {
+                let sig = signature.clone();
+                self.get_public_key(&address).map(|pub_key| (pub_key, sig))
+            })
+            .collect();
+        // Fallback is required to identify the source of the problem if batching fails.
+        if Ed25519Signature::batch_verify_struct_signatures(message, keys_and_signatures).is_err() {
+            self.verify_aggregated_struct_signature(message, aggregated_signature)?
         }
         Ok(())
     }
@@ -353,7 +432,7 @@ pub fn random_validator_verifier(
 mod tests {
     use super::*;
     use crate::validator_signer::ValidatorSigner;
-    use libra_crypto::{test_utils::TEST_SEED, HashValue};
+    use libra_crypto::test_utils::{TestLibraCrypto, TEST_SEED};
     use std::collections::BTreeMap;
 
     #[test]
@@ -371,9 +450,9 @@ mod tests {
             }
         );
 
-        let random_hash = HashValue::random();
+        let dummy_struct = TestLibraCrypto("Hello, World".to_string());
         for validator in validator_signers.iter() {
-            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
+            author_to_signature_map.insert(validator.author(), validator.sign(&dummy_struct));
         }
 
         assert_eq!(
@@ -385,26 +464,26 @@ mod tests {
     #[test]
     fn test_validator() {
         let validator_signer = ValidatorSigner::random(TEST_SEED);
-        let random_hash = HashValue::random();
-        let signature = validator_signer.sign_message(random_hash);
+        let dummy_struct = TestLibraCrypto("Hello, World".to_string());
+        let signature = validator_signer.sign(&dummy_struct);
         let validator =
             ValidatorVerifier::new_single(validator_signer.author(), validator_signer.public_key());
         assert_eq!(
-            validator.verify_signature(validator_signer.author(), random_hash, &signature),
+            validator.verify(validator_signer.author(), &dummy_struct, &signature),
             Ok(())
         );
         let unknown_validator_signer = ValidatorSigner::random([1; 32]);
-        let unknown_signature = unknown_validator_signer.sign_message(random_hash);
+        let unknown_signature = unknown_validator_signer.sign(&dummy_struct);
         assert_eq!(
-            validator.verify_signature(
+            validator.verify(
                 unknown_validator_signer.author(),
-                random_hash,
+                &dummy_struct,
                 &unknown_signature
             ),
             Err(VerifyError::UnknownAuthor)
         );
         assert_eq!(
-            validator.verify_signature(validator_signer.author(), random_hash, &unknown_signature),
+            validator.verify(validator_signer.author(), &dummy_struct, &unknown_signature),
             Err(VerifyError::InvalidSignature)
         );
     }
@@ -416,7 +495,7 @@ mod tests {
         let validator_signers: Vec<ValidatorSigner> = (0..NUM_SIGNERS)
             .map(|i| ValidatorSigner::random([i; 32]))
             .collect();
-        let random_hash = HashValue::random();
+        let dummy_struct = TestLibraCrypto("Hello, World".to_string());
 
         // Create a map from authors to public keys with equal voting power.
         let mut author_to_public_key_map = BTreeMap::new();
@@ -430,7 +509,7 @@ mod tests {
         // Create a map from author to signatures.
         let mut author_to_signature_map = BTreeMap::new();
         for validator in validator_signers.iter() {
-            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
+            author_to_signature_map.insert(validator.author(), validator.sign(&dummy_struct));
         }
 
         // Let's assume our verifier needs to satisfy at least 5 signatures from the original
@@ -442,18 +521,18 @@ mod tests {
         // Check against signatures == N; this will pass.
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
+                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
             Ok(())
         );
 
         // Add an extra unknown signer, signatures > N; this will fail.
         let unknown_validator_signer = ValidatorSigner::random([NUM_SIGNERS + 1; 32]);
-        let unknown_signature = unknown_validator_signer.sign_message(random_hash);
+        let unknown_signature = unknown_validator_signer.sign(&dummy_struct);
         author_to_signature_map
             .insert(unknown_validator_signer.author(), unknown_signature.clone());
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
+                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::TooManySignatures {
                 num_of_signatures: 8,
                 num_of_authors: 7
@@ -463,11 +542,11 @@ mod tests {
         // Add 5 valid signers only (quorum threshold is met); this will pass.
         author_to_signature_map.clear();
         for validator in validator_signers.iter().take(5) {
-            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
+            author_to_signature_map.insert(validator.author(), validator.sign(&dummy_struct));
         }
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
+                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
             Ok(())
         );
 
@@ -477,18 +556,18 @@ mod tests {
             .insert(unknown_validator_signer.author(), unknown_signature.clone());
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
+                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::UnknownAuthor)
         );
 
         // Add 4 valid signers only (quorum threshold is NOT met); this will fail.
         author_to_signature_map.clear();
         for validator in validator_signers.iter().take(4) {
-            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
+            author_to_signature_map.insert(validator.author(), validator.sign(&dummy_struct));
         }
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
+                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::TooLittleVotingPower {
                 voting_power: 4,
                 quorum_voting_power: 5
@@ -499,7 +578,7 @@ mod tests {
         author_to_signature_map.insert(unknown_validator_signer.author(), unknown_signature);
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
+                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::UnknownAuthor)
         );
     }
@@ -511,7 +590,7 @@ mod tests {
         let validator_signers: Vec<ValidatorSigner> = (0..NUM_SIGNERS)
             .map(|i| ValidatorSigner::random([i; 32]))
             .collect();
-        let random_hash = HashValue::random();
+        let dummy_struct = TestLibraCrypto("Hello, World".to_string());
 
         // Create a map from authors to public keys with increasing weights (0, 1, 2, 3) and
         // a map of author to signature.
@@ -524,7 +603,7 @@ mod tests {
             );
             author_to_signature_map.insert(
                 validator_signer.author(),
-                validator_signer.sign_message(random_hash),
+                validator_signer.sign(&dummy_struct),
             );
         }
 
@@ -536,18 +615,18 @@ mod tests {
         // Check against all signatures (6 voting power); this will pass.
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
+                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
             Ok(())
         );
 
         // Add an extra unknown signer, signatures > N; this will fail.
         let unknown_validator_signer = ValidatorSigner::random([NUM_SIGNERS + 1; 32]);
-        let unknown_signature = unknown_validator_signer.sign_message(random_hash);
+        let unknown_signature = unknown_validator_signer.sign(&dummy_struct);
         author_to_signature_map
             .insert(unknown_validator_signer.author(), unknown_signature.clone());
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
+                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::TooManySignatures {
                 num_of_signatures: 5,
                 num_of_authors: 4
@@ -557,11 +636,11 @@ mod tests {
         // Add 5 voting power signers only (quorum threshold is met) with (2, 3) ; this will pass.
         author_to_signature_map.clear();
         for validator in validator_signers.iter().skip(2) {
-            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
+            author_to_signature_map.insert(validator.author(), validator.sign(&dummy_struct));
         }
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
+                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
             Ok(())
         );
 
@@ -571,18 +650,18 @@ mod tests {
             .insert(unknown_validator_signer.author(), unknown_signature.clone());
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
+                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::UnknownAuthor)
         );
 
         // Add first 3 valid signers only (quorum threshold is NOT met); this will fail.
         author_to_signature_map.clear();
         for validator in validator_signers.iter().take(3) {
-            author_to_signature_map.insert(validator.author(), validator.sign_message(random_hash));
+            author_to_signature_map.insert(validator.author(), validator.sign(&dummy_struct));
         }
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
+                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::TooLittleVotingPower {
                 voting_power: 3,
                 quorum_voting_power: 5
@@ -593,7 +672,7 @@ mod tests {
         author_to_signature_map.insert(unknown_validator_signer.author(), unknown_signature);
         assert_eq!(
             validator_verifier
-                .batch_verify_aggregated_signature(random_hash, &author_to_signature_map),
+                .batch_verify_aggregated_struct_signature(&dummy_struct, &author_to_signature_map),
             Err(VerifyError::UnknownAuthor)
         );
     }

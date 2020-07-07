@@ -8,7 +8,7 @@ use crate::{
     SecureBackends,
 };
 use libra_config::config::HANDSHAKE_VERSION;
-use libra_crypto::{ed25519::Ed25519PublicKey, hash::CryptoHash, x25519, ValidCryptoMaterial};
+use libra_crypto::{ed25519::Ed25519PublicKey, x25519, ValidCryptoMaterial};
 use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
 };
@@ -92,7 +92,7 @@ impl ValidatorConfig {
             Duration::from_secs(expiration_time),
         );
         let signature = local_storage
-            .sign_message(OPERATOR_KEY, &raw_transaction.hash())
+            .sign(OPERATOR_KEY, &raw_transaction)
             .map_err(|e| {
                 Error::LocalStorageSigningError("validator-config", OPERATOR_KEY, e.to_string())
             })?;

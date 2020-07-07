@@ -6,7 +6,6 @@ use executor_types::StateComputeResult;
 use libra_config::{config::NodeConfig, utils};
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
-    hash::CryptoHash,
     HashValue,
 };
 use libra_types::{
@@ -65,7 +64,7 @@ pub fn gen_ledger_info_with_sigs(
     );
     let signatures = signer
         .iter()
-        .map(|s| (s.author(), s.sign_message(ledger_info.hash())))
+        .map(|s| (s.author(), s.sign(&ledger_info)))
         .collect();
     LedgerInfoWithSignatures::new(ledger_info, signatures)
 }

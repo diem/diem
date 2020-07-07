@@ -7,8 +7,7 @@ use libra_config::config::{
     Identity, KeyManagerConfig, NodeConfig, OnDiskStorageConfig, SecureBackend,
 };
 use libra_crypto::{
-    ed25519::Ed25519PrivateKey, hash::CryptoHash, PrivateKey, SigningKey, Uniform,
-    ValidCryptoMaterial,
+    ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform, ValidCryptoMaterial,
 };
 use libra_global_constants::{
     CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
@@ -805,7 +804,7 @@ fn test_external_transaction_signer() {
     assert_eq!(unsigned_txn.sender(), sender_address);
 
     // sign the transaction with the private key
-    let signature = private_key.sign_message(&unsigned_txn.hash());
+    let signature = private_key.sign(&unsigned_txn);
 
     // submit the transaction
     let submit_txn_result =
@@ -1353,7 +1352,7 @@ fn submit_new_transaction(
     );
 
     // Sign and submit the transaction
-    let signature = account_context.private_key.sign_message(&raw_txn.hash());
+    let signature = account_context.private_key.sign(&raw_txn);
     let signed_txn =
         SignedTransaction::new(raw_txn, account_context.private_key.public_key(), signature);
     libra.submit_transaction(Transaction::UserTransaction(signed_txn))?;

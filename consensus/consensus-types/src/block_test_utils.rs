@@ -209,7 +209,7 @@ pub fn gen_test_certificate(
 
     let mut signatures = BTreeMap::new();
     for signer in signers {
-        let li_sig = signer.sign_message(ledger_info.hash());
+        let li_sig = signer.sign(&ledger_info);
         signatures.insert(signer.author(), li_sig);
     }
 
@@ -257,7 +257,7 @@ pub fn placeholder_certificate_for_block(
 
     let mut signatures = BTreeMap::new();
     for signer in signers {
-        let li_sig = signer.sign_message(ledger_info_placeholder.hash());
+        let li_sig = signer.sign(&ledger_info_placeholder);
         signatures.insert(signer.author(), li_sig);
     }
 

@@ -41,7 +41,7 @@ use futures::{
     stream::select,
     Stream, StreamExt, TryStreamExt,
 };
-use libra_crypto::{ed25519::Ed25519PrivateKey, hash::CryptoHash, HashValue, Uniform};
+use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, Uniform};
 use libra_secure_storage::Storage;
 use libra_types::{
     epoch_state::EpochState,
@@ -634,10 +634,7 @@ fn recover_on_restart() {
         let proposal = inserter.create_block_with_qc(genesis_qc.clone(), i, i, vec![]);
         let timeout = Timeout::new(1, i - 1);
         let mut tc = TimeoutCertificate::new(timeout.clone());
-        tc.add_signature(
-            inserter.signer().author(),
-            inserter.signer().sign_message(timeout.hash()),
-        );
+        tc.add_signature(inserter.signer().author(), inserter.signer().sign(&timeout));
         data.push((proposal, tc));
     }
 

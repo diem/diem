@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{CryptoStorage, Error, KVStorage, Storage, Value};
-use libra_crypto::{ed25519::Ed25519PrivateKey, HashValue, PrivateKey, Signature, Uniform};
+
+use libra_crypto::{
+    ed25519::Ed25519PrivateKey, test_utils::TestLibraCrypto, HashValue, PrivateKey, Signature,
+    Uniform,
+};
 
 /// This suite contains tests for secure storage backends. We test the correct functionality
 /// of both key/value and cryptographic operations for storage implementations. All storage backend
@@ -142,10 +146,10 @@ fn test_import_key(storage: &mut Storage) {
 
     // Verify valid keys
 
-    let message = HashValue::new([1; HashValue::LENGTH]);
-    let message_signature = storage.sign_message(imported_key_name, &message).unwrap();
+    let message = TestLibraCrypto("Hello, World".to_string());
+    let message_signature = storage.sign(imported_key_name, &message).unwrap();
     message_signature
-        .verify(&message, &imported_public_key)
+        .verify_struct_msg(&message, &imported_public_key)
         .unwrap();
 
     // Ensure rotation still works
@@ -157,9 +161,9 @@ fn test_import_key(storage: &mut Storage) {
         .unwrap()
         .public_key;
 
-    let rotated_message_signature = storage.sign_message(imported_key_name, &message).unwrap();
+    let rotated_message_signature = storage.sign(imported_key_name, &message).unwrap();
     rotated_message_signature
-        .verify(&message, &rotated_imported_public_key)
+        .verify_struct_msg(&message, &rotated_imported_public_key)
         .unwrap();
 
     assert_ne!(imported_key, rotated_imported_key);
@@ -277,14 +281,16 @@ fn test_create_sign_rotate_sign(storage: &mut Storage) {
     let public_key = storage.create_key(CRYPTO_NAME).unwrap();
 
     // Create then sign message and verify correct signature
-    let message = HashValue::new([1; HashValue::LENGTH]);
-    let message_signature = storage.sign_message(CRYPTO_NAME, &message).unwrap();
-    assert!(message_signature.verify(&message, &public_key).is_ok());
+    let message = TestLibraCrypto("Hello, World".to_string());
+    let message_signature = storage.sign(CRYPTO_NAME, &message).unwrap();
+    assert!(message_signature
+        .verify_struct_msg(&message, &public_key)
+        .is_ok());
 
     // Rotate the key pair and sign the message again using the previous key pair version
     let _ = storage.rotate_key(CRYPTO_NAME).unwrap();
     let message_signature_previous = storage
-        .sign_message_using_version(CRYPTO_NAME, public_key, &message)
+        .sign_using_version(CRYPTO_NAME, public_key, &message)
         .unwrap();
 
     // Verify signatures match and are valid
