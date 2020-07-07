@@ -69,6 +69,8 @@ struct Args {
     cleanup: bool,
     #[structopt(long, group = "action")]
     run_ci_suite: bool,
+    #[structopt(long, group = "action")]
+    strong_commit: bool,
 
     #[structopt(last = true)]
     last: Vec<String>,
@@ -181,6 +183,8 @@ pub fn main() {
     } else if args.changelog.is_none() && args.deploy.is_none() {
         println!("No action specified");
         process::exit(1);
+    } else if args.strong_commit {
+        perf_msg = Some(runner.strong_commit());
     }
 
     if let Some(mut changelog) = args.changelog {
@@ -654,6 +658,12 @@ impl ClusterTestRunner {
     }
 
     pub fn perf_run(&mut self) -> String {
+        let suite = ExperimentSuite::new_perf_suite(&self.cluster);
+        self.run_suite(suite).unwrap();
+        self.report.to_string()
+    }
+
+    pub fn strong_commit(&mut self) -> String {
         let suite = ExperimentSuite::new_perf_suite(&self.cluster);
         self.run_suite(suite).unwrap();
         self.report.to_string()
