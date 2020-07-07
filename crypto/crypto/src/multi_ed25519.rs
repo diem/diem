@@ -150,6 +150,7 @@ impl SigningKey for MultiEd25519PrivateKey {
                 .enumerate()
                 .map(|(i, item)| {
                     bitmap_set_bit(&mut bitmap, i);
+                    #[allow(deprecated)]
                     item.sign_message(message)
                 }),
         );
