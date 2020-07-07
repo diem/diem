@@ -175,7 +175,9 @@ if TEST_MODE == "manual":
     print("Upgrade path:")
     print("\tvault (force)\t\t==> latest")
     print(f"\tvalidators {list(range(NUM_VALIDATORS // 2))} \t==> {ALT_TEST_TAG}")
-    print(f"\tvalidators {list(range(NUM_VALIDATORS // 2, NUM_VALIDATORS))}\t==> {TEST_TAG}")
+    print(
+        f"\tvalidators {list(range(NUM_VALIDATORS // 2, NUM_VALIDATORS))}\t==> {TEST_TAG}"
+    )
     print(f"\tfullnodes {list(range(NUM_FULLNODES))}\t==> {ALT_TEST_TAG}\n")
     new_v_defs = [
         update_task_def_image_tags(v_def, ALT_TEST_TAG)
@@ -191,8 +193,12 @@ if TEST_MODE == "manual":
     ]
 
     if args.dry:
-        print(f"DRY RUN: updated validators/fullnodes {list(range(NUM_VALIDATORS // 2))} to {ALT_TEST_TAG}")
-        print(f"DRY RUN: updated validators {list(range(NUM_VALIDATORS // 2, NUM_VALIDATORS))} to {TEST_TAG}")
+        print(
+            f"DRY RUN: updated validators/fullnodes {list(range(NUM_VALIDATORS // 2))} to {ALT_TEST_TAG}"
+        )
+        print(
+            f"DRY RUN: updated validators {list(range(NUM_VALIDATORS // 2, NUM_VALIDATORS))} to {TEST_TAG}"
+        )
     else:
         v_revs = [
             register_task_def_update(v_fams[i], new_v_defs[i])
@@ -219,7 +225,9 @@ elif TEST_MODE == "testnet":
     print("Upgrade path:")
     print("\tvault (force)\t\t==> latest")
     print(f"\tvalidators {list(range(NUM_VALIDATORS // 2))}\t==> {TEST_TAG}")
-    print(f"\tvalidators {list(range(NUM_VALIDATORS // 2, NUM_VALIDATORS))}\t==> {ALT_TEST_TAG}")
+    print(
+        f"\tvalidators {list(range(NUM_VALIDATORS // 2, NUM_VALIDATORS))}\t==> {ALT_TEST_TAG}"
+    )
     print(f"\tfullnodes {list(range(NUM_FULLNODES))}\t==> {ALT_TEST_TAG}\n")
     print("Checking if nodes are already running latest testnet version...")
     wrong_versions = False
@@ -284,6 +292,8 @@ elif TEST_MODE == "testnet":
             update_service_task_def(WORKSPACE, v_fams[i], v_revs[i])
 
     else:
-        print(f"DRY RUN: updated validators {list(range(NUM_VALIDATORS // 2))} to {TEST_TAG}")
+        print(
+            f"DRY RUN: updated validators {list(range(NUM_VALIDATORS // 2))} to {TEST_TAG}"
+        )
 
 print("Done!")
