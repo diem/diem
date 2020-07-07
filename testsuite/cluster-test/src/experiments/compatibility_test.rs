@@ -130,7 +130,7 @@ impl Experiment for CompatibilityTest {
         // Generate some traffic
         context
             .tx_emitter
-            .emit_txn_for(job_duration.clone(), fullnode_txn_job.clone())
+            .emit_txn_for(job_duration, fullnode_txn_job.clone())
             .await?;
 
         info!("1. Changing the images for the first instance to validate storage");
@@ -139,7 +139,7 @@ impl Experiment for CompatibilityTest {
         context
             .tx_emitter
             .emit_txn_for(
-                job_duration.clone(),
+                job_duration,
                 EmitJobRequest::for_instances(first_node, context.global_emit_job_request),
             )
             .await?;
@@ -148,21 +148,21 @@ impl Experiment for CompatibilityTest {
         update_batch_instance(context, &self.first_batch, self.updated_image_tag.clone()).await?;
         context
             .tx_emitter
-            .emit_txn_for(job_duration.clone(), validator_txn_job.clone())
+            .emit_txn_for(job_duration, validator_txn_job.clone())
             .await?;
 
         info!("3. Changing images for the rest of the nodes");
         update_batch_instance(context, &self.second_batch, self.updated_image_tag.clone()).await?;
         context
             .tx_emitter
-            .emit_txn_for(job_duration.clone(), validator_txn_job)
+            .emit_txn_for(job_duration, validator_txn_job)
             .await?;
 
         info!("4. Changing images for full nodes");
         update_batch_instance(context, &self.full_nodes, self.updated_image_tag.clone()).await?;
         context
             .tx_emitter
-            .emit_txn_for(job_duration.clone(), fullnode_txn_job)
+            .emit_txn_for(job_duration, fullnode_txn_job)
             .await?;
         Ok(())
     }
