@@ -211,7 +211,7 @@ pub fn impl_enum_signingkey(
             #name::#variant_ident(key) => Self::SignatureMaterial::#variant_ident(key.sign_message(message)),
         });
         match_struct_arms.extend(quote! {
-            #name::#variant_ident(key) => Ok(Self::SignatureMaterial::#variant_ident(key.sign(message)?)),
+            #name::#variant_ident(key) => Self::SignatureMaterial::#variant_ident(key.sign(message)),
         });
         match_arms_arbitrary.extend(quote! {
             #name::#variant_ident(key) => Self::SignatureMaterial::#variant_ident(key.sign_arbitrary_message(message)),
@@ -228,7 +228,7 @@ pub fn impl_enum_signingkey(
                 }
             }
 
-            fn sign<T: libra_crypto::hash::CryptoHash + serde::Serialize>(&self, message: &T) -> Result<Self::SignatureMaterial, libra_crypto::CryptoMaterialError> {
+            fn sign<T: libra_crypto::hash::CryptoHash + serde::Serialize>(&self, message: &T) -> Self::SignatureMaterial {
                 match self {
                     #match_struct_arms
                 }

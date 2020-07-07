@@ -131,10 +131,10 @@ pub trait SigningKey:
     /// For the moment, this signature is incompatible with the conversion into
     /// a `HashValue` above. We intend to deprecate `sign message` in favor of
     /// the present function soon.
-    fn sign<T: CryptoHash + Serialize>(
-        &self,
-        message: &T,
-    ) -> Result<Self::SignatureMaterial, CryptoMaterialError>;
+    ///
+    /// Note: this assumes serialization is unfaillible. See libra_common::lcs::ser
+    /// for a discussion of this assumption.
+    fn sign<T: CryptoHash + Serialize>(&self, message: &T) -> Self::SignatureMaterial;
 
     /// Signs a non-hash input message. For testing only.
     #[cfg(any(test, feature = "fuzzing"))]

@@ -218,17 +218,12 @@ impl SigningKey for Ed25519PrivateKey {
     type VerifyingKeyMaterial = Ed25519PublicKey;
     type SignatureMaterial = Ed25519Signature;
 
-    fn sign<T: CryptoHash + Serialize>(
-        &self,
-        message: &T,
-    ) -> Result<Ed25519Signature, CryptoMaterialError> {
+    fn sign<T: CryptoHash + Serialize>(&self, message: &T) -> Ed25519Signature {
         let mut bytes = <T::Hasher as CryptoHasher>::seed().to_vec();
         lcs::serialize_into(&mut bytes, &message)
-            .map_err(|_| CryptoMaterialError::SerializationError)?;
-        Ok(Ed25519PrivateKey::sign_arbitrary_message(
-            &self,
-            bytes.as_ref(),
-        ))
+            .map_err(|_| CryptoMaterialError::SerializationError)
+            .expect("Serialization of signable material should not fail.");
+        Ed25519PrivateKey::sign_arbitrary_message(&self, bytes.as_ref())
     }
 
     fn sign_message(&self, message: &HashValue) -> Ed25519Signature {
