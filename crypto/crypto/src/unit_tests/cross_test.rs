@@ -71,6 +71,7 @@ proptest! {
     #![proptest_config(ProptestConfig::with_cases(20))]
 
     #[test]
+    #[allow(deprecated)]
     fn test_keys_mix(
         hash in any::<HashValue>(),
         ed_keypair1 in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>(),

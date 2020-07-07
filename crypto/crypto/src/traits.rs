@@ -122,6 +122,7 @@ pub trait SigningKey:
     type SignatureMaterial: Signature<SigningKeyMaterial = Self>;
 
     /// Signs an input message, represented by its `HashValue`
+    #[deprecated(since = "0.1.0", note = "please use SigningKey::sign instead.")]
     fn sign_message(&self, message: &HashValue) -> Self::SignatureMaterial;
 
     /// Signs an object that has an distinct domain-separation hasher and
@@ -186,11 +187,16 @@ pub trait VerifyingKey:
     type SignatureMaterial: Signature<VerifyingKeyMaterial = Self>;
 
     /// We provide the logical implementation which dispatches to the signature.
+    #[deprecated(
+        since = "0.1.0",
+        note = "please use VerifyingKey::verify_struct_signature instead."
+    )]
     fn verify_signature(
         &self,
         message: &HashValue,
         signature: &Self::SignatureMaterial,
     ) -> Result<()> {
+        #[allow(deprecated)]
         signature.verify(message, self)
     }
 
@@ -242,6 +248,10 @@ pub trait Signature:
     type SigningKeyMaterial: SigningKey<SignatureMaterial = Self>;
 
     /// The verification function.
+    #[deprecated(
+        since = "0.1.0",
+        note = "please use Signature::verify_struct_msg instead."
+    )]
     fn verify(&self, message: &HashValue, public_key: &Self::VerifyingKeyMaterial) -> Result<()>;
 
     /// Verification for a struct we unabmiguously know how to serialize and
@@ -270,6 +280,7 @@ pub trait Signature:
         keys_and_signatures: Vec<(Self::VerifyingKeyMaterial, Self)>,
     ) -> Result<()> {
         for (key, signature) in keys_and_signatures {
+            #[allow(deprecated)]
             signature.verify(message, &key)?
         }
         Ok(())

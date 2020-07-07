@@ -97,6 +97,7 @@ proptest! {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_batch_verify(
         hash in any::<HashValue>(),
         keypairs in proptest::array::uniform10(uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>())) {
@@ -131,6 +132,7 @@ proptest! {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_signature_verification_custom_serialisation(
         hash in any::<HashValue>(),
         keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
@@ -170,6 +172,7 @@ proptest! {
 
     // Check for canonical S.
     #[test]
+    #[allow(deprecated)]
     fn test_signature_malleability(
         hash in any::<HashValue>(),
         keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
