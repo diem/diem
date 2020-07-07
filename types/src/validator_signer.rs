@@ -6,7 +6,7 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
     hash::CryptoHash,
     test_utils::TEST_SEED,
-    HashValue, PrivateKey, SigningKey, Uniform,
+    PrivateKey, SigningKey, Uniform,
 };
 use rand::{rngs::StdRng, SeedableRng};
 use serde::ser::Serialize;
@@ -28,13 +28,6 @@ impl ValidatorSigner {
             author,
             private_key,
         }
-    }
-
-    /// Constructs a signature for `message` using `private_key`.
-    #[deprecated(since = "0.1.0", note = "use ValidatorSigner::sign instead.")]
-    pub fn sign_message(&self, message: HashValue) -> Ed25519Signature {
-        #[allow(deprecated)]
-        self.private_key.sign_message(&message)
     }
 
     /// Constructs a signature for `message` using `private_key`.

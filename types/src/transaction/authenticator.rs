@@ -92,25 +92,6 @@ impl TransactionAuthenticator {
     }
 
     /// Return Ok if the authenticator's public key matches its signature, Err otherwise
-    #[deprecated(
-        since = "0.1.0",
-        note = "use TransactionAuthenticator::verify instead."
-    )]
-    pub fn verify_signature(&self, message: &HashValue) -> Result<()> {
-        #[allow(deprecated)]
-        match self {
-            Self::Ed25519 {
-                public_key,
-                signature,
-            } => signature.verify(message, public_key),
-            Self::MultiEd25519 {
-                public_key,
-                signature,
-            } => signature.verify(message, public_key),
-        }
-    }
-
-    /// Return Ok if the authenticator's public key matches its signature, Err otherwise
     pub fn verify<T: Serialize + CryptoHash>(&self, message: &T) -> Result<()> {
         match self {
             Self::Ed25519 {

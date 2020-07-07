@@ -186,20 +186,6 @@ pub trait VerifyingKey:
     /// The associated signature type for this verifying key.
     type SignatureMaterial: Signature<VerifyingKeyMaterial = Self>;
 
-    /// We provide the logical implementation which dispatches to the signature.
-    #[deprecated(
-        since = "0.1.0",
-        note = "please use VerifyingKey::verify_struct_signature instead."
-    )]
-    fn verify_signature(
-        &self,
-        message: &HashValue,
-        signature: &Self::SignatureMaterial,
-    ) -> Result<()> {
-        #[allow(deprecated)]
-        signature.verify(message, self)
-    }
-
     /// We provide the striaghtfoward implementation which dispatches to the signature.
     fn verify_struct_signature<T: CryptoHash + Serialize>(
         &self,
