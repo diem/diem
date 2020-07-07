@@ -664,7 +664,7 @@ impl ClusterTestRunner {
     }
 
     pub fn strong_commit(&mut self) -> String {
-        let suite = ExperimentSuite::new_perf_suite(&self.cluster);
+        let suite = ExperimentSuite::new_strong_commit(&self.cluster);
         self.run_suite(suite).unwrap();
         self.report.to_string()
     }
