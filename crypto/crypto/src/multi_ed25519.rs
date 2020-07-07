@@ -156,10 +156,7 @@ impl SigningKey for MultiEd25519PrivateKey {
         MultiEd25519Signature { signatures, bitmap }
     }
 
-    fn sign<T: CryptoHash + Serialize>(
-        &self,
-        message: &T,
-    ) -> Result<MultiEd25519Signature, CryptoMaterialError> {
+    fn sign<T: CryptoHash + Serialize>(&self, message: &T) -> MultiEd25519Signature {
         let mut bitmap = [0u8; BITMAP_NUM_OF_BYTES];
         let signatures: Vec<Ed25519Signature> = self
             .private_keys
@@ -170,9 +167,9 @@ impl SigningKey for MultiEd25519PrivateKey {
                 bitmap_set_bit(&mut bitmap, i);
                 item.sign(message)
             })
-            .collect::<Result<_, _>>()?;
+            .collect();
 
-        Ok(MultiEd25519Signature { signatures, bitmap })
+        MultiEd25519Signature { signatures, bitmap }
     }
 
     #[cfg(any(test, feature = "fuzzing"))]

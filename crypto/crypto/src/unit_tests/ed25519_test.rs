@@ -161,7 +161,7 @@ proptest! {
         keypair in uniform_keypair_strategy::<Ed25519PrivateKey, Ed25519PublicKey>()
     ) {
         let hashable = CryptoHashable(x);
-        let signature = keypair.private_key.sign(&hashable).expect("all `RawTransaction` objects should LCS-serialize correctly");
+        let signature = keypair.private_key.sign(&hashable);
         let serialized: &[u8] = &(signature.to_bytes());
         prop_assert_eq!(ED25519_SIGNATURE_LENGTH, serialized.len());
         let deserialized = Ed25519Signature::try_from(serialized).unwrap();
