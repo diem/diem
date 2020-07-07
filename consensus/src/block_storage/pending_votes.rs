@@ -1,12 +1,15 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+//! PendingVotes store pending votes observed for a fixed epoch and round.
+//! It is meant to be used inside of a RoundState.
+//! The module takes care of creating a QC or a TC
+//! when enough votes (or timeout votes) have been observed.
+//! Votes are automatically dropped when the structure goes out of scope.
+
 use crate::block_storage::VoteReceptionResult;
 use consensus_types::{
-    common::{Author, Round},
-    quorum_cert::QuorumCert,
-    timeout_certificate::TimeoutCertificate,
-    vote::Vote,
+    common::Author, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate, vote::Vote,
 };
 use libra_crypto::{hash::CryptoHash, HashValue};
 use libra_logger::prelude::*;
@@ -24,39 +27,25 @@ use std::{
 #[path = "pending_votes_test.rs"]
 mod pending_votes_test;
 
-struct LastVoteInfo {
-    li_digest: HashValue,
-    round: Round,
-    is_timeout: bool, // true if a vote includes a round signature that can be aggregated to TC
-}
-
-/// Last pending votes of the authors. Should be cleared upon reconfiguration.
+/// A PendingVotes structure keep track of votes
 pub struct PendingVotes {
-    /// `li_digest_to_votes` might keep multiple LedgerInfos per proposed block in order
-    /// to tolerate non-determinism in execution: given a proposal, a QuorumCertificate is going
-    /// to be collected only for all the votes that carry identical LedgerInfo.
-    /// LedgerInfo digest covers the potential commit ids, as well as the vote information
-    /// (including the 3-chain of a voted proposal).
-    /// Thus, the structure of `li_digest_to_votes` is as follows:
-    /// HashMap<ledger_info_digest, LedgerInfoWithSignatures>
-    li_digest_to_votes: HashMap<HashValue, LedgerInfoWithSignatures>,
+    /// Maps LedgerInfo digest to associated signatures (contained in a partial LedgerInfoWithSignatures).
+    /// This might keep multiple LedgerInfos (for the current round) to tolerate non-determinism in execution.
+    li_digest_to_votes: HashMap<HashValue /* LedgerInfo digest */, LedgerInfoWithSignatures>,
     /// Tracks all the signatures of the votes for the given round. In case we succeed to
-    /// aggregate 2f+1 signatures for the same round a TimeoutCertificate is formed.
-    /// Note that QuorumCert has higher priority than TimeoutCertificate (in case 2f+1 votes are
-    /// gathered for the same ledger info we are going to generate QuorumCert and not the
-    /// TimeoutCertificate).
-    round_to_tc: HashMap<Round, TimeoutCertificate>,
-    /// Map of Author to last vote info. Any pending vote from Author is cleaned up
-    /// whenever a new vote is added by same Author
-    author_to_last_voted_info: HashMap<Author, LastVoteInfo>,
+    /// aggregate 2f+1 signatures a TimeoutCertificate is formed.
+    maybe_partial_tc: Option<TimeoutCertificate>,
+    /// Map of Author to vote. This is useful to discard multiple votes.
+    author_to_vote: HashMap<Author, Vote>,
 }
 
 impl PendingVotes {
+    /// Creates an empty PendingVotes structure for a specific epoch and round
     pub fn new() -> Self {
         PendingVotes {
             li_digest_to_votes: HashMap::new(),
-            round_to_tc: HashMap::new(),
-            author_to_last_voted_info: HashMap::new(),
+            maybe_partial_tc: None,
+            author_to_vote: HashMap::new(),
         }
     }
 
@@ -67,166 +56,143 @@ impl PendingVotes {
         vote: &Vote,
         validator_verifier: &ValidatorVerifier,
     ) -> VoteReceptionResult {
-        if let Err(e) = self.replace_prev_vote(vote) {
-            return e;
-        }
-        let vote_aggr_res = self.aggregate_qc(vote, validator_verifier);
-        if let VoteReceptionResult::NewQuorumCertificate(_) = vote_aggr_res {
-            return vote_aggr_res;
-        }
-        match self.aggregate_tc(vote, &validator_verifier) {
-            Some(VoteReceptionResult::NewTimeoutCertificate(tc)) => {
-                VoteReceptionResult::NewTimeoutCertificate(tc)
-            }
-            _ => vote_aggr_res,
-        }
-    }
-
-    /// Check whether the newly inserted vote completes a QC
-    fn aggregate_qc(
-        &mut self,
-        vote: &Vote,
-        validator_verifier: &ValidatorVerifier,
-    ) -> VoteReceptionResult {
-        // Note that the digest covers the ledger info information, which is also indirectly
-        // covering vote data hash (in its `consensus_data_hash` field).
+        // derive data from vote
         let li_digest = vote.ledger_info().hash();
+
+        //
+        // 1. Has the author already voted for this round?
+        //
+
+        if let Some(previously_seen_vote) = self.author_to_vote.get(&vote.author()) {
+            // is it the same vote?
+            if li_digest == previously_seen_vote.ledger_info().hash() {
+                // we've already seen an equivalent vote before
+                let new_timeout_vote = vote.is_timeout() && !previously_seen_vote.is_timeout();
+                if !new_timeout_vote {
+                    // it's not a new timeout vote
+                    return VoteReceptionResult::DuplicateVote;
+                }
+            } else {
+                // we have seen a different vote for the same round
+                return VoteReceptionResult::EquivocateVote;
+            }
+        }
+
+        //
+        // 2. Store new vote (or update, in case it's a new timeout vote)
+        //
+
+        self.author_to_vote.insert(vote.author(), vote.clone());
+
+        //
+        // 3. Let's check if we can create a QC
+        //
+
+        // obtain the ledger info with signatures associated to the vote's ledger info
         let li_with_sig = self.li_digest_to_votes.entry(li_digest).or_insert_with(|| {
+            // if the ledger info with signatures doesn't exist yet, create it
             LedgerInfoWithSignatures::new(vote.ledger_info().clone(), BTreeMap::new())
         });
+
+        // add this vote to the ledger info with signatures
         li_with_sig.add_signature(vote.author(), vote.signature().clone());
 
-        match validator_verifier.check_voting_power(li_with_sig.signatures().keys()) {
-            Ok(_) => VoteReceptionResult::NewQuorumCertificate(Arc::new(QuorumCert::new(
-                vote.vote_data().clone(),
-                li_with_sig.clone(),
-            ))),
-            Err(VerifyError::TooLittleVotingPower { voting_power, .. }) => {
-                VoteReceptionResult::VoteAdded(voting_power)
-            }
-            Err(error) => {
-                error!("MUST_FIX: vote received could not be added: {}", error);
-                VoteReceptionResult::ErrorAddingVote(error)
-            }
-        }
-    }
+        // check if we have enough signatures to create a QC
+        let voting_power =
+            match validator_verifier.check_voting_power(li_with_sig.signatures().keys()) {
+                // a quorum of signature was reached, a new QC is formed
+                Ok(_) => {
+                    return VoteReceptionResult::NewQuorumCertificate(Arc::new(QuorumCert::new(
+                        vote.vote_data().clone(),
+                        li_with_sig.clone(),
+                    )));
+                }
 
-    /// In case a timeout certificate is formed (there are 2f+1 votes in the same round) return the
-    /// new TimeoutCertificate, otherwise, return None.
-    fn aggregate_tc(
-        &mut self,
-        vote: &Vote,
-        validator_verifier: &ValidatorVerifier,
-    ) -> Option<VoteReceptionResult> {
-        let timeout_signature = vote.timeout_signature().cloned()?;
-        let timeout = vote.timeout();
-        let tc = self
-            .round_to_tc
-            .entry(timeout.round())
-            .or_insert_with(|| TimeoutCertificate::new(timeout));
-        tc.add_signature(vote.author(), timeout_signature);
-        match validator_verifier.check_voting_power(tc.signatures().keys()) {
-            Ok(_) => Some(VoteReceptionResult::NewTimeoutCertificate(Arc::new(
-                tc.clone(),
-            ))),
-            Err(VerifyError::TooLittleVotingPower { .. }) => None,
-            _ => panic!("Unexpected verification error, vote = {}", vote),
-        }
-    }
+                // not enough votes
+                Err(VerifyError::TooLittleVotingPower { voting_power, .. }) => voting_power,
 
-    /// If this is the first vote from Author, add it to map. If Author has
-    /// already voted on same block then return DuplicateVote error. If Author has already voted
-    /// on some other result, prune the last vote and insert new one in map.
-    fn replace_prev_vote(&mut self, vote: &Vote) -> Result<(), VoteReceptionResult> {
-        let author = vote.author();
-        let round = vote.vote_data().proposed().round();
-        let li_digest = vote.ledger_info().hash();
-        let is_timeout = vote.is_timeout();
-        let vote_info = LastVoteInfo {
-            li_digest,
-            round,
-            is_timeout,
-        };
-        let last_voted_info = match self.author_to_last_voted_info.insert(author, vote_info) {
-            None => {
-                // First vote from Author, do nothing.
-                return Ok(());
-            }
-            Some(last_voted_info) => last_voted_info,
-        };
+                // error
+                Err(error) => {
+                    error!(
+                        "MUST_FIX: vote received could not be added: {}, vote: {}",
+                        error, vote
+                    );
+                    return VoteReceptionResult::ErrorAddingVote(error);
+                }
+            };
 
-        if li_digest == last_voted_info.li_digest {
-            if is_timeout == last_voted_info.is_timeout {
-                // Author has already voted for the very same LedgerInfo
-                return Err(VoteReceptionResult::DuplicateVote);
-            } else {
-                // Author has already voted for this LedgerInfo, but this time the Vote's
-                // round signature is different.
-                // Do not replace the prev vote, try to may be gather a TC.
-                return Ok(());
+        //
+        // 4. We couldn't form a QC, let's check if we can create a TC
+        //
+
+        if let Some(timeout_signature) = vote.timeout_signature() {
+            // form timeout struct
+            // TODO(mimoo): stronger: pass the (epoch, round) tuple as arguments of this function
+            let timeout = vote.timeout();
+
+            // if no partial TC exist, create one
+            let partial_tc = self
+                .maybe_partial_tc
+                .get_or_insert_with(|| TimeoutCertificate::new(timeout));
+
+            // add the timeout signature
+            partial_tc.add_signature(vote.author(), timeout_signature.clone());
+
+            // did the TC reach a threshold?
+            match validator_verifier.check_voting_power(partial_tc.signatures().keys()) {
+                // A quorum of signature was reached, a new TC was formed!
+                Ok(_) => {
+                    return VoteReceptionResult::NewTimeoutCertificate(Arc::new(partial_tc.clone()))
+                }
+
+                // not enough votes
+                Err(VerifyError::TooLittleVotingPower { .. }) => (),
+
+                // error
+                Err(error) => {
+                    error!(
+                        "MUST_FIX: timeout vote received could not be added: {}, vote: {}",
+                        error, vote
+                    );
+                    return VoteReceptionResult::ErrorAddingVote(error);
+                }
             }
         }
 
-        // Prune last pending vote from the pending votes.
-        if let Some(li_pending_votes) = self.li_digest_to_votes.get_mut(&last_voted_info.li_digest)
-        {
-            // Removing signature from last voted block
-            li_pending_votes.remove_signature(author);
-            if li_pending_votes.signatures().is_empty() {
-                // Last vote for that LI digest, remove the digest entry
-                self.li_digest_to_votes.remove(&last_voted_info.li_digest);
-            }
-        }
+        //
+        // 5. No QC (or TC) could be formed, return the QC's voting power
+        //
 
-        // Prune last pending vote from the pending timeout certificates.
-        if round == last_voted_info.round {
-            // The same author has already sent a vote for this round but a different LedgerInfo
-            // digest: this is not a valid behavior.
-            error!(
-                "Validator {} sent two different votes for the same round {}!",
-                author.short_str(),
-                round
-            );
-            return Err(VoteReceptionResult::EquivocateVote);
-        }
-        if let Some(pending_tc) = self.round_to_tc.get_mut(&last_voted_info.round) {
-            // Removing signature from last tc
-            pending_tc.remove_signature(author);
-            if pending_tc.signatures().is_empty() {
-                // Last vote for that round, remove the TC
-                self.round_to_tc.remove(&last_voted_info.round);
-            }
-        }
-
-        Ok(())
+        VoteReceptionResult::VoteAdded(voting_power)
     }
 }
 
 impl fmt::Display for PendingVotes {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let (votes, timeout) = (
-            self.li_digest_to_votes
-                .iter()
-                .map(|(hash, li)| (hash, li.signatures().keys().collect::<Vec<_>>()))
-                .collect::<BTreeMap<_, _>>(),
-            self.round_to_tc
-                .iter()
-                .map(|(round, tc)| (round, tc.signatures().keys().collect::<Vec<_>>()))
-                .collect::<BTreeMap<_, _>>(),
-        );
+        // collect votes per ledger info
+        let votes = self
+            .li_digest_to_votes
+            .iter()
+            .map(|(li_digest, li)| (li_digest, li.signatures().keys().collect::<Vec<_>>()))
+            .collect::<BTreeMap<_, _>>();
+
+        // collect timeout votes
+        let timeout_votes = self
+            .maybe_partial_tc
+            .as_ref()
+            .map(|partial_tc| partial_tc.signatures().keys().collect::<Vec<_>>());
+
+        // write
         write!(f, "PendingVotes: [")?;
+
         for (hash, authors) in votes {
             write!(f, "LI {} has {} votes {:?} ", hash, authors.len(), authors)?;
         }
-        for (round, authors) in timeout {
-            write!(
-                f,
-                "Round {} has {} timeout {:?}",
-                round,
-                authors.len(),
-                authors
-            )?;
+
+        for authors in timeout_votes {
+            write!(f, "{} timeout {:?}", authors.len(), authors)?;
         }
+
         write!(f, "]")
     }
 }
