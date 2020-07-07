@@ -40,12 +40,12 @@ instruction on how to set the environment variables can be found in `../scripts/
 
 ## Debugging Long Running Tests
 
-By default, the prover uses a timeout of 60 seconds, which can be changed by the `-T=<seconds>` flag. Healthy tests
+By default, the prover uses a timeout of 40 seconds, which can be changed by the `-T=<seconds>` flag. Healthy tests
 should never take that long to finish. To avoid flakes in continuous integration, you should test your tests to
-be able to pass at least with `-T=30`. To do so use
+be able to pass at least with `-T=20`. To do so use
 
 ```shell script
-MVP_TEST_FLAGS="-T=30" cargo test -p move-prover
+MVP_TEST_FLAGS="-T=20" cargo test -p move-prover
 ```
 
 ## Code coverage

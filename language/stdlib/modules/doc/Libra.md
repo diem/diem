@@ -59,6 +59,7 @@
 -  [Specification](#0x1_Libra_Specification)
     -  [Resource `Libra`](#0x1_Libra_Specification_Libra)
     -  [Function `mint`](#0x1_Libra_Specification_mint)
+    -  [Function `burn`](#0x1_Libra_Specification_burn)
     -  [Function `mint_with_capability`](#0x1_Libra_Specification_mint_with_capability)
     -  [Function `preburn_with_resource`](#0x1_Libra_Specification_preburn_with_resource)
     -  [Function `preburn_to`](#0x1_Libra_Specification_preburn_to)
@@ -2223,6 +2224,22 @@ the total_value CurrencyInfo keeps track of.
 <pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_Libra_MintCapability">MintCapability</a>&lt;CoinType&gt;&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account));
 <b>include</b> <a href="#0x1_Libra_MintAbortsIf">MintAbortsIf</a>&lt;CoinType&gt;;
 <b>include</b> <a href="#0x1_Libra_MintEnsures">MintEnsures</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+<a name="0x1_Libra_Specification_burn"></a>
+
+### Function `burn`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Libra_burn">burn</a>&lt;CoinType&gt;(account: &signer, preburn_address: address)
+</code></pre>
+
+
+
+
+<pre><code>pragma verify=<b>false</b>;
 </code></pre>
 
 
