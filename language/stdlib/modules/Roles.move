@@ -12,7 +12,7 @@ address 0x1 {
 ///
 
 module Roles {
-    use 0x1::Signer;
+    use 0x1::Signer::{Self, spec_address_of};
     use 0x1::CoreAddresses;
     use 0x1::LibraTimestamp;
 
@@ -58,6 +58,13 @@ module Roles {
         // Grant the role to the libra root account
         move_to(lr_account, RoleId { role_id: LIBRA_ROOT_ROLE_ID });
     }
+    spec fun grant_libra_root_role {
+        aborts_if !LibraTimestamp::spec_is_genesis();
+        aborts_if spec_address_of(lr_account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+        aborts_if exists<RoleId>(spec_address_of(lr_account));
+        ensures exists<RoleId>(spec_address_of(lr_account));
+        ensures global<RoleId>(spec_address_of(lr_account)).role_id == SPEC_LIBRA_ROOT_ROLE_ID();
+    }
 
     /// NB: currency-related privileges are defined in the `Libra` module.
     /// Granted in genesis. So there cannot be any pre-existing privileges
@@ -72,6 +79,14 @@ module Roles {
         assert(owner_address == CoreAddresses::TREASURY_COMPLIANCE_ADDRESS(), EINVALID_TC_ADDRESS);
         // Grant the TC role to the treasury_compliance_account
         move_to(treasury_compliance_account, RoleId { role_id: TREASURY_COMPLIANCE_ROLE_ID });
+    }
+    spec fun grant_treasury_compliance_role {
+        aborts_if !LibraTimestamp::spec_is_genesis();
+        aborts_if !spec_has_libra_root_role(lr_account);
+        aborts_if spec_address_of(treasury_compliance_account) != CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS();
+        aborts_if exists<RoleId>(spec_address_of(treasury_compliance_account));
+        ensures exists<RoleId>(spec_address_of(treasury_compliance_account));
+        ensures global<RoleId>(spec_address_of(treasury_compliance_account)).role_id == SPEC_TREASURY_COMPLIANCE_ROLE_ID();
     }
 
     /// Generic new role creation (for role ids != LIBRA_ROOT_ROLE_ID
@@ -91,6 +106,12 @@ module Roles {
         assert(calling_role.role_id == TREASURY_COMPLIANCE_ROLE_ID, EINVALID_PARENT_ROLE);
         move_to(new_account, RoleId { role_id: DESIGNATED_DEALER_ROLE_ID });
     }
+    spec fun new_designated_dealer_role {
+        aborts_if !spec_has_treasury_compliance_role(creating_account);
+        aborts_if exists<RoleId>(spec_address_of(new_account));
+        ensures exists<RoleId>(spec_address_of(new_account));
+        ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_DESIGNATED_DEALER_ROLE_ID();
+    }
 
     /// Publish a Validator `RoleId` under `new_account`.
     /// The `creating_account` must be LibraRoot
@@ -98,11 +119,16 @@ module Roles {
         creating_account: &signer,
         new_account: &signer
     ) acquires RoleId {
-        let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
+        assert(has_libra_root_role(creating_account), EINVALID_PARENT_ROLE);
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);
-        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID, EINVALID_PARENT_ROLE);
         move_to(new_account, RoleId { role_id: VALIDATOR_ROLE_ID });
+    }
+    spec fun new_validator_role {
+        aborts_if !spec_has_libra_root_role(creating_account);
+        aborts_if exists<RoleId>(spec_address_of(new_account));
+        ensures exists<RoleId>(spec_address_of(new_account));
+        ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_VALIDATOR_ROLE_ID();
     }
 
     /// Publish a ValidatorOperator `RoleId` under `new_account`.
@@ -111,11 +137,16 @@ module Roles {
         creating_account: &signer,
         new_account: &signer,
     ) acquires RoleId {
-        let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
+        assert(has_libra_root_role(creating_account), EINVALID_PARENT_ROLE);
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);
-        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID, EINVALID_PARENT_ROLE);
         move_to(new_account, RoleId { role_id: VALIDATOR_OPERATOR_ROLE_ID });
+    }
+    spec fun new_validator_operator_role {
+        aborts_if !spec_has_libra_root_role(creating_account);
+        aborts_if exists<RoleId>(spec_address_of(new_account));
+        ensures exists<RoleId>(spec_address_of(new_account));
+        ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_VALIDATOR_OPERATOR_ROLE_ID();
     }
 
     /// Publish a ParentVASP `RoleId` under `new_account`.
@@ -124,11 +155,16 @@ module Roles {
         creating_account: &signer,
         new_account: &signer,
     ) acquires RoleId {
-        let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
+        assert(has_libra_root_role(creating_account), EINVALID_PARENT_ROLE);
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);
-        assert(calling_role.role_id == LIBRA_ROOT_ROLE_ID, EINVALID_PARENT_ROLE);
         move_to(new_account, RoleId { role_id: PARENT_VASP_ROLE_ID });
+    }
+    spec fun new_parent_vasp_role {
+        aborts_if !spec_has_libra_root_role(creating_account);
+        aborts_if exists<RoleId>(spec_address_of(new_account));
+        ensures exists<RoleId>(spec_address_of(new_account));
+        ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_PARENT_VASP_ROLE_ID();
     }
 
     /// Publish a ChildVASP `RoleId` under `new_account`.
@@ -137,11 +173,16 @@ module Roles {
         creating_account: &signer,
         new_account: &signer,
     ) acquires RoleId {
-        let calling_role = borrow_global<RoleId>(Signer::address_of(creating_account));
+        assert(has_parent_VASP_role(creating_account), EINVALID_PARENT_ROLE);
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);
-        assert(calling_role.role_id == PARENT_VASP_ROLE_ID, EINVALID_PARENT_ROLE);
         move_to(new_account, RoleId { role_id: CHILD_VASP_ROLE_ID });
+    }
+    spec fun new_child_vasp_role {
+        aborts_if !spec_has_parent_VASP_role(creating_account);
+        aborts_if exists<RoleId>(spec_address_of(new_account));
+        ensures exists<RoleId>(spec_address_of(new_account));
+        ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_CHILD_VASP_ROLE_ID();
     }
 
     /// Publish an Unhosted `RoleId` under `new_account`.
@@ -151,6 +192,11 @@ module Roles {
         // A role cannot have previously been assigned to `new_account`.
         assert(!exists<RoleId>(Signer::address_of(new_account)), EROLE_ALREADY_ASSIGNED);
         move_to(new_account, RoleId { role_id: UNHOSTED_ROLE_ID });
+    }
+    spec fun new_unhosted_role {
+        aborts_if exists<RoleId>(spec_address_of(new_account));
+        ensures exists<RoleId>(spec_address_of(new_account));
+        ensures global<RoleId>(spec_address_of(new_account)).role_id == SPEC_UNHOSTED_ROLE_ID();
     }
 
     ///  ## privilege-checking functions for roles ##
@@ -226,12 +272,12 @@ module Roles {
     /// Helper functions
     spec module {
         define spec_get_role_id(account: signer): u64 {
-            let addr = Signer::spec_address_of(account);
+            let addr = spec_address_of(account);
             global<RoleId>(addr).role_id
         }
 
         define spec_has_role_id(account: signer, role_id: u64): bool {
-            let addr = Signer::spec_address_of(account);
+            let addr = spec_address_of(account);
             exists<RoleId>(addr) && global<RoleId>(addr).role_id == role_id
         }
 
@@ -299,6 +345,55 @@ module Roles {
 
     spec module {
         apply RoleIdPersists to *<T>, *;
+    }
+
+
+    spec schema ThisRoleIsNotNewlyPublished {
+        this: u64;
+        ensures forall addr: address where exists<RoleId>(addr) && global<RoleId>(addr).role_id == this:
+            old(exists<RoleId>(addr)) && old(global<RoleId>(addr).role_id) == this;
+    }
+
+    spec schema AbortsIfNotLibraRoot {
+        creating_account: signer;
+        aborts_if !spec_has_libra_root_role(creating_account);
+    }
+
+    spec schema AbortsIfNotTreasuryCompliance {
+        creating_account: signer;
+        aborts_if !spec_has_treasury_compliance_role(creating_account);
+    }
+
+    spec schema AbortsIfNotParentVASP {
+        creating_account: signer;
+        aborts_if !spec_has_parent_VASP_role(creating_account);
+    }
+
+    spec module {
+        /// Validator roles are only granted by LibraRoot [B4]. A new `RoldId` with `VALIDATOR_ROLE_ID()` is only
+        /// published through `new_validator_role` which aborts if `creating_account` does not have the LibraRoot role.
+        apply ThisRoleIsNotNewlyPublished{this: SPEC_VALIDATOR_ROLE_ID()} to * except new_validator_role;
+        apply AbortsIfNotLibraRoot to new_validator_role;
+
+        /// ValidatorOperator roles are only granted by LibraRoot [B5]. A new `RoldId` with `VALIDATOR_OPERATOR_ROLE_ID()` is only
+        /// published through `new_validator_operator_role` which aborts if `creating_account` does not have the LibraRoot role.
+        apply ThisRoleIsNotNewlyPublished{this: SPEC_VALIDATOR_OPERATOR_ROLE_ID()} to * except new_validator_operator_role;
+        apply AbortsIfNotLibraRoot to new_validator_operator_role;
+
+        /// DesignatedDealer roles are only granted by TreasuryCompliance [B6](TODO: resolve the discrepancy). A new `RoldId` with `DESIGNATED_DEALER_ROLE_ID()` is only
+        /// published through `new_designated_dealer_role` which aborts if `creating_account` does not have the TreasuryCompliance role.
+        apply ThisRoleIsNotNewlyPublished{this: SPEC_DESIGNATED_DEALER_ROLE_ID()} to * except new_designated_dealer_role;
+        apply AbortsIfNotTreasuryCompliance to new_designated_dealer_role;
+
+        /// ParentVASP roles are only granted by LibraRoot [B7]. A new `RoldId` with `PARENT_VASP_ROLE_ID()` is only
+        /// published through `new_parent_vasp_role` which aborts if `creating_account` does not have the LibraRoot role.
+        apply ThisRoleIsNotNewlyPublished{this: SPEC_PARENT_VASP_ROLE_ID()} to * except new_parent_vasp_role;
+        apply AbortsIfNotLibraRoot to new_parent_vasp_role;
+
+        /// ChildVASP roles are only granted by ParentVASP [B8]. A new `RoldId` with `CHILD_VASP_ROLE_ID()` is only
+        /// published through `new_child_vasp_role` which aborts if `creating_account` does not have the ParentVASP role.
+        apply ThisRoleIsNotNewlyPublished{this: SPEC_CHILD_VASP_ROLE_ID()} to * except new_child_vasp_role;
+        apply AbortsIfNotParentVASP to new_child_vasp_role;
     }
 
     // TODO: Role is supposed to be set by end of genesis?
