@@ -94,7 +94,7 @@ pub fn encode_genesis_change_set(
     reconfigure(&mut genesis_context);
 
     // XXX/TODO: for testnet only
-    create_and_initialize_testnet_minting(&mut genesis_context, &public_key, &lbr_ty);
+    create_and_initialize_testnet_minting(&mut genesis_context, &public_key);
 
     let mut interpreter_context = genesis_context.into_data_store();
     publish_stdlib(&mut interpreter_context, stdlib_modules);
@@ -181,7 +181,6 @@ fn create_and_initialize_main_accounts(
 fn create_and_initialize_testnet_minting(
     context: &mut GenesisContext,
     public_key: &Ed25519PublicKey,
-    lbr_ty: &TypeTag,
 ) {
     let genesis_auth_key = AuthenticationKey::ed25519(public_key);
     let coin1_tag = account_config::type_tag_for_currency_code(
@@ -195,10 +194,8 @@ fn create_and_initialize_testnet_minting(
         0,
         account_config::testnet_dd_account_address(),
         genesis_auth_key.prefix().to_vec(),
+        true, // add_all_currencies
     );
-
-    let add_lbr = transaction_builder::encode_add_currency_to_account_script(lbr_ty.clone());
-    let add_coin2 = transaction_builder::encode_add_currency_to_account_script(coin2_tag.clone());
 
     let mint_max_coin1 = transaction_builder::encode_tiered_mint_script(
         coin1_tag,
@@ -219,11 +216,6 @@ fn create_and_initialize_testnet_minting(
     // Create the DD account
     context.set_sender(account_config::treasury_compliance_account_address());
     context.exec_script(&create_dd_script);
-
-    // add coins to the DD account
-    context.set_sender(account_config::testnet_dd_account_address());
-    context.exec_script(&add_lbr);
-    context.exec_script(&add_coin2);
 
     // mint the coins, and mint LBR
     context.set_sender(account_config::treasury_compliance_account_address());

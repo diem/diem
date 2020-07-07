@@ -13,11 +13,17 @@
 
 ## Function `create_designated_dealer`
 
-Create designated dealer account at 'new_account_address' and 'auth_key_prefix' for nonsynthetic CoinType.
-Create dealer and preburn resource.
+Create an account with the DesignatedDealer role at
+<code>addr</code> with authentication key
+<code>auth_key_prefix</code> |
+<code>addr</code> and a 0 balance of type
+<code>Currency</code>. If
+<code>add_all_currencies</code> is true,
+0 balances for all available currencies in the system will also be added. This can only be
+invoked by an account with the TreasuryCompliance role.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, addr: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -26,19 +32,22 @@ Create dealer and preburn resource.
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(tc_account: &signer, sliding_nonce: u64, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;) {
-    // XXX We need <b>to</b> figure out <b>if</b> TC is in charge of this or association root account. For now we <b>assume</b> assoc root.
+<pre><code><b>fun</b> <a href="#SCRIPT_create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(
+    tc_account: &signer,
+    sliding_nonce: u64,
+    addr: address,
+    auth_key_prefix: vector&lt;u8&gt;,
+    add_all_currencies: bool,
+) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
-    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_designated_dealer">LibraAccount::create_designated_dealer</a>&lt;CoinType&gt;(
-        tc_account,
-        new_account_address,
-        auth_key_prefix
+    <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_designated_dealer">LibraAccount::create_designated_dealer</a>&lt;Currency&gt;(
+        tc_account, addr, auth_key_prefix, add_all_currencies
     );
     // Create default tiers for newly created DD
-    <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, new_account_address, 500000);
-    <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, new_account_address, 5000000);
-    <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, new_account_address, 50000000);
-    <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, new_account_address, 500000000);
+    <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, addr, 500000);
+    <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, addr, 5000000);
+    <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, addr, 50000000);
+    <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, addr, 500000000);
 }
 </code></pre>
 

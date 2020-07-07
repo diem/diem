@@ -1500,7 +1500,7 @@ Create a designated dealer account at
 Creates Preburn resource under account 'new_account_address'
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1513,13 +1513,14 @@ Creates Preburn resource under account 'new_account_address'
     creator_account: &signer,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
+    add_all_currencies: bool,
 ) {
     <b>let</b> new_dd_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_dd_account);
     <a href="Libra.md#0x1_Libra_publish_preburn_to_account">Libra::publish_preburn_to_account</a>&lt;CoinType&gt;(&new_dd_account, creator_account);
     <a href="DesignatedDealer.md#0x1_DesignatedDealer_publish_designated_dealer_credential">DesignatedDealer::publish_designated_dealer_credential</a>(&new_dd_account, creator_account);
     <a href="Roles.md#0x1_Roles_new_designated_dealer_role">Roles::new_designated_dealer_role</a>(creator_account, &new_dd_account);
-    <a href="#0x1_LibraAccount_add_currencies_for_account">add_currencies_for_account</a>&lt;CoinType&gt;(&new_dd_account, <b>false</b>);
+    <a href="#0x1_LibraAccount_add_currencies_for_account">add_currencies_for_account</a>&lt;CoinType&gt;(&new_dd_account, add_all_currencies);
     <a href="#0x1_LibraAccount_make_account">make_account</a>(new_dd_account, auth_key_prefix)
 }
 </code></pre>
@@ -2872,7 +2873,7 @@ TODO(wrwg): function takes very long to verify; investigate why
 ### Function `create_designated_dealer`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 

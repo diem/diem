@@ -176,34 +176,39 @@ pub fn encode_create_child_vasp_account_script(
     )
 }
 
-/// Create designated dealer account at 'new_account_address' and 'auth_key_prefix' for
-/// nonsynthetic CoinType. Create dealer and preburn resource.
+/// Create an account with the DesignatedDealer role at `addr` with authentication key
+/// `auth_key_prefix` | `addr` and a 0 balance of type `Currency`. If `add_all_currencies`
+/// is true, 0 balances for all available currencies in the system will also be added.
+/// This can only be invoked by an account with the TreasuryCompliance role.
 pub fn encode_create_designated_dealer_script(
-    coin_type: TypeTag,
+    currency: TypeTag,
     sliding_nonce: u64,
-    new_account_address: AccountAddress,
+    addr: AccountAddress,
     auth_key_prefix: Vec<u8>,
+    add_all_currencies: bool,
 ) -> Script {
     Script::new(
         vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 6, 3, 6, 16, 4, 22, 2, 5, 24, 26, 7, 50, 99, 8,
-            149, 1, 16, 0, 0, 0, 1, 0, 2, 2, 3, 0, 1, 0, 0, 4, 2, 1, 0, 1, 5, 3, 1, 1, 1, 2, 5, 2,
-            6, 12, 3, 0, 3, 6, 12, 5, 3, 3, 6, 12, 5, 10, 2, 4, 6, 12, 3, 5, 10, 2, 1, 9, 0, 16,
-            68, 101, 115, 105, 103, 110, 97, 116, 101, 100, 68, 101, 97, 108, 101, 114, 12, 76,
+            161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 6, 3, 6, 16, 4, 22, 2, 5, 24, 28, 7, 52, 99, 8,
+            151, 1, 16, 0, 0, 0, 1, 0, 2, 2, 3, 0, 1, 0, 0, 4, 2, 1, 0, 1, 5, 3, 1, 1, 1, 2, 5, 2,
+            6, 12, 3, 0, 3, 6, 12, 5, 3, 4, 6, 12, 5, 10, 2, 1, 5, 6, 12, 3, 5, 10, 2, 1, 1, 9, 0,
+            16, 68, 101, 115, 105, 103, 110, 97, 116, 101, 100, 68, 101, 97, 108, 101, 114, 12, 76,
             105, 98, 114, 97, 65, 99, 99, 111, 117, 110, 116, 12, 83, 108, 105, 100, 105, 110, 103,
             78, 111, 110, 99, 101, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110, 99, 101, 95,
             111, 114, 95, 97, 98, 111, 114, 116, 8, 97, 100, 100, 95, 116, 105, 101, 114, 24, 99,
             114, 101, 97, 116, 101, 95, 100, 101, 115, 105, 103, 110, 97, 116, 101, 100, 95, 100,
-            101, 97, 108, 101, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 4, 1, 24,
-            10, 0, 10, 1, 17, 0, 10, 0, 10, 2, 11, 3, 56, 0, 10, 0, 10, 2, 6, 32, 161, 7, 0, 0, 0,
-            0, 0, 17, 1, 10, 0, 10, 2, 6, 64, 75, 76, 0, 0, 0, 0, 0, 17, 1, 10, 0, 10, 2, 6, 128,
-            240, 250, 2, 0, 0, 0, 0, 17, 1, 11, 0, 10, 2, 6, 0, 101, 205, 29, 0, 0, 0, 0, 17, 1, 2,
+            101, 97, 108, 101, 114, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 4, 1, 25,
+            10, 0, 10, 1, 17, 0, 10, 0, 10, 2, 11, 3, 10, 4, 56, 0, 10, 0, 10, 2, 6, 32, 161, 7, 0,
+            0, 0, 0, 0, 17, 1, 10, 0, 10, 2, 6, 64, 75, 76, 0, 0, 0, 0, 0, 17, 1, 10, 0, 10, 2, 6,
+            128, 240, 250, 2, 0, 0, 0, 0, 17, 1, 11, 0, 10, 2, 6, 0, 101, 205, 29, 0, 0, 0, 0, 17,
+            1, 2,
         ],
-        vec![coin_type],
+        vec![currency],
         vec![
             TransactionArgument::U64(sliding_nonce),
-            TransactionArgument::Address(new_account_address),
+            TransactionArgument::Address(addr),
             TransactionArgument::U8Vector(auth_key_prefix),
+            TransactionArgument::Bool(add_all_currencies),
         ],
     )
 }

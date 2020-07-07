@@ -13,6 +13,7 @@ fun main(account: &signer) {
         account,
         {{dd}},
         {{dd::auth_key}},
+        false,
     );
     LibraAccount::tiered_mint<Coin1>(
         account,

@@ -26,6 +26,7 @@ fn tiered_mint_designated_dealer() {
             0,
             *dd.address(),
             dd.auth_key_prefix(),
+            false, // add_all_currencies
         ),
         0,
     ));

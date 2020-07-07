@@ -724,13 +724,14 @@ module LibraAccount {
         creator_account: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
+        add_all_currencies: bool,
     ) {
         let new_dd_account = create_signer(new_account_address);
         Event::publish_generator(&new_dd_account);
         Libra::publish_preburn_to_account<CoinType>(&new_dd_account, creator_account);
         DesignatedDealer::publish_designated_dealer_credential(&new_dd_account, creator_account);
         Roles::new_designated_dealer_role(creator_account, &new_dd_account);
-        add_currencies_for_account<CoinType>(&new_dd_account, false);
+        add_currencies_for_account<CoinType>(&new_dd_account, add_all_currencies);
         make_account(new_dd_account, auth_key_prefix)
     }
     spec fun create_designated_dealer {
