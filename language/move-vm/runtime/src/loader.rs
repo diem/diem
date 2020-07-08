@@ -334,6 +334,10 @@ impl TypeCache {
     }
 }
 
+//
+// Loader
+//
+
 // A Loader is responsible to load scripts and modules and holds the cache of all loaded
 // entities. Each cache is protected by a `Mutex`. Operation in the Loader must be thread safe
 // (operating on values on the stack) and when cache needs updating the mutex must be taken.
@@ -354,34 +358,14 @@ impl Loader {
         }
     }
 
-    // Entry point for function execution (`MoveVM::execute_function`).
-    // Loading verifies the module if it was never loaded.
-    // Type parameters are checked as well after every type is loaded.
-    pub(crate) fn load_function(
-        &self,
-        function_name: &IdentStr,
-        module_id: &ModuleId,
-        ty_args: &[TypeTag],
-        data_store: &mut dyn DataStore,
-    ) -> VMResult<(Arc<Function>, Vec<Type>)> {
-        self.load_module(module_id, data_store)?;
-        let idx = self
-            .module_cache
-            .lock()
-            .unwrap()
-            .resolve_function_handle(function_name, module_id)?;
-        let func = self.module_cache.lock().unwrap().function_at(idx);
+    //
+    // Script verification and loading
+    //
 
-        // verify type arguments
-        let mut type_params = vec![];
-        for ty in ty_args {
-            type_params.push(self.load_type(ty, data_store)?);
-        }
-        self.verify_ty_args(func.type_parameters(), &type_params)
-            .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
-
-        Ok((func, type_params))
-    }
+    // Scripts are verified and dependencies are loaded.
+    // Effectively that means modules are cached from leaf to root in the dependency DAG.
+    // If a dependency error is found, loading stops and the error is returned.
+    // However all modules cached up to that point stay loaded.
 
     // Entry point for script execution (`MoveVM::execute_script`).
     // Verifies the script if it is not in the cache of scripts loaded.
@@ -390,7 +374,7 @@ impl Loader {
         &self,
         script_blob: &[u8],
         ty_args: &[TypeTag],
-        data_store: &mut dyn DataStore,
+        data_store: &mut impl DataStore,
     ) -> VMResult<(Arc<Function>, Vec<Type>)> {
         // retrieve or load the script
         let hash_value = HashValue::sha3_256_of(script_blob);
@@ -420,10 +404,107 @@ impl Loader {
         Ok((main, type_params))
     }
 
+    // The process of deserialization and verification is not and it must not be under lock.
+    // So when publishing modules through the dependency DAG it may happen that a different
+    // thread had loaded the module after this process fetched it from storage.
+    // Caching will take care of that by asking for each dependency module again under lock.
+    fn deserialize_and_verify_script(
+        &self,
+        script: &[u8],
+        data_store: &mut impl DataStore,
+    ) -> VMResult<CompiledScript> {
+        let script = match CompiledScript::deserialize(script) {
+            Ok(script) => script,
+            Err(err) => {
+                error!("[VM] deserializer for script returned error: {:?}", err);
+                let msg = format!("Deserialization error: {:?}", err);
+                return Err(PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
+                    .with_message(msg)
+                    .finish(Location::Script));
+            }
+        };
+
+        match self.verify_script(&script) {
+            Ok(_) => {
+                // verify dependencies
+                let deps = load_script_dependencies(&script);
+                let mut dependencies = vec![];
+                for dep in &deps {
+                    dependencies.push(self.load_module(dep, data_store)?);
+                }
+                self.verify_script_dependencies(script, dependencies)
+            }
+            Err(err) => {
+                error!(
+                    "[VM] bytecode verifier returned errors for script: {:?}",
+                    err
+                );
+                Err(err)
+            }
+        }
+    }
+
+    // Script verification steps.
+    // See `verify_module()` for module verification steps.
+    fn verify_script(&self, script: &CompiledScript) -> VMResult<()> {
+        DuplicationChecker::verify_script(&script)?;
+        SignatureChecker::verify_script(&script)?;
+        InstructionConsistency::verify_script(&script)?;
+        constants::verify_script(&script)?;
+        CodeUnitVerifier::verify_script(&script)?;
+        verify_main_signature(&script)
+    }
+
+    fn verify_script_dependencies(
+        &self,
+        script: CompiledScript,
+        dependencies: Vec<Arc<Module>>,
+    ) -> VMResult<CompiledScript> {
+        let mut deps = vec![];
+        for dep in &dependencies {
+            deps.push(dep.module());
+        }
+        DependencyChecker::verify_script(&script, deps).and_then(|_| Ok(script))
+    }
+
+    //
+    // Module verification and loading
+    //
+
+    // Entry point for function execution (`MoveVM::execute_function`).
+    // Loading verifies the module if it was never loaded.
+    // Type parameters are checked as well after every type is loaded.
+    pub(crate) fn load_function(
+        &self,
+        function_name: &IdentStr,
+        module_id: &ModuleId,
+        ty_args: &[TypeTag],
+        data_store: &mut impl DataStore,
+    ) -> VMResult<(Arc<Function>, Vec<Type>)> {
+        self.load_module(module_id, data_store)?;
+        let idx = self
+            .module_cache
+            .lock()
+            .unwrap()
+            .resolve_function_handle(function_name, module_id)?;
+        let func = self.module_cache.lock().unwrap().function_at(idx);
+
+        // verify type arguments
+        let mut type_params = vec![];
+        for ty in ty_args {
+            type_params.push(self.load_type(ty, data_store)?);
+        }
+        self.verify_ty_args(func.type_parameters(), &type_params)
+            .map_err(|e| e.finish(Location::Module(module_id.clone())))?;
+
+        Ok((func, type_params))
+    }
+
     // Entry point for module publishing (`MoveVM::publish_module`).
     // A module to be published must be loadable.
     // This step performs all verification steps to load the module without loading it.
     // The module is not added to the code cache. It is simply published to the data cache.
+    // See `verify_script()` for script verification steps.
     pub(crate) fn verify_module(&self, module: &CompiledModule) -> VMResult<()> {
         DuplicationChecker::verify_module(&module)?;
         SignatureChecker::verify_module(&module)?;
@@ -436,76 +517,62 @@ impl Loader {
         Self::check_natives(&module)
     }
 
-    fn verify_script(&self, script: &CompiledScript) -> VMResult<()> {
-        DuplicationChecker::verify_script(&script)?;
-        SignatureChecker::verify_script(&script)?;
-        InstructionConsistency::verify_script(&script)?;
-        constants::verify_script(&script)?;
-        CodeUnitVerifier::verify_script(&script)?;
-        verify_main_signature(&script)
-    }
+    // The process of loading is recursive, and module are cached by the loader as soon as
+    // they are verifiable (including dependencies).
+    // Effectively that means modules are cached from leaf to root in the dependency DAG.
+    // If a dependency error is found, loading stops and the error is returned.
+    // However all modules cached up to that point stay loaded.
+    // In principle that is not the safest model but it is justified
+    // by the fact that publishing is limited, and complex/tricky dependencies error
+    // are difficult or impossible to accomplish in reality.
 
-    fn load_type(&self, type_tag: &TypeTag, data_store: &mut dyn DataStore) -> VMResult<Type> {
-        Ok(match type_tag {
-            TypeTag::Bool => Type::Bool,
-            TypeTag::U8 => Type::U8,
-            TypeTag::U64 => Type::U64,
-            TypeTag::U128 => Type::U128,
-            TypeTag::Address => Type::Address,
-            TypeTag::Signer => Type::Signer,
-            TypeTag::Vector(tt) => Type::Vector(Box::new(self.load_type(tt, data_store)?)),
-            TypeTag::Struct(struct_tag) => {
-                let module_id = ModuleId::new(struct_tag.address, struct_tag.module.clone());
-                self.load_module(&module_id, data_store)?;
-                let (idx, struct_type) = self
-                    .module_cache
-                    .lock()
-                    .unwrap()
-                    .find_struct_by_name(&struct_tag.name, &module_id)
-                    .map_err(|e| e.finish(Location::Undefined))?;
-                if struct_type.type_parameters.is_empty() && struct_tag.type_params.is_empty() {
-                    Type::Struct(idx)
-                } else {
-                    let mut type_params = vec![];
-                    for ty_param in &struct_tag.type_params {
-                        type_params.push(self.load_type(ty_param, data_store)?);
-                    }
-                    self.verify_ty_args(&struct_type.type_parameters, &type_params)
-                        .map_err(|e| e.finish(Location::Undefined))?;
-                    Type::StructInstantiation(idx, type_params)
-                }
+    // The process of deserialization and verification is not and it must not be under lock.
+    // So when publishing modules through the dependency DAG it may happen that a different
+    // thread had loaded the module after this process fetched it from storage.
+    // Caching will take care of that by asking for each dependency module again under lock.
+    fn deserialize_and_verify_module(
+        &self,
+        id: &ModuleId,
+        data_store: &mut impl DataStore,
+    ) -> VMResult<CompiledModule> {
+        let module = match data_store.load_module(id) {
+            Ok(m) => m,
+            Err(err) => {
+                crit!("[VM] Error fetching module with id {:?}", id);
+                return Err(err);
             }
-        })
+        };
+        self.verify_module(&module)?;
+        self.check_dependencies(&module, data_store)?;
+        Ok(module)
     }
 
-    fn load_module(&self, id: &ModuleId, data_store: &mut dyn DataStore) -> VMResult<Arc<Module>> {
-        if let Some(module) = self.module_cache.lock().unwrap().get(id) {
-            return Ok(module);
+    fn check_dependencies(
+        &self,
+        module: &CompiledModule,
+        data_store: &mut impl DataStore,
+    ) -> VMResult<()> {
+        let deps = load_module_dependencies(module);
+        let mut dependencies = vec![];
+        for dep in &deps {
+            dependencies.push(self.load_module(dep, data_store)?);
         }
-        let module = self.deserialize_and_verify_module(id, data_store)?;
-        Self::check_natives(&module)?;
-        self.module_cache.lock().unwrap().insert(id.clone(), module)
+        self.verify_module_dependencies(module, dependencies)
     }
 
-    fn verify_ty_args(&self, constraints: &[Kind], ty_args: &[Type]) -> PartialVMResult<()> {
-        if constraints.len() != ty_args.len() {
-            return Err(PartialVMError::new(
-                StatusCode::NUMBER_OF_TYPE_ARGUMENTS_MISMATCH,
-            ));
+    fn verify_module_dependencies(
+        &self,
+        module: &CompiledModule,
+        dependencies: Vec<Arc<Module>>,
+    ) -> VMResult<()> {
+        let mut deps = vec![];
+        for dep in &dependencies {
+            deps.push(dep.module());
         }
-        for (ty, expected_k) in ty_args.iter().zip(constraints) {
-            let k = if self.is_resource(ty)? {
-                Kind::Resource
-            } else {
-                Kind::Copyable
-            };
-            if !k.is_sub_kind_of(*expected_k) {
-                return Err(PartialVMError::new(StatusCode::CONSTRAINT_KIND_MISMATCH));
-            }
-        }
-        Ok(())
+        DependencyChecker::verify_module(module, deps)
     }
 
+    // All native functions must be known to the loader
     fn check_natives(module: &CompiledModule) -> VMResult<()> {
         fn check_natives_impl(module: &CompiledModule) -> PartialVMResult<()> {
             for (idx, native_function) in module
@@ -545,7 +612,78 @@ impl Loader {
         check_natives_impl(module).map_err(|e| e.finish(Location::Module(module.self_id())))
     }
 
-    pub(crate) fn function_at(&self, idx: usize) -> Arc<Function> {
+    //
+    // Helpers for loading and verification
+    //
+
+    fn load_type(&self, type_tag: &TypeTag, data_store: &mut impl DataStore) -> VMResult<Type> {
+        Ok(match type_tag {
+            TypeTag::Bool => Type::Bool,
+            TypeTag::U8 => Type::U8,
+            TypeTag::U64 => Type::U64,
+            TypeTag::U128 => Type::U128,
+            TypeTag::Address => Type::Address,
+            TypeTag::Signer => Type::Signer,
+            TypeTag::Vector(tt) => Type::Vector(Box::new(self.load_type(tt, data_store)?)),
+            TypeTag::Struct(struct_tag) => {
+                let module_id = ModuleId::new(struct_tag.address, struct_tag.module.clone());
+                self.load_module(&module_id, data_store)?;
+                let (idx, struct_type) = self
+                    .module_cache
+                    .lock()
+                    .unwrap()
+                    .find_struct_by_name(&struct_tag.name, &module_id)
+                    .map_err(|e| e.finish(Location::Undefined))?;
+                if struct_type.type_parameters.is_empty() && struct_tag.type_params.is_empty() {
+                    Type::Struct(idx)
+                } else {
+                    let mut type_params = vec![];
+                    for ty_param in &struct_tag.type_params {
+                        type_params.push(self.load_type(ty_param, data_store)?);
+                    }
+                    self.verify_ty_args(&struct_type.type_parameters, &type_params)
+                        .map_err(|e| e.finish(Location::Undefined))?;
+                    Type::StructInstantiation(idx, type_params)
+                }
+            }
+        })
+    }
+
+    fn load_module(&self, id: &ModuleId, data_store: &mut impl DataStore) -> VMResult<Arc<Module>> {
+        if let Some(module) = self.module_cache.lock().unwrap().get(id) {
+            return Ok(module);
+        }
+        let module = self.deserialize_and_verify_module(id, data_store)?;
+        self.module_cache.lock().unwrap().insert(id.clone(), module)
+    }
+
+    // Verify the kind (constraints) of an instantiation.
+    // Both function and script invocation use this function to verify correctness
+    // of type arguments provided
+    fn verify_ty_args(&self, constraints: &[Kind], ty_args: &[Type]) -> PartialVMResult<()> {
+        if constraints.len() != ty_args.len() {
+            return Err(PartialVMError::new(
+                StatusCode::NUMBER_OF_TYPE_ARGUMENTS_MISMATCH,
+            ));
+        }
+        for (ty, expected_k) in ty_args.iter().zip(constraints) {
+            let k = if self.is_resource(ty)? {
+                Kind::Resource
+            } else {
+                Kind::Copyable
+            };
+            if !k.is_sub_kind_of(*expected_k) {
+                return Err(PartialVMError::new(StatusCode::CONSTRAINT_KIND_MISMATCH));
+            }
+        }
+        Ok(())
+    }
+
+    //
+    // Internal helpers
+    //
+
+    fn function_at(&self, idx: usize) -> Arc<Function> {
         self.module_cache.lock().unwrap().function_at(idx)
     }
 
@@ -605,97 +743,11 @@ impl Loader {
             _ => Ok(false),
         }
     }
-
-    fn deserialize_and_verify_script(
-        &self,
-        script: &[u8],
-        data_store: &mut dyn DataStore,
-    ) -> VMResult<CompiledScript> {
-        let script = match CompiledScript::deserialize(script) {
-            Ok(script) => script,
-            Err(err) => {
-                error!("[VM] deserializer for script returned error: {:?}", err);
-                let msg = format!("Deserialization error: {:?}", err);
-                return Err(PartialVMError::new(StatusCode::CODE_DESERIALIZATION_ERROR)
-                    .with_message(msg)
-                    .finish(Location::Script));
-            }
-        };
-
-        match self.verify_script(&script) {
-            Ok(_) => {
-                // verify dependencies
-                let deps = load_script_dependencies(&script);
-                let mut dependencies = vec![];
-                for dep in &deps {
-                    dependencies.push(self.load_module(dep, data_store)?);
-                }
-                self.verify_script_dependencies(script, dependencies)
-            }
-            Err(err) => {
-                error!(
-                    "[VM] bytecode verifier returned errors for script: {:?}",
-                    err
-                );
-                Err(err)
-            }
-        }
-    }
-
-    fn verify_script_dependencies(
-        &self,
-        script: CompiledScript,
-        dependencies: Vec<Arc<Module>>,
-    ) -> VMResult<CompiledScript> {
-        let mut deps = vec![];
-        for dep in &dependencies {
-            deps.push(dep.module());
-        }
-        DependencyChecker::verify_script(&script, deps).and_then(|_| Ok(script))
-    }
-
-    fn deserialize_and_verify_module(
-        &self,
-        id: &ModuleId,
-        data_store: &mut dyn DataStore,
-    ) -> VMResult<CompiledModule> {
-        let module = match data_store.load_module(id) {
-            Ok(m) => m,
-            Err(err) => {
-                crit!("[VM] Error fetching module with id {:?}", id);
-                return Err(err);
-            }
-        };
-        self.verify_module(&module)?;
-        self.check_dependencies(&module, data_store)?;
-        Ok(module)
-    }
-
-    fn check_dependencies(
-        &self,
-        module: &CompiledModule,
-        data_store: &mut dyn DataStore,
-    ) -> VMResult<()> {
-        let deps = load_module_dependencies(module);
-        let mut dependencies = vec![];
-        for dep in &deps {
-            dependencies.push(self.load_module(dep, data_store)?);
-        }
-        self.verify_module_dependencies(module, dependencies)
-    }
-
-    fn verify_module_dependencies(
-        &self,
-        module: &CompiledModule,
-        dependencies: Vec<Arc<Module>>,
-    ) -> VMResult<()> {
-        let mut deps = vec![];
-        for dep in &dependencies {
-            deps.push(dep.module());
-        }
-        DependencyChecker::verify_module(module, deps)
-    }
 }
+
+//
+// Resolver
+//
 
 // A simple wrapper for a `Module` or a `Script` in the `Resolver`
 enum BinaryType {
@@ -706,7 +758,7 @@ enum BinaryType {
 // A Resolver is a simple and small structure allocated on the stack and used by the
 // interpreter. It's the only API known to the interpreter and it's tailored to the interpreter
 // needs.
-pub struct Resolver<'a> {
+pub(crate) struct Resolver<'a> {
     loader: &'a Loader,
     binary: BinaryType,
 }
@@ -722,6 +774,10 @@ impl<'a> Resolver<'a> {
         Self { loader, binary }
     }
 
+    //
+    // Constant resolution
+    //
+
     pub(crate) fn constant_at(&self, idx: ConstantPoolIndex) -> &Constant {
         match &self.binary {
             BinaryType::Module(module) => module.module.constant_at(idx),
@@ -729,7 +785,11 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    pub(crate) fn function_at(&self, idx: FunctionHandleIndex) -> Arc<Function> {
+    //
+    // Function resolution
+    //
+
+    pub(crate) fn function_from_handle(&self, idx: FunctionHandleIndex) -> Arc<Function> {
         let idx = match &self.binary {
             BinaryType::Module(module) => module.function_at(idx.0),
             BinaryType::Script(script) => script.function_at(idx.0),
@@ -737,17 +797,46 @@ impl<'a> Resolver<'a> {
         self.loader.function_at(idx)
     }
 
-    pub(crate) fn function_instantiation_at(
-        &self,
-        idx: FunctionInstantiationIndex,
-    ) -> &FunctionInstantiation {
-        match &self.binary {
+    pub(crate) fn function_from_generic(&self, idx: FunctionInstantiationIndex) -> Arc<Function> {
+        let func_inst = match &self.binary {
             BinaryType::Module(module) => module.function_instantiation_at(idx.0),
             BinaryType::Script(script) => script.function_instantiation_at(idx.0),
-        }
+        };
+        self.loader.function_at(func_inst.handle)
     }
 
-    pub(crate) fn struct_at(&self, idx: StructDefinitionIndex) -> Arc<StructType> {
+    pub(crate) fn materialize_generic_function(
+        &self,
+        idx: FunctionInstantiationIndex,
+        type_params: &[Type],
+    ) -> PartialVMResult<Vec<Type>> {
+        let func_inst = match &self.binary {
+            BinaryType::Module(module) => module.function_instantiation_at(idx.0),
+            BinaryType::Script(script) => script.function_instantiation_at(idx.0),
+        };
+        let mut instantiation = vec![];
+        for ty in &func_inst.instantiation {
+            instantiation.push(ty.subst(type_params)?);
+        }
+        Ok(instantiation)
+    }
+
+    pub(crate) fn type_params_count(
+        &self,
+        idx: FunctionInstantiationIndex,
+    ) -> PartialVMResult<usize> {
+        let func_inst = match &self.binary {
+            BinaryType::Module(module) => module.function_instantiation_at(idx.0),
+            BinaryType::Script(script) => script.function_instantiation_at(idx.0),
+        };
+        Ok(func_inst.instantiation.len())
+    }
+
+    //
+    // Type resolution
+    //
+
+    pub(crate) fn struct_from_definition(&self, idx: StructDefinitionIndex) -> Arc<StructType> {
         match &self.binary {
             BinaryType::Module(module) => {
                 let gidx = module.struct_at(idx);
@@ -757,29 +846,12 @@ impl<'a> Resolver<'a> {
         }
     }
 
-    pub(crate) fn struct_gidx_at(&self, idx: StructDefinitionIndex) -> usize {
-        match &self.binary {
+    pub(crate) fn get_struct_type(&self, idx: StructDefinitionIndex) -> Type {
+        let struct_def = match &self.binary {
             BinaryType::Module(module) => module.struct_at(idx),
             BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
-        }
-    }
-
-    pub(crate) fn struct_type_at(&self, gidx: usize) -> Arc<StructType> {
-        self.loader.struct_at(gidx)
-    }
-
-    pub(crate) fn struct_instantiation_at(
-        &self,
-        idx: StructDefInstantiationIndex,
-    ) -> &StructInstantiation {
-        match &self.binary {
-            BinaryType::Module(module) => module.struct_instantiation_at(idx.0),
-            BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
-        }
-    }
-
-    pub(crate) fn get_struct_type(&self, idx: StructDefinitionIndex) -> Type {
-        Type::Struct(self.struct_gidx_at(idx))
+        };
+        Type::Struct(struct_def)
     }
 
     pub(crate) fn get_struct_instantiation_type(
@@ -787,15 +859,47 @@ impl<'a> Resolver<'a> {
         idx: StructDefInstantiationIndex,
         ty_args: &[Type],
     ) -> PartialVMResult<Type> {
-        let si = self.struct_instantiation_at(idx);
+        let struct_inst = match &self.binary {
+            BinaryType::Module(module) => module.struct_instantiation_at(idx.0),
+            BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
+        };
         Ok(Type::StructInstantiation(
-            si.get_def_idx(),
-            si.get_instantiation()
+            struct_inst.def,
+            struct_inst
+                .instantiation
                 .iter()
                 .map(|ty| ty.subst(ty_args))
                 .collect::<PartialVMResult<_>>()?,
         ))
     }
+
+    pub(crate) fn instantiation_is_resource(
+        &self,
+        idx: StructDefInstantiationIndex,
+        instantiation: &[Type],
+    ) -> PartialVMResult<bool> {
+        let struct_inst = match &self.binary {
+            BinaryType::Module(module) => module.struct_instantiation_at(idx.0),
+            BinaryType::Script(_) => unreachable!("Scripts cannot have type instructions"),
+        };
+        let struct_ty = self.loader.struct_at(struct_inst.def);
+        let is_nominal_resource = struct_ty.is_resource;
+        Ok(if is_nominal_resource {
+            true
+        } else {
+            let mut is_resource = false;
+            for ty in &struct_inst.instantiation {
+                if self.is_resource(&ty.subst(instantiation)?)? {
+                    is_resource = true;
+                }
+            }
+            is_resource
+        })
+    }
+
+    //
+    // Fields resolution
+    //
 
     pub(crate) fn field_offset(&self, idx: FieldHandleIndex) -> usize {
         match &self.binary {
@@ -868,7 +972,7 @@ impl<'a> TypeConverter for Resolver<'a> {
 // When code executes indexes in instructions are resolved against those runtime structure
 // so that any data needed for execution is immediately available
 #[derive(Debug)]
-pub struct Module {
+pub(crate) struct Module {
     id: ModuleId,
     // primitive pools
     module: CompiledModule,
@@ -1154,7 +1258,7 @@ enum Scope {
 
 // A runtime function
 #[derive(Debug)]
-pub struct Function {
+pub(crate) struct Function {
     code: Vec<Bytecode>,
     parameters: Signature,
     return_: Signature,
@@ -1282,68 +1386,52 @@ impl Function {
     }
 }
 
+//
+// Internal structures that are saved at the proper index in proper tables to access
+// execution information (interpreter).
+// The following structs are internal to the loader and never exposed out.
+// The `Loader` will create those struct and the proper table when loading a module.
+// THe `Resolver` uses those structs to return information to the `Interpreter`.
+//
+
 // A function instantiation.
 #[derive(Debug)]
-pub struct FunctionInstantiation {
+struct FunctionInstantiation {
+    // index to `ModuleCache::functions` global table
     handle: usize,
     instantiation: Vec<Type>,
 }
 
-impl FunctionInstantiation {
-    pub(crate) fn materialize(&self, type_params: &[Type]) -> PartialVMResult<Vec<Type>> {
-        let mut instantiation = vec![];
-        for ty in &self.instantiation {
-            instantiation.push(ty.subst(type_params)?);
-        }
-        Ok(instantiation)
-    }
-
-    pub(crate) fn handle(&self) -> usize {
-        self.handle
-    }
-
-    pub(crate) fn instantiation_size(&self) -> usize {
-        self.instantiation.len()
-    }
-}
-
-// A struct definition carries an index to the type in the ModuleCache and the field count
-// which is the most common information used at runtime
 #[derive(Debug)]
 struct StructDef {
+    // struct field count
     field_count: u16,
+    // `ModuelCache::structs` global table index
     idx: usize,
 }
 
-// A struct insantiation.
 #[derive(Debug)]
-pub(crate) struct StructInstantiation {
+struct StructInstantiation {
+    // struct field count
     field_count: u16,
+    // `ModuelCache::structs` global table index. It is the generic type.
     def: usize,
     instantiation: Vec<Type>,
-}
-
-impl StructInstantiation {
-    pub(crate) fn get_def_idx(&self) -> usize {
-        self.def
-    }
-
-    pub(crate) fn get_instantiation(&self) -> &[Type] {
-        &self.instantiation
-    }
 }
 
 // A field handle. The offset is the only used information when operating on a field
 #[derive(Debug)]
 struct FieldHandle {
     offset: usize,
+    // `ModuelCache::structs` global table index. It is the generic type.
     owner: usize,
 }
 
 // A field instantiation. The offset is the only used information when operating on a field
 #[derive(Debug)]
-pub struct FieldInstantiation {
+struct FieldInstantiation {
     offset: usize,
+    // `ModuelCache::structs` global table index. It is the generic type.
     owner: usize,
 }
 

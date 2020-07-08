@@ -45,7 +45,7 @@ impl VMRuntime {
         &self,
         module: Vec<u8>,
         sender: AccountAddress,
-        data_store: &mut dyn DataStore,
+        data_store: &mut impl DataStore,
         _cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
         // deserialize the module. Perform bounds check. After this indexes can be
@@ -91,7 +91,7 @@ impl VMRuntime {
         ty_args: Vec<TypeTag>,
         mut args: Vec<Value>,
         sender: AccountAddress,
-        data_store: &mut dyn DataStore,
+        data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
         // signer helper closure
@@ -130,7 +130,7 @@ impl VMRuntime {
         function_name: &IdentStr,
         ty_args: Vec<TypeTag>,
         args: Vec<Value>,
-        data_store: &mut dyn DataStore,
+        data_store: &mut impl DataStore,
         cost_strategy: &mut CostStrategy,
     ) -> VMResult<()> {
         // load the function in the given module, perform verification of the module and

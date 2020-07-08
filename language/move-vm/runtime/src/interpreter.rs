@@ -147,13 +147,11 @@ impl Interpreter {
                             AbstractMemorySize::new(1 as GasCarrier),
                         )
                         .map_err(|e| self.set_location(e))?;
-                    let func = resolver.function_at(fh_idx);
+                    let func = resolver.function_from_handle(fh_idx);
                     if func.is_native() {
                         self.call_native(&resolver, data_store, cost_strategy, func, vec![])?;
                         continue;
                     }
-                    // TODO: when a native function is executed, the current frame has not yet
-                    // been pushed onto the call stack. Fix it.
                     let frame = self
                         .make_call_frame(func, vec![])
                         .or_else(|err| Err(self.maybe_core_dump(err, &current_frame)))?;
@@ -165,25 +163,23 @@ impl Interpreter {
                     current_frame = frame;
                 }
                 ExitCode::CallGeneric(idx) => {
-                    let func_inst = resolver.function_instantiation_at(idx);
-                    cost_strategy
-                        .charge_instr_with_size(
-                            Opcodes::CALL_GENERIC,
-                            AbstractMemorySize::new(
-                                (func_inst.instantiation_size() + 1) as GasCarrier,
-                            ),
-                        )
+                    resolver
+                        .type_params_count(idx)
+                        .and_then(|arity| {
+                            cost_strategy.charge_instr_with_size(
+                                Opcodes::CALL_GENERIC,
+                                AbstractMemorySize::new((arity + 1) as GasCarrier),
+                            )
+                        })
                         .map_err(|e| self.set_location(e))?;
-                    let func = loader.function_at(func_inst.handle());
-                    let ty_args = func_inst
-                        .materialize(current_frame.ty_args())
+                    let ty_args = resolver
+                        .materialize_generic_function(idx, current_frame.ty_args())
                         .map_err(|e| self.set_location(e))?;
+                    let func = resolver.function_from_generic(idx);
                     if func.is_native() {
                         self.call_native(&resolver, data_store, cost_strategy, func, ty_args)?;
                         continue;
                     }
-                    // TODO: when a native function is executed, the current frame has not yet
-                    // been pushed onto the call stack. Fix it.
                     let frame = self
                         .make_call_frame(func, ty_args)
                         .or_else(|err| Err(self.maybe_core_dump(err, &current_frame)))?;
@@ -793,7 +789,7 @@ impl Frame {
                             |acc, v| acc.add(v.size()),
                         );
                         cost_strategy.charge_instr_with_size(Opcodes::PACK, size)?;
-                        let is_resource = resolver.struct_at(*sd_idx).is_resource;
+                        let is_resource = resolver.struct_from_definition(*sd_idx).is_resource;
                         interpreter
                             .operand_stack
                             .push(Value::struct_(Struct::pack(args, is_resource)))?;
@@ -806,22 +802,8 @@ impl Frame {
                             |acc, v| acc.add(v.size()),
                         );
                         cost_strategy.charge_instr_with_size(Opcodes::PACK_GENERIC, size)?;
-                        let struct_def = resolver.struct_instantiation_at(*si_idx);
-                        let struct_ty = resolver.struct_type_at(struct_def.get_def_idx());
-                        let is_nominal_resource = struct_ty.is_resource;
-
-                        let is_resource = if is_nominal_resource {
-                            true
-                        } else {
-                            let mut is_resource = false;
-                            for ty in struct_def.get_instantiation() {
-                                if resolver.is_resource(&ty.subst(self.ty_args())?)? {
-                                    is_resource = true;
-                                }
-                            }
-                            is_resource
-                        };
-
+                        let is_resource =
+                            resolver.instantiation_is_resource(*si_idx, self.ty_args())?;
                         interpreter
                             .operand_stack
                             .push(Value::struct_(Struct::pack(args, is_resource)))?;
