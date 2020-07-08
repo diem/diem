@@ -7,7 +7,7 @@ module VASP {
     use 0x1::Signature;
     use 0x1::Roles;  // alias import does not play well with spec functions in Roles.
     use 0x1::Libra;
-    use 0x1::AccountLimits::{Self, CallingCapability};
+    use 0x1::AccountLimits::{Self, AccountLimitMutationCapability};
     use 0x1::AccountFreezing;
 
     /// Each VASP has a unique root account that holds a `ParentVASP` resource. This resource holds
@@ -36,7 +36,7 @@ module VASP {
     resource struct ChildVASP { parent_vasp_addr: address }
 
     /// A singleton resource allowing this module to publish limits definitions and accounting windows
-    resource struct VASPOperationsResource { limits_cap: CallingCapability }
+    resource struct VASPOperationsResource { limits_cap: AccountLimitMutationCapability }
 
     const ENOT_GENESIS: u64 = 0;
     const ENOT_A_REGISTERED_CURRENCY: u64 = 1;
@@ -51,8 +51,9 @@ module VASP {
         assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
-        let limits_cap = AccountLimits::grant_calling_capability(lr_account);
-        move_to(lr_account, VASPOperationsResource { limits_cap })
+        move_to(lr_account, VASPOperationsResource {
+            limits_cap: AccountLimits::grant_mutation_capability(lr_account),
+        })
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -176,12 +177,11 @@ module VASP {
         let account_address = Signer::address_of(account);
         if (!is_vasp(account_address)) return true;
         let parent_address = parent_address(account_address);
-        if (AccountLimits::has_limits_published<CoinType>(parent_address)) {
+        if (AccountLimits::has_window_published<CoinType>(parent_address)) {
             true
         } else if (is_parent(account_address)) {
             let cap = &borrow_global<VASPOperationsResource>(CoreAddresses::LIBRA_ROOT_ADDRESS()).limits_cap;
-            AccountLimits::publish_unrestricted_limits<CoinType>(account, cap);
-            AccountLimits::publish_window<CoinType>(account, cap, parent_address);
+            AccountLimits::publish_window<CoinType>(account, cap, CoreAddresses::LIBRA_ROOT_ADDRESS());
             true
         } else {
             // it's a child vasp, and we can't publish the limits definition under it.

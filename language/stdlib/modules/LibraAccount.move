@@ -3,7 +3,7 @@ address 0x1 {
 // The module for the account resource that governs every Libra account
 module LibraAccount {
     use 0x1::CoreAddresses;
-    use 0x1::AccountLimits;
+    use 0x1::AccountLimits::{Self, AccountLimitMutationCapability};
     use 0x1::Coin1::Coin1;
     use 0x1::Coin2::Coin2;
     use 0x1::Event::{Self, EventHandle};
@@ -73,10 +73,10 @@ module LibraAccount {
         account_address: address,
     }
 
-    /// A wrapper around an `AccountLimits::CallingCapability` which is used to check for account limits
+    /// A wrapper around an `AccountLimitMutationCapability` which is used to check for account limits
     /// and to record freeze/unfreeze events.
     resource struct AccountOperationsCapability {
-        limits_cap: AccountLimits::CallingCapability,
+        limits_cap: AccountLimitMutationCapability,
     }
 
     /// Message for sent events
@@ -150,12 +150,10 @@ module LibraAccount {
         assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         // Operational constraint, not a privilege constraint.
         assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_SINGLETON_ADDRESS);
-        let limits_cap = AccountLimits::grant_calling_capability(lr_account);
-        AccountLimits::initialize(lr_account, &limits_cap);
         move_to(
             lr_account,
             AccountOperationsCapability {
-                limits_cap,
+                limits_cap: AccountLimits::grant_mutation_capability(lr_account),
             }
         );
     }

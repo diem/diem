@@ -166,7 +166,7 @@ A singleton resource allowing this module to publish limits definitions and acco
 <dl>
 <dt>
 
-<code>limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a></code>
+<code>limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a></code>
 </dt>
 <dd>
 
@@ -195,8 +195,9 @@ A singleton resource allowing this module to publish limits definitions and acco
     <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
     <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
-    <b>let</b> limits_cap = <a href="AccountLimits.md#0x1_AccountLimits_grant_calling_capability">AccountLimits::grant_calling_capability</a>(lr_account);
-    move_to(lr_account, <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a> { limits_cap })
+    move_to(lr_account, <a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a> {
+        limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_grant_mutation_capability">AccountLimits::grant_mutation_capability</a>(lr_account),
+    })
 }
 </code></pre>
 
@@ -409,12 +410,11 @@ will be published under the account.
     <b>let</b> account_address = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(account);
     <b>if</b> (!<a href="#0x1_VASP_is_vasp">is_vasp</a>(account_address)) <b>return</b> <b>true</b>;
     <b>let</b> parent_address = <a href="#0x1_VASP_parent_address">parent_address</a>(account_address);
-    <b>if</b> (<a href="AccountLimits.md#0x1_AccountLimits_has_limits_published">AccountLimits::has_limits_published</a>&lt;CoinType&gt;(parent_address)) {
+    <b>if</b> (<a href="AccountLimits.md#0x1_AccountLimits_has_window_published">AccountLimits::has_window_published</a>&lt;CoinType&gt;(parent_address)) {
         <b>true</b>
     } <b>else</b> <b>if</b> (<a href="#0x1_VASP_is_parent">is_parent</a>(account_address)) {
         <b>let</b> cap = &borrow_global&lt;<a href="#0x1_VASP_VASPOperationsResource">VASPOperationsResource</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).limits_cap;
-        <a href="AccountLimits.md#0x1_AccountLimits_publish_unrestricted_limits">AccountLimits::publish_unrestricted_limits</a>&lt;CoinType&gt;(account, cap);
-        <a href="AccountLimits.md#0x1_AccountLimits_publish_window">AccountLimits::publish_window</a>&lt;CoinType&gt;(account, cap, parent_address);
+        <a href="AccountLimits.md#0x1_AccountLimits_publish_window">AccountLimits::publish_window</a>&lt;CoinType&gt;(account, cap, <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
         <b>true</b>
     } <b>else</b> {
         // it's a child vasp, and we can't publish the limits definition under it.

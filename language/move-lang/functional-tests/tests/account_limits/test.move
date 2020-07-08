@@ -44,7 +44,7 @@ script {
     use 0x1::CoreAddresses;
     use 0x1::LBR::LBR;
     fun main(tc_account: &signer) {
-        AccountLimits::update_limits_definition<LBR>(tc_account, CoreAddresses::LIBRA_ROOT_ADDRESS(), 2, 2, 0);
+        AccountLimits::update_limits_definition<LBR>(tc_account, CoreAddresses::LIBRA_ROOT_ADDRESS(), 2, 2, 0, 0);
     }
 }
 
@@ -77,7 +77,7 @@ script {
     use 0x1::CoreAddresses;
     use 0x1::LBR::LBR;
     fun main(tc_account: &signer) {
-        AccountLimits::update_limits_definition<LBR>(tc_account, CoreAddresses::LIBRA_ROOT_ADDRESS(), 1000, 1000, 1000);
+        AccountLimits::update_limits_definition<LBR>(tc_account, CoreAddresses::LIBRA_ROOT_ADDRESS(), 1000, 1000, 1000, 0);
     }
 }
 

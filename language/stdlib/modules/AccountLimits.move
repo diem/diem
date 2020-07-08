@@ -5,13 +5,13 @@ module AccountLimits {
     use 0x1::Coin1::Coin1;
     use 0x1::Coin2::Coin2;
     use 0x1::LBR::LBR;
-    use 0x1::Roles::{has_libra_root_role, has_treasury_compliance_role};
+    use 0x1::Roles;
     use 0x1::CoreAddresses;
     use 0x1::Signer;
 
     /// An operations capability that restricts callers of this module since
     /// the operations can mutate account states.
-    resource struct CallingCapability { }
+    resource struct AccountLimitMutationCapability { }
 
     /// A resource specifying the account limits per-currency. There is a default
     /// `LimitsDefinition` resource for unhosted accounts published at
@@ -49,6 +49,7 @@ module AccountLimits {
     const EINVALID_INITIALIZATION_ADDRESS: u64 = 1;
     const ENOT_LIBRA_ROOT: u64 = 2;
     const ENOT_TREASURY_COMPLIANCE: u64 = 3;
+    const ENO_LIMITS_DEFINITION_EXISTS: u64 = 4;
 
     /// 24 hours in microseconds
     const ONE_DAY: u64 = 86400000000;
@@ -56,19 +57,19 @@ module AccountLimits {
 
     /// Grant a capability to call this module. This does not necessarily
     /// need to be a unique capability.
-    public fun grant_calling_capability(lr_account: &signer): CallingCapability {
+    public fun grant_mutation_capability(lr_account: &signer): AccountLimitMutationCapability {
         assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
-        assert(has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
-        CallingCapability{}
+        assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
+        AccountLimitMutationCapability{}
     }
 
     /// Initializes the account limits for unhosted accounts.
-    public fun initialize(lr_account: &signer, calling_cap: &CallingCapability) {
+    public fun initialize(lr_account: &signer) {
         assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
         assert(Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(), EINVALID_INITIALIZATION_ADDRESS);
-        publish_unrestricted_limits<LBR>(lr_account, calling_cap);
-        publish_unrestricted_limits<Coin1>(lr_account, calling_cap);
-        publish_unrestricted_limits<Coin2>(lr_account, calling_cap);
+        publish_unrestricted_limits<LBR>(lr_account);
+        publish_unrestricted_limits<Coin1>(lr_account);
+        publish_unrestricted_limits<Coin2>(lr_account);
     }
 
     /// Determines if depositing `amount` of `CoinType` coins into the
@@ -77,7 +78,7 @@ module AccountLimits {
     public fun update_deposit_limits<CoinType>(
         amount: u64,
         addr: address,
-        _cap: &CallingCapability,
+        _cap: &AccountLimitMutationCapability,
     ): bool acquires LimitsDefinition, Window {
         can_receive<CoinType>(
             amount,
@@ -101,7 +102,7 @@ module AccountLimits {
     public fun update_withdrawal_limits<CoinType>(
         amount: u64,
         addr: address,
-        _cap: &CallingCapability,
+        _cap: &AccountLimitMutationCapability,
     ): bool acquires LimitsDefinition, Window {
         can_withdraw<CoinType>(
             amount,
@@ -115,7 +116,7 @@ module AccountLimits {
     /// their root/parent account.
     public fun publish_window<CoinType>(
         to_limit: &signer,
-        _: &CallingCapability,
+        _: &AccountLimitMutationCapability,
         limit_address: address,
     ) {
         move_to(
@@ -130,31 +131,22 @@ module AccountLimits {
         )
     }
 
-    /// Publishes a `LimitsDefinition` resource under `account`. The caller must have permission
-    /// to publish this, represented by the `CallingCapability`.
-    public fun publish_limits_definition<CoinType>(
-        account: &signer,
-        _: &CallingCapability,
-        max_inflow: u64,
-        max_outflow: u64,
-        max_holding: u64,
-        time_period: u64
-    ) {
+    /// Unrestricted limits are represented by setting all fields in the
+    /// limits definition to `U64_MAX`. Anyone can publish an unrestricted
+    /// limits since no windows will point to this limits definition unless the
+    /// TC account, or a caller with access to a `&AccountLimitMutationCapability` points a
+    /// window to it. Additionally, the TC controls the values held within this
+    /// resource once it's published.
+    public fun publish_unrestricted_limits<CoinType>(publish_account: &signer) {
         move_to(
-            account,
+            publish_account,
             LimitsDefinition<CoinType> {
-                max_inflow,
-                max_outflow,
-                max_holding,
-                time_period,
+                max_inflow: U64_MAX,
+                max_outflow: U64_MAX,
+                max_holding: U64_MAX,
+                time_period: ONE_DAY,
             }
         )
-    }
-
-    /// Unrestricted accounts are represented by setting all fields in the
-    /// limits definition to u64 max.
-    public fun publish_unrestricted_limits<CoinType>(account: &signer, cap: &CallingCapability) {
-        publish_limits_definition<CoinType>(account, cap, U64_MAX, U64_MAX, U64_MAX, ONE_DAY)
     }
 
     /// Updates the `LimitsDefinition<CoinType>` resource at `limit_address`.
@@ -165,26 +157,39 @@ module AccountLimits {
         new_max_inflow: u64,
         new_max_outflow: u64,
         new_max_holding_balance: u64,
+        new_time_period: u64,
     ) acquires LimitsDefinition {
-        assert(has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
+        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
         // As we don't have Optionals for txn scripts, in update_account_limit_definition.move
         // we use 0 value to represent a None (ie no update to that variable)
         let limits_def = borrow_global_mut<LimitsDefinition<CoinType>>(limit_address);
         if (new_max_inflow > 0) { limits_def.max_inflow = new_max_inflow };
         if (new_max_outflow > 0) { limits_def.max_outflow = new_max_outflow };
         if (new_max_holding_balance > 0) { limits_def.max_holding = new_max_holding_balance };
+        if (new_time_period > 0) { limits_def.time_period = new_time_period };
     }
 
-    /// Since we don't track balances of accounts before they are limited, once
-    /// they do become limited the approximate balance in `CointType` held by
-    /// the entity across all of its accounts will need to be set by the association.
-    public fun set_current_holdings<CoinType>(
+    /// Update either the `tracked_balance` or `limit_address` fields of the
+    /// `Window<CoinType>` stored under `window_address`.
+    /// * Since we don't track balances of accounts before they are limited, once
+    ///   they do become limited the approximate balance in `CointType` held by
+    ///   the entity across all of its accounts will need to be set by the association.
+    ///   if `aggregate_balance` is set to zero the field is not updated.
+    /// * This updates the `limit_address` in the window resource to a new limits definition at
+    ///   `new_limit_address`. If the `aggregate_balance` needs to be updated
+    ///   but the `limit_address` should remain the same, the current
+    ///   `limit_address` needs to be passed in for `new_limit_address`.
+    public fun update_window_info<CoinType>(
         tc_account: &signer,
         window_address: address,
         aggregate_balance: u64,
+        new_limit_address: address,
     ) acquires Window {
-        assert(has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
-        borrow_global_mut<Window<CoinType>>(window_address).tracked_balance = aggregate_balance;
+        assert(Roles::has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
+        let window = borrow_global_mut<Window<CoinType>>(window_address);
+        if (aggregate_balance != 0)  { window.tracked_balance = aggregate_balance };
+        assert(exists<LimitsDefinition<CoinType>>(new_limit_address), ENO_LIMITS_DEFINITION_EXISTS);
+        window.limit_address = new_limit_address;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -270,9 +275,12 @@ module AccountLimits {
         exists<LimitsDefinition<CoinType>>(addr)
     }
 
+    public fun has_window_published<CoinType>(addr: address): bool {
+        exists<Window<CoinType>>(addr)
+    }
+
     fun current_time(): u64 {
         if (LibraTimestamp::is_not_initialized()) 0 else LibraTimestamp::now_microseconds()
     }
 }
-
 }
