@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //!
-//! The security module gathers security-related logs
+//! The security module gathers security-related logs:
+//! logs to detect malicious behavior from other validators.
 //!
 //! ```
 //! use libra_logger::prelude::*;
@@ -62,11 +63,11 @@ pub mod security_events {
     /// A block being committed or executed is invalid
     pub const INVALID_BLOCK: &str = "InvalidBlock";
 
-    // Executor
-    // --------
+    // State-Sync
+    // ----------
 
-    /// Executor received an invalid transactions chunk
-    pub const INVALID_CHUNK_EXECUTOR: &str = "InvalidChunkExecutor";
+    /// Invalid chunk of transactions received
+    pub const STATE_SYNC_INVALID_CHUNK: &str = "InvalidChunk";
 
     // Health Checker
     // --------------

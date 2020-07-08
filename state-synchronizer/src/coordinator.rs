@@ -283,11 +283,16 @@ impl<T: ExecutorProxyTrait> SyncCoordinator<T> {
                 }
             }
             StateSynchronizerMsg::GetChunkResponse(response) => {
-                if let Err(err) = self.process_chunk_response(&peer.clone(), *response).await {
-                    error!(
-                        "[state sync] failed to process chunk response from {:?}: {}",
-                        peer, err
-                    );
+                if let Err(err) = self
+                    .process_chunk_response(&peer.clone(), *response.clone())
+                    .await
+                {
+                    // security log
+                    send_struct_log!(security_log(security_events::STATE_SYNC_INVALID_CHUNK)
+                        .data("from_peer", &peer)
+                        .data("error", format!("{}", err))
+                        .data("chunk", &response));
+
                     // TODO update dashboards to ID peers using PeerNetworkID, not just peer ID
                     counters::APPLY_CHUNK_FAILURE
                         .with_label_values(&[&*peer.peer_id().to_string()])
