@@ -27,8 +27,8 @@ use libra_types::{
 };
 use std::{convert::TryFrom, ffi::CStr, slice, time::Duration};
 use transaction_builder::{
-    encode_add_currency_to_account_script, encode_rotate_base_url_script,
-    encode_rotate_compliance_public_key_script, encode_transfer_with_metadata_script,
+    encode_add_currency_to_account_script, encode_peer_to_peer_with_metadata_script,
+    encode_rotate_base_url_script, encode_rotate_compliance_public_key_script,
     get_transaction_name,
 };
 
@@ -175,7 +175,7 @@ pub unsafe extern "C" fn libra_TransactionP2PScript_from(
         }
     };
 
-    let script = encode_transfer_with_metadata_script(
+    let script = encode_peer_to_peer_with_metadata_script(
         coin_type_tag,
         receiver_address,
         num_coins,
@@ -389,7 +389,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
         slice::from_raw_parts(metadata_signature_bytes, metadata_signature_len).to_vec()
     };
 
-    let program = encode_transfer_with_metadata_script(
+    let program = encode_peer_to_peer_with_metadata_script(
         lbr_type_tag(),
         receiver_address,
         num_coins,
@@ -1124,7 +1124,7 @@ mod test {
         let metadata_signature = [0x1; 64].to_vec();
         let signature = Ed25519Signature::try_from(&[1u8; Ed25519Signature::LENGTH][..]).unwrap();
 
-        let program = encode_transfer_with_metadata_script(
+        let program = encode_peer_to_peer_with_metadata_script(
             lbr_type_tag(),
             receiver,
             amount,

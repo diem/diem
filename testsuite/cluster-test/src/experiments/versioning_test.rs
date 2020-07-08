@@ -27,7 +27,7 @@ use std::{
 use structopt::StructOpt;
 use tokio::time;
 use transaction_builder::{
-    encode_transfer_with_metadata_script, encode_update_libra_version_script,
+    encode_peer_to_peer_with_metadata_script, encode_update_libra_version_script,
 };
 
 #[derive(StructOpt, Debug)]
@@ -139,7 +139,7 @@ impl Experiment for ValidatorVersioning {
         let mut account_1 = context.tx_emitter.take_account();
         let account_2 = context.tx_emitter.take_account();
 
-        let txn_payload = TransactionPayload::Script(encode_transfer_with_metadata_script(
+        let txn_payload = TransactionPayload::Script(encode_peer_to_peer_with_metadata_script(
             lbr_type_tag(),
             account_2.address,
             1,

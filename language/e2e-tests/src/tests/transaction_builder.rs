@@ -348,7 +348,7 @@ fn dual_attestation_payment() {
             &message,
         );
         let output = executor.execute_and_apply(payment_sender.signed_script_txn(
-            encode_transfer_with_metadata_script(
+            encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *payment_receiver.address(),
                 payment_amount,
@@ -367,7 +367,7 @@ fn dual_attestation_payment() {
         // structurally invalid signature. Fails.
         let ref_id = [0u8; 32].to_vec();
         let output = executor.execute_transaction(payment_sender.signed_script_txn(
-            encode_transfer_with_metadata_script(
+            encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *payment_receiver.address(),
                 payment_amount,
@@ -404,7 +404,7 @@ fn dual_attestation_payment() {
             &message,
         );
         let output = executor.execute_transaction(payment_sender.signed_script_txn(
-            encode_transfer_with_metadata_script(
+            encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *payment_receiver.address(),
                 payment_amount,
@@ -441,7 +441,7 @@ fn dual_attestation_payment() {
             &message,
         );
         let output = executor.execute_transaction(payment_sender.signed_script_txn(
-            encode_transfer_with_metadata_script(
+            encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *payment_receiver.address(),
                 payment_amount,
@@ -461,7 +461,7 @@ fn dual_attestation_payment() {
         // checking isn't performed on intra-vasp transfers
         // parent->child
         executor.execute_and_apply(payment_sender.signed_script_txn(
-            encode_transfer_with_metadata_script(
+            encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *sender_child.address(),
                 payment_amount * 2,
@@ -475,7 +475,7 @@ fn dual_attestation_payment() {
         // Checking isn't performed on intra-vasp transfers
         // child->parent
         executor.execute_and_apply(sender_child.signed_script_txn(
-            encode_transfer_with_metadata_script(
+            encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *payment_sender.address(),
                 payment_amount,
@@ -518,7 +518,7 @@ fn dual_attestation_payment() {
         // Check that unhosted wallet <-> VASP transactions do not require dual attestation
         // since checking isn't performed on VASP->UHW transfers.
         executor.execute_and_apply(payment_sender.signed_script_txn(
-            encode_transfer_with_metadata_script(
+            encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *unhosted.address(),
                 payment_amount,
@@ -532,7 +532,7 @@ fn dual_attestation_payment() {
         // Checking isn't performed on VASP->UHW
         // Check from a child account.
         executor.execute_and_apply(sender_child.signed_script_txn(
-            encode_transfer_with_metadata_script(
+            encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *unhosted.address(),
                 payment_amount,
@@ -545,7 +545,7 @@ fn dual_attestation_payment() {
     {
         // Checking isn't performed on UHW->VASP
         executor.execute_and_apply(unhosted.signed_script_txn(
-            encode_transfer_with_metadata_script(
+            encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *payment_sender.address(),
                 payment_amount,
@@ -558,7 +558,7 @@ fn dual_attestation_payment() {
     {
         // Checking isn't performed on UHW->VASP
         executor.execute_and_apply(unhosted.signed_script_txn(
-            encode_transfer_with_metadata_script(
+            encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *sender_child.address(),
                 payment_amount,
@@ -572,7 +572,7 @@ fn dual_attestation_payment() {
         // Finally, check that unhosted <-> unhosted transactions do not require dual attestation
         // Checking isn't performed on UHW->UHW
         executor.execute_and_apply(unhosted.signed_script_txn(
-            encode_transfer_with_metadata_script(
+            encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *unhosted_other.address(),
                 payment_amount,
@@ -614,7 +614,7 @@ fn dual_attestation_payment() {
             &message,
         );
         let output = executor.execute_transaction(payment_sender.signed_script_txn(
-            encode_transfer_with_metadata_script(
+            encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *payment_receiver.address(),
                 payment_amount,
@@ -916,7 +916,7 @@ fn account_limits() {
         let output = executor.execute_transaction(
             vasp_b
                 .transaction()
-                .script(encode_transfer_with_metadata_script(
+                .script(encode_peer_to_peer_with_metadata_script(
                     account_config::coin1_tag(),
                     *vasp_a.address(),
                     mint_amount + 1,
@@ -939,7 +939,7 @@ fn account_limits() {
         let output = executor.execute_transaction(
             vasp_b
                 .transaction()
-                .script(encode_transfer_with_metadata_script(
+                .script(encode_peer_to_peer_with_metadata_script(
                     account_config::coin1_tag(),
                     *vasp_a_child.address(),
                     mint_amount + 1,
@@ -961,7 +961,7 @@ fn account_limits() {
     executor.execute_and_apply(
         vasp_a
             .transaction()
-            .script(encode_transfer_with_metadata_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *vasp_a_child.address(),
                 mint_amount + 1,
@@ -977,7 +977,7 @@ fn account_limits() {
     executor.execute_and_apply(
         vasp_a_child
             .transaction()
-            .script(encode_transfer_with_metadata_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *vasp_b_child.address(),
                 mint_amount + 1,
@@ -993,7 +993,7 @@ fn account_limits() {
     executor.execute_and_apply(
         vasp_b_child
             .transaction()
-            .script(encode_transfer_with_metadata_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *vasp_a_child.address(),
                 mint_amount,
@@ -1071,7 +1071,7 @@ fn account_limits() {
     executor.execute_and_apply(
         vasp_a
             .transaction()
-            .script(encode_transfer_with_metadata_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *vasp_a_child.address(),
                 1001,
@@ -1087,7 +1087,7 @@ fn account_limits() {
     executor.execute_and_apply(
         vasp_a_child
             .transaction()
-            .script(encode_transfer_with_metadata_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *vasp_b_child.address(),
                 1000,
@@ -1104,7 +1104,7 @@ fn account_limits() {
         let output = executor.execute_transaction(
             vasp_a
                 .transaction()
-                .script(encode_transfer_with_metadata_script(
+                .script(encode_peer_to_peer_with_metadata_script(
                     account_config::coin1_tag(),
                     *vasp_b.address(),
                     1,
@@ -1127,7 +1127,7 @@ fn account_limits() {
         let output = executor.execute_transaction(
             vasp_a_child
                 .transaction()
-                .script(encode_transfer_with_metadata_script(
+                .script(encode_peer_to_peer_with_metadata_script(
                     account_config::coin1_tag(),
                     *vasp_b_child.address(),
                     1,
@@ -1150,7 +1150,7 @@ fn account_limits() {
         let output = executor.execute_transaction(
             vasp_a_child
                 .transaction()
-                .script(encode_transfer_with_metadata_script(
+                .script(encode_peer_to_peer_with_metadata_script(
                     account_config::coin1_tag(),
                     *dd.address(),
                     1,
@@ -1175,7 +1175,7 @@ fn account_limits() {
         let output = executor.execute_transaction(
             vasp_a_child
                 .transaction()
-                .script(encode_transfer_with_metadata_script(
+                .script(encode_peer_to_peer_with_metadata_script(
                     account_config::coin1_tag(),
                     *dd.address(),
                     1,
@@ -1241,7 +1241,7 @@ fn account_limits() {
         let output = executor.execute_transaction(
             vasp_b
                 .transaction()
-                .script(encode_transfer_with_metadata_script(
+                .script(encode_peer_to_peer_with_metadata_script(
                     account_config::coin1_tag(),
                     *vasp_a_child.address(),
                     1,
@@ -1263,7 +1263,7 @@ fn account_limits() {
     executor.execute_and_apply(
         vasp_a
             .transaction()
-            .script(encode_transfer_with_metadata_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *vasp_b_child.address(),
                 10,
@@ -1279,7 +1279,7 @@ fn account_limits() {
     executor.execute_and_apply(
         vasp_b
             .transaction()
-            .script(encode_transfer_with_metadata_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *vasp_a_child.address(),
                 10,
@@ -1296,7 +1296,7 @@ fn account_limits() {
         let output = executor.execute_transaction(
             vasp_b
                 .transaction()
-                .script(encode_transfer_with_metadata_script(
+                .script(encode_peer_to_peer_with_metadata_script(
                     account_config::coin1_tag(),
                     *vasp_a_child.address(),
                     1,
@@ -1318,7 +1318,7 @@ fn account_limits() {
     executor.execute_and_apply(
         vasp_a_child
             .transaction()
-            .script(encode_transfer_with_metadata_script(
+            .script(encode_peer_to_peer_with_metadata_script(
                 account_config::coin1_tag(),
                 *vasp_a.address(),
                 1100,

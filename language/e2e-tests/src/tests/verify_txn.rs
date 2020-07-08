@@ -22,7 +22,7 @@ use libra_types::{
     vm_status::{StatusCode, StatusType, VMStatus},
 };
 use move_core_types::gas_schedule::{GasAlgebra, GasConstants};
-use transaction_builder::encode_transfer_with_metadata_script;
+use transaction_builder::encode_peer_to_peer_with_metadata_script;
 
 #[test]
 fn verify_signature() {
@@ -31,7 +31,7 @@ fn verify_signature() {
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
-    let program = encode_transfer_with_metadata_script(
+    let program = encode_peer_to_peer_with_metadata_script(
         lbr_type_tag(),
         *sender.address(),
         100,
@@ -60,7 +60,7 @@ fn verify_reserved_sender() {
     executor.add_account_data(&sender);
     // Generate a new key pair to try and sign things with.
     let private_key = Ed25519PrivateKey::generate_for_testing();
-    let program = encode_transfer_with_metadata_script(
+    let program = encode_peer_to_peer_with_metadata_script(
         lbr_type_tag(),
         *sender.address(),
         100,
