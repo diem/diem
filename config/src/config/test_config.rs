@@ -20,6 +20,8 @@ pub struct TestConfig {
     pub auth_key: Option<AuthenticationKey>,
     #[serde(rename = "operator_private_key")]
     pub operator_keypair: Option<AccountKeyPair>,
+    #[serde(rename = "owner_private_key")]
+    pub owner_keypair: Option<AccountKeyPair>,
     #[serde(rename = "execution_private_key")]
     pub execution_keypair: Option<ExecutionKeyPair>,
     // Used only to prevent a potentially temporary data_dir from being deleted. This should
@@ -36,6 +38,7 @@ impl Clone for TestConfig {
         Self {
             auth_key: self.auth_key,
             operator_keypair: self.operator_keypair.clone(),
+            owner_keypair: self.owner_keypair.clone(),
             execution_keypair: self.execution_keypair.clone(),
             temp_dir: None,
             publishing_option: self.publishing_option.clone(),
@@ -46,6 +49,7 @@ impl Clone for TestConfig {
 impl PartialEq for TestConfig {
     fn eq(&self, other: &Self) -> bool {
         self.operator_keypair == other.operator_keypair
+            && self.owner_keypair == other.owner_keypair
             && self.auth_key == other.auth_key
             && self.execution_keypair == other.execution_keypair
     }
@@ -56,6 +60,7 @@ impl TestConfig {
         Self {
             auth_key: None,
             operator_keypair: None,
+            owner_keypair: None,
             execution_keypair: None,
             temp_dir: None,
             publishing_option: Some(VMPublishingOption::open()),
@@ -68,6 +73,7 @@ impl TestConfig {
         Self {
             auth_key: None,
             operator_keypair: None,
+            owner_keypair: None,
             execution_keypair: None,
             temp_dir: Some(temp_dir),
             publishing_option: None,
@@ -78,6 +84,9 @@ impl TestConfig {
         let privkey = Ed25519PrivateKey::generate(rng);
         self.auth_key = Some(AuthenticationKey::ed25519(&privkey.public_key()));
         self.operator_keypair = Some(AccountKeyPair::load(privkey));
+
+        let privkey = Ed25519PrivateKey::generate(rng);
+        self.owner_keypair = Some(AccountKeyPair::load(privkey));
     }
 
     pub fn random_execution_key(&mut self, rng: &mut StdRng) {
@@ -100,6 +109,7 @@ mod test {
         // Create default test config without keys
         let mut test_config = TestConfig::new_with_temp_dir();
         assert_eq!(test_config.operator_keypair, None);
+        assert_eq!(test_config.owner_keypair, None);
         assert_eq!(test_config.execution_keypair, None);
 
         // Clone the config and verify equality
@@ -118,6 +128,7 @@ mod test {
         clone_test_config.auth_key = test_config.auth_key;
         clone_test_config.execution_keypair = test_config.execution_keypair.clone();
         clone_test_config.operator_keypair = test_config.operator_keypair.clone();
+        clone_test_config.owner_keypair = test_config.owner_keypair.clone();
 
         // Verify both configs are identical
         assert_eq!(clone_test_config, test_config);
