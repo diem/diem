@@ -4,7 +4,6 @@ module VASP {
     use 0x1::CoreAddresses;
     use 0x1::LibraTimestamp;
     use 0x1::Signer;
-    use 0x1::Signature;
     use 0x1::Roles;  // alias import does not play well with spec functions in Roles.
     use 0x1::Libra;
     use 0x1::AccountLimits::{Self, AccountLimitMutationCapability};
@@ -14,20 +13,6 @@ module VASP {
     /// the VASP's globally unique name and all of the metadata that other VASPs need to perform
     /// off-chain protocols with this one.
     resource struct ParentVASP {
-        /// The human readable name of this VASP. Immutable.
-        human_name: vector<u8>,
-        /// The base_url holds the URL to be used for off-chain communication. This contains the
-        /// entire URL (e.g. https://...). Mutable.
-        base_url: vector<u8>,
-        /// Expiration date in microseconds from unix epoch. For V1 VASPs, it is always set to
-        /// U64_MAX. Mutable, but only by the Association.
-        expiration_date: u64,
-        /// 32 byte Ed25519 public key whose counterpart must be used to sign
-        /// (1) the payment metadata for on-chain travel rule transactions
-        /// (2) the KYC information exchanged in the off-chain travel rule protocol.
-        /// Note that this is different than `authentication_key` used in LibraAccount::T, which is
-        /// a hash of a public key + signature scheme identifier, not a public key. Mutable.
-        compliance_public_key: vector<u8>,
         /// Number of child accounts this parent has created.
         num_children: u64
     }
@@ -44,7 +29,6 @@ module VASP {
     const ENOT_LIBRA_ROOT: u64 = 3;
     const ENOT_A_PARENT_VASP: u64 = 4;
     const ENOT_A_VASP: u64 = 5;
-    const EINVALID_PUBLIC_KEY: u64 = 6;
     const EALREADY_A_VASP: u64 = 7;
 
     public fun initialize(lr_account: &signer) {
@@ -57,76 +41,21 @@ module VASP {
     }
 
     ///////////////////////////////////////////////////////////////////////////
-    // Association called functions for parent VASP accounts
-    ///////////////////////////////////////////////////////////////////////////
-
-    /// Renew's `parent_vasp`'s certification
-    public fun recertify_vasp(parent_vasp: &mut ParentVASP) {
-        parent_vasp.expiration_date = LibraTimestamp::now_microseconds() + cert_lifetime();
-    }
-    spec fun recertify_vasp {
-        aborts_if !LibraTimestamp::root_ctm_initialized();
-        aborts_if LibraTimestamp::spec_now_microseconds() + spec_cert_lifetime() > max_u64();
-        ensures parent_vasp.expiration_date
-             == LibraTimestamp::spec_now_microseconds() + spec_cert_lifetime();
-    }
-
-    /// Non-destructively decertify `parent_vasp`. Can be
-    /// recertified later on via `recertify_vasp`.
-    public fun decertify_vasp(parent_vasp: &mut ParentVASP) {
-        // Expire the parent credential.
-        parent_vasp.expiration_date = 0;
-    }
-    spec fun decertify_vasp {
-        aborts_if false;
-        ensures parent_vasp.expiration_date == 0;
-    }
-
-
-    /// A year in microseconds
-    fun cert_lifetime(): u64 {
-        31540000000000
-    }
-    spec module {
-        define spec_cert_lifetime(): u64 {
-            31540000000000
-        }
-    }
-
-    ///////////////////////////////////////////////////////////////////////////
     // To-be parent-vasp called functions
     ///////////////////////////////////////////////////////////////////////////
 
     /// Create a new `ParentVASP` resource under `vasp`
     /// Aborts if `lr_account` is not the libra root account,
     /// or if there is already a VASP (child or parent) at this account.
-    public fun publish_parent_vasp_credential(
-        vasp: &signer,
-        lr_account: &signer,
-        human_name: vector<u8>,
-        base_url: vector<u8>,
-        compliance_public_key: vector<u8>
-    ) {
+    public fun publish_parent_vasp_credential(vasp: &signer, lr_account: &signer) {
         assert(Roles::has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
         let vasp_addr = Signer::address_of(vasp);
         assert(!is_vasp(vasp_addr), ENOT_A_VASP);
-        assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), EINVALID_PUBLIC_KEY);
-        move_to(
-            vasp,
-            ParentVASP {
-                // For testnet and V1, so it should never expire. So set to u64::MAX
-                expiration_date: 18446744073709551615,
-                human_name,
-                base_url,
-                compliance_public_key,
-                num_children: 0
-            }
-        );
+        move_to(vasp, ParentVASP { num_children: 0 });
     }
     spec fun publish_parent_vasp_credential {
         aborts_if !Roles::spec_has_libra_root_role(lr_account);
         aborts_if spec_is_vasp(Signer::spec_address_of(vasp));
-        aborts_if !Signature::spec_ed25519_validate_pubkey(compliance_public_key);
         ensures spec_is_parent_vasp(Signer::spec_address_of(vasp));
         ensures spec_get_num_children(Signer::spec_address_of(vasp)) == 0;
     }
@@ -298,70 +227,12 @@ module VASP {
         }
     }
 
-    /// Return the human-readable name for the VASP account
-    /// Aborts if `addr` is not a ParentVASP or ChildVASP account
-    public fun human_name(addr: address): vector<u8>  acquires ChildVASP, ParentVASP {
-        *&borrow_global<ParentVASP>(parent_address(addr)).human_name
-    }
-
-    /// Return the base URL for the VASP account
-    /// Aborts if `addr` is not a ParentVASP or ChildVASP account
-    public fun base_url(addr: address): vector<u8>  acquires ChildVASP, ParentVASP {
-        *&borrow_global<ParentVASP>(parent_address(addr)).base_url
-    }
-
-    /// Return the compliance public key for the VASP account
-    /// Aborts if `addr` is not a ParentVASP or ChildVASP account
-    public fun compliance_public_key(addr: address): vector<u8> acquires ChildVASP, ParentVASP {
-        *&borrow_global<ParentVASP>(parent_address(addr)).compliance_public_key
-    }
-    spec module {
-        /// Spec version of `Self::compliance_public_key`.
-        define spec_compliance_public_key(addr: address): vector<u8> {
-            global<ParentVASP>(spec_parent_address(addr)).compliance_public_key
-        }
-    }
-
-    /// Return the expiration date for the VASP account
-    /// Aborts if `addr` is not a ParentVASP or ChildVASP account
-    public fun expiration_date(addr: address): u64  acquires ChildVASP, ParentVASP {
-        *&borrow_global<ParentVASP>(parent_address(addr)).expiration_date
-    }
-
     /// Return the number of child accounts for this VASP.
     /// The total number of accounts for this VASP is num_children() + 1
     /// Aborts if `addr` is not a ParentVASP or ChildVASP account
     public fun num_children(addr: address): u64  acquires ChildVASP, ParentVASP {
         *&borrow_global<ParentVASP>(parent_address(addr)).num_children
     }
-
-    /// Rotate the base URL for the `parent_vasp` account to `new_url`
-    public fun rotate_base_url(parent_vasp: &signer, new_url: vector<u8>) acquires ParentVASP {
-        let parent_addr = Signer::address_of(parent_vasp);
-        borrow_global_mut<ParentVASP>(parent_addr).base_url = new_url
-    }
-    spec fun rotate_base_url {
-        aborts_if !spec_is_parent_vasp(Signer::spec_address_of(parent_vasp));
-        ensures global<ParentVASP>(Signer::spec_address_of(parent_vasp)).base_url
-             == new_url;
-    }
-
-    /// Rotate the compliance public key for `parent_vasp` to `new_key`
-    public fun rotate_compliance_public_key(
-        parent_vasp: &signer,
-        new_key: vector<u8>
-    ) acquires ParentVASP {
-        assert(Signature::ed25519_validate_pubkey(copy new_key), EINVALID_PUBLIC_KEY);
-        let parent_addr = Signer::address_of(parent_vasp);
-        borrow_global_mut<ParentVASP>(parent_addr).compliance_public_key = new_key
-    }
-    spec fun rotate_compliance_public_key {
-        aborts_if !spec_is_parent_vasp(Signer::spec_address_of(parent_vasp));
-        aborts_if !Signature::spec_ed25519_validate_pubkey(new_key);
-        ensures global<ParentVASP>(Signer::spec_address_of(parent_vasp)).compliance_public_key
-             == new_key;
-    }
-
 
     // **************** SPECIFICATIONS ****************
 
@@ -457,8 +328,7 @@ module VASP {
     }
 
     spec module {
-        apply AbortsIfNotVASP to parent_address, human_name, base_url,
-            compliance_public_key, expiration_date, num_children;
+        apply AbortsIfNotVASP to parent_address, num_children;
     }
 
     spec schema AbortsIfParentIsNotParentVASP {
@@ -467,8 +337,7 @@ module VASP {
     }
 
     spec module {
-        apply AbortsIfParentIsNotParentVASP to human_name, base_url,
-            compliance_public_key, expiration_date, num_children;
+        apply AbortsIfParentIsNotParentVASP to num_children;
     }
 }
 

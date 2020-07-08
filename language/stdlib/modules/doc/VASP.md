@@ -9,9 +9,6 @@
 -  [Resource `ChildVASP`](#0x1_VASP_ChildVASP)
 -  [Resource `VASPOperationsResource`](#0x1_VASP_VASPOperationsResource)
 -  [Function `initialize`](#0x1_VASP_initialize)
--  [Function `recertify_vasp`](#0x1_VASP_recertify_vasp)
--  [Function `decertify_vasp`](#0x1_VASP_decertify_vasp)
--  [Function `cert_lifetime`](#0x1_VASP_cert_lifetime)
 -  [Function `publish_parent_vasp_credential`](#0x1_VASP_publish_parent_vasp_credential)
 -  [Function `publish_child_vasp_credential`](#0x1_VASP_publish_child_vasp_credential)
 -  [Function `try_allow_currency`](#0x1_VASP_try_allow_currency)
@@ -21,16 +18,8 @@
 -  [Function `is_frozen`](#0x1_VASP_is_frozen)
 -  [Function `is_vasp`](#0x1_VASP_is_vasp)
 -  [Function `is_same_vasp`](#0x1_VASP_is_same_vasp)
--  [Function `human_name`](#0x1_VASP_human_name)
--  [Function `base_url`](#0x1_VASP_base_url)
--  [Function `compliance_public_key`](#0x1_VASP_compliance_public_key)
--  [Function `expiration_date`](#0x1_VASP_expiration_date)
 -  [Function `num_children`](#0x1_VASP_num_children)
--  [Function `rotate_base_url`](#0x1_VASP_rotate_base_url)
--  [Function `rotate_compliance_public_key`](#0x1_VASP_rotate_compliance_public_key)
 -  [Specification](#0x1_VASP_Specification)
-    -  [Function `recertify_vasp`](#0x1_VASP_Specification_recertify_vasp)
-    -  [Function `decertify_vasp`](#0x1_VASP_Specification_decertify_vasp)
     -  [Function `publish_parent_vasp_credential`](#0x1_VASP_Specification_publish_parent_vasp_credential)
     -  [Function `publish_child_vasp_credential`](#0x1_VASP_Specification_publish_child_vasp_credential)
     -  [Function `parent_address`](#0x1_VASP_Specification_parent_address)
@@ -38,8 +27,6 @@
     -  [Function `is_child`](#0x1_VASP_Specification_is_child)
     -  [Function `is_vasp`](#0x1_VASP_Specification_is_vasp)
     -  [Function `is_same_vasp`](#0x1_VASP_Specification_is_same_vasp)
-    -  [Function `rotate_base_url`](#0x1_VASP_Specification_rotate_base_url)
-    -  [Function `rotate_compliance_public_key`](#0x1_VASP_Specification_rotate_compliance_public_key)
     -  [Module specifications](#0x1_VASP_@Module_specifications)
     -  [Each children has a parent](#0x1_VASP_@Each_children_has_a_parent)
         -  [Privileges](#0x1_VASP_@Privileges)
@@ -70,41 +57,6 @@ off-chain protocols with this one.
 
 
 <dl>
-<dt>
-
-<code>human_name: vector&lt;u8&gt;</code>
-</dt>
-<dd>
- The human readable name of this VASP. Immutable.
-</dd>
-<dt>
-
-<code>base_url: vector&lt;u8&gt;</code>
-</dt>
-<dd>
- The base_url holds the URL to be used for off-chain communication. This contains the
- entire URL (e.g. https://...). Mutable.
-</dd>
-<dt>
-
-<code>expiration_date: u64</code>
-</dt>
-<dd>
- Expiration date in microseconds from unix epoch. For V1 VASPs, it is always set to
- U64_MAX. Mutable, but only by the Association.
-</dd>
-<dt>
-
-<code>compliance_public_key: vector&lt;u8&gt;</code>
-</dt>
-<dd>
- 32 byte Ed25519 public key whose counterpart must be used to sign
- (1) the payment metadata for on-chain travel rule transactions
- (2) the KYC information exchanged in the off-chain travel rule protocol.
- Note that this is different than
-<code>authentication_key</code> used in LibraAccount::T, which is
- a hash of a public key + signature scheme identifier, not a public key. Mutable.
-</dd>
 <dt>
 
 <code>num_children: u64</code>
@@ -205,86 +157,6 @@ A singleton resource allowing this module to publish limits definitions and acco
 
 </details>
 
-<a name="0x1_VASP_recertify_vasp"></a>
-
-## Function `recertify_vasp`
-
-Renew's
-<code>parent_vasp</code>'s certification
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_recertify_vasp">recertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">VASP::ParentVASP</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_recertify_vasp">recertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a>) {
-    parent_vasp.expiration_date = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>() + <a href="#0x1_VASP_cert_lifetime">cert_lifetime</a>();
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_VASP_decertify_vasp"></a>
-
-## Function `decertify_vasp`
-
-Non-destructively decertify
-<code>parent_vasp</code>. Can be
-recertified later on via
-<code>recertify_vasp</code>.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_decertify_vasp">decertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">VASP::ParentVASP</a>)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_decertify_vasp">decertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a>) {
-    // Expire the parent credential.
-    parent_vasp.expiration_date = 0;
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_VASP_cert_lifetime"></a>
-
-## Function `cert_lifetime`
-
-A year in microseconds
-
-
-<pre><code><b>fun</b> <a href="#0x1_VASP_cert_lifetime">cert_lifetime</a>(): u64
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_VASP_cert_lifetime">cert_lifetime</a>(): u64 {
-    31540000000000
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_VASP_publish_parent_vasp_credential"></a>
 
 ## Function `publish_parent_vasp_credential`
@@ -297,7 +169,7 @@ Aborts if
 or if there is already a VASP (child or parent) at this account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(vasp: &signer, lr_account: &signer, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(vasp: &signer, lr_account: &signer)
 </code></pre>
 
 
@@ -306,28 +178,11 @@ or if there is already a VASP (child or parent) at this account.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(
-    vasp: &signer,
-    lr_account: &signer,
-    human_name: vector&lt;u8&gt;,
-    base_url: vector&lt;u8&gt;,
-    compliance_public_key: vector&lt;u8&gt;
-) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(vasp: &signer, lr_account: &signer) {
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
     <b>let</b> vasp_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(vasp);
     <b>assert</b>(!<a href="#0x1_VASP_is_vasp">is_vasp</a>(vasp_addr), ENOT_A_VASP);
-    <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> compliance_public_key), EINVALID_PUBLIC_KEY);
-    move_to(
-        vasp,
-        <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
-            // For testnet and V1, so it should never expire. So set <b>to</b> u64::MAX
-            expiration_date: 18446744073709551615,
-            human_name,
-            base_url,
-            compliance_public_key,
-            num_children: 0
-        }
-    );
+    move_to(vasp, <a href="#0x1_VASP_ParentVASP">ParentVASP</a> { num_children: 0 });
 }
 </code></pre>
 
@@ -595,114 +450,6 @@ Returns true if both addresses are VASPs and they have the same parent address.
 
 </details>
 
-<a name="0x1_VASP_human_name"></a>
-
-## Function `human_name`
-
-Return the human-readable name for the VASP account
-Aborts if
-<code>addr</code> is not a ParentVASP or ChildVASP account
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_human_name">human_name</a>(addr: address): vector&lt;u8&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_human_name">human_name</a>(addr: address): vector&lt;u8&gt;  <b>acquires</b> <a href="#0x1_VASP_ChildVASP">ChildVASP</a>, <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
-    *&borrow_global&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="#0x1_VASP_parent_address">parent_address</a>(addr)).human_name
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_VASP_base_url"></a>
-
-## Function `base_url`
-
-Return the base URL for the VASP account
-Aborts if
-<code>addr</code> is not a ParentVASP or ChildVASP account
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_base_url">base_url</a>(addr: address): vector&lt;u8&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_base_url">base_url</a>(addr: address): vector&lt;u8&gt;  <b>acquires</b> <a href="#0x1_VASP_ChildVASP">ChildVASP</a>, <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
-    *&borrow_global&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="#0x1_VASP_parent_address">parent_address</a>(addr)).base_url
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_VASP_compliance_public_key"></a>
-
-## Function `compliance_public_key`
-
-Return the compliance public key for the VASP account
-Aborts if
-<code>addr</code> is not a ParentVASP or ChildVASP account
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_compliance_public_key">compliance_public_key</a>(addr: address): vector&lt;u8&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_compliance_public_key">compliance_public_key</a>(addr: address): vector&lt;u8&gt; <b>acquires</b> <a href="#0x1_VASP_ChildVASP">ChildVASP</a>, <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
-    *&borrow_global&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="#0x1_VASP_parent_address">parent_address</a>(addr)).compliance_public_key
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_VASP_expiration_date"></a>
-
-## Function `expiration_date`
-
-Return the expiration date for the VASP account
-Aborts if
-<code>addr</code> is not a ParentVASP or ChildVASP account
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_expiration_date">expiration_date</a>(addr: address): u64
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_expiration_date">expiration_date</a>(addr: address): u64  <b>acquires</b> <a href="#0x1_VASP_ChildVASP">ChildVASP</a>, <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
-    *&borrow_global&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="#0x1_VASP_parent_address">parent_address</a>(addr)).expiration_date
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_VASP_num_children"></a>
 
 ## Function `num_children`
@@ -731,116 +478,9 @@ Aborts if
 
 </details>
 
-<a name="0x1_VASP_rotate_base_url"></a>
-
-## Function `rotate_base_url`
-
-Rotate the base URL for the
-<code>parent_vasp</code> account to
-<code>new_url</code>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_rotate_base_url">rotate_base_url</a>(parent_vasp: &signer, new_url: vector&lt;u8&gt;)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_rotate_base_url">rotate_base_url</a>(parent_vasp: &signer, new_url: vector&lt;u8&gt;) <b>acquires</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
-    <b>let</b> parent_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(parent_vasp);
-    borrow_global_mut&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent_addr).base_url = new_url
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_VASP_rotate_compliance_public_key"></a>
-
-## Function `rotate_compliance_public_key`
-
-Rotate the compliance public key for
-<code>parent_vasp</code> to
-<code>new_key</code>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_rotate_compliance_public_key">rotate_compliance_public_key</a>(parent_vasp: &signer, new_key: vector&lt;u8&gt;)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_rotate_compliance_public_key">rotate_compliance_public_key</a>(
-    parent_vasp: &signer,
-    new_key: vector&lt;u8&gt;
-) <b>acquires</b> <a href="#0x1_VASP_ParentVASP">ParentVASP</a> {
-    <b>assert</b>(<a href="Signature.md#0x1_Signature_ed25519_validate_pubkey">Signature::ed25519_validate_pubkey</a>(<b>copy</b> new_key), EINVALID_PUBLIC_KEY);
-    <b>let</b> parent_addr = <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(parent_vasp);
-    borrow_global_mut&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(parent_addr).compliance_public_key = new_key
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_VASP_Specification"></a>
 
 ## Specification
-
-
-<a name="0x1_VASP_Specification_recertify_vasp"></a>
-
-### Function `recertify_vasp`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_recertify_vasp">recertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">VASP::ParentVASP</a>)
-</code></pre>
-
-
-
-
-<pre><code><b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_root_ctm_initialized">LibraTimestamp::root_ctm_initialized</a>();
-<b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() + <a href="#0x1_VASP_spec_cert_lifetime">spec_cert_lifetime</a>() &gt; max_u64();
-<b>ensures</b> parent_vasp.expiration_date
-     == <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() + <a href="#0x1_VASP_spec_cert_lifetime">spec_cert_lifetime</a>();
-</code></pre>
-
-
-
-<a name="0x1_VASP_Specification_decertify_vasp"></a>
-
-### Function `decertify_vasp`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_decertify_vasp">decertify_vasp</a>(parent_vasp: &<b>mut</b> <a href="#0x1_VASP_ParentVASP">VASP::ParentVASP</a>)
-</code></pre>
-
-
-
-
-<pre><code><b>aborts_if</b> <b>false</b>;
-<b>ensures</b> parent_vasp.expiration_date == 0;
-</code></pre>
-
-
-
-
-<a name="0x1_VASP_spec_cert_lifetime"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_VASP_spec_cert_lifetime">spec_cert_lifetime</a>(): u64 {
-    31540000000000
-}
-</code></pre>
-
 
 
 <a name="0x1_VASP_Specification_publish_parent_vasp_credential"></a>
@@ -848,7 +488,7 @@ Rotate the compliance public key for
 ### Function `publish_parent_vasp_credential`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(vasp: &signer, lr_account: &signer, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_publish_parent_vasp_credential">publish_parent_vasp_credential</a>(vasp: &signer, lr_account: &signer)
 </code></pre>
 
 
@@ -856,7 +496,6 @@ Rotate the compliance public key for
 
 <pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_libra_root_role">Roles::spec_has_libra_root_role</a>(lr_account);
 <b>aborts_if</b> <a href="#0x1_VASP_spec_is_vasp">spec_is_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp));
-<b>aborts_if</b> !<a href="Signature.md#0x1_Signature_spec_ed25519_validate_pubkey">Signature::spec_ed25519_validate_pubkey</a>(compliance_public_key);
 <b>ensures</b> <a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp));
 <b>ensures</b> <a href="#0x1_VASP_spec_get_num_children">spec_get_num_children</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(vasp)) == 0;
 </code></pre>
@@ -1061,57 +700,6 @@ Spec version of
 
 
 
-Spec version of
-<code><a href="#0x1_VASP_compliance_public_key">Self::compliance_public_key</a></code>.
-
-
-<a name="0x1_VASP_spec_compliance_public_key"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_VASP_spec_compliance_public_key">spec_compliance_public_key</a>(addr: address): vector&lt;u8&gt; {
-    <b>global</b>&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="#0x1_VASP_spec_parent_address">spec_parent_address</a>(addr)).compliance_public_key
-}
-</code></pre>
-
-
-
-<a name="0x1_VASP_Specification_rotate_base_url"></a>
-
-### Function `rotate_base_url`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_rotate_base_url">rotate_base_url</a>(parent_vasp: &signer, new_url: vector&lt;u8&gt;)
-</code></pre>
-
-
-
-
-<pre><code><b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp));
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp)).base_url
-     == new_url;
-</code></pre>
-
-
-
-<a name="0x1_VASP_Specification_rotate_compliance_public_key"></a>
-
-### Function `rotate_compliance_public_key`
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_VASP_rotate_compliance_public_key">rotate_compliance_public_key</a>(parent_vasp: &signer, new_key: vector&lt;u8&gt;)
-</code></pre>
-
-
-
-
-<pre><code><b>aborts_if</b> !<a href="#0x1_VASP_spec_is_parent_vasp">spec_is_parent_vasp</a>(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp));
-<b>aborts_if</b> !<a href="Signature.md#0x1_Signature_spec_ed25519_validate_pubkey">Signature::spec_ed25519_validate_pubkey</a>(new_key);
-<b>ensures</b> <b>global</b>&lt;<a href="#0x1_VASP_ParentVASP">ParentVASP</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(parent_vasp)).compliance_public_key
-     == new_key;
-</code></pre>
-
-
-
 <a name="0x1_VASP_@Module_specifications"></a>
 
 ### Module specifications
@@ -1289,8 +877,7 @@ TODO(wrwg): this currently lets LibraAccount hang if injected.
 
 
 
-<pre><code><b>apply</b> <a href="#0x1_VASP_AbortsIfNotVASP">AbortsIfNotVASP</a> <b>to</b> parent_address, human_name, base_url,
-    compliance_public_key, expiration_date, num_children;
+<pre><code><b>apply</b> <a href="#0x1_VASP_AbortsIfNotVASP">AbortsIfNotVASP</a> <b>to</b> parent_address, num_children;
 </code></pre>
 
 
@@ -1308,6 +895,5 @@ TODO(wrwg): this currently lets LibraAccount hang if injected.
 
 
 
-<pre><code><b>apply</b> <a href="#0x1_VASP_AbortsIfParentIsNotParentVASP">AbortsIfParentIsNotParentVASP</a> <b>to</b> human_name, base_url,
-    compliance_public_key, expiration_date, num_children;
+<pre><code><b>apply</b> <a href="#0x1_VASP_AbortsIfParentIsNotParentVASP">AbortsIfParentIsNotParentVASP</a> <b>to</b> num_children;
 </code></pre>

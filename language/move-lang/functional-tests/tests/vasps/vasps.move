@@ -5,6 +5,7 @@
 //! new-transaction
 //! sender: libraroot
 script {
+use 0x1::DualAttestation;
 use 0x1::LBR::LBR;
 use 0x1::LibraAccount;
 use 0x1::LibraTimestamp;
@@ -28,11 +29,11 @@ fun main(lr_account: &signer) {
     assert(!VASP::is_child({{parent}}), 2003);
 
     assert(VASP::parent_address({{parent}}) == {{parent}}, 2005);
-    assert(VASP::compliance_public_key({{parent}}) == copy pubkey, 2006);
-    assert(VASP::human_name({{parent}}) == x"A1", 2007);
-    assert(VASP::base_url({{parent}}) == x"A2", 2008);
+    assert(DualAttestation::compliance_public_key({{parent}}) == copy pubkey, 2006);
+    assert(DualAttestation::human_name({{parent}}) == x"A1", 2007);
+    assert(DualAttestation::base_url({{parent}}) == x"A2", 2008);
     assert(
-        VASP::expiration_date({{parent}}) > LibraTimestamp::now_microseconds(),
+        DualAttestation::expiration_date({{parent}}) > LibraTimestamp::now_microseconds(),
         2009
     );
 
@@ -68,13 +69,13 @@ fun main(parent_vasp: &signer) {
 //! new-transaction
 //! sender: parent
 script {
-use 0x1::VASP;
+use 0x1::DualAttestation;
 fun main(parent_vasp: &signer) {
-    let old_pubkey = VASP::compliance_public_key({{parent}});
+    let old_pubkey = DualAttestation::compliance_public_key({{parent}});
     let new_pubkey = x"3d4017c3e843895a92b70aa74d1b7ebc9c982ccf2ec4968cc0cd55f12af4660c";
     assert(old_pubkey != copy new_pubkey, 2011);
-    VASP::rotate_compliance_public_key(parent_vasp, copy new_pubkey);
-    assert(VASP::compliance_public_key({{parent}}) == new_pubkey, 2015);
+    DualAttestation::rotate_compliance_public_key(parent_vasp, copy new_pubkey);
+    assert(DualAttestation::compliance_public_key({{parent}}) == new_pubkey, 2015);
 }
 }
 // check: EXECUTED

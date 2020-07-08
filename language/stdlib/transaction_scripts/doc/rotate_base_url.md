@@ -14,11 +14,11 @@
 ## Function `rotate_base_url`
 
 Rotate
-<code>vasp_root_addr</code>'s base URL to
+<code>account</code>'s base URL to
 <code>new_url</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_base_url">rotate_base_url</a>(vasp: &signer, new_url: vector&lt;u8&gt;)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_rotate_base_url">rotate_base_url</a>(account: &signer, new_url: vector&lt;u8&gt;)
 </code></pre>
 
 
@@ -27,8 +27,8 @@ Rotate
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#SCRIPT_rotate_base_url">rotate_base_url</a>(vasp: &signer, new_url: vector&lt;u8&gt;) {
-    <a href="../../modules/doc/VASP.md#0x1_VASP_rotate_base_url">VASP::rotate_base_url</a>(vasp, new_url)
+<pre><code><b>fun</b> <a href="#SCRIPT_rotate_base_url">rotate_base_url</a>(account: &signer, new_url: vector&lt;u8&gt;) {
+    <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_rotate_base_url">DualAttestation::rotate_base_url</a>(account, new_url)
 }
 </code></pre>
 

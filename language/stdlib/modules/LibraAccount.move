@@ -6,6 +6,7 @@ module LibraAccount {
     use 0x1::AccountLimits::{Self, AccountLimitMutationCapability};
     use 0x1::Coin1::Coin1;
     use 0x1::Coin2::Coin2;
+    use 0x1::DualAttestation;
     use 0x1::Event::{Self, EventHandle};
     use 0x1::Hash;
     use 0x1::LBR::{Self, LBR};
@@ -326,7 +327,7 @@ module LibraAccount {
         assert(
             Signature::ed25519_verify(
                 *metadata_signature,
-                VASP::compliance_public_key(payee),
+                DualAttestation::compliance_public_key(payee),
                 message
             ),
             EINVALID_METADATA_SIGNATURE
@@ -348,7 +349,7 @@ module LibraAccount {
             len(metadata_signature) == 64
                 && Signature::spec_ed25519_verify(
                         metadata_signature,
-                        VASP::spec_compliance_public_key(payee),
+                        DualAttestation::spec_compliance_public_key(payee),
                         spec_dual_attestation_message(payer, metadata, deposit_value)
                    )
         }
@@ -727,12 +728,9 @@ module LibraAccount {
     ) {
         let new_account = create_signer(new_account_address);
         Roles::new_parent_vasp_role(creator_account, &new_account);
-        VASP::publish_parent_vasp_credential(
-            &new_account,
-            creator_account,
-            human_name,
-            base_url,
-            compliance_public_key
+        VASP::publish_parent_vasp_credential(&new_account, creator_account);
+        DualAttestation::publish_credential(
+            &new_account, creator_account, human_name, base_url, compliance_public_key
         );
         Event::publish_generator(&new_account);
         add_currencies_for_account<Token>(&new_account, add_all_currencies);
