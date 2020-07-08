@@ -27,7 +27,7 @@ libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
-mirai-annotations = "1.8.0"
+mirai-annotations = "1.9.1"
 network = { path = "../network", version = "0.1.0" }
 rand = "0.7.3"
 netcore = { path = "../network/netcore", version = "0.1.0" }
