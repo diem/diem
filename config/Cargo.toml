@@ -11,7 +11,7 @@ edition = "2018"
 
 [dependencies]
 get_if_addrs = { version = "0.5.3", default-features = false }
-mirai-annotations = "1.8.0"
+mirai-annotations = "1.9.1"
 rand = "0.7.3"
 serde = { version = "1.0.114", features = ["rc"], default-features = false }
 serde_yaml = "0.8.13"
