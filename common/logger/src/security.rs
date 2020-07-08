@@ -39,8 +39,8 @@ pub mod security_events {
     // Consensus
     // ---------
 
-    /// Consensus received a transaction with an invalid signature
-    pub const INVALID_TRANSACTION_CONSENSUS: &str = "InvalidTransactionConsensus";
+    /// Consensus received an invalid message (not well-formed or incorrect signature)
+    pub const CONSENSUS_INVALID_MESSAGE: &str = "ConsensusInvalidMessage";
 
     /// Consensus received an equivocating vote
     pub const CONSENSUS_EQUIVOCATING_VOTE: &str = "ConsensusEquivocatingVote";

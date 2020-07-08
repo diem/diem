@@ -35,9 +35,11 @@ use libra_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier
 #[cfg(test)]
 use safety_rules::ConsensusState;
 use safety_rules::TSafetyRules;
+use serde::Serialize;
 use std::{sync::Arc, time::Duration};
 use termion::color::*;
 
+#[derive(Serialize, Clone)]
 pub enum UnverifiedEvent {
     ProposalMsg(Box<ProposalMsg>),
     VoteMsg(Box<VoteMsg>),
