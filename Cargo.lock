@@ -6438,7 +6438,7 @@ dependencies = [
 [[package]]
 name = "x25519-dalek"
 version = "0.6.0"
-source = "git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat2#2cd269742922403a588af0872e3b06fe4ef89d0e"
+source = "git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat2#459bb04bbe7ba650f3e5c30e594542c1f7892225"
 dependencies = [
  "curve25519-dalek 2.1.0 (git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat2)",
  "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
