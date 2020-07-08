@@ -152,12 +152,6 @@ pub(crate) async fn coordinator<V>(
                                 );
                                 debug_assert!(false, "Unexpected network event rpc request");
                             }
-                            Event::Message(message) => {
-                                send_struct_log!(security_log(security_events::INVALID_NETWORK_EVENT_MP)
-                                    .data("event_msg", &message)
-                            );
-                                debug_assert!(false, "Unexpected network event message");
-                            }
                         }
                     },
                     Err(e) => {
