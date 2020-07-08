@@ -237,6 +237,11 @@ impl fmt::Display for VMError {
 ////////////////////////////////////////////////////////////////////////////
 /// Conversion functions from internal VM statuses into external VM statuses
 ////////////////////////////////////////////////////////////////////////////
+impl Into<VMStatus> for VMError {
+    fn into(self) -> VMStatus {
+        self.into_vm_status()
+    }
+}
 
 pub fn vm_status_of_result<T>(result: VMResult<T>) -> VMStatus {
     match result {

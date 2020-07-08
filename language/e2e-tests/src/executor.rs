@@ -23,7 +23,8 @@ use libra_types::{
     write_set::WriteSet,
 };
 use libra_vm::{
-    data_cache::RemoteStorage, txn_effects_to_writeset_and_events, LibraVM, VMExecutor, VMValidator,
+    data_cache::RemoteStorage, txn_effects_to_writeset_and_events, LibraVM, LibraVMValidator,
+    VMExecutor, VMValidator,
 };
 use move_core_types::{
     account_address::AccountAddress,
@@ -236,7 +237,7 @@ impl FakeExecutor {
 
     /// Verifies the given transaction by running it through the VM verifier.
     pub fn verify_transaction(&self, txn: SignedTransaction) -> VMValidatorResult {
-        let mut vm = LibraVM::new();
+        let mut vm = LibraVMValidator::new();
         vm.load_configs(self.get_state_view());
         vm.validate_transaction(txn, &self.data_store)
     }

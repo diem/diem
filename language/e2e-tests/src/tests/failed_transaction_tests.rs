@@ -9,6 +9,7 @@ use crate::{
 use libra_types::vm_status::{StatusCode, VMStatus};
 use libra_vm::{data_cache::StateViewCache, transaction_metadata::TransactionMetadata, LibraVM};
 use move_core_types::gas_schedule::{GasAlgebra, GasPrice, GasUnits};
+use move_vm_types::gas_schedule::zero_cost_schedule;
 
 #[test]
 fn failed_transaction_cleanup_test() {
@@ -17,7 +18,7 @@ fn failed_transaction_cleanup_test() {
     fake_executor.add_account_data(&sender);
 
     let mut libra_vm = LibraVM::new();
-    let mut data_cache = StateViewCache::new(fake_executor.get_state_view());
+    let data_cache = StateViewCache::new(fake_executor.get_state_view());
     libra_vm.load_configs(fake_executor.get_state_view());
 
     let mut txn_data = TransactionMetadata::default();
@@ -26,13 +27,15 @@ fn failed_transaction_cleanup_test() {
     txn_data.gas_unit_price = GasPrice::new(0);
 
     let gas_left = GasUnits::new(10_000);
+    let gas_schedule = zero_cost_schedule();
 
     // TYPE_MISMATCH should be kept and charged.
     let out1 = libra_vm.failed_transaction_cleanup(
         VMStatus::new(StatusCode::TYPE_MISMATCH, None, None),
+        &gas_schedule,
         gas_left,
         &txn_data,
-        &mut data_cache,
+        &data_cache,
         &account::lbr_currency_code(),
     );
     assert!(!out1.write_set().is_empty());
@@ -46,9 +49,10 @@ fn failed_transaction_cleanup_test() {
     // OUT_OF_BOUNDS_INDEX should be discarded and not charged.
     let out2 = libra_vm.failed_transaction_cleanup(
         VMStatus::new(StatusCode::OUT_OF_BOUNDS_INDEX, None, None),
+        &gas_schedule,
         gas_left,
         &txn_data,
-        &mut data_cache,
+        &data_cache,
         &account::lbr_currency_code(),
     );
     assert!(out2.write_set().is_empty());

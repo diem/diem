@@ -116,6 +116,13 @@ impl<'a> CostStrategy<'a> {
         self.deduct_gas(cost)
             .map_err(|e| e.finish(Location::Undefined))
     }
+
+    pub fn disable_metering(&mut self) {
+        self.charge = false
+    }
+    pub fn enable_metering(&mut self) {
+        self.charge = true
+    }
 }
 
 pub fn new_from_instructions(
