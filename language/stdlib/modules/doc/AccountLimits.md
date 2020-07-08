@@ -447,7 +447,7 @@ If any of the field arguments is
     new_max_holding_balance: u64,
 ) <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
     <b>assert</b>(has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
-    // As we don't have Optionals for txn scripts, in update_unhosted_wallet_limits.<b>move</b>
+    // As we don't have Optionals for txn scripts, in update_account_limit_definition.<b>move</b>
     // we <b>use</b> 0 value <b>to</b> represent a None (ie no <b>update</b> <b>to</b> that variable)
     <b>let</b> limits_def = borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address);
     <b>if</b> (new_max_inflow &gt; 0) { limits_def.max_inflow = new_max_inflow };

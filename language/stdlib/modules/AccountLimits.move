@@ -167,7 +167,7 @@ module AccountLimits {
         new_max_holding_balance: u64,
     ) acquires LimitsDefinition {
         assert(has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
-        // As we don't have Optionals for txn scripts, in update_unhosted_wallet_limits.move
+        // As we don't have Optionals for txn scripts, in update_account_limit_definition.move
         // we use 0 value to represent a None (ie no update to that variable)
         let limits_def = borrow_global_mut<LimitsDefinition<CoinType>>(limit_address);
         if (new_max_inflow > 0) { limits_def.max_inflow = new_max_inflow };
