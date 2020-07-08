@@ -80,6 +80,9 @@ macro_rules! record_src_loc {
             .source_map
             .add_top_level_struct_mapping($context.current_struct_definition_index(), $location)?;
     };
+    (const_decl: $context:expr, $const_index:expr, $name:expr) => {
+        $context.source_map.add_const_mapping($const_index, $name);
+    };
 }
 
 macro_rules! make_push_instr {
@@ -417,7 +420,9 @@ pub fn compile_script<'a, T: 'a + ModuleAccess>(
     )?;
     for ir_constant in script.constants {
         let constant = compile_constant(&mut context, ir_constant.signature, ir_constant.value)?;
-        context.declare_constant(ir_constant.name, constant)?
+        context.declare_constant(ir_constant.name.clone(), constant.clone())?;
+        let const_idx = context.constant_index(constant)?;
+        record_src_loc!(const_decl: context, const_idx, ir_constant.name);
     }
 
     let function = script.main;
@@ -502,7 +507,9 @@ pub fn compile_module<'a, T: 'a + ModuleAccess>(
 
     for ir_constant in module.constants {
         let constant = compile_constant(&mut context, ir_constant.signature, ir_constant.value)?;
-        context.declare_constant(ir_constant.name, constant)?
+        context.declare_constant(ir_constant.name.clone(), constant.clone())?;
+        let const_idx = context.constant_index(constant)?;
+        record_src_loc!(const_decl: context, const_idx, ir_constant.name);
     }
 
     for (name, function) in &module.functions {

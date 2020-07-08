@@ -4,15 +4,15 @@
 use anyhow::{format_err, Result};
 use libra_types::account_address::AccountAddress;
 use move_core_types::identifier::Identifier;
-use move_ir_types::ast::{ModuleName, NopLabel, QualifiedModuleIdent};
+use move_ir_types::ast::{ConstantName, ModuleName, NopLabel, QualifiedModuleIdent};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, ops::Bound};
 use vm::{
     access::*,
     file_format::{
-        CodeOffset, CompiledModule, CompiledScript, FunctionDefinition, FunctionDefinitionIndex,
-        LocalIndex, MemberCount, ModuleHandleIndex, StructDefinition, StructDefinitionIndex,
-        TableIndex,
+        CodeOffset, CompiledModule, CompiledScript, ConstantPoolIndex, FunctionDefinition,
+        FunctionDefinitionIndex, LocalIndex, MemberCount, ModuleHandleIndex, StructDefinition,
+        StructDefinitionIndex, TableIndex,
     },
 };
 
@@ -71,6 +71,9 @@ pub struct SourceMap<Location: Clone + Eq> {
 
     // A mapping of FunctionDefinitionIndex to the soure map for that function.
     function_map: BTreeMap<TableIndex, FunctionSourceMap<Location>>,
+
+    // A mapping of ConstantPoolIndex to a vector of constant names.
+    pub constant_map: BTreeMap<TableIndex, Vec<ConstantName>>,
 }
 
 pub fn remap_locations_source_name<Location: Clone + Eq, Other: Clone + Eq>(
@@ -324,6 +327,7 @@ impl<Location: Clone + Eq> SourceMap<Location> {
             module_name_opt,
             struct_map: BTreeMap::new(),
             function_map: BTreeMap::new(),
+            constant_map: BTreeMap::new(),
         }
     }
 
@@ -449,6 +453,13 @@ impl<Location: Clone + Eq> SourceMap<Location> {
                 )) })
     }
 
+    pub fn add_const_mapping(&mut self, const_idx: ConstantPoolIndex, name: ConstantName) {
+        self.constant_map
+            .entry(const_idx.0)
+            .or_insert_with(Vec::new)
+            .push(name);
+    }
+
     pub fn add_struct_field_mapping(
         &mut self,
         struct_def_idx: StructDefinitionIndex,
@@ -549,6 +560,13 @@ impl<Location: Clone + Eq> SourceMap<Location> {
                 .dummy_struct_map(&module, &struct_def, default_loc.clone())?;
         }
 
+        for const_idx in 0..module.constant_pool().len() {
+            empty_source_map.add_const_mapping(
+                ConstantPoolIndex(const_idx as TableIndex),
+                ConstantName::new(format!("CONST{}", const_idx)),
+            );
+        }
+
         Ok(empty_source_map)
     }
 
@@ -564,6 +582,7 @@ impl<Location: Clone + Eq> SourceMap<Location> {
             module_name_opt,
             struct_map,
             function_map,
+            constant_map,
         } = self;
         let struct_map = struct_map
             .into_iter()
@@ -577,6 +596,7 @@ impl<Location: Clone + Eq> SourceMap<Location> {
             module_name_opt,
             struct_map,
             function_map,
+            constant_map,
         }
     }
 }
