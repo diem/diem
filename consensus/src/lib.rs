@@ -21,6 +21,7 @@ mod metrics_safety_rules;
 mod network;
 #[cfg(test)]
 mod network_tests;
+mod pending_votes;
 mod persistent_liveness_storage;
 mod round_manager;
 mod state_computer;

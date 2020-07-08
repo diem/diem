@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    block_storage::{BlockReader, BlockRetriever, BlockStore, VoteReceptionResult},
+    block_storage::{BlockReader, BlockRetriever, BlockStore},
     counters,
     liveness::{
         proposal_generator::ProposalGenerator,
@@ -12,6 +12,7 @@ use crate::{
     metrics_safety_rules::MetricsSafetyRules,
     network::{IncomingBlockRetrievalRequest, NetworkSender},
     network_interface::ConsensusMsg,
+    pending_votes::VoteReceptionResult,
     persistent_liveness_storage::{PersistentLivenessStorage, RecoveryData},
     state_replication::{StateComputer, TxnManager},
     util::time_service::duration_since_epoch,

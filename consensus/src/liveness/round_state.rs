@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    block_storage::{PendingVotes, VoteReceptionResult},
     counters,
+    pending_votes::{PendingVotes, VoteReceptionResult},
     util::time_service::{SendTask, TimeService},
 };
 use consensus_types::{common::Round, sync_info::SyncInfo, vote::Vote};

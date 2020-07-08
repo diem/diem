@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    block_storage::{
-        block_store::sync_manager::NeedFetchResult, BlockReader, PendingVotes, VoteReceptionResult,
-    },
+    block_storage::{block_store::sync_manager::NeedFetchResult, BlockReader},
+    pending_votes::{PendingVotes, VoteReceptionResult},
     test_utils::{build_empty_tree, build_simple_tree, TreeInserter},
 };
 use consensus_types::{
