@@ -29,6 +29,7 @@ pub use performance_benchmark_three_region_simulation::{
 };
 pub use reboot_random_validator::{RebootRandomValidators, RebootRandomValidatorsParams};
 pub use recovery_time::{RecoveryTime, RecoveryTimeParams};
+pub use twin_validator::{TwinValidators, TwinValidatorsParams};
 pub use versioning_test::{ValidatorVersioning, ValidatorVersioningParams};
 
 use crate::{
@@ -40,7 +41,6 @@ use crate::{
 
 use crate::{
     cluster_swarm::{cluster_swarm_kube::ClusterSwarmKube, ClusterSwarm},
-    experiments::twin_validator::TwinValidatorsParams,
     health::TraceTail,
 };
 use async_trait::async_trait;
