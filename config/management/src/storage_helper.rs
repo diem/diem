@@ -11,7 +11,7 @@ use libra_network_address::NetworkAddress;
 use libra_secure_storage::{
     CryptoStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage, Value,
 };
-use libra_types::{account_address::AccountAddress, transaction::Transaction, waypoint::Waypoint};
+use libra_types::{transaction::Transaction, waypoint::Waypoint};
 use std::{fs::File, path::Path};
 use structopt::StructOpt;
 
@@ -145,6 +145,7 @@ impl StorageHelper {
         command.insert_waypoint()
     }
 
+    #[cfg(test)]
     pub fn operator_key(&self, local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
@@ -243,7 +244,7 @@ impl StorageHelper {
 
     pub fn validator_config(
         &self,
-        owner_address: AccountAddress,
+        owner_name: &str,
         validator_address: NetworkAddress,
         fullnode_address: NetworkAddress,
         local_ns: &str,
@@ -253,7 +254,7 @@ impl StorageHelper {
             "
                 management
                 validator-config
-                --owner-address {owner_address}
+                --owner-name {owner_name}
                 --validator-address {validator_address}
                 --fullnode-address {fullnode_address}
                 --local backend={backend};\
@@ -263,7 +264,7 @@ impl StorageHelper {
                     path={path};\
                     namespace={remote_ns}\
             ",
-            owner_address = owner_address,
+            owner_name = owner_name,
             validator_address = validator_address,
             fullnode_address = fullnode_address,
             backend = crate::secure_backend::DISK,
