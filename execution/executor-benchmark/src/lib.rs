@@ -34,8 +34,8 @@ use storage_client::StorageClient;
 use storage_interface::{DbReader, DbReaderWriter};
 use storage_service::start_storage_service_with_db;
 use transaction_builder::{
-    encode_create_testing_account_script, encode_testnet_mint_script,
-    encode_transfer_with_metadata_script,
+    encode_create_testing_account_script, encode_peer_to_peer_with_metadata_script,
+    encode_testnet_mint_script,
 };
 
 struct AccountData {
@@ -176,7 +176,7 @@ impl TransactionGenerator {
                     sender.sequence_number,
                     &sender.private_key,
                     sender.public_key.clone(),
-                    encode_transfer_with_metadata_script(
+                    encode_peer_to_peer_with_metadata_script(
                         coin1_tag(),
                         receiver.address,
                         1, /* amount */

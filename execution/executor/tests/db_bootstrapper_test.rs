@@ -46,8 +46,8 @@ use rand::SeedableRng;
 use std::convert::TryFrom;
 use storage_interface::{DbReader, DbReaderWriter};
 use transaction_builder::{
-    encode_create_testing_account_script, encode_testnet_mint_script,
-    encode_transfer_with_metadata_script,
+    encode_create_testing_account_script, encode_peer_to_peer_with_metadata_script,
+    encode_testnet_mint_script,
 };
 
 #[test]
@@ -176,7 +176,7 @@ fn get_transfer_transaction(
         sender_seq_number,
         sender_key.clone(),
         sender_key.public_key(),
-        Some(encode_transfer_with_metadata_script(
+        Some(encode_peer_to_peer_with_metadata_script(
             coin1_tag(),
             recipient,
             amount,

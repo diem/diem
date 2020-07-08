@@ -20,8 +20,6 @@ mod generated;
 /// Re-export all generated builders unless they are shadowed by custom builders below.
 pub use generated::*;
 
-pub use generated::encode_peer_to_peer_with_metadata_script as encode_transfer_with_metadata_script;
-
 /// Encode `stdlib_script` with arguments `args`.
 /// Note: this is not type-safe; the individual type-safe wrappers below should be used when
 /// possible.

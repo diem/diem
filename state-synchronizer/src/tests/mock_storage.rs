@@ -17,7 +17,7 @@ use libra_types::{
     validator_signer::ValidatorSigner,
 };
 use std::collections::{BTreeMap, HashMap};
-use transaction_builder::encode_transfer_with_metadata_script;
+use transaction_builder::encode_peer_to_peer_with_metadata_script;
 use vm_genesis::GENESIS_KEYPAIR;
 
 #[derive(Clone)]
@@ -163,7 +163,7 @@ impl MockStorage {
     fn gen_mock_user_txn() -> Transaction {
         let sender = AccountAddress::random();
         let receiver = AuthenticationKey::random();
-        let program = encode_transfer_with_metadata_script(
+        let program = encode_peer_to_peer_with_metadata_script(
             lbr_type_tag(),
             receiver.derived_address(),
             1,

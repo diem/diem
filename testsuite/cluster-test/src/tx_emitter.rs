@@ -628,7 +628,7 @@ fn gen_transfer_txn_request(
     num_coins: u64,
 ) -> SignedTransaction {
     gen_submit_transaction_request(
-        transaction_builder::encode_transfer_with_metadata_script(
+        transaction_builder::encode_peer_to_peer_with_metadata_script(
             account_config::coin1_tag(),
             *receiver,
             num_coins,

@@ -33,9 +33,8 @@ use std::convert::TryFrom;
 use storage_interface::DbReaderWriter;
 use transaction_builder::{
     encode_block_prologue_script, encode_create_testing_account_script,
-    encode_modify_publishing_option_script, encode_reconfigure_script,
-    encode_set_validator_config_script, encode_testnet_mint_script,
-    encode_transfer_with_metadata_script,
+    encode_modify_publishing_option_script, encode_peer_to_peer_with_metadata_script,
+    encode_reconfigure_script, encode_set_validator_config_script, encode_testnet_mint_script,
 };
 
 fn create_db_and_executor(config: &NodeConfig) -> (DbReaderWriter, Executor<LibraVM>) {
@@ -133,7 +132,7 @@ fn test_reconfiguration() {
         /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_transfer_with_metadata_script(
+        Some(encode_peer_to_peer_with_metadata_script(
             coin1_tag(),
             validator_account,
             1_000_000,
@@ -326,7 +325,7 @@ fn test_change_publishing_option_to_custom() {
         /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_transfer_with_metadata_script(
+        Some(encode_peer_to_peer_with_metadata_script(
             coin1_tag(),
             validator_account,
             1_000_000,
@@ -499,7 +498,7 @@ fn test_extend_whitelist() {
         /* sequence_number = */ 0,
         genesis_key.clone(),
         genesis_key.public_key(),
-        Some(encode_transfer_with_metadata_script(
+        Some(encode_peer_to_peer_with_metadata_script(
             coin1_tag(),
             validator_account,
             1_000_000,
@@ -756,7 +755,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 0,
         privkey1.clone(),
         pubkey1.clone(),
-        Some(encode_transfer_with_metadata_script(
+        Some(encode_peer_to_peer_with_metadata_script(
             coin1_tag(),
             account2,
             20_000,
@@ -772,7 +771,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 0,
         privkey2,
         pubkey2,
-        Some(encode_transfer_with_metadata_script(
+        Some(encode_peer_to_peer_with_metadata_script(
             coin1_tag(),
             account3,
             10_000,
@@ -788,7 +787,7 @@ fn test_execution_with_storage() {
         /* sequence_number = */ 1,
         privkey1.clone(),
         pubkey1.clone(),
-        Some(encode_transfer_with_metadata_script(
+        Some(encode_peer_to_peer_with_metadata_script(
             coin1_tag(),
             account3,
             70_000,
@@ -810,7 +809,7 @@ fn test_execution_with_storage() {
             /* sequence_number = */ i,
             privkey1.clone(),
             pubkey1.clone(),
-            Some(encode_transfer_with_metadata_script(
+            Some(encode_peer_to_peer_with_metadata_script(
                 coin1_tag(),
                 account3,
                 10_000,

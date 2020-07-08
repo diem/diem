@@ -173,7 +173,7 @@ fn generate_raw_txn(g: GenerateRawTxnRequest) -> GenerateRawTxnResponse {
         } => {
             let coin_tag = helpers::coin_tag_parser(&coin_tag);
             let recipient_address = helpers::account_address_parser(&recipient_address);
-            transaction_builder::encode_transfer_with_metadata_script(
+            transaction_builder::encode_peer_to_peer_with_metadata_script(
                 coin_tag,
                 recipient_address,
                 amount,

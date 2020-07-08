@@ -762,7 +762,7 @@ impl ClientProxy {
             let sender = self.accounts.get(sender_account_ref_id).ok_or_else(|| {
                 format_err!("Unable to find sender account: {}", sender_account_ref_id)
             })?;
-            let program = transaction_builder::encode_transfer_with_metadata_script(
+            let program = transaction_builder::encode_peer_to_peer_with_metadata_script(
                 type_tag_for_currency_code(currency_code),
                 *receiver_address,
                 num_coins,
@@ -811,7 +811,7 @@ impl ClientProxy {
     ) -> Result<RawTransaction> {
         let currency_code = from_currency_code_string(&coin_currency)
             .map_err(|_| format_err!("Invalid currency code {} specified", coin_currency))?;
-        let program = transaction_builder::encode_transfer_with_metadata_script(
+        let program = transaction_builder::encode_peer_to_peer_with_metadata_script(
             type_tag_for_currency_code(currency_code),
             receiver_address,
             num_coins,
