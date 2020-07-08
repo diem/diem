@@ -19,9 +19,6 @@
 -  [Function `staple_lbr`](#0x1_LibraAccount_staple_lbr)
 -  [Function `unstaple_lbr`](#0x1_LibraAccount_unstaple_lbr)
 -  [Function `deposit`](#0x1_LibraAccount_deposit)
--  [Function `assert_signature_is_valid`](#0x1_LibraAccount_assert_signature_is_valid)
--  [Function `dual_attestation_required`](#0x1_LibraAccount_dual_attestation_required)
--  [Function `dual_attestation_message`](#0x1_LibraAccount_dual_attestation_message)
 -  [Function `tiered_mint`](#0x1_LibraAccount_tiered_mint)
 -  [Function `cancel_burn`](#0x1_LibraAccount_cancel_burn)
 -  [Function `withdraw_from_balance`](#0x1_LibraAccount_withdraw_from_balance)
@@ -67,9 +64,6 @@
     -  [Function `staple_lbr`](#0x1_LibraAccount_Specification_staple_lbr)
     -  [Function `unstaple_lbr`](#0x1_LibraAccount_Specification_unstaple_lbr)
     -  [Function `deposit`](#0x1_LibraAccount_Specification_deposit)
-    -  [Function `assert_signature_is_valid`](#0x1_LibraAccount_Specification_assert_signature_is_valid)
-    -  [Function `dual_attestation_required`](#0x1_LibraAccount_Specification_dual_attestation_required)
-    -  [Function `dual_attestation_message`](#0x1_LibraAccount_Specification_dual_attestation_message)
     -  [Function `tiered_mint`](#0x1_LibraAccount_Specification_tiered_mint)
     -  [Function `withdraw_from_balance`](#0x1_LibraAccount_Specification_withdraw_from_balance)
     -  [Function `withdraw_from`](#0x1_LibraAccount_Specification_withdraw_from)
@@ -653,10 +647,10 @@ Record a payment of
     // Check that the `to_deposit` coin is non-zero
     <b>let</b> deposit_value = <a href="Libra.md#0x1_Libra_value">Libra::value</a>(&to_deposit);
     <b>assert</b>(deposit_value &gt; 0, ECOIN_DEPOSIT_IS_ZERO);
-    <b>if</b> (<a href="#0x1_LibraAccount_dual_attestation_required">dual_attestation_required</a>&lt;Token&gt;(payer, payee, deposit_value)) {
-        <a href="#0x1_LibraAccount_assert_signature_is_valid">assert_signature_is_valid</a>(payer, payee, &metadata_signature, &metadata, deposit_value);
-    };
-
+    // Check that the payment complies with dual attestation rules
+    <a href="DualAttestation.md#0x1_DualAttestation_assert_payment_ok">DualAttestation::assert_payment_ok</a>&lt;Token&gt;(
+        payer, payee, deposit_value, <b>copy</b> metadata, metadata_signature
+    );
     // Ensure that this deposit is compliant with the account limits on
     // this account.
     <b>if</b> (<a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>(payer, payee, <b>false</b>)) {
@@ -680,116 +674,9 @@ Record a payment of
             amount: deposit_value,
             currency_code: <a href="Libra.md#0x1_Libra_currency_code">Libra::currency_code</a>&lt;Token&gt;(),
             payer,
-            metadata: metadata
+            metadata
         }
     );
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraAccount_assert_signature_is_valid"></a>
-
-## Function `assert_signature_is_valid`
-
-Helper function to check validity of a signature when dual attestion is required.
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_assert_signature_is_valid">assert_signature_is_valid</a>(payer: address, payee: address, metadata_signature: &vector&lt;u8&gt;, metadata: &vector&lt;u8&gt;, deposit_value: u64)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_assert_signature_is_valid">assert_signature_is_valid</a>(
-    payer: address,
-    payee: address,
-    metadata_signature: &vector&lt;u8&gt;,
-    metadata: &vector&lt;u8&gt;,
-    deposit_value: u64
-) {
-    // sanity check of signature validity
-    <b>assert</b>(<a href="Vector.md#0x1_Vector_length">Vector::length</a>(metadata_signature) == 64, EMALFORMED_METADATA_SIGNATURE);
-    // cryptographic check of signature validity
-    <b>let</b> message = <a href="#0x1_LibraAccount_dual_attestation_message">dual_attestation_message</a>(payer, metadata, deposit_value);
-    <b>assert</b>(
-        <a href="Signature.md#0x1_Signature_ed25519_verify">Signature::ed25519_verify</a>(
-            *metadata_signature,
-            <a href="DualAttestation.md#0x1_DualAttestation_compliance_public_key">DualAttestation::compliance_public_key</a>(payee),
-            message
-        ),
-        EINVALID_METADATA_SIGNATURE
-    );
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraAccount_dual_attestation_required"></a>
-
-## Function `dual_attestation_required`
-
-Helper which returns true if dual attestion is required for a deposit.
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_dual_attestation_required">dual_attestation_required</a>&lt;Token&gt;(payer: address, payee: address, deposit_value: u64): bool
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_dual_attestation_required">dual_attestation_required</a>&lt;Token&gt;(payer: address, payee: address, deposit_value: u64): bool {
-    // travel rule applies for payments over a threshold
-    <b>let</b> travel_rule_limit_microlibra = <a href="DualAttestationLimit.md#0x1_DualAttestationLimit_get_cur_microlibra_limit">DualAttestationLimit::get_cur_microlibra_limit</a>();
-    <b>let</b> approx_lbr_microlibra_value = <a href="Libra.md#0x1_Libra_approx_lbr_for_value">Libra::approx_lbr_for_value</a>&lt;Token&gt;(deposit_value);
-    <b>let</b> above_threshold = approx_lbr_microlibra_value &gt;= travel_rule_limit_microlibra;
-    // travel rule applies <b>if</b> the payer and payee are both <a href="VASP.md#0x1_VASP">VASP</a>, but not for
-    // intra-<a href="VASP.md#0x1_VASP">VASP</a> transactions
-    above_threshold
-        && <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) && <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee)
-        && <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payer) != <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payee)
-}
-</code></pre>
-
-
-
-</details>
-
-<a name="0x1_LibraAccount_dual_attestation_message"></a>
-
-## Function `dual_attestation_message`
-
-Helper to construct a message for dual attestation.
-Message is
-<code>metadata | payer | amount | domain_separator</code>.
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_dual_attestation_message">dual_attestation_message</a>(payer: address, metadata: &vector&lt;u8&gt;, deposit_value: u64): vector&lt;u8&gt;
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_dual_attestation_message">dual_attestation_message</a>(payer: address, metadata: &vector&lt;u8&gt;, deposit_value: u64): vector&lt;u8&gt; {
-    <b>let</b> domain_separator = b"@@$$LIBRA_ATTEST$$@@";
-    <b>let</b> message = *metadata;
-    <a href="Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> message, <a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(&payer));
-    <a href="Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> message, <a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(&deposit_value));
-    <a href="Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> message, domain_separator);
-    message
 }
 </code></pre>
 
@@ -2277,9 +2164,10 @@ TODO(wrwg): function takes very long to verify; investigate why
     <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payee);
     <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
     <b>aborts_if</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee).coin.value + to_deposit.value &gt; max_u64();
-    <b>include</b> <a href="#0x1_LibraAccount_TravelRuleAppliesAbortsIf">TravelRuleAppliesAbortsIf</a>&lt;Token&gt;;
-    <b>aborts_if</b> <a href="#0x1_LibraAccount_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Token&gt;(payer, payee, to_deposit.value)
-                    && !<a href="#0x1_LibraAccount_signature_is_valid">signature_is_valid</a>(payer, payee, metadata_signature, metadata, to_deposit.value);
+    <b>include</b> <a href="DualAttestation.md#0x1_DualAttestation_TravelRuleAppliesAbortsIf">DualAttestation::TravelRuleAppliesAbortsIf</a>&lt;Token&gt;;
+    <b>aborts_if</b>
+        <a href="DualAttestation.md#0x1_DualAttestation_spec_dual_attestation_required">DualAttestation::spec_dual_attestation_required</a>&lt;Token&gt;(payer, payee, to_deposit.value)
+        && !<a href="DualAttestation.md#0x1_DualAttestation_signature_is_valid">DualAttestation::signature_is_valid</a>(payer, payee, metadata_signature, metadata, to_deposit.value);
 }
 </code></pre>
 
@@ -2296,129 +2184,6 @@ TODO(wrwg): function takes very long to verify; investigate why
     <b>ensures</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee).coin.value
         == <b>old</b>(<b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee).coin.value) + to_deposit.value;
 }
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_assert_signature_is_valid"></a>
-
-### Function `assert_signature_is_valid`
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_assert_signature_is_valid">assert_signature_is_valid</a>(payer: address, payee: address, metadata_signature: &vector&lt;u8&gt;, metadata: &vector&lt;u8&gt;, deposit_value: u64)
-</code></pre>
-
-
-
-
-<pre><code>pragma verify = <b>true</b>, opaque = <b>true</b>;
-<b>aborts_if</b> !<a href="#0x1_LibraAccount_signature_is_valid">signature_is_valid</a>(payer, payee, metadata_signature, metadata, deposit_value);
-</code></pre>
-
-
-
-Returns true if signature is valid.
-
-
-<a name="0x1_LibraAccount_signature_is_valid"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraAccount_signature_is_valid">signature_is_valid</a>(
-    payer: address,
-    payee: address,
-    metadata_signature: vector&lt;u8&gt;,
-    metadata: vector&lt;u8&gt;,
-    deposit_value: u64
-): bool {
-    len(metadata_signature) == 64
-        && <a href="Signature.md#0x1_Signature_spec_ed25519_verify">Signature::spec_ed25519_verify</a>(
-                metadata_signature,
-                <a href="DualAttestation.md#0x1_DualAttestation_spec_compliance_public_key">DualAttestation::spec_compliance_public_key</a>(payee),
-                <a href="#0x1_LibraAccount_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value)
-           )
-}
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_dual_attestation_required"></a>
-
-### Function `dual_attestation_required`
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_dual_attestation_required">dual_attestation_required</a>&lt;Token&gt;(payer: address, payee: address, deposit_value: u64): bool
-</code></pre>
-
-
-
-
-<pre><code>pragma verify = <b>true</b>, opaque = <b>true</b>;
-<b>include</b> <a href="#0x1_LibraAccount_TravelRuleAppliesAbortsIf">TravelRuleAppliesAbortsIf</a>&lt;Token&gt;;
-<b>ensures</b> result == <a href="#0x1_LibraAccount_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Token&gt;(payer, payee, deposit_value);
-</code></pre>
-
-
-
-
-<a name="0x1_LibraAccount_TravelRuleAppliesAbortsIf"></a>
-
-
-<pre><code><b>schema</b> <a href="#0x1_LibraAccount_TravelRuleAppliesAbortsIf">TravelRuleAppliesAbortsIf</a>&lt;Token&gt; {
-    <b>aborts_if</b> !<a href="Libra.md#0x1_Libra_spec_is_currency">Libra::spec_is_currency</a>&lt;Token&gt;();
-    <b>aborts_if</b> !<a href="DualAttestationLimit.md#0x1_DualAttestationLimit_spec_is_published">DualAttestationLimit::spec_is_published</a>();
-}
-</code></pre>
-
-
-
-Helper functions which simulates
-<code><a href="#0x1_LibraAccount_dual_attestation_required">Self::dual_attestation_required</a></code>.
-
-
-<a name="0x1_LibraAccount_spec_dual_attestation_required"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Token&gt;(payer: address, payee: address, deposit_value: u64): bool {
-    <a href="Libra.md#0x1_Libra_spec_approx_lbr_for_value">Libra::spec_approx_lbr_for_value</a>&lt;Token&gt;(deposit_value)
-            &gt;= <a href="DualAttestationLimit.md#0x1_DualAttestationLimit_spec_get_cur_microlibra_limit">DualAttestationLimit::spec_get_cur_microlibra_limit</a>()
-    && <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payer) && <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payee)
-    && <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer) != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee)
-}
-</code></pre>
-
-
-
-<a name="0x1_LibraAccount_Specification_dual_attestation_message"></a>
-
-### Function `dual_attestation_message`
-
-
-<pre><code><b>fun</b> <a href="#0x1_LibraAccount_dual_attestation_message">dual_attestation_message</a>(payer: address, metadata: &vector&lt;u8&gt;, deposit_value: u64): vector&lt;u8&gt;
-</code></pre>
-
-
-
-Abstract from construction of message for the prover. Concatenation of results from
-<code><a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a></code>
-are difficult to reason about, so we avoid doing it. This is possible because the actual value of this
-message is not important for the verification problem, as long as the prover considers both
-messages which fail verification and which do not.
-
-
-<pre><code>pragma opaque = <b>true</b>, verify = <b>false</b>;
-<b>ensures</b> result == <a href="#0x1_LibraAccount_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value);
-</code></pre>
-
-
-
-Uninterpreted function for
-<code><a href="#0x1_LibraAccount_dual_attestation_message">Self::dual_attestation_message</a></code>.
-
-
-<a name="0x1_LibraAccount_spec_dual_attestation_message"></a>
-
-
-<pre><code><b>define</b> <a href="#0x1_LibraAccount_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer: address, metadata: vector&lt;u8&gt;, deposit_value: u64): vector&lt;u8&gt;;
 </code></pre>
 
 

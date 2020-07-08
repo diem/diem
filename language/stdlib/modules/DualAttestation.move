@@ -1,11 +1,15 @@
 address 0x1 {
 
 module DualAttestation {
+    use 0x1::DualAttestationLimit;
+    use 0x1::LCS;
+    use 0x1::Libra;
     use 0x1::LibraTimestamp;
     use 0x1::Roles;
     use 0x1::Signature;
     use 0x1::Signer;
-//    use 0x1::VASP;
+    use 0x1::VASP;
+    use 0x1::Vector;
 
     /// This resource holds an entity's globally unique name and all of the metadata it needs to
     /// participate if off-chain protocols.
@@ -28,10 +32,19 @@ module DualAttestation {
         expiration_date: u64,
     }
 
+    // Error codes
     const ENOT_PARENT_VASP_OR_DD: u64 = 0;
+    /// Transaction not signed by LIBRA_ROOT
     const ENOT_LIBRA_ROOT: u64 = 1;
+    /// Cannot parse this as an ed25519 public key
     const EINVALID_PUBLIC_KEY: u64 = 2;
+    /// Cannot parse this as an ed25519 signature (e.g., != 64 bytes)
+    const EMALFORMED_METADATA_SIGNATURE: u64 = 4;
+    /// Signature does not match message and public key
+    const EINVALID_METADATA_SIGNATURE: u64 = 5;
 
+    /// suffix of every signed dual attestation message
+    const DOMAIN_SEPARATOR: vector<u8> = b"@@$$LIBRA_ATTEST$$@@";
     const U64_MAX: u64 = 18446744073709551615;
 
     public fun publish_credential(
@@ -148,6 +161,132 @@ module DualAttestation {
         }
     }
 
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Dual attestation requirements and checking
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// Helper which returns true if dual attestion is required for a deposit.
+    public fun dual_attestation_required<Token>(
+        payer: address, payee: address, deposit_value: u64
+    ): bool {
+        // travel rule applies for payments over a threshold
+        let travel_rule_limit_microlibra = DualAttestationLimit::get_cur_microlibra_limit();
+        let approx_lbr_microlibra_value = Libra::approx_lbr_for_value<Token>(deposit_value);
+        let above_threshold = approx_lbr_microlibra_value >= travel_rule_limit_microlibra;
+        // travel rule applies if the payer and payee are both VASP, but not for
+        // intra-VASP transactions
+        above_threshold
+            && VASP::is_vasp(payer) && VASP::is_vasp(payee)
+            && VASP::parent_address(payer) != VASP::parent_address(payee)
+    }
+    spec fun dual_attestation_required {
+        pragma verify = true, opaque = true;
+        include TravelRuleAppliesAbortsIf<Token>;
+        ensures result == spec_dual_attestation_required<Token>(payer, payee, deposit_value);
+    }
+    spec schema TravelRuleAppliesAbortsIf<Token> {
+        aborts_if !Libra::spec_is_currency<Token>();
+        aborts_if !DualAttestationLimit::spec_is_published();
+    }
+    spec module {
+        /// Helper functions which simulates `Self::dual_attestation_required`.
+        define spec_dual_attestation_required<Token>(payer: address, payee: address, deposit_value: u64): bool {
+            Libra::spec_approx_lbr_for_value<Token>(deposit_value)
+                    >= DualAttestationLimit::spec_get_cur_microlibra_limit()
+            && VASP::spec_is_vasp(payer) && VASP::spec_is_vasp(payee)
+            && VASP::spec_parent_address(payer) != VASP::spec_parent_address(payee)
+        }
+    }
+
+    /// Helper to construct a message for dual attestation.
+    /// Message is `metadata` | `payer` | `amount` | `DOMAIN_SEPARATOR`.
+    public fun dual_attestation_message(
+        payer: address, metadata: vector<u8>, deposit_value: u64
+    ): vector<u8> {
+        let message = metadata;
+        Vector::append(&mut message, LCS::to_bytes(&payer));
+        Vector::append(&mut message, LCS::to_bytes(&deposit_value));
+        Vector::append(&mut message, DOMAIN_SEPARATOR);
+        message
+    }
+    spec fun dual_attestation_message {
+        /// Abstract from construction of message for the prover. Concatenation of results from `LCS::to_bytes`
+        /// are difficult to reason about, so we avoid doing it. This is possible because the actual value of this
+        /// message is not important for the verification problem, as long as the prover considers both
+        /// messages which fail verification and which do not.
+        pragma opaque = true, verify = false;
+        ensures result == spec_dual_attestation_message(payer, metadata, deposit_value);
+    }
+    spec module {
+        /// Uninterpreted function for `Self::dual_attestation_message`.
+        define spec_dual_attestation_message(payer: address, metadata: vector<u8>, deposit_value: u64): vector<u8>;
+    }
+
+    /// Helper function to check validity of a signature when dual attestion is required.
+    public fun assert_signature_is_valid(
+        payer: address,
+        payee: address,
+        metadata_signature: vector<u8>,
+        metadata: vector<u8>,
+        deposit_value: u64
+    ) acquires Credential {
+        // sanity check of signature validity
+        assert(Vector::length(&metadata_signature) == 64, EMALFORMED_METADATA_SIGNATURE);
+        // cryptographic check of signature validity
+        let message = dual_attestation_message(payer, metadata, deposit_value);
+        assert(
+            Signature::ed25519_verify(
+                metadata_signature,
+                compliance_public_key(payee),
+                message
+            ),
+            EINVALID_METADATA_SIGNATURE
+        );
+    }
+    spec fun assert_signature_is_valid {
+        pragma verify = true, opaque = true;
+        aborts_if !exists<Credential>(payee);
+        aborts_if !signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value);
+    }
+    spec module {
+        /// Returns true if signature is valid.
+        define signature_is_valid(
+            payer: address,
+            payee: address,
+            metadata_signature: vector<u8>,
+            metadata: vector<u8>,
+            deposit_value: u64
+        ): bool {
+            len(metadata_signature) == 64
+                && Signature::spec_ed25519_verify(
+                        metadata_signature,
+                        spec_compliance_public_key(payee),
+                        spec_dual_attestation_message(payer, metadata, deposit_value)
+                   )
+        }
+    }
+
+    /// Public API for checking whether a payment of `value_microlibra` coins of type `Currency`
+    /// from `payer` to `payee` has a valid dual attestation. This returns without aborting if
+    /// (1) dual attestation is not required for this payment, or
+    /// (2) dual attestation is required, and `metadata_signature` can be verified on the message
+    ///     `metadata` | `payer` | `amount` | `DOMAIN_SEPARATOR` using the `compliance_public_key`
+    ///     published in `payee`'s `Credential` resource
+    /// It aborts with an appropriate error code if dual attestation is required, but one or more of
+    /// the conditions in (2) is not met.
+    public fun assert_payment_ok<Currency>(
+        payer: address,
+        payee: address,
+        value_microlibra: u64,
+        metadata: vector<u8>,
+        metadata_signature: vector<u8>
+    ) acquires Credential {
+        if (dual_attestation_required<Currency>(payer, payee, value_microlibra)) {
+          assert_signature_is_valid(payer, payee, metadata_signature, metadata, value_microlibra)
+        }
+    }
 
 }
 }

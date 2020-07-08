@@ -2,6 +2,7 @@ address 0x1 {
 
 // The module for the account resource that governs every Libra account
 module LibraAccount {
+    use 0x1::AccountFreezing;
     use 0x1::CoreAddresses;
     use 0x1::AccountLimits::{Self, AccountLimitMutationCapability};
     use 0x1::Coin1::Coin1;
@@ -13,7 +14,6 @@ module LibraAccount {
     use 0x1::LCS;
     use 0x1::LibraTimestamp;
     use 0x1::LibraTransactionTimeout;
-    use 0x1::Signature;
     use 0x1::Signer;
     use 0x1::SlidingNonce;
     use 0x1::TransactionFee;
@@ -23,8 +23,6 @@ module LibraAccount {
     use 0x1::DesignatedDealer;
     use 0x1::Libra::{Self, Libra};
     use 0x1::Option::{Self, Option};
-    use 0x1::DualAttestationLimit;
-    use 0x1::AccountFreezing;
     use 0x1::Roles;
 
     resource struct PublishModule {}
@@ -108,8 +106,6 @@ module LibraAccount {
     const EINVALID_SINGLETON_ADDRESS: u64 = 1;
     const ECOIN_DEPOSIT_IS_ZERO: u64 = 2;
     const EDEPOSIT_EXCEEDS_LIMITS: u64 = 3;
-    const EMALFORMED_METADATA_SIGNATURE: u64 = 4;
-    const EINVALID_METADATA_SIGNATURE: u64 = 5;
     const EWITHDRAWAL_EXCEEDS_LIMITS: u64 = 6;
     const EWITHDRAWAL_CAPABILITY_ALREADY_EXTRACTED: u64 = 7;
     const EMALFORMED_AUTHENTICATION_KEY: u64 = 8;
@@ -247,10 +243,10 @@ module LibraAccount {
         // Check that the `to_deposit` coin is non-zero
         let deposit_value = Libra::value(&to_deposit);
         assert(deposit_value > 0, ECOIN_DEPOSIT_IS_ZERO);
-        if (dual_attestation_required<Token>(payer, payee, deposit_value)) {
-            assert_signature_is_valid(payer, payee, &metadata_signature, &metadata, deposit_value);
-        };
-
+        // Check that the payment complies with dual attestation rules
+        DualAttestation::assert_payment_ok<Token>(
+            payer, payee, deposit_value, copy metadata, metadata_signature
+        );
         // Ensure that this deposit is compliant with the account limits on
         // this account.
         if (should_track_limits_for_account(payer, payee, false)) {
@@ -274,7 +270,7 @@ module LibraAccount {
                 amount: deposit_value,
                 currency_code: Libra::currency_code<Token>(),
                 payer,
-                metadata: metadata
+                metadata
             }
         );
     }
@@ -300,9 +296,10 @@ module LibraAccount {
         aborts_if !exists<LibraAccount>(payee);
         aborts_if !exists<Balance<Token>>(payee);
         aborts_if global<Balance<Token>>(payee).coin.value + to_deposit.value > max_u64();
-        include TravelRuleAppliesAbortsIf<Token>;
-        aborts_if spec_dual_attestation_required<Token>(payer, payee, to_deposit.value)
-                        && !signature_is_valid(payer, payee, metadata_signature, metadata, to_deposit.value);
+        include DualAttestation::TravelRuleAppliesAbortsIf<Token>;
+        aborts_if
+            DualAttestation::spec_dual_attestation_required<Token>(payer, payee, to_deposit.value)
+            && !DualAttestation::signature_is_valid(payer, payee, metadata_signature, metadata, to_deposit.value);
     }
     spec schema DepositEnsures<Token> {
         payer: address;
@@ -310,103 +307,6 @@ module LibraAccount {
         to_deposit: Libra<Token>;
         ensures global<Balance<Token>>(payee).coin.value
             == old(global<Balance<Token>>(payee).coin.value) + to_deposit.value;
-    }
-
-    /// Helper function to check validity of a signature when dual attestion is required.
-    fun assert_signature_is_valid(
-        payer: address,
-        payee: address,
-        metadata_signature: &vector<u8>,
-        metadata: &vector<u8>,
-        deposit_value: u64
-    ) {
-        // sanity check of signature validity
-        assert(Vector::length(metadata_signature) == 64, EMALFORMED_METADATA_SIGNATURE);
-        // cryptographic check of signature validity
-        let message = dual_attestation_message(payer, metadata, deposit_value);
-        assert(
-            Signature::ed25519_verify(
-                *metadata_signature,
-                DualAttestation::compliance_public_key(payee),
-                message
-            ),
-            EINVALID_METADATA_SIGNATURE
-        );
-    }
-    spec fun assert_signature_is_valid {
-        pragma verify = true, opaque = true;
-        aborts_if !signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value);
-    }
-    spec module {
-        /// Returns true if signature is valid.
-        define signature_is_valid(
-            payer: address,
-            payee: address,
-            metadata_signature: vector<u8>,
-            metadata: vector<u8>,
-            deposit_value: u64
-        ): bool {
-            len(metadata_signature) == 64
-                && Signature::spec_ed25519_verify(
-                        metadata_signature,
-                        DualAttestation::spec_compliance_public_key(payee),
-                        spec_dual_attestation_message(payer, metadata, deposit_value)
-                   )
-        }
-    }
-
-    /// Helper which returns true if dual attestion is required for a deposit.
-    fun dual_attestation_required<Token>(payer: address, payee: address, deposit_value: u64): bool {
-        // travel rule applies for payments over a threshold
-        let travel_rule_limit_microlibra = DualAttestationLimit::get_cur_microlibra_limit();
-        let approx_lbr_microlibra_value = Libra::approx_lbr_for_value<Token>(deposit_value);
-        let above_threshold = approx_lbr_microlibra_value >= travel_rule_limit_microlibra;
-        // travel rule applies if the payer and payee are both VASP, but not for
-        // intra-VASP transactions
-        above_threshold
-            && VASP::is_vasp(payer) && VASP::is_vasp(payee)
-            && VASP::parent_address(payer) != VASP::parent_address(payee)
-    }
-    spec fun dual_attestation_required {
-        pragma verify = true, opaque = true;
-        include TravelRuleAppliesAbortsIf<Token>;
-        ensures result == spec_dual_attestation_required<Token>(payer, payee, deposit_value);
-    }
-    spec schema TravelRuleAppliesAbortsIf<Token> {
-        aborts_if !Libra::spec_is_currency<Token>();
-        aborts_if !DualAttestationLimit::spec_is_published();
-    }
-    spec module {
-        /// Helper functions which simulates `Self::dual_attestation_required`.
-        define spec_dual_attestation_required<Token>(payer: address, payee: address, deposit_value: u64): bool {
-            Libra::spec_approx_lbr_for_value<Token>(deposit_value)
-                    >= DualAttestationLimit::spec_get_cur_microlibra_limit()
-            && VASP::spec_is_vasp(payer) && VASP::spec_is_vasp(payee)
-            && VASP::spec_parent_address(payer) != VASP::spec_parent_address(payee)
-        }
-    }
-
-    /// Helper to construct a message for dual attestation.
-    /// Message is `metadata | payer | amount | domain_separator`.
-    fun dual_attestation_message(payer: address, metadata: &vector<u8>, deposit_value: u64): vector<u8> {
-        let domain_separator = b"@@$$LIBRA_ATTEST$$@@";
-        let message = *metadata;
-        Vector::append(&mut message, LCS::to_bytes(&payer));
-        Vector::append(&mut message, LCS::to_bytes(&deposit_value));
-        Vector::append(&mut message, domain_separator);
-        message
-    }
-    spec fun dual_attestation_message {
-        /// Abstract from construction of message for the prover. Concatenation of results from `LCS::to_bytes`
-        /// are difficult to reason about, so we avoid doing it. This is possible because the actual value of this
-        /// message is not important for the verification problem, as long as the prover considers both
-        /// messages which fail verification and which do not.
-        pragma opaque = true, verify = false;
-        ensures result == spec_dual_attestation_message(payer, metadata, deposit_value);
-    }
-    spec module {
-        /// Uninterpreted function for `Self::dual_attestation_message`.
-        define spec_dual_attestation_message(payer: address, metadata: vector<u8>, deposit_value: u64): vector<u8>;
     }
 
     /// Mint 'mint_amount' to 'designated_dealer_address' for 'tier_index' tier.

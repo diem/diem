@@ -16,11 +16,18 @@
 -  [Function `recertify`](#0x1_DualAttestation_recertify)
 -  [Function `decertify`](#0x1_DualAttestation_decertify)
 -  [Function `cert_lifetime`](#0x1_DualAttestation_cert_lifetime)
+-  [Function `dual_attestation_required`](#0x1_DualAttestation_dual_attestation_required)
+-  [Function `dual_attestation_message`](#0x1_DualAttestation_dual_attestation_message)
+-  [Function `assert_signature_is_valid`](#0x1_DualAttestation_assert_signature_is_valid)
+-  [Function `assert_payment_ok`](#0x1_DualAttestation_assert_payment_ok)
 -  [Specification](#0x1_DualAttestation_Specification)
     -  [Function `rotate_base_url`](#0x1_DualAttestation_Specification_rotate_base_url)
     -  [Function `rotate_compliance_public_key`](#0x1_DualAttestation_Specification_rotate_compliance_public_key)
     -  [Function `recertify`](#0x1_DualAttestation_Specification_recertify)
     -  [Function `decertify`](#0x1_DualAttestation_Specification_decertify)
+    -  [Function `dual_attestation_required`](#0x1_DualAttestation_Specification_dual_attestation_required)
+    -  [Function `dual_attestation_message`](#0x1_DualAttestation_Specification_dual_attestation_message)
+    -  [Function `assert_signature_is_valid`](#0x1_DualAttestation_Specification_assert_signature_is_valid)
 
 
 
@@ -378,6 +385,170 @@ A year in microseconds
 
 </details>
 
+<a name="0x1_DualAttestation_dual_attestation_required"></a>
+
+## Function `dual_attestation_required`
+
+Helper which returns true if dual attestion is required for a deposit.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_dual_attestation_required">dual_attestation_required</a>&lt;Token&gt;(payer: address, payee: address, deposit_value: u64): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_dual_attestation_required">dual_attestation_required</a>&lt;Token&gt;(
+    payer: address, payee: address, deposit_value: u64
+): bool {
+    // travel rule applies for payments over a threshold
+    <b>let</b> travel_rule_limit_microlibra = <a href="DualAttestationLimit.md#0x1_DualAttestationLimit_get_cur_microlibra_limit">DualAttestationLimit::get_cur_microlibra_limit</a>();
+    <b>let</b> approx_lbr_microlibra_value = <a href="Libra.md#0x1_Libra_approx_lbr_for_value">Libra::approx_lbr_for_value</a>&lt;Token&gt;(deposit_value);
+    <b>let</b> above_threshold = approx_lbr_microlibra_value &gt;= travel_rule_limit_microlibra;
+    // travel rule applies <b>if</b> the payer and payee are both <a href="VASP.md#0x1_VASP">VASP</a>, but not for
+    // intra-<a href="VASP.md#0x1_VASP">VASP</a> transactions
+    above_threshold
+        && <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payer) && <a href="VASP.md#0x1_VASP_is_vasp">VASP::is_vasp</a>(payee)
+        && <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payer) != <a href="VASP.md#0x1_VASP_parent_address">VASP::parent_address</a>(payee)
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DualAttestation_dual_attestation_message"></a>
+
+## Function `dual_attestation_message`
+
+Helper to construct a message for dual attestation.
+Message is
+<code>metadata</code> |
+<code>payer</code> |
+<code>amount</code> |
+<code>DOMAIN_SEPARATOR</code>.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_dual_attestation_message">dual_attestation_message</a>(payer: address, metadata: vector&lt;u8&gt;, deposit_value: u64): vector&lt;u8&gt;
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_dual_attestation_message">dual_attestation_message</a>(
+    payer: address, metadata: vector&lt;u8&gt;, deposit_value: u64
+): vector&lt;u8&gt; {
+    <b>let</b> message = metadata;
+    <a href="Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> message, <a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(&payer));
+    <a href="Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> message, <a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a>(&deposit_value));
+    <a href="Vector.md#0x1_Vector_append">Vector::append</a>(&<b>mut</b> message, DOMAIN_SEPARATOR);
+    message
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DualAttestation_assert_signature_is_valid"></a>
+
+## Function `assert_signature_is_valid`
+
+Helper function to check validity of a signature when dual attestion is required.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_assert_signature_is_valid">assert_signature_is_valid</a>(payer: address, payee: address, metadata_signature: vector&lt;u8&gt;, metadata: vector&lt;u8&gt;, deposit_value: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_assert_signature_is_valid">assert_signature_is_valid</a>(
+    payer: address,
+    payee: address,
+    metadata_signature: vector&lt;u8&gt;,
+    metadata: vector&lt;u8&gt;,
+    deposit_value: u64
+) <b>acquires</b> <a href="#0x1_DualAttestation_Credential">Credential</a> {
+    // sanity check of signature validity
+    <b>assert</b>(<a href="Vector.md#0x1_Vector_length">Vector::length</a>(&metadata_signature) == 64, EMALFORMED_METADATA_SIGNATURE);
+    // cryptographic check of signature validity
+    <b>let</b> message = <a href="#0x1_DualAttestation_dual_attestation_message">dual_attestation_message</a>(payer, metadata, deposit_value);
+    <b>assert</b>(
+        <a href="Signature.md#0x1_Signature_ed25519_verify">Signature::ed25519_verify</a>(
+            metadata_signature,
+            <a href="#0x1_DualAttestation_compliance_public_key">compliance_public_key</a>(payee),
+            message
+        ),
+        EINVALID_METADATA_SIGNATURE
+    );
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DualAttestation_assert_payment_ok"></a>
+
+## Function `assert_payment_ok`
+
+Public API for checking whether a payment of
+<code>value_microlibra</code> coins of type
+<code>Currency</code>
+from
+<code>payer</code> to
+<code>payee</code> has a valid dual attestation. This returns without aborting if
+(1) dual attestation is not required for this payment, or
+(2) dual attestation is required, and
+<code>metadata_signature</code> can be verified on the message
+<code>metadata</code> |
+<code>payer</code> |
+<code>amount</code> |
+<code>DOMAIN_SEPARATOR</code> using the
+<code>compliance_public_key</code>
+published in
+<code>payee</code>'s
+<code><a href="#0x1_DualAttestation_Credential">Credential</a></code> resource
+It aborts with an appropriate error code if dual attestation is required, but one or more of
+the conditions in (2) is not met.
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_assert_payment_ok">assert_payment_ok</a>&lt;Currency&gt;(payer: address, payee: address, value_microlibra: u64, metadata: vector&lt;u8&gt;, metadata_signature: vector&lt;u8&gt;)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_assert_payment_ok">assert_payment_ok</a>&lt;Currency&gt;(
+    payer: address,
+    payee: address,
+    value_microlibra: u64,
+    metadata: vector&lt;u8&gt;,
+    metadata_signature: vector&lt;u8&gt;
+) <b>acquires</b> <a href="#0x1_DualAttestation_Credential">Credential</a> {
+    <b>if</b> (<a href="#0x1_DualAttestation_dual_attestation_required">dual_attestation_required</a>&lt;Currency&gt;(payer, payee, value_microlibra)) {
+      <a href="#0x1_DualAttestation_assert_signature_is_valid">assert_signature_is_valid</a>(payer, payee, metadata_signature, metadata, value_microlibra)
+    }
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_DualAttestation_Specification"></a>
 
 ## Specification
@@ -476,5 +647,129 @@ Spec version of
 
 <pre><code><b>define</b> <a href="#0x1_DualAttestation_spec_cert_lifetime">spec_cert_lifetime</a>(): u64 {
     31540000000000
+}
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_Specification_dual_attestation_required"></a>
+
+### Function `dual_attestation_required`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_dual_attestation_required">dual_attestation_required</a>&lt;Token&gt;(payer: address, payee: address, deposit_value: u64): bool
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>true</b>, opaque = <b>true</b>;
+<b>include</b> <a href="#0x1_DualAttestation_TravelRuleAppliesAbortsIf">TravelRuleAppliesAbortsIf</a>&lt;Token&gt;;
+<b>ensures</b> result == <a href="#0x1_DualAttestation_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Token&gt;(payer, payee, deposit_value);
+</code></pre>
+
+
+
+
+<a name="0x1_DualAttestation_TravelRuleAppliesAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_DualAttestation_TravelRuleAppliesAbortsIf">TravelRuleAppliesAbortsIf</a>&lt;Token&gt; {
+    <b>aborts_if</b> !<a href="Libra.md#0x1_Libra_spec_is_currency">Libra::spec_is_currency</a>&lt;Token&gt;();
+    <b>aborts_if</b> !<a href="DualAttestationLimit.md#0x1_DualAttestationLimit_spec_is_published">DualAttestationLimit::spec_is_published</a>();
+}
+</code></pre>
+
+
+
+Helper functions which simulates
+<code><a href="#0x1_DualAttestation_dual_attestation_required">Self::dual_attestation_required</a></code>.
+
+
+<a name="0x1_DualAttestation_spec_dual_attestation_required"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_DualAttestation_spec_dual_attestation_required">spec_dual_attestation_required</a>&lt;Token&gt;(payer: address, payee: address, deposit_value: u64): bool {
+    <a href="Libra.md#0x1_Libra_spec_approx_lbr_for_value">Libra::spec_approx_lbr_for_value</a>&lt;Token&gt;(deposit_value)
+            &gt;= <a href="DualAttestationLimit.md#0x1_DualAttestationLimit_spec_get_cur_microlibra_limit">DualAttestationLimit::spec_get_cur_microlibra_limit</a>()
+    && <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payer) && <a href="VASP.md#0x1_VASP_spec_is_vasp">VASP::spec_is_vasp</a>(payee)
+    && <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payer) != <a href="VASP.md#0x1_VASP_spec_parent_address">VASP::spec_parent_address</a>(payee)
+}
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_Specification_dual_attestation_message"></a>
+
+### Function `dual_attestation_message`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_dual_attestation_message">dual_attestation_message</a>(payer: address, metadata: vector&lt;u8&gt;, deposit_value: u64): vector&lt;u8&gt;
+</code></pre>
+
+
+
+Abstract from construction of message for the prover. Concatenation of results from
+<code><a href="LCS.md#0x1_LCS_to_bytes">LCS::to_bytes</a></code>
+are difficult to reason about, so we avoid doing it. This is possible because the actual value of this
+message is not important for the verification problem, as long as the prover considers both
+messages which fail verification and which do not.
+
+
+<pre><code>pragma opaque = <b>true</b>, verify = <b>false</b>;
+<b>ensures</b> result == <a href="#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value);
+</code></pre>
+
+
+
+Uninterpreted function for
+<code><a href="#0x1_DualAttestation_dual_attestation_message">Self::dual_attestation_message</a></code>.
+
+
+<a name="0x1_DualAttestation_spec_dual_attestation_message"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer: address, metadata: vector&lt;u8&gt;, deposit_value: u64): vector&lt;u8&gt;;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_Specification_assert_signature_is_valid"></a>
+
+### Function `assert_signature_is_valid`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_assert_signature_is_valid">assert_signature_is_valid</a>(payer: address, payee: address, metadata_signature: vector&lt;u8&gt;, metadata: vector&lt;u8&gt;, deposit_value: u64)
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>true</b>, opaque = <b>true</b>;
+<b>aborts_if</b> !exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(payee);
+<b>aborts_if</b> !<a href="#0x1_DualAttestation_signature_is_valid">signature_is_valid</a>(payer, payee, metadata_signature, metadata, deposit_value);
+</code></pre>
+
+
+
+Returns true if signature is valid.
+
+
+<a name="0x1_DualAttestation_signature_is_valid"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_DualAttestation_signature_is_valid">signature_is_valid</a>(
+    payer: address,
+    payee: address,
+    metadata_signature: vector&lt;u8&gt;,
+    metadata: vector&lt;u8&gt;,
+    deposit_value: u64
+): bool {
+    len(metadata_signature) == 64
+        && <a href="Signature.md#0x1_Signature_spec_ed25519_verify">Signature::spec_ed25519_verify</a>(
+                metadata_signature,
+                <a href="#0x1_DualAttestation_spec_compliance_public_key">spec_compliance_public_key</a>(payee),
+                <a href="#0x1_DualAttestation_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value)
+           )
 }
 </code></pre>
