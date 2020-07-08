@@ -10,8 +10,11 @@ script {
     use 0x1::LibraAccount;
     use 0x1::Coin1::Coin1;
     fun main(account: &signer) {
+        let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
         let dummy_auth_key_prefix = x"00000000000000000000000000000001";
-        LibraAccount::create_designated_dealer<Coin1>(account, 0xDEADBEEF, dummy_auth_key_prefix, false);
+        LibraAccount::create_designated_dealer<Coin1>(
+            account, 0xDEADBEEF, dummy_auth_key_prefix, x"", x"", pubkey, false
+        );
         assert(DesignatedDealer::exists_at(0xDEADBEEF), 0);
     }
 }

@@ -1,6 +1,7 @@
 address 0x1 {
 
 module DualAttestation {
+    use 0x1::DesignatedDealer;
     use 0x1::DualAttestationLimit;
     use 0x1::LCS;
     use 0x1::Libra;
@@ -12,7 +13,7 @@ module DualAttestation {
     use 0x1::Vector;
 
     /// This resource holds an entity's globally unique name and all of the metadata it needs to
-    /// participate if off-chain protocols.
+    /// participate in off-chain protocols.
     resource struct Credential {
         /// The human readable name of this entity. Immutable.
         human_name: vector<u8>,
@@ -24,7 +25,7 @@ module DualAttestation {
         ///     transactions subject to the travel rule)
         /// (2) information exchanged in the off-chain protocols (e.g., KYC info in the travel rule
         ///     protocol)
-        /// Note that this is different than `authentication_key` used in LibraAccount::T, which is
+        /// Note that this is different than `authentication_key` used in LibraAccount, which is
         /// a hash of a public key + signature scheme identifier, not a public key. Mutable.
         compliance_public_key: vector<u8>,
         /// Expiration date in microseconds from unix epoch. For V1, it is always set to
@@ -34,8 +35,8 @@ module DualAttestation {
 
     // Error codes
     const ENOT_PARENT_VASP_OR_DD: u64 = 0;
-    /// Transaction not signed by LIBRA_ROOT
-    const ENOT_LIBRA_ROOT: u64 = 1;
+    /// Transaction not signed by LibraRoot or TreasuryCompliance
+    const ENOT_LIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 1;
     /// Cannot parse this as an ed25519 public key
     const EINVALID_PUBLIC_KEY: u64 = 2;
     /// Cannot parse this as an ed25519 signature (e.g., != 64 bytes)
@@ -43,8 +44,10 @@ module DualAttestation {
     /// Signature does not match message and public key
     const EINVALID_METADATA_SIGNATURE: u64 = 5;
 
-    /// suffix of every signed dual attestation message
+    /// Suffix of every signed dual attestation message
     const DOMAIN_SEPARATOR: vector<u8> = b"@@$$LIBRA_ATTEST$$@@";
+    /// A year in microseconds
+    const ONE_YEAR: u64 = 31540000000000;
     const U64_MAX: u64 = 18446744073709551615;
 
     public fun publish_credential(
@@ -58,7 +61,10 @@ module DualAttestation {
             Roles::has_parent_VASP_role(created) || Roles::has_designated_dealer_role(created),
             ENOT_PARENT_VASP_OR_DD
         );
-        assert(Roles::has_libra_root_role(creator), ENOT_LIBRA_ROOT);
+        assert(
+            Roles::has_libra_root_role(creator) || Roles::has_treasury_compliance_role(creator),
+            ENOT_LIBRA_ROOT_OR_TREASURY_COMPLIANCE
+        );
         assert(Signature::ed25519_validate_pubkey(copy compliance_public_key), EINVALID_PUBLIC_KEY);
         move_to(created, Credential {
             human_name,
@@ -132,13 +138,14 @@ module DualAttestation {
 
     /// Renew's `credential`'s certificate
     public fun recertify(credential: &mut Credential) {
-        credential.expiration_date = LibraTimestamp::now_microseconds() + cert_lifetime();
+        credential.expiration_date = LibraTimestamp::now_microseconds() + ONE_YEAR;
     }
     spec fun recertify {
+        // TODO: use ONE_YEAR below
         aborts_if !LibraTimestamp::root_ctm_initialized();
-        aborts_if LibraTimestamp::spec_now_microseconds() + spec_cert_lifetime() > max_u64();
+        aborts_if LibraTimestamp::spec_now_microseconds() + 31540000000000 > max_u64();
         ensures credential.expiration_date
-             == LibraTimestamp::spec_now_microseconds() + spec_cert_lifetime();
+             == LibraTimestamp::spec_now_microseconds() + 31540000000000;
     }
 
     /// Non-destructively decertify `credential`. Can be recertified later on via `recertify`.
@@ -151,35 +158,62 @@ module DualAttestation {
         ensures credential.expiration_date == 0;
     }
 
-    /// A year in microseconds
-    fun cert_lifetime(): u64 {
-        31540000000000
-    }
-    spec module {
-        define spec_cert_lifetime(): u64 {
-            31540000000000
-        }
-    }
-
-
-
     ///////////////////////////////////////////////////////////////////////////
     // Dual attestation requirements and checking
     ///////////////////////////////////////////////////////////////////////////
 
+    /// Return the address where the credentials for `addr` are stored
+    fun credential_address(addr: address): address {
+        if (VASP::is_child(addr)) VASP::parent_address(addr) else addr
+    }
+    spec fun credential_address {
+        pragma verify = true;
+        aborts_if false;
+        ensures result == spec_credential_address(addr);
+    }
+    spec module {
+        define spec_credential_address(addr: address): address {
+            if (VASP::spec_is_child_vasp(addr)) {
+                VASP::spec_parent_address(addr)
+            } else {
+                addr
+            }
+        }
+    }
+
     /// Helper which returns true if dual attestion is required for a deposit.
-    public fun dual_attestation_required<Token>(
+    fun dual_attestation_required<Token>(
         payer: address, payee: address, deposit_value: u64
     ): bool {
         // travel rule applies for payments over a threshold
         let travel_rule_limit_microlibra = DualAttestationLimit::get_cur_microlibra_limit();
         let approx_lbr_microlibra_value = Libra::approx_lbr_for_value<Token>(deposit_value);
         let above_threshold = approx_lbr_microlibra_value >= travel_rule_limit_microlibra;
-        // travel rule applies if the payer and payee are both VASP, but not for
-        // intra-VASP transactions
-        above_threshold
-            && VASP::is_vasp(payer) && VASP::is_vasp(payee)
-            && VASP::parent_address(payer) != VASP::parent_address(payee)
+        if (!above_threshold) {
+            return false
+        };
+        // self-deposits never require dual attestation
+        if (payer == payee) {
+            return false
+        };
+        // dual attestation is required if the amount is above the threshold AND between distinct
+        // entities. E.g.:
+        // (1) inter-VASP
+        // (2) inter-DD
+        // (3) VASP -> DD
+        // (4) DD -> VASP
+        // We assume that any DD <-> DD payment is inter-DD because each DD has a single account
+        let is_payer_vasp = VASP::is_vasp(payer);
+        let is_payee_vasp = VASP::is_vasp(payee);
+        let is_payer_dd = DesignatedDealer::exists_at(payer);
+        let is_payee_dd = DesignatedDealer::exists_at(payee);
+        let is_inter_vasp =
+            is_payer_vasp && is_payee_vasp &&
+            VASP::parent_address(payer) != VASP::parent_address(payee);
+        is_inter_vasp || // (1) inter-VASP
+            (is_payer_dd && is_payee_dd) || // (2) inter-DD
+            (is_payer_vasp && is_payee_dd) || // (3) VASP -> DD
+            (is_payer_dd && is_payee_vasp) // (4) DD -> VASP
     }
     spec fun dual_attestation_required {
         pragma verify = true, opaque = true;
@@ -191,18 +225,38 @@ module DualAttestation {
         aborts_if !DualAttestationLimit::spec_is_published();
     }
     spec module {
+        // TODO(sblackshear): this times out; investigate
+        pragma verify = false;
+        define spec_is_inter_vasp(payer: address, payee: address): bool {
+            VASP::spec_is_vasp(payer) && VASP::spec_is_vasp(payee)
+                && VASP::spec_parent_address(payer) != VASP::spec_parent_address(payee)
+        }
+        define spec_is_inter_dd(payer: address, payee: address): bool {
+            DesignatedDealer::spec_exists_at(payer) && DesignatedDealer::spec_exists_at(payee)
+        }
+        define spec_is_vasp_to_dd(payer: address, payee: address): bool {
+            VASP::spec_is_vasp(payer) && DesignatedDealer::spec_exists_at(payee)
+        }
+        define spec_is_dd_to_vasp(payer: address, payee: address): bool {
+            DesignatedDealer::spec_exists_at(payer) && VASP::spec_is_vasp(payee)
+        }
         /// Helper functions which simulates `Self::dual_attestation_required`.
-        define spec_dual_attestation_required<Token>(payer: address, payee: address, deposit_value: u64): bool {
+        define spec_dual_attestation_required<Token>(
+            payer: address, payee: address, deposit_value: u64
+        ): bool {
             Libra::spec_approx_lbr_for_value<Token>(deposit_value)
-                    >= DualAttestationLimit::spec_get_cur_microlibra_limit()
-            && VASP::spec_is_vasp(payer) && VASP::spec_is_vasp(payee)
-            && VASP::spec_parent_address(payer) != VASP::spec_parent_address(payee)
+                    >= DualAttestationLimit::spec_get_cur_microlibra_limit() &&
+            payer != payee &&
+            (spec_is_inter_vasp(payer, payee) ||
+             spec_is_inter_dd(payer, payee) ||
+             spec_is_vasp_to_dd(payer, payee) ||
+             spec_is_dd_to_vasp(payer, payee))
         }
     }
 
     /// Helper to construct a message for dual attestation.
     /// Message is `metadata` | `payer` | `amount` | `DOMAIN_SEPARATOR`.
-    public fun dual_attestation_message(
+    fun dual_attestation_message(
         payer: address, metadata: vector<u8>, deposit_value: u64
     ): vector<u8> {
         let message = metadata;
@@ -225,7 +279,7 @@ module DualAttestation {
     }
 
     /// Helper function to check validity of a signature when dual attestion is required.
-    public fun assert_signature_is_valid(
+    fun assert_signature_is_valid(
         payer: address,
         payee: address,
         metadata_signature: vector<u8>,
@@ -239,7 +293,7 @@ module DualAttestation {
         assert(
             Signature::ed25519_verify(
                 metadata_signature,
-                compliance_public_key(payee),
+                compliance_public_key(credential_address(payee)),
                 message
             ),
             EINVALID_METADATA_SIGNATURE
@@ -247,7 +301,7 @@ module DualAttestation {
     }
     spec fun assert_signature_is_valid {
         pragma verify = true, opaque = true;
-        aborts_if !exists<Credential>(payee);
+        aborts_if !exists<Credential>(spec_credential_address(payee));
         aborts_if !signature_is_valid(payer, payee, metadata_signature, metadata, deposit_value);
     }
     spec module {
@@ -262,29 +316,29 @@ module DualAttestation {
             len(metadata_signature) == 64
                 && Signature::spec_ed25519_verify(
                         metadata_signature,
-                        spec_compliance_public_key(payee),
+                        spec_compliance_public_key(spec_credential_address(payee)),
                         spec_dual_attestation_message(payer, metadata, deposit_value)
                    )
         }
     }
 
-    /// Public API for checking whether a payment of `value_microlibra` coins of type `Currency`
+    /// Public API for checking whether a payment of `value` coins of type `Currency`
     /// from `payer` to `payee` has a valid dual attestation. This returns without aborting if
     /// (1) dual attestation is not required for this payment, or
     /// (2) dual attestation is required, and `metadata_signature` can be verified on the message
-    ///     `metadata` | `payer` | `amount` | `DOMAIN_SEPARATOR` using the `compliance_public_key`
+    ///     `metadata` | `payer` | `value` | `DOMAIN_SEPARATOR` using the `compliance_public_key`
     ///     published in `payee`'s `Credential` resource
     /// It aborts with an appropriate error code if dual attestation is required, but one or more of
     /// the conditions in (2) is not met.
     public fun assert_payment_ok<Currency>(
         payer: address,
         payee: address,
-        value_microlibra: u64,
+        value: u64,
         metadata: vector<u8>,
         metadata_signature: vector<u8>
     ) acquires Credential {
-        if (dual_attestation_required<Currency>(payer, payee, value_microlibra)) {
-          assert_signature_is_valid(payer, payee, metadata_signature, metadata, value_microlibra)
+        if (dual_attestation_required<Currency>(payer, payee, value)) {
+          assert_signature_is_valid(payer, payee, metadata_signature, metadata, value)
         }
     }
 

@@ -17,10 +17,13 @@ use crate::{
 use libra_crypto::{ed25519::Ed25519PrivateKey, traits::SigningKey, PrivateKey, Uniform};
 use libra_types::{
     account_config,
-    transaction::{authenticator::AuthenticationKey, TransactionStatus},
+    transaction::{authenticator::AuthenticationKey, TransactionOutput, TransactionStatus},
     vm_status::{StatusCode, VMStatus},
 };
 use transaction_builder::*;
+
+const COIN1_THRESHOLD: u64 = 10_000_000_000 / 5;
+const BAD_METADATA_SIGNATURE_ERROR_CODE: u64 = 4;
 
 #[test]
 fn freeze_unfreeze_account() {
@@ -286,10 +289,7 @@ fn dual_attestation_payment() {
     let (receiver_vasp_compliance_private_key, receiver_vasp_compliance_public_key) =
         keygen.generate_keypair();
 
-    // choose an amount large enough to make multiple payments
-    let mint_amount = 1_000_000_000_000;
-    // choose an amount above the dual attestation threshold
-    let payment_amount = 10_000_000_000u64;
+    let payment_amount = COIN1_THRESHOLD;
 
     executor.execute_and_apply(libra_root.signed_script_txn(
         encode_create_parent_vasp_account_script(
@@ -317,14 +317,21 @@ fn dual_attestation_payment() {
         2,
     ));
 
-    executor.execute_and_apply(dd.signed_script_txn(
-        encode_testnet_mint_script(
-            account_config::coin1_tag(),
-            *payment_sender.address(),
-            mint_amount,
-        ),
-        0,
-    ));
+    // give `payment_sender` enough coins to make a `num_payments` payments at or above the dual
+    // attestation threshold. We have to split this into multiple txes because DD -> VASP txes are
+    // subject to the travel rule too!
+    let num_payments = 5;
+    for i in 0..num_payments {
+        executor.execute_and_apply(dd.signed_script_txn(
+            encode_testnet_mint_script(
+                account_config::coin1_tag(),
+                *payment_sender.address(),
+                COIN1_THRESHOLD - 1,
+            ),
+            i,
+        ));
+    }
+    let dd_sequence_num = num_payments;
 
     // create a child VASP with a balance of amount
     executor.execute_and_apply(payment_sender.signed_script_txn(
@@ -516,14 +523,18 @@ fn dual_attestation_payment() {
         0,
         account_config::coin1_tag(),
     ));
-    executor.execute_and_apply(dd.signed_script_txn(
-        encode_testnet_mint_script(
-            account_config::coin1_tag(),
-            *unhosted.address(),
-            mint_amount,
-        ),
-        1,
-    ));
+
+    let num_payments = 3;
+    for i in 0..num_payments {
+        executor.execute_and_apply(dd.signed_script_txn(
+            encode_testnet_mint_script(
+                account_config::coin1_tag(),
+                *unhosted.address(),
+                COIN1_THRESHOLD - 1,
+            ),
+            dd_sequence_num + i,
+        ));
+    }
 
     {
         // Check that unhosted wallet <-> VASP transactions do not require dual attestation
@@ -640,6 +651,149 @@ fn dual_attestation_payment() {
         );
         assert_eq!(output.status().vm_status().sub_status, Some(5));
     }
+}
+
+fn assert_aborted_with(output: TransactionOutput, error_code: u64) {
+    assert_eq!(
+        output.status().vm_status().major_status,
+        StatusCode::ABORTED
+    );
+    assert_eq!(output.status().vm_status().sub_status, Some(error_code));
+}
+
+// Check that DD <-> DD and DD <-> VASP payments over the threshold fail without dual attesation.
+#[test]
+fn dd_dual_attestation_payments() {
+    let mut executor = FakeExecutor::from_genesis_file();
+    // account that will receive the dual attestation payment
+    let parent_vasp = Account::new();
+    let dd1 = Account::new();
+    let dd2 = Account::new();
+    let libra_root = Account::new_libra_root();
+    let blessed = Account::new_blessed_tc();
+    let mint_dd = Account::new_genesis_account(account_config::testnet_dd_account_address());
+    let mut keygen = KeyGen::from_seed([9u8; 32]);
+    let (_parent_vasp_compliance_private_key, parent_vasp_compliance_public_key) =
+        keygen.generate_keypair();
+    let (_dd1_compliance_private_key, dd1_compliance_public_key) = keygen.generate_keypair();
+    let (_dd2_compliance_private_key, dd2_compliance_public_key) = keygen.generate_keypair();
+
+    // create the VASP account
+    executor.execute_and_apply(libra_root.signed_script_txn(
+        encode_create_parent_vasp_account_script(
+            account_config::coin1_tag(),
+            *parent_vasp.address(),
+            parent_vasp.auth_key_prefix(),
+            vec![],
+            vec![],
+            parent_vasp_compliance_public_key.to_bytes().to_vec(),
+            false,
+        ),
+        1,
+    ));
+    // create the DD1 account
+    executor.execute_and_apply(blessed.signed_script_txn(
+        encode_create_designated_dealer_script(
+            account_config::coin1_tag(),
+            0,
+            *dd1.address(),
+            dd1.auth_key_prefix(),
+            vec![],
+            vec![],
+            dd1_compliance_public_key.to_bytes().to_vec(),
+            false,
+        ),
+        0,
+    ));
+    // create the DD2 account
+    executor.execute_and_apply(blessed.signed_script_txn(
+        encode_create_designated_dealer_script(
+            account_config::coin1_tag(),
+            0,
+            *dd2.address(),
+            dd1.auth_key_prefix(),
+            vec![],
+            vec![],
+            dd2_compliance_public_key.to_bytes().to_vec(),
+            false,
+        ),
+        1,
+    ));
+
+    // give DD1 some funds
+    executor.execute_and_apply(mint_dd.signed_script_txn(
+        encode_testnet_mint_script(
+            account_config::coin1_tag(),
+            *dd1.address(),
+            COIN1_THRESHOLD - 1,
+        ),
+        0,
+    ));
+    executor.execute_and_apply(mint_dd.signed_script_txn(
+        encode_testnet_mint_script(
+            account_config::coin1_tag(),
+            *dd1.address(),
+            COIN1_THRESHOLD - 1,
+        ),
+        1,
+    ));
+    // Give VASP some funds
+    executor.execute_and_apply(mint_dd.signed_script_txn(
+        encode_testnet_mint_script(
+            account_config::coin1_tag(),
+            *parent_vasp.address(),
+            COIN1_THRESHOLD - 1,
+        ),
+        2,
+    ));
+    executor.execute_and_apply(mint_dd.signed_script_txn(
+        encode_testnet_mint_script(
+            account_config::coin1_tag(),
+            *parent_vasp.address(),
+            COIN1_THRESHOLD - 1,
+        ),
+        3,
+    ));
+
+    // DD <-> DD over threshold without attestation fails
+    // Checking isn't performed on UHW->VASP
+    let output = executor.execute_transaction(dd1.signed_script_txn(
+        encode_peer_to_peer_with_metadata_script(
+            account_config::coin1_tag(),
+            *dd2.address(),
+            COIN1_THRESHOLD,
+            vec![0],
+            b"what a bad signature".to_vec(),
+        ),
+        0,
+    ));
+    assert_aborted_with(output, BAD_METADATA_SIGNATURE_ERROR_CODE);
+
+    // DD -> VASP over threshold without attestation fails
+    let output = executor.execute_transaction(dd1.signed_script_txn(
+        encode_peer_to_peer_with_metadata_script(
+            account_config::coin1_tag(),
+            *parent_vasp.address(),
+            COIN1_THRESHOLD,
+            vec![0],
+            b"what a bad signature".to_vec(),
+        ),
+        0, // didn't apply result of previous tx, so seq doesn't change
+    ));
+    assert_aborted_with(output, BAD_METADATA_SIGNATURE_ERROR_CODE);
+
+    // VASP -> DD over threshold without attestation fails
+    let output = executor.execute_transaction(parent_vasp.signed_script_txn(
+        encode_peer_to_peer_with_metadata_script(
+            account_config::coin1_tag(),
+            *dd1.address(),
+            COIN1_THRESHOLD,
+            vec![0],
+            b"what a bad signature".to_vec(),
+        ),
+        0,
+    ));
+    assert_aborted_with(output, BAD_METADATA_SIGNATURE_ERROR_CODE);
 }
 
 #[test]

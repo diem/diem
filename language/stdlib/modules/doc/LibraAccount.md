@@ -65,8 +65,10 @@
     -  [Function `unstaple_lbr`](#0x1_LibraAccount_Specification_unstaple_lbr)
     -  [Function `deposit`](#0x1_LibraAccount_Specification_deposit)
     -  [Function `tiered_mint`](#0x1_LibraAccount_Specification_tiered_mint)
+    -  [Function `cancel_burn`](#0x1_LibraAccount_Specification_cancel_burn)
     -  [Function `withdraw_from_balance`](#0x1_LibraAccount_Specification_withdraw_from_balance)
     -  [Function `withdraw_from`](#0x1_LibraAccount_Specification_withdraw_from)
+    -  [Function `preburn`](#0x1_LibraAccount_Specification_preburn)
     -  [Function `extract_withdraw_capability`](#0x1_LibraAccount_Specification_extract_withdraw_capability)
     -  [Function `pay_from`](#0x1_LibraAccount_Specification_pay_from)
     -  [Function `rotate_authentication_key`](#0x1_LibraAccount_Specification_rotate_authentication_key)
@@ -1250,7 +1252,7 @@ Create a designated dealer account at
 Creates Preburn resource under account 'new_account_address'
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -1263,6 +1265,9 @@ Creates Preburn resource under account 'new_account_address'
     creator_account: &signer,
     new_account_address: address,
     auth_key_prefix: vector&lt;u8&gt;,
+    human_name: vector&lt;u8&gt;,
+    base_url: vector&lt;u8&gt;,
+    compliance_public_key: vector&lt;u8&gt;,
     add_all_currencies: bool,
 ) {
     <b>let</b> new_dd_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
@@ -1271,6 +1276,9 @@ Creates Preburn resource under account 'new_account_address'
     <a href="DesignatedDealer.md#0x1_DesignatedDealer_publish_designated_dealer_credential">DesignatedDealer::publish_designated_dealer_credential</a>(&new_dd_account, creator_account);
     <a href="Roles.md#0x1_Roles_new_designated_dealer_role">Roles::new_designated_dealer_role</a>(creator_account, &new_dd_account);
     <a href="#0x1_LibraAccount_add_currencies_for_account">add_currencies_for_account</a>&lt;CoinType&gt;(&new_dd_account, add_all_currencies);
+    <a href="DualAttestation.md#0x1_DualAttestation_publish_credential">DualAttestation::publish_credential</a>(
+        &new_dd_account, creator_account, human_name, base_url, compliance_public_key
+    );
     <a href="#0x1_LibraAccount_make_account">make_account</a>(new_dd_account, auth_key_prefix)
 }
 </code></pre>
@@ -2204,8 +2212,18 @@ TODO(wrwg): function takes very long to verify; investigate why
 
 
 
+<a name="0x1_LibraAccount_Specification_cancel_burn"></a>
 
-<pre><code>pragma verify = <b>true</b>;
+### Function `cancel_burn`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_cancel_burn">cancel_burn</a>&lt;Token&gt;(account: &signer, preburn_address: address)
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>false</b>;
 </code></pre>
 
 
@@ -2238,6 +2256,22 @@ TODO(wrwg): function takes very long to verify; investigate why
 
 
 <pre><code>pragma verify = <b>true</b>;
+</code></pre>
+
+
+
+<a name="0x1_LibraAccount_Specification_preburn"></a>
+
+### Function `preburn`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_preburn">preburn</a>&lt;Token&gt;(dd: &signer, cap: &<a href="#0x1_LibraAccount_WithdrawCapability">LibraAccount::WithdrawCapability</a>, amount: u64)
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>false</b>;
 </code></pre>
 
 
@@ -2393,7 +2427,7 @@ TODO(wrwg): function takes very long to verify; investigate why
 ### Function `create_designated_dealer`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_create_designated_dealer">create_designated_dealer</a>&lt;CoinType&gt;(creator_account: &signer, new_account_address: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 

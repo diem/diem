@@ -4,6 +4,8 @@
 pub mod account;
 pub mod balance;
 pub mod currency_info;
+pub mod designated_dealer;
+pub mod dual_attestation;
 pub mod freezing_bit;
 pub mod key_rotation_capability;
 pub mod role;
@@ -14,6 +16,8 @@ pub mod withdraw_capability;
 pub use account::*;
 pub use balance::*;
 pub use currency_info::*;
+pub use designated_dealer::*;
+pub use dual_attestation::*;
 pub use freezing_bit::*;
 pub use key_rotation_capability::*;
 pub use role::*;

@@ -21,6 +21,7 @@
     -  [Function `add_tier`](#0x1_DesignatedDealer_Specification_add_tier)
     -  [Function `update_tier`](#0x1_DesignatedDealer_Specification_update_tier)
     -  [Function `tiered_mint`](#0x1_DesignatedDealer_Specification_tiered_mint)
+    -  [Function `exists_at`](#0x1_DesignatedDealer_Specification_exists_at)
 
 
 
@@ -487,6 +488,34 @@
         }};
 <b>ensures</b> tier_index &lt; len(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr)).tiers);
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr).window_inflow &lt;= <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr)).tiers[tier_index];
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_Specification_exists_at"></a>
+
+### Function `exists_at`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr: address): bool
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>true</b>;
+<b>ensures</b> result == <a href="#0x1_DesignatedDealer_spec_exists_at">spec_exists_at</a>(dd_addr);
+</code></pre>
+
+
+
+
+<a name="0x1_DesignatedDealer_spec_exists_at"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_DesignatedDealer_spec_exists_at">spec_exists_at</a>(addr: address): bool {
+    exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr)
+}
 </code></pre>
 
 
