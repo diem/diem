@@ -374,10 +374,25 @@ impl EpochManager {
         peer_id: AccountAddress,
         consensus_msg: ConsensusMsg,
     ) -> anyhow::Result<()> {
-        if let Some(event) = self.process_epoch(peer_id, consensus_msg).await? {
-            let verified_event = event
+        // we can't verify signatures from a different epoch
+        let maybe_unverified_event = self.process_epoch(peer_id, consensus_msg).await?;
+
+        if let Some(unverified_event) = maybe_unverified_event {
+            // same epoch -> run well-formedness + signature check
+            let verified_event = unverified_event
+                .clone()
                 .verify(&self.epoch_state().verifier)
-                .context("[EpochManager] Verify event")?;
+                .context("[EpochManager] Verify event")
+                .map_err(|err|
+                        // security log + return the error
+                        {send_struct_log!(security_log(security_events::CONSENSUS_INVALID_MESSAGE)
+                            .data("from_peer", &peer_id)
+                            .data("error", format!("{}", err))
+                            .data("event", &unverified_event)
+                        );
+                    err})?;
+
+            // process the verified event
             self.process_event(peer_id, verified_event).await?;
         }
         Ok(())
