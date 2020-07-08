@@ -46,6 +46,7 @@ impl StorageHelper {
     pub fn initialize(&self, namespace: String) {
         let mut storage = self.storage(namespace);
 
+        // Initialize all keys in storage
         storage.create_key(ASSOCIATION_KEY).unwrap();
         storage.create_key(CONSENSUS_KEY).unwrap();
         storage.create_key(EXECUTION_KEY).unwrap();
@@ -54,6 +55,7 @@ impl StorageHelper {
         storage.create_key(OPERATOR_KEY).unwrap();
         storage.create_key(VALIDATOR_NETWORK_KEY).unwrap();
 
+        // Initialize all other data in storage
         storage.set(EPOCH, Value::U64(0)).unwrap();
         storage.set(LAST_VOTED_ROUND, Value::U64(0)).unwrap();
         storage.set(PREFERRED_ROUND, Value::U64(0)).unwrap();
@@ -210,6 +212,36 @@ impl StorageHelper {
 
         let command = Command::from_iter(args.split_whitespace());
         command.set_layout()
+    }
+
+    #[cfg(test)]
+    pub fn set_operator(
+        &self,
+        operator_name: &str,
+        local_ns: &str,
+        remote_ns: &str,
+    ) -> Result<String, Error> {
+        let args = format!(
+            "
+                management
+                set-operator
+                --operator-name {operator_name}
+                --local backend={backend};\
+                    path={path};\
+                    namespace={local_ns}
+                --remote backend={backend};\
+                    path={path};\
+                    namespace={remote_ns}\
+            ",
+            operator_name = operator_name,
+            backend = crate::secure_backend::DISK,
+            path = self.path_string(),
+            local_ns = local_ns,
+            remote_ns = remote_ns,
+        );
+
+        let command = Command::from_iter(args.split_whitespace());
+        command.set_operator()
     }
 
     pub fn validator_config(
