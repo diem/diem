@@ -248,7 +248,7 @@ module Roles {
     }
 
     public fun has_register_new_currency_privilege(account: &signer): bool acquires RoleId {
-         has_treasury_compliance_role(account)
+         has_libra_root_role(account)
     }
 
     public fun has_update_dual_attestation_threshold_privilege(account: &signer): bool acquires RoleId {

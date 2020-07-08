@@ -10,7 +10,7 @@ use thiserror::Error;
 pub enum ErrorKind {
     #[error("an error occurred when executing the transaction, txn status {:?}", .0.status())]
     VMExecutionFailure(TransactionOutput),
-    #[error("the transaction was discarded")]
+    #[error("the transaction was discarded: {0:?}")]
     DiscardedTransaction(TransactionOutput),
     #[error("the checker has failed to match the directives against the output")]
     CheckerFailure,

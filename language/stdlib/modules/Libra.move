@@ -655,17 +655,15 @@ module Libra {
     /// Register the type `CoinType` as a currency. Until the type is
     /// registered as a currency it cannot be used as a coin/currency unit in Libra.
     /// The passed-in `account` must be a specific address (`CoreAddresses::CURRENCY_INFO_ADDRESS()`) and
-    /// the `account` must also have the correct `RegisterNewCurrency` capability.
-    /// After the first registration of `CoinType` as a
-    /// currency, all subsequent tries to register `CoinType` as a currency
-    /// will fail.
+    /// the `account` must also have the register new currency privilege.
+    /// After the first registration of `CoinType` as a  currency, all subsequent tries to register `CoinType` as a currency will fail.
+    ///
     /// When the `CoinType` is registered it publishes the
     /// `CurrencyInfo<CoinType>` resource under the `CoreAddresses::CURRENCY_INFO_ADDRESS()` and
     /// adds the currency to the set of `RegisteredCurrencies`. It returns
     /// `MintCapability<CoinType>` and `BurnCapability<CoinType>` resources.
     public fun register_currency<CoinType>(
-        account: &signer,
-        tc_account: &signer,
+        lr_account: &signer,
         to_lbr_exchange_rate: FixedPoint32,
         is_synthetic: bool,
         scaling_factor: u64,
@@ -673,14 +671,14 @@ module Libra {
         currency_code: vector<u8>,
     ): (MintCapability<CoinType>, BurnCapability<CoinType>)
     acquires CurrencyRegistrationCapability {
-        assert(Roles::has_register_new_currency_privilege(tc_account), EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE);
+        assert(Roles::has_register_new_currency_privilege(lr_account), EDOES_NOT_HAVE_REGISTRATION_PRIVILEGE);
         // Operational constraint that it must be stored under a specific address.
         assert(
-            Signer::address_of(account) == CoreAddresses::CURRENCY_INFO_ADDRESS(),
+            Signer::address_of(lr_account) == CoreAddresses::CURRENCY_INFO_ADDRESS(),
             EINVALID_SINGLETON_ADDRESS
         );
 
-        move_to(account, CurrencyInfo<CoinType> {
+        move_to(lr_account, CurrencyInfo<CoinType> {
             total_value: 0,
             preburn_value: 0,
             to_lbr_exchange_rate,
@@ -689,11 +687,11 @@ module Libra {
             fractional_part,
             currency_code: copy currency_code,
             can_mint: true,
-            mint_events: Event::new_event_handle<MintEvent>(account),
-            burn_events: Event::new_event_handle<BurnEvent>(account),
-            preburn_events: Event::new_event_handle<PreburnEvent>(account),
-            cancel_burn_events: Event::new_event_handle<CancelBurnEvent>(account),
-            exchange_rate_update_events: Event::new_event_handle<ToLBRExchangeRateUpdateEvent>(account)
+            mint_events: Event::new_event_handle<MintEvent>(lr_account),
+            burn_events: Event::new_event_handle<BurnEvent>(lr_account),
+            preburn_events: Event::new_event_handle<PreburnEvent>(lr_account),
+            cancel_burn_events: Event::new_event_handle<CancelBurnEvent>(lr_account),
+            exchange_rate_update_events: Event::new_event_handle<ToLBRExchangeRateUpdateEvent>(lr_account)
         });
         RegisteredCurrencies::add_currency_code(
             currency_code,
@@ -702,10 +700,10 @@ module Libra {
         (MintCapability<CoinType>{}, BurnCapability<CoinType>{})
     }
     spec fun register_currency {
-        aborts_if !Roles::spec_has_register_new_currency_privilege(tc_account);
-        aborts_if Signer::spec_address_of(account) != CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS();
+        aborts_if !Roles::spec_has_register_new_currency_privilege(lr_account);
+        aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS();
         aborts_if !exists<CurrencyRegistrationCapability>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
-        aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(account));
+        aborts_if exists<CurrencyInfo<CoinType>>(Signer::spec_address_of(lr_account));
         aborts_if spec_is_currency<CoinType>();
         include RegisteredCurrencies::AddCurrencyCodeAbortsIf;
 

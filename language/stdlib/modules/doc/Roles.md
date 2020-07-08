@@ -607,7 +607,7 @@ module that uses it.
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_has_register_new_currency_privilege">has_register_new_currency_privilege</a>(account: &signer): bool <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
-     <a href="#0x1_Roles_has_treasury_compliance_role">has_treasury_compliance_role</a>(account)
+     <a href="#0x1_Roles_has_libra_root_role">has_libra_root_role</a>(account)
 }
 </code></pre>
 

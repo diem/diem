@@ -236,7 +236,6 @@ restrictions are enforced in the
     // Register the `<a href="#0x1_LBR">LBR</a>` currency.
     <b>let</b> (mint_cap, burn_cap) = <a href="Libra.md#0x1_Libra_register_currency">Libra::register_currency</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;(
         lr_account,
-        tc_account,
         <a href="FixedPoint32.md#0x1_FixedPoint32_create_from_rational">FixedPoint32::create_from_rational</a>(1, 1), // exchange rate <b>to</b> <a href="#0x1_LBR">LBR</a>
         <b>true</b>,    // is_synthetic
         1000000, // scaling_factor = 10^6

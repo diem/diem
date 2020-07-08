@@ -77,7 +77,6 @@ module LBR {
         // Register the `LBR` currency.
         let (mint_cap, burn_cap) = Libra::register_currency<LBR>(
             lr_account,
-            tc_account,
             FixedPoint32::create_from_rational(1, 1), // exchange rate to LBR
             true,    // is_synthetic
             1000000, // scaling_factor = 10^6
