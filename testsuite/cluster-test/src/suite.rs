@@ -9,7 +9,7 @@ use crate::{
     experiments::{
         CpuFlamegraphParams, Experiment, ExperimentParam, PerformanceBenchmarkParams,
         PerformanceBenchmarkThreeRegionSimulationParams, RebootRandomValidatorsParams,
-        RecoveryTimeParams,
+        RecoveryTimeParams, TwinValidatorsParams,
     },
 };
 use anyhow::{format_err, Result};
@@ -42,11 +42,12 @@ impl ExperimentSuite {
             PerformanceBenchmarkParams::new_nodes_down(10).build(cluster),
         ));
         experiments.push(Box::new(
-            PerformanceBenchmarkParams::new_fixed_tps(0, 10).build(cluster),
-        ));
-        experiments.push(Box::new(
             PerformanceBenchmarkThreeRegionSimulationParams {}.build(cluster),
         ));
+        experiments.push(Box::new(
+            PerformanceBenchmarkParams::new_fixed_tps(0, 10).build(cluster),
+        ));
+        experiments.push(Box::new(TwinValidatorsParams { pair: 1 }.build(cluster)));
         experiments.push(Box::new(
             CpuFlamegraphParams { duration_secs: 60 }.build(cluster),
         ));
