@@ -10,7 +10,8 @@
 //! supported over that messaging protocol. On receipt, both ends will determine the highest
 //! intersecting messaging protocol version and use that for the remainder of the session.
 
-use libra_config::{chain_id::ChainId, network_id::NetworkId};
+use libra_config::network_id::NetworkId;
+use libra_types::chain_id::ChainId;
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, convert::TryInto, fmt, iter::Iterator};
 

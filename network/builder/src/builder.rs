@@ -11,7 +11,6 @@
 //! long as the latter is in its trusted peers set.
 use channel::{self, message_queues::QueueStyle};
 use libra_config::{
-    chain_id::ChainId,
     config::{DiscoveryMethod, NetworkConfig, RoleType, HANDSHAKE_VERSION},
     network_id::{NetworkContext, NetworkId},
 };
@@ -22,7 +21,7 @@ use libra_network_address::{
     encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
     NetworkAddress,
 };
-use libra_types::PeerId;
+use libra_types::{chain_id::ChainId, PeerId};
 use network::{
     connectivity_manager::{builder::ConnectivityManagerBuilder, ConnectivityRequest},
     constants,

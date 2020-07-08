@@ -14,11 +14,11 @@ use futures::{
     io::{AsyncRead, AsyncWrite},
     stream::{Stream, StreamExt, TryStreamExt},
 };
-use libra_config::{chain_id::ChainId, config::HANDSHAKE_VERSION, network_id::NetworkId};
+use libra_config::{config::HANDSHAKE_VERSION, network_id::NetworkId};
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_network_address::{parse_dns_tcp, parse_ip_tcp, parse_memory, NetworkAddress};
-use libra_types::PeerId;
+use libra_types::{chain_id::ChainId, PeerId};
 use netcore::transport::{tcp, ConnectionOrigin, Transport};
 use serde::Serialize;
 use std::{
