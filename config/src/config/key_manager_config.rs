@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::config::{Error, LoggerConfig, PersistableConfig, SecureBackend};
+use libra_types::chain_id::{self, ChainId};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -21,6 +22,8 @@ pub struct KeyManagerConfig {
     pub secure_backend: SecureBackend,
     pub sleep_period_secs: u64,
     pub txn_expiration_secs: u64,
+    #[serde(deserialize_with = "chain_id::deserialize_config_chain_id")]
+    pub chain_id: ChainId,
 }
 
 impl Default for KeyManagerConfig {
@@ -32,6 +35,7 @@ impl Default for KeyManagerConfig {
             secure_backend: SecureBackend::InMemoryStorage,
             sleep_period_secs: DEFAULT_SLEEP_PERIOD_SECS,
             txn_expiration_secs: DEFAULT_TXN_EXPIRATION_SECS,
+            chain_id: ChainId::test(),
         }
     }
 }

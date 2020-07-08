@@ -428,9 +428,11 @@ fn test_get_transactions() {
                     TransactionDataView::UserTransaction {
                         sender,
                         script_hash,
+                        chain_id,
                         ..
                     } => {
                         assert_eq!(&t.sender().to_string(), sender);
+                        assert_eq!(&t.chain_id().id(), chain_id);
                         // TODO: verify every field
                         if let TransactionPayload::Script(s) = t.payload() {
                             assert_eq!(script_hash, &HashValue::sha3_256_of(s.code()).to_hex());

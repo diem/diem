@@ -1059,6 +1059,14 @@ User submitted transaction.
    </td>
   </tr>
   <tr>
+   <td>chain_id
+   </td>
+   <td>u64
+   </td>
+   <td>Chain ID of the network this transaction is intended for
+   </td>
+  </tr>
+  <tr>
    <td>max_gas_amount
    </td>
    <td>u64

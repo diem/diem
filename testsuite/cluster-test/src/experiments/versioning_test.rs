@@ -17,6 +17,7 @@ use async_trait::async_trait;
 use libra_logger::prelude::*;
 use libra_types::{
     account_config::{lbr_type_tag, LBR_NAME},
+    chain_id::ChainId,
     on_chain_config::LibraVersion,
     transaction::{helpers::create_user_txn, TransactionPayload},
 };
@@ -119,6 +120,7 @@ impl Experiment for ValidatorVersioning {
                 0,
                 LBR_NAME.to_owned(),
                 10,
+                ChainId::test(),
             )
             .map_err(|e| format_err!("Failed to create signed transaction: {}", e))
         };
@@ -150,6 +152,7 @@ impl Experiment for ValidatorVersioning {
             0,
             LBR_NAME.to_owned(),
             10,
+            ChainId::test(),
         )
         .map_err(|e| format_err!("Failed to create signed transaction: {}", e))?;
         faucet_account.sequence_number += 1;

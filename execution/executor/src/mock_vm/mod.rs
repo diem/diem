@@ -10,6 +10,7 @@ use libra_types::{
     access_path::AccessPath,
     account_address::AccountAddress,
     account_config::{libra_root_address, validator_set_address, LBR_NAME},
+    chain_id::ChainId,
     contract_event::ContractEvent,
     event::EventKey,
     on_chain_config::{
@@ -315,6 +316,7 @@ fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
         0,
         LBR_NAME.to_owned(),
         std::time::Duration::from_secs(0),
+        ChainId::test(),
     );
 
     let privkey = Ed25519PrivateKey::generate_for_testing();
@@ -327,7 +329,8 @@ fn encode_transaction(sender: AccountAddress, program: Script) -> Transaction {
 }
 
 pub fn encode_reconfiguration_transaction(sender: AccountAddress) -> Transaction {
-    let raw_transaction = RawTransaction::new_write_set(sender, 0, WriteSet::default());
+    let raw_transaction =
+        RawTransaction::new_write_set(sender, 0, WriteSet::default(), ChainId::test());
 
     let privkey = Ed25519PrivateKey::generate_for_testing();
     Transaction::UserTransaction(

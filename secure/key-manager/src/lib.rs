@@ -29,6 +29,7 @@ use libra_secure_time::TimeService;
 use libra_types::{
     account_address::AccountAddress,
     account_config::LBR_NAME,
+    chain_id::ChainId,
     transaction::{RawTransaction, Script, SignedTransaction, Transaction, TransactionArgument},
 };
 use std::{str::FromStr, time::Duration};
@@ -90,6 +91,7 @@ pub struct KeyManager<LI, S, T> {
     rotation_period_secs: u64, // The frequency by which to rotate all keys
     sleep_period_secs: u64,    // The amount of time to sleep between key management checks
     txn_expiration_secs: u64,  // The time after which a rotation transaction expires
+    chain_id: ChainId,
 }
 
 impl<LI, S, T> KeyManager<LI, S, T>
@@ -105,6 +107,7 @@ where
         rotation_period_secs: u64,
         sleep_period_secs: u64,
         txn_expiration_secs: u64,
+        chain_id: ChainId,
     ) -> Self {
         Self {
             libra,
@@ -114,6 +117,7 @@ where
             rotation_period_secs,
             sleep_period_secs,
             txn_expiration_secs,
+            chain_id,
         }
     }
 
@@ -235,6 +239,7 @@ where
             &fullnode_network_key,
             &fullnode_network_address,
             expiration,
+            self.chain_id,
         );
 
         let operator_pubkey = self.storage.get_public_key(OPERATOR_KEY)?.public_key;
@@ -337,6 +342,7 @@ pub fn build_rotation_transaction(
     fullnode_network_key: &x25519::PublicKey,
     fullnode_network_address: &RawNetworkAddress,
     expiration: Duration,
+    chain_id: ChainId,
 ) -> RawTransaction {
     let script = Script::new(
         libra_transaction_scripts::SET_VALIDATOR_CONFIG_TXN.clone(),
@@ -358,5 +364,6 @@ pub fn build_rotation_transaction(
         GAS_UNIT_PRICE,
         LBR_NAME.to_owned(),
         expiration,
+        chain_id,
     )
 }

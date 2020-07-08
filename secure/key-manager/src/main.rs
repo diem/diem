@@ -60,6 +60,7 @@ fn create_and_execute_key_manager(key_manager_config: KeyManagerConfig) -> Resul
         key_manager_config.rotation_period_secs,
         key_manager_config.sleep_period_secs,
         key_manager_config.txn_expiration_secs,
+        key_manager_config.chain_id,
     )
     .execute()
 }

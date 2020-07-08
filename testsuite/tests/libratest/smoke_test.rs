@@ -33,6 +33,7 @@ use libra_trace::trace::trace_node;
 use libra_types::{
     account_address::AccountAddress,
     account_config::{libra_root_address, testnet_dd_account_address, COIN1_NAME},
+    chain_id::ChainId,
     ledger_info::LedgerInfo,
     transaction::{
         authenticator::AuthenticationKey, RawTransaction, Script, SignedTransaction, Transaction,
@@ -131,6 +132,7 @@ impl TestEnvironment {
             .to_string();
 
         ClientProxy::new(
+            ChainId::test(),
             &format!("http://localhost:{}", port),
             &self.faucet_key.1,
             &self.faucet_key.1,
@@ -1356,6 +1358,7 @@ fn submit_new_transaction(
         constants::GAS_UNIT_PRICE,
         constants::GAS_CURRENCY_CODE.to_owned(),
         Duration::from_secs(expiration_time),
+        ChainId::test(),
     );
 
     // Sign and submit the transaction

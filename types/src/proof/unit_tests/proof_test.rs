@@ -5,6 +5,7 @@ use crate::{
     account_config::LBR_NAME,
     account_state_blob::AccountStateBlob,
     block_info::BlockInfo,
+    chain_id::ChainId,
     ledger_info::LedgerInfo,
     proof::{
         definition::MAX_ACCUMULATOR_PROOF_DEPTH, AccountStateProof, AccumulatorExtensionProof,
@@ -356,6 +357,7 @@ fn test_verify_account_state_and_event() {
             /* gas_unit_price = */ 0,
             /* gas_currency_code = */ LBR_NAME.to_owned(),
             /* expiration_time = */ std::time::Duration::new(0, 0),
+            ChainId::test(),
         )
         .sign(&privkey, pubkey)
         .expect("Signing failed.")

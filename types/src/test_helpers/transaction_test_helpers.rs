@@ -4,6 +4,7 @@
 use crate::{
     account_address::AccountAddress,
     account_config::LBR_NAME,
+    chain_id::ChainId,
     transaction::{Module, RawTransaction, Script, SignatureCheckedTransaction, SignedTransaction},
     write_set::WriteSet,
 };
@@ -36,6 +37,7 @@ pub fn get_test_signed_module_publishing_transaction(
         TEST_GAS_PRICE,
         LBR_NAME.to_owned(),
         Duration::from_secs(expiration_time),
+        ChainId::test(),
     );
 
     let signature = private_key.sign(&raw_txn);
@@ -63,6 +65,7 @@ pub fn get_test_signed_transaction(
         gas_unit_price,
         gas_currency_code,
         Duration::from_secs(expiration_time),
+        ChainId::test(),
     );
 
     let signature = private_key.sign(&raw_txn);
@@ -90,6 +93,7 @@ pub fn get_test_unchecked_transaction(
         gas_unit_price,
         gas_currency_code,
         Duration::from_secs(expiration_time),
+        ChainId::test(),
     );
 
     let signature = private_key.sign(&raw_txn);
@@ -157,7 +161,7 @@ pub fn get_write_set_txn(
     write_set: Option<WriteSet>,
 ) -> SignatureCheckedTransaction {
     let write_set = write_set.unwrap_or_default();
-    RawTransaction::new_write_set(sender, sequence_number, write_set)
+    RawTransaction::new_write_set(sender, sequence_number, write_set, ChainId::test())
         .sign(&private_key, public_key)
         .unwrap()
 }

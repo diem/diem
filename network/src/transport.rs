@@ -596,7 +596,7 @@ mod test {
             listener_key,
             trusted_peers.clone(),
             HANDSHAKE_VERSION,
-            chain_id.clone(),
+            chain_id,
             NetworkId::Validator,
             supported_protocols.clone(),
         );

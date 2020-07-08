@@ -13,6 +13,7 @@ use libra_types::{
         self, from_currency_code_string, type_tag_for_currency_code, AccountResource,
         BalanceResource, RoleId, COIN1_NAME, COIN2_NAME, LBR_NAME,
     },
+    chain_id::ChainId,
     event::EventHandle,
     transaction::{
         authenticator::AuthenticationKey, ChangeSet, Module, RawTransaction, Script,
@@ -209,7 +210,7 @@ impl Account {
     ) -> RawTransaction {
         match payload {
             TransactionPayload::WriteSet(writeset) => {
-                RawTransaction::new_change_set(address, sequence_number, writeset)
+                RawTransaction::new_change_set(address, sequence_number, writeset, ChainId::test())
             }
             TransactionPayload::Module(module) => RawTransaction::new_module(
                 address,
@@ -219,6 +220,7 @@ impl Account {
                 gas_unit_price,
                 gas_currency_code,
                 Duration::from_secs(DEFAULT_EXPIRATION_TIME),
+                ChainId::test(),
             ),
             TransactionPayload::Script(script) => RawTransaction::new_script(
                 address,
@@ -228,6 +230,7 @@ impl Account {
                 gas_unit_price,
                 gas_currency_code,
                 Duration::from_secs(DEFAULT_EXPIRATION_TIME),
+                ChainId::test(),
             ),
         }
     }
@@ -373,6 +376,7 @@ impl Account {
             gas_currency_code,
             // TTL is 86400s. Initial time was set to 0.
             Duration::from_secs(DEFAULT_EXPIRATION_TIME),
+            ChainId::test(),
         )
     }
 
@@ -462,6 +466,7 @@ impl TransactionBuilder {
                 .unwrap_or_else(|| LBR_NAME.to_owned()),
             self.ttl
                 .unwrap_or_else(|| Duration::from_secs(DEFAULT_EXPIRATION_TIME)),
+            ChainId::test(),
         )
         .sign(&self.sender.privkey, self.sender.pubkey)
         .unwrap()

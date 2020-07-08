@@ -11,7 +11,10 @@ use libra_network_address::NetworkAddress;
 use libra_secure_storage::{
     CryptoStorage, KVStorage, NamespacedStorage, OnDiskStorage, Storage, Value,
 };
-use libra_types::{account_address::AccountAddress, transaction::Transaction, waypoint::Waypoint};
+use libra_types::{
+    account_address::AccountAddress, chain_id::ChainId, transaction::Transaction,
+    waypoint::Waypoint,
+};
 use std::{fs::File, path::Path};
 use structopt::StructOpt;
 
@@ -214,6 +217,7 @@ impl StorageHelper {
         owner_address: AccountAddress,
         validator_address: NetworkAddress,
         fullnode_address: NetworkAddress,
+        chain_id: ChainId,
         local_ns: &str,
         remote_ns: &str,
     ) -> Result<Transaction, Error> {
@@ -224,6 +228,7 @@ impl StorageHelper {
                 --owner-address {owner_address}
                 --validator-address {validator_address}
                 --fullnode-address {fullnode_address}
+                --chain-id {chain_id}
                 --local backend={backend};\
                     path={path};\
                     namespace={local_ns}
@@ -234,6 +239,7 @@ impl StorageHelper {
             owner_address = owner_address,
             validator_address = validator_address,
             fullnode_address = fullnode_address,
+            chain_id = chain_id.id(),
             backend = crate::secure_backend::DISK,
             path = self.path_string(),
             local_ns = local_ns,

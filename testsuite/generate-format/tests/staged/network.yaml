@@ -1,6 +1,6 @@
 ---
 ChainId:
-  NEWTYPESTRUCT: STR
+  NEWTYPESTRUCT: U64
 DirectSendMsg:
   STRUCT:
     - protocol_id:

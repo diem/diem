@@ -282,7 +282,7 @@ impl PeerManagerBuilder {
             .expect("PeerManager can only be built once");
 
         let protos = transport_context.supported_protocols();
-        let chain_id = transport_context.chain_id.clone();
+        let chain_id = transport_context.chain_id;
         let network_id = self.network_context.network_id().clone();
         let peer_id = self.network_context.peer_id();
 

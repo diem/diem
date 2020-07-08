@@ -139,7 +139,7 @@ pub fn setup_network() -> DummyNetwork {
     // Set up the listener network
     let mut network_builder = NetworkBuilder::new(
         runtime.handle().clone(),
-        chain_id.clone(),
+        chain_id,
         network_id.clone(),
         RoleType::Validator,
         listener_peer_id,

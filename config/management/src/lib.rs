@@ -264,7 +264,7 @@ pub mod tests {
     use super::*;
     use crate::storage_helper::StorageHelper;
     use libra_secure_storage::{CryptoStorage, KVStorage};
-    use libra_types::account_address::AccountAddress;
+    use libra_types::{account_address::AccountAddress, chain_id::ChainId};
     use std::{
         fs::File,
         io::{Read, Write},
@@ -329,6 +329,7 @@ pub mod tests {
                     AccountAddress::random(),
                     "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                     "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+                    ChainId::test(),
                     ns,
                     &((*ns).to_string() + shared),
                 )
@@ -394,6 +395,7 @@ pub mod tests {
                 AccountAddress::random(),
                 "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                 "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
+                ChainId::test(),
                 local_ns,
                 remote_ns,
             )

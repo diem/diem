@@ -12,7 +12,6 @@ use channel::{libra_channel, message_queues::QueueStyle};
 use executor_types::ExecutedTrees;
 use futures::{executor::block_on, future::FutureExt, StreamExt};
 use libra_config::{
-    chain_id::ChainId,
     config::RoleType,
     network_id::{NetworkContext, NetworkId},
 };
@@ -25,7 +24,7 @@ use libra_network_address::{
     NetworkAddress, RawNetworkAddress,
 };
 use libra_types::{
-    contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
+    chain_id::ChainId, contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
     on_chain_config::ValidatorSet, proof::TransactionListProof,
     transaction::TransactionListWithProof, validator_config::ValidatorConfig,
     validator_info::ValidatorInfo, validator_signer::ValidatorSigner,
