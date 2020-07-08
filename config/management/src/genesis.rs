@@ -11,9 +11,8 @@ use libra_secure_storage::KVStorage;
 use libra_types::transaction::{Transaction, TransactionPayload};
 use std::{fs::File, io::Write, path::PathBuf};
 use structopt::StructOpt;
-use vm_genesis::ValidatorRegistration;
+use vm_genesis::OperatorRegistration;
 
-// TODO(davidiw) add operator_address, since that will eventually be the identity producing this.
 /// Note, it is implicitly expected that the storage supports
 /// a namespace but one has not been set.
 #[derive(Debug, StructOpt)]
@@ -27,12 +26,12 @@ pub struct Genesis {
 impl Genesis {
     pub fn execute(self) -> Result<Transaction, Error> {
         let layout = self.layout()?;
-        let association_key = self.association(&layout)?;
-        let validators = self.validators(&layout)?;
+        let association_key = self.association_key(&layout)?;
+        let operator_registrations = self.operator_registrations(&layout)?;
 
-        let genesis = vm_genesis::encode_genesis_transaction_with_validator(
+        let genesis = vm_genesis::encode_genesis_transaction(
             association_key,
-            &validators,
+            &operator_registrations,
             Some(libra_types::on_chain_config::VMPublishingOption::open()),
         );
 
@@ -51,9 +50,9 @@ impl Genesis {
         Ok(genesis)
     }
 
-    /// Retrieves association key from the remote storage. Note, at this point in time, genesis
+    /// Retrieves the association key from the remote storage. Note, at this point in time, genesis
     /// only supports a single association key.
-    pub fn association(&self, layout: &Layout) -> Result<Ed25519PublicKey, Error> {
+    pub fn association_key(&self, layout: &Layout) -> Result<Ed25519PublicKey, Error> {
         let association_config = self.backend.backend.clone();
         let association_config = association_config.set_namespace(layout.association[0].clone());
 
@@ -83,39 +82,43 @@ impl Genesis {
             .map_err(|e| Error::RemoteStorageReadError(constants::LAYOUT, e.to_string()))
     }
 
-    /// Produces a set of ValidatorRegistration from the remote storage.
-    pub fn validators(&self, layout: &Layout) -> Result<Vec<ValidatorRegistration>, Error> {
-        let mut validators = Vec::new();
+    /// Produces a set of OperatorRegistrations from the remote storage.
+    pub fn operator_registrations(
+        &self,
+        layout: &Layout,
+    ) -> Result<Vec<OperatorRegistration>, Error> {
+        let mut registrations = Vec::new();
         for operator in layout.operators.iter() {
-            let validator_config = self.backend.backend.clone();
-            let validator_config = validator_config.set_namespace(operator.into());
+            let operator_config = self.backend.backend.clone();
+            let operator_config = operator_config.set_namespace(operator.into());
 
-            let validator_storage = validator_config.create_storage(RemoteStorage)?;
+            let operator_storage = operator_config.create_storage(RemoteStorage)?;
 
-            let key = validator_storage
+            let operator_key = operator_storage
                 .get(OPERATOR_KEY)
                 .map_err(|e| Error::RemoteStorageReadError(OPERATOR_KEY, e.to_string()))?
                 .value
                 .ed25519_public_key()
                 .map_err(|e| Error::RemoteStorageReadError(OPERATOR_KEY, e.to_string()))?;
 
-            let txn = validator_storage
+            let validator_config_tx = operator_storage
                 .get(constants::VALIDATOR_CONFIG)
                 .map_err(|e| {
                     Error::RemoteStorageReadError(constants::VALIDATOR_CONFIG, e.to_string())
                 })?
                 .value;
-            let txn = txn.transaction().unwrap();
-            let txn = txn.as_signed_user_txn().unwrap().payload();
-            let txn = if let TransactionPayload::Script(script) = txn {
-                script.clone()
-            } else {
-                return Err(Error::UnexpectedError("Found invalid registration".into()));
-            };
+            let validator_config_tx = validator_config_tx.transaction().unwrap();
+            let validator_config_tx = validator_config_tx.as_signed_user_txn().unwrap().payload();
+            let validator_config_tx =
+                if let TransactionPayload::Script(script) = validator_config_tx {
+                    script.clone()
+                } else {
+                    return Err(Error::UnexpectedError("Found invalid registration".into()));
+                };
 
-            validators.push((key, txn));
+            registrations.push((operator_key, validator_config_tx));
         }
 
-        Ok(validators)
+        Ok(registrations)
     }
 }

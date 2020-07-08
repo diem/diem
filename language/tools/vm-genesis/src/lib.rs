@@ -59,19 +59,22 @@ pub static GENESIS_KEYPAIR: Lazy<(Ed25519PrivateKey, Ed25519PublicKey)> = Lazy::
 
 pub static ZERO_COST_SCHEDULE: Lazy<CostTable> = Lazy::new(zero_cost_schedule);
 
-pub type ValidatorRegistration = (Ed25519PublicKey, Script);
+pub type OperatorRegistration = (Ed25519PublicKey, Script); // Registers a validator config
 
-pub fn encode_genesis_transaction_with_validator(
+pub fn encode_genesis_transaction(
     public_key: Ed25519PublicKey,
-    validators: &[ValidatorRegistration],
+    operator_registrations: &[OperatorRegistration],
     vm_publishing_option: Option<VMPublishingOption>,
 ) -> Transaction {
-    encode_genesis_transaction(
-        public_key,
-        validators,
-        stdlib_modules(StdLibOptions::Compiled), // Must use compiled stdlib
-        vm_publishing_option
-            .unwrap_or_else(|| VMPublishingOption::locked(StdlibScript::whitelist())),
+    Transaction::WaypointWriteSet(
+        encode_genesis_change_set(
+            &public_key,
+            operator_registrations,
+            stdlib_modules(StdLibOptions::Compiled), // Must use compiled stdlib,
+            vm_publishing_option
+                .unwrap_or_else(|| VMPublishingOption::locked(StdlibScript::whitelist())),
+        )
+        .0,
     )
 }
 
@@ -87,7 +90,7 @@ fn merge_txn_effects(
 
 pub fn encode_genesis_change_set(
     public_key: &Ed25519PublicKey,
-    validators: &[ValidatorRegistration],
+    operator_registrations: &[OperatorRegistration],
     stdlib_modules: &[CompiledModule],
     vm_publishing_option: VMPublishingOption,
 ) -> (ChangeSet, BTreeMap<Vec<u8>, StructTag>) {
@@ -111,7 +114,7 @@ pub fn encode_genesis_change_set(
 
     // generate the genesis WriteSet
     create_and_initialize_main_accounts(&mut session, &public_key, vm_publishing_option, &lbr_ty);
-    create_and_initialize_validators(&mut session, &validators);
+    create_and_initialize_validators(&mut session, &operator_registrations);
     reconfigure(&mut session);
 
     // XXX/TODO: for testnet only
@@ -142,23 +145,6 @@ pub fn encode_genesis_change_set(
 
     verify_genesis_write_set(&events);
     (ChangeSet::new(write_set, events), type_mapping)
-}
-
-pub fn encode_genesis_transaction(
-    public_key: Ed25519PublicKey,
-    validators: &[ValidatorRegistration],
-    stdlib_modules: &[CompiledModule],
-    vm_publishing_option: VMPublishingOption,
-) -> Transaction {
-    Transaction::WaypointWriteSet(
-        encode_genesis_change_set(
-            &public_key,
-            validators,
-            stdlib_modules,
-            vm_publishing_option,
-        )
-        .0,
-    )
 }
 
 /// Convert the transaction arguments into move values.
@@ -210,7 +196,7 @@ fn exec_script(session: &mut Session<StateViewCache>, sender: AccountAddress, sc
         .unwrap()
 }
 
-/// Create an initialize Association and Core Code accounts.
+/// Create and initialize Association and Core Code accounts.
 fn create_and_initialize_main_accounts(
     session: &mut Session<StateViewCache>,
     public_key: &Ed25519PublicKey,
@@ -369,11 +355,11 @@ fn create_and_initialize_testnet_minting(
 /// Initialize each validator.
 fn create_and_initialize_validators(
     session: &mut Session<StateViewCache>,
-    validators: &[ValidatorRegistration],
+    operator_registrations: &[OperatorRegistration],
 ) {
     let libra_root_address = account_config::libra_root_address();
-    for (account_key, registration) in validators {
-        let auth_key = AuthenticationKey::ed25519(&account_key);
+    for (operator_key, registration) in operator_registrations {
+        let auth_key = AuthenticationKey::ed25519(&operator_key);
         let account = auth_key.derived_address();
         let create_script = transaction_builder::encode_create_validator_account_script(
             account,
@@ -393,7 +379,7 @@ fn create_and_initialize_validators(
             "add_validator",
             vec![],
             vec![
-                Value::transaction_argument_signer_reference(account_config::libra_root_address()),
+                Value::transaction_argument_signer_reference(libra_root_address),
                 Value::address(account),
             ],
         );
@@ -476,7 +462,7 @@ pub fn generate_genesis_change_set_for_testing(stdlib_options: StdLibOptions) ->
 
     encode_genesis_change_set(
         &GENESIS_KEYPAIR.1,
-        &validator_registrations(&swarm.nodes),
+        &operator_registrations(&swarm.nodes),
         stdlib_modules,
         VMPublishingOption::open(),
     )
@@ -490,14 +476,14 @@ pub fn generate_genesis_type_mapping() -> BTreeMap<Vec<u8>, StructTag> {
 
     encode_genesis_change_set(
         &GENESIS_KEYPAIR.1,
-        &validator_registrations(&swarm.nodes),
+        &operator_registrations(&swarm.nodes),
         stdlib_modules,
         VMPublishingOption::open(),
     )
     .1
 }
 
-pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegistration> {
+pub fn operator_registrations(node_configs: &[NodeConfig]) -> Vec<OperatorRegistration> {
     node_configs
         .iter()
         .map(|n| {
