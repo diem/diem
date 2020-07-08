@@ -56,6 +56,7 @@ pub async fn update_batch_instance(
 
     // Add a timeout to have wait for validators back to healthy mode.
     // TODO: Replace this with a blocking health check.
+    info!("Wait for the instance to sync up with peers");
     time::delay_for(Duration::from_secs(20)).await;
     Ok(())
 }
@@ -168,7 +169,7 @@ impl Experiment for CompatibilityTest {
     }
 
     fn deadline(&self) -> Duration {
-        Duration::from_secs(20 * 60)
+        Duration::from_secs(16 * 60)
     }
 }
 
