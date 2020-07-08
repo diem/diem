@@ -720,7 +720,7 @@ Helper function to check validity of a signature when dual attestion is required
     <b>assert</b>(
         <a href="Signature.md#0x1_Signature_ed25519_verify">Signature::ed25519_verify</a>(
             *metadata_signature,
-            <a href="VASP.md#0x1_VASP_compliance_public_key">VASP::compliance_public_key</a>(payee),
+            <a href="DualAttestation.md#0x1_DualAttestation_compliance_public_key">DualAttestation::compliance_public_key</a>(payee),
             message
         ),
         EINVALID_METADATA_SIGNATURE
@@ -1424,12 +1424,9 @@ all available currencies in the system will also be added.
 ) {
     <b>let</b> new_account = <a href="#0x1_LibraAccount_create_signer">create_signer</a>(new_account_address);
     <a href="Roles.md#0x1_Roles_new_parent_vasp_role">Roles::new_parent_vasp_role</a>(creator_account, &new_account);
-    <a href="VASP.md#0x1_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(
-        &new_account,
-        creator_account,
-        human_name,
-        base_url,
-        compliance_public_key
+    <a href="VASP.md#0x1_VASP_publish_parent_vasp_credential">VASP::publish_parent_vasp_credential</a>(&new_account, creator_account);
+    <a href="DualAttestation.md#0x1_DualAttestation_publish_credential">DualAttestation::publish_credential</a>(
+        &new_account, creator_account, human_name, base_url, compliance_public_key
     );
     <a href="Event.md#0x1_Event_publish_generator">Event::publish_generator</a>(&new_account);
     <a href="#0x1_LibraAccount_add_currencies_for_account">add_currencies_for_account</a>&lt;Token&gt;(&new_account, add_all_currencies);
@@ -2336,7 +2333,7 @@ Returns true if signature is valid.
     len(metadata_signature) == 64
         && <a href="Signature.md#0x1_Signature_spec_ed25519_verify">Signature::spec_ed25519_verify</a>(
                 metadata_signature,
-                <a href="VASP.md#0x1_VASP_spec_compliance_public_key">VASP::spec_compliance_public_key</a>(payee),
+                <a href="DualAttestation.md#0x1_DualAttestation_spec_compliance_public_key">DualAttestation::spec_compliance_public_key</a>(payee),
                 <a href="#0x1_LibraAccount_spec_dual_attestation_message">spec_dual_attestation_message</a>(payer, metadata, deposit_value)
            )
 }
