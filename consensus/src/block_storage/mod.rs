@@ -5,37 +5,13 @@ use consensus_types::{
     executed_block::ExecutedBlock, quorum_cert::QuorumCert, timeout_certificate::TimeoutCertificate,
 };
 use libra_crypto::HashValue;
-use libra_types::validator_verifier::VerifyError;
 use std::sync::Arc;
 
 mod block_store;
 mod block_tree;
-mod pending_votes;
 
 pub use block_store::{sync_manager::BlockRetriever, BlockStore};
 use consensus_types::sync_info::SyncInfo;
-pub use pending_votes::PendingVotes;
-
-/// Result of the vote processing. The failure case (Verification error) is returned
-/// as the Error part of the result.
-#[derive(Debug, PartialEq)]
-pub enum VoteReceptionResult {
-    /// The vote has been added but QC has not been formed yet. Return the amount of voting power
-    /// the given (proposal, execution) pair.
-    VoteAdded(u64),
-    /// The very same vote message has been processed in past.
-    DuplicateVote,
-    /// The very same author has already voted for another proposal in this round (equivocation).
-    EquivocateVote,
-    /// This block has just been certified after adding the vote.
-    NewQuorumCertificate(Arc<QuorumCert>),
-    /// The vote completes a new TimeoutCertificate
-    NewTimeoutCertificate(Arc<TimeoutCertificate>),
-    /// There might be some issues adding a vote
-    ErrorAddingVote(VerifyError),
-    /// The vote is not for the current round.
-    UnexpectedRound(u64, u64),
-}
 
 pub trait BlockReader: Send + Sync {
     /// Check if a block with the block_id exist in the BlockTree.
