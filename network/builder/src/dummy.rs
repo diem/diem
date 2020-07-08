@@ -6,11 +6,11 @@
 use crate::builder::NetworkBuilder;
 use channel::message_queues::QueueStyle;
 use futures::{executor::block_on, StreamExt};
-use libra_config::{chain_id::ChainId, config::RoleType, network_id::NetworkId};
+use libra_config::{config::RoleType, network_id::NetworkId};
 use libra_crypto::{test_utils::TEST_SEED, x25519, Uniform};
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
+use libra_types::{chain_id::ChainId, PeerId};
 use netcore::transport::ConnectionOrigin;
 use network::{
     constants::{MAX_FRAME_SIZE, NETWORK_CHANNEL_SIZE},

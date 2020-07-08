@@ -44,9 +44,9 @@ pub use safety_rules_config::*;
 mod upstream_config;
 pub use upstream_config::*;
 mod test_config;
-use crate::{chain_id::ChainId, network_id::NetworkId};
+use crate::network_id::NetworkId;
 use libra_secure_storage::{KVStorage, Storage};
-use libra_types::waypoint::Waypoint;
+use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 pub use test_config::*;
 
 /// Config pulls in configuration information from the config file.

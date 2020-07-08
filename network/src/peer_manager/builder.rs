@@ -13,12 +13,12 @@ use crate::{
     ProtocolId,
 };
 use channel::{self, libra_channel, message_queues::QueueStyle};
-use libra_config::{chain_id::ChainId, config::HANDSHAKE_VERSION, network_id::NetworkContext};
+use libra_config::{config::HANDSHAKE_VERSION, network_id::NetworkContext};
 use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_network_address::NetworkAddress;
-use libra_types::PeerId;
+use libra_types::{chain_id::ChainId, PeerId};
 use netcore::transport::{
     memory::MemoryTransport,
     tcp::{TcpSocket, TcpTransport},
