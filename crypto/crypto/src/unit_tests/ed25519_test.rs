@@ -1,5 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
+#[cfg(feature = "vanilla")]
+use vanilla_ed25519_dalek as ed25519_dalek;
 
 use crate as libra_crypto;
 use crate::{

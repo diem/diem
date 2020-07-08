@@ -1105,6 +1105,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "curve25519-dalek"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "byteorder 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "digest 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subtle 2.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeroize 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "datatest-stable"
 version = "0.1.0"
 dependencies = [
@@ -1294,6 +1306,17 @@ dependencies = [
  "merlin 1.2.1 (git+https://github.com/isislovecruft/merlin?branch=develop)",
  "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sha2 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "ed25519-dalek"
+version = "1.0.0-pre.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "clear_on_drop 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
+ "curve25519-dalek 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand 0.7.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha2 0.8.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -2399,8 +2422,10 @@ dependencies = [
  "bytes 0.5.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "criterion 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "curve25519-dalek 2.1.0 (git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat2)",
+ "curve25519-dalek 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "digest 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "ed25519-dalek 1.0.0-pre.3 (git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat2)",
+ "ed25519-dalek 1.0.0-pre.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hmac 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-canonical-serialization 0.1.0",
@@ -2424,6 +2449,7 @@ dependencies = [
  "thiserror 1.0.20 (registry+https://github.com/rust-lang/crates.io-index)",
  "tiny-keccak 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "x25519-dalek 0.6.0 (git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat2)",
+ "x25519-dalek 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -3019,6 +3045,7 @@ dependencies = [
  "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "byteorder 1.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "ed25519-dalek 1.0.0-pre.3 (git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat2)",
+ "ed25519-dalek 1.0.0-pre.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hmac 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libra-crypto 0.1.0",
@@ -6447,6 +6474,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "x25519-dalek"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "curve25519-dalek 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rand_core 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "zeroize 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "xml-rs"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6562,6 +6599,7 @@ dependencies = [
 "checksum ct-logs 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "4d3686f5fa27dbc1d76c751300376e167c5a43387f44bb451fd1c24776e49113"
 "checksum ctrlc 3.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "7a4ba686dff9fa4c1c9636ce1010b0cf98ceb421361b0bb3d6faeec43bd217a7"
 "checksum curve25519-dalek 2.1.0 (git+https://github.com/novifinancial/curve25519-dalek.git?branch=fiat2)" = "<none>"
+"checksum curve25519-dalek 2.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5d85653f070353a16313d0046f173f70d1aadd5b42600a14de626f0dfb3473a5"
 "checksum difference 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "524cbf6897b527295dff137cec09ecf3a05f4fddffd7dfcd1585403449e74198"
 "checksum diffus 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)" = "8d3b0f382a0651ab91518390f16df755c6e2ca11f52a8e06b301fd3f7dfb576c"
 "checksum digest 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f3d0c8c8752312f9713efd397ff63acb9f85585afbf179282e720e7704954dd5"
@@ -6574,6 +6612,7 @@ dependencies = [
 "checksum discard 1.0.4 (registry+https://github.com/rust-lang/crates.io-index)" = "212d0f5754cb6769937f4501cc0e67f4f4483c8d2c3e1e922ee9edbe4ab4c7c0"
 "checksum dtoa 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)" = "134951f4028bdadb9b84baf4232681efbf277da25144b9b0ad65df75946c422b"
 "checksum ed25519-dalek 1.0.0-pre.3 (git+https://github.com/novifinancial/ed25519-dalek.git?branch=fiat2)" = "<none>"
+"checksum ed25519-dalek 1.0.0-pre.3 (registry+https://github.com/rust-lang/crates.io-index)" = "978710b352437433c97b2bff193f2fb1dfd58a093f863dd95e225a19baa599a2"
 "checksum either 1.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
 "checksum encode_unicode 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)" = "a357d28ed41a50f9c765dbfe56cbc04a64e53e5fc58ba79fbc34c10ef3df831f"
 "checksum encoding_rs 0.8.23 (registry+https://github.com/rust-lang/crates.io-index)" = "e8ac63f94732332f44fe654443c46f6375d1939684c17b0afb6cb56b0456e171"
@@ -6931,6 +6970,7 @@ dependencies = [
 "checksum winreg 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0120db82e8a1e0b9fb3345a539c478767c0048d842860994d96113d5b667bd69"
 "checksum ws2_32-sys 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d59cefebd0c892fa2dd6de581e937301d8552cb44489cdff035c6187cb63fa5e"
 "checksum x25519-dalek 0.6.0 (git+https://github.com/novifinancial/x25519-dalek.git?branch=fiat2)" = "<none>"
+"checksum x25519-dalek 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "637ff90c9540fa3073bb577e65033069e4bae7c79d49d74aa3ffdf5342a53217"
 "checksum xml-rs 0.8.3 (registry+https://github.com/rust-lang/crates.io-index)" = "b07db065a5cf61a7e4ba64f29e67db906fb1787316516c4e6e5ff0fea1efcd8a"
 "checksum yaml-rust 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "39f0c922f1a334134dc2f7a8b67dc5d25f0735263feec974345ff706bcf20b0d"
 "checksum zeroize 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3cbac2ed2ba24cc90f5e06485ac8c7c1e5449fe8911aef4d8877218af021a5b8"
