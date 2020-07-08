@@ -125,6 +125,17 @@ cargo run -p libra-management -- \
     --remote 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN;namespace=NAME'
 ```
 
+* Each validator owner will select the validator operator responsible for
+  operating the validator node. This selection is done by specifying the name of
+  the validator operator (as registered in the shared Github):
+```
+cargo run -p libra-management -- \
+    set-operator \
+    --operator-name OPERATOR_NAME \
+    --local 'backend=vault;server=URL;token=PATH_TO_VAULT_TOKEN' \
+    --remote 'backend=github;repository_owner=REPOSITORY_OWNER;repository=REPOSITORY;token=PATH_TO_GITHUB_TOKEN;namespace=NAME'
+```
+
 ### Validator Operators
 
 * Each Validator Operator member will upload their key to GitHub:

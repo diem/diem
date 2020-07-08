@@ -10,6 +10,7 @@ mod key;
 mod layout;
 mod secure_backend;
 mod validator_config;
+mod validator_operator;
 mod verify;
 mod waypoint;
 
@@ -29,6 +30,7 @@ pub mod constants {
     pub const COMMON_NS: &str = "common";
     pub const LAYOUT: &str = "layout";
     pub const VALIDATOR_CONFIG: &str = "validator_config";
+    pub const VALIDATOR_OPERATOR: &str = "validator_operator";
 
     pub const GAS_UNIT_PRICE: u64 = 0;
     pub const MAX_GAS_AMOUNT: u64 = 1_000_000;
@@ -57,6 +59,8 @@ pub enum Command {
     SubmitTransaction(crate::json_rpc::SubmitTransaction),
     #[structopt(about = "Submits a Layout doc to a shared storage")]
     SetLayout(SetLayout),
+    #[structopt(about = "Sets the validator operator chosen by the owner")]
+    SetOperator(crate::validator_operator::ValidatorOperator),
     #[structopt(about = "Constructs and signs a ValidatorConfig")]
     ValidatorConfig(crate::validator_config::ValidatorConfig),
     #[structopt(about = "Verifies and prints the current configuration state")]
@@ -73,6 +77,7 @@ pub enum CommandName {
     OwnerKey,
     ReadAccountState,
     SetLayout,
+    SetOperator,
     SubmitTransaction,
     ValidatorConfig,
     Verify,
@@ -89,6 +94,7 @@ impl From<&Command> for CommandName {
             Command::OwnerKey(_) => CommandName::OwnerKey,
             Command::ReadAccountState(_) => CommandName::ReadAccountState,
             Command::SetLayout(_) => CommandName::SetLayout,
+            Command::SetOperator(_) => CommandName::SetOperator,
             Command::SubmitTransaction(_) => CommandName::SubmitTransaction,
             Command::ValidatorConfig(_) => CommandName::ValidatorConfig,
             Command::Verify(_) => CommandName::Verify,
@@ -107,6 +113,7 @@ impl std::fmt::Display for CommandName {
             CommandName::OwnerKey => "owner-key",
             CommandName::ReadAccountState => "read-account-state",
             CommandName::SetLayout => "set-layout",
+            CommandName::SetOperator => "set-operator",
             CommandName::SubmitTransaction => "submit-transaction",
             CommandName::ValidatorConfig => "validator-config",
             CommandName::Verify => "verify",
@@ -126,6 +133,7 @@ impl Command {
             Command::OwnerKey(_) => self.owner_key().unwrap().to_string(),
             Command::ReadAccountState(_) => format!("{:?}", self.read_account_state().unwrap()),
             Command::SetLayout(_) => self.set_layout().unwrap().to_string(),
+            Command::SetOperator(_) => format!("{:?}", self.set_operator().unwrap()),
             Command::SubmitTransaction(_) => self
                 .submit_transaction()
                 .map(|_| "success!")
@@ -189,6 +197,13 @@ impl Command {
         match self {
             Command::SetLayout(set_layout) => set_layout.execute(),
             _ => Err(self.unexpected_command(CommandName::SetLayout)),
+        }
+    }
+
+    pub fn set_operator(self) -> Result<String, Error> {
+        match self {
+            Command::SetOperator(set_operator) => set_operator.execute(),
+            _ => Err(self.unexpected_command(CommandName::SetOperator)),
         }
     }
 
@@ -263,7 +278,9 @@ pub struct SingleBackend {
 pub mod tests {
     use super::*;
     use crate::storage_helper::StorageHelper;
-    use libra_secure_storage::{CryptoStorage, KVStorage};
+    use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
+    use libra_global_constants::OPERATOR_KEY;
+    use libra_secure_storage::{CryptoStorage, KVStorage, Value};
     use libra_types::{account_address::AccountAddress, chain_id::ChainId};
     use std::{
         fs::File,
@@ -406,6 +423,38 @@ pub mod tests {
         let remote_txn = remote_txn.transaction().unwrap();
 
         assert_eq!(local_txn, remote_txn);
+    }
+
+    #[test]
+    fn test_set_operator() {
+        let storage_helper = StorageHelper::new();
+        let local_owner_ns = "local";
+        let remote_owner_ns = "owner";
+        storage_helper.initialize(local_owner_ns.into());
+
+        // Upload an operator key to the remote storage
+        let operator_name = "operator";
+        let operator_key = Ed25519PrivateKey::generate_for_testing().public_key();
+        let mut remote_storage = storage_helper.storage(operator_name.into());
+        remote_storage
+            .set(OPERATOR_KEY, Value::Ed25519PublicKey(operator_key))
+            .map_err(|e| Error::RemoteStorageWriteError(OPERATOR_KEY, e.to_string()))
+            .unwrap();
+
+        // Owner calls the set-operator command
+        let local_operator_name = storage_helper
+            .set_operator(operator_name, local_owner_ns, remote_owner_ns)
+            .unwrap();
+
+        // Verify that a file setting the operator was uploaded to the remote storage
+        let remote_storage = storage_helper.storage(remote_owner_ns.into());
+        let uploaded_operator_name = remote_storage
+            .get(constants::VALIDATOR_OPERATOR)
+            .unwrap()
+            .value
+            .string()
+            .unwrap();
+        assert_eq!(local_operator_name, uploaded_operator_name);
     }
 
     #[test]

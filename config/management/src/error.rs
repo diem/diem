@@ -22,6 +22,8 @@ pub enum Error {
     LocalStorageSigningError(&'static str, &'static str, String),
     #[error("Failed to write, {0}, to local storage: {1}")]
     LocalStorageWriteError(&'static str, String),
+    #[error("No remote storage was specified, but one is required!")]
+    RemoteStorageMissing,
     #[error("Failed to read, {0}, from remote storage: {1}")]
     RemoteStorageReadError(&'static str, String),
     #[error("Failed to write, {0}, to remote storage: {1}")]
