@@ -5,6 +5,7 @@ This crate generates the dependency diagrams of the stdlib modules (`../../stdli
 * the backward dependency diagram for each module ({ModuleName}.backward.dot)
 * the diagram for the entire dependency graph ("(EntireGraph.dot)")
 
+
 The command to run is:
 ```
 cargo run -p diagen
