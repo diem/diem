@@ -10,7 +10,6 @@ use libra_config::config::{
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use libra_temppath::TempPath;
-use libra_types::account_address;
 use std::path::{Path, PathBuf};
 
 const SHARED: &str = "_shared";
@@ -81,9 +80,6 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
         let ns_shared = ns.clone() + SHARED;
         self.storage_helper.initialize(ns.clone());
 
-        let operator_key = self.storage_helper.operator_key(&ns, &ns_shared).unwrap();
-
-        let validator_account = account_address::from_public_key(&operator_key);
         let mut config = self.template.clone_for_template();
         config.randomize_ports();
 
@@ -103,9 +99,12 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
             self.secure_backend(&ns, "full_node"),
         );
 
+        // TODO(joshlind): FIX ME: owner_name is currently unused!
+        let owner_name = format!("owner_{}", index);
+
         self.storage_helper
             .validator_config(
-                validator_account,
+                &owner_name,
                 validator_network_address,
                 fullnode_network_address,
                 self.template.base.chain_id,

@@ -279,9 +279,13 @@ pub mod tests {
     use super::*;
     use crate::storage_helper::StorageHelper;
     use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
-    use libra_global_constants::OPERATOR_KEY;
+    use libra_global_constants::{OPERATOR_KEY, OWNER_KEY};
     use libra_secure_storage::{CryptoStorage, KVStorage, Value};
-    use libra_types::{account_address::AccountAddress, chain_id::ChainId};
+    use libra_types::{
+        account_address,
+        chain_id::ChainId,
+        transaction::{TransactionArgument, TransactionPayload},
+    };
     use std::{
         fs::File,
         io::{Read, Write},
@@ -292,23 +296,25 @@ pub mod tests {
         let helper = StorageHelper::new();
 
         // Each identity works in their own namespace
-        // Alice, Bob, and Carol are operators, implicitly mapped 1:1 with owners.
+        // Alice, Bob, and Carol are owners.
+        // Operator_Alice, Operator_Bob and Operator_Carol are operators.
         // Dave is the association.
         // Each user will upload their contents to *_ns + "shared"
         // Common is used by the technical staff for coordination.
         let alice_ns = "alice";
         let bob_ns = "bob";
         let carol_ns = "carol";
+        let operator_alice_ns = "operator_alice";
+        let operator_bob_ns = "operator_bob";
+        let operator_carol_ns = "operator_carol";
         let dave_ns = "dave";
         let shared = "_shared";
 
         // Step 1) Define and upload the layout specifying which identities have which roles. This
-        // is uplaoded to the common namespace.
-
-        // Note: owners are irrelevant currently
+        // is uploaded to the common namespace:
         let layout_text = "\
-            operators = [\"alice_shared\", \"bob_shared\", \"carol_shared\"]\n\
-            owners = []\n\
+            operators = [\"operator_alice_shared\", \"operator_bob_shared\", \"operator_carol_shared\"]\n\
+            owners = [\"alice_shared\", \"bob_shared\", \"carol_shared\"]\n\
             association = [\"dave_shared\"]\n\
         ";
 
@@ -327,34 +333,60 @@ pub mod tests {
             .unwrap();
 
         // Step 2) Upload the association key:
-
         helper.initialize(dave_ns.into());
         helper
             .association_key(dave_ns, &(dave_ns.to_string() + shared))
             .unwrap();
 
-        // Step 3) Upload each operators key and then a signed transaction:
-
+        // Step 3) Upload each owner key:
         for ns in [alice_ns, bob_ns, carol_ns].iter() {
-            helper.initialize((*ns).to_string());
-            helper
-                .operator_key(ns, &((*ns).to_string() + shared))
-                .unwrap();
+            let ns = (*ns).to_string();
+            let ns_shared = (*ns).to_string() + shared;
 
+            helper.initialize(ns.clone());
+            helper.owner_key(&ns, &ns_shared).unwrap();
+        }
+
+        // Step 4) Upload each operator key:
+        for ns in [operator_alice_ns, operator_bob_ns, operator_carol_ns].iter() {
+            let ns = (*ns).to_string();
+            let ns_shared = (*ns).to_string() + shared;
+
+            helper.initialize(ns.clone());
+            helper.operator_key(&ns, &ns_shared).unwrap();
+        }
+
+        // Step 5) Set the operator for each owner:
+        for ns in [alice_ns, bob_ns, carol_ns].iter() {
+            let ns = (*ns).to_string();
+            let ns_shared = (*ns).to_string() + shared;
+
+            let operator_name = format!("operator_{}", ns_shared);
+            helper
+                .set_operator(&operator_name, &ns, &ns_shared)
+                .unwrap();
+        }
+
+        // Step 6) Upload a signed validator config transaction for each operator:
+        for ns in [operator_alice_ns, operator_bob_ns, operator_carol_ns].iter() {
+            let ns = (*ns).to_string();
+            let ns_shared = (*ns).to_string() + shared;
+
+            let owner_name: String = (*ns).chars().skip(9).collect(); // Remove "operator_" prefix
+            let owner_name = owner_name + shared;
             helper
                 .validator_config(
-                    AccountAddress::random(),
+                    &owner_name,
                     "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                     "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                     ChainId::test(),
-                    ns,
-                    &((*ns).to_string() + shared),
+                    &ns,
+                    &ns_shared,
                 )
                 .unwrap();
         }
 
-        // Step 4) Produce genesis
-
+        // Step 7) Produce genesis
         let genesis_path = libra_temppath::TempPath::new();
         genesis_path.create_as_file().unwrap();
         helper.genesis(genesis_path.path()).unwrap();
@@ -401,28 +433,69 @@ pub mod tests {
 
     #[test]
     fn test_validator_config() {
-        let helper = StorageHelper::new();
-        let local_ns = "local_validator_config";
-        let remote_ns = "remote_validator_config";
+        let storage_helper = StorageHelper::new();
+        let local_operator_ns = "local";
+        let remote_operator_ns = "operator";
+        storage_helper.initialize(local_operator_ns.into());
 
-        helper.initialize(local_ns.into());
+        // Operator uploads key to shared storage and initializes address in local storage
+        let operator_key = storage_helper
+            .operator_key(local_operator_ns, remote_operator_ns)
+            .unwrap();
 
-        let local_txn = helper
+        // Upload an owner key to the remote storage
+        let owner_name = "owner";
+        let owner_key = Ed25519PrivateKey::generate_for_testing().public_key();
+        let owner_account = account_address::from_public_key(&owner_key);
+        let mut remote_storage = storage_helper.storage(owner_name.into());
+        remote_storage
+            .set(OWNER_KEY, Value::Ed25519PublicKey(owner_key))
+            .map_err(|e| Error::RemoteStorageWriteError(OWNER_KEY, e.to_string()))
+            .unwrap();
+
+        // Operator calls the validator-config command
+        let local_config_tx = storage_helper
             .validator_config(
-                AccountAddress::random(),
+                owner_name,
                 "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                 "/ip4/0.0.0.0/tcp/6180".parse().unwrap(),
                 ChainId::test(),
-                local_ns,
-                remote_ns,
+                local_operator_ns,
+                remote_operator_ns,
             )
             .unwrap();
 
-        let remote = helper.storage(remote_ns.into());
-        let remote_txn = remote.get(constants::VALIDATOR_CONFIG).unwrap().value;
-        let remote_txn = remote_txn.transaction().unwrap();
+        // Verify that a validator config transaction was uploaded to the remote storage
+        let remote_storage = storage_helper.storage(remote_operator_ns.into());
+        let uploaded_config_tx = remote_storage
+            .get(constants::VALIDATOR_CONFIG)
+            .unwrap()
+            .value
+            .transaction()
+            .unwrap();
+        assert_eq!(local_config_tx, uploaded_config_tx);
 
-        assert_eq!(local_txn, remote_txn);
+        // Verify the transaction sender is the operator account address
+        let operator_account = account_address::from_public_key(&operator_key);
+        let uploaded_user_transaction = uploaded_config_tx.as_signed_user_txn().unwrap();
+        assert_eq!(operator_account, uploaded_user_transaction.sender());
+
+        // Verify the validator config in the transaction has the correct account address
+        match uploaded_user_transaction.payload() {
+            TransactionPayload::Script(script) => {
+                assert_eq!(6, script.args().len());
+
+                match script.args().get(0).unwrap() {
+                    TransactionArgument::Address(account_address) => {
+                        assert_eq!(&owner_account, account_address);
+                    }
+                    _ => panic!(
+                        "Found an invalid argument type for the validator-config transaction script!"
+                    ),
+                };
+            }
+            _ => panic!("Invalid validator-config transaction payload found!"),
+        };
     }
 
     #[test]
