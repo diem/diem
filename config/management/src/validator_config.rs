@@ -9,7 +9,10 @@ use crate::{
 };
 use libra_config::config::HANDSHAKE_VERSION;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519, ValidCryptoMaterial};
-use libra_global_constants::{CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_KEY, VALIDATOR_NETWORK_KEY, OWNER_ACCOUNT};
+use libra_global_constants::{
+    CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
+    VALIDATOR_NETWORK_KEY,
+};
 use libra_network_address::{NetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
@@ -59,9 +62,7 @@ impl ValidatorConfig {
         // Save the owner account in local storage for deployment later on
         local_storage
             .set(OWNER_ACCOUNT, Value::String(owner_account.to_string()))
-            .map_err(|e| {
-                Error::LocalStorageWriteError(OWNER_ACCOUNT, e.to_string())
-            })?;
+            .map_err(|e| Error::LocalStorageWriteError(OWNER_ACCOUNT, e.to_string()))?;
 
         // Upload the validator config to shared storage
         match self.backends.remote {
