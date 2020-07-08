@@ -5,6 +5,7 @@ use crate::{
     account::{self, Account},
     executor::FakeExecutor,
     gas_costs::TXN_RESERVED,
+    keygen::KeyGen,
     transaction_status_eq,
 };
 use libra_types::{
@@ -18,6 +19,9 @@ use transaction_builder::*;
 fn tiered_mint_designated_dealer() {
     let mut executor = FakeExecutor::from_genesis_file();
     let blessed = Account::new_blessed_tc();
+    let mut keygen = KeyGen::from_seed([9u8; 32]);
+    let (_, pubkey) = keygen.generate_keypair();
+
     // account to represent designated dealer
     let dd = Account::new();
     executor.execute_and_apply(blessed.signed_script_txn(
@@ -26,6 +30,9 @@ fn tiered_mint_designated_dealer() {
             0,
             *dd.address(),
             dd.auth_key_prefix(),
+            vec![],
+            vec![],
+            pubkey.to_bytes().to_vec(),
             false, // add_all_currencies
         ),
         0,

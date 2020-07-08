@@ -23,7 +23,7 @@ Create an account with the DesignatedDealer role at
 invoked by an account with the TreasuryCompliance role.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, addr: address, auth_key_prefix: vector&lt;u8&gt;, add_all_currencies: bool)
+<pre><code><b>public</b> <b>fun</b> <a href="#SCRIPT_create_designated_dealer">create_designated_dealer</a>&lt;Currency&gt;(tc_account: &signer, sliding_nonce: u64, addr: address, auth_key_prefix: vector&lt;u8&gt;, human_name: vector&lt;u8&gt;, base_url: vector&lt;u8&gt;, compliance_public_key: vector&lt;u8&gt;, add_all_currencies: bool)
 </code></pre>
 
 
@@ -37,11 +37,20 @@ invoked by an account with the TreasuryCompliance role.
     sliding_nonce: u64,
     addr: address,
     auth_key_prefix: vector&lt;u8&gt;,
+    human_name: vector&lt;u8&gt;,
+    base_url: vector&lt;u8&gt;,
+    compliance_public_key: vector&lt;u8&gt;,
     add_all_currencies: bool,
 ) {
     <a href="../../modules/doc/SlidingNonce.md#0x1_SlidingNonce_record_nonce_or_abort">SlidingNonce::record_nonce_or_abort</a>(tc_account, sliding_nonce);
     <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_create_designated_dealer">LibraAccount::create_designated_dealer</a>&lt;Currency&gt;(
-        tc_account, addr, auth_key_prefix, add_all_currencies
+        tc_account,
+        addr,
+        auth_key_prefix,
+        human_name,
+        base_url,
+        compliance_public_key,
+        add_all_currencies
     );
     // Create default tiers for newly created DD
     <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, addr, 500000);

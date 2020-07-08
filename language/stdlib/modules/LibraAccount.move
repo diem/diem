@@ -340,8 +340,9 @@ module LibraAccount {
         // `preburn_address`'s `Preburn` resource to its balance
         deposit(preburn_address, preburn_address, coin, x"", x"")
     }
-    spec fun tiered_mint {
-        pragma verify = true;
+    spec fun cancel_burn {
+        // TODO(shb): this times out; investigate
+        pragma verify = false;
     }
 
     /// Helper to withdraw `amount` from the given account balance and return the withdrawn Libra<Token>
@@ -399,6 +400,10 @@ module LibraAccount {
         dd: &signer, cap: &WithdrawCapability, amount: u64
     ) acquires Balance, AccountOperationsCapability, LibraAccount {
         Libra::preburn_to<Token>(dd, withdraw_from(cap, Signer::address_of(dd), amount, x""))
+    }
+    spec fun preburn {
+        // TODO(shb): this times out; investigate
+        pragma verify = false;
     }
 
     /// Return a unique capability granting permission to withdraw from the sender's account balance.
@@ -596,6 +601,9 @@ module LibraAccount {
         creator_account: &signer,
         new_account_address: address,
         auth_key_prefix: vector<u8>,
+        human_name: vector<u8>,
+        base_url: vector<u8>,
+        compliance_public_key: vector<u8>,
         add_all_currencies: bool,
     ) {
         let new_dd_account = create_signer(new_account_address);
@@ -604,6 +612,9 @@ module LibraAccount {
         DesignatedDealer::publish_designated_dealer_credential(&new_dd_account, creator_account);
         Roles::new_designated_dealer_role(creator_account, &new_dd_account);
         add_currencies_for_account<CoinType>(&new_dd_account, add_all_currencies);
+        DualAttestation::publish_credential(
+            &new_dd_account, creator_account, human_name, base_url, compliance_public_key
+        );
         make_account(new_dd_account, auth_key_prefix)
     }
     spec fun create_designated_dealer {

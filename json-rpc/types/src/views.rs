@@ -59,6 +59,13 @@ pub enum AccountRoleView {
         compliance_key: BytesView,
         num_children: u64,
     },
+    #[serde(rename = "designated_dealer")]
+    DesignatedDealer {
+        human_name: String,
+        base_url: String,
+        expiration_time: u64,
+        compliance_key: BytesView,
+    },
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
@@ -425,12 +432,18 @@ impl From<AccountRole> for AccountRoleView {
             AccountRole::ChildVASP(child_vasp) => AccountRoleView::ChildVASP {
                 parent_vasp_address: BytesView::from(&child_vasp.parent_vasp_addr().to_vec()),
             },
-            AccountRole::ParentVASP(parent_vasp) => AccountRoleView::ParentVASP {
-                human_name: parent_vasp.human_name().to_string(),
-                base_url: parent_vasp.base_url().to_string(),
-                expiration_time: parent_vasp.expiration_date(),
-                compliance_key: BytesView::from(parent_vasp.compliance_public_key()),
-                num_children: parent_vasp.num_children(),
+            AccountRole::ParentVASP { vasp, credential } => AccountRoleView::ParentVASP {
+                human_name: credential.human_name().to_string(),
+                base_url: credential.base_url().to_string(),
+                expiration_time: credential.expiration_date(),
+                compliance_key: BytesView::from(credential.compliance_public_key()),
+                num_children: vasp.num_children(),
+            },
+            AccountRole::DesignatedDealer(dd) => AccountRoleView::DesignatedDealer {
+                human_name: dd.human_name().to_string(),
+                base_url: dd.base_url().to_string(),
+                expiration_time: dd.expiration_date(),
+                compliance_key: BytesView::from(dd.compliance_public_key()),
             },
         }
     }

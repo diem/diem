@@ -5,7 +5,8 @@ use crate::{
     account_address::AccountAddress,
     account_config::{
         type_tag_for_currency_code, AccountResource, AccountRole, BalanceResource, ChildVASP,
-        FreezingBit, ParentVASP, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH,
+        Credential, DesignatedDealer, FreezingBit, ParentVASP, ACCOUNT_RECEIVED_EVENT_PATH,
+        ACCOUNT_SENT_EVENT_PATH,
     },
     block_metadata::{LibraBlockResource, NEW_BLOCK_EVENT_PATH},
     event::EventHandle,
@@ -67,11 +68,21 @@ impl AccountState {
 
     pub fn get_account_role(&self) -> Result<Option<AccountRole>> {
         if self.0.contains_key(&ParentVASP::resource_path()) {
-            self.get_resource(&ParentVASP::resource_path())
-                .map(|r_opt| r_opt.map(AccountRole::ParentVASP))
+            match (
+                self.get_resource(&ParentVASP::resource_path()),
+                self.get_resource(&Credential::resource_path()),
+            ) {
+                (Ok(Some(vasp)), Ok(Some(credential))) => {
+                    Ok(Some(AccountRole::ParentVASP { vasp, credential }))
+                }
+                _ => Ok(None),
+            }
         } else if self.0.contains_key(&ChildVASP::resource_path()) {
             self.get_resource(&ChildVASP::resource_path())
                 .map(|r_opt| r_opt.map(AccountRole::ChildVASP))
+        } else if self.0.contains_key(&DesignatedDealer::resource_path()) {
+            self.get_resource(&Credential::resource_path())
+                .map(|r_opt| r_opt.map(AccountRole::DesignatedDealer))
         } else {
             // TODO: add role_id to Unknown
             Ok(Some(AccountRole::Unknown))

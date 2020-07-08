@@ -273,7 +273,10 @@ fn create_and_initialize_testnet_minting(
         0,
         account_config::testnet_dd_account_address(),
         genesis_auth_key.prefix().to_vec(),
-        true, // add_all_currencies
+        b"moneybags".to_vec(),          // name
+        b"https://libra.org".to_vec(),  // base_url
+        public_key.to_bytes().to_vec(), // compliance_public_key
+        true,                           // add_all_currencies
     );
 
     let mint_max_coin1 = transaction_builder::encode_tiered_mint_script(

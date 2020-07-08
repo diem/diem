@@ -176,6 +176,16 @@ module DesignatedDealer {
     public fun exists_at(dd_addr: address): bool {
         exists<Dealer>(dd_addr)
     }
+    spec fun exists_at {
+        pragma verify = true;
+        ensures result == spec_exists_at(dd_addr);
+    }
+    spec module {
+        define spec_exists_at(addr: address): bool {
+            exists<Dealer>(addr)
+        }
+    }
+
 
     // If the time window starting at `dealer.window_start` and lasting for window_length()
     // has elapsed, resets the window and the inflow and outflow records.

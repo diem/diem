@@ -9,30 +9,10 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ParentVASP {
-    human_name: String,
-    base_url: String,
-    expiration_date: u64,
-    compliance_public_key: Vec<u8>,
     num_children: u64,
 }
 
 impl ParentVASP {
-    pub fn human_name(&self) -> &str {
-        &self.human_name
-    }
-
-    pub fn base_url(&self) -> &str {
-        &self.base_url
-    }
-
-    pub fn expiration_date(&self) -> u64 {
-        self.expiration_date
-    }
-
-    pub fn compliance_public_key(&self) -> &[u8] {
-        &self.compliance_public_key
-    }
-
     pub fn num_children(&self) -> u64 {
         self.num_children
     }
