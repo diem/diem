@@ -459,6 +459,23 @@ pub fn encode_preburn_script(token: TypeTag, amount: u64) -> Script {
     )
 }
 
+/// Publishes an unrestricted `LimitsDefintion<CoinType>` under `account`. Will abort if a
+/// resource with the same type already exists under `account`. No windows will point to
+/// this limit at the time it is published.
+pub fn encode_publish_account_limit_definition_script(coin_type: TypeTag) -> Script {
+    Script::new(
+        vec![
+            161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 7, 7, 17, 42, 8, 59,
+            16, 0, 0, 0, 1, 0, 1, 1, 1, 0, 2, 1, 6, 12, 0, 1, 9, 0, 13, 65, 99, 99, 111, 117, 110,
+            116, 76, 105, 109, 105, 116, 115, 27, 112, 117, 98, 108, 105, 115, 104, 95, 117, 110,
+            114, 101, 115, 116, 114, 105, 99, 116, 101, 100, 95, 108, 105, 109, 105, 116, 115, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 3, 11, 0, 56, 0, 2,
+        ],
+        vec![coin_type],
+        vec![],
+    )
+}
+
 /// (1) Rotate the authentication key of the sender to `public_key` (2) Publish a resource
 /// containing a 32-byte ed25519 public key and the rotation capability of the sender
 /// under the sender's address. Aborts if the sender already has a
@@ -634,29 +651,6 @@ pub fn encode_rotate_shared_ed25519_public_key_script(public_key: Vec<u8>) -> Sc
     )
 }
 
-/// Sets the account limits window `tracking_balance` field for `CointType` at
-/// `window_address` to `aggregate_balance`
-pub fn encode_set_account_limit_window_current_holdings_script(
-    coint_type: TypeTag,
-    window_address: AccountAddress,
-    aggregate_balance: u64,
-) -> Script {
-    Script::new(
-        vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 9, 7, 19, 35, 8, 54,
-            16, 0, 0, 0, 1, 0, 1, 1, 1, 0, 2, 3, 6, 12, 5, 3, 0, 1, 9, 0, 13, 65, 99, 99, 111, 117,
-            110, 116, 76, 105, 109, 105, 116, 115, 20, 115, 101, 116, 95, 99, 117, 114, 114, 101,
-            110, 116, 95, 104, 111, 108, 100, 105, 110, 103, 115, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 1, 1, 1, 0, 1, 5, 11, 0, 10, 1, 10, 2, 56, 0, 2,
-        ],
-        vec![coint_type],
-        vec![
-            TransactionArgument::Address(window_address),
-            TransactionArgument::U64(aggregate_balance),
-        ],
-    )
-}
-
 /// Set validator's config.
 pub fn encode_set_validator_config_script(
     validator_account: AccountAddress,
@@ -819,18 +813,19 @@ pub fn encode_update_account_limit_definition_script(
     new_max_inflow: u64,
     new_max_outflow: u64,
     new_max_holding_balance: u64,
+    new_time_period: u64,
 ) -> Script {
     Script::new(
         vec![
-            161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 23, 7, 40, 74, 8,
-            114, 16, 0, 0, 0, 1, 0, 2, 0, 1, 1, 1, 1, 3, 2, 1, 0, 0, 4, 5, 6, 12, 5, 3, 3, 3, 0, 2,
-            6, 12, 3, 6, 6, 12, 5, 3, 3, 3, 3, 1, 9, 0, 13, 65, 99, 99, 111, 117, 110, 116, 76,
-            105, 109, 105, 116, 115, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99, 101,
-            24, 117, 112, 100, 97, 116, 101, 95, 108, 105, 109, 105, 116, 115, 95, 100, 101, 102,
-            105, 110, 105, 116, 105, 111, 110, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111, 110,
-            99, 101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 1, 1, 1, 3, 1, 10, 10, 0, 10, 2, 17, 1, 11, 0, 10, 1, 10, 3, 10, 4, 10, 5, 56,
-            0, 2,
+            161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 4, 3, 4, 11, 4, 15, 2, 5, 17, 25, 7, 42, 74, 8,
+            116, 16, 0, 0, 0, 1, 0, 2, 0, 1, 1, 1, 1, 3, 2, 1, 0, 0, 4, 6, 6, 12, 5, 3, 3, 3, 3, 0,
+            2, 6, 12, 3, 7, 6, 12, 5, 3, 3, 3, 3, 3, 1, 9, 0, 13, 65, 99, 99, 111, 117, 110, 116,
+            76, 105, 109, 105, 116, 115, 12, 83, 108, 105, 100, 105, 110, 103, 78, 111, 110, 99,
+            101, 24, 117, 112, 100, 97, 116, 101, 95, 108, 105, 109, 105, 116, 115, 95, 100, 101,
+            102, 105, 110, 105, 116, 105, 111, 110, 21, 114, 101, 99, 111, 114, 100, 95, 110, 111,
+            110, 99, 101, 95, 111, 114, 95, 97, 98, 111, 114, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 1, 3, 1, 11, 10, 0, 10, 2, 17, 1, 11, 0, 10, 1, 10, 3, 10, 4, 10, 5,
+            10, 6, 56, 0, 2,
         ],
         vec![coin_type],
         vec![
@@ -839,6 +834,34 @@ pub fn encode_update_account_limit_definition_script(
             TransactionArgument::U64(new_max_inflow),
             TransactionArgument::U64(new_max_outflow),
             TransactionArgument::U64(new_max_holding_balance),
+            TransactionArgument::U64(new_time_period),
+        ],
+    )
+}
+
+/// * Sets the account limits window `tracking_balance` field for `CoinType` at
+/// `window_address` to `aggregate_balance` if `aggregate_balance != 0`. * Sets the
+/// account limits window `limit_address` field for `CoinType` at `window_address` to
+/// `new_limit_address`.
+pub fn encode_update_account_limit_window_info_script(
+    coin_type: TypeTag,
+    window_address: AccountAddress,
+    aggregate_balance: u64,
+    new_limit_address: AccountAddress,
+) -> Script {
+    Script::new(
+        vec![
+            161, 28, 235, 11, 1, 0, 0, 0, 6, 1, 0, 2, 3, 2, 6, 4, 8, 2, 5, 10, 10, 7, 20, 33, 8,
+            53, 16, 0, 0, 0, 1, 0, 1, 1, 1, 0, 2, 4, 6, 12, 5, 3, 5, 0, 1, 9, 0, 13, 65, 99, 99,
+            111, 117, 110, 116, 76, 105, 109, 105, 116, 115, 18, 117, 112, 100, 97, 116, 101, 95,
+            119, 105, 110, 100, 111, 119, 95, 105, 110, 102, 111, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 1, 1, 1, 0, 1, 6, 11, 0, 10, 1, 10, 2, 10, 3, 56, 0, 2,
+        ],
+        vec![coin_type],
+        vec![
+            TransactionArgument::Address(window_address),
+            TransactionArgument::U64(aggregate_balance),
+            TransactionArgument::Address(new_limit_address),
         ],
     )
 }

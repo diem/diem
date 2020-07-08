@@ -5,18 +5,17 @@
 
 ### Table of Contents
 
--  [Resource `CallingCapability`](#0x1_AccountLimits_CallingCapability)
+-  [Resource `AccountLimitMutationCapability`](#0x1_AccountLimits_AccountLimitMutationCapability)
 -  [Resource `LimitsDefinition`](#0x1_AccountLimits_LimitsDefinition)
 -  [Resource `Window`](#0x1_AccountLimits_Window)
--  [Function `grant_calling_capability`](#0x1_AccountLimits_grant_calling_capability)
+-  [Function `grant_mutation_capability`](#0x1_AccountLimits_grant_mutation_capability)
 -  [Function `initialize`](#0x1_AccountLimits_initialize)
 -  [Function `update_deposit_limits`](#0x1_AccountLimits_update_deposit_limits)
 -  [Function `update_withdrawal_limits`](#0x1_AccountLimits_update_withdrawal_limits)
 -  [Function `publish_window`](#0x1_AccountLimits_publish_window)
--  [Function `publish_limits_definition`](#0x1_AccountLimits_publish_limits_definition)
 -  [Function `publish_unrestricted_limits`](#0x1_AccountLimits_publish_unrestricted_limits)
 -  [Function `update_limits_definition`](#0x1_AccountLimits_update_limits_definition)
--  [Function `set_current_holdings`](#0x1_AccountLimits_set_current_holdings)
+-  [Function `update_window_info`](#0x1_AccountLimits_update_window_info)
 -  [Function `reset_window`](#0x1_AccountLimits_reset_window)
 -  [Function `can_receive`](#0x1_AccountLimits_can_receive)
 -  [Function `can_withdraw`](#0x1_AccountLimits_can_withdraw)
@@ -24,21 +23,22 @@
 -  [Function `limits_definition_address`](#0x1_AccountLimits_limits_definition_address)
 -  [Function `is_unlimited_account`](#0x1_AccountLimits_is_unlimited_account)
 -  [Function `has_limits_published`](#0x1_AccountLimits_has_limits_published)
+-  [Function `has_window_published`](#0x1_AccountLimits_has_window_published)
 -  [Function `current_time`](#0x1_AccountLimits_current_time)
 -  [Specification](#0x1_AccountLimits_Specification)
     -  [Function `update_deposit_limits`](#0x1_AccountLimits_Specification_update_deposit_limits)
 
 
 
-<a name="0x1_AccountLimits_CallingCapability"></a>
+<a name="0x1_AccountLimits_AccountLimitMutationCapability"></a>
 
-## Resource `CallingCapability`
+## Resource `AccountLimitMutationCapability`
 
 An operations capability that restricts callers of this module since
 the operations can mutate account states.
 
 
-<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>
 </code></pre>
 
 
@@ -176,15 +176,15 @@ in the limits definition at
 
 </details>
 
-<a name="0x1_AccountLimits_grant_calling_capability"></a>
+<a name="0x1_AccountLimits_grant_mutation_capability"></a>
 
-## Function `grant_calling_capability`
+## Function `grant_mutation_capability`
 
 Grant a capability to call this module. This does not necessarily
 need to be a unique capability.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_calling_capability">grant_calling_capability</a>(lr_account: &signer): <a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_mutation_capability">grant_mutation_capability</a>(lr_account: &signer): <a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>
 </code></pre>
 
 
@@ -193,10 +193,10 @@ need to be a unique capability.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_calling_capability">grant_calling_capability</a>(lr_account: &signer): <a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_grant_mutation_capability">grant_mutation_capability</a>(lr_account: &signer): <a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a> {
     <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
-    <b>assert</b>(has_libra_root_role(lr_account), ENOT_LIBRA_ROOT);
-    <a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>{}
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_libra_root_role">Roles::has_libra_root_role</a>(lr_account), ENOT_LIBRA_ROOT);
+    <a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>{}
 }
 </code></pre>
 
@@ -211,7 +211,7 @@ need to be a unique capability.
 Initializes the account limits for unhosted accounts.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_initialize">initialize</a>(lr_account: &signer, calling_cap: &<a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_initialize">initialize</a>(lr_account: &signer)
 </code></pre>
 
 
@@ -220,12 +220,12 @@ Initializes the account limits for unhosted accounts.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_initialize">initialize</a>(lr_account: &signer, calling_cap: &<a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>) {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_initialize">initialize</a>(lr_account: &signer) {
     <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
     <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_INITIALIZATION_ADDRESS);
-    <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(lr_account, calling_cap);
-    <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(lr_account, calling_cap);
-    <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(lr_account, calling_cap);
+    <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;(lr_account);
+    <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(lr_account);
+    <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(lr_account);
 }
 </code></pre>
 
@@ -245,7 +245,7 @@ account at
 Returns false if this deposit violates the account limits. Effectful.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_deposit_limits">update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_deposit_limits">update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>): bool
 </code></pre>
 
 
@@ -257,7 +257,7 @@ Returns false if this deposit violates the account limits. Effectful.
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_deposit_limits">update_deposit_limits</a>&lt;CoinType&gt;(
     amount: u64,
     addr: address,
-    _cap: &<a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>,
+    _cap: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>,
 ): bool <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="#0x1_AccountLimits_Window">Window</a> {
     <a href="#0x1_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(
         amount,
@@ -283,7 +283,7 @@ Returns
 <code><b>false</b></code> if this withdrawal violates account limits. Effectful.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_withdrawal_limits">update_withdrawal_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_withdrawal_limits">update_withdrawal_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>): bool
 </code></pre>
 
 
@@ -295,7 +295,7 @@ Returns
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_withdrawal_limits">update_withdrawal_limits</a>&lt;CoinType&gt;(
     amount: u64,
     addr: address,
-    _cap: &<a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>,
+    _cap: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>,
 ): bool <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>, <a href="#0x1_AccountLimits_Window">Window</a> {
     <a href="#0x1_AccountLimits_can_withdraw">can_withdraw</a>&lt;CoinType&gt;(
         amount,
@@ -318,7 +318,7 @@ Root accounts for multi-account entities will hold this resource at
 their root/parent account.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(to_limit: &signer, _: &<a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>, limit_address: address)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(to_limit: &signer, _: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>, limit_address: address)
 </code></pre>
 
 
@@ -329,7 +329,7 @@ their root/parent account.
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_window">publish_window</a>&lt;CoinType&gt;(
     to_limit: &signer,
-    _: &<a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>,
+    _: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a>,
     limit_address: address,
 ) {
     move_to(
@@ -349,59 +349,21 @@ their root/parent account.
 
 </details>
 
-<a name="0x1_AccountLimits_publish_limits_definition"></a>
-
-## Function `publish_limits_definition`
-
-Publishes a
-<code><a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a></code> resource under
-<code>account</code>. The caller must have permission
-to publish this, represented by the
-<code><a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a></code>.
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_limits_definition">publish_limits_definition</a>&lt;CoinType&gt;(account: &signer, _: &<a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>, max_inflow: u64, max_outflow: u64, max_holding: u64, time_period: u64)
-</code></pre>
-
-
-
-<details>
-<summary>Implementation</summary>
-
-
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_limits_definition">publish_limits_definition</a>&lt;CoinType&gt;(
-    account: &signer,
-    _: &<a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>,
-    max_inflow: u64,
-    max_outflow: u64,
-    max_holding: u64,
-    time_period: u64
-) {
-    move_to(
-        account,
-        <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt; {
-            max_inflow,
-            max_outflow,
-            max_holding,
-            time_period,
-        }
-    )
-}
-</code></pre>
-
-
-
-</details>
-
 <a name="0x1_AccountLimits_publish_unrestricted_limits"></a>
 
 ## Function `publish_unrestricted_limits`
 
-Unrestricted accounts are represented by setting all fields in the
-limits definition to u64 max.
+Unrestricted limits are represented by setting all fields in the
+limits definition to
+<code>U64_MAX</code>. Anyone can publish an unrestricted
+limits since no windows will point to this limits definition unless the
+TC account, or a caller with access to a
+<code>&<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimitMutationCapability</a></code> points a
+window to it. Additionally, the TC controls the values held within this
+resource once it's published.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;CoinType&gt;(account: &signer, cap: &<a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;CoinType&gt;(publish_account: &signer)
 </code></pre>
 
 
@@ -410,8 +372,16 @@ limits definition to u64 max.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;CoinType&gt;(account: &signer, cap: &<a href="#0x1_AccountLimits_CallingCapability">CallingCapability</a>) {
-    <a href="#0x1_AccountLimits_publish_limits_definition">publish_limits_definition</a>&lt;CoinType&gt;(account, cap, U64_MAX, U64_MAX, U64_MAX, ONE_DAY)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_publish_unrestricted_limits">publish_unrestricted_limits</a>&lt;CoinType&gt;(publish_account: &signer) {
+    move_to(
+        publish_account,
+        <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt; {
+            max_inflow: U64_MAX,
+            max_outflow: U64_MAX,
+            max_holding: U64_MAX,
+            time_period: ONE_DAY,
+        }
+    )
 }
 </code></pre>
 
@@ -430,7 +400,7 @@ If any of the field arguments is
 <code>0</code> the corresponding field is not updated.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>&lt;CoinType&gt;(tc_account: &signer, limit_address: address, new_max_inflow: u64, new_max_outflow: u64, new_max_holding_balance: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_limits_definition">update_limits_definition</a>&lt;CoinType&gt;(tc_account: &signer, limit_address: address, new_max_inflow: u64, new_max_outflow: u64, new_max_holding_balance: u64, new_time_period: u64)
 </code></pre>
 
 
@@ -445,14 +415,16 @@ If any of the field arguments is
     new_max_inflow: u64,
     new_max_outflow: u64,
     new_max_holding_balance: u64,
+    new_time_period: u64,
 ) <b>acquires</b> <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a> {
-    <b>assert</b>(has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
     // As we don't have Optionals for txn scripts, in update_account_limit_definition.<b>move</b>
     // we <b>use</b> 0 value <b>to</b> represent a None (ie no <b>update</b> <b>to</b> that variable)
     <b>let</b> limits_def = borrow_global_mut&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(limit_address);
     <b>if</b> (new_max_inflow &gt; 0) { limits_def.max_inflow = new_max_inflow };
     <b>if</b> (new_max_outflow &gt; 0) { limits_def.max_outflow = new_max_outflow };
     <b>if</b> (new_max_holding_balance &gt; 0) { limits_def.max_holding = new_max_holding_balance };
+    <b>if</b> (new_time_period &gt; 0) { limits_def.time_period = new_time_period };
 }
 </code></pre>
 
@@ -460,17 +432,32 @@ If any of the field arguments is
 
 </details>
 
-<a name="0x1_AccountLimits_set_current_holdings"></a>
+<a name="0x1_AccountLimits_update_window_info"></a>
 
-## Function `set_current_holdings`
+## Function `update_window_info`
 
-Since we don't track balances of accounts before they are limited, once
+Update either the
+<code>tracked_balance</code> or
+<code>limit_address</code> fields of the
+<code><a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;</code> stored under
+<code>window_address</code>.
+* Since we don't track balances of accounts before they are limited, once
 they do become limited the approximate balance in
 <code>CointType</code> held by
 the entity across all of its accounts will need to be set by the association.
+if
+<code>aggregate_balance</code> is set to zero the field is not updated.
+* This updates the
+<code>limit_address</code> in the window resource to a new limits definition at
+<code>new_limit_address</code>. If the
+<code>aggregate_balance</code> needs to be updated
+but the
+<code>limit_address</code> should remain the same, the current
+<code>limit_address</code> needs to be passed in for
+<code>new_limit_address</code>.
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_set_current_holdings">set_current_holdings</a>&lt;CoinType&gt;(tc_account: &signer, window_address: address, aggregate_balance: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_window_info">update_window_info</a>&lt;CoinType&gt;(tc_account: &signer, window_address: address, aggregate_balance: u64, new_limit_address: address)
 </code></pre>
 
 
@@ -479,13 +466,17 @@ the entity across all of its accounts will need to be set by the association.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_set_current_holdings">set_current_holdings</a>&lt;CoinType&gt;(
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_window_info">update_window_info</a>&lt;CoinType&gt;(
     tc_account: &signer,
     window_address: address,
     aggregate_balance: u64,
+    new_limit_address: address,
 ) <b>acquires</b> <a href="#0x1_AccountLimits_Window">Window</a> {
-    <b>assert</b>(has_treasury_compliance_role(tc_account), ENOT_TREASURY_COMPLIANCE);
-    borrow_global_mut&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(window_address).tracked_balance = aggregate_balance;
+    <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), ENOT_TREASURY_COMPLIANCE);
+    <b>let</b> window = borrow_global_mut&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(window_address);
+    <b>if</b> (aggregate_balance != 0)  { window.tracked_balance = aggregate_balance };
+    <b>assert</b>(exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(new_limit_address), ENO_LIMITS_DEFINITION_EXISTS);
+    window.limit_address = new_limit_address;
 }
 </code></pre>
 
@@ -720,6 +711,30 @@ Return whether the
 
 </details>
 
+<a name="0x1_AccountLimits_has_window_published"></a>
+
+## Function `has_window_published`
+
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_has_window_published">has_window_published</a>&lt;CoinType&gt;(addr: address): bool
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_has_window_published">has_window_published</a>&lt;CoinType&gt;(addr: address): bool {
+    exists&lt;<a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;&gt;(addr)
+}
+</code></pre>
+
+
+
+</details>
+
 <a name="0x1_AccountLimits_current_time"></a>
 
 ## Function `current_time`
@@ -754,7 +769,7 @@ Return whether the
 ### Function `update_deposit_limits`
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_deposit_limits">update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a>): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountLimits_update_deposit_limits">update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, addr: address, _cap: &<a href="#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a>): bool
 </code></pre>
 
 

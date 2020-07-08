@@ -898,6 +898,30 @@ fn account_limits() {
             .sign(),
     );
 
+    executor.execute_and_apply(
+        vasp_a
+            .transaction()
+            .script(encode_publish_account_limit_definition_script(
+                account_config::coin1_tag(),
+            ))
+            .sequence_number(1)
+            .ttl(ttl)
+            .sign(),
+    );
+
+    executor.execute_and_apply(
+        tc.transaction()
+            .script(encode_update_account_limit_window_info_script(
+                account_config::coin1_tag(),
+                *vasp_a.address(),
+                0,
+                *vasp_a.address(),
+            ))
+            .sequence_number(0)
+            .ttl(ttl)
+            .sign(),
+    );
+
     ///////////////////////////////////////////////////////////////////////////
     // Inflow tests
     /////////////////////////////////////////////////////////////////////////////
@@ -912,8 +936,9 @@ fn account_limits() {
                 mint_amount,
                 0,
                 0,
+                0,
             ))
-            .sequence_number(0)
+            .sequence_number(1)
             .ttl(ttl)
             .sign(),
     );
@@ -975,7 +1000,7 @@ fn account_limits() {
                 vec![],
                 vec![],
             ))
-            .sequence_number(1)
+            .sequence_number(2)
             .ttl(ttl)
             .sign(),
     );
@@ -1068,8 +1093,9 @@ fn account_limits() {
                 std::u64::MAX, // unlimit inflow
                 1000,          // set outflow to 1000
                 0,
+                0,
             ))
-            .sequence_number(1)
+            .sequence_number(2)
             .ttl(ttl)
             .sign(),
     );
@@ -1085,7 +1111,7 @@ fn account_limits() {
                 vec![],
                 vec![],
             ))
-            .sequence_number(2)
+            .sequence_number(3)
             .ttl(ttl)
             .sign(),
     );
@@ -1118,7 +1144,7 @@ fn account_limits() {
                     vec![],
                     vec![],
                 ))
-                .sequence_number(3)
+                .sequence_number(4)
                 .ttl(ttl)
                 .sign(),
         );
@@ -1224,20 +1250,22 @@ fn account_limits() {
                     0,
                     std::u64::MAX, // unlimit outflow
                     a_balance,     // set max holding to the current balance of A
+                    0,
                 ))
-                .sequence_number(2)
+                .sequence_number(3)
                 .ttl(ttl)
                 .sign(),
         );
         // TC needs to set the current aggregate balance for vasp a's window
         executor.execute_and_apply(
             tc.transaction()
-                .script(encode_set_account_limit_window_current_holdings_script(
+                .script(encode_update_account_limit_window_info_script(
                     account_config::coin1_tag(),
                     *vasp_a.address(),
                     a_balance,
+                    *vasp_a.address(),
                 ))
-                .sequence_number(3)
+                .sequence_number(4)
                 .ttl(ttl)
                 .sign(),
         );
@@ -1277,7 +1305,7 @@ fn account_limits() {
                 vec![],
                 vec![],
             ))
-            .sequence_number(3)
+            .sequence_number(4)
             .ttl(ttl)
             .sign(),
     );

@@ -14,6 +14,7 @@ fun update_account_limit_definition<CoinType>(
     new_max_inflow: u64,
     new_max_outflow: u64,
     new_max_holding_balance: u64,
+    new_time_period: u64,
 ) {
     SlidingNonce::record_nonce_or_abort(tc_account, sliding_nonce);
     AccountLimits::update_limits_definition<CoinType>(
@@ -21,7 +22,8 @@ fun update_account_limit_definition<CoinType>(
         limit_address,
         new_max_inflow,
         new_max_outflow,
-        new_max_holding_balance
+        new_max_holding_balance,
+        new_time_period,
     );
 }
 }

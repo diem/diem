@@ -297,7 +297,7 @@ There is at most one KeyRotationCapability in existence for a given address.
 ## Resource `AccountOperationsCapability`
 
 A wrapper around an
-<code><a href="AccountLimits.md#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a></code> which is used to check for account limits
+<code>AccountLimitMutationCapability</code> which is used to check for account limits
 and to record freeze/unfreeze events.
 
 
@@ -313,7 +313,7 @@ and to record freeze/unfreeze events.
 <dl>
 <dt>
 
-<code>limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_CallingCapability">AccountLimits::CallingCapability</a></code>
+<code>limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_AccountLimitMutationCapability">AccountLimits::AccountLimitMutationCapability</a></code>
 </dt>
 <dd>
 
@@ -478,12 +478,10 @@ Initialize this module. This is only callable from genesis.
     <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
     // Operational constraint, not a privilege constraint.
     <b>assert</b>(<a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(), EINVALID_SINGLETON_ADDRESS);
-    <b>let</b> limits_cap = <a href="AccountLimits.md#0x1_AccountLimits_grant_calling_capability">AccountLimits::grant_calling_capability</a>(lr_account);
-    <a href="AccountLimits.md#0x1_AccountLimits_initialize">AccountLimits::initialize</a>(lr_account, &limits_cap);
     move_to(
         lr_account,
         <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
-            limits_cap,
+            limits_cap: <a href="AccountLimits.md#0x1_AccountLimits_grant_mutation_capability">AccountLimits::grant_mutation_capability</a>(lr_account),
         }
     );
 }
