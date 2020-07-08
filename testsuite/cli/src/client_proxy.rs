@@ -31,6 +31,7 @@ use libra_types::{
         type_tag_for_currency_code, ACCOUNT_RECEIVED_EVENT_PATH, ACCOUNT_SENT_EVENT_PATH, LBR_NAME,
     },
     account_state::AccountState,
+    chain_id::ChainId,
     ledger_info::LedgerInfoWithSignatures,
     on_chain_config::VMPublishingOption,
     transaction::{
@@ -102,6 +103,8 @@ pub struct IndexAndSequence {
 
 /// Proxy handling CLI commands/inputs.
 pub struct ClientProxy {
+    /// chain ID of the network this client is interacting with
+    pub chain_id: ChainId,
     /// client for admission control interface.
     pub client: LibraClient,
     /// Created accounts.
@@ -126,6 +129,7 @@ pub struct ClientProxy {
 impl ClientProxy {
     /// Construct a new TestClient.
     pub fn new(
+        chain_id: ChainId,
         url: &str,
         libra_root_account_file: &str,
         testnet_designated_dealer_account_file: &str,
@@ -182,6 +186,7 @@ impl ClientProxy {
             .collect::<HashMap<AccountAddress, usize>>();
 
         Ok(ClientProxy {
+            chain_id,
             client,
             accounts,
             address_to_ref_id,
@@ -848,6 +853,7 @@ impl ClientProxy {
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
             gas_currency_code.unwrap_or_else(|| LBR_NAME.to_owned()),
             TX_EXPIRATION,
+            self.chain_id,
         ))
     }
 
@@ -1598,6 +1604,7 @@ impl ClientProxy {
             gas_unit_price.unwrap_or(GAS_UNIT_PRICE),
             gas_currency_code.unwrap_or_else(|| LBR_NAME.to_owned()),
             TX_EXPIRATION,
+            self.chain_id,
         )
     }
 
@@ -1665,7 +1672,10 @@ impl fmt::Display for AccountEntry {
 mod tests {
     use crate::client_proxy::{parse_bool, AddressAndIndex, ClientProxy};
     use libra_temppath::TempPath;
-    use libra_types::{ledger_info::LedgerInfo, on_chain_config::ValidatorSet, waypoint::Waypoint};
+    use libra_types::{
+        chain_id::ChainId, ledger_info::LedgerInfo, on_chain_config::ValidatorSet,
+        waypoint::Waypoint,
+    };
     use libra_wallet::io_utils;
     use proptest::prelude::*;
 
@@ -1681,6 +1691,7 @@ mod tests {
         // Note: `client_proxy` won't actually connect to URL - it will be used only to
         // generate random accounts
         let mut client_proxy = ClientProxy::new(
+            ChainId::test(),
             "http://localhost:8080",
             &"",
             &"",

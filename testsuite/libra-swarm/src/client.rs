@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::waypoint::Waypoint;
+use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use std::{
     io,
     path::Path,
@@ -70,6 +70,8 @@ impl InteractiveClient {
                     )
                     .arg("--waypoint")
                     .arg(waypoint.to_string())
+                    .arg("-c")
+                    .arg(ChainId::test().id().to_string())
                     .stdin(Stdio::inherit())
                     .stdout(Stdio::inherit())
                     .stderr(Stdio::inherit())

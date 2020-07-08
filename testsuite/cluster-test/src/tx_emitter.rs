@@ -21,6 +21,7 @@ use libra_logger::*;
 use libra_types::{
     account_address::AccountAddress,
     account_config::{self, testnet_dd_account_address, COIN1_NAME},
+    chain_id::ChainId,
     transaction::{
         authenticator::AuthenticationKey, helpers::create_user_txn, Script, TransactionPayload,
     },
@@ -604,6 +605,7 @@ fn gen_submit_transaction_request(
         GAS_UNIT_PRICE,
         GAS_CURRENCY_CODE.to_owned(),
         TXN_EXPIRATION_SECONDS,
+        ChainId::test(),
     )
     .expect("Failed to create signed transaction");
     sender_account.sequence_number += 1;

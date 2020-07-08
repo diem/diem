@@ -126,7 +126,7 @@ pub fn setup_environment(node_config: &mut NodeConfig) -> LibraHandle {
     for (role, network_config) in network_configs {
         // Perform common instantiation steps
         let (runtime, mut network_builder) =
-            NetworkBuilder::create(&node_config.base.chain_id, role, network_config);
+            NetworkBuilder::create(node_config.base.chain_id, role, network_config);
         let network_id = network_config.network_id.clone();
 
         // Create the endpoints to connect the Network to StateSynchronizer.

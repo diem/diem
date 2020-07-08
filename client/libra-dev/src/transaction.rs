@@ -20,6 +20,7 @@ use libra_types::{
     account_config::{
         from_currency_code_string, lbr_type_tag, type_tag_for_currency_code, LBR_NAME,
     },
+    chain_id::ChainId,
     transaction::{
         authenticator::AuthenticationKey, helpers::TransactionSigner, RawTransaction, Script,
         SignedTransaction, TransactionArgument, TransactionPayload,
@@ -40,6 +41,7 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
     gas_unit_price: u64,
     gas_identifier: *const i8,
     expiration_time_secs: u64,
+    chain_id: u64,
     script_bytes: *const u8,
     script_len: usize,
     ptr_buf: *mut *mut u8,
@@ -90,6 +92,7 @@ pub unsafe extern "C" fn libra_SignedTransactionBytes_from(
             .to_string_lossy()
             .into_owned(),
         expiration_time,
+        ChainId::new(chain_id),
     );
 
     let keypair = KeyPair::from(private_key);
@@ -338,6 +341,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
     sender: *const u8,
     receiver: *const u8,
     sequence: u64,
+    chain_id: u64,
     num_coins: u64,
     max_gas_amount: u64,
     gas_unit_price: u64,
@@ -405,6 +409,7 @@ pub unsafe extern "C" fn libra_RawTransactionBytes_from(
         gas_unit_price,
         LBR_NAME.to_owned(),
         expiration_time,
+        ChainId::new(chain_id),
     );
 
     let raw_txn_bytes = match to_bytes(&raw_txn) {
@@ -709,6 +714,7 @@ mod test {
                 gas_unit_price,
                 coin_ident.as_ptr(),
                 expiration_time_secs,
+                ChainId::test().id(),
                 script_bytes.as_ptr(),
                 script_len,
                 buf_ptr,
@@ -758,6 +764,7 @@ mod test {
                 gas_unit_price,
                 coin_idnet.as_ptr(),
                 expiration_time_secs,
+                ChainId::test().id(),
                 script_bytes.as_ptr(),
                 script_len,
                 buf_ptr2,
@@ -806,6 +813,7 @@ mod test {
                 gas_unit_price,
                 coin_ident_2.as_ptr(),
                 expiration_time_secs,
+                ChainId::test().id(),
                 script_bytes.as_ptr(),
                 script_len,
                 buf_ptr,
@@ -1046,6 +1054,7 @@ mod test {
                 sender_address.as_ref().as_ptr(),
                 receiver_address.as_ref().as_ptr(),
                 sequence,
+                ChainId::test().id(),
                 amount,
                 max_gas_amount,
                 gas_unit_price,
@@ -1140,6 +1149,7 @@ mod test {
                 gas_unit_price,
                 LBR_NAME.to_owned(),
                 Duration::from_secs(expiration_time_secs),
+                ChainId::test(),
             ),
             public_key.clone(),
             signature.clone(),

@@ -108,6 +108,7 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
                 validator_account,
                 validator_network_address,
                 fullnode_network_address,
+                self.template.base.chain_id,
                 &ns,
                 &ns_shared,
             )

@@ -22,6 +22,7 @@ use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
     account_address::{self, AccountAddress},
+    chain_id::ChainId,
     transaction::{RawTransaction, SignedTransaction, Transaction},
 };
 use std::{convert::TryFrom, time::Duration};
@@ -38,6 +39,8 @@ pub struct ValidatorConfig {
     fullnode_address: NetworkAddress,
     #[structopt(flatten)]
     backends: SecureBackends,
+    #[structopt(long)]
+    chain_id: ChainId,
 }
 
 impl ValidatorConfig {
@@ -122,6 +125,7 @@ impl ValidatorConfig {
             constants::GAS_UNIT_PRICE,
             constants::GAS_CURRENCY_CODE.to_owned(),
             Duration::from_secs(expiration_time),
+            self.chain_id,
         );
         let signature = local_storage
             .sign(OPERATOR_KEY, &raw_transaction)

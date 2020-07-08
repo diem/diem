@@ -1,5 +1,5 @@
 base:
-    chain_id: "some-test-id"
+    chain_id: "TESTING"
     data_dir: "/opt/libra/data/common"
     role: "validator"
     waypoint:

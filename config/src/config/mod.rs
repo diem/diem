@@ -46,7 +46,10 @@ pub use upstream_config::*;
 mod test_config;
 use crate::network_id::NetworkId;
 use libra_secure_storage::{KVStorage, Storage};
-use libra_types::{chain_id::ChainId, waypoint::Waypoint};
+use libra_types::{
+    chain_id::{self, ChainId},
+    waypoint::Waypoint,
+};
 pub use test_config::*;
 
 /// Config pulls in configuration information from the config file.
@@ -91,6 +94,7 @@ pub struct NodeConfig {
 #[serde(default, deny_unknown_fields)]
 pub struct BaseConfig {
     data_dir: PathBuf,
+    #[serde(deserialize_with = "chain_id::deserialize_config_chain_id")]
     pub chain_id: ChainId,
     pub role: RoleType,
     pub waypoint: WaypointConfig,
@@ -100,7 +104,7 @@ impl Default for BaseConfig {
     fn default() -> BaseConfig {
         BaseConfig {
             data_dir: PathBuf::from("/opt/libra/data/commmon"),
-            chain_id: ChainId::default(),
+            chain_id: ChainId::test(),
             role: RoleType::Validator,
             waypoint: WaypointConfig::None,
         }

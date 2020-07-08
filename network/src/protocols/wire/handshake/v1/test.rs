@@ -30,19 +30,19 @@ fn protocols_to_from_vec() {
 #[test]
 fn represents_same_network() {
     let network_id = NetworkId::Private("h1".to_string());
-    let chain_id = ChainId::new("h1");
+    let chain_id = ChainId::test();
 
     // Positive case
-    let h1 = HandshakeMsg::new(chain_id.clone(), network_id.clone());
-    let h2 = HandshakeMsg::new(chain_id.clone(), network_id.clone());
+    let h1 = HandshakeMsg::new(chain_id, network_id.clone());
+    let h2 = HandshakeMsg::new(chain_id, network_id.clone());
     assert!(h1.verify(&h2));
 
     // Negative cases
-    let h2 = HandshakeMsg::new(chain_id.clone(), NetworkId::Private("h2".to_string()));
+    let h2 = HandshakeMsg::new(chain_id, NetworkId::Private("h2".to_string()));
     assert!(!h1.verify(&h2));
     let h2 = HandshakeMsg::new(chain_id, NetworkId::Public);
     assert!(!h1.verify(&h2));
-    let h2 = HandshakeMsg::new(ChainId::new("h2"), network_id);
+    let h2 = HandshakeMsg::new(ChainId::new(0), network_id);
     assert!(!h1.verify(&h2));
 }
 
@@ -51,7 +51,7 @@ fn common_protocols() {
     let network_id = NetworkId::default();
     let chain_id = ChainId::default();
 
-    let mut h1 = HandshakeMsg::new(chain_id.clone(), network_id.clone());
+    let mut h1 = HandshakeMsg::new(chain_id, network_id.clone());
     h1.add(
         MessagingProtocolVersion::V1,
         [ProtocolId::ConsensusRpc, ProtocolId::DiscoveryDirectSend]
@@ -60,7 +60,7 @@ fn common_protocols() {
     );
 
     // Case 1: One intersecting protocol is found for common messaging protocol version.
-    let mut h2 = HandshakeMsg::new(chain_id.clone(), network_id.clone());
+    let mut h2 = HandshakeMsg::new(chain_id, network_id.clone());
     h2.add(
         MessagingProtocolVersion::V1,
         [ProtocolId::ConsensusRpc, ProtocolId::MempoolDirectSend]
@@ -79,7 +79,7 @@ fn common_protocols() {
     let h2 = HandshakeMsg {
         network_id: network_id.clone(),
         supported_protocols: BTreeMap::default(),
-        chain_id: chain_id.clone(),
+        chain_id,
     };
     assert_eq!(None, h1.find_common_protocols(&h2));
 

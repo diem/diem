@@ -3,6 +3,7 @@
 
 use crate::{
     account_address::AccountAddress,
+    chain_id::ChainId,
     transaction::{RawTransaction, SignedTransaction, TransactionPayload},
 };
 use anyhow::Result;
@@ -17,6 +18,7 @@ pub fn create_unsigned_txn(
     gas_unit_price: u64,
     gas_currency_code: String,
     txn_expiration: i64, // for compatibility with UTC's timestamp.
+    chain_id: ChainId,
 ) -> RawTransaction {
     RawTransaction::new(
         sender_address,
@@ -26,6 +28,7 @@ pub fn create_unsigned_txn(
         gas_unit_price,
         gas_currency_code,
         std::time::Duration::new((Utc::now().timestamp() + txn_expiration) as u64, 0),
+        chain_id,
     )
 }
 
@@ -43,6 +46,7 @@ pub fn create_user_txn<T: TransactionSigner + ?Sized>(
     gas_unit_price: u64,
     gas_currency_code: String,
     txn_expiration: i64, // for compatibility with UTC's timestamp.
+    chain_id: ChainId,
 ) -> Result<SignedTransaction> {
     let raw_txn = create_unsigned_txn(
         payload,
@@ -52,6 +56,7 @@ pub fn create_user_txn<T: TransactionSigner + ?Sized>(
         gas_unit_price,
         gas_currency_code,
         txn_expiration,
+        chain_id,
     );
     signer.sign_txn(raw_txn)
 }

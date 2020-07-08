@@ -6,6 +6,7 @@ use crate::{
     account_config::LBR_NAME,
     account_state_blob::AccountStateBlob,
     block_metadata::BlockMetadata,
+    chain_id::ChainId,
     contract_event::ContractEvent,
     ledger_info::LedgerInfo,
     proof::{accumulator::InMemoryAccumulator, TransactionInfoWithProof, TransactionListProof},
@@ -80,6 +81,9 @@ pub struct RawTransaction {
     #[serde(serialize_with = "serialize_duration")]
     #[serde(deserialize_with = "deserialize_duration")]
     expiration_time: Duration,
+
+    // chain ID of the network this transaction is intended for
+    chain_id: ChainId,
 }
 
 // TODO(#1307)
@@ -126,6 +130,7 @@ impl RawTransaction {
         gas_unit_price: u64,
         gas_currency_code: String,
         expiration_time: Duration,
+        chain_id: ChainId,
     ) -> Self {
         RawTransaction {
             sender,
@@ -135,6 +140,7 @@ impl RawTransaction {
             gas_unit_price,
             gas_currency_code,
             expiration_time,
+            chain_id,
         }
     }
 
@@ -149,6 +155,7 @@ impl RawTransaction {
         gas_unit_price: u64,
         gas_currency_code: String,
         expiration_time: Duration,
+        chain_id: ChainId,
     ) -> Self {
         RawTransaction {
             sender,
@@ -158,6 +165,7 @@ impl RawTransaction {
             gas_unit_price,
             gas_currency_code,
             expiration_time,
+            chain_id,
         }
     }
 
@@ -173,6 +181,7 @@ impl RawTransaction {
         gas_unit_price: u64,
         gas_currency_code: String,
         expiration_time: Duration,
+        chain_id: ChainId,
     ) -> Self {
         RawTransaction {
             sender,
@@ -182,6 +191,7 @@ impl RawTransaction {
             gas_unit_price,
             gas_currency_code,
             expiration_time,
+            chain_id,
         }
     }
 
@@ -189,6 +199,7 @@ impl RawTransaction {
         sender: AccountAddress,
         sequence_number: u64,
         write_set: WriteSet,
+        chain_id: ChainId,
     ) -> Self {
         RawTransaction {
             sender,
@@ -200,6 +211,7 @@ impl RawTransaction {
             gas_currency_code: LBR_NAME.to_owned(),
             // Write-set transactions are special and important and shouldn't expire.
             expiration_time: Duration::new(u64::max_value(), 0),
+            chain_id,
         }
     }
 
@@ -207,6 +219,7 @@ impl RawTransaction {
         sender: AccountAddress,
         sequence_number: u64,
         change_set: ChangeSet,
+        chain_id: ChainId,
     ) -> Self {
         RawTransaction {
             sender,
@@ -218,6 +231,7 @@ impl RawTransaction {
             gas_currency_code: LBR_NAME.to_owned(),
             // Write-set transactions are special and important and shouldn't expire.
             expiration_time: Duration::new(u64::max_value(), 0),
+            chain_id,
         }
     }
 
@@ -278,6 +292,7 @@ impl RawTransaction {
              \tgas_unit_price: {}, \n\
              \tgas_currency_code: {}, \n\
              \texpiration_time: {:#?}, \n\
+             \tchain_id: {},
              }}",
             self.sender,
             self.sequence_number,
@@ -287,6 +302,7 @@ impl RawTransaction {
             self.gas_unit_price,
             self.gas_currency_code,
             self.expiration_time,
+            self.chain_id,
         )
     }
     /// Return the sender of this transaction.
@@ -399,6 +415,10 @@ impl SignedTransaction {
 
     pub fn sequence_number(&self) -> u64 {
         self.raw_txn.sequence_number
+    }
+
+    pub fn chain_id(&self) -> ChainId {
+        self.raw_txn.chain_id
     }
 
     pub fn payload(&self) -> &TransactionPayload {

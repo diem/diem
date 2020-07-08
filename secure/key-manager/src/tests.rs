@@ -26,6 +26,7 @@ use libra_types::{
     account_state::AccountState,
     block_info::BlockInfo,
     block_metadata::{BlockMetadata, LibraBlockResource},
+    chain_id::ChainId,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     mempool_status::{MempoolStatus, MempoolStatusCode},
     on_chain_config::{ConfigurationResource, ValidatorSet},
@@ -371,6 +372,7 @@ fn setup_node<T: LibraInterface + Clone>(
         key_manager_config.rotation_period_secs,
         key_manager_config.sleep_period_secs,
         key_manager_config.txn_expiration_secs,
+        key_manager_config.chain_id,
     );
 
     Node::new(account, executor, libra_test_harness, key_manager, time)
@@ -514,6 +516,7 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
         &new_network_pubkey,
         &RawNetworkAddress::new(Vec::new()),
         Duration::from_secs(node.time.now() + TXN_EXPIRATION_SECS),
+        node_config.base.chain_id,
     );
     let txn1 = txn1
         .sign(&account_prikey, account_prikey.public_key())
@@ -743,6 +746,7 @@ fn build_reconfiguration_transaction(
         GAS_UNIT_PRICE,
         LBR_NAME.to_owned(),
         expiration,
+        ChainId::test(),
     );
     let signed_txn = raw_txn.sign(signing_key, signing_key.public_key()).unwrap();
     Transaction::UserTransaction(signed_txn.into_inner())

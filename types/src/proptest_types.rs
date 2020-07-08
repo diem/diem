@@ -10,6 +10,7 @@ use crate::{
     account_state_blob::AccountStateBlob,
     block_info::{BlockInfo, Round},
     block_metadata::BlockMetadata,
+    chain_id::ChainId,
     contract_event::ContractEvent,
     epoch_state::EpochState,
     event::{EventHandle, EventKey},
@@ -285,6 +286,7 @@ fn new_raw_transaction(
     gas_currency_code: String,
     expiration_time_secs: u64,
 ) -> RawTransaction {
+    let chain_id = ChainId::test();
     match payload {
         TransactionPayload::Module(module) => RawTransaction::new_module(
             sender,
@@ -294,6 +296,7 @@ fn new_raw_transaction(
             gas_unit_price,
             gas_currency_code,
             Duration::from_secs(expiration_time_secs),
+            chain_id,
         ),
         TransactionPayload::Script(script) => RawTransaction::new_script(
             sender,
@@ -303,11 +306,12 @@ fn new_raw_transaction(
             gas_unit_price,
             gas_currency_code,
             Duration::from_secs(expiration_time_secs),
+            chain_id,
         ),
         TransactionPayload::WriteSet(write_set) => {
             // It's a bit unfortunate that max_gas_amount etc is generated but
             // not used, but it isn't a huge deal.
-            RawTransaction::new_change_set(sender, sequence_number, write_set)
+            RawTransaction::new_change_set(sender, sequence_number, write_set, chain_id)
         }
     }
 }

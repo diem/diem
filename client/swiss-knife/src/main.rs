@@ -7,12 +7,16 @@ use libra_crypto::{
     test_utils::KeyPair,
     Signature, SigningKey, Uniform, ValidCryptoMaterialStringExt,
 };
-use libra_types::transaction::{
-    authenticator::AuthenticationKey, RawTransaction, SignedTransaction, Transaction,
-    TransactionPayload,
+use libra_types::{
+    chain_id::ChainId,
+    transaction::{
+        authenticator::AuthenticationKey, RawTransaction, SignedTransaction, Transaction,
+        TransactionPayload,
+    },
 };
 use rand::{prelude::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use structopt::StructOpt;
 use swiss_knife::helpers;
 
@@ -117,6 +121,8 @@ struct TxnParams {
     pub sender_address: String,
     // Sequence number of this transaction corresponding to sender's account.
     pub sequence_number: u64,
+    // Chain ID of the network this transaction is intended for
+    pub chain_id: String,
     // Maximal total gas specified by wallet to spend for this transaction.
     pub max_gas_amount: u64,
     // Maximal price can be paid per gas.
@@ -193,6 +199,7 @@ fn generate_raw_txn(g: GenerateRawTxnRequest) -> GenerateRawTxnResponse {
         g.txn_params.gas_unit_price,
         g.txn_params.gas_currency_code,
         std::time::Duration::new(g.txn_params.expiration_timestamp, 0),
+        ChainId::from_str(&g.txn_params.chain_id).expect("Failed to convert str to ChainId"),
     );
     GenerateRawTxnResponse {
         raw_txn: hex::encode(

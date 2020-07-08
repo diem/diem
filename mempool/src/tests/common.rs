@@ -8,6 +8,7 @@ use libra_crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform};
 use libra_types::{
     account_address::AccountAddress,
     account_config::LBR_NAME,
+    chain_id::ChainId,
     mempool_status::MempoolStatusCode,
     transaction::{RawTransaction, Script, SignedTransaction},
 };
@@ -83,6 +84,7 @@ impl TestTransaction {
             self.gas_price,
             LBR_NAME.to_owned(),
             exp_time,
+            ChainId::test(),
         );
         let mut seed: [u8; 32] = [0u8; 32];
         seed[..4].copy_from_slice(&[1, 2, 3, 4]);

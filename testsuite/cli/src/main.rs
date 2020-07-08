@@ -11,7 +11,7 @@ use cli::{
     client_proxy::ClientProxy,
     commands::{get_commands, parse_cmd, report_error, Command},
 };
-use libra_types::waypoint::Waypoint;
+use libra_types::{chain_id::ChainId, waypoint::Waypoint};
 use rustyline::{config::CompletionType, error::ReadlineError, Config, Editor};
 use std::{
     str::FromStr,
@@ -26,6 +26,17 @@ use structopt::StructOpt;
     about = "Libra client to connect to a specific validator"
 )]
 struct Args {
+    /// Chain ID of the network this client is connecting to
+    #[structopt(
+        short = "c",
+        long,
+        help = "\
+            Explicitly specify the chain ID of the network the CLI is connecting to: e.g.,
+            for mainnet: \"MAINNET\" or 0, pre-mainnet: \"PREMAINNET\" or 1,
+            testnet: \"TESTNET\" or 2, devnet: \"DEVNET\" or 3
+        "
+    )]
+    pub chain_id: ChainId,
     /// Full URL address to connect to - should include port number, if applicable
     #[structopt(short = "u", long)]
     pub url: String,
@@ -94,6 +105,7 @@ fn main() {
             .unwrap()
     });
     let mut client_proxy = ClientProxy::new(
+        args.chain_id,
         &args.url,
         &faucet_account_file,
         &treasury_compliance_account_file,

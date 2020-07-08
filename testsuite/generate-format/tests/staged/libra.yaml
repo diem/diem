@@ -20,6 +20,8 @@ BlockMetadata:
           TYPENAME: AccountAddress
     - proposer:
         TYPENAME: AccountAddress
+ChainId:
+  NEWTYPESTRUCT: U64
 ChangeSet:
   STRUCT:
     - write_set:
@@ -69,6 +71,8 @@ RawTransaction:
     - gas_unit_price: U64
     - gas_currency_code: STR
     - expiration_time: U64
+    - chain_id:
+        TYPENAME: ChainId
 Script:
   STRUCT:
     - code: BYTES

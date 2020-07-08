@@ -16,6 +16,7 @@ use libra_types::{
         coin1_tag, libra_root_address, testnet_dd_account_address, AccountResource, COIN1_NAME,
     },
     block_info::BlockInfo,
+    chain_id::ChainId,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     transaction::{
         authenticator::AuthenticationKey, RawTransaction, Script, SignedTransaction, Transaction,
@@ -374,6 +375,7 @@ fn create_transaction(
         0,                     /* gas_unit_price */
         COIN1_NAME.to_owned(), /* gas_currency_code */
         expiration_time,
+        ChainId::test(),
     );
 
     let signature = private_key.sign(&raw_txn);

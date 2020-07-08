@@ -127,7 +127,7 @@ impl NetworkBuilder {
     }
 
     pub fn create(
-        chain_id: &ChainId,
+        chain_id: ChainId,
         role: RoleType,
         config: &mut NetworkConfig,
     ) -> (Runtime, NetworkBuilder) {
@@ -150,7 +150,7 @@ impl NetworkBuilder {
 
         let mut network_builder = NetworkBuilder::new(
             runtime.handle().clone(),
-            chain_id.clone(),
+            chain_id,
             config.network_id.clone(),
             role,
             peer_id,

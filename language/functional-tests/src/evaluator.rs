@@ -17,6 +17,7 @@ use libra_types::{
     account_config,
     account_config::LBR_NAME,
     block_metadata::BlockMetadata,
+    chain_id::ChainId,
     on_chain_config::VMPublishingOption,
     transaction::{
         Module as TransactionModule, RawTransaction, Script as TransactionScript,
@@ -341,6 +342,7 @@ fn make_script_transaction(
         params.gas_unit_price,
         params.gas_currency_code,
         params.expiration_time,
+        ChainId::test(),
     )
     .sign(params.privkey, params.pubkey.clone())?
     .into_inner())
@@ -365,6 +367,7 @@ fn make_module_transaction(
         params.gas_unit_price,
         params.gas_currency_code,
         params.expiration_time,
+        ChainId::test(),
     )
     .sign(params.privkey, params.pubkey.clone())?
     .into_inner())
