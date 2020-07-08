@@ -3625,9 +3625,9 @@ dependencies = [
 name = "network-simple-onchain-discovery"
 version = "0.1.0"
 dependencies = [
+ "anyhow 1.0.31 (registry+https://github.com/rust-lang/crates.io-index)",
  "channel 0.1.0",
  "futures 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "libra-canonical-serialization 0.1.0",
  "libra-config 0.1.0",
  "libra-crypto 0.1.0",
  "libra-logger 0.1.0",
@@ -3635,6 +3635,7 @@ dependencies = [
  "libra-network-address 0.1.0",
  "libra-types 0.1.0",
  "libra-workspace-hack 0.1.0",
+ "move-core-types 0.1.0",
  "network 0.1.0",
  "once_cell 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "subscription-service 0.1.0",

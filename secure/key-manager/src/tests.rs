@@ -16,7 +16,7 @@ use libra_config::{
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, x25519, HashValue, PrivateKey, Uniform};
 use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
-use libra_network_address::RawNetworkAddress;
+use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Value};
 use libra_secure_time::{MockTimeService, TimeService};
 use libra_types::{
@@ -510,7 +510,7 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
         0,
         &new_pubkey,
         &new_network_pubkey,
-        &RawNetworkAddress::new(Vec::new()),
+        &RawEncNetworkAddress::new(Vec::new()),
         &new_network_pubkey,
         &RawNetworkAddress::new(Vec::new()),
         Duration::from_secs(node.time.now() + TXN_EXPIRATION_SECS),

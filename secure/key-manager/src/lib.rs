@@ -23,7 +23,7 @@ use crate::{counters::COUNTERS, libra_interface::LibraInterface};
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
 use libra_logger::{error, info};
-use libra_network_address::RawNetworkAddress;
+use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{CryptoStorage, KVStorage};
 use libra_secure_time::TimeService;
 use libra_types::{
@@ -333,7 +333,7 @@ pub fn build_rotation_transaction(
     seq_id: u64,
     consensus_key: &Ed25519PublicKey,
     network_key: &x25519::PublicKey,
-    network_address: &RawNetworkAddress,
+    network_address: &RawEncNetworkAddress,
     fullnode_network_key: &x25519::PublicKey,
     fullnode_network_address: &RawNetworkAddress,
     expiration: Duration,

@@ -12,7 +12,10 @@ use libra_crypto::{ed25519::Ed25519PublicKey, x25519, ValidCryptoMaterial};
 use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
 };
-use libra_network_address::{NetworkAddress, RawNetworkAddress};
+use libra_network_address::{
+    encrypted::{RawEncNetworkAddress, TEST_ROOT_KEY, TEST_ROOT_KEY_VERSION},
+    NetworkAddress, RawNetworkAddress,
+};
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_types::{
@@ -45,6 +48,20 @@ impl ValidatorConfig {
         let validator_network_key = x25519_from_storage(VALIDATOR_NETWORK_KEY, &local_storage)?;
         let operator_key = ed25519_from_storage(OPERATOR_KEY, &local_storage)?;
 
+        // TODO(davidiw): In genesis this is irrelevant -- afterward we need to obtain the
+        // current sequence number by querying the blockchain.
+        let sequence_number = 0;
+
+        // TODO(davidiw): This is currently not supported
+        // let sender = self.owner_address;
+        let sender = account_address::from_public_key(&operator_key);
+
+        // TODO(philiphayes): actually get the real keys from storage
+        let root_key = TEST_ROOT_KEY;
+        let key_version = TEST_ROOT_KEY_VERSION;
+        // only supports one address for now
+        let addr_idx = 0;
+
         // append ln-noise-ik and ln-handshake protocols to base network addresses
 
         let validator_address = self
@@ -53,6 +70,11 @@ impl ValidatorConfig {
             .append_prod_protos(validator_network_key, HANDSHAKE_VERSION);
         let raw_validator_address = RawNetworkAddress::try_from(&validator_address)
             .map_err(|e| Error::UnexpectedError(format!("(raw_validator_address) {}", e)))?;
+        let enc_validator_address = raw_validator_address
+            .encrypt(&root_key, key_version, &sender, sequence_number, addr_idx)
+            .map_err(|e| Error::UnexpectedError(format!("(enc_validator_address) {}", e)))?;
+        let raw_enc_validator_address = RawEncNetworkAddress::try_from(&enc_validator_address)
+            .map_err(|e| Error::UnexpectedError(format!("(raw_enc_validator_address) {}", e)))?;
 
         let fullnode_address = self
             .fullnode_address
@@ -63,24 +85,16 @@ impl ValidatorConfig {
 
         // Step 2) Generate transaction
 
-        // TODO(davidiw): This is currently not supported
-        // let sender = self.owner_address;
-        let sender = account_address::from_public_key(&operator_key);
-
         // TODO(philiphayes): remove network identity pubkey field from struct when
         // transition complete
         let script = transaction_builder::encode_set_validator_config_script(
             sender,
             consensus_key.to_bytes().to_vec(),
             validator_network_key.to_bytes(),
-            raw_validator_address.into(),
+            raw_enc_validator_address.into(),
             fullnode_network_key.to_bytes(),
             raw_fullnode_address.into(),
         );
-
-        // TODO(davidiw): In genesis this is irrelevant -- afterward we need to obtain the
-        // current sequence number by querying the blockchain.
-        let sequence_number = 0;
         let expiration_time = RealTimeService::new().now() + constants::TXN_EXPIRATION_SECS;
         let raw_transaction = RawTransaction::new_script(
             sender,

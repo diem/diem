@@ -18,7 +18,10 @@ use libra_key_manager::{
     libra_interface::{JsonRpcLibraInterface, LibraInterface},
 };
 use libra_management::{config_builder::FullnodeType, constants};
-use libra_network_address::{NetworkAddress, RawNetworkAddress};
+use libra_network_address::{
+    encrypted::{EncNetworkAddress, RawEncNetworkAddress, TEST_ROOT_KEY, TEST_ROOT_KEY_VERSION},
+    NetworkAddress, RawNetworkAddress,
+};
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
@@ -1472,14 +1475,42 @@ fn test_network_key_rotation() {
     // Submit a transaction telling that the validator key rotated
     let time_service = RealTimeService::new();
     let mut validator_config = libra.retrieve_validator_config(validator_account).unwrap();
-    let mut network_address =
-        NetworkAddress::try_from(&validator_config.validator_network_address).unwrap();
-    network_address.rotate_noise_public_key(
+
+    // TODO(philiphayes): fetch real keys from secure storage
+    let root_key = TEST_ROOT_KEY;
+    let key_version = TEST_ROOT_KEY_VERSION;
+
+    // Pull out current validator network address
+    let enc_addr =
+        EncNetworkAddress::try_from(&validator_config.validator_network_address).unwrap();
+    let prev_seq_num = enc_addr.seq_num();
+    let raw_addr = enc_addr
+        .decrypt(&root_key, &validator_account, key_version)
+        .unwrap();
+    let mut addr = NetworkAddress::try_from(&raw_addr).unwrap();
+
+    // Rotate to new noise pubkey
+    addr.rotate_noise_public_key(
         &validator_config.validator_network_identity_public_key,
         &new_public_key,
     );
-    validator_config.validator_network_address =
-        RawNetworkAddress::try_from(&network_address).unwrap();
+
+    // Serialize and encrypt new network address
+    let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
+    let seq_num = prev_seq_num + 1;
+    let addr_idx = 0;
+    let enc_addr = raw_addr
+        .encrypt(
+            &root_key,
+            key_version,
+            &validator_account,
+            seq_num,
+            addr_idx,
+        )
+        .unwrap();
+    let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
+
+    validator_config.validator_network_address = raw_enc_addr;
     validator_config.validator_network_identity_public_key = new_public_key;
 
     submit_new_validator_config(libra, &time_service, &operator_info, validator_config).unwrap();

@@ -18,7 +18,10 @@ use libra_config::{
 };
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
 use libra_mempool::mocks::MockSharedMempool;
-use libra_network_address::{NetworkAddress, RawNetworkAddress};
+use libra_network_address::{
+    encrypted::{RawEncNetworkAddress, TEST_ROOT_KEY, TEST_ROOT_KEY_VERSION},
+    NetworkAddress, RawNetworkAddress,
+};
 use libra_types::{
     contract_event::ContractEvent, ledger_info::LedgerInfoWithSignatures,
     on_chain_config::ValidatorSet, proof::TransactionListProof,
@@ -44,6 +47,7 @@ use std::{
     convert::TryFrom,
     num::NonZeroUsize,
     ops::DerefMut,
+    str::FromStr,
     sync::{
         atomic::{AtomicUsize, Ordering},
         Arc, RwLock,
@@ -168,13 +172,22 @@ impl SynchronizerEnv {
         // The voting power of peer 0 is enough to generate an LI that passes validation.
         for (idx, signer) in signers.iter().enumerate() {
             let voting_power = if idx == 0 { 1000 } else { 1 };
-            let addr: NetworkAddress = "/memory/0".parse().unwrap();
+            let addr = NetworkAddress::from_str("/memory/0").unwrap();
+            let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
+            let root_key = TEST_ROOT_KEY;
+            let key_version = TEST_ROOT_KEY_VERSION;
+            let enc_addr = raw_addr
+                .clone()
+                .encrypt(&root_key, key_version, &signer.author(), 0, 0)
+                .unwrap();
+            let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
+
             let validator_config = ValidatorConfig::new(
                 signer.public_key(),
                 network_keys[idx].public_key(),
-                RawNetworkAddress::try_from(&addr).unwrap(),
+                raw_enc_addr,
                 network_keys[idx].public_key(),
-                RawNetworkAddress::try_from(&addr).unwrap(),
+                raw_addr,
             );
             let validator_info =
                 ValidatorInfo::new(signer.author(), voting_power, validator_config);

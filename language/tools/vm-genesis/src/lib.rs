@@ -13,7 +13,10 @@ use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey},
     PrivateKey, Uniform, ValidCryptoMaterial,
 };
-use libra_network_address::RawNetworkAddress;
+use libra_network_address::{
+    encrypted::{RawEncNetworkAddress, TEST_ROOT_KEY, TEST_ROOT_KEY_VERSION},
+    RawNetworkAddress,
+};
 use libra_types::{
     account_config,
     contract_event::ContractEvent,
@@ -480,6 +483,7 @@ pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegi
         .map(|n| {
             let test = n.test.as_ref().unwrap();
             let account_key = test.operator_keypair.as_ref().unwrap().public_key();
+            let account_address = AuthenticationKey::ed25519(&account_key).derived_address();
 
             let sr_test = n.consensus.safety_rules.test.as_ref().unwrap();
             let consensus_key = sr_test.consensus_keypair.as_ref().unwrap().public_key();
@@ -487,22 +491,32 @@ pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegi
             let network = n.validator_network.as_ref().unwrap();
             let identity_key = network.identity.public_key_from_config().unwrap();
 
-            let advertised_address = network
+            let addr = network
                 .discovery_method
                 .advertised_address()
                 .append_prod_protos(identity_key, HANDSHAKE_VERSION);
-            let raw_advertised_address = RawNetworkAddress::try_from(&advertised_address).unwrap();
+            let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
+
+            let root_key = TEST_ROOT_KEY;
+            let key_version = TEST_ROOT_KEY_VERSION;
+            let seq_num = 0;
+            let addr_idx = 0;
+            let enc_addr = raw_addr
+                .clone()
+                .encrypt(&root_key, key_version, &account_address, seq_num, addr_idx)
+                .unwrap();
+            let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
 
             // TODO(philiphayes): do something with n.full_node_networks instead
             // of ignoring them?
 
             let script = transaction_builder::encode_set_validator_config_script(
-                AuthenticationKey::ed25519(&account_key).derived_address(),
+                account_address,
                 consensus_key.to_bytes().to_vec(),
                 identity_key.to_bytes(),
-                raw_advertised_address.clone().into(),
+                raw_enc_addr.into(),
                 identity_key.to_bytes(),
-                raw_advertised_address.into(),
+                raw_addr.into(),
             );
             (account_key, script)
         })
