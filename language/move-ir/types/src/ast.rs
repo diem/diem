@@ -270,7 +270,7 @@ pub enum StructDefinitionFields {
 //**************************************************************************************************
 
 /// Newtype for the name of a constant
-#[derive(Debug, Eq, Hash, Ord, PartialEq, PartialOrd, Clone)]
+#[derive(Debug, Serialize, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Clone)]
 pub struct ConstantName(String);
 
 /// A constant declaration in a module or script
