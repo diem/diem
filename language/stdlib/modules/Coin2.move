@@ -14,7 +14,6 @@ module Coin2 {
         let (coin2_mint_cap, coin2_burn_cap) =
             Libra::register_currency<Coin2>(
                 lr_account,
-                tc_account,
                 FixedPoint32::create_from_rational(1, 2), // exchange rate to LBR
                 false,   // is_synthetic
                 1000000, // scaling_factor = 10^6
