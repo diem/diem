@@ -142,6 +142,7 @@ where
     }
 
     fn next_impl(&mut self) -> Result<Option<(S::Key, S::Value)>> {
+        let _timer = OP_COUNTER.timer(&format!("db_iter_time_{}", S::COLUMN_FAMILY_NAME));
         if !self.db_iter.valid() {
             self.db_iter.status()?;
             return Ok(None);
@@ -156,15 +157,10 @@ where
         let key = <S::Key as KeyCodec<S>>::decode_key(raw_key)?;
         let value = <S::Value as ValueCodec<S>>::decode_value(raw_value)?;
 
-        let time = std::time::Instant::now();
         match self.direction {
             ScanDirection::Forward => self.db_iter.next(),
             ScanDirection::Backward => self.db_iter.prev(),
         }
-        OP_COUNTER.observe_duration(
-            &format!("db_iter_{}", S::COLUMN_FAMILY_NAME),
-            time.elapsed(),
-        );
 
         Ok(Some((key, value)))
     }
@@ -277,12 +273,11 @@ impl DB {
 
     /// Reads single record by key.
     pub fn get<S: Schema>(&self, schema_key: &S::Key) -> Result<Option<S::Value>> {
+        let _timer = OP_COUNTER.timer(&format!("db_get_time_{}", S::COLUMN_FAMILY_NAME));
         let k = <S::Key as KeyCodec<S>>::encode_key(&schema_key)?;
         let cf_handle = self.get_cf_handle(S::COLUMN_FAMILY_NAME)?;
-        let time = std::time::Instant::now();
 
         let result = self.inner.get_cf(cf_handle, &k)?;
-        OP_COUNTER.observe_duration(&format!("db_get_{}", S::COLUMN_FAMILY_NAME), time.elapsed());
         OP_COUNTER.observe(
             &format!("db_get_bytes_{}", S::COLUMN_FAMILY_NAME),
             result.as_ref().map_or(0.0, |v| v.len() as f64),
@@ -343,6 +338,7 @@ impl DB {
 
     /// Writes a group of records wrapped in a [`SchemaBatch`].
     pub fn write_schemas(&self, batch: SchemaBatch) -> Result<()> {
+        let _timer = OP_COUNTER.timer(&format!("db_batch_commit_time_{}", self.name));
         let mut db_batch = rocksdb::WriteBatch::default();
         for (cf_name, rows) in &batch.rows {
             let cf_handle = self.get_cf_handle(cf_name)?;
