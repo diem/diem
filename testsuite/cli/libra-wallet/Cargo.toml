@@ -19,7 +19,8 @@ pbkdf2 = "0.4.0"
 serde = "1.0.114"
 sha2 = "0.9.1"
 thiserror = "1.0.20"
-ed25519-dalek = { git = "https://github.com/novifinancial/ed25519-dalek.git", branch = "fiat2", default-features = false }
+vanilla-ed25519-dalek = { version = "1.0.0-pre.3", package = 'ed25519-dalek', optional = true}
+ed25519-dalek = { git = "https://github.com/novifinancial/ed25519-dalek.git", branch = "fiat2", default-features = false, features = ["std", "fiat_u64_backend"], optional = true}
 libra-crypto = { path = "../../../crypto/crypto", version = "0.1.0" }
 libra-temppath = { path = "../../../common/temppath/", version = "0.1.0" }
 libra-types = { path = "../../../types", version = "0.1.0" }
@@ -27,5 +28,7 @@ libra-workspace-hack = { path = "../../../common/workspace-hack", version = "0.1
 mirai-annotations = "1.9.1"
 
 [features]
-default = []
+default = ["fiat"]
+fiat = ["ed25519-dalek"]
+vanilla = ["vanilla-ed25519-dalek"]
 fuzzing = ["libra-types/fuzzing"]

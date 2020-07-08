@@ -29,6 +29,10 @@
 //! # }
 //! ```
 //!
+#[cfg(feature = "vanilla")]
+use vanilla_curve25519_dalek as curve25519_dalek;
+#[cfg(feature = "vanilla")]
+use vanilla_ed25519_dalek as ed25519_dalek;
 
 use crate::{
     traits::{self, CryptoMaterialError, ValidCryptoMaterial, ValidCryptoMaterialStringExt},
@@ -49,6 +53,9 @@ use proptest_derive::Arbitrary;
 // This makes it easier to uniformalize build dalek-x25519 in libra-core.
 //
 
+#[cfg(feature = "vanilla")]
+pub use vanilla_x25519_dalek as x25519_dalek;
+#[cfg(not(feature = "vanilla"))]
 pub use x25519_dalek;
 
 //
