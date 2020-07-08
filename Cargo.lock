@@ -3196,6 +3196,7 @@ dependencies = [
  "consensus-types 0.1.0",
  "libra-canonical-serialization 0.1.0",
  "libra-types 0.1.0",
+ "serde 1.0.114 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

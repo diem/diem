@@ -9,6 +9,8 @@ use consensus_types::{
     vote_proposal::MaybeSignedVoteProposal,
 };
 
+use crate::consensus_state::ConsensusState;
+
 pub struct SafetyRules {
     validator_signer: ValidatorSigner,
 }
@@ -16,7 +18,7 @@ pub struct SafetyRules {
 impl SafetyRules {
     pub fn new() -> Self {
         Self {
-            validator_signer: ValidatorSigner::from_int(1)
+            validator_signer: ValidatorSigner::from_int(1),
         }
     }
 
@@ -32,7 +34,9 @@ impl SafetyRules {
     pub fn sign_timeout(&mut self, timeout: &Timeout) {
     }
 
-    pub fn consensus_state(&mut self) {
+    pub fn consensus_state(&mut self) -> Option<ConsensusState> {
+        eprintln!("Handling req:consensus_state!");
+        None
     }
 }
 

@@ -9,7 +9,9 @@ use consensus_types::{
     timeout::Timeout,
 };
 
+use crate::{safety_rules::SafetyRules};
 mod safety_rules;
+mod consensus_state;
 
 pub const LSR_SGX_ADDRESS: &str = "localhost:8888";
 
@@ -38,19 +40,23 @@ fn test_data_types() {
     test_validator_signer();
 }
 
-fn process_safety_rules_reqs(stream: TcpStream) -> Result<()> {
+fn process_safety_rules_reqs(lsr: &mut SafetyRules, stream: &TcpStream) -> Result<()> {
     eprintln!("LSR_CORE: received a new incoming req...");
     let peer_addr = stream.peer_addr()?;
     let local_addr = stream.local_addr()?;
     eprintln!(
-        "LSR_CORE:accept meesage from local {:?}, peer {:?}",
-        local_addr, peer_addr
+        "LSR_CORE: accept meesage from local {:?}, peer {:?}, stream = {:?}",
+        local_addr, peer_addr, stream
     );
     let mut reader = BufReader::new(stream);
     let mut request = String::new();
-    let read_bytes = reader.read_line(&mut request)?;
+    eprintln!("About to read...");
+    let read_bytes = reader.read_line(&mut request).unwrap();
+    eprintln!("finish reading {} bytes...", read_bytes);
     // fill the read of buf
-    let buf = reader.fill_buf().unwrap();
+    //let buf = reader.fill_buf().unwrap();
+    let buf = reader.buffer();
+    eprintln!("buf = {:?}", buf);
     match request.as_str().trim() {
         "req:init" => {
             // fill the read of buf
@@ -58,8 +64,10 @@ fn process_safety_rules_reqs(stream: TcpStream) -> Result<()> {
             eprintln!("{} -- {:#?}", request, input);
         }
         "req:consensus_state" => {
+            let response = lsr.consensus_state();
+            let mut stream = BufReader::new(stream.try_clone().unwrap());
+            stream.get_mut().write_all("done".as_bytes()).unwrap();
             eprintln!("{} -- {:?}", request, buf);
-
         }
         "req:construct_and_sign_vote" => {
             let input: MaybeSignedVoteProposal = lcs::from_bytes(buf).unwrap();
@@ -82,13 +90,13 @@ fn process_safety_rules_reqs(stream: TcpStream) -> Result<()> {
 
 fn main() -> Result<()> {
     test_data_types();
-    let safety_rules = safety_rules::SafetyRules::new();
+    let mut safety_rules = SafetyRules::new();
     let listener = TcpListener::bind(LSR_SGX_ADDRESS)?;
     eprintln!("Ready to accept...");
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                process_safety_rules_reqs(stream)?;
+                process_safety_rules_reqs(&mut safety_rules, &stream)?;
             }
             Err(_) => {
                 eprintln!("unable to connect...");

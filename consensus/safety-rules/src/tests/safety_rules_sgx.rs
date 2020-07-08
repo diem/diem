@@ -14,7 +14,7 @@ fn safety_rules_sgx() -> suite::Callback {
     Box::new(move || {
         let signer = ValidatorSigner::from_int(0);
         let storage = test_utils::test_storage(&signer);
-        let safety_rules = Box::new(SafetyRulesSGX::new());
+        let safety_rules = Box::new(SafetyRulesSGX::new(storage));
         (
             safety_rules,
             signer,
