@@ -6,13 +6,8 @@ use aes_gcm::{
     aead::{generic_array::GenericArray, AeadInPlace, NewAead},
     Aes256Gcm,
 };
-use libra_crypto::{
-    compat::Sha3_256,
-    hash::HashValue,
-    hkdf::{Hkdf, HkdfError},
-};
+use libra_crypto::{compat::Sha3_256, hkdf::Hkdf};
 use move_core_types::account_address::AccountAddress;
-use once_cell::sync::Lazy;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -48,10 +43,21 @@ pub const TEST_ROOT_KEY_VERSION: RootKeyVersion = 0;
 ///
 /// Note: modifying this salt is a backwards-incompatible protocol change.
 ///
-/// For readers, this hash value is equal to the following hex string:
-/// `"dfc8ffcc7f62ea4e5b9bc41ee7969b44275419ebaad1db27d2a191b6d1db6d13"`
-pub static HKDF_SALT: Lazy<HashValue> =
-    Lazy::new(|| HashValue::sha3_256_of(b"LIBRA_ENCRYPTED_NETWORK_ADDRESS_SALT"));
+/// For readers, the HKDF salt is equal to the following hex string:
+/// `"dfc8ffcc7f62ea4e5b9bc41ee7969b44275419ebaad1db27d2a191b6d1db6d13"` which is
+/// also equal to the hash value `SHA3-256(b"LIBRA_ENCRYPTED_NETWORK_ADDRESS_SALT")`.
+///
+/// ```
+/// use libra_network_address::encrypted::HKDF_SALT;
+/// use libra_crypto::hash::HashValue;
+///
+/// let derived_salt = HashValue::sha3_256_of(b"LIBRA_ENCRYPTED_NETWORK_ADDRESS_SALT");
+/// assert_eq!(HKDF_SALT.as_ref(), derived_salt.as_ref());
+/// ```
+pub const HKDF_SALT: [u8; 32] = [
+    0xdf, 0xc8, 0xff, 0xcc, 0x7f, 0x62, 0xea, 0x4e, 0x5b, 0x9b, 0xc4, 0x1e, 0xe7, 0x96, 0x9b, 0x44,
+    0x27, 0x54, 0x19, 0xeb, 0xaa, 0xd1, 0xdb, 0x27, 0xd2, 0xa1, 0x91, 0xb6, 0xd1, 0xdb, 0x6d, 0x13,
+];
 
 /// A serialized `EncNetworkAddress`.
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
@@ -152,9 +158,6 @@ pub enum Error {
 
     #[error("ciphertext is too small to even contain the auth tag: length: {0}")]
     CiphertextTooSmall(usize),
-
-    #[error("error deriving account key: {0}")]
-    DeriveAccountKeyError(#[from] HkdfError),
 }
 
 //////////////////////////
@@ -216,7 +219,7 @@ impl EncNetworkAddress {
         // unpack the RawNetworkAddress into its base Vec<u8>
         let mut addr_vec: Vec<u8> = addr.into();
 
-        let account_key = Self::derive_account_key(root_key, account)?;
+        let account_key = Self::derive_account_key(root_key, account);
         let aead = Aes256Gcm::new(GenericArray::from_slice(&account_key));
 
         // nonce := seq_num || addr_idx; sizeof(nonce) == 12
@@ -263,7 +266,7 @@ impl EncNetworkAddress {
             return Err(Error::CiphertextTooSmall(enc_addr.len()));
         }
 
-        let account_key = Self::derive_account_key(root_key, account)?;
+        let account_key = Self::derive_account_key(root_key, account);
         let aead = Aes256Gcm::new(GenericArray::from_slice(&account_key));
 
         // nonce := seq_num || addr_idx; sizeof(nonce) == 12
@@ -294,13 +297,13 @@ impl EncNetworkAddress {
     }
 
     /// Given the shared `root_key`, derive the per-validator `account_key`.
-    fn derive_account_key(
-        root_key: &RootKey,
-        account: &AccountAddress,
-    ) -> Result<Vec<u8>, HkdfError> {
-        let salt = Some(&HKDF_SALT.as_ref()[..]);
+    fn derive_account_key(root_key: &RootKey, account: &AccountAddress) -> Vec<u8> {
+        let salt = Some(HKDF_SALT.as_ref());
         let info = Some(account.as_ref());
-        Hkdf::<Sha3_256>::extract_then_expand(salt, root_key, info, KEY_LEN)
+        Hkdf::<Sha3_256>::extract_then_expand(salt, root_key, info, KEY_LEN).expect(
+            "HKDF_SHA3_256 extract_then_expand is infallible here since all inputs \
+             have valid and well-defined lengths enforced by the type system",
+        )
     }
 
     pub fn root_key_version(&self) -> RootKeyVersion {
@@ -358,15 +361,6 @@ mod test {
     use super::*;
     use crate::NetworkAddress;
     use std::str::FromStr;
-
-    // Ensure that the HKDF_SALT doesn't accidentally get modified.
-    #[test]
-    fn check_salt() {
-        let expected =
-            HashValue::from_hex("dfc8ffcc7f62ea4e5b9bc41ee7969b44275419ebaad1db27d2a191b6d1db6d13")
-                .unwrap();
-        assert_eq!(*HKDF_SALT, expected);
-    }
 
     // Ensure that modifying the ciphertext or associated data causes a decryption
     // error.
