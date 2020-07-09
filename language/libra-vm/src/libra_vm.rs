@@ -550,7 +550,6 @@ pub(crate) fn get_transaction_output<A: AccessPathCache, R: RemoteCache>(
     let effects = session.finish().map_err(|e| e.into_vm_status())?;
     let (write_set, events) = txn_effects_to_writeset_and_events_cached(ap_cache, effects)?;
 
-    TXN_TOTAL_GAS_USAGE.observe(gas_used as f64);
     Ok(TransactionOutput::new(
         write_set,
         events,
