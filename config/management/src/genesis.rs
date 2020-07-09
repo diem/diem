@@ -6,12 +6,16 @@ use crate::{
     SingleBackend,
 };
 use libra_crypto::ed25519::Ed25519PublicKey;
-use libra_global_constants::{ASSOCIATION_KEY, OPERATOR_KEY};
+use libra_global_constants::{ASSOCIATION_KEY, OPERATOR_KEY, OWNER_KEY};
 use libra_secure_storage::KVStorage;
-use libra_types::transaction::{Transaction, TransactionPayload};
+use libra_types::{
+    account_address,
+    account_address::AccountAddress,
+    transaction::{Transaction, TransactionPayload},
+};
 use std::{fs::File, io::Write, path::PathBuf};
 use structopt::StructOpt;
-use vm_genesis::OperatorRegistration;
+use vm_genesis::{OperatorAssignment, OperatorRegistration};
 
 /// Note, it is implicitly expected that the storage supports
 /// a namespace but one has not been set.
@@ -27,10 +31,12 @@ impl Genesis {
     pub fn execute(self) -> Result<Transaction, Error> {
         let layout = self.layout()?;
         let association_key = self.association_key(&layout)?;
+        let operator_assignments = self.operator_assignments(&layout)?;
         let operator_registrations = self.operator_registrations(&layout)?;
 
         let genesis = vm_genesis::encode_genesis_transaction(
             association_key,
+            &operator_assignments,
             &operator_registrations,
             Some(libra_types::on_chain_config::VMPublishingOption::open()),
         );
@@ -80,6 +86,59 @@ impl Genesis {
             .map_err(|e| Error::RemoteStorageReadError(constants::LAYOUT, e.to_string()))?;
         Layout::parse(&layout)
             .map_err(|e| Error::RemoteStorageReadError(constants::LAYOUT, e.to_string()))
+    }
+
+    /// Produces a set of OperatorAssignments from the remote storage.
+    pub fn operator_assignments(&self, layout: &Layout) -> Result<Vec<OperatorAssignment>, Error> {
+        let mut operator_assignments = Vec::new();
+
+        for owner in layout.owners.iter() {
+            let owner_config = self.backend.backend.clone();
+            let owner_config = owner_config.set_namespace(owner.into());
+
+            let owner_storage = owner_config.create_storage(RemoteStorage)?;
+
+            let owner_key = owner_storage
+                .get(OWNER_KEY)
+                .map_err(|e| Error::RemoteStorageReadError(OWNER_KEY, e.to_string()))?
+                .value
+                .ed25519_public_key()
+                .map_err(|e| Error::RemoteStorageReadError(OWNER_KEY, e.to_string()))?;
+
+            let operator_name = owner_storage
+                .get(constants::VALIDATOR_OPERATOR)
+                .map_err(|e| {
+                    Error::RemoteStorageReadError(constants::VALIDATOR_OPERATOR, e.to_string())
+                })?
+                .value
+                .string()
+                .unwrap();
+
+            let operator_account = self.fetch_operator_account(operator_name)?;
+            let set_operator_script =
+                transaction_builder::encode_set_validator_operator_script(operator_account);
+
+            operator_assignments.push((owner_key, set_operator_script));
+        }
+
+        Ok(operator_assignments)
+    }
+
+    /// Retrieves the operator key from the remote storage using the given operator name, and uses
+    /// this key to derive an operator account address.
+    fn fetch_operator_account(&self, operator_name: String) -> Result<AccountAddress, Error> {
+        let operator_config = self.backend.backend.clone();
+        let operator_config = operator_config.set_namespace(operator_name);
+
+        let operator_storage = operator_config.create_storage(RemoteStorage)?;
+
+        let operator_key = operator_storage
+            .get(OPERATOR_KEY)
+            .map_err(|e| Error::RemoteStorageReadError(OPERATOR_KEY, e.to_string()))?
+            .value
+            .ed25519_public_key()
+            .map_err(|e| Error::RemoteStorageReadError(OPERATOR_KEY, e.to_string()))?;
+        Ok(account_address::from_public_key(&operator_key))
     }
 
     /// Produces a set of OperatorRegistrations from the remote storage.
