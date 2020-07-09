@@ -6,6 +6,7 @@ script {
 use 0x1::LibraAccount;
 use 0x1::Coin1::Coin1;
 use 0x1::Coin2::Coin2;
+use 0x1::DesignatedDealer;
 use 0x1::Libra;
 
 // register dd(1|2) as a preburner
@@ -24,6 +25,8 @@ fun main(account: &signer) {
         {{dd2::auth_key}},
         false,
     );
+    DesignatedDealer::add_tier(account, {{dd1}}, 1000);
+    DesignatedDealer::add_tier(account, {{dd2}}, 1000);
     LibraAccount::tiered_mint<Coin1>(
         account,
         {{dd1}},

@@ -17,6 +17,10 @@
 -  [Function `exists_at`](#0x1_DesignatedDealer_exists_at)
 -  [Function `reset_window`](#0x1_DesignatedDealer_reset_window)
 -  [Function `window_length`](#0x1_DesignatedDealer_window_length)
+-  [Specification](#0x1_DesignatedDealer_Specification)
+    -  [Function `add_tier`](#0x1_DesignatedDealer_Specification_add_tier)
+    -  [Function `update_tier`](#0x1_DesignatedDealer_Specification_update_tier)
+    -  [Function `tiered_mint`](#0x1_DesignatedDealer_Specification_tiered_mint)
 
 
 
@@ -158,10 +162,10 @@
 <pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_add_tier_">add_tier_</a>(dealer: &<b>mut</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a>, next_tier_upperbound: u64) {
     <b>let</b> tiers = &<b>mut</b> dealer.tiers;
     <b>let</b> number_of_tiers: u64 = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
-    <b>assert</b>(number_of_tiers &lt;= 4, EINVALID_TIER_ADDITION);
-    <b>if</b> (number_of_tiers &gt; 1) {
-        <b>let</b> prev_tier = *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, number_of_tiers - 1);
-        <b>assert</b>(prev_tier &lt; next_tier_upperbound, EINVALID_TIER_START);
+    <b>assert</b>(number_of_tiers + 1 &lt;= MAX_NUM_TIERS, EINVALID_TIER_ADDITION);
+    <b>if</b> (number_of_tiers &gt; 0) {
+        <b>let</b> last_tier = *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, number_of_tiers - 1);
+        <b>assert</b>(last_tier &lt; next_tier_upperbound, EINVALID_TIER_START);
     };
     <a href="Vector.md#0x1_Vector_push_back">Vector::push_back</a>(tiers, next_tier_upperbound);
 }
@@ -177,7 +181,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>(tc_account: &signer, addr: address, tier_upperbound: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>(tc_account: &signer, dd_addr: address, tier_upperbound: u64)
 </code></pre>
 
 
@@ -188,11 +192,11 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>(
     tc_account: &signer,
-    addr: address,
+    dd_addr: address,
     tier_upperbound: u64
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
-    <b>let</b> dealer = borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr);
+    <b>let</b> dealer = borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr);
     <a href="#0x1_DesignatedDealer_add_tier_">add_tier_</a>(dealer, tier_upperbound)
 }
 </code></pre>
@@ -219,16 +223,22 @@
 <pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_update_tier_">update_tier_</a>(dealer: &<b>mut</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a>, tier_index: u64, new_upperbound: u64) {
     <b>let</b> tiers = &<b>mut</b> dealer.tiers;
     <b>let</b> number_of_tiers = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
-    <b>assert</b>(tier_index &lt;= 3, EINVALID_TIER_INDEX); // max 4 tiers allowed
     <b>assert</b>(tier_index &lt; number_of_tiers, EINVALID_TIER_INDEX);
     // Make sure that this new start for the tier is consistent
-    // with the tier above it.
-    <b>let</b> next_tier = tier_index + 1;
-    <b>if</b> (next_tier &lt; number_of_tiers) {
-        <b>assert</b>(new_upperbound &lt; *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, next_tier), EINVALID_TIER_START);
+    // with the tier above and below it.
+    <b>let</b> tier = <a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, tier_index);
+    <b>if</b> (*tier == new_upperbound) <b>return</b>;
+    <b>if</b> (*tier &lt; new_upperbound) {
+        <b>let</b> next_tier_index = tier_index + 1;
+        <b>if</b> (next_tier_index &lt; number_of_tiers) {
+            <b>assert</b>(new_upperbound &lt; *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, next_tier_index), EINVALID_TIER_START);
+        };
     };
-    <b>let</b> tier_mut = <a href="Vector.md#0x1_Vector_borrow_mut">Vector::borrow_mut</a>(tiers, tier_index);
-    *tier_mut = new_upperbound;
+    <b>if</b> (*tier &gt; new_upperbound && tier_index &gt; 0) {
+        <b>let</b> prev_tier_index = tier_index - 1;
+        <b>assert</b>(new_upperbound &gt; *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, prev_tier_index), EINVALID_TIER_START);
+    };
+    *<a href="Vector.md#0x1_Vector_borrow_mut">Vector::borrow_mut</a>(tiers, tier_index) = new_upperbound;
 }
 </code></pre>
 
@@ -242,7 +252,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_update_tier">update_tier</a>(tc_account: &signer, addr: address, tier_index: u64, new_upperbound: u64)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_update_tier">update_tier</a>(tc_account: &signer, dd_addr: address, tier_index: u64, new_upperbound: u64)
 </code></pre>
 
 
@@ -253,12 +263,12 @@
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_update_tier">update_tier</a>(
     tc_account: &signer,
-    addr: address,
+    dd_addr: address,
     tier_index: u64,
     new_upperbound: u64
 ) <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
-    <b>let</b> dealer = borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr);
+    <b>let</b> dealer = borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr);
     <a href="#0x1_DesignatedDealer_update_tier_">update_tier_</a>(dealer, tier_index, new_upperbound)
 }
 </code></pre>
@@ -273,7 +283,7 @@
 
 
 
-<pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint_">tiered_mint_</a>(dealer: &<b>mut</b> <a href="#0x1_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>, amount: u64, tier_index: u64): bool
+<pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint_">tiered_mint_</a>(dealer: &<b>mut</b> <a href="#0x1_DesignatedDealer_Dealer">DesignatedDealer::Dealer</a>, amount: u64, tier_index: u64)
 </code></pre>
 
 
@@ -282,25 +292,16 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint_">tiered_mint_</a>(dealer: &<b>mut</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a>, amount: u64, tier_index: u64): bool {
-    // <b>if</b> tier is 4, can mint unlimited
-    <b>assert</b>(tier_index &lt;= 4, EINVALID_TIER_INDEX);
+<pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint_">tiered_mint_</a>(dealer: &<b>mut</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a>, amount: u64, tier_index: u64) {
     <a href="#0x1_DesignatedDealer_reset_window">reset_window</a>(dealer);
-    <b>let</b> cur_inflow = *&dealer.window_inflow;
+    <b>let</b> cur_inflow = dealer.window_inflow;
+    <b>let</b> new_inflow = cur_inflow + amount;
     <b>let</b> tiers = &<b>mut</b> dealer.tiers;
-    // If the tier_index is one past the bounded tiers, minting is unbounded
     <b>let</b> number_of_tiers = <a href="Vector.md#0x1_Vector_length">Vector::length</a>(tiers);
-    <b>let</b> tier_check = &<b>mut</b> <b>false</b>;
-    <b>if</b> (tier_index == number_of_tiers) {
-        *tier_check = <b>true</b>;
-    } <b>else</b> {
-        <b>let</b> tier_upperbound: u64 = *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, tier_index);
-        *tier_check = (cur_inflow + amount &lt;= tier_upperbound);
-    };
-    <b>if</b> (*tier_check) {
-        dealer.window_inflow = cur_inflow + amount;
-    };
-    *tier_check
+    <b>assert</b>(tier_index &lt; number_of_tiers, EINVALID_TIER_INDEX);
+    <b>let</b> tier_upperbound: u64 = *<a href="Vector.md#0x1_Vector_borrow">Vector::borrow</a>(tiers, tier_index);
+    <b>assert</b>(new_inflow &lt;= tier_upperbound, EINVALID_AMOUNT_FOR_TIER);
+    dealer.window_inflow = new_inflow;
 }
 </code></pre>
 
@@ -329,13 +330,12 @@
     dd_addr: address,
     tier_index: u64,
 ): <a href="Libra.md#0x1_Libra">Libra</a>&lt;CoinType&gt; <b>acquires</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a> {
-
     <b>assert</b>(<a href="Roles.md#0x1_Roles_has_treasury_compliance_role">Roles::has_treasury_compliance_role</a>(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
     <b>assert</b>(amount &gt; 0, EINVALID_MINT_AMOUNT);
-
     <b>assert</b>(<a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr), ENOT_A_DD);
-    <b>let</b> tier_check = <a href="#0x1_DesignatedDealer_tiered_mint_">tiered_mint_</a>(borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr), amount, tier_index);
-    <b>assert</b>(tier_check, EINVALID_AMOUNT_FOR_TIER);
+
+    <a href="#0x1_DesignatedDealer_tiered_mint_">tiered_mint_</a>(borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr), amount, tier_index);
+
     // Send <a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>
     <a href="Event.md#0x1_Event_emit_event">Event::emit_event</a>&lt;<a href="#0x1_DesignatedDealer_ReceivedMintEvent">ReceivedMintEvent</a>&gt;(
         &<b>mut</b> borrow_global_mut&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr).mint_event_handle,
@@ -358,7 +358,7 @@
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(addr: address): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr: address): bool
 </code></pre>
 
 
@@ -367,8 +367,8 @@
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(addr: address): bool {
-    exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(addr)
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_exists_at">exists_at</a>(dd_addr: address): bool {
+    exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr)
 }
 </code></pre>
 
@@ -393,7 +393,7 @@
 
 <pre><code><b>fun</b> <a href="#0x1_DesignatedDealer_reset_window">reset_window</a>(dealer: &<b>mut</b> <a href="#0x1_DesignatedDealer_Dealer">Dealer</a>) {
     <b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_now_microseconds">LibraTimestamp::now_microseconds</a>();
-    <b>if</b> (current_time &gt; dealer.window_start + <a href="#0x1_DesignatedDealer_window_length">window_length</a>()) {
+    <b>if</b> (current_time &gt;= dealer.window_start + <a href="#0x1_DesignatedDealer_window_length">window_length</a>()) {
         dealer.window_start = current_time;
         dealer.window_inflow = 0;
     }
@@ -428,3 +428,88 @@
 
 
 </details>
+
+<a name="0x1_DesignatedDealer_Specification"></a>
+
+## Specification
+
+
+<a name="0x1_DesignatedDealer_Specification_add_tier"></a>
+
+### Function `add_tier`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_add_tier">add_tier</a>(tc_account: &signer, dd_addr: address, tier_upperbound: u64)
+</code></pre>
+
+
+
+
+<pre><code><b>ensures</b> len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr).tiers) == len(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr)).tiers) + 1;
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr).tiers[len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr).tiers) - 1] == tier_upperbound;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_Specification_update_tier"></a>
+
+### Function `update_tier`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_update_tier">update_tier</a>(tc_account: &signer, dd_addr: address, tier_index: u64, new_upperbound: u64)
+</code></pre>
+
+
+
+
+<pre><code><b>ensures</b> len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr).tiers) == len(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr)).tiers);
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr).tiers[tier_index] == new_upperbound;
+</code></pre>
+
+
+
+<a name="0x1_DesignatedDealer_Specification_tiered_mint"></a>
+
+### Function `tiered_mint`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DesignatedDealer_tiered_mint">tiered_mint</a>&lt;CoinType&gt;(tc_account: &signer, amount: u64, dd_addr: address, tier_index: u64): <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;CoinType&gt;
+</code></pre>
+
+
+
+
+<pre><code><b>ensures</b> {<b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr); <b>old</b>(dealer.window_start) &lt;= dealer.window_start};
+<b>ensures</b> {<b>let</b> dealer = <b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr);
+        {<b>let</b> current_time = <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>();
+            (dealer.window_start == current_time && dealer.window_inflow == amount) ||
+            (<b>old</b>(dealer.window_start) == dealer.window_start && dealer.window_inflow == <b>old</b>(dealer.window_inflow) + amount)
+        }};
+<b>ensures</b> tier_index &lt; len(<b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr)).tiers);
+<b>ensures</b> <b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr).window_inflow &lt;= <b>old</b>(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(dd_addr)).tiers[tier_index];
+</code></pre>
+
+
+
+
+<a name="0x1_DesignatedDealer_SpecSchema"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_DesignatedDealer_SpecSchema">SpecSchema</a> {
+    <b>invariant</b> <b>module</b> forall x: address where exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(x): len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(x).tiers) &lt;= <a href="#0x1_DesignatedDealer_SPEC_MAX_NUM_TIERS">SPEC_MAX_NUM_TIERS</a>();
+    <b>invariant</b> <b>module</b> forall x: address where exists&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(x):
+                     forall i: u64, j: u64 where 0 &lt;= i && i &lt; j && j &lt; len(<b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(x).tiers):
+                        <b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(x).tiers[i] &lt; <b>global</b>&lt;<a href="#0x1_DesignatedDealer_Dealer">Dealer</a>&gt;(x).tiers[j];
+}
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>false</b>;
+<a name="0x1_DesignatedDealer_SPEC_MAX_NUM_TIERS"></a>
+<b>define</b> <a href="#0x1_DesignatedDealer_SPEC_MAX_NUM_TIERS">SPEC_MAX_NUM_TIERS</a>(): u64 { 4 }
+<a name="0x1_DesignatedDealer_spec_window_length"></a>
+<b>define</b> <a href="#0x1_DesignatedDealer_spec_window_length">spec_window_length</a>(): u64 { 86400000000 }
+<b>apply</b> <a href="#0x1_DesignatedDealer_SpecSchema">SpecSchema</a> <b>to</b> *, *&lt;CoinType&gt;;
+</code></pre>

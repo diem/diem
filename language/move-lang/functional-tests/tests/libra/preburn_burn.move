@@ -6,6 +6,7 @@
 script {
 use 0x1::LibraAccount;
 use 0x1::Coin1::Coin1;
+use 0x1::DesignatedDealer;
 
 fun main(account: &signer) {
     LibraAccount::create_designated_dealer<Coin1>(
@@ -14,6 +15,7 @@ fun main(account: &signer) {
         {{dd::auth_key}},
         false,
     );
+    DesignatedDealer::add_tier(account, {{dd}}, 1000);
     LibraAccount::tiered_mint<Coin1>(
         account,
         {{dd}},

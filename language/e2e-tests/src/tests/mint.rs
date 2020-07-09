@@ -69,36 +69,17 @@ fn tiered_mint_designated_dealer() {
         .expect("receiver balance must exist");
     assert_eq!(mint_amount_one + mint_amount_two, dd_balance.coin());
 
-    // --- mint any amount
-    // -------------- can mint unlimited with 5th tier (tier index 4) -----
-    let mint_amount = 9_999_999_999_999;
+    // -------------- invalid tier index
     let tier_index = 4;
-    let output = executor.execute_and_apply(blessed.signed_script_txn(
+    let output = &executor.execute_transaction(blessed.signed_script_txn(
         encode_tiered_mint_script(
             account_config::coin1_tag(),
             3,
             *dd.address(),
-            mint_amount,
-            tier_index,
-        ),
-        3,
-    ));
-    assert_eq!(
-        output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
-    );
-
-    // -------------- invalid tier index
-    let tier_index = 5;
-    let output = &executor.execute_transaction(blessed.signed_script_txn(
-        encode_tiered_mint_script(
-            account_config::coin1_tag(),
-            4,
-            *dd.address(),
             mint_amount_one,
             tier_index,
         ),
-        4,
+        3,
     ));
     assert!(transaction_status_eq(
         &output.status(),

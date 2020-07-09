@@ -281,7 +281,7 @@ fn create_and_initialize_testnet_minting(
         0,
         account_config::testnet_dd_account_address(),
         std::u64::MAX / 2,
-        4,
+        3,
     );
 
     let mint_max_coin2 = transaction_builder::encode_tiered_mint_script(
@@ -289,7 +289,7 @@ fn create_and_initialize_testnet_minting(
         0,
         account_config::testnet_dd_account_address(),
         std::u64::MAX / 2,
-        4,
+        3,
     );
 
     // Create the DD account
@@ -297,6 +297,21 @@ fn create_and_initialize_testnet_minting(
         session,
         account_config::treasury_compliance_account_address(),
         &create_dd_script,
+    );
+    exec_function(
+        session,
+        account_config::treasury_compliance_account_address(),
+        "DesignatedDealer",
+        "update_tier",
+        vec![],
+        vec![
+            Value::transaction_argument_signer_reference(
+                account_config::treasury_compliance_account_address(),
+            ),
+            Value::address(account_config::testnet_dd_account_address()),
+            Value::u64(3),
+            Value::u64(std::u64::MAX),
+        ],
     );
 
     // mint the coins, and mint LBR
