@@ -63,25 +63,45 @@ impl ValidatorConfig {
         let addr_idx = 0;
 
         // append ln-noise-ik and ln-handshake protocols to base network addresses
+        // and encrypt the validator address.
 
         let validator_address = self
             .validator_address
             .clone()
             .append_prod_protos(validator_network_key, HANDSHAKE_VERSION);
-        let raw_validator_address = RawNetworkAddress::try_from(&validator_address)
-            .map_err(|e| Error::UnexpectedError(format!("(raw_validator_address) {}", e)))?;
+        let raw_validator_address =
+            RawNetworkAddress::try_from(&validator_address).map_err(|e| {
+                Error::UnexpectedError(format!(
+                    "error serializing validator address: \"{}\", error: {}",
+                    validator_address, e
+                ))
+            })?;
         let enc_validator_address = raw_validator_address
             .encrypt(&root_key, key_version, &sender, sequence_number, addr_idx)
-            .map_err(|e| Error::UnexpectedError(format!("(enc_validator_address) {}", e)))?;
+            .map_err(|e| {
+                Error::UnexpectedError(format!(
+                    "error encrypting validator address: \"{}\", error: {}",
+                    validator_address, e
+                ))
+            })?;
         let raw_enc_validator_address = RawEncNetworkAddress::try_from(&enc_validator_address)
-            .map_err(|e| Error::UnexpectedError(format!("(raw_enc_validator_address) {}", e)))?;
+            .map_err(|e| {
+                Error::UnexpectedError(format!(
+                    "error serializing encrypted validator address: {:?}, error: {}",
+                    enc_validator_address, e
+                ))
+            })?;
 
         let fullnode_address = self
             .fullnode_address
             .clone()
             .append_prod_protos(fullnode_network_key, HANDSHAKE_VERSION);
-        let raw_fullnode_address = RawNetworkAddress::try_from(&fullnode_address)
-            .map_err(|e| Error::UnexpectedError(format!("(raw_fullnode_address) {}", e)))?;
+        let raw_fullnode_address = RawNetworkAddress::try_from(&fullnode_address).map_err(|e| {
+            Error::UnexpectedError(format!(
+                "error serializing fullnode address: \"{}\", error: {}",
+                fullnode_address, e
+            ))
+        })?;
 
         // Step 2) Generate transaction
 
