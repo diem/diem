@@ -1,5 +1,4 @@
 script {
-use 0x1::DesignatedDealer;
 use 0x1::LibraAccount;
 use 0x1::SlidingNonce;
 
@@ -27,10 +26,5 @@ fun create_designated_dealer<Currency>(
         compliance_public_key,
         add_all_currencies
     );
-    // Create default tiers for newly created DD
-    DesignatedDealer::add_tier(tc_account, addr, 500000);
-    DesignatedDealer::add_tier(tc_account, addr, 5000000);
-    DesignatedDealer::add_tier(tc_account, addr, 50000000);
-    DesignatedDealer::add_tier(tc_account, addr, 500000000);
 }
 }

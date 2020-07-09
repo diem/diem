@@ -52,11 +52,6 @@ invoked by an account with the TreasuryCompliance role.
         compliance_public_key,
         add_all_currencies
     );
-    // Create default tiers for newly created DD
-    <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, addr, 500000);
-    <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, addr, 5000000);
-    <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, addr, 50000000);
-    <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer_add_tier">DesignatedDealer::add_tier</a>(tc_account, addr, 500000000);
 }
 </code></pre>
 

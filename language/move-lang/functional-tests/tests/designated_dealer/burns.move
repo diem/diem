@@ -28,17 +28,13 @@ script {
 //! new-transaction
 //! sender: blessed
 script {
-    use 0x1::DesignatedDealer;
     use 0x1::LibraAccount;
     use 0x1::Coin1::Coin1;
     fun main(tc_account: &signer) {
         let designated_dealer_address = 0xDEADBEEF;
-        DesignatedDealer::add_tier(tc_account, 0xDEADBEEF, 100); // first Tier, 0th index
         LibraAccount::tiered_mint<Coin1>(
             tc_account, designated_dealer_address, 99, 0
         );
-        DesignatedDealer::add_tier(tc_account, 0xDEADBEEF, 1000); // second Tier
-        DesignatedDealer::add_tier(tc_account, 0xDEADBEEF, 10000); // third Tier
     }
 }
 

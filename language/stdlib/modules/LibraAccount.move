@@ -556,8 +556,7 @@ module LibraAccount {
     ) {
         let new_dd_account = create_signer(new_account_address);
         Event::publish_generator(&new_dd_account);
-        Libra::publish_preburn_to_account<CoinType>(&new_dd_account, creator_account);
-        DesignatedDealer::publish_designated_dealer_credential(&new_dd_account, creator_account);
+        DesignatedDealer::publish_designated_dealer_credential<CoinType>(&new_dd_account, creator_account, add_all_currencies);
         Roles::new_designated_dealer_role(creator_account, &new_dd_account);
         add_currencies_for_account<CoinType>(&new_dd_account, add_all_currencies);
         DualAttestation::publish_credential(

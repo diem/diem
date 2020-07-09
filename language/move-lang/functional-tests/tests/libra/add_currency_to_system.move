@@ -106,7 +106,6 @@ script {
 use 0x1::LibraAccount;
 use 0x1::Coin3::Coin3;
 use 0x1::Libra;
-use 0x1::DesignatedDealer;
 fun main(account: &signer) {
     let pubkey = x"7013b6ed7dde3cfb1251db1b04ae9cd7853470284085693590a75def645a926d";
     let prev_mcap3 = Libra::market_cap<Coin3>();
@@ -119,14 +118,13 @@ fun main(account: &signer) {
         pubkey,
         false,
     );
-    DesignatedDealer::add_tier(account, {{dd}}, 10000000);
     LibraAccount::tiered_mint<Coin3>(
         account,
         {{dd}},
-        100000,
+        1000,
         0,
     );
-    assert(Libra::market_cap<Coin3>() - prev_mcap3 == 100000, 8);
+    assert(Libra::market_cap<Coin3>() - prev_mcap3 == 1000, 8);
 }
 }
 // check: EXECUTED
@@ -152,7 +150,7 @@ fun main(account: &signer) {
     LibraAccount::pay_from<Coin3>(
         &with_cap,
         {{bob}},
-        10000,
+        100,
         x"",
         x""
     );
