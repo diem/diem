@@ -147,18 +147,9 @@ pub struct EncNetworkAddress {
     enc_addr: Vec<u8>,
 }
 
-/// Possible errors when parsing a human-readable [`NetworkAddress`].
 #[derive(Error, Debug)]
-pub enum Error {
-    #[error("error encrypting network address")]
-    EncryptError,
-
-    #[error("error decrypting network address")]
-    DecryptError,
-
-    #[error("ciphertext is too small to even contain the auth tag: length: {0}")]
-    CiphertextTooSmall(usize),
-}
+#[error("error decrypting network address")]
+pub struct DecryptError;
 
 //////////////////////////
 // RawEncNetworkAddress //
@@ -208,6 +199,9 @@ impl Arbitrary for RawEncNetworkAddress {
 ///////////////////////
 
 impl EncNetworkAddress {
+    /// ### Panics
+    ///
+    /// encrypt will panic if `addr` length > 64 GiB.
     pub fn encrypt(
         addr: RawNetworkAddress,
         root_key: &RootKey,
@@ -215,7 +209,7 @@ impl EncNetworkAddress {
         account: &AccountAddress,
         seq_num: u64,
         addr_idx: u32,
-    ) -> Result<Self, Error> {
+    ) -> Self {
         // unpack the RawNetworkAddress into its base Vec<u8>
         let mut addr_vec: Vec<u8> = addr.into();
 
@@ -236,18 +230,20 @@ impl EncNetworkAddress {
         let ad_slice = &ad_buf[..];
 
         // encrypt the raw network address in-place
+        // note: this can technically panic if the serialized network address
+        //       length is > 64 GiB
         let auth_tag = aead
             .encrypt_in_place_detached(nonce_slice, ad_slice, &mut addr_vec)
-            .map_err(|_| Error::EncryptError)?;
+            .expect("addr.len() must be <= 64 GiB");
 
         // append the authentication tag
         addr_vec.extend_from_slice(auth_tag.as_slice());
 
-        Ok(Self {
+        Self {
             root_key_version,
             seq_num,
             enc_addr: addr_vec,
-        })
+        }
     }
 
     pub fn decrypt(
@@ -255,7 +251,7 @@ impl EncNetworkAddress {
         root_key: &RootKey,
         account: &AccountAddress,
         addr_idx: u32,
-    ) -> Result<RawNetworkAddress, Error> {
+    ) -> Result<RawNetworkAddress, DecryptError> {
         let root_key_version = self.root_key_version;
         let seq_num = self.seq_num;
         let mut enc_addr = self.enc_addr;
@@ -263,7 +259,7 @@ impl EncNetworkAddress {
         // ciphertext is too small to even contain the authentication tag, so it
         // must be invalid.
         if enc_addr.len() < AES_GCM_TAG_LEN {
-            return Err(Error::CiphertextTooSmall(enc_addr.len()));
+            return Err(DecryptError);
         }
 
         let account_key = Self::derive_account_key(root_key, account);
@@ -288,7 +284,7 @@ impl EncNetworkAddress {
         let auth_tag_slice = GenericArray::from_slice(auth_tag_slice);
 
         aead.decrypt_in_place_detached(nonce_slice, ad_slice, enc_addr_slice, auth_tag_slice)
-            .map_err(|_| Error::DecryptError)?;
+            .map_err(|_| DecryptError)?;
 
         // remove the auth tag suffix, leaving just the decrypted network address
         enc_addr.truncate(auth_tag_offset);
@@ -346,7 +342,6 @@ impl Arbitrary for EncNetworkAddress {
                     seq_num,
                     addr_idx,
                 )
-                .unwrap()
             })
             .boxed()
     }
@@ -373,10 +368,10 @@ mod test {
         let addr_idx = 123;
         let addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
         let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
-        let enc_addr = raw_addr
-            .clone()
-            .encrypt(&root_key, root_key_version, &account, seq_num, addr_idx)
-            .unwrap();
+        let enc_addr =
+            raw_addr
+                .clone()
+                .encrypt(&root_key, root_key_version, &account, seq_num, addr_idx);
 
         // we expect decrypting a properly encrypted address to work
         let dec_addr = enc_addr
@@ -446,7 +441,7 @@ mod test {
             let account = AccountAddress::ZERO;
             let seq_num = 0;
             let addr_idx = 0;
-            let enc_addr = raw_addr.clone().encrypt(&root_key, root_key_version, &account, seq_num, addr_idx).unwrap();
+            let enc_addr = raw_addr.clone().encrypt(&root_key, root_key_version, &account, seq_num, addr_idx);
             let dec_addr = enc_addr.decrypt(&root_key, &account, addr_idx).unwrap();
             assert_eq!(raw_addr, dec_addr);
         }
@@ -461,7 +456,7 @@ mod test {
             raw_addr in any::<RawNetworkAddress>(),
         ) {
             let account = AccountAddress::new(account);
-            let enc_addr = raw_addr.clone().encrypt(&root_key, root_key_version, &account, seq_num, addr_idx).unwrap();
+            let enc_addr = raw_addr.clone().encrypt(&root_key, root_key_version, &account, seq_num, addr_idx);
             let dec_addr = enc_addr.decrypt(&root_key, &account, addr_idx).unwrap();
             assert_eq!(raw_addr, dec_addr);
         }

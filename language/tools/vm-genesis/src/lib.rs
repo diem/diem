@@ -501,10 +501,13 @@ pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegi
             let key_version = TEST_ROOT_KEY_VERSION;
             let seq_num = 0;
             let addr_idx = 0;
-            let enc_addr = raw_addr
-                .clone()
-                .encrypt(&root_key, key_version, &account_address, seq_num, addr_idx)
-                .unwrap();
+            let enc_addr = raw_addr.clone().encrypt(
+                &root_key,
+                key_version,
+                &account_address,
+                seq_num,
+                addr_idx,
+            );
             let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
 
             // TODO(philiphayes): do something with n.full_node_networks instead

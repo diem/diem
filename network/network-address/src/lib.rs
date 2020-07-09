@@ -220,7 +220,7 @@ impl RawNetworkAddress {
         account: &AccountAddress,
         seq_num: u64,
         addr_idx: u32,
-    ) -> Result<EncNetworkAddress, encrypted::Error> {
+    ) -> EncNetworkAddress {
         EncNetworkAddress::encrypt(self, root_key, root_key_version, account, seq_num, addr_idx)
     }
 }

@@ -685,7 +685,7 @@ impl ClientProxy {
         let addr_idx = 0;
 
         let enc_network_address =
-            raw_network_address.encrypt(&root_key, key_version, &address, seq_num, addr_idx)?;
+            raw_network_address.encrypt(&root_key, key_version, &address, seq_num, addr_idx);
         let raw_enc_network_address = RawEncNetworkAddress::try_from(&enc_network_address)?;
 
         let program = encode_set_validator_config_script(
