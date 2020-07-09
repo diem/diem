@@ -15,7 +15,9 @@ use libra_config::{
     utils::get_genesis_txn,
 };
 use libra_crypto::{ed25519::Ed25519PrivateKey, x25519, HashValue, PrivateKey, Uniform};
-use libra_global_constants::{OPERATOR_ACCOUNT, OPERATOR_KEY};
+use libra_global_constants::{
+    CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT, OWNER_KEY,
+};
 use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{InMemoryStorageInternal, KVStorage, Value};
 use libra_secure_time::{MockTimeService, TimeService};
@@ -47,7 +49,6 @@ use vm_validator::{
 const TXN_EXPIRATION_SECS: u64 = 100;
 
 struct Node<T: LibraInterface> {
-    account: AccountAddress,
     executor: Executor<LibraVM>,
     libra: LibraInterfaceTestHarness<T>,
     key_manager: KeyManager<
@@ -60,7 +61,6 @@ struct Node<T: LibraInterface> {
 
 impl<T: LibraInterface> Node<T> {
     pub fn new(
-        account: AccountAddress,
         executor: Executor<LibraVM>,
         libra: LibraInterfaceTestHarness<T>,
         key_manager: KeyManager<
@@ -71,7 +71,6 @@ impl<T: LibraInterface> Node<T> {
         time: MockTimeService,
     ) -> Self {
         Self {
-            account,
             executor,
             libra,
             key_manager,
@@ -90,8 +89,9 @@ impl<T: LibraInterface> Node<T> {
         // Clock is supposed to be in microseconds
         let clock = self.time.now() * 1_000_000;
 
+        let owner_account = self.get_account_from_storage(OWNER_ACCOUNT);
         let block_id = HashValue::zero();
-        let block_metadata = BlockMetadata::new(block_id, 0, clock, vec![], self.account);
+        let block_metadata = BlockMetadata::new(block_id, 0, clock, vec![], owner_account);
         let prologue = Transaction::BlockMetadata(block_metadata);
         block.insert(0, prologue);
 
@@ -118,6 +118,29 @@ impl<T: LibraInterface> Node<T> {
         self.executor
             .commit_blocks(vec![block_id], ledger_info_with_sigs)
             .unwrap();
+    }
+
+    fn get_account_from_storage(&mut self, account_name: &str) -> AccountAddress {
+        AccountAddress::try_from(
+            self.key_manager
+                .storage
+                .get(account_name)
+                .unwrap()
+                .value
+                .string()
+                .unwrap(),
+        )
+        .unwrap()
+    }
+
+    fn get_key_from_storage(&mut self, key_name: &str) -> Ed25519PrivateKey {
+        self.key_manager
+            .storage
+            .get(key_name)
+            .unwrap()
+            .value
+            .ed25519_private_key()
+            .unwrap()
     }
 }
 
@@ -355,15 +378,6 @@ fn setup_node<T: LibraInterface + Clone>(
     let time = MockTimeService::new();
     let libra_test_harness = LibraInterfaceTestHarness::new(libra);
     let storage = setup_secure_storage(&node_config, time.clone());
-    let account = AccountAddress::try_from(
-        storage
-            .get(OPERATOR_ACCOUNT)
-            .unwrap()
-            .value
-            .string()
-            .unwrap(),
-    )
-    .unwrap();
 
     let key_manager = KeyManager::new(
         libra_test_harness.clone(),
@@ -375,7 +389,7 @@ fn setup_node<T: LibraInterface + Clone>(
         key_manager_config.chain_id,
     );
 
-    Node::new(account, executor, libra_test_harness, key_manager, time)
+    Node::new(executor, libra_test_harness, key_manager, time)
 }
 
 // Creates and returns a secure storage implementation (based on an in memory storage engine) for
@@ -387,11 +401,23 @@ fn setup_secure_storage(
     let mut sec_storage = InMemoryStorageInternal::new_with_time_service(time);
     let test_config = config.clone().test.unwrap();
 
-    let mut a_keypair = test_config.operator_keypair.unwrap();
-    let a_prikey = Value::Ed25519PrivateKey(a_keypair.take_private().unwrap());
-    sec_storage.set(OPERATOR_KEY, a_prikey).unwrap();
+    // Initialize the owner key and account address in storage
+    let mut owner_keypair = test_config.owner_keypair.unwrap();
+    let owner_prikey = Value::Ed25519PrivateKey(owner_keypair.take_private().unwrap());
+    sec_storage.set(OWNER_KEY, owner_prikey).unwrap();
 
-    let operator_account = libra_types::account_address::from_public_key(&a_keypair.public_key());
+    let owner_account = libra_types::account_address::from_public_key(&owner_keypair.public_key());
+    sec_storage
+        .set(OWNER_ACCOUNT, Value::String(owner_account.to_string()))
+        .unwrap();
+
+    // Initialize the operator key and account address in storage
+    let mut operator_keypair = test_config.operator_keypair.unwrap();
+    let operator_prikey = Value::Ed25519PrivateKey(operator_keypair.take_private().unwrap());
+    sec_storage.set(OPERATOR_KEY, operator_prikey).unwrap();
+
+    let operator_account =
+        libra_types::account_address::from_public_key(&operator_keypair.public_key());
     sec_storage
         .set(
             OPERATOR_ACCOUNT,
@@ -399,11 +425,15 @@ fn setup_secure_storage(
         )
         .unwrap();
 
+    // Initialize the consensus key in storage
     let sr_test_config = config.consensus.safety_rules.test.as_ref().unwrap();
-    let c_keypair = sr_test_config.consensus_keypair.as_ref().unwrap();
-    let c_prikey = c_keypair.clone().take_private().unwrap();
+    let consensus_keypair = sr_test_config.consensus_keypair.as_ref().unwrap();
+    let consensus_prikey = consensus_keypair.clone().take_private().unwrap();
     sec_storage
-        .set(crate::CONSENSUS_KEY, Value::Ed25519PrivateKey(c_prikey))
+        .set(
+            crate::CONSENSUS_KEY,
+            Value::Ed25519PrivateKey(consensus_prikey),
+        )
         .unwrap();
 
     sec_storage
@@ -454,11 +484,13 @@ fn test_ability_to_read_move_data() {
     verify_ability_to_read_move_data(node);
 }
 
-fn verify_ability_to_read_move_data<T: LibraInterface>(node: Node<T>) {
+fn verify_ability_to_read_move_data<T: LibraInterface>(mut node: Node<T>) {
+    let owner_account = node.get_account_from_storage(OWNER_ACCOUNT);
+
     node.libra.last_reconfiguration().unwrap();
     node.libra.retrieve_validator_set().unwrap();
-    node.libra.retrieve_validator_config(node.account).unwrap();
-    node.libra.retrieve_validator_info(node.account).unwrap();
+    node.libra.retrieve_validator_config(owner_account).unwrap();
+    node.libra.retrieve_validator_info(owner_account).unwrap();
     node.libra.retrieve_libra_block_resource().unwrap();
 }
 
@@ -479,36 +511,26 @@ fn test_manual_rotation_on_chain() {
 fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
     let (node_config, _) = get_test_configs();
 
-    let test_config = node_config.test.unwrap();
-    let account_prikey = test_config
-        .operator_keypair
-        .unwrap()
-        .take_private()
-        .unwrap();
-
-    let sr_test_config = node_config.consensus.safety_rules.test.unwrap();
-    let genesis_pubkey = sr_test_config
-        .consensus_keypair
-        .unwrap()
-        .take_private()
-        .unwrap()
-        .public_key();
-
-    let genesis_config = node.libra.retrieve_validator_config(node.account).unwrap();
-    let genesis_info = node.libra.retrieve_validator_info(node.account).unwrap();
+    let owner_account = node.get_account_from_storage(OWNER_ACCOUNT);
+    let genesis_config = node.libra.retrieve_validator_config(owner_account).unwrap();
+    let genesis_info = node.libra.retrieve_validator_info(owner_account).unwrap();
 
     // Check on-chain consensus state matches the genesis state
-    assert_eq!(genesis_pubkey, genesis_config.consensus_public_key);
-    assert_eq!(&genesis_pubkey, genesis_info.consensus_public_key());
-    assert_eq!(&node.account, genesis_info.account_address());
+    let consensus_pubkey = node.get_key_from_storage(CONSENSUS_KEY).public_key();
+    assert_eq!(consensus_pubkey, genesis_config.consensus_public_key);
+    assert_eq!(&consensus_pubkey, genesis_info.consensus_public_key());
+    assert_eq!(&owner_account, genesis_info.account_address());
 
     // Perform on-chain rotation
+    let operator_privkey = node.get_key_from_storage(OPERATOR_KEY);
+    let operator_account = node.get_account_from_storage(OPERATOR_ACCOUNT);
     let mut rng = StdRng::from_seed([44u8; 32]);
     let new_privkey = Ed25519PrivateKey::generate(&mut rng);
     let new_pubkey = new_privkey.public_key();
     let new_network_pubkey = x25519::PrivateKey::generate(&mut rng).public_key();
     let txn1 = crate::build_rotation_transaction(
-        node.account,
+        owner_account,
+        operator_account,
         0,
         &new_pubkey,
         &new_network_pubkey,
@@ -519,7 +541,7 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
         node_config.base.chain_id,
     );
     let txn1 = txn1
-        .sign(&account_prikey, account_prikey.public_key())
+        .sign(&operator_privkey, operator_privkey.public_key())
         .unwrap();
     let txn1 = Transaction::UserTransaction(txn1.into_inner());
 
@@ -533,11 +555,11 @@ fn verify_manual_rotation_on_chain<T: LibraInterface>(mut node: Node<T>) {
 
     node.execute_and_commit(vec![txn1, txn2]);
 
-    let new_config = node.libra.retrieve_validator_config(node.account).unwrap();
-    let new_info = node.libra.retrieve_validator_info(node.account).unwrap();
+    let new_config = node.libra.retrieve_validator_config(owner_account).unwrap();
+    let new_info = node.libra.retrieve_validator_info(owner_account).unwrap();
 
     // Check on-chain consensus state has been rotated
-    assert_ne!(new_pubkey, genesis_pubkey);
+    assert_ne!(new_pubkey, consensus_pubkey);
     assert_eq!(new_pubkey, new_config.consensus_public_key);
     assert_eq!(&new_pubkey, new_info.consensus_public_key());
 }
@@ -564,9 +586,10 @@ fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
     assert_eq!(0, node.key_manager.libra_timestamp().unwrap());
 
     // Perform key rotation locally
-    let genesis_info = node.libra.retrieve_validator_info(node.account).unwrap();
+    let owner_account = node.get_account_from_storage(OWNER_ACCOUNT);
+    let genesis_info = node.libra.retrieve_validator_info(owner_account).unwrap();
     let new_key = node.key_manager.rotate_consensus_key().unwrap();
-    let pre_exe_rotated_info = node.libra.retrieve_validator_info(node.account).unwrap();
+    let pre_exe_rotated_info = node.libra.retrieve_validator_info(owner_account).unwrap();
     assert_eq!(
         genesis_info.consensus_public_key(),
         pre_exe_rotated_info.consensus_public_key()
@@ -576,7 +599,7 @@ fn verify_init_and_basic_rotation<T: LibraInterface>(mut node: Node<T>) {
     // Execute key rotation on-chain
     submit_reconfiguration_transaction(&node);
     node.execute_and_commit(node.libra.take_all_transactions());
-    let rotated_info = node.libra.retrieve_validator_info(node.account).unwrap();
+    let rotated_info = node.libra.retrieve_validator_info(owner_account).unwrap();
     assert_ne!(
         genesis_info.consensus_public_key(),
         rotated_info.consensus_public_key()
@@ -698,19 +721,19 @@ fn verify_execute_error<T: LibraInterface>(mut node: Node<T>) {
         node.update_libra_timestamp();
         node.key_manager.execute_once().unwrap();
     }
+    node.update_libra_timestamp();
 
     // Delete all keys in secure storage to emulate a failure (e.g., so that the key manager should
     // fail when trying to access something in secure storage on the next execution iteration.)
     node.key_manager.storage.reset_and_clear().unwrap();
 
     // Check that execute() now returns an error and doesn't spin forever.
-    node.update_libra_timestamp();
     assert!(node.key_manager.execute().is_err());
 }
 
 // Creates and submits a reconfiguration transaction to the given libra interface.
 fn submit_reconfiguration_transaction<T: LibraInterface>(node: &Node<T>) {
-    let association_prikey = get_test_association_key();
+    let association_privkey = get_test_association_key();
     let association_account = libra_root_address();
     let seq_id = node
         .libra
@@ -721,7 +744,7 @@ fn submit_reconfiguration_transaction<T: LibraInterface>(node: &Node<T>) {
     let txn = build_reconfiguration_transaction(
         association_account,
         seq_id,
-        &association_prikey,
+        &association_privkey,
         expiration,
     );
     node.libra.submit_transaction(txn).unwrap();
