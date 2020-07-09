@@ -12,6 +12,7 @@ use executor_types::BlockExecutor;
 use libra_config::{config::NodeConfig, utils::get_genesis_txn};
 use libra_crypto::{ed25519::*, test_utils::TEST_SEED, x25519, HashValue, PrivateKey, Uniform};
 use libra_types::{
+    account_address,
     account_config::{
         coin1_tag, from_currency_code_string, libra_root_address, testnet_dd_account_address,
         treasury_compliance_account_address, COIN1_NAME,
@@ -85,10 +86,9 @@ fn test_reconfiguration() {
         .test
         .as_mut()
         .unwrap()
-        .operator_keypair
+        .owner_keypair
         .as_mut()
         .unwrap();
-    let validator_privkey = keys.take_private().unwrap();
     let validator_pubkey = keys.public_key();
     let auth_key = AuthenticationKey::ed25519(&validator_pubkey);
     assert!(
@@ -144,14 +144,23 @@ fn test_reconfiguration() {
     let txn2 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
 
     // txn3 = rotate the validator's consensus pubkey
+    let operator_key = config
+        .test
+        .as_mut()
+        .unwrap()
+        .operator_keypair
+        .as_mut()
+        .unwrap();
+    let operator_account = account_address::from_public_key(&operator_key.public_key());
+
     let new_pubkey = Ed25519PrivateKey::generate_for_testing().public_key();
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
     let new_network_pubkey = x25519::PrivateKey::generate(&mut rng).public_key();
     let txn3 = get_test_signed_transaction(
-        validator_account,
+        operator_account,
         /* sequence_number = */ 0,
-        validator_privkey,
-        validator_pubkey,
+        operator_key.take_private().unwrap(),
+        operator_key.public_key(),
         Some(encode_set_validator_config_script(
             validator_account,
             new_pubkey.to_bytes().to_vec(),
@@ -188,7 +197,7 @@ fn test_reconfiguration() {
 
     let t3 = db
         .reader
-        .get_txn_by_account(validator_account, 0, current_version, true)
+        .get_txn_by_account(operator_account, 0, current_version, true)
         .unwrap();
     verify_committed_txn_status(t3.as_ref(), &txn_block[2]).unwrap();
 
@@ -311,7 +320,7 @@ fn test_change_publishing_option_to_custom() {
         .test
         .as_mut()
         .unwrap()
-        .operator_keypair
+        .owner_keypair
         .as_mut()
         .unwrap();
     let validator_privkey = keys.take_private().unwrap();
@@ -480,7 +489,7 @@ fn test_extend_whitelist() {
         .test
         .as_mut()
         .unwrap()
-        .operator_keypair
+        .owner_keypair
         .as_mut()
         .unwrap();
     let validator_privkey = keys.take_private().unwrap();
