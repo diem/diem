@@ -1254,6 +1254,7 @@ fn test_malformed_script() {
 
 #[test]
 #[ignore]
+// TODO(joshlind): FIX ME!
 fn test_key_manager_consensus_rotation() {
     // Create and launch a local validator swarm of 2 nodes.
     let mut env = TestEnvironment::new(2);

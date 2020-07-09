@@ -21,7 +21,7 @@
 
 use crate::{counters::COUNTERS, libra_interface::LibraInterface};
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
-use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY};
+use libra_global_constants::{CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, OWNER_ACCOUNT};
 use libra_logger::{error, info};
 use libra_network_address::{encrypted::RawEncNetworkAddress, RawNetworkAddress};
 use libra_secure_storage::{CryptoStorage, KVStorage};
@@ -163,28 +163,30 @@ where
     }
 
     pub fn compare_storage_to_config(&self) -> Result<(), Error> {
-        let storage_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
-        let operator_account = self.get_operator_account()?;
-        let validator_config = self.libra.retrieve_validator_config(operator_account)?;
-        let config_key = validator_config.consensus_public_key;
+        let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
+        let validator_config = self.libra.retrieve_validator_config(owner_account)?;
 
-        if storage_key == config_key {
-            return Ok(());
+        let storage_key = self.storage.get_public_key(CONSENSUS_KEY)?.public_key;
+        let config_key = validator_config.consensus_public_key;
+        if storage_key != config_key {
+            return Err(Error::ConfigStorageKeyMismatch(config_key, storage_key));
         }
-        Err(Error::ConfigStorageKeyMismatch(config_key, storage_key))
+
+        Ok(())
     }
 
     pub fn compare_info_to_config(&self) -> Result<(), Error> {
-        let operator_account = self.get_operator_account()?;
-        let validator_info = self.libra.retrieve_validator_info(operator_account)?;
-        let info_key = validator_info.consensus_public_key();
-        let validator_config = self.libra.retrieve_validator_config(operator_account)?;
-        let config_key = validator_config.consensus_public_key;
+        let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
+        let validator_config = self.libra.retrieve_validator_config(owner_account)?;
+        let validator_info = self.libra.retrieve_validator_info(owner_account)?;
 
-        if &config_key == info_key {
-            return Ok(());
+        let info_key = validator_info.consensus_public_key();
+        let config_key = validator_config.consensus_public_key;
+        if &config_key != info_key {
+            return Err(Error::ConfigInfoKeyMismatch(config_key, info_key.clone()));
         }
-        Err(Error::ConfigInfoKeyMismatch(config_key, info_key.clone()))
+
+        Ok(())
     }
 
     pub fn last_reconfiguration(&self) -> Result<u64, Error> {
@@ -219,18 +221,20 @@ where
         &mut self,
         consensus_key: Ed25519PublicKey,
     ) -> Result<Ed25519PublicKey, Error> {
-        let operator_account = self.get_operator_account()?;
+        let operator_account = self.get_account_from_storage(OPERATOR_ACCOUNT)?;
         let seq_id = self.libra.retrieve_sequence_number(operator_account)?;
         let expiration = Duration::from_secs(self.time_service.now() + self.txn_expiration_secs);
 
         // Retrieve existing network information as registered on-chain
-        let validator_config = self.libra.retrieve_validator_config(operator_account)?;
+        let owner_account = self.get_account_from_storage(OWNER_ACCOUNT)?;
+        let validator_config = self.libra.retrieve_validator_config(owner_account)?;
         let network_key = validator_config.validator_network_identity_public_key;
         let network_address = validator_config.validator_network_address;
         let fullnode_network_key = validator_config.full_node_network_identity_public_key;
         let fullnode_network_address = validator_config.full_node_network_address;
 
         let txn = build_rotation_transaction(
+            owner_account,
             operator_account,
             seq_id,
             &consensus_key,
@@ -320,10 +324,10 @@ where
         }
     }
 
-    fn get_operator_account(&self) -> Result<AccountAddress, Error> {
+    fn get_account_from_storage(&self, account_name: &str) -> Result<AccountAddress, Error> {
         match self
             .storage
-            .get(OPERATOR_ACCOUNT)
+            .get(account_name)
             .and_then(|response| response.value.string())
         {
             Ok(account_address) => AccountAddress::from_str(&account_address)
@@ -334,7 +338,8 @@ where
 }
 
 pub fn build_rotation_transaction(
-    sender: AccountAddress,
+    owner_address: AccountAddress,
+    operator_address: AccountAddress,
     seq_id: u64,
     consensus_key: &Ed25519PublicKey,
     network_key: &x25519::PublicKey,
@@ -348,7 +353,7 @@ pub fn build_rotation_transaction(
         libra_transaction_scripts::SET_VALIDATOR_CONFIG_TXN.clone(),
         vec![],
         vec![
-            TransactionArgument::Address(sender),
+            TransactionArgument::Address(owner_address),
             TransactionArgument::U8Vector(consensus_key.to_bytes().to_vec()),
             TransactionArgument::U8Vector(network_key.as_slice().to_vec()),
             TransactionArgument::U8Vector(network_address.as_ref().to_vec()),
@@ -357,7 +362,7 @@ pub fn build_rotation_transaction(
         ],
     );
     RawTransaction::new_script(
-        sender,
+        operator_address,
         seq_id,
         script,
         MAX_GAS_AMOUNT,
