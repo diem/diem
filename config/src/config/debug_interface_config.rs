@@ -44,7 +44,7 @@ pub struct LibraTraceConfig {
 impl Default for LibraTraceConfig {
     fn default() -> LibraTraceConfig {
         let mut map = HashMap::new();
-        map.insert(String::from("txn"), String::from("1/100"));
+        map.insert(String::from("txn"), String::from("1/1000"));
         map.insert(String::from("block"), String::from("1/1"));
         LibraTraceConfig { sampling: map }
     }

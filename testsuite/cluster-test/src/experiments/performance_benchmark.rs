@@ -56,6 +56,8 @@ pub struct PerformanceBenchmarkParams {
         help = "Whether benchmark should pick one node to run DB backup."
     )]
     pub backup: bool,
+    #[structopt(long, help = "Set dalay for elastic search traces")]
+    pub delay: u64,
 }
 
 pub struct PerformanceBenchmark {
@@ -68,6 +70,7 @@ pub struct PerformanceBenchmark {
     tps: Option<u64>,
     use_logs_for_trace: bool,
     backup: bool,
+    delay: u64,
 }
 
 pub const DEFAULT_BENCH_DURATION: u64 = 120;
@@ -81,6 +84,7 @@ impl PerformanceBenchmarkParams {
             tps: None,
             use_logs_for_trace: false,
             backup: false,
+            delay: 10,
         }
     }
 
@@ -92,6 +96,7 @@ impl PerformanceBenchmarkParams {
             tps: Some(fixed_tps),
             use_logs_for_trace: false,
             backup: false,
+            delay: 10,
         }
     }
 }
@@ -123,6 +128,7 @@ impl ExperimentParam for PerformanceBenchmarkParams {
             tps: self.tps,
             use_logs_for_trace: self.use_logs_for_trace,
             backup: self.backup,
+            delay: self.delay,
         }
     }
 }
@@ -151,34 +157,20 @@ impl Experiment for PerformanceBenchmark {
         };
         let emit_txn = context.tx_emitter.emit_txn_for(window, emit_job_request);
         let start = chrono::Utc::now();
+        info!("start capture traces from elastic search with 60s delays");
         let trace_tail = &context.trace_tail;
         let trace_delay = buffer;
         let trace = self.trace;
         let capture_trace = async move {
             if trace {
                 tokio::time::delay_for(trace_delay).await;
+                info!("start capture traces from debug interface");
                 Some(trace_tail.capture_trace(Duration::from_secs(5)).await)
             } else {
                 None
             }
         };
-        let (stats, mut trace) = join!(emit_txn, capture_trace);
-        let trace_log = self.use_logs_for_trace;
-        if trace_log {
-            let start = start + chrono::Duration::seconds(60);
-            let libra_trace_client = LibraTraceClient::new("elasticsearch-master", 9200);
-            trace = match libra_trace_client
-                .get_libra_trace(start, chrono::Duration::seconds(5))
-                .await
-            {
-                Ok(trace) => Some(trace),
-                Err(err) => {
-                    info!("Failed to capture traces from elastic search {}", err);
-                    None
-                }
-            };
-        }
-        drop(backup);
+        let (stats, trace) = join!(emit_txn, capture_trace);
         let stats = stats?;
         if let Some(trace) = trace {
             info!("Traced {} events", trace.len());
@@ -198,6 +190,47 @@ impl Experiment for PerformanceBenchmark {
             info!("Tracing {}", node);
             trace_node(&events[..], &node);
         }
+
+        let trace_log = self.use_logs_for_trace;
+        if trace_log {
+            let start = start + chrono::Duration::seconds(self.delay as i64);
+            let libra_trace_client = LibraTraceClient::new("elasticsearch-master", 9200);
+            let trace = match libra_trace_client
+                .get_libra_trace(start, chrono::Duration::seconds(10))
+                .await
+            {
+                Ok(trace) => Some(trace),
+                Err(err) => {
+                    info!("Failed to capture traces from elastic search {}", err);
+                    None
+                }
+            };
+
+            if let Some(trace) = trace {
+                info!("Traced {} events", trace.len());
+                let mut events = vec![];
+                for (node, mut event) in trace {
+                    // This could be done more elegantly, but for now this will do
+                    event
+                        .json
+                        .as_object_mut()
+                        .unwrap()
+                        .insert("peer".to_string(), Value::String(node));
+                    events.push(event);
+                }
+                events.sort_by_key(|k| k.timestamp);
+                let node = debug_interface::libra_trace::random_node(
+                    &events[..],
+                    "json-rpc::submit",
+                    "txn::",
+                )
+                .expect("No trace node found");
+                info!("Tracing {}", node);
+                debug_interface::libra_trace::trace_node(&events[..], &node);
+            }
+        }
+        drop(backup);
+
         let end = unix_timestamp_now() - buffer;
         let start = end - window + 2 * buffer;
         let avg_txns_per_block = stats::avg_txns_per_block(&context.prometheus, start, end);
