@@ -136,26 +136,3 @@ fun main(account: &signer) {
 // check: FreezeAccountEvent
 // check: UnfreezeAccountEvent
 // check: EXECUTED
-
-//! new-transaction
-//! sender: blessed
-script {
-use 0x1::AccountFreezing;
-use 0x1::VASP;
-// Freezing a child account doesn't freeze the root, freezing the root
-// freezes the child according to the VASP module.
-fun main(account: &signer) {
-    AccountFreezing::freeze_account(account, {{vasp}});
-    assert(AccountFreezing::account_is_frozen({{vasp}}), 9);
-    assert(!AccountFreezing::account_is_frozen(0xAA), 10);
-    assert(VASP::is_frozen({{vasp}}), 11);
-    assert(VASP::is_frozen(0xAA), 12);
-
-    AccountFreezing::unfreeze_account(account, {{vasp}});
-    AccountFreezing::freeze_account(account, 0xAA);
-    assert(!AccountFreezing::account_is_frozen({{vasp}}), 13);
-    assert(AccountFreezing::account_is_frozen(0xAA), 14);
-    assert(!VASP::is_frozen({{vasp}}), 15);
-    assert(VASP::is_frozen(0xAA), 16);
-}
-}
