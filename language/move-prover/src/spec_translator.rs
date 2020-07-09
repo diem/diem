@@ -98,18 +98,23 @@ pub enum FunctionEntryPoint {
     Indirect,
     /// Variant used for verification.
     Verification,
+    /// Mutated inlined variant without pre/post conditions. Used by
+    /// specification checks. Holds `rewritten_code_index` from `Spec`.
+    /// To distinguish between different mutated functions.
+    Mutated(usize),
 }
 
 impl FunctionEntryPoint {
-    pub fn suffix(self) -> &'static str {
+    pub fn suffix(self) -> String {
         use FunctionEntryPoint::*;
         match self {
-            Definition => "_$def",
-            VerificationDefinition => "_$def_verify",
-            DirectInterModule => "_$direct_inter",
-            DirectIntraModule => "_$direct_intra",
-            Indirect => "",
-            Verification => "_$verify",
+            Definition => "_$def".to_string(),
+            VerificationDefinition => "_$def_verify".to_string(),
+            DirectInterModule => "_$direct_inter".to_string(),
+            DirectIntraModule => "_$direct_intra".to_string(),
+            Indirect => "".to_string(),
+            Verification => "_$verify".to_string(),
+            Mutated(index) => format!("_mutated_{}", index),
         }
     }
 }

@@ -57,7 +57,7 @@ pub struct FunctionTargetData {
     pub locations: BTreeMap<AttrId, Loc>,
     pub annotations: Annotations,
     pub rewritten_spec: Vec<Spec>,
-    pub rewritten_code: BTreeMap<u64, Vec<Bytecode>>,
+    pub rewritten_code: BTreeMap<usize, Vec<Bytecode>>,
 
     /// Map of spec block ids as given by the source, to the code offset in the original
     /// bytecode. Those spec block's content is found at
@@ -300,12 +300,22 @@ impl FunctionTargetData {
     /// Adds a mutated specification and the corresponding mutated code to the list
     /// of specification checks
     pub fn add_spec_check(&mut self, spec: Spec, rewritten_code_opt: Option<Vec<Bytecode>>) {
-        if let Some(rewritten_code) = rewritten_code_opt {
-            if let Some(index) = spec.rewritten_code_index {
-                self.rewritten_code.insert(index, rewritten_code);
-            }
+        let mut index = None;
+        if let Some(code) = rewritten_code_opt {
+            index = Some(self.rewritten_code.len());
+            self.rewritten_code.insert(index.unwrap(), code);
         }
+        let spec = Spec {
+            rewritten_code_index: index,
+            ..spec
+        };
         self.rewritten_spec.push(spec);
+    }
+
+    /// Return the code associated to the specification
+    pub fn get_spec_code(&self, spec: &Spec) -> Option<&Vec<Bytecode>> {
+        spec.rewritten_code_index
+            .map_or(None, |index| self.rewritten_code.get(&index))
     }
 }
 

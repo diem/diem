@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use crate::{
     function_target::FunctionTargetData,
     function_target_pipeline::{FunctionTargetProcessor, FunctionTargetsHolder},
-    stackless_bytecode::{Bytecode, Operation},
+    stackless_bytecode::{Bytecode, Operation, TEMP_DEFAULT_VALUE_INDEX},
 };
 use spec_lang::{
     ast::{
@@ -30,6 +30,7 @@ use spec_lang::{
         CONST_FIELD_TEST_PRAGMA,
         CONST_SC_ADDR,
         CONST_SUBEXP_TEST_PRAGMA,
+        WRITEREF_TEST_PRAGMA,
     },
     ty::{
         BOOL_TYPE,
@@ -77,6 +78,9 @@ impl FunctionTargetProcessor for TestInstrumenter {
             self.instrument_const_precond_subexp(func_env, &mut data, &mut count);
             self.instrument_const_postcond_subexp(func_env, &mut data, &mut count);
         }
+        if func_env.is_pragma_true(WRITEREF_TEST_PRAGMA, || false) {
+            self.instrument_writeref(func_env, &mut data);
+        }
         data
     }
 }
@@ -103,12 +107,7 @@ impl TestInstrumenter {
         );
         let cond_loc = cond.loc.clone();
         conds.push(cond);
-        let spec = Spec {
-            conditions: conds,
-            properties: Default::default(),
-            on_impl: Default::default(),
-            rewritten_code_index: None,
-        };
+        let spec = Spec::new(conds, Default::default(), Default::default());
         data.add_spec_check(spec, None);
         // Add ConditionInfo to global environment for backend error reporting.
         let info = ConditionInfo {
@@ -212,12 +211,7 @@ impl TestInstrumenter {
                 conds_for_field.push(cond);
 
                 // Add the specification check
-                let spec = Spec {
-                    conditions: conds_for_field,
-                    properties: Default::default(),
-                    on_impl: Default::default(),
-                    rewritten_code_index: None,
-                };
+                let spec = Spec::new(conds_for_field, Default::default(), Default::default());
                 data.add_spec_check(spec, None);
             }
         }
@@ -297,7 +291,7 @@ impl TestInstrumenter {
         let preconds = self.get_smoke_test_preconditions(func_env);
         let mut conds = vec![];
         for precond in preconds {
-            self.create_const_subexp_condition(&ConditionKind::RequiresSmokeTestAssert, func_env, &precond.exp, data, count, true, &conds);
+            self.create_const_subexp_condition(&ConditionKind::RequiresSmokeTestAssert, func_env, &precond.exp, data, count, true, &conds, " in the precondition");
             conds.push(precond.clone());
         }
     }
@@ -307,7 +301,7 @@ impl TestInstrumenter {
     fn instrument_const_postcond_subexp(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData, count: &mut i64) {
         let preconds = self.get_smoke_test_preconditions(func_env);
         for cond in &func_env.get_spec().conditions {
-            self.create_const_subexp_condition(&ConditionKind::EnsuresSmokeTest, func_env, &cond.exp, data, count, true, &preconds);
+            self.create_const_subexp_condition(&ConditionKind::EnsuresSmokeTest, func_env, &cond.exp, data, count, true, &preconds, " in the postcondition");
         }
     }
 
@@ -319,7 +313,8 @@ impl TestInstrumenter {
         data: &mut FunctionTargetData,
         count: &mut i64,
         first_level: bool,
-        preconds: &Vec<Condition>) {
+        preconds: &Vec<Condition>,
+        msg_suffix: &str) {
         let module_env = &func_env.module_env;
         if func_env.module_env.get_node_type(exp.node_id()) == BOOL_TYPE && (!first_level || *kind == ConditionKind::RequiresSmokeTestAssert) {
             let exp_is_true = exp.clone();
@@ -342,39 +337,92 @@ impl TestInstrumenter {
                 conds.push(cond);
                 let info = ConditionInfo {
                     message: if i == 0 {
-                        format!("subexpression is always true: {:?}", exp)
+                        format!("subexpression in {} is always true: {:?}{}",
+                            func_env.get_name().display(func_env.symbol_pool()),
+                            exp,
+                            msg_suffix)
                     } else {
-                        format!("subexpression is always false: {:?}", exp)
+                        format!("subexpression in {} is always false: {:?}{}",
+                            func_env.get_name().display(func_env.symbol_pool()),
+                            exp,
+                            msg_suffix)
                     },
                     omit_trace: true,
                     negative_cond: true,
                 };
 
                 func_env.module_env.env.set_condition_info(loc, ConditionTag::NegativeTest, info);
-                data.add_spec_check(Spec {
-                    conditions: conds,
-                    properties: Default::default(),
-                    on_impl: Default::default(),
-                    rewritten_code_index: None,
-                }, None);
+                data.add_spec_check(Spec::new(conds, Default::default(), Default::default()), None);
             }
         }
         use Exp::*;
         match exp {
             Call(_, _, exps) => {
                 for exp in exps {
-                    self.create_const_subexp_condition(kind, func_env, &exp, data, count, false, preconds);
+                    self.create_const_subexp_condition(kind, func_env, &exp, data, count, false, preconds, msg_suffix);
                 }
             }
             Block(_, _, exp) => {
-                self.create_const_subexp_condition(kind, func_env, &exp, data, count, false, preconds);
+                self.create_const_subexp_condition(kind, func_env, &exp, data, count, false, preconds, msg_suffix);
             }
             IfElse(_, cond, then_, else_) => {
-                self.create_const_subexp_condition(kind, func_env, &cond, data, count, false, preconds);
-                self.create_const_subexp_condition(kind, func_env, &then_, data, count, false, preconds);
-                self.create_const_subexp_condition(kind, func_env, &else_, data, count, false, preconds);
+                self.create_const_subexp_condition(kind, func_env, &cond, data, count, false, preconds, msg_suffix);
+                self.create_const_subexp_condition(kind, func_env, &then_, data, count, false, preconds, msg_suffix);
+                self.create_const_subexp_condition(kind, func_env, &else_, data, count, false, preconds, msg_suffix);
             }
             _ => ()
+        }
+    }
+}
+
+// ==============================================================================
+// WriteRef mutation testing
+
+impl TestInstrumenter {
+    fn instrument_writeref(&self, func_env: &FunctionEnv<'_>, data: &mut FunctionTargetData) {
+        let module_env = &func_env.module_env;
+        let preconds = self.get_smoke_test_preconditions(func_env);
+        let postconds = self.get_smoke_test_postconditions(func_env);
+        let mut count = 0;
+        for (i, bytecode) in data.code.clone().iter().enumerate() {
+            match bytecode {
+                Bytecode::Call(id, dsts, Operation::WriteRef, srcs) => {
+                    let mut conds = preconds.clone();
+
+                    let mut rewritten_bytecode = data.code.clone();
+                    let write_ref = &mut rewritten_bytecode[i];
+                    let mutated_srcs = vec![srcs[0], TEMP_DEFAULT_VALUE_INDEX];
+                    *write_ref = Bytecode::Call(id.clone(), dsts.clone(), Operation::WriteRef, mutated_srcs);
+
+                    // Conjunction of all postconditions
+                    let exp = postconds
+                        .iter()
+                        .fold(Exp::make_value_bool(&module_env, true), |acc, cond| {
+                            Exp::make_call_and(&module_env, acc, cond.exp.clone())
+                        });
+                    let not_abort_flag = Exp::make_call_not(&module_env, self.make_abort_flag_bool_exp(&module_env));
+                    let exp = Exp::make_call_implies(&module_env, not_abort_flag, exp);
+
+                    count = count + 1;
+                    let span = Span::new(func_env.get_loc().span().start() + ByteOffset(count), func_env.get_loc().span().end());
+                    let loc = Loc::new(func_env.get_loc().file_id(), span);
+
+                    let cond = self.make_condition(
+                        loc.clone(),
+                        ConditionKind::EnsuresSmokeTest,
+                        exp);
+                    conds.push(cond);
+
+                    let info = ConditionInfo {
+                        message: "missing writeref specification".to_string(),
+                        omit_trace: true,
+                        negative_cond: true,
+                    };
+                    func_env.module_env.env.set_condition_info(loc.clone(), ConditionTag::NegativeTest, info);
+                    data.add_spec_check(Spec::new(conds, Default::default(), Default::default()), Some(rewritten_bytecode));
+                },
+                _ => (),
+            }
         }
     }
 }
@@ -385,7 +433,7 @@ impl TestInstrumenter {
 impl TestInstrumenter {
     /// Helper to return the preconditions of the `func_env` as a list of
     /// `RequiresSmokeTest` conditions.
-    /// These conditions are assumed at the top level `_verify` function only.
+    /// These conditions are assumed at the top level `_smoke_test_` function only.
     fn get_smoke_test_preconditions(&self, func_env: &FunctionEnv<'_>) -> Vec<Condition> {
         let mut conds = vec![];
         for cond in &func_env.get_spec().conditions {
@@ -398,6 +446,28 @@ impl TestInstrumenter {
                         exp: cond.exp.clone(),
                     };
                     conds.push(st_requires);
+                }
+                _ => ()
+            }
+        }
+        conds
+    }
+
+    /// Helper to return the postconditions of the `func_env` as a list of
+    /// `Ensures` conditions.
+    /// These conditions are asserted at the top level `_smoke_test_` function.
+    fn get_smoke_test_postconditions(&self, func_env: &FunctionEnv<'_>) -> Vec<Condition> {
+        let mut conds = vec![];
+        for cond in &func_env.get_spec().conditions {
+            match cond.kind {
+                ConditionKind::Ensures => {
+                    let st_ensures = Condition {
+                        loc: cond.loc.clone(),
+                        kind: ConditionKind::Ensures,
+                        properties: Default::default(),
+                        exp: cond.exp.clone(),
+                    };
+                    conds.push(st_ensures);
                 }
                 _ => ()
             }

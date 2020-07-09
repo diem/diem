@@ -181,10 +181,19 @@ pub struct Spec {
     // If this is a function, specs associated with individual code points.
     pub on_impl: BTreeMap<CodeOffset, Spec>,
     // For specification checking, this is the index of the mutated code
-    pub rewritten_code_index: Option<u64>
+    pub rewritten_code_index: Option<usize>
 }
 
 impl Spec {
+    pub fn new(conditions: Vec<Condition>, properties: PropertyBag, on_impl: BTreeMap<CodeOffset, Spec>) -> Self {
+        Spec {
+            conditions,
+            properties,
+            on_impl,
+            rewritten_code_index: None,
+        }
+    }
+
     pub fn has_conditions(&self) -> bool {
         !self.conditions.is_empty()
     }

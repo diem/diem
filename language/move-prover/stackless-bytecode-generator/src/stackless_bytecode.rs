@@ -13,6 +13,8 @@ use vm::file_format::CodeOffset;
 
 pub type TempIndex = usize;
 
+pub const TEMP_DEFAULT_VALUE_INDEX: usize = usize::max_value();
+
 /// A label for a branch destination.
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy)]
 pub struct Label(u16);

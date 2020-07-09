@@ -3,7 +3,10 @@
 
 //! This module translates the bytecode of a module to Boogie code.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    rc::Rc,
+};
 
 use itertools::Itertools;
 #[allow(unused_imports)]
@@ -14,7 +17,7 @@ use spec_lang::{
     emit, emitln,
     env::{GlobalEnv, Loc, ModuleEnv, StructEnv, TypeParameter},
     ty::{PrimitiveType, Type},
-    ast::{Condition, ConditionKind},
+    ast::{ConditionKind, Spec},
 };
 use stackless_bytecode_generator::{
     function_target::FunctionTarget,
@@ -24,6 +27,7 @@ use stackless_bytecode_generator::{
         AssignKind, BorrowNode,
         Bytecode::{self, *},
         Constant, Label, Operation, SpecBlockId,
+        TEMP_DEFAULT_VALUE_INDEX,
     },
     stackless_control_flow_graph::{BlockId, StacklessControlFlowGraph},
 };
@@ -517,9 +521,9 @@ impl<'env> ModuleTranslator<'env> {
             return;
         }
 
-        // generate definition entry
-        self.generate_function_sig(func_target, Definition);
-        self.generate_inline_function_body(func_target);
+        // generate definition with function body
+        self.generate_function_sig(func_target, FunctionEntryPoint::Definition);
+        self.generate_inline_function_body(func_target, None);
         emitln!(self.writer);
 
         // generate direct and indirect application entries.
@@ -574,11 +578,20 @@ impl<'env> ModuleTranslator<'env> {
             // generate the _smoke_test version of the function which creates a new procedure
             // for condition `EnsuresSmokeTest` so that ALL the errors will be reported
             for (i, spec) in func_target.data.rewritten_spec.iter().enumerate() {
-                let conds = &spec.conditions;
+                // generate the mutated program for this spec if one exists
+                let mutated_bytecode = func_target.data.get_spec_code(spec);
+                if mutated_bytecode.is_some() {
+                    let index = spec
+                        .rewritten_code_index
+                        .expect("Couldn't find rewritten_code_index from spec containing mutation.");
+                    self.generate_function_sig(func_target, FunctionEntryPoint::Mutated(index));
+                    self.generate_inline_function_body(func_target, mutated_bytecode);
+                }
+
                 // > TODO(kkmc): Generate a function with the rewritten code.
                 self.generate_smoke_test_function_sig(i, func_target);
                 self.generate_function_args_well_formed(func_target);
-                self.generate_function_spec_check_body(func_target, conds);
+                self.generate_function_spec_check_body(func_target, spec);
             }
 
             return;
@@ -587,7 +600,7 @@ impl<'env> ModuleTranslator<'env> {
         // generate the verify functions with full pre/post conditions.
         self.generate_function_sig(func_target, FunctionEntryPoint::VerificationDefinition);
         self.set_top_level_verify(true); // Ensure that DirectCall is used from this definition
-        self.generate_inline_function_body(func_target);
+        self.generate_inline_function_body(func_target, None);
         self.set_top_level_verify(false);
         emitln!(self.writer);
         self.generate_function_sig(func_target, FunctionEntryPoint::Verification);
@@ -628,7 +641,8 @@ impl<'env> ModuleTranslator<'env> {
             | FunctionEntryPoint::VerificationDefinition
             | FunctionEntryPoint::DirectIntraModule
             | FunctionEntryPoint::Indirect
-            | FunctionEntryPoint::DirectInterModule => "{:inline 1} ".to_string(),
+            | FunctionEntryPoint::DirectInterModule
+            | FunctionEntryPoint::Mutated(_) => "{:inline 1} ".to_string(),
             FunctionEntryPoint::Verification => {
                 let timeout = self.options.adjust_timeout(
                     func_target
@@ -797,8 +811,9 @@ impl<'env> ModuleTranslator<'env> {
     fn generate_function_spec_check_body(
         &self,
         func_target: &FunctionTarget<'_>,
-        conds: &Vec<Condition>,
+        spec: &Spec,
     ) {
+        let conds = &spec.conditions;
         let spec_check_opt = conds
             .iter()
             .find(|cond| match cond.kind {
@@ -835,68 +850,66 @@ impl<'env> ModuleTranslator<'env> {
         }
 
         if spec_check.kind != ConditionKind::RequiresSmokeTestAssert {
-        // (c) assume reference parameters to be based on the Param(i) Location, ensuring
-        // they are disjoint from all other references. This prevents aliasing and is justified as
-        // follows:
-        // - for mutual references, by their exclusive access in Move.
-        // - for immutable references, by that mutation is not possible, and they are equivalent
-        //   to some given but arbitrary value.
-        for i in 0..func_target.get_parameter_count() {
-            let ty = func_target.get_local_type(i);
-            if ty.is_reference() {
-                let name = func_target
-                    .symbol_pool()
-                    .string(func_target.get_local_name(i));
-                emitln!(
-                    self.writer,
-                    "assume l#$Reference({}) == $Param({});",
-                    name,
-                    i
-                );
-                emitln!(
-                    self.writer,
-                    "assume size#Path(p#$Reference({})) == 0;",
-                    name
-                );
+            // (c) assume reference parameters to be based on the Param(i) Location, ensuring
+            // they are disjoint from all other references. This prevents aliasing and is justified as
+            // follows:
+            // - for mutual references, by their exclusive access in Move.
+            // - for immutable references, by that mutation is not possible, and they are equivalent
+            //   to some given but arbitrary value.
+            for i in 0..func_target.get_parameter_count() {
+                let ty = func_target.get_local_type(i);
+                if ty.is_reference() {
+                    let name = func_target
+                        .symbol_pool()
+                        .string(func_target.get_local_name(i));
+                    emitln!(
+                        self.writer,
+                        "assume l#$Reference({}) == $Param({});",
+                        name,
+                        i
+                    );
+                    emitln!(
+                        self.writer,
+                        "assume size#Path(p#$Reference({})) == 0;",
+                        name
+                    );
+                }
             }
-        }
 
-        // Generate call to inlined function.
-        let args = func_target
-            .get_type_parameters()
-            .iter()
-            .map(|TypeParameter(s, _)| format!("{}", s.display(func_target.symbol_pool())))
-            .chain((0..func_target.get_parameter_count()).map(|i| {
-                format!(
-                    "{}",
-                    func_target
-                        .get_local_name(i)
-                        .display(func_target.symbol_pool())
-                )
-            }))
-            .join(", ");
-        let rets = (0..func_target.get_return_count())
-            .map(|i| format!("$ret{}", i))
-            .join(", ");
-        if rets.is_empty() {
+            // Generate call to inlined function.
+            let fun_entry_point = if let Some(index) = spec.rewritten_code_index {
+                FunctionEntryPoint::Mutated(index)
+            } else {
+                FunctionEntryPoint::Definition
+            };
+            let args = func_target
+                .get_type_parameters()
+                .iter()
+                .map(|TypeParameter(s, _)| format!("{}", s.display(func_target.symbol_pool())))
+                .chain((0..func_target.get_parameter_count()).map(|i| {
+                    format!(
+                        "{}",
+                        func_target
+                            .get_local_name(i)
+                            .display(func_target.symbol_pool())
+                    )
+                }))
+                .join(", ");
+            let rets = (0..func_target.get_return_count())
+                .map(|i| format!("$ret{}", i))
+                .join(", ");
             emitln!(
                 self.writer,
-                "call {}{}({});",
+                "call{} {}{}({});",
+                if rets.is_empty() {
+                    "".to_string()
+                } else {
+                    format!(" {} := ", rets)
+                },
                 boogie_function_name(func_target.func_env),
-                FunctionEntryPoint::Definition.suffix(),
+                fun_entry_point.suffix(),
                 args
             )
-        } else {
-            emitln!(
-                self.writer,
-                "call {} := {}{}({});",
-                rets,
-                boogie_function_name(func_target.func_env),
-                FunctionEntryPoint::Definition.suffix(),
-                args
-            )
-        }
-
         }
 
         self.writer.unindent();
@@ -907,7 +920,7 @@ impl<'env> ModuleTranslator<'env> {
     /// This generates boogie code for everything after the function signature
     /// The function body is only generated for the `FunctionEntryPoint::Definition`
     /// version of the function.
-    fn generate_inline_function_body(&self, func_target: &FunctionTarget<'_>) {
+    fn generate_inline_function_body(&self, func_target: &FunctionTarget<'_>, rewritten_bytecode: Option<&Vec<Bytecode>>) {
         // Construct context for bytecode translation.
         let context = BytecodeContext::new(func_target);
 
@@ -950,7 +963,11 @@ impl<'env> ModuleTranslator<'env> {
         emitln!(self.writer, "\n// bytecode translation starts here");
 
         // Generate bytecode
-        let code = func_target.get_bytecode();
+        let code = if let Some(bytecode) = rewritten_bytecode {
+            bytecode
+        } else {
+            func_target.get_bytecode()
+        };
         for (offset, bytecode) in code.iter().enumerate() {
             self.translate_bytecode(func_target, &context, offset as CodeOffset, bytecode);
         }
@@ -989,6 +1006,9 @@ impl<'env> ModuleTranslator<'env> {
 
         // Helper function to get an Rc<String> for a local.
         let str_local = |idx: usize| {
+            if idx == TEMP_DEFAULT_VALUE_INDEX {
+                return Rc::new("$DefaultValue()".to_string());
+            }
             func_target
                 .symbol_pool()
                 .string(func_target.get_local_name(idx))
