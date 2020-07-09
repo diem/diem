@@ -261,7 +261,9 @@ impl Interpreter {
         let native_function = function.get_native()?;
         let result = native_function.dispatch(&mut native_context, ty_args, arguments)?;
         cost_strategy.deduct_gas(result.cost)?;
-        let values = result.result?;
+        let values = result
+            .result
+            .map_err(|code| PartialVMError::new(StatusCode::ABORTED).with_sub_status(code))?;
         for value in values {
             self.operand_stack.push(value)?;
         }

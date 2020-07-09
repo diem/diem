@@ -9,4 +9,4 @@ main() {
     return;
 }
 
-// check: NATIVE_FUNCTION_ERROR
+// check: ABORTED 3

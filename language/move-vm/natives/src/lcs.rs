@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use libra_types::vm_status::{sub_status::NFE_LCS_SERIALIZATION_FAILURE, StatusCode};
+use libra_types::vm_status::sub_status::NFE_LCS_SERIALIZATION_FAILURE;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
@@ -9,7 +9,7 @@ use move_vm_types::{
     values::{values_impl::Reference, Value},
 };
 use std::collections::VecDeque;
-use vm::errors::{PartialVMError, PartialVMResult};
+use vm::errors::PartialVMResult;
 
 /// Rust implementation of Move's `native public fun to_bytes<T>(&T): vector<u8>`
 pub fn native_to_bytes(
@@ -25,13 +25,14 @@ pub fn native_to_bytes(
     let mut ty_args = context.convert_to_fat_types(ty_args)?;
     let arg_type = ty_args.pop().unwrap();
     // delegate to the LCS serialization for `Value`
-    let serialized_value = ref_to_val
-        .read_ref()?
-        .simple_serialize_fat(&arg_type)
-        .ok_or_else(|| {
-            PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
-                .with_sub_status(NFE_LCS_SERIALIZATION_FAILURE)
-        })?;
+    let serialized_value = match ref_to_val.read_ref()?.simple_serialize_fat(&arg_type) {
+        None => {
+            let cost = native_gas(context.cost_table(), NativeCostIndex::LCS_TO_BYTES, 1);
+            return Ok(NativeResult::err(cost, NFE_LCS_SERIALIZATION_FAILURE));
+        }
+        Some(serialized_value) => serialized_value,
+    };
+
     // cost is proportional to the size of the serialized value
     let cost = native_gas(
         context.cost_table(),

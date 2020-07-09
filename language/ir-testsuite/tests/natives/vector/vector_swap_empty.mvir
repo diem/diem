@@ -10,5 +10,4 @@ main() {
   return;
 }
 
-// check: NATIVE_FUNCTION_ERROR
-// check: 1
+// check: ABORTED 1

@@ -459,7 +459,6 @@ pub enum StatusCode {
     CODE_DESERIALIZATION_ERROR = 4019,
     EXECUTION_STACK_OVERFLOW = 4020,
     CALL_STACK_OVERFLOW = 4021,
-    NATIVE_FUNCTION_ERROR = 4022,
     GAS_SCHEDULE_ERROR = 4023,
 
     // A reserved status to represent an unknown vm status.
