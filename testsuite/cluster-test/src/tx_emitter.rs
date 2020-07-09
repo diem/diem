@@ -895,7 +895,11 @@ impl TxStats {
             submitted: self.submitted / window.as_secs(),
             committed: self.committed / window.as_secs(),
             expired: self.expired / window.as_secs(),
-            latency: self.latency / self.committed,
+            latency: if self.committed == 0 {
+                0u64
+            } else {
+                self.latency / self.committed
+            },
             p99_latency: self.latency_buckets.percentile(99, 100),
         }
     }

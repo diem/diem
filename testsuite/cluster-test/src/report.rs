@@ -47,7 +47,11 @@ impl SuiteReport {
         let submitted_txn = stats.submitted;
         let expired_txn = stats.expired;
         let avg_tps = stats.committed / window.as_secs();
-        let avg_latency_client = stats.latency / stats.committed;
+        let avg_latency_client = if stats.committed == 0 {
+            0u64
+        } else {
+            stats.latency / stats.committed
+        };
         let p99_latency = stats.latency_buckets.percentile(99, 100);
         self.report_metric(experiment.clone(), "submitted_txn", submitted_txn as f64);
         self.report_metric(experiment.clone(), "expired_txn", expired_txn as f64);
