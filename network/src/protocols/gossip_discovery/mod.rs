@@ -7,7 +7,7 @@
 //!
 //! ## Implementation
 //!
-//! The discovery module is implemented as a stand-alone actor in the Network sub-system of the
+//! The gossip_discovery module is implemented as a stand-alone actor in the Network sub-system of the
 //! Libra stack. The actor participates in discovery by periodically sending its observed state of
 //! the network to a randomly chosen peer. Other peers are also expected to be running the same
 //! protocol. Therefore, in expectation, every peer expects to hear from 1 other peer in each
@@ -72,21 +72,21 @@ mod test;
 ///
 /// `DiscoveryNetworkEvents` is a `Stream` of `PeerManagerNotification` where the
 /// raw `Bytes` rpc messages are deserialized into
-/// `DiscoveryMsg` types. `DiscoveryNetworkEvents` is a thin wrapper
+/// `GossipDiscoveryMsg` types. `DiscoveryNetworkEvents` is a thin wrapper
 /// around a `channel::Receiver<PeerManagerNotification>`.
-pub type DiscoveryNetworkEvents = NetworkEvents<DiscoveryMsg>;
+pub type GossipDiscoveryNetworkEvents = NetworkEvents<GossipDiscoveryMsg>;
 
 /// The interface from Discovery to Networking layer.
 ///
-/// This is a thin wrapper around a `NetworkSender<Discoverymsg>`, so it is
+/// This is a thin wrapper around a `NetworkSender<GossipDiscoveryMsg>`, so it is
 /// easy to clone and send off to a separate task. For example, the rpc requests
 /// return Futures that encapsulate the whole flow, from sending the request to
 /// remote, to finally receiving the response and deserializing. It therefore
 /// makes the most sense to make the rpc call on a separate async task, which
 /// requires the `DiscoveryNetworkSender` to be `Clone` and `Send`.
 #[derive(Clone)]
-pub struct DiscoveryNetworkSender {
-    inner: NetworkSender<DiscoveryMsg>,
+pub struct GossipDiscoveryNetworkSender {
+    inner: NetworkSender<GossipDiscoveryMsg>,
 }
 
 /// Configuration for the network endpoints to support Discovery.
@@ -106,7 +106,7 @@ pub fn network_endpoint_config() -> (
     )
 }
 
-impl NewNetworkSender for DiscoveryNetworkSender {
+impl NewNetworkSender for GossipDiscoveryNetworkSender {
     /// Create a new Discovery sender
     fn new(
         peer_mgr_reqs_tx: PeerManagerRequestSender,
@@ -117,16 +117,16 @@ impl NewNetworkSender for DiscoveryNetworkSender {
         }
     }
 }
-impl DiscoveryNetworkSender {
-    /// Send a DiscoveryMsg to a peer.
-    pub fn send_to(&mut self, peer: PeerId, msg: DiscoveryMsg) -> Result<(), NetworkError> {
+impl GossipDiscoveryNetworkSender {
+    /// Send a GossipDiscoveryMsg to a peer.
+    pub fn send_to(&mut self, peer: PeerId, msg: GossipDiscoveryMsg) -> Result<(), NetworkError> {
         self.inner
             .send_to(peer, ProtocolId::DiscoveryDirectSend, msg)
     }
 }
 
-/// The actor running the discovery protocol.
-pub struct Discovery<TTicker> {
+/// The actor running the gossip discovery protocol.
+pub struct GossipDiscovery<TTicker> {
     /// Note for self, which is prefixed with an underscore as this is not used but is in
     /// preparation for logic that changes the advertised Note while the validator is running.
     note: Note,
@@ -142,16 +142,16 @@ pub struct Discovery<TTicker> {
     /// fixed duration interval timer.
     ticker: TTicker,
     /// Handle to send requests to Network.
-    network_reqs_tx: DiscoveryNetworkSender,
+    network_reqs_tx: GossipDiscoveryNetworkSender,
     /// Handle to receive notifications from Network.
-    network_notifs_rx: DiscoveryNetworkEvents,
+    network_notifs_rx: GossipDiscoveryNetworkEvents,
     /// Channel to send requests to ConnectivityManager.
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     /// Random-number generator.
     rng: SmallRng,
 }
 
-impl<TTicker> Discovery<TTicker>
+impl<TTicker> GossipDiscovery<TTicker>
 where
     TTicker: Stream + FusedStream + Unpin,
 {
@@ -159,8 +159,8 @@ where
         network_context: Arc<NetworkContext>,
         self_addrs: Vec<NetworkAddress>,
         ticker: TTicker,
-        network_reqs_tx: DiscoveryNetworkSender,
-        network_notifs_rx: DiscoveryNetworkEvents,
+        network_reqs_tx: GossipDiscoveryNetworkSender,
+        network_notifs_rx: GossipDiscoveryNetworkEvents,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     ) -> Self {
         // TODO(philiphayes): wire through config
@@ -241,7 +241,10 @@ where
         }
     }
 
-    async fn handle_network_event(&mut self, event: Result<Event<DiscoveryMsg>, NetworkError>) {
+    async fn handle_network_event(
+        &mut self,
+        event: Result<Event<GossipDiscoveryMsg>, NetworkError>,
+    ) {
         trace!("{} Network event::{:?}", self.network_context, event);
         match event {
             Ok(e) => {
@@ -284,10 +287,10 @@ where
         }
     }
 
-    // Creates DiscoveryMsg to be sent to some remote peer.
-    fn compose_discovery_msg(&self) -> DiscoveryMsg {
+    // Creates GossipDiscoveryMsg to be sent to some remote peer.
+    fn compose_discovery_msg(&self) -> GossipDiscoveryMsg {
         let notes = self.known_peers.values().cloned().collect::<Vec<_>>();
-        DiscoveryMsg { notes }
+        GossipDiscoveryMsg { notes }
     }
 
     // Updates local state by reconciling with notes received from some remote peer.
@@ -384,7 +387,7 @@ where
 
 /// A Discovery message contains notes collected from other peers within the system.
 #[derive(Clone, Debug, Deserialize, Serialize)]
-pub struct DiscoveryMsg {
+pub struct GossipDiscoveryMsg {
     notes: Vec<Note>,
 }
 

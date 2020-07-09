@@ -31,7 +31,7 @@ use network::{
         conn_notifs_channel, ConnectionRequestSender,
     },
     protocols::{
-        discovery::{self, builder::DiscoveryBuilder},
+        gossip_discovery::{self, builder::GossipDiscoveryBuilder},
         health_checker::{self, builder::HealthCheckerBuilder},
         network::{NewNetworkEvents, NewNetworkSender},
     },
@@ -70,7 +70,7 @@ pub struct NetworkBuilder {
 
     configuration_change_listener_builder: Option<ConfigurationChangeListenerBuilder>,
     connectivity_manager_builder: Option<ConnectivityManagerBuilder>,
-    discovery_builder: Option<DiscoveryBuilder>,
+    discovery_builder: Option<GossipDiscoveryBuilder>,
     health_checker_builder: Option<HealthCheckerBuilder>,
     peer_manager_builder: PeerManagerBuilder,
 
@@ -401,7 +401,7 @@ impl NetworkBuilder {
             .expect("ConnectivityManager not enabled");
         // Get handles for network events and sender.
         let (discovery_network_tx, discovery_network_rx) =
-            self.add_protocol_handler(discovery::network_endpoint_config());
+            self.add_protocol_handler(gossip_discovery::network_endpoint_config());
 
         // TODO(philiphayes): the current setup for gossip discovery doesn't work
         // when we don't have an `advertised_address` set, since it uses the
@@ -418,7 +418,7 @@ impl NetworkBuilder {
 
         let addrs = vec![advertised_address];
 
-        self.discovery_builder = Some(DiscoveryBuilder::create(
+        self.discovery_builder = Some(GossipDiscoveryBuilder::create(
             self.network_context(),
             addrs,
             discovery_interval_ms,

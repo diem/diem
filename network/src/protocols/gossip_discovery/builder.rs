@@ -3,7 +3,9 @@
 
 use crate::{
     connectivity_manager::ConnectivityRequest,
-    protocols::discovery::{Discovery, DiscoveryNetworkEvents, DiscoveryNetworkSender},
+    protocols::gossip_discovery::{
+        GossipDiscovery, GossipDiscoveryNetworkEvents, GossipDiscoveryNetworkSender,
+    },
 };
 use futures::stream::StreamExt;
 use futures_util::stream::Fuse;
@@ -17,22 +19,22 @@ use tokio::{
 };
 
 /// Configuration object which describes the production Discovery component.
-struct DiscoveryBuilderConfig {
+struct GossipDiscoveryBuilderConfig {
     network_context: Arc<NetworkContext>,
     self_addrs: Vec<NetworkAddress>,
     discovery_interval_ms: u64,
-    network_reqs_tx: DiscoveryNetworkSender,
-    network_notifs_rx: DiscoveryNetworkEvents,
+    network_reqs_tx: GossipDiscoveryNetworkSender,
+    network_notifs_rx: GossipDiscoveryNetworkEvents,
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
 }
 
-impl DiscoveryBuilderConfig {
+impl GossipDiscoveryBuilderConfig {
     pub fn new(
         network_context: Arc<NetworkContext>,
         self_addrs: Vec<NetworkAddress>,
         discovery_interval_ms: u64,
-        network_reqs_tx: DiscoveryNetworkSender,
-        network_notifs_rx: DiscoveryNetworkEvents,
+        network_reqs_tx: GossipDiscoveryNetworkSender,
+        network_notifs_rx: GossipDiscoveryNetworkEvents,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     ) -> Self {
         Self {
@@ -46,7 +48,7 @@ impl DiscoveryBuilderConfig {
     }
 }
 
-type DiscoveryService = Discovery<Fuse<Interval>>;
+type GossipDiscoveryService = GossipDiscovery<Fuse<Interval>>;
 
 #[derive(Debug, PartialOrd, PartialEq)]
 enum State {
@@ -55,29 +57,29 @@ enum State {
     STARTED,
 }
 
-pub struct DiscoveryBuilder {
+pub struct GossipDiscoveryBuilder {
     network_context: Arc<NetworkContext>,
-    config: Option<DiscoveryBuilderConfig>,
-    discovery: Option<DiscoveryService>,
+    config: Option<GossipDiscoveryBuilderConfig>,
+    discovery: Option<GossipDiscoveryService>,
     state: State,
 }
 
-impl DiscoveryBuilder {
+impl GossipDiscoveryBuilder {
     pub fn create(
         network_context: Arc<NetworkContext>,
         self_addrs: Vec<NetworkAddress>,
         discovery_interval_ms: u64,
-        network_reqs_tx: DiscoveryNetworkSender,
-        network_notifs_rx: DiscoveryNetworkEvents,
+        network_reqs_tx: GossipDiscoveryNetworkSender,
+        network_notifs_rx: GossipDiscoveryNetworkEvents,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     ) -> Self {
         debug!(
-            "{} Created discovery protocol actor (builder)",
+            "{} Created gossip discovery protocol actor (builder)",
             network_context
         );
         Self {
             network_context: network_context.clone(),
-            config: Some(DiscoveryBuilderConfig::new(
+            config: Some(GossipDiscoveryBuilderConfig::new(
                 network_context,
                 self_addrs,
                 discovery_interval_ms,
@@ -95,7 +97,7 @@ impl DiscoveryBuilder {
         self.state = State::BUILT;
         if let Some(config) = self.config.take() {
             self.discovery = Some(executor.enter(|| {
-                Discovery::new(
+                GossipDiscovery::new(
                     config.network_context,
                     config.self_addrs,
                     interval(Duration::from_millis(config.discovery_interval_ms)).fuse(),
@@ -105,7 +107,7 @@ impl DiscoveryBuilder {
                 )
             }));
             debug!(
-                "{} Built discovery protocol actor (builder)",
+                "{} Built gossip discovery protocol actor (builder)",
                 self.network_context
             );
         };
@@ -119,7 +121,7 @@ impl DiscoveryBuilder {
         if let Some(discovery) = self.discovery.take() {
             executor.spawn(discovery.start());
             debug!(
-                "{} Started discovery protocol actor (builder)",
+                "{} Started gossip discovery protocol actor (builder)",
                 self.network_context
             );
         }

@@ -23,16 +23,16 @@ use netcore::transport::ConnectionOrigin;
 use std::{num::NonZeroUsize, str::FromStr};
 use tokio::runtime::Runtime;
 
-fn get_raw_message(msg: DiscoveryMsg) -> Message {
+fn get_raw_message(msg: GossipDiscoveryMsg) -> Message {
     Message {
         protocol: ProtocolId::DiscoveryDirectSend,
         mdata: lcs::to_bytes(&msg).unwrap().into(),
     }
 }
 
-fn parse_raw_message(msg: Message) -> Result<DiscoveryMsg, NetworkError> {
+fn parse_raw_message(msg: Message) -> Result<GossipDiscoveryMsg, NetworkError> {
     assert_eq!(msg.protocol, ProtocolId::DiscoveryDirectSend);
-    let msg: DiscoveryMsg = lcs::from_bytes(&msg.mdata)
+    let msg: GossipDiscoveryMsg = lcs::from_bytes(&msg.mdata)
         .map_err(|err| anyhow!(err).context(NetworkErrorKind::ParsingError))?;
     Ok(msg)
 }
@@ -58,7 +58,7 @@ fn setup_discovery(
     let (connection_notifs_tx, connection_notifs_rx) = conn_notifs_channel::new();
     let (ticker_tx, ticker_rx) = channel::new_test(0);
     let discovery = {
-        Discovery::new(
+        GossipDiscovery::new(
             Arc::new(NetworkContext::new(
                 NetworkId::Validator,
                 RoleType::Validator,
@@ -66,11 +66,11 @@ fn setup_discovery(
             )),
             addrs,
             ticker_rx,
-            DiscoveryNetworkSender::new(
+            GossipDiscoveryNetworkSender::new(
                 PeerManagerRequestSender::new(peer_mgr_reqs_tx),
                 ConnectionRequestSender::new(connection_reqs_tx),
             ),
-            DiscoveryNetworkEvents::new(network_notifs_rx, connection_notifs_rx),
+            GossipDiscoveryNetworkEvents::new(network_notifs_rx, connection_notifs_rx),
             conn_mgr_reqs_tx,
         )
     };
@@ -147,7 +147,7 @@ fn inbound() {
             b"example.com",
             100, /* epoch */
         );
-        let msg = DiscoveryMsg {
+        let msg = GossipDiscoveryMsg {
             notes: vec![other_note],
         };
         let msg_key = (other_peer_id, ProtocolId::DiscoveryDirectSend);
@@ -192,7 +192,7 @@ fn inbound() {
             300, /* epoch */
         );
 
-        let msg = DiscoveryMsg {
+        let msg = GossipDiscoveryMsg {
             notes: vec![new_note, other_note],
         };
         let (delivered_tx, delivered_rx) = oneshot::channel();
@@ -314,7 +314,7 @@ fn old_note_higher_epoch() {
         let old_self_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
         let old_epoch = get_unix_epoch() + 1_000_000;
         let old_note = Note::new(peer_id, old_self_addrs.clone(), b"example.com", old_epoch);
-        let msg = DiscoveryMsg {
+        let msg = GossipDiscoveryMsg {
             notes: vec![old_note],
         };
         let msg_key = (other_peer_id, ProtocolId::DiscoveryDirectSend);
@@ -383,7 +383,7 @@ fn old_note_max_epoch() {
         let old_self_addrs = vec![NetworkAddress::from_str("/ip4/127.0.0.1/tcp/9091").unwrap()];
         let old_epoch = std::u64::MAX;
         let old_note = Note::new(peer_id, old_self_addrs.clone(), b"example.com", old_epoch);
-        let msg = DiscoveryMsg {
+        let msg = GossipDiscoveryMsg {
             notes: vec![old_note],
         };
         let msg_key = (other_peer_id, ProtocolId::DiscoveryDirectSend);
