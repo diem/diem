@@ -178,8 +178,7 @@ impl SynchronizerEnv {
             let key_version = TEST_ROOT_KEY_VERSION;
             let enc_addr = raw_addr
                 .clone()
-                .encrypt(&root_key, key_version, &signer.author(), 0, 0)
-                .unwrap();
+                .encrypt(&root_key, key_version, &signer.author(), 0, 0);
             let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
 
             let validator_config = ValidatorConfig::new(

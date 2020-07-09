@@ -1499,15 +1499,13 @@ fn test_network_key_rotation() {
     let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
     let seq_num = prev_seq_num + 1;
     let addr_idx = 0;
-    let enc_addr = raw_addr
-        .encrypt(
-            &root_key,
-            key_version,
-            &validator_account,
-            seq_num,
-            addr_idx,
-        )
-        .unwrap();
+    let enc_addr = raw_addr.encrypt(
+        &root_key,
+        key_version,
+        &validator_account,
+        seq_num,
+        addr_idx,
+    );
     let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
 
     validator_config.validator_network_address = raw_enc_addr;

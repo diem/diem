@@ -67,9 +67,7 @@ impl ValidatorInfo {
         let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
         let root_key = TEST_ROOT_KEY;
         let key_version = TEST_ROOT_KEY_VERSION;
-        let enc_addr = raw_addr
-            .encrypt(&root_key, key_version, &account_address, 0, 0)
-            .unwrap();
+        let enc_addr = raw_addr.encrypt(&root_key, key_version, &account_address, 0, 0);
         let validator_network_address = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
 
         let private_key = x25519::PrivateKey::generate_for_testing();

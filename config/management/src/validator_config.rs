@@ -76,14 +76,13 @@ impl ValidatorConfig {
                     validator_address, e
                 ))
             })?;
-        let enc_validator_address = raw_validator_address
-            .encrypt(&root_key, key_version, &sender, sequence_number, addr_idx)
-            .map_err(|e| {
-                Error::UnexpectedError(format!(
-                    "error encrypting validator address: \"{}\", error: {}",
-                    validator_address, e
-                ))
-            })?;
+        let enc_validator_address = raw_validator_address.encrypt(
+            &root_key,
+            key_version,
+            &sender,
+            sequence_number,
+            addr_idx,
+        );
         let raw_enc_validator_address = RawEncNetworkAddress::try_from(&enc_validator_address)
             .map_err(|e| {
                 Error::UnexpectedError(format!(
