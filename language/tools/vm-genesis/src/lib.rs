@@ -311,7 +311,25 @@ fn create_and_initialize_testnet_minting(
         account_config::treasury_compliance_account_address(),
         "DesignatedDealer",
         "update_tier",
-        vec![],
+        vec![account_config::coin1_tag()],
+        vec![
+            Value::transaction_argument_signer_reference(
+                account_config::treasury_compliance_account_address(),
+            ),
+            Value::address(account_config::testnet_dd_account_address()),
+            Value::u64(3),
+            Value::u64(std::u64::MAX),
+        ],
+    );
+
+    exec_function(
+        session,
+        account_config::treasury_compliance_account_address(),
+        "DesignatedDealer",
+        "update_tier",
+        vec![account_config::type_tag_for_currency_code(
+            account_config::from_currency_code_string(account_config::COIN2_NAME).unwrap(),
+        )],
         vec![
             Value::transaction_argument_signer_reference(
                 account_config::treasury_compliance_account_address(),
