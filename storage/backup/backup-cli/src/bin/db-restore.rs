@@ -52,25 +52,32 @@ async fn main() -> Result<()> {
 
     let db = Arc::new(
         LibraDB::open(
-            opt.global.db_dir,
+            &opt.global.db_dir,
             false, /* read_only */
             None,  /* pruner */
         )
         .expect("Failed opening DB."),
     );
     let restore_handler = Arc::new(db.get_restore_handler());
+    let global_opt = opt.global;
 
     match opt.restore_type {
         RestoreType::EpochEnding { opt, storage } => {
-            EpochEndingRestoreController::new(opt, storage.init_storage().await?, restore_handler)
-                .run()
-                .await
-                .map(|_| println!("Epoch ending information restore success."))
-                .context("Failed restoring epoch ending information.")?;
+            EpochEndingRestoreController::new(
+                opt,
+                global_opt,
+                storage.init_storage().await?,
+                restore_handler,
+            )
+            .run()
+            .await
+            .map(|_| println!("Epoch ending information restore success."))
+            .context("Failed restoring epoch ending information.")?;
         }
         RestoreType::StateSnapshot { opt, storage } => {
             StateSnapshotRestoreController::new(
                 opt,
+                global_opt,
                 storage.init_storage().await?,
                 restore_handler,
             )
@@ -80,11 +87,16 @@ async fn main() -> Result<()> {
             .context("Failed restoring state snapshot.")?;
         }
         RestoreType::Transaction { opt, storage } => {
-            TransactionRestoreController::new(opt, storage.init_storage().await?, restore_handler)
-                .run()
-                .await
-                .map(|_| println!("Transactions restore success."))
-                .context("Failed restoring state snapshot.")?;
+            TransactionRestoreController::new(
+                opt,
+                global_opt,
+                storage.init_storage().await?,
+                restore_handler,
+            )
+            .run()
+            .await
+            .map(|_| println!("Transactions restore success."))
+            .context("Failed restoring state snapshot.")?;
         }
     }
 

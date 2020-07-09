@@ -10,13 +10,13 @@ use crate::{
     utils::{
         backup_service_client::BackupServiceClient,
         test_utils::{tmp_db_empty, tmp_db_with_random_content},
-        GlobalBackupOpt,
+        GlobalBackupOpt, GlobalRestoreOpt,
     },
 };
 use backup_service::start_backup_service;
 use libra_config::utils::get_available_port;
 use libra_temppath::TempPath;
-use std::sync::Arc;
+use std::{path::PathBuf, sync::Arc};
 use tokio::time::Duration;
 
 #[test]
@@ -32,6 +32,7 @@ fn end_to_end() {
     let client = Arc::new(BackupServiceClient::new(port));
 
     let latest_epoch = blocks.last().unwrap().1.ledger_info().next_block_epoch();
+    let target_version = blocks[blocks.len() / 2].1.ledger_info().version() + 1;
     let manifest_handle = rt
         .block_on(
             EpochEndingBackupController::new(
@@ -52,6 +53,10 @@ fn end_to_end() {
     rt.block_on(
         EpochEndingRestoreController::new(
             EpochEndingRestoreOpt { manifest_handle },
+            GlobalRestoreOpt {
+                db_dir: PathBuf::new(),
+                target_version,
+            },
             store,
             Arc::new(tgt_db.get_restore_handler()),
         )
@@ -59,18 +64,22 @@ fn end_to_end() {
     )
     .unwrap();
 
-    let expected_ledgers_infos = blocks
+    let expected_ledger_infos = blocks
         .into_iter()
         .map(|(_, li)| li)
-        .filter(|li| li.ledger_info().ends_epoch())
+        .filter(|li| li.ledger_info().ends_epoch() && li.ledger_info().version() <= target_version)
         .collect::<Vec<_>>();
+    let target_version_next_block_epoch = expected_ledger_infos
+        .last()
+        .map(|li| li.ledger_info().next_block_epoch())
+        .unwrap_or(0);
 
     assert_eq!(
         tgt_db
-            .get_epoch_ending_ledger_infos(0, latest_epoch)
+            .get_epoch_ending_ledger_infos(0, target_version_next_block_epoch)
             .unwrap()
             .0,
-        expected_ledgers_infos,
+        expected_ledger_infos,
     );
 
     rt.shutdown_timeout(Duration::from_secs(1));

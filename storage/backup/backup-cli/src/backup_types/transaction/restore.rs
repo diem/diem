@@ -4,7 +4,7 @@
 use crate::{
     backup_types::transaction::manifest::TransactionBackup,
     storage::{BackupStorage, FileHandle},
-    utils::read_record_bytes::ReadRecordBytes,
+    utils::{read_record_bytes::ReadRecordBytes, GlobalRestoreOpt},
 };
 use anyhow::{ensure, Result};
 use libra_types::{
@@ -13,7 +13,7 @@ use libra_types::{
     transaction::{Transaction, TransactionInfo, TransactionListWithProof, Version},
 };
 use libradb::backup::restore_handler::RestoreHandler;
-use std::sync::Arc;
+use std::{cmp::min, sync::Arc};
 use structopt::StructOpt;
 use tokio::io::AsyncReadExt;
 
@@ -27,11 +27,13 @@ pub struct TransactionRestoreController {
     storage: Arc<dyn BackupStorage>,
     restore_handler: Arc<RestoreHandler>,
     manifest_handle: FileHandle,
+    target_version: Version,
 }
 
 impl TransactionRestoreController {
     pub fn new(
         opt: TransactionRestoreOpt,
+        global_opt: GlobalRestoreOpt,
         storage: Arc<dyn BackupStorage>,
         restore_handler: Arc<RestoreHandler>,
     ) -> Self {
@@ -39,6 +41,7 @@ impl TransactionRestoreController {
             storage,
             restore_handler,
             manifest_handle: opt.manifest_handle,
+            target_version: global_opt.target_version,
         }
     }
 
@@ -51,9 +54,17 @@ impl TransactionRestoreController {
             .await?;
         let manifest: TransactionBackup = serde_json::from_slice(&manifest_bytes)?;
         manifest.verify()?;
+        if self.target_version < manifest.first_version {
+            println!(
+                "Manifest {} skipped since its entirety is newer than target version {}.",
+                self.manifest_handle, self.target_version,
+            );
+            return Ok(());
+        }
 
         let mut first_chunk = true;
         for chunk in manifest.chunks {
+            // verify
             let (txns, txn_infos) = self.read_chunk(chunk.transactions).await?;
             let (proof, ledger_info) = self.read_proof(chunk.proof).await?;
             ensure!(
@@ -72,13 +83,28 @@ impl TransactionRestoreController {
             );
             txn_list_with_proof.verify(ledger_info.ledger_info(), Some(chunk.first_version))?;
 
+            let last = min(self.target_version, chunk.last_version);
             // write to db
-            self.restore_handler.save_transactions(
-                &txn_list_with_proof,
-                &ledger_info,
-                first_chunk,
-            )?;
-            first_chunk = false;
+            if last >= chunk.first_version {
+                self.restore_handler.save_transactions(
+                    &txn_list_with_proof,
+                    &ledger_info,
+                    first_chunk,
+                    (last - chunk.first_version + 1) as usize,
+                )?;
+                first_chunk = false;
+            }
+
+            if last < chunk.last_version {
+                break;
+            }
+        }
+
+        if self.target_version < manifest.last_version {
+            println!(
+                "Transactions newer than target version {} ignored.",
+                self.target_version,
+            )
         }
 
         Ok(())
