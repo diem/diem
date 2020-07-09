@@ -145,7 +145,6 @@ impl StorageHelper {
         command.insert_waypoint()
     }
 
-    #[cfg(test)]
     pub fn operator_key(&self, local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
@@ -168,7 +167,6 @@ impl StorageHelper {
         command.operator_key()
     }
 
-    #[cfg(test)]
     pub fn owner_key(&self, local_ns: &str, remote_ns: &str) -> Result<Ed25519PublicKey, Error> {
         let args = format!(
             "
@@ -212,7 +210,6 @@ impl StorageHelper {
         command.set_layout()
     }
 
-    #[cfg(test)]
     pub fn set_operator(
         &self,
         operator_name: &str,

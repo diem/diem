@@ -12,9 +12,12 @@ use libra_secure_storage::{CryptoStorage, KVStorage, Value};
 use libra_temppath::TempPath;
 use std::path::{Path, PathBuf};
 
-const SHARED: &str = "_shared";
-const ASSOCIATION: &str = "association";
-const ASSOCIATION_SHARED: &str = "association_shared";
+const ASSOCIATION_NS: &str = "association";
+const ASSOCIATION_SHARED_NS: &str = "association_shared";
+const OPERATOR_NS: &str = "_operator";
+const OPERATOR_SHARED_NS: &str = "_operator_shared";
+const OWNER_NS: &str = "_owner";
+const OWNER_SHARED_NS: &str = "_owner_shared";
 
 pub struct ValidatorBuilder<T: AsRef<Path>> {
     storage_helper: StorageHelper,
@@ -50,9 +53,12 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
     /// Association uploads the validator layout to shared storage.
     fn create_layout(&self) {
         let mut layout = Layout::default();
-        layout.association = vec![ASSOCIATION_SHARED.into()];
+        layout.association = vec![ASSOCIATION_SHARED_NS.into()];
+        layout.owners = (0..self.num_validators)
+            .map(|i| (i.to_string() + OWNER_SHARED_NS))
+            .collect();
         layout.operators = (0..self.num_validators)
-            .map(|v| (v.to_string() + SHARED))
+            .map(|i| (i.to_string() + OPERATOR_SHARED_NS))
             .collect();
 
         let mut common_storage = self
@@ -66,76 +72,110 @@ impl<T: AsRef<Path>> ValidatorBuilder<T> {
 
     /// Association initializes its account and key.
     fn create_association(&self) {
-        self.storage_helper.initialize(ASSOCIATION.into());
+        self.storage_helper.initialize(ASSOCIATION_NS.into());
         self.storage_helper
-            .association_key(ASSOCIATION, ASSOCIATION_SHARED)
+            .association_key(ASSOCIATION_NS, ASSOCIATION_SHARED_NS)
             .unwrap();
     }
 
-    /// Operators upload their keys to shared storage
-    /// Operators initialize their validator endpoint and full node endpoint
-    /// Operators upload their validator_config to shared storage
+    /// Generate owner key locally and upload to shared storage.
+    fn initialize_validator_owner(&self, index: usize) {
+        let local_ns = index.to_string() + OWNER_NS;
+        let remote_ns = index.to_string() + OWNER_SHARED_NS;
+
+        self.storage_helper.initialize(local_ns.clone());
+        let _ = self
+            .storage_helper
+            .owner_key(&local_ns, &remote_ns)
+            .unwrap();
+    }
+
+    /// Generate operator key locally and upload to shared storage.
+    fn initialize_validator_operator(&self, index: usize) {
+        let local_ns = index.to_string() + OPERATOR_NS;
+        let remote_ns = index.to_string() + OPERATOR_SHARED_NS;
+
+        self.storage_helper.initialize(local_ns.clone());
+        let _ = self
+            .storage_helper
+            .operator_key(&local_ns, &remote_ns)
+            .unwrap();
+    }
+
+    /// Sets the operator for the owner by uploading a set-operator transaction to shared storage.
+    /// Note, we assume that owner i chooses operator i to operate the validator.
+    fn set_validator_operator(&self, index: usize) {
+        let local_ns = index.to_string() + OWNER_NS;
+        let remote_ns = index.to_string() + OWNER_SHARED_NS;
+
+        let operator_name = index.to_string() + OPERATOR_SHARED_NS;
+        let _ = self
+            .storage_helper
+            .set_operator(&operator_name, &local_ns, &remote_ns);
+    }
+
+    /// Operators upload their validator_config to shared storage.
     fn initialize_validator_config(&self, index: usize) -> NodeConfig {
-        let ns = index.to_string();
-        let ns_shared = ns.clone() + SHARED;
-        self.storage_helper.initialize(ns.clone());
+        let local_ns = index.to_string() + OPERATOR_NS;
+        let remote_ns = index.to_string() + OPERATOR_SHARED_NS;
 
         let mut config = self.template.clone_for_template();
         config.randomize_ports();
 
         let validator_network = config.validator_network.as_mut().unwrap();
         let validator_network_address = validator_network.listen_address.clone();
-        validator_network.identity = Identity::from_storage(
-            libra_global_constants::VALIDATOR_NETWORK_KEY.into(),
-            libra_global_constants::OPERATOR_ACCOUNT.into(),
-            self.secure_backend(&ns, "validator"),
-        );
-
         let fullnode_network = &mut config.full_node_networks[0];
         let fullnode_network_address = fullnode_network.listen_address.clone();
-        fullnode_network.identity = Identity::from_storage(
-            libra_global_constants::FULLNODE_NETWORK_KEY.into(),
-            libra_global_constants::OPERATOR_ACCOUNT.into(),
-            self.secure_backend(&ns, "full_node"),
-        );
-
-        // TODO(joshlind): FIX ME: owner_name is currently unused!
-        let owner_name = format!("owner_{}", index);
 
         self.storage_helper
             .validator_config(
-                &owner_name,
+                &(index.to_string() + OWNER_SHARED_NS),
                 validator_network_address,
                 fullnode_network_address,
                 self.template.base.chain_id,
-                &ns,
-                &ns_shared,
+                &local_ns,
+                &remote_ns,
             )
             .unwrap();
+
+        validator_network.identity = Identity::from_storage(
+            libra_global_constants::VALIDATOR_NETWORK_KEY.into(),
+            libra_global_constants::OWNER_ACCOUNT.into(),
+            self.secure_backend(&local_ns, "validator"),
+        );
+        fullnode_network.identity = Identity::from_storage(
+            libra_global_constants::FULLNODE_NETWORK_KEY.into(),
+            libra_global_constants::OWNER_ACCOUNT.into(),
+            self.secure_backend(&local_ns, "full_node"),
+        );
+
         config
     }
 
     /// Operators generate genesis from shared storage and verify against waypoint.
     /// Insert the genesis/waypoint into local config.
     fn finish_validator_config(&self, index: usize, config: &mut NodeConfig) {
-        let ns = index.to_string();
+        let local_ns = index.to_string() + OPERATOR_NS;
+
         let genesis_path = TempPath::new();
         genesis_path.create_as_file().unwrap();
         let genesis = self.storage_helper.genesis(genesis_path.path()).unwrap();
-        self.storage_helper
-            .insert_waypoint(&ns, constants::COMMON_NS)
+
+        let _ = self
+            .storage_helper
+            .insert_waypoint(&local_ns, constants::COMMON_NS)
             .unwrap();
         let output = self
             .storage_helper
-            .verify_genesis(&ns, genesis_path.path())
+            .verify_genesis(&local_ns, genesis_path.path())
             .unwrap();
         assert_eq!(output.split("match").count(), 5);
 
         config.consensus.safety_rules.service = SafetyRulesService::Thread;
-        config.consensus.safety_rules.backend = self.secure_backend(&ns, "safety-rules");
-        config.execution.backend = self.secure_backend(&ns, "execution");
+        config.consensus.safety_rules.backend = self.secure_backend(&local_ns, "safety-rules");
+        config.execution.backend = self.secure_backend(&local_ns, "execution");
 
-        let backend = self.secure_backend(&ns, "waypoint");
+        let backend = self.secure_backend(&local_ns, "waypoint");
         config.base.waypoint = WaypointConfig::FromStorage(backend);
         config.execution.genesis = Some(genesis);
         config.execution.genesis_file_location = PathBuf::from("");
@@ -146,21 +186,36 @@ impl<T: AsRef<Path>> BuildSwarm for ValidatorBuilder<T> {
     fn build_swarm(&self) -> anyhow::Result<(Vec<NodeConfig>, Ed25519PrivateKey)> {
         self.create_layout();
         self.create_association();
-        let faucet_key = self
+        let association_key = self
             .storage_helper
-            .storage(ASSOCIATION.into())
+            .storage(ASSOCIATION_NS.into())
             .export_private_key(libra_global_constants::ASSOCIATION_KEY)
             .unwrap();
-        let mut configs: Vec<_> = (0..self.num_validators)
-            .map(|i| self.initialize_validator_config(i))
-            .collect();
-        self.storage_helper
+
+        // Upload both owner and operator keys to shared storage
+        for index in 0..self.num_validators {
+            self.initialize_validator_owner(index);
+            self.initialize_validator_operator(index);
+        }
+
+        // Set the operator for each owner and the validator config for each operator
+        let mut configs = vec![];
+        for index in 0..self.num_validators {
+            let _ = self.set_validator_operator(index);
+            let config = self.initialize_validator_config(index);
+            configs.push(config);
+        }
+
+        // Create genesis and waypoint
+        let _ = self
+            .storage_helper
             .create_waypoint(constants::COMMON_NS)
             .unwrap();
         for (i, config) in configs.iter_mut().enumerate() {
             self.finish_validator_config(i, config);
         }
-        Ok((configs, faucet_key))
+
+        Ok((configs, association_key))
     }
 }
 
