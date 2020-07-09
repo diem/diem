@@ -4,7 +4,7 @@
 use crate::{
     backup_types::state_snapshot::manifest::StateSnapshotBackup,
     storage::{BackupStorage, FileHandle},
-    utils::read_record_bytes::ReadRecordBytes,
+    utils::{read_record_bytes::ReadRecordBytes, GlobalRestoreOpt},
 };
 use anyhow::Result;
 use libra_crypto::HashValue;
@@ -27,13 +27,18 @@ pub struct StateSnapshotRestoreOpt {
 pub struct StateSnapshotRestoreController {
     storage: Arc<dyn BackupStorage>,
     restore_handler: Arc<RestoreHandler>,
+    // State snapshot restore to this version
     version: Version,
     manifest_handle: FileHandle,
+    // Global "target_version" for the entire restore process, if `version` is newer than this,
+    // nothing will be done.
+    target_version: Version,
 }
 
 impl StateSnapshotRestoreController {
     pub fn new(
         opt: StateSnapshotRestoreOpt,
+        global_opt: GlobalRestoreOpt,
         storage: Arc<dyn BackupStorage>,
         restore_handler: Arc<RestoreHandler>,
     ) -> Self {
@@ -42,10 +47,20 @@ impl StateSnapshotRestoreController {
             restore_handler,
             version: opt.version,
             manifest_handle: opt.manifest_handle,
+            target_version: global_opt.target_version,
         }
     }
 
     pub async fn run(self) -> Result<()> {
+        if self.version > self.target_version {
+            println!(
+                "Trying to restore state snapshot to version {}, which is newer than the target version {}.",
+                self.version,
+                self.target_version,
+            );
+            return Ok(());
+        }
+
         let mut manifest_bytes = Vec::new();
         self.storage
             .open_for_read(&self.manifest_handle)
@@ -66,6 +81,7 @@ impl StateSnapshotRestoreController {
         }
 
         receiver.finish()?;
+        println!("Finished restoring state snapshot.");
         Ok(())
     }
 }

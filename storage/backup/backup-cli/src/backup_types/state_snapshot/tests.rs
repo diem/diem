@@ -10,14 +10,14 @@ use crate::{
     utils::{
         backup_service_client::BackupServiceClient,
         test_utils::{tmp_db_empty, tmp_db_with_random_content},
-        GlobalBackupOpt,
+        GlobalBackupOpt, GlobalRestoreOpt,
     },
 };
 use backup_service::start_backup_service;
 use libra_config::utils::get_available_port;
 use libra_temppath::TempPath;
-use libra_types::transaction::PRE_GENESIS_VERSION;
-use std::sync::Arc;
+use libra_types::transaction::{Version, PRE_GENESIS_VERSION};
+use std::{path::PathBuf, sync::Arc};
 use storage_interface::DbReader;
 use tokio::time::Duration;
 
@@ -52,6 +52,10 @@ fn end_to_end() {
             StateSnapshotRestoreOpt {
                 manifest_handle,
                 version: PRE_GENESIS_VERSION,
+            },
+            GlobalRestoreOpt {
+                db_dir: PathBuf::new(),
+                target_version: Version::max_value(),
             },
             store,
             Arc::new(tgt_db.get_restore_handler()),

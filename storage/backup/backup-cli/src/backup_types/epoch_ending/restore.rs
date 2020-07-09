@@ -4,10 +4,12 @@
 use crate::{
     backup_types::epoch_ending::manifest::EpochEndingBackup,
     storage::{BackupStorage, FileHandle},
-    utils::read_record_bytes::ReadRecordBytes,
+    utils::{read_record_bytes::ReadRecordBytes, GlobalRestoreOpt},
 };
 use anyhow::{anyhow, ensure, Result};
-use libra_types::{ledger_info::LedgerInfoWithSignatures, waypoint::Waypoint};
+use libra_types::{
+    ledger_info::LedgerInfoWithSignatures, transaction::Version, waypoint::Waypoint,
+};
 use libradb::backup::restore_handler::RestoreHandler;
 use std::sync::Arc;
 use structopt::StructOpt;
@@ -23,11 +25,13 @@ pub struct EpochEndingRestoreController {
     storage: Arc<dyn BackupStorage>,
     restore_handler: Arc<RestoreHandler>,
     manifest_handle: FileHandle,
+    target_version: Version,
 }
 
 impl EpochEndingRestoreController {
     pub fn new(
         opt: EpochEndingRestoreOpt,
+        global_opt: GlobalRestoreOpt,
         storage: Arc<dyn BackupStorage>,
         restore_handler: Arc<RestoreHandler>,
     ) -> Self {
@@ -35,6 +39,7 @@ impl EpochEndingRestoreController {
             storage,
             restore_handler,
             manifest_handle: opt.manifest_handle,
+            target_version: global_opt.target_version,
         }
     }
 
@@ -82,9 +87,31 @@ impl EpochEndingRestoreController {
                 next_epoch += 1;
             }
 
+            let mut end = lis.len(); // To apply: "[0, end)"
+            if let Some(_end) = lis
+                .iter()
+                .position(|li| li.ledger_info().version() > self.target_version)
+            {
+                println!(
+                    "Ignoring epoch ending info beyond target_version. Epoch {} ends at {}, target_version: {}.",
+                    lis[_end].ledger_info().epoch(),
+                    lis[_end].ledger_info().version(),
+                    self.target_version,
+                );
+                end = _end;
+            }
+
             // write to db
-            self.restore_handler.save_ledger_infos(&lis)?;
+            if end != 0 {
+                self.restore_handler.save_ledger_infos(&lis[..end])?;
+            }
+
+            // skip remaining chunks if beyond target_version
+            if end < lis.len() {
+                break;
+            }
         }
+        println!("Finished restoring epoch ending info.");
 
         Ok(())
     }

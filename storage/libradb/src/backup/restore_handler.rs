@@ -78,6 +78,7 @@ impl RestoreHandler {
         txn_list_with_proof: &TransactionListWithProof,
         ledger_info: &LedgerInfoWithSignatures,
         save_left_siblings: bool,
+        limit: usize,
     ) -> Result<()> {
         // TODO: check signatures
         let first_version = txn_list_with_proof
@@ -115,14 +116,14 @@ impl RestoreHandler {
 
         let mut cs = ChangeSet::new();
         let mut version = first_version;
-        for txn in &txn_list_with_proof.transactions {
+        for txn in &txn_list_with_proof.transactions[..limit] {
             self.transaction_store
                 .put_transaction(version, txn, &mut cs)?;
             version += 1;
         }
         self.ledger_store.put_transaction_infos(
             first_version,
-            txn_list_with_proof.proof.transaction_infos(),
+            &txn_list_with_proof.proof.transaction_infos()[..limit],
             &mut cs,
         )?;
 

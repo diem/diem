@@ -10,14 +10,14 @@ use crate::{
     utils::{
         backup_service_client::BackupServiceClient,
         test_utils::{tmp_db_empty, tmp_db_with_random_content},
-        GlobalBackupOpt,
+        GlobalBackupOpt, GlobalRestoreOpt,
     },
 };
 use backup_service::start_backup_service;
 use libra_config::utils::get_available_port;
 use libra_temppath::TempPath;
 use libra_types::transaction::Version;
-use std::{mem::size_of, sync::Arc};
+use std::{mem::size_of, path::PathBuf, sync::Arc};
 use storage_interface::DbReader;
 use tokio::time::Duration;
 
@@ -49,8 +49,10 @@ fn end_to_end() {
         .unwrap() // biggest txn
         + 115 // size of a serialized TransactionInfo
         + size_of::<u32>(); // record len header
-    let first_ver_to_backup = (total_txns / 2) as Version;
+    let first_ver_to_backup = (total_txns / 4) as Version;
     let num_txns_to_backup = total_txns - first_ver_to_backup as usize;
+    let target_version = first_ver_to_backup + total_txns as Version / 2;
+    let num_txns_to_restore = (target_version - first_ver_to_backup + 1) as usize;
 
     let manifest_handle = rt
         .block_on(
@@ -70,6 +72,10 @@ fn end_to_end() {
     rt.block_on(
         TransactionRestoreController::new(
             TransactionRestoreOpt { manifest_handle },
+            GlobalRestoreOpt {
+                db_dir: PathBuf::new(),
+                target_version,
+            },
             store,
             Arc::new(tgt_db.get_restore_handler()),
         )
@@ -80,8 +86,8 @@ fn end_to_end() {
     let recovered_transactions = tgt_db
         .get_transactions(
             first_ver_to_backup,
-            num_txns_to_backup as u64,
-            latest_version,
+            num_txns_to_restore as u64,
+            target_version,
             false,
         )
         .unwrap()
@@ -91,6 +97,7 @@ fn end_to_end() {
         recovered_transactions,
         txns.into_iter()
             .skip(first_ver_to_backup as usize)
+            .take(num_txns_to_restore)
             .cloned()
             .collect::<Vec<_>>()
     );
