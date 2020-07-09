@@ -95,21 +95,3 @@ script {
 
 // check: ABORTED
 // check: 0
-
-// --------------------------------------------------------------------
-// Tier index is one more than number of tiers, indicating unlimited minting allowed
-
-//! new-transaction
-//! sender: blessed
-script {
-    use 0x1::LibraAccount;
-    use 0x1::Coin1::Coin1;
-    fun main(tc_account: &signer) {
-        LibraAccount::tiered_mint<Coin1>(
-            tc_account, 0xDEADBEEF, 99999999999, 3
-        );
-    }
-}
-// check: ReceivedMintEvent
-// check: MintEvent
-// check: EXECUTED

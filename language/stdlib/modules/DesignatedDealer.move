@@ -26,6 +26,8 @@ module DesignatedDealer {
         amount: u64,
     }
 
+    const MAX_NUM_TIERS: u64 = 4;
+
     const EACCOUNT_NOT_TREASURY_COMPLIANCE: u64 = 0;
     const EINVALID_TIER_ADDITION: u64 = 1;
     const EINVALID_TIER_START: u64 = 2;
@@ -62,69 +64,78 @@ module DesignatedDealer {
     fun add_tier_(dealer: &mut Dealer, next_tier_upperbound: u64) {
         let tiers = &mut dealer.tiers;
         let number_of_tiers: u64 = Vector::length(tiers);
-        assert(number_of_tiers <= 4, EINVALID_TIER_ADDITION);
-        if (number_of_tiers > 1) {
-            let prev_tier = *Vector::borrow(tiers, number_of_tiers - 1);
-            assert(prev_tier < next_tier_upperbound, EINVALID_TIER_START);
+        assert(number_of_tiers + 1 <= MAX_NUM_TIERS, EINVALID_TIER_ADDITION);
+        if (number_of_tiers > 0) {
+            let last_tier = *Vector::borrow(tiers, number_of_tiers - 1);
+            assert(last_tier < next_tier_upperbound, EINVALID_TIER_START);
         };
         Vector::push_back(tiers, next_tier_upperbound);
     }
 
     public fun add_tier(
         tc_account: &signer,
-        addr: address,
+        dd_addr: address,
         tier_upperbound: u64
     ) acquires Dealer {
         assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
-        let dealer = borrow_global_mut<Dealer>(addr);
+        let dealer = borrow_global_mut<Dealer>(dd_addr);
         add_tier_(dealer, tier_upperbound)
+    }
+
+    spec fun add_tier {
+        // modifies global<Dealer>@dd_addr.tiers;
+        ensures len(global<Dealer>(dd_addr).tiers) == len(old(global<Dealer>(dd_addr)).tiers) + 1;
+        ensures global<Dealer>(dd_addr).tiers[len(global<Dealer>(dd_addr).tiers) - 1] == tier_upperbound;
     }
 
     fun update_tier_(dealer: &mut Dealer, tier_index: u64, new_upperbound: u64) {
         let tiers = &mut dealer.tiers;
         let number_of_tiers = Vector::length(tiers);
-        assert(tier_index <= 3, EINVALID_TIER_INDEX); // max 4 tiers allowed
         assert(tier_index < number_of_tiers, EINVALID_TIER_INDEX);
         // Make sure that this new start for the tier is consistent
-        // with the tier above it.
-        let next_tier = tier_index + 1;
-        if (next_tier < number_of_tiers) {
-            assert(new_upperbound < *Vector::borrow(tiers, next_tier), EINVALID_TIER_START);
+        // with the tier above and below it.
+        let tier = Vector::borrow(tiers, tier_index);
+        if (*tier == new_upperbound) return;
+        if (*tier < new_upperbound) {
+            let next_tier_index = tier_index + 1;
+            if (next_tier_index < number_of_tiers) {
+                assert(new_upperbound < *Vector::borrow(tiers, next_tier_index), EINVALID_TIER_START);
+            };
         };
-        let tier_mut = Vector::borrow_mut(tiers, tier_index);
-        *tier_mut = new_upperbound;
+        if (*tier > new_upperbound && tier_index > 0) {
+            let prev_tier_index = tier_index - 1;
+            assert(new_upperbound > *Vector::borrow(tiers, prev_tier_index), EINVALID_TIER_START);
+        };
+        *Vector::borrow_mut(tiers, tier_index) = new_upperbound;
     }
 
     public fun update_tier(
         tc_account: &signer,
-        addr: address,
+        dd_addr: address,
         tier_index: u64,
         new_upperbound: u64
     ) acquires Dealer {
         assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
-        let dealer = borrow_global_mut<Dealer>(addr);
+        let dealer = borrow_global_mut<Dealer>(dd_addr);
         update_tier_(dealer, tier_index, new_upperbound)
     }
 
-    fun tiered_mint_(dealer: &mut Dealer, amount: u64, tier_index: u64): bool {
-        // if tier is 4, can mint unlimited
-        assert(tier_index <= 4, EINVALID_TIER_INDEX);
+    spec fun update_tier {
+        // modifies global<Dealer>@dd_addr.tiers;
+        ensures len(global<Dealer>(dd_addr).tiers) == len(old(global<Dealer>(dd_addr)).tiers);
+        ensures global<Dealer>(dd_addr).tiers[tier_index] == new_upperbound;
+    }
+
+    fun tiered_mint_(dealer: &mut Dealer, amount: u64, tier_index: u64) {
         reset_window(dealer);
-        let cur_inflow = *&dealer.window_inflow;
+        let cur_inflow = dealer.window_inflow;
+        let new_inflow = cur_inflow + amount;
         let tiers = &mut dealer.tiers;
-        // If the tier_index is one past the bounded tiers, minting is unbounded
         let number_of_tiers = Vector::length(tiers);
-        let tier_check = &mut false;
-        if (tier_index == number_of_tiers) {
-            *tier_check = true;
-        } else {
-            let tier_upperbound: u64 = *Vector::borrow(tiers, tier_index);
-            *tier_check = (cur_inflow + amount <= tier_upperbound);
-        };
-        if (*tier_check) {
-            dealer.window_inflow = cur_inflow + amount;
-        };
-        *tier_check
+        assert(tier_index < number_of_tiers, EINVALID_TIER_INDEX);
+        let tier_upperbound: u64 = *Vector::borrow(tiers, tier_index);
+        assert(new_inflow <= tier_upperbound, EINVALID_AMOUNT_FOR_TIER);
+        dealer.window_inflow = new_inflow;
     }
 
     public fun tiered_mint<CoinType>(
@@ -133,13 +144,12 @@ module DesignatedDealer {
         dd_addr: address,
         tier_index: u64,
     ): Libra<CoinType> acquires Dealer {
-
         assert(Roles::has_treasury_compliance_role(tc_account), EACCOUNT_NOT_TREASURY_COMPLIANCE);
         assert(amount > 0, EINVALID_MINT_AMOUNT);
-
         assert(exists_at(dd_addr), ENOT_A_DD);
-        let tier_check = tiered_mint_(borrow_global_mut<Dealer>(dd_addr), amount, tier_index);
-        assert(tier_check, EINVALID_AMOUNT_FOR_TIER);
+
+        tiered_mint_(borrow_global_mut<Dealer>(dd_addr), amount, tier_index);
+
         // Send ReceivedMintEvent
         Event::emit_event<ReceivedMintEvent>(
             &mut borrow_global_mut<Dealer>(dd_addr).mint_event_handle,
@@ -151,16 +161,27 @@ module DesignatedDealer {
         Libra::mint<CoinType>(tc_account, amount)
     }
 
-    public fun exists_at(addr: address): bool {
-        exists<Dealer>(addr)
+    spec fun tiered_mint {
+        // modifies global<Dealer>@dd_addr.{window_start, window_inflow, mint_event_handle}
+        ensures {let dealer = global<Dealer>(dd_addr); old(dealer.window_start) <= dealer.window_start};
+        ensures {let dealer = global<Dealer>(dd_addr);
+                {let current_time = LibraTimestamp::spec_now_microseconds();
+                    (dealer.window_start == current_time && dealer.window_inflow == amount) ||
+                    (old(dealer.window_start) == dealer.window_start && dealer.window_inflow == old(dealer.window_inflow) + amount)
+                }};
+        ensures tier_index < len(old(global<Dealer>(dd_addr)).tiers);
+        ensures global<Dealer>(dd_addr).window_inflow <= old(global<Dealer>(dd_addr)).tiers[tier_index];
     }
 
-    // If the time window starting at `dealer.window_start` and lasting for
-    // window_length() has elapsed, resets the window and
-    // the inflow and outflow records.
+    public fun exists_at(dd_addr: address): bool {
+        exists<Dealer>(dd_addr)
+    }
+
+    // If the time window starting at `dealer.window_start` and lasting for window_length()
+    // has elapsed, resets the window and the inflow and outflow records.
     fun reset_window(dealer: &mut Dealer) {
         let current_time = LibraTimestamp::now_microseconds();
-        if (current_time > dealer.window_start + window_length()) {
+        if (current_time >= dealer.window_start + window_length()) {
             dealer.window_start = current_time;
             dealer.window_inflow = 0;
         }
@@ -171,5 +192,18 @@ module DesignatedDealer {
         86400000000
     }
 
+    spec schema SpecSchema {
+        invariant module forall x: address where exists<Dealer>(x): len(global<Dealer>(x).tiers) <= SPEC_MAX_NUM_TIERS();
+        invariant module forall x: address where exists<Dealer>(x):
+                         forall i: u64, j: u64 where 0 <= i && i < j && j < len(global<Dealer>(x).tiers):
+                            global<Dealer>(x).tiers[i] < global<Dealer>(x).tiers[j];
+    }
+
+    spec module {
+        pragma verify = false;
+        define SPEC_MAX_NUM_TIERS(): u64 { 4 }
+        define spec_window_length(): u64 { 86400000000 }
+        apply SpecSchema to *, *<CoinType>;
+    }
 }
 }

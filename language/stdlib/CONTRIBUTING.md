@@ -25,7 +25,7 @@ inside `stdlib` to compile all of the standard library modules, transaction scri
 
 ### Testing
 
-Most tests for the standard library live [here](../move-lang/tests/functional) and can be run with `cargo test`.
+Most tests for the standard library live [here](../move-lang/functional-tests) and can be run with `cargo test`.
 
 These tests use the Move functional testing framework, which we will briefly explain here (more details can be found in this [blog post](https://developers.libra.org/blog/2020/03/06/how-to-use-the-end-to-end-tests-framework-in-move).
 
