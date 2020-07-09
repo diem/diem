@@ -1717,11 +1717,7 @@ impl VectorRef {
         let v = self.0.borrow();
         check_elem_layout(context, type_param, &*v)?;
         if idx >= v.len() {
-            return Ok(NativeResult::err(
-                cost,
-                PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
-                    .with_sub_status(INDEX_OUT_OF_BOUNDS),
-            ));
+            return Ok(NativeResult::err(cost, INDEX_OUT_OF_BOUNDS));
         }
         Ok(NativeResult::ok(
             cost,
@@ -1740,11 +1736,7 @@ impl VectorRef {
 
         macro_rules! err_pop_empty_vec {
             () => {
-                return Ok(NativeResult::err(
-                    cost,
-                    PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
-                        .with_sub_status(POP_EMPTY_VEC),
-                ));
+                return Ok(NativeResult::err(cost, POP_EMPTY_VEC));
             };
         }
 
@@ -1793,11 +1785,7 @@ impl VectorRef {
         macro_rules! swap {
             ($v: ident) => {{
                 if idx1 >= $v.len() || idx2 >= $v.len() {
-                    return Ok(NativeResult::err(
-                        cost,
-                        PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
-                            .with_sub_status(INDEX_OUT_OF_BOUNDS),
-                    ));
+                    return Ok(NativeResult::err(cost, INDEX_OUT_OF_BOUNDS));
                 }
                 $v.swap(idx1, idx2);
             }};
@@ -1872,11 +1860,7 @@ impl Vector {
         if is_empty {
             Ok(NativeResult::ok(cost, vec![]))
         } else {
-            Ok(NativeResult::err(
-                cost,
-                PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
-                    .with_sub_status(DESTROY_NON_EMPTY_VEC),
-            ))
+            Ok(NativeResult::err(cost, DESTROY_NON_EMPTY_VEC))
         }
     }
 }

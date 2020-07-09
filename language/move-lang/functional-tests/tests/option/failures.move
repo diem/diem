@@ -8,7 +8,7 @@ fun main() {
 }
 }
 
-// check: NATIVE_FUNCTION_ERROR
+// check: ABORTED 1
 
 
 //! new-transaction
@@ -20,8 +20,7 @@ fun main() {
 }
 }
 
-// check: NATIVE_FUNCTION_ERROR
-
+// check: ABORTED 1
 
 //! new-transaction
 script {
@@ -32,7 +31,7 @@ fun main() {
 }
 }
 
-// check: NATIVE_FUNCTION_ERROR
+// check: ABORTED 1
 
 
 //! new-transaction
@@ -44,7 +43,7 @@ fun main() {
 }
 }
 
-// check: NATIVE_FUNCTION_ERROR
+// check: ABORTED 1
 
 
 //! new-transaction

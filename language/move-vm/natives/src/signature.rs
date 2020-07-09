@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_crypto::{ed25519, traits::*};
-use libra_types::vm_status::StatusCode;
 use move_vm_types::{
     gas_schedule::NativeCostIndex,
     loaded_data::runtime_types::Type,
@@ -10,7 +9,7 @@ use move_vm_types::{
     values::Value,
 };
 use std::{collections::VecDeque, convert::TryFrom};
-use vm::errors::{PartialVMError, PartialVMResult};
+use vm::errors::PartialVMResult;
 
 /// Starting error code number
 const DEFAULT_ERROR_CODE: u64 = 0x0ED2_5519;
@@ -58,21 +57,13 @@ pub fn native_ed25519_signature_verification(
     let sig = match ed25519::Ed25519Signature::try_from(signature.as_slice()) {
         Ok(sig) => sig,
         Err(_) => {
-            return Ok(NativeResult::err(
-                cost,
-                PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
-                    .with_sub_status(DEFAULT_ERROR_CODE),
-            ));
+            return Ok(NativeResult::err(cost, DEFAULT_ERROR_CODE));
         }
     };
     let pk = match ed25519::Ed25519PublicKey::try_from(pubkey.as_slice()) {
         Ok(pk) => pk,
         Err(_) => {
-            return Ok(NativeResult::err(
-                cost,
-                PartialVMError::new(StatusCode::NATIVE_FUNCTION_ERROR)
-                    .with_sub_status(DEFAULT_ERROR_CODE),
-            ));
+            return Ok(NativeResult::err(cost, DEFAULT_ERROR_CODE));
         }
     };
 

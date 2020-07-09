@@ -6,5 +6,5 @@ main() {
     value = Vector.pop_back<u64>(&mut v);
     return;
 }
-// check: NATIVE_FUNCTION_ERROR
-// check: 2
+
+// check: ABORTED 2

@@ -68,5 +68,4 @@ main() {
   return;
 }
 
-// check: NATIVE_FUNCTION_ERROR
-// check: Some(1)
+// check: ABORTED 1

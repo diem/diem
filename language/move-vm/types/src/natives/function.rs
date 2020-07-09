@@ -25,7 +25,7 @@ use move_core_types::gas_schedule::{
     AbstractMemorySize, CostTable, GasAlgebra, GasCarrier, GasUnits,
 };
 use std::fmt::Write;
-use vm::errors::{PartialVMError, PartialVMResult};
+use vm::errors::PartialVMResult;
 
 /// `NativeContext` - Native function context.
 ///
@@ -65,7 +65,7 @@ pub struct NativeResult {
     /// The cost for running that function, whether successfully or not.
     pub cost: GasUnits<GasCarrier>,
     /// Result of execution. This is either the return values or the error to report.
-    pub result: PartialVMResult<Vec<Value>>,
+    pub result: Result<Vec<Value>, u64>,
 }
 
 impl NativeResult {
@@ -77,12 +77,14 @@ impl NativeResult {
         }
     }
 
-    /// `VMStatus` of a failed execution. The failure is a runtime failure in the function
-    /// and not an invariant failure of the VM which would raise a `PartialVMError` error directly.
-    pub fn err(cost: GasUnits<GasCarrier>, err: PartialVMError) -> Self {
+    /// Failed execution. The failure is a runtime failure in the function and not an invariant
+    /// failure of the VM which would raise a `PartialVMError` error directly.
+    /// The only thing the funciton can specify is its abort code, as if it had invoked the `Abort`
+    /// bytecode instruction
+    pub fn err(cost: GasUnits<GasCarrier>, abort_code: u64) -> Self {
         NativeResult {
             cost,
-            result: Err(err),
+            result: Err(abort_code),
         }
     }
 }
