@@ -423,7 +423,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(libra_vm_txn_total_gas_usage_sum[1m])/irate(libra_vm_txn_total_gas_usage_count[1m])",
+          "expr": "irate(libra_vm_txn_gas_usage_sum[1m])/irate(libra_vm_txn_gas_usage_count[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -434,92 +434,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Avg Gas per Txn (Total)",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": "gas",
-          "logBase": 1,
-          "max": null,
-          "min": "0",
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "fill": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 18
-      },
-      "id": 43,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "null",
-      "options": {},
-      "percentage": false,
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "irate(libra_vm_txn_execution_gas_usage_sum[1m])/irate(libra_vm_txn_execution_gas_usage_count[1m])",
-          "format": "time_series",
-          "intervalFactor": 1,
-          "legendFormat": "{{peer_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Avg Gas per Txn Execution",
+      "title": "Avg Gas per User Txn",
       "tooltip": {
         "shared": true,
         "sort": 0,

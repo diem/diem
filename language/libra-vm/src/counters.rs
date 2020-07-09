@@ -85,18 +85,10 @@ pub static TXN_EPILOGUE_SECONDS: Lazy<Histogram> = Lazy::new(|| {
     .unwrap()
 });
 
-pub static TXN_EXECUTION_GAS_USAGE: Lazy<Histogram> = Lazy::new(|| {
+pub static TXN_GAS_USAGE: Lazy<Histogram> = Lazy::new(|| {
     register_histogram!(
-        "libra_vm_txn_execution_gas_usage",
-        "Histogram for the gas used during txn execution"
-    )
-    .unwrap()
-});
-
-pub static TXN_TOTAL_GAS_USAGE: Lazy<Histogram> = Lazy::new(|| {
-    register_histogram!(
-        "libra_vm_txn_total_gas_usage",
-        "Histogram for the total gas used for txns"
+        "libra_vm_txn_gas_usage",
+        "Histogram for the gas used for txns"
     )
     .unwrap()
 });

@@ -124,7 +124,6 @@ impl LibraVM {
     ) -> Result<TransactionOutput, VMStatus> {
         let gas_schedule = self.0.get_gas_schedule()?;
         let mut session = self.0.new_session(remote_cache);
-        // TODO: The logic for handling falied transaction fee is pretty ugly right now. Fix it later.
 
         // Run the validation logic
         {
@@ -156,12 +155,6 @@ impl LibraVM {
                     cost_strategy,
                 )
                 .map_err(|e| e.into_vm_status())?;
-
-            let gas_usage = txn_data
-                .max_gas_amount()
-                .sub(cost_strategy.remaining_gas())
-                .get();
-            TXN_EXECUTION_GAS_USAGE.observe(gas_usage as f64);
 
             cost_strategy.disable_metering();
             self.success_transaction_cleanup(
@@ -262,6 +255,12 @@ impl LibraVM {
             }
         };
 
+        let gas_usage = txn_data
+            .max_gas_amount()
+            .sub(cost_strategy.remaining_gas())
+            .get();
+        TXN_GAS_USAGE.observe(gas_usage as f64);
+
         match result {
             Ok(output) => output,
             Err(err) => {
@@ -319,21 +318,11 @@ impl LibraVM {
         remote_cache: &mut StateViewCache<'_>,
         block_metadata: BlockMetadata,
     ) -> Result<TransactionOutput, VMStatus> {
-        // TODO: How should we setup the metadata here? A couple of thoughts here:
-        // 1. We might make the txn_data to be poisoned so that reading anything will result in a panic.
-        // 2. The most important consideration is figuring out the sender address.  Having a notion of a
-        //    "null address" (probably 0x0...0) that is prohibited from containing modules or resources
-        //    might be useful here.
-        // 3. We set the max gas to a big number just to get rid of the potential out of gas error.
         let mut txn_data = TransactionMetadata::default();
         txn_data.sender = account_config::reserved_vm_address();
-        txn_data.max_gas_amount = GasUnits::new(std::u64::MAX);
 
         let gas_schedule = zero_cost_schedule();
-        let mut cost_strategy = CostStrategy::transaction(&gas_schedule, txn_data.max_gas_amount());
-        cost_strategy
-            .charge_intrinsic_gas(txn_data.transaction_size())
-            .map_err(|e| e.into_vm_status())?;
+        let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
         let mut session = self.0.new_session(remote_cache);
 
         if let Ok((round, timestamp, previous_vote, proposer)) = block_metadata.into_inner() {

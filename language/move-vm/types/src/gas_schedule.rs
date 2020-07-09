@@ -35,10 +35,10 @@ pub struct CostStrategy<'a> {
 }
 
 impl<'a> CostStrategy<'a> {
-    /// A transaction `CostStrategy`. Charge for every operation and fails once there
+    /// A transaction `CostStrategy`. Charge for every operation and fail when there
     /// is no more gas to pay for operations.
     ///
-    /// This is the instantiation the must be used when execution a user script.
+    /// This is the instantiation that must be used when executing a user script.
     pub fn transaction(cost_table: &'a CostTable, gas_left: GasUnits<GasCarrier>) -> Self {
         Self {
             cost_table,
