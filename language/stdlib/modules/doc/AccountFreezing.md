@@ -17,6 +17,7 @@
 -  [Specification](#0x1_AccountFreezing_Specification)
     -  [Function `freeze_account`](#0x1_AccountFreezing_Specification_freeze_account)
     -  [Function `unfreeze_account`](#0x1_AccountFreezing_Specification_unfreeze_account)
+    -  [Function `account_is_frozen`](#0x1_AccountFreezing_Specification_account_is_frozen)
 
 
 
@@ -312,7 +313,7 @@ Returns if the account at
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountFreezing_account_is_frozen">account_is_frozen</a>(addr: address): bool
 <b>acquires</b> <a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a> {
-    borrow_global&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen
+    exists&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr) && borrow_global&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen
  }
 </code></pre>
 
@@ -335,10 +336,13 @@ Returns if the account at
 
 
 
-TODO(wrwg): function takes very long to verify; investigate why
 
-
-<pre><code>pragma verify = <b>false</b>;
+<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role">Roles::spec_has_treasury_compliance_role</a>(account);
+<b>aborts_if</b> frozen_address == <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
+<b>aborts_if</b> frozen_address == <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_TREASURY_COMPLIANCE_ADDRESS">CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS</a>();
+<b>aborts_if</b> !exists&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(frozen_address);
+<b>aborts_if</b> !exists&lt;<a href="#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
+<b>ensures</b> <a href="#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(frozen_address);
 </code></pre>
 
 
@@ -353,14 +357,35 @@ TODO(wrwg): function takes very long to verify; investigate why
 
 
 
-TODO(wrwg): function takes very long to verify; investigate why
+
+<pre><code><b>aborts_if</b> !<a href="Roles.md#0x1_Roles_spec_has_treasury_compliance_role">Roles::spec_has_treasury_compliance_role</a>(account);
+<b>aborts_if</b> !exists&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(unfrozen_address);
+<b>aborts_if</b> !exists&lt;<a href="#0x1_AccountFreezing_FreezeEventsHolder">FreezeEventsHolder</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
+<b>ensures</b> !<a href="#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(unfrozen_address);
+</code></pre>
 
 
-<pre><code>pragma verify = <b>false</b>;
+
+<a name="0x1_AccountFreezing_Specification_account_is_frozen"></a>
+
+### Function `account_is_frozen`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_AccountFreezing_account_is_frozen">account_is_frozen</a>(addr: address): bool
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> <b>false</b>;
 </code></pre>
 
 
 
 
 <pre><code>pragma verify = <b>true</b>;
+<a name="0x1_AccountFreezing_spec_account_is_frozen"></a>
+<b>define</b> <a href="#0x1_AccountFreezing_spec_account_is_frozen">spec_account_is_frozen</a>(addr: address): bool {
+    exists&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr) && <b>global</b>&lt;<a href="#0x1_AccountFreezing_FreezingBit">FreezingBit</a>&gt;(addr).is_frozen
+}
 </code></pre>

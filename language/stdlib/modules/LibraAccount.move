@@ -116,6 +116,7 @@ module LibraAccount {
     const EPARENT_VASP_CURRENCY_LIMITS_DNE: u64 = 13;
     const ENOT_A_CURRENCY: u64 = 14;
     const EADD_EXISTING_CURRENCY: u64 = 15;
+    const EACCOUNT_FROZEN: u64 = 16;
 
     /// Prologue errors. These are separated out from the other errors in this
     /// module since they are mapped separately to major VM statuses, and are
@@ -240,6 +241,8 @@ module LibraAccount {
         metadata: vector<u8>,
         metadata_signature: vector<u8>
     ) acquires LibraAccount, Balance, AccountOperationsCapability {
+        assert(!AccountFreezing::account_is_frozen(payee), EACCOUNT_FROZEN);
+
         // Check that the `to_deposit` coin is non-zero
         let deposit_value = Libra::value(&to_deposit);
         assert(deposit_value > 0, ECOIN_DEPOSIT_IS_ZERO);
@@ -293,6 +296,7 @@ module LibraAccount {
                            )
                        );
         aborts_if to_deposit.value == 0;
+        aborts_if AccountFreezing::spec_account_is_frozen(payee);
         aborts_if !exists<LibraAccount>(payee);
         aborts_if !exists<Balance<Token>>(payee);
         aborts_if global<Balance<Token>>(payee).coin.value + to_deposit.value > max_u64();
@@ -352,6 +356,7 @@ module LibraAccount {
         balance: &mut Balance<Token>,
         amount: u64
     ): Libra<Token> acquires AccountOperationsCapability {
+        assert(!AccountFreezing::account_is_frozen(payer), EACCOUNT_FROZEN);
         // Make sure that this withdrawal is compliant with the limits on
         // the account if it's a inter-VASP transfer,
         if (should_track_limits_for_account(payer, payee, true)) {
@@ -802,11 +807,8 @@ module LibraAccount {
         // Verify that the transaction sender's account exists
         assert(exists_at(transaction_sender), EPROLOGUE_ACCOUNT_DNE);
 
-        // We check whether this account is frozen, and also, if it's a VASP
-        // account if its parent account is frozen. Freezing a parent VASP
-        // account should effectively freeze all child accounts as well.
+        // We check whether this account is frozen, if it is no transaction can be sent from it.
         assert(!AccountFreezing::account_is_frozen(transaction_sender), EPROLOGUE_ACCOUNT_FROZEN);
-        assert(!VASP::is_frozen(transaction_sender), EPROLOGUE_ACCOUNT_FROZEN);
 
         // Load the transaction sender's account
         let sender_account = borrow_global_mut<LibraAccount>(transaction_sender);

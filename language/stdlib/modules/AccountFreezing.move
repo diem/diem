@@ -76,8 +76,12 @@ module AccountFreezing {
         );
     }
     spec fun freeze_account {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
+        aborts_if !Roles::spec_has_treasury_compliance_role(account);
+        aborts_if frozen_address == CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
+        aborts_if frozen_address == CoreAddresses::SPEC_TREASURY_COMPLIANCE_ADDRESS();
+        aborts_if !exists<FreezingBit>(frozen_address);
+        aborts_if !exists<FreezeEventsHolder>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
+        ensures spec_account_is_frozen(frozen_address);
     }
 
     /// Unfreeze the account at `addr`.
@@ -98,18 +102,27 @@ module AccountFreezing {
         );
     }
     spec fun unfreeze_account {
-        /// TODO(wrwg): function takes very long to verify; investigate why
-        pragma verify = false;
+        aborts_if !Roles::spec_has_treasury_compliance_role(account);
+        aborts_if !exists<FreezingBit>(unfrozen_address);
+        aborts_if !exists<FreezeEventsHolder>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
+        ensures !spec_account_is_frozen(unfrozen_address);
     }
 
     /// Returns if the account at `addr` is frozen.
     public fun account_is_frozen(addr: address): bool
     acquires FreezingBit {
-        borrow_global<FreezingBit>(addr).is_frozen
+        exists<FreezingBit>(addr) && borrow_global<FreezingBit>(addr).is_frozen
      }
+    spec fun account_is_frozen {
+        aborts_if false;
+    }
 
     spec module {
         pragma verify = true;
+
+        define spec_account_is_frozen(addr: address): bool {
+            exists<FreezingBit>(addr) && global<FreezingBit>(addr).is_frozen
+        }
     }
 }
 }

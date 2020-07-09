@@ -7,7 +7,6 @@ module VASP {
     use 0x1::Roles;  // alias import does not play well with spec functions in Roles.
     use 0x1::Libra;
     use 0x1::AccountLimits::{Self, AccountLimitMutationCapability};
-    use 0x1::AccountFreezing;
 
     /// Each VASP has a unique root account that holds a `ParentVASP` resource. This resource holds
     /// the VASP's globally unique name and all of the metadata that other VASPs need to perform
@@ -186,15 +185,6 @@ module VASP {
         define spec_is_child_vasp(addr: address): bool {
             exists<ChildVASP>(addr)
         }
-    }
-
-    /// A VASP account is frozen if itself is frozen, or if its parent account is frozen.
-    public fun is_frozen(addr: address): bool
-    acquires ChildVASP {
-        is_vasp(addr) && (
-            AccountFreezing::account_is_frozen(parent_address(addr)) ||
-            AccountFreezing::account_is_frozen(addr)
-        )
     }
 
     /// Returns true if `addr` is a VASP.

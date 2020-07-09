@@ -646,6 +646,8 @@ Record a payment of
     metadata: vector&lt;u8&gt;,
     metadata_signature: vector&lt;u8&gt;
 ) <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a>, <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+    <b>assert</b>(!<a href="AccountFreezing.md#0x1_AccountFreezing_account_is_frozen">AccountFreezing::account_is_frozen</a>(payee), EACCOUNT_FROZEN);
+
     // Check that the `to_deposit` coin is non-zero
     <b>let</b> deposit_value = <a href="Libra.md#0x1_Libra_value">Libra::value</a>(&to_deposit);
     <b>assert</b>(deposit_value &gt; 0, ECOIN_DEPOSIT_IS_ZERO);
@@ -776,6 +778,7 @@ Helper to withdraw
     balance: &<b>mut</b> <a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;,
     amount: u64
 ): <a href="Libra.md#0x1_Libra">Libra</a>&lt;Token&gt; <b>acquires</b> <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
+    <b>assert</b>(!<a href="AccountFreezing.md#0x1_AccountFreezing_account_is_frozen">AccountFreezing::account_is_frozen</a>(payer), EACCOUNT_FROZEN);
     // Make sure that this withdrawal is compliant with the limits on
     // the account <b>if</b> it's a inter-<a href="VASP.md#0x1_VASP">VASP</a> transfer,
     <b>if</b> (<a href="#0x1_LibraAccount_should_track_limits_for_account">should_track_limits_for_account</a>(payer, payee, <b>true</b>)) {
@@ -1815,11 +1818,8 @@ It verifies:
     // Verify that the transaction sender's account exists
     <b>assert</b>(<a href="#0x1_LibraAccount_exists_at">exists_at</a>(transaction_sender), EPROLOGUE_ACCOUNT_DNE);
 
-    // We check whether this account is frozen, and also, <b>if</b> it's a <a href="VASP.md#0x1_VASP">VASP</a>
-    // account <b>if</b> its parent account is frozen. Freezing a parent <a href="VASP.md#0x1_VASP">VASP</a>
-    // account should effectively freeze all child accounts <b>as</b> well.
+    // We check whether this account is frozen, <b>if</b> it is no transaction can be sent from it.
     <b>assert</b>(!<a href="AccountFreezing.md#0x1_AccountFreezing_account_is_frozen">AccountFreezing::account_is_frozen</a>(transaction_sender), EPROLOGUE_ACCOUNT_FROZEN);
-    <b>assert</b>(!<a href="VASP.md#0x1_VASP_is_frozen">VASP::is_frozen</a>(transaction_sender), EPROLOGUE_ACCOUNT_FROZEN);
 
     // Load the transaction sender's account
     <b>let</b> sender_account = borrow_global_mut&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(transaction_sender);
@@ -2169,6 +2169,7 @@ TODO(wrwg): function takes very long to verify; investigate why
                        )
                    );
     <b>aborts_if</b> to_deposit.value == 0;
+    <b>aborts_if</b> <a href="AccountFreezing.md#0x1_AccountFreezing_spec_account_is_frozen">AccountFreezing::spec_account_is_frozen</a>(payee);
     <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount">LibraAccount</a>&gt;(payee);
     <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee);
     <b>aborts_if</b> <b>global</b>&lt;<a href="#0x1_LibraAccount_Balance">Balance</a>&lt;Token&gt;&gt;(payee).coin.value + to_deposit.value &gt; max_u64();
