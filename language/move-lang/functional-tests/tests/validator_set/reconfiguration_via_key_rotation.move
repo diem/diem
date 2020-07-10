@@ -1,9 +1,34 @@
 //! account: alice, 1000000, 0, validator
+//! account: bob
 //! account: vivian, 1000000, 0, validator
+//! account: dave
 //! account: viola, 1000000, 0, validator
 
-//! new-transaction
 //! sender: alice
+script {
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        // set bob to change alice's key
+        ValidatorConfig::set_operator(account, {{bob}});
+    }
+}
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: vivian
+script {
+    use 0x1::ValidatorConfig;
+    fun main(account: &signer) {
+        // set dave to change vivian's key
+        ValidatorConfig::set_operator(account, {{dave}});
+    }
+}
+
+// check: EXECUTED
+
+//! new-transaction
+//! sender: bob
 script{
     use 0x1::ValidatorConfig;
     // rotate alice's pubkey
@@ -25,7 +50,7 @@ script{
 // check: EXECUTED
 
 //! new-transaction
-//! sender: vivian
+//! sender: dave
 script{
     use 0x1::ValidatorConfig;
 
@@ -66,7 +91,7 @@ script{
 // check: EXECUTED
 
 //! new-transaction
-//! sender: vivian
+//! sender: dave
 script{
     use 0x1::ValidatorConfig;
     // rotate vivian's pubkey to the same value.
