@@ -36,6 +36,9 @@ transaction-builder = { path = "../../language/transaction-builder", version = "
 vm-genesis = { path = "../../language/tools/vm-genesis", version = "0.1.0" }
 config-builder = { path = "../config-builder", version = "0.1.0" }
 
+[dev-dependencies]
+libra-config = { path = "..", version = "0.1.0", features = ["fuzzing"] }
+
 [features]
 testing = []
 fuzzing = ["libra-config/fuzzing"]

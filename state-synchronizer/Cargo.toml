@@ -41,6 +41,7 @@ bytes = "0.5.6"
 config-builder = { path = "../config/config-builder", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libra-crypto = { path = "../crypto/crypto", version = "0.1.0" }
+libra-mempool = { path = "../mempool", version = "0.1.0", features = ["fuzzing"] }
 libra-network-address = { path = "../network/network-address", version = "0.1.0" }
 libradb = { path = "../storage/libradb", version = "0.1.0" }
 vm-genesis = { path = "../language/tools/vm-genesis", version = "0.1.0" }

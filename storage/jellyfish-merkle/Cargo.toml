@@ -32,6 +32,10 @@ rand = "0.7.3"
 proptest = "0.10.0"
 proptest-derive = "0.2.0"
 
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+libra-nibble = { path = "../../common/nibble", version = "0.1.0", features = ["fuzzing"] }
+libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+
 [features]
 default = []
 fuzzing = ["proptest", "proptest-derive", "libra-crypto/fuzzing", "libra-types/fuzzing", "libra-nibble/fuzzing"]

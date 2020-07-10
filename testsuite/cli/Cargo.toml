@@ -42,6 +42,8 @@ transaction-builder = { path = "../../language/transaction-builder", version = "
 [dev-dependencies]
 proptest = "0.10.0"
 
+libra-types = { path = "../../types", version = "0.1.0", features = ["fuzzing"] }
+
 [features]
 default = []
 fuzzing = ["proptest", "libra-crypto/fuzzing", "libra-types/fuzzing"]

@@ -83,18 +83,6 @@ impl SimulatedTimeService {
         }
     }
 
-    /// Creates new SimulatedTimeService in disabled state (time not running) with a max duration
-    pub fn max(max: Duration) -> SimulatedTimeService {
-        SimulatedTimeService {
-            inner: Arc::new(Mutex::new(SimulatedTimeServiceInner {
-                now: Duration::from_secs(0),
-                pending: vec![],
-                time_limit: Duration::from_secs(0),
-                max,
-            })),
-        }
-    }
-
     /// Creates new SimulatedTimeService that automatically advance time up to time_limit
     pub fn auto_advance_until(time_limit: Duration) -> SimulatedTimeService {
         SimulatedTimeService {

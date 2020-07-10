@@ -19,7 +19,7 @@ num-traits = "0.2.12"
 rust_decimal = "1.7.0"
 statistical = "1.0.0"
 
-cli = { path = "cli", version = "0.1.0" }
+cli = { path = "cli", version = "0.1.0", features = ["fuzzing"]  }
 debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 generate-key = { path = "../config/generate-key", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
