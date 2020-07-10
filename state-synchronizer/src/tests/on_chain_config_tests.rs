@@ -17,6 +17,7 @@ use libra_crypto::{
     x25519, HashValue,
 };
 use libra_types::{
+    account_address,
     account_config::{lbr_type_tag, libra_root_address},
     on_chain_config::{OnChainConfig, VMConfig, VMPublishingOption},
 };
@@ -79,16 +80,17 @@ fn test_on_chain_config_pub_sub() {
     let genesis_account = libra_root_address();
     let network_config = config.validator_network.as_ref().unwrap();
     let validator_account = network_config.peer_id();
-    let keys = config
+    let operator_key = config
         .test
         .as_mut()
         .unwrap()
         .operator_keypair
         .as_mut()
+        .unwrap()
+        .take_private()
         .unwrap();
-
-    let validator_privkey = keys.take_private().unwrap();
-    let validator_pubkey = keys.public_key();
+    let operator_public_key = operator_key.public_key();
+    let operator_account = account_address::from_public_key(&operator_public_key);
 
     // Create a dummy block prologue transaction that will bump the timer.
     let txn1 = encode_block_prologue_script(gen_block_metadata(1, validator_account));
@@ -169,10 +171,10 @@ fn test_on_chain_config_pub_sub() {
     let mut rng = ::rand::rngs::StdRng::from_seed(TEST_SEED);
     let new_network_pubkey = x25519::PrivateKey::generate(&mut rng).public_key();
     let txn5 = get_test_signed_transaction(
-        validator_account,
+        operator_account,
         /* sequence_number = */ 0,
-        validator_privkey,
-        validator_pubkey,
+        operator_key,
+        operator_public_key,
         Some(encode_set_validator_config_script(
             validator_account,
             new_pubkey.to_bytes().to_vec(),
