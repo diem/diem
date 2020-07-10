@@ -3,7 +3,11 @@
 
 use anyhow::{Context, Result};
 use backup_cli::{
-    backup_types::state_snapshot::backup::{StateSnapshotBackupController, StateSnapshotBackupOpt},
+    backup_types::{
+        epoch_ending::backup::{EpochEndingBackupController, EpochEndingBackupOpt},
+        state_snapshot::backup::{StateSnapshotBackupController, StateSnapshotBackupOpt},
+        transaction::backup::{TransactionBackupController, TransactionBackupOpt},
+    },
     storage::StorageOpt,
     utils::{
         backup_service_client::{BackupServiceClient, BackupServiceClientOpt},
@@ -45,13 +49,32 @@ struct OneShotBackupOpt {
     global: GlobalBackupOpt,
 
     #[structopt(flatten)]
-    state_snapshot: StateSnapshotBackupOpt,
-
-    #[structopt(flatten)]
     client: BackupServiceClientOpt,
 
     #[structopt(subcommand)]
-    storage: StorageOpt,
+    backup_type: BackupType,
+}
+
+#[derive(StructOpt)]
+enum BackupType {
+    EpochEnding {
+        #[structopt(flatten)]
+        opt: EpochEndingBackupOpt,
+        #[structopt(subcommand)]
+        storage: StorageOpt,
+    },
+    StateSnapshot {
+        #[structopt(flatten)]
+        opt: StateSnapshotBackupOpt,
+        #[structopt(subcommand)]
+        storage: StorageOpt,
+    },
+    Transaction {
+        #[structopt(flatten)]
+        opt: TransactionBackupOpt,
+        #[structopt(subcommand)]
+        storage: StorageOpt,
+    },
 }
 
 #[tokio::main]
@@ -68,19 +91,46 @@ async fn main() -> Result<()> {
             }
             OneShotCommand::Backup(opt) => {
                 let client = Arc::new(BackupServiceClient::new_with_opt(opt.client));
-                let storage = opt.storage.init_storage().await?;
+                let global_opt = opt.global;
 
-                let manifest = StateSnapshotBackupController::new(
-                    opt.state_snapshot,
-                    opt.global,
-                    client,
-                    storage,
-                )
-                .run()
-                .await
-                .context("Failed to backup account state.")?;
-
-                println!("Success. Manifest saved to {}", &manifest);
+                match opt.backup_type {
+                    BackupType::EpochEnding { opt, storage } => {
+                        EpochEndingBackupController::new(
+                            opt,
+                            global_opt,
+                            client,
+                            storage.init_storage().await?,
+                        )
+                        .run()
+                        .await
+                        .map(|m| println!("Epoch ending backup success. Manifest: {}", m))
+                        .context("Failed to back up epoch ending information.")?;
+                    }
+                    BackupType::StateSnapshot { opt, storage } => {
+                        StateSnapshotBackupController::new(
+                            opt,
+                            global_opt,
+                            client,
+                            storage.init_storage().await?,
+                        )
+                        .run()
+                        .await
+                        .map(|m| println!("State snapshot backup success. Manifest: {}", m))
+                        .context("Failed to back up state snapshot.")?;
+                    }
+                    BackupType::Transaction { opt, storage } => {
+                        TransactionBackupController::new(
+                            opt,
+                            global_opt,
+                            client,
+                            storage.init_storage().await?,
+                        )
+                        .run()
+                        .await
+                        .map(|m| println!("Transaction backup success. Manifest: {}", m))
+                        .context("Failed to back up transactions.")?;
+                    }
+                }
             }
         },
     }
