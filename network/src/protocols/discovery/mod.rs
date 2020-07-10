@@ -332,10 +332,6 @@ where
                             self.note.epoch()
                         );
                         if note.epoch() == std::u64::MAX {
-                            send_struct_log!(security_log(security_events::INVALID_DISCOVERY_MSG)
-                                .data("from_peer", &note.peer_id)
-                                .data("error", "Older note received for self has u64::MAX epoch.")
-                                .data("note", &note));
                             continue;
                         }
                         note = Note::new(

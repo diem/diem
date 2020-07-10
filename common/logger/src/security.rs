@@ -83,7 +83,4 @@ pub mod security_events {
 
     /// Network identified an invalid peer
     pub const INVALID_NETWORK_PEER: &str = "InvalidNetworkPeer";
-
-    /// Network discovery received an invalid DiscoveryMsg
-    pub const INVALID_DISCOVERY_MSG: &str = "InvalidDiscoveryMsg";
 }
