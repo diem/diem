@@ -8,6 +8,7 @@ use serde_json::Value;
 use std::{
     collections::HashMap,
     env,
+    fmt::Display,
     fs::{File, OpenOptions},
     io,
     io::Write as IoWrite,
@@ -110,6 +111,11 @@ impl StructuredLogEntry {
             serde_json::to_value(value).expect("Failed to serialize StructuredLogEntry key"),
         );
         self
+    }
+
+    /// Used for errors and other types that don't serialize well
+    pub fn data_display<D: Display>(self, key: &'static str, value: D) -> Self {
+        self.data(key, value.to_string())
     }
 
     pub fn field<D: Serialize>(self, field: &LoggingField<D>, value: D) -> Self {
