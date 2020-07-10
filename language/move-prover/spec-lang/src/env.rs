@@ -96,6 +96,10 @@ pub const CONDITION_INJECTED_PROP: &str = "$injected";
 /// even if they are injected.
 pub const CONDITION_EXPORT: &str = "export";
 
+/// Pragma which indicates that the functions aborts and ensure conditions shall be exported
+/// to the verification context even if the implementation of the function is inlined.
+pub const EXPORT_ENSURES_PRAGMA: &str = "export_ensures";
+
 // =================================================================================================
 /// # Locations
 

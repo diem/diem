@@ -9,6 +9,9 @@ module AccountLimits {
     use 0x1::CoreAddresses;
     use 0x1::Signer;
 
+    spec module {
+        pragma verify = true;
+    }
     /// An operations capability that restricts callers of this module since
     /// the operations can mutate account states.
     resource struct AccountLimitMutationCapability { }
@@ -207,6 +210,23 @@ module AccountLimits {
             window.window_outflow = 0;
         }
     }
+    spec fun reset_window {
+        include ResetWindowAbortsIf<CoinType>;
+    }
+    spec schema ResetWindowAbortsIf<CoinType> {
+        window: Window<CoinType>;
+        limits_definition: LimitsDefinition<CoinType>;
+        include LibraTimestamp::TimeAccessAbortsIf;
+        aborts_if window.window_start + limits_definition.time_period > max_u64();
+    }
+    spec module {
+        define spec_window_expired<CoinType>(
+            window: Window<CoinType>,
+            limits_definition: LimitsDefinition<CoinType>
+        ): bool {
+            LibraTimestamp::spec_now_microseconds() > window.window_start + limits_definition.time_period
+        }
+    }
 
     /// Verify that the receiving account tracked by the `receiving` window
     /// can receive `amount` funds without violating requirements
@@ -231,6 +251,45 @@ module AccountLimits {
         };
         inflow_ok && holding_ok
     }
+    spec fun can_receive {
+        pragma verify = true;
+        include CanReceiveAbortsIf<CoinType>;
+        include CanReceiveEnsures<CoinType>;
+    }
+    spec schema CanReceiveAbortsIf<CoinType> {
+        amount: num;
+        receiving: Window<CoinType>;
+        aborts_if !exists<LimitsDefinition<CoinType>>(receiving.limit_address);
+        include !spec_receiving_is_unrestricted<CoinType>(receiving)
+                    ==> CanReceiveRestrictedAbortsIf<CoinType>;
+    }
+    spec schema CanReceiveRestrictedAbortsIf<CoinType> {
+        amount: num;
+        receiving: Window<CoinType>;
+        aborts_if !spec_receiving_expired(receiving) && receiving.window_inflow + amount > max_u64();
+        aborts_if receiving.tracked_balance + amount > max_u64();
+        include ResetWindowAbortsIf<CoinType>{
+            window: receiving,
+            limits_definition: spec_limits_definition<CoinType>(receiving.limit_address)
+        };
+    }
+    spec schema CanReceiveEnsures<CoinType> {
+        amount: num;
+        receiving: Window<CoinType>;
+    }
+    spec module {
+        define spec_limits_definition<CoinType>(addr: address): LimitsDefinition<CoinType> {
+           global<LimitsDefinition<CoinType>>(addr)
+        }
+        define spec_receiving_is_unrestricted<CoinType>(receiving: Window<CoinType>): bool {
+            spec_is_unrestricted(spec_limits_definition<CoinType>(receiving.limit_address))
+        }
+        define spec_receiving_expired<CoinType>(receiving: Window<CoinType>): bool {
+            spec_window_expired(receiving, spec_limits_definition<CoinType>(receiving.limit_address))
+        }
+    }
+
+
 
     /// Verify that `amount` can be withdrawn from the account tracked
     /// by the `sending` window without violating any limits specified
@@ -262,6 +321,18 @@ module AccountLimits {
         limits_def.max_holding == U64_MAX &&
         limits_def.time_period == ONE_DAY
     }
+    spec fun is_unrestricted {
+        ensures result == spec_is_unrestricted(limits_def);
+    }
+    spec module {
+        define spec_is_unrestricted<CoinType>(limits_def: LimitsDefinition<CoinType>): bool {
+            limits_def.max_inflow == max_u64() &&
+            limits_def.max_outflow == max_u64() &&
+            limits_def.max_holding == max_u64() &&
+            limits_def.time_period == 86400000000
+        }
+    }
+
 
     public fun limits_definition_address<CoinType>(addr: address): address acquires Window {
         borrow_global<Window<CoinType>>(addr).limit_address
@@ -282,5 +353,6 @@ module AccountLimits {
     fun current_time(): u64 {
         if (LibraTimestamp::is_not_initialized()) 0 else LibraTimestamp::now_microseconds()
     }
+
 }
 }
