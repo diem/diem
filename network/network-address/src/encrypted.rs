@@ -20,23 +20,20 @@ pub const AES_GCM_TAG_LEN: usize = 16;
 /// The length in bytes of the AES-256-GCM nonce.
 pub const AES_GCM_NONCE_LEN: usize = 12;
 
-/// The length in bytes of the root key and derived per-validator account keys.
+/// The length in bytes of the `shared_val_netaddr_key` and per-validator
+/// `derived_key`.
 pub const KEY_LEN: usize = 32;
 
-/// A root key used to derive per-validator account keys.
-///
-/// This key should be shared amongst the validators for encrypting and decrypting
-/// the validator network addresses. There may be multiple versions of the root
-/// key, disambiguated by their `root_key_version`.
-pub type RootKey = [u8; KEY_LEN];
-pub type RootKeyVersion = u32;
+/// Convenient type alias for the `shared_val_netaddr_key` as an array.
+pub type Key = [u8; KEY_LEN];
+pub type KeyVersion = u32;
 
-// Constant root key + version so we can push `EncNetworkAddress` everywhere
-// without worrying about getting the key in the right places. these will be
-// test-only soon.
+/// Constant key + version so we can push `EncNetworkAddress` everywhere
+/// without worrying about getting the key in the right places. these will be
+/// test-only soon.
 // TODO(philiphayes): feature gate for testing/fuzzing only
-pub const TEST_ROOT_KEY: RootKey = [0u8; KEY_LEN];
-pub const TEST_ROOT_KEY_VERSION: RootKeyVersion = 0;
+pub const TEST_SHARED_VAL_NETADDR_KEY: Key = [0u8; KEY_LEN];
+pub const TEST_SHARED_VAL_NETADDR_KEY_VERSION: KeyVersion = 0;
 
 /// We salt the HKDF for deriving the account keys to provide application
 /// separation.
@@ -74,15 +71,15 @@ pub struct RawEncNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
 ///
 /// These encrypted network addresses are intended to be stored on-chain under
 /// each validator's advertised network addresses in their `ValidatorConfig`s.
-/// All validators share the secret `root_key`, though each validator's addresses
-/// are encrypted using a per-validator derived `account_key`.
+/// All validators share the secret `shared_val_netaddr_key`, though each validator's addresses
+/// are encrypted using a per-validator `derived_key`.
 ///
 /// ### Account Key
 ///
 /// ```txt
-/// account_key := HKDF-SHA3-256::extract_and_expand(
+/// derived_key := HKDF-SHA3-256::extract_and_expand(
 ///     salt=HKDF_SALT,
-///     ikm=root_key,
+///     ikm=shared_val_netaddr_key,
 ///     info=account_address,
 ///     output_length=32,
 /// )
@@ -90,14 +87,13 @@ pub struct RawEncNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
 ///
 /// where `hkdf_sha3_256_extract_and_expand` is
 /// [HKDF extract-and-expand](https://tools.ietf.org/html/rfc5869) with SHA3-256,
-/// `HKDF_SALT` is a constant salt for application separation, `root_key` is the
+/// `HKDF_SALT` is a constant salt for application separation, `shared_val_netaddr_key` is the
 /// shared secret distributed amongst all the validators, and `account_address`
 /// is the specific validator's [`AccountAddress`].
 ///
-/// We use per-validator derived `account_key`s to limit the "blast radius" of
+/// We use per-validator `derived_key`s to limit the "blast radius" of
 /// nonce reuse to each validator, i.e., a validator that accidentally reuses a
-/// nonce will only leak information about their network addresses or derived
-/// `account_key`.
+/// nonce will only leak information about their network addresses or `derived_key`.
 ///
 /// ### Encryption
 ///
@@ -105,14 +101,14 @@ pub struct RawEncNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
 ///
 /// ```txt
 /// enc_addr := AES-256-GCM::encrypt(
-///     key=account_key,
+///     key=derived_key,
 ///     nonce=nonce,
-///     ad=root_key_version,
+///     ad=key_version,
 ///     message=addr,
 /// )
 /// ```
 ///
-/// where `nonce` is a 96-bit integer as described below, `root_key_version` is
+/// where `nonce` is a 96-bit integer as described below, `key_version` is
 /// the key version as a u32 big-endian integer, `addr` is the serialized
 /// `RawNetworkAddress`, and `enc_addr` is the encrypted network address
 /// concatenated with the 16-byte authentication tag.
@@ -134,14 +130,14 @@ pub struct RawEncNetworkAddress(#[serde(with = "serde_bytes")] Vec<u8>);
 ///
 /// ### Key Rotation
 ///
-/// The `EncNetworkAddress` struct contains a `root_key_version` field, which
-/// identifies the specific `root_key` used to encrypt/decrypt the
+/// The `EncNetworkAddress` struct contains a `key_version` field, which
+/// identifies the specific `shared_val_netaddr_key` used to encrypt/decrypt the
 /// `EncNetworkAddress`.
 ///
 /// TODO(philiphayes): expand this section
 #[derive(Clone, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub struct EncNetworkAddress {
-    root_key_version: RootKeyVersion,
+    key_version: KeyVersion,
     seq_num: u64,
     #[serde(with = "serde_bytes")]
     enc_addr: Vec<u8>,
@@ -204,8 +200,8 @@ impl EncNetworkAddress {
     /// encrypt will panic if `addr` length > 64 GiB.
     pub fn encrypt(
         addr: RawNetworkAddress,
-        root_key: &RootKey,
-        root_key_version: RootKeyVersion,
+        shared_val_netaddr_key: &Key,
+        key_version: KeyVersion,
         account: &AccountAddress,
         seq_num: u64,
         addr_idx: u32,
@@ -213,20 +209,23 @@ impl EncNetworkAddress {
         // unpack the RawNetworkAddress into its base Vec<u8>
         let mut addr_vec: Vec<u8> = addr.into();
 
-        let account_key = Self::derive_account_key(root_key, account);
-        let aead = Aes256Gcm::new(GenericArray::from_slice(&account_key));
+        let derived_key = Self::derive_key(shared_val_netaddr_key, account);
+        let aead = Aes256Gcm::new(GenericArray::from_slice(&derived_key));
 
-        // nonce := seq_num || addr_idx; sizeof(nonce) == 12
+        // nonce := seq_num || addr_idx
+        //
+        // concatenate seq_num and addr_idx into a 12-byte AES-GCM nonce. both
+        // seq_num and addr_idx are big-endian integers.
+        //
         // ex: seq_num = 0x1234, addr_idx = 0x04
         //     ==> nonce_slice == &[0, 0, 0, 0, 0, 0, 0x12, 0x34, 0, 0, 0, 0x4]
-        let nonce = ((seq_num as u128) << 32) | (addr_idx as u128);
-        let nonce_buf = (nonce as u128).to_be_bytes();
-        let nonce_slice = &nonce_buf[mem::size_of::<u128>() - AES_GCM_NONCE_LEN..];
+        let nonce = (((seq_num as u128) << 32) | (addr_idx as u128)).to_be_bytes();
+        let nonce_slice = &nonce[mem::size_of::<u128>() - AES_GCM_NONCE_LEN..];
         let nonce_slice = GenericArray::from_slice(nonce_slice);
 
-        // the root_key_version is in-the-clear, so we include it in the integrity check
-        // using the "additonal data"
-        let ad_buf = root_key_version.to_be_bytes();
+        // the key_version is in-the-clear, so we include it in the integrity check
+        // using the "associated data"
+        let ad_buf = key_version.to_be_bytes();
         let ad_slice = &ad_buf[..];
 
         // encrypt the raw network address in-place
@@ -240,7 +239,7 @@ impl EncNetworkAddress {
         addr_vec.extend_from_slice(auth_tag.as_slice());
 
         Self {
-            root_key_version,
+            key_version,
             seq_num,
             enc_addr: addr_vec,
         }
@@ -248,11 +247,11 @@ impl EncNetworkAddress {
 
     pub fn decrypt(
         self,
-        root_key: &RootKey,
+        shared_val_netaddr_key: &Key,
         account: &AccountAddress,
         addr_idx: u32,
     ) -> Result<RawNetworkAddress, DecryptError> {
-        let root_key_version = self.root_key_version;
+        let key_version = self.key_version;
         let seq_num = self.seq_num;
         let mut enc_addr = self.enc_addr;
 
@@ -262,20 +261,23 @@ impl EncNetworkAddress {
             return Err(DecryptError);
         }
 
-        let account_key = Self::derive_account_key(root_key, account);
-        let aead = Aes256Gcm::new(GenericArray::from_slice(&account_key));
+        let derived_key = Self::derive_key(shared_val_netaddr_key, account);
+        let aead = Aes256Gcm::new(GenericArray::from_slice(&derived_key));
 
-        // nonce := seq_num || addr_idx; sizeof(nonce) == 12
+        // nonce := seq_num || addr_idx
+        //
+        // concatenate seq_num and addr_idx into a 12-byte AES-GCM nonce. both
+        // seq_num and addr_idx are big-endian integers.
+        //
         // ex: seq_num = 0x1234, addr_idx = 0x04
         //     ==> nonce_slice == &[0, 0, 0, 0, 0, 0, 0x12, 0x34, 0, 0, 0, 0x4]
-        let nonce = ((seq_num as u128) << 32) | (addr_idx as u128);
-        let nonce_buf = (nonce as u128).to_be_bytes();
-        let nonce_slice = &nonce_buf[mem::size_of::<u128>() - AES_GCM_NONCE_LEN..];
+        let nonce = (((seq_num as u128) << 32) | (addr_idx as u128)).to_be_bytes();
+        let nonce_slice = &nonce[mem::size_of::<u128>() - AES_GCM_NONCE_LEN..];
         let nonce_slice = GenericArray::from_slice(nonce_slice);
 
-        // the root_key_version is in-the-clear, so we include it in the integrity check
+        // the key_version is in-the-clear, so we include it in the integrity check
         // using the "additonal data"
-        let ad_buf = root_key_version.to_be_bytes();
+        let ad_buf = key_version.to_be_bytes();
         let ad_slice = &ad_buf[..];
 
         // split buffer into separate ciphertext and authentication tag slices
@@ -292,18 +294,19 @@ impl EncNetworkAddress {
         Ok(RawNetworkAddress::new(enc_addr))
     }
 
-    /// Given the shared `root_key`, derive the per-validator `account_key`.
-    fn derive_account_key(root_key: &RootKey, account: &AccountAddress) -> Vec<u8> {
+    /// Given the shared `shared_val_netaddr_key`, derive the per-validator
+    /// `derived_key`.
+    fn derive_key(shared_val_netaddr_key: &Key, account: &AccountAddress) -> Vec<u8> {
         let salt = Some(HKDF_SALT.as_ref());
         let info = Some(account.as_ref());
-        Hkdf::<Sha3_256>::extract_then_expand(salt, root_key, info, KEY_LEN).expect(
+        Hkdf::<Sha3_256>::extract_then_expand(salt, shared_val_netaddr_key, info, KEY_LEN).expect(
             "HKDF_SHA3_256 extract_then_expand is infallible here since all inputs \
              have valid and well-defined lengths enforced by the type system",
         )
     }
 
-    pub fn root_key_version(&self) -> RootKeyVersion {
-        self.root_key_version
+    pub fn key_version(&self) -> KeyVersion {
+        self.key_version
     }
 
     pub fn seq_num(&self) -> u64 {
@@ -326,8 +329,8 @@ impl Arbitrary for EncNetworkAddress {
     type Strategy = BoxedStrategy<Self>;
 
     fn arbitrary_with(_args: Self::Parameters) -> Self::Strategy {
-        let root_key = TEST_ROOT_KEY;
-        let root_key_version = TEST_ROOT_KEY_VERSION;
+        let shared_val_netaddr_key = TEST_SHARED_VAL_NETADDR_KEY;
+        let key_version = TEST_SHARED_VAL_NETADDR_KEY_VERSION;
         let account = AccountAddress::ZERO;
         let seq_num = 0;
         let addr_idx = 0;
@@ -336,8 +339,8 @@ impl Arbitrary for EncNetworkAddress {
             .prop_map(move |addr| {
                 EncNetworkAddress::encrypt(
                     addr,
-                    &root_key,
-                    root_key_version,
+                    &shared_val_netaddr_key,
+                    key_version,
                     &account,
                     seq_num,
                     addr_idx,
@@ -355,28 +358,30 @@ impl Arbitrary for EncNetworkAddress {
 mod test {
     use super::*;
     use crate::NetworkAddress;
-    use std::str::FromStr;
 
     // Ensure that modifying the ciphertext or associated data causes a decryption
     // error.
     #[test]
     fn expect_decryption_failures() {
-        let root_key = TEST_ROOT_KEY;
-        let root_key_version = TEST_ROOT_KEY_VERSION;
+        let shared_val_netaddr_key = TEST_SHARED_VAL_NETADDR_KEY;
+        let key_version = TEST_SHARED_VAL_NETADDR_KEY_VERSION;
         let account = AccountAddress::ZERO;
         let seq_num = 0x4589;
         let addr_idx = 123;
-        let addr = NetworkAddress::from_str("/ip4/127.0.0.1/tcp/1234").unwrap();
+        let addr = NetworkAddress::mock();
         let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
-        let enc_addr =
-            raw_addr
-                .clone()
-                .encrypt(&root_key, root_key_version, &account, seq_num, addr_idx);
+        let enc_addr = raw_addr.clone().encrypt(
+            &shared_val_netaddr_key,
+            key_version,
+            &account,
+            seq_num,
+            addr_idx,
+        );
 
         // we expect decrypting a properly encrypted address to work
         let dec_addr = enc_addr
             .clone()
-            .decrypt(&root_key, &account, addr_idx)
+            .decrypt(&shared_val_netaddr_key, &account, addr_idx)
             .unwrap();
         assert_eq!(raw_addr, dec_addr);
 
@@ -384,14 +389,14 @@ mod test {
         let mut malicious_enc_addr = enc_addr.clone();
         malicious_enc_addr.seq_num = 1234;
         malicious_enc_addr
-            .decrypt(&root_key, &account, addr_idx)
+            .decrypt(&shared_val_netaddr_key, &account, addr_idx)
             .unwrap_err();
 
-        // modifying the root_key_version should cause decryption failure
+        // modifying the key_version should cause decryption failure
         let mut malicious_enc_addr = enc_addr.clone();
-        malicious_enc_addr.root_key_version = 9999;
+        malicious_enc_addr.key_version = 9999;
         malicious_enc_addr
-            .decrypt(&root_key, &account, addr_idx)
+            .decrypt(&shared_val_netaddr_key, &account, addr_idx)
             .unwrap_err();
 
         // modifying the auth_tag should cause decryption failure
@@ -400,34 +405,34 @@ mod test {
         let buf_len = buf.len();
         buf[buf_len - 1] ^= 0x55;
         malicious_enc_addr
-            .decrypt(&root_key, &account, addr_idx)
+            .decrypt(&shared_val_netaddr_key, &account, addr_idx)
             .unwrap_err();
 
         // modifying the enc_addr ciphertext should cause decryption failure
         let mut malicious_enc_addr = enc_addr.clone();
         malicious_enc_addr.enc_addr = vec![0x42u8; 123];
         malicious_enc_addr
-            .decrypt(&root_key, &account, addr_idx)
+            .decrypt(&shared_val_netaddr_key, &account, addr_idx)
             .unwrap_err();
 
         // modifying the account address should cause decryption failure
         let malicious_account = AccountAddress::new([0x33; AccountAddress::LENGTH]);
         enc_addr
             .clone()
-            .decrypt(&root_key, &malicious_account, addr_idx)
+            .decrypt(&shared_val_netaddr_key, &malicious_account, addr_idx)
             .unwrap_err();
 
-        // modifying the root_key should cause decryption failure
-        let malicious_root_key = [0x88; KEY_LEN];
+        // modifying the shared_val_netaddr_key should cause decryption failure
+        let malicious_shared_val_netaddr_key = [0x88; KEY_LEN];
         enc_addr
             .clone()
-            .decrypt(&malicious_root_key, &account, addr_idx)
+            .decrypt(&malicious_shared_val_netaddr_key, &account, addr_idx)
             .unwrap_err();
 
         // modifying the addr_idx should cause decryption failure
         let malicious_addr_idx = 999;
         enc_addr
-            .decrypt(&root_key, &account, malicious_addr_idx)
+            .decrypt(&shared_val_netaddr_key, &account, malicious_addr_idx)
             .unwrap_err();
     }
 
@@ -436,28 +441,28 @@ mod test {
         fn encrypt_decrypt_roundtrip(
             raw_addr in any::<RawNetworkAddress>(),
         ) {
-            let root_key = TEST_ROOT_KEY;
-            let root_key_version = TEST_ROOT_KEY_VERSION;
+            let shared_val_netaddr_key = TEST_SHARED_VAL_NETADDR_KEY;
+            let key_version = TEST_SHARED_VAL_NETADDR_KEY_VERSION;
             let account = AccountAddress::ZERO;
             let seq_num = 0;
             let addr_idx = 0;
-            let enc_addr = raw_addr.clone().encrypt(&root_key, root_key_version, &account, seq_num, addr_idx);
-            let dec_addr = enc_addr.decrypt(&root_key, &account, addr_idx).unwrap();
+            let enc_addr = raw_addr.clone().encrypt(&shared_val_netaddr_key, key_version, &account, seq_num, addr_idx);
+            let dec_addr = enc_addr.decrypt(&shared_val_netaddr_key, &account, addr_idx).unwrap();
             assert_eq!(raw_addr, dec_addr);
         }
 
         #[test]
         fn encrypt_decrypt_roundtrip_all_parameters(
-            root_key in any::<RootKey>(),
-            root_key_version in any::<RootKeyVersion>(),
+            shared_val_netaddr_key in any::<Key>(),
+            key_version in any::<KeyVersion>(),
             account in any::<[u8; AccountAddress::LENGTH]>(),
             seq_num in any::<u64>(),
             addr_idx in any::<u32>(),
             raw_addr in any::<RawNetworkAddress>(),
         ) {
             let account = AccountAddress::new(account);
-            let enc_addr = raw_addr.clone().encrypt(&root_key, root_key_version, &account, seq_num, addr_idx);
-            let dec_addr = enc_addr.decrypt(&root_key, &account, addr_idx).unwrap();
+            let enc_addr = raw_addr.clone().encrypt(&shared_val_netaddr_key, key_version, &account, seq_num, addr_idx);
+            let dec_addr = enc_addr.decrypt(&shared_val_netaddr_key, &account, addr_idx).unwrap();
             assert_eq!(raw_addr, dec_addr);
         }
 

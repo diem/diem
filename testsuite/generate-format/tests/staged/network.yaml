@@ -11,7 +11,7 @@ DnsName:
   NEWTYPESTRUCT: STR
 EncNetworkAddress:
   STRUCT:
-    - root_key_version: U32
+    - key_version: U32
     - seq_num: U64
     - enc_addr: BYTES
 ErrorCode:

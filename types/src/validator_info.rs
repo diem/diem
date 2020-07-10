@@ -7,7 +7,9 @@ use libra_crypto::Uniform;
 use libra_crypto::{ed25519::Ed25519PublicKey, x25519};
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_network_address::{
-    encrypted::{RawEncNetworkAddress, TEST_ROOT_KEY, TEST_ROOT_KEY_VERSION},
+    encrypted::{
+        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+    },
     NetworkAddress, RawNetworkAddress,
 };
 #[cfg(any(test, feature = "fuzzing"))]
@@ -65,9 +67,13 @@ impl ValidatorInfo {
 
         let addr = NetworkAddress::mock();
         let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
-        let root_key = TEST_ROOT_KEY;
-        let key_version = TEST_ROOT_KEY_VERSION;
-        let enc_addr = raw_addr.encrypt(&root_key, key_version, &account_address, 0, 0);
+        let enc_addr = raw_addr.encrypt(
+            &TEST_SHARED_VAL_NETADDR_KEY,
+            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+            &account_address,
+            0,
+            0,
+        );
         let validator_network_address = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
 
         let private_key = x25519::PrivateKey::generate_for_testing();

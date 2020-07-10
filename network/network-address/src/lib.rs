@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::encrypted::{EncNetworkAddress, RootKey, RootKeyVersion};
+use crate::encrypted::{EncNetworkAddress, Key, KeyVersion};
 use libra_crypto::{
     traits::{CryptoMaterialError, ValidCryptoMaterialStringExt},
     x25519,
@@ -215,13 +215,20 @@ impl RawNetworkAddress {
 
     pub fn encrypt(
         self,
-        root_key: &RootKey,
-        root_key_version: RootKeyVersion,
+        shared_val_netaddr_key: &Key,
+        key_version: KeyVersion,
         account: &AccountAddress,
         seq_num: u64,
         addr_idx: u32,
     ) -> EncNetworkAddress {
-        EncNetworkAddress::encrypt(self, root_key, root_key_version, account, seq_num, addr_idx)
+        EncNetworkAddress::encrypt(
+            self,
+            shared_val_netaddr_key,
+            key_version,
+            account,
+            seq_num,
+            addr_idx,
+        )
     }
 }
 

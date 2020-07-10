@@ -9,7 +9,7 @@ use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::{register_histogram, DurationHistogram};
 use libra_network_address::{
-    encrypted::{EncNetworkAddress, RawEncNetworkAddress, RootKey, RootKeyVersion},
+    encrypted::{EncNetworkAddress, Key, KeyVersion, RawEncNetworkAddress},
     NetworkAddress, RawNetworkAddress,
 };
 use libra_types::on_chain_config::{OnChainConfigPayload, ValidatorSet, ON_CHAIN_CONFIG_REGISTRY};
@@ -51,7 +51,7 @@ pub static EVENT_PROCESSING_LOOP_BUSY_DURATION_S: Lazy<DurationHistogram> = Lazy
 /// for the ConnectivityManager.
 pub struct ConfigurationChangeListener {
     role: RoleType,
-    root_key_map: HashMap<RootKeyVersion, RootKey>,
+    shared_val_netaddr_key_map: HashMap<KeyVersion, Key>,
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
 }
@@ -62,7 +62,7 @@ pub fn gen_simple_discovery_reconfig_subscription(
 }
 
 fn decrypt_validator_netaddr(
-    root_key_map: &HashMap<RootKeyVersion, RootKey>,
+    shared_val_netaddr_key_map: &HashMap<KeyVersion, Key>,
     account: &AccountAddress,
     addr_idx: u32,
     raw_enc_addr: RawEncNetworkAddress,
@@ -76,18 +76,18 @@ fn decrypt_validator_netaddr(
             )
         })?;
 
-    let key_version = enc_addr.root_key_version();
-    let root_key = root_key_map
+    let key_version = enc_addr.key_version();
+    let shared_val_netaddr_key = shared_val_netaddr_key_map
         .get(&key_version)
-        .ok_or_else(|| format_err!("no root_key for version: {}", key_version))?;
-    let raw_addr = enc_addr.decrypt(root_key, account, addr_idx)?;
+        .ok_or_else(|| format_err!("no shared_val_netaddr_key for version: {}", key_version))?;
+    let raw_addr = enc_addr.decrypt(shared_val_netaddr_key, account, addr_idx)?;
     Ok(raw_addr)
 }
 
 /// Extracts a set of ConnectivityRequests from a ValidatorSet which are appropriate for a network with type role.
 fn extract_updates(
     role: RoleType,
-    root_key_map: &HashMap<RootKeyVersion, RootKey>,
+    shared_val_netaddr_key_map: &HashMap<KeyVersion, Key>,
     node_set: ValidatorSet,
 ) -> Vec<ConnectivityRequest> {
     // TODO(philiphayes): remove this after removing explicit pubkey field
@@ -116,7 +116,12 @@ fn extract_updates(
             let raw_addr_res = match role {
                 RoleType::Validator => {
                     let raw_enc_addr = config.validator_network_address;
-                    decrypt_validator_netaddr(&root_key_map, &peer_id, addr_idx, raw_enc_addr)
+                    decrypt_validator_netaddr(
+                        &shared_val_netaddr_key_map,
+                        &peer_id,
+                        addr_idx,
+                        raw_enc_addr,
+                    )
                 }
                 RoleType::FullNode => Ok(config.full_node_network_address),
             };
@@ -171,13 +176,13 @@ impl ConfigurationChangeListener {
     /// Creates a new ConfigurationListener
     pub fn new(
         role: RoleType,
-        root_key_map: HashMap<RootKeyVersion, RootKey>,
+        shared_val_netaddr_key_map: HashMap<KeyVersion, Key>,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     ) -> Self {
         Self {
             role,
-            root_key_map,
+            shared_val_netaddr_key_map,
             conn_mgr_reqs_tx,
             reconfig_events,
         }
@@ -190,7 +195,7 @@ impl ConfigurationChangeListener {
             .get()
             .expect("failed to get ValidatorSet from payload");
 
-        let updates = extract_updates(self.role, &self.root_key_map, node_set);
+        let updates = extract_updates(self.role, &self.shared_val_netaddr_key_map, node_set);
 
         info!(
             "Update {} Network about new Node IDs",

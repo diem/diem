@@ -14,7 +14,9 @@ use libra_crypto::{
     PrivateKey, Uniform, ValidCryptoMaterial,
 };
 use libra_network_address::{
-    encrypted::{RawEncNetworkAddress, TEST_ROOT_KEY, TEST_ROOT_KEY_VERSION},
+    encrypted::{
+        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+    },
     RawNetworkAddress,
 };
 use libra_types::{
@@ -497,13 +499,11 @@ pub fn validator_registrations(node_configs: &[NodeConfig]) -> Vec<ValidatorRegi
                 .append_prod_protos(identity_key, HANDSHAKE_VERSION);
             let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
 
-            let root_key = TEST_ROOT_KEY;
-            let key_version = TEST_ROOT_KEY_VERSION;
             let seq_num = 0;
             let addr_idx = 0;
             let enc_addr = raw_addr.clone().encrypt(
-                &root_key,
-                key_version,
+                &TEST_SHARED_VAL_NETADDR_KEY,
+                TEST_SHARED_VAL_NETADDR_KEY_VERSION,
                 &account_address,
                 seq_num,
                 addr_idx,
