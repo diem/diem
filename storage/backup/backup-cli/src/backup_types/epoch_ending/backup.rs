@@ -6,13 +6,13 @@ use crate::{
     storage::{BackupHandleRef, BackupStorage, FileHandle, ShellSafeName},
     utils::{
         backup_service_client::BackupServiceClient, read_record_bytes::ReadRecordBytes,
-        GlobalBackupOpt,
+        should_cut_chunk, GlobalBackupOpt,
     },
 };
 use anyhow::{ensure, Result};
 use libra_types::{ledger_info::LedgerInfoWithSignatures, waypoint::Waypoint};
 use once_cell::sync::Lazy;
-use std::{convert::TryInto, mem::size_of, str::FromStr, sync::Arc};
+use std::{convert::TryInto, str::FromStr, sync::Arc};
 use structopt::StructOpt;
 use tokio::io::AsyncWriteExt;
 
@@ -67,15 +67,8 @@ impl EpochEndingBackupController {
         let mut chunk_first_epoch: u64 = self.start_epoch;
 
         while let Some(record_bytes) = ledger_infos_file.read_record_bytes().await? {
-            if chunk_bytes.len() + size_of::<u32>() + record_bytes.len() > self.max_chunk_size {
-                ensure!(
-                    !chunk_bytes.is_empty(),
-                    "max chunk size too small: {}",
-                    self.max_chunk_size
-                );
-                assert!(chunk_bytes.len() <= self.max_chunk_size);
-                println!("Reached max_chunk_size.");
-
+            if should_cut_chunk(&chunk_bytes, &record_bytes, self.max_chunk_size) {
+                println!("New chunk.");
                 let chunk = self
                     .write_chunk(
                         &backup_handle,
@@ -96,7 +89,6 @@ impl EpochEndingBackupController {
         }
 
         assert!(!chunk_bytes.is_empty());
-        assert!(chunk_bytes.len() <= self.max_chunk_size);
         assert_eq!(current_epoch, self.end_epoch);
         println!("Last chunk.");
         let chunk = self
