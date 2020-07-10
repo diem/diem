@@ -84,10 +84,8 @@
     <a href="LibraVersion.md#0x1_LibraVersion_initialize">LibraVersion::initialize</a>(
         lr_account,
     );
-
-    <a href="DualAttestationLimit.md#0x1_DualAttestationLimit_initialize">DualAttestationLimit::initialize</a>(
+    <a href="DualAttestation.md#0x1_DualAttestation_initialize">DualAttestation::initialize</a>(
         lr_account,
-        tc_account,
     );
     <a href="LibraBlock.md#0x1_LibraBlock_initialize_block_metadata">LibraBlock::initialize_block_metadata</a>(lr_account);
     <a href="LibraWriteSetManager.md#0x1_LibraWriteSetManager_initialize">LibraWriteSetManager::initialize</a>(lr_account);

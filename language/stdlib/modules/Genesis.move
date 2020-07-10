@@ -9,7 +9,7 @@ module Genesis {
     use 0x1::VASP;
     use 0x1::Coin1;
     use 0x1::Coin2;
-    use 0x1::DualAttestationLimit;
+    use 0x1::DualAttestation;
     use 0x1::Event;
     use 0x1::LBR;
     use 0x1::Libra;
@@ -86,10 +86,8 @@ module Genesis {
         LibraVersion::initialize(
             lr_account,
         );
-
-        DualAttestationLimit::initialize(
+        DualAttestation::initialize(
             lr_account,
-            tc_account,
         );
         LibraBlock::initialize_block_metadata(lr_account);
         LibraWriteSetManager::initialize(lr_account);

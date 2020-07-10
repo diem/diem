@@ -251,7 +251,7 @@ module Roles {
          has_libra_root_role(account)
     }
 
-    public fun has_update_dual_attestation_threshold_privilege(account: &signer): bool acquires RoleId {
+    public fun has_update_dual_attestation_limit_privilege(account: &signer): bool acquires RoleId {
          has_treasury_compliance_role(account)
     }
 

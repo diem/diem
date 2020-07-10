@@ -1,8 +1,9 @@
 address 0x1 {
 
 module DualAttestation {
+    use 0x1::CoreAddresses;
     use 0x1::DesignatedDealer;
-    use 0x1::DualAttestationLimit;
+    use 0x1::LBR::LBR;
     use 0x1::LCS;
     use 0x1::Libra;
     use 0x1::LibraTimestamp;
@@ -33,17 +34,33 @@ module DualAttestation {
         expiration_date: u64,
     }
 
-    // Error codes
-    const ENOT_PARENT_VASP_OR_DD: u64 = 0;
-    /// Transaction not signed by LibraRoot or TreasuryCompliance
-    const ENOT_LIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 1;
-    /// Cannot parse this as an ed25519 public key
-    const EINVALID_PUBLIC_KEY: u64 = 2;
-    /// Cannot parse this as an ed25519 signature (e.g., != 64 bytes)
-    const EMALFORMED_METADATA_SIGNATURE: u64 = 4;
-    /// Signature does not match message and public key
-    const EINVALID_METADATA_SIGNATURE: u64 = 5;
+    /// Struct to store the limit on-chain
+    resource struct Limit {
+        micro_lbr_limit: u64,
+    }
 
+    // Error codes
+    /// Attempting to initialize the dual attestation limit after genesis
+    const ENOT_GENESIS: u64 = 0;
+    /// Calling a privileged function from an account without the LibraRoot role
+    const EACCOUNT_NOT_LIBRA_ROOT: u64 = 1;
+    /// Attempting to publish a `Credential` resource under an account without the ParentVASP or
+    /// DesignatedDealer role
+    const ENOT_PARENT_VASP_OR_DD: u64 = 2;
+    /// Transaction not signed by LibraRoot or TreasuryCompliance
+    const ENOT_LIBRA_ROOT_OR_TREASURY_COMPLIANCE: u64 = 3;
+    /// Attempting to update the limit from an account that does not contain the
+    /// `ModifyLimitCapability` resource
+    const ECANNOT_UPDATE_LIMIT: u64 = 4;
+    /// Cannot parse this as an ed25519 public key
+    const EINVALID_PUBLIC_KEY: u64 = 5;
+    /// Cannot parse this as an ed25519 signature (e.g., != 64 bytes)
+    const EMALFORMED_METADATA_SIGNATURE: u64 = 6;
+    /// Signature does not match message and public key
+    const EINVALID_METADATA_SIGNATURE: u64 = 7;
+
+    /// Value of the dual attestation limit at genesis
+    const INITIAL_DUAL_ATTESTATION_LIMIT: u64 = 1000;
     /// Suffix of every signed dual attestation message
     const DOMAIN_SEPARATOR: vector<u8> = b"@@$$LIBRA_ATTEST$$@@";
     /// A year in microseconds
@@ -118,6 +135,10 @@ module DualAttestation {
     public fun compliance_public_key(addr: address): vector<u8> acquires Credential {
         *&borrow_global<Credential>(addr).compliance_public_key
     }
+    spec fun compliance_public_key {
+        aborts_if !exists<Credential>(addr);
+        ensures result == spec_compliance_public_key(addr);
+    }
     spec module {
         /// Spec version of `Self::compliance_public_key`.
         define spec_compliance_public_key(addr: address): vector<u8> {
@@ -141,7 +162,7 @@ module DualAttestation {
         credential.expiration_date = LibraTimestamp::now_microseconds() + ONE_YEAR;
     }
     spec fun recertify {
-        // TODO: use ONE_YEAR below
+        // TODO: use ONE_YEAR below once the spec language supports constants
         aborts_if !LibraTimestamp::root_ctm_initialized();
         aborts_if LibraTimestamp::spec_now_microseconds() + 31540000000000 > max_u64();
         ensures credential.expiration_date
@@ -183,19 +204,19 @@ module DualAttestation {
     /// Helper which returns true if dual attestion is required for a deposit.
     fun dual_attestation_required<Token>(
         payer: address, payee: address, deposit_value: u64
-    ): bool {
-        // travel rule applies for payments over a threshold
-        let travel_rule_limit_microlibra = DualAttestationLimit::get_cur_microlibra_limit();
+    ): bool acquires Limit {
+        // travel rule applies for payments over a limit
+        let travel_rule_limit_microlibra = get_cur_microlibra_limit();
         let approx_lbr_microlibra_value = Libra::approx_lbr_for_value<Token>(deposit_value);
-        let above_threshold = approx_lbr_microlibra_value >= travel_rule_limit_microlibra;
-        if (!above_threshold) {
+        let above_limit = approx_lbr_microlibra_value >= travel_rule_limit_microlibra;
+        if (!above_limit) {
             return false
         };
         // self-deposits never require dual attestation
         if (payer == payee) {
             return false
         };
-        // dual attestation is required if the amount is above the threshold AND between distinct
+        // dual attestation is required if the amount is above the limit AND between distinct
         // entities. E.g.:
         // (1) inter-VASP
         // (2) inter-DD
@@ -221,7 +242,7 @@ module DualAttestation {
     }
     spec schema TravelRuleAppliesAbortsIf<Token> {
         aborts_if !Libra::spec_is_currency<Token>();
-        aborts_if !DualAttestationLimit::spec_is_published();
+        aborts_if !spec_is_published();
     }
     spec module {
         define spec_is_inter_vasp(payer: address, payee: address): bool {
@@ -242,7 +263,7 @@ module DualAttestation {
             payer: address, payee: address, deposit_value: u64
         ): bool {
             Libra::spec_approx_lbr_for_value<Token>(deposit_value)
-                    >= DualAttestationLimit::spec_get_cur_microlibra_limit() &&
+                    >= spec_get_cur_microlibra_limit() &&
             payer != payee &&
             (spec_is_inter_vasp(payer, payee) ||
              spec_is_inter_dd(payer, payee) ||
@@ -333,14 +354,72 @@ module DualAttestation {
         value: u64,
         metadata: vector<u8>,
         metadata_signature: vector<u8>
-    ) acquires Credential {
+    ) acquires Credential, Limit {
         if (dual_attestation_required<Currency>(payer, payee, value)) {
           assert_signature_is_valid(payer, payee, metadata_signature, metadata, value)
         }
     }
 
+    ///////////////////////////////////////////////////////////////////////////
+    // Creating and updating dual attestation limit
+    ///////////////////////////////////////////////////////////////////////////
+
+    /// Travel rule limit set during genesis
+    public fun initialize(lr_account: &signer) {
+        assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
+        assert(
+            Signer::address_of(lr_account) == CoreAddresses::LIBRA_ROOT_ADDRESS(),
+            EACCOUNT_NOT_LIBRA_ROOT
+        );
+        move_to(
+            lr_account,
+            Limit {
+                micro_lbr_limit: INITIAL_DUAL_ATTESTATION_LIMIT * Libra::scaling_factor<LBR>()
+            }
+        )
+    }
+
+    /// Return the current dual attestation limit in microlibra
+    public fun get_cur_microlibra_limit(): u64 acquires Limit {
+        borrow_global<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS()).micro_lbr_limit
+    }
+    spec fun get_cur_microlibra_limit {
+        aborts_if !exists<Limit>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
+        ensures result == spec_get_cur_microlibra_limit();
+    }
+
+    /// Set the dual attestation limit to `micro_libra_limit`.
+    /// Aborts if `tc_account` does not have the TreasuryCompliance role
+    public fun set_microlibra_limit(tc_account: &signer, micro_lbr_limit: u64) acquires Limit {
+        assert(
+            Roles::has_update_dual_attestation_limit_privilege(tc_account),
+            ECANNOT_UPDATE_LIMIT
+        );
+        borrow_global_mut<Limit>(CoreAddresses::LIBRA_ROOT_ADDRESS()).micro_lbr_limit = micro_lbr_limit;
+    }
+
+    // **************************** SPECIFICATION ********************************
+
+    /// The Limit resource should be published after genesis
+    spec schema LimitExists {
+        invariant !LibraTimestamp::spec_is_genesis() ==> spec_is_published();
+    }
+
     spec module {
         pragma verify = true;
+
+        /// Helper function to determine whether the Limit is published.
+        define spec_is_published(): bool {
+            exists<Limit>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
+        }
+
+        /// Mirrors `Self::get_cur_microlibra_limit`.
+        define spec_get_cur_microlibra_limit(): u64 {
+            global<Limit>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS()).micro_lbr_limit
+        }
+
+        // TODO(shb): why does verification of LimitExists fail for only these two procedures?
+        apply LimitExists to * except get_cur_microlibra_limit, compliance_public_key;
     }
 
 }

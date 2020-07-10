@@ -25,7 +25,7 @@
 -  [Function `has_child_VASP_role`](#0x1_Roles_has_child_VASP_role)
 -  [Function `has_unhosted_role`](#0x1_Roles_has_unhosted_role)
 -  [Function `has_register_new_currency_privilege`](#0x1_Roles_has_register_new_currency_privilege)
--  [Function `has_update_dual_attestation_threshold_privilege`](#0x1_Roles_has_update_dual_attestation_threshold_privilege)
+-  [Function `has_update_dual_attestation_limit_privilege`](#0x1_Roles_has_update_dual_attestation_limit_privilege)
 -  [Function `has_on_chain_config_privilege`](#0x1_Roles_has_on_chain_config_privilege)
 -  [Specification](#0x1_Roles_Specification)
     -  [Function `grant_libra_root_role`](#0x1_Roles_Specification_grant_libra_root_role)
@@ -615,13 +615,13 @@ module that uses it.
 
 </details>
 
-<a name="0x1_Roles_has_update_dual_attestation_threshold_privilege"></a>
+<a name="0x1_Roles_has_update_dual_attestation_limit_privilege"></a>
 
-## Function `has_update_dual_attestation_threshold_privilege`
+## Function `has_update_dual_attestation_limit_privilege`
 
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_has_update_dual_attestation_threshold_privilege">has_update_dual_attestation_threshold_privilege</a>(account: &signer): bool
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_has_update_dual_attestation_limit_privilege">has_update_dual_attestation_limit_privilege</a>(account: &signer): bool
 </code></pre>
 
 
@@ -630,7 +630,7 @@ module that uses it.
 <summary>Implementation</summary>
 
 
-<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_has_update_dual_attestation_threshold_privilege">has_update_dual_attestation_threshold_privilege</a>(account: &signer): bool <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_Roles_has_update_dual_attestation_limit_privilege">has_update_dual_attestation_limit_privilege</a>(account: &signer): bool <b>acquires</b> <a href="#0x1_Roles_RoleId">RoleId</a> {
      <a href="#0x1_Roles_has_treasury_compliance_role">has_treasury_compliance_role</a>(account)
 }
 </code></pre>
