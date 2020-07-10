@@ -33,9 +33,7 @@ struct CategorySampling {
 #[macro_export]
 macro_rules! trace_event {
     ($stage:expr, $node:tt) => {
-        $crate::counters::TRACE_EVENT_CALL_COUNT.inc();
         if $crate::is_selected($crate::node_sampling_data!($node)) {
-            $crate::counters::TRACE_EVENT_SELECT_COUNT.inc();
             trace_event!($stage; {$crate::format_node!($node), module_path!(), Option::<u64>::None});
         }
     };
@@ -84,9 +82,7 @@ macro_rules! send_logs {
 #[macro_export]
 macro_rules! trace_code_block {
     ($stage:expr, $node:tt) => {
-        $crate::counters::TRACE_EVENT_CALL_COUNT.inc();
         let trace_guard = if $crate::is_selected($crate::node_sampling_data!($node)) {
-            $crate::counters::TRACE_EVENT_SELECT_COUNT.inc();
             let node = $crate::format_node!($node);
             trace_event!($stage; {node.clone(), module_path!(), Option::<u64>::None});
             Some($crate::trace::TraceBlockGuard::new_entered(
@@ -99,9 +95,7 @@ macro_rules! trace_code_block {
         };
     };
     ($stage:expr, $node:tt, $guard_vec:tt) => {
-        $crate::counters::TRACE_EVENT_CALL_COUNT.inc();
         if $crate::is_selected($crate::node_sampling_data!($node)) {
-            $crate::counters::TRACE_EVENT_SELECT_COUNT.inc();
             let node = $crate::format_node!($node);
             let trace_guard = $crate::trace::TraceBlockGuard::new_entered(
                 concat!($stage, "::done"),
@@ -139,7 +133,6 @@ impl TraceBlockGuard {
 
 impl Drop for TraceBlockGuard {
     fn drop(&mut self) {
-        crate::counters::TRACE_EVENT_DROP_COUNT.inc();
         let duration = format!("{:.0?}", Instant::now().duration_since(self.started));
         trace_event!(self.stage; {self.node, self.module_path, duration});
     }
@@ -148,9 +141,7 @@ impl Drop for TraceBlockGuard {
 #[macro_export]
 macro_rules! end_trace {
     ($stage:expr, $node:tt) => {
-        $crate::counters::TRACE_EVENT_CALL_COUNT.inc();
         if $crate::is_selected($crate::node_sampling_data!($node)) {
-            $crate::counters::TRACE_EVENT_SELECT_COUNT.inc();
             let json = serde_json::json!({
                     "path": module_path!(),
                     "node": $crate::format_node!($node),
@@ -165,11 +156,7 @@ macro_rules! end_trace {
 #[macro_export]
 macro_rules! trace_edge {
     ($stage:expr, $node_from:tt, $node_to:tt) => {
-        $crate::counters::TRACE_EVENT_CALL_COUNT.inc();
-        $crate::counters::TRACE_EDGE_CALL_COUNT.inc();
         if $crate::is_selected($crate::node_sampling_data!($node_from)) {
-            $crate::counters::TRACE_EVENT_SELECT_COUNT.inc();
-            $crate::counters::TRACE_EDGE_COUNT.inc();
             let json = serde_json::json!({
                     "path": module_path!(),
                     "node": $crate::format_node!($node_from),
@@ -427,11 +414,6 @@ pub fn is_selected(node: (&'static str, u64)) -> bool {
         match &SAMPLING_CONFIG {
             Some(Sampling(sampling)) => {
                 if let Some(sampling_rate) = sampling.get(node.0) {
-                    if sampling_rate.denominator == 1 {
-                        crate::counters::TRACE_EVENT_BLOCK_COUNT.inc();
-                    } else {
-                        crate::counters::TRACE_EVENT_TXN_COUNT.inc();
-                    }
                     node.1 % sampling_rate.denominator < sampling_rate.nominator
                 } else {
                     // assume no sampling if sampling category is not found and return true

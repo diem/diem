@@ -217,7 +217,7 @@ macro_rules! struct_log {
     ($($arg:tt)+) => {
         let mut entry = $crate::StructuredLogEntry::new_unnamed();
         $crate::format_struct_args_and_pattern!(entry, $($arg)+);
-        $crate::send_struct_log!(entry);
+        // $crate::send_struct_log!(entry);
     }
 }
 

@@ -46,8 +46,8 @@ spec:
       EOF
       cat << EOF > /opt/libra/data/fluent-bit/fluent-bit.conf
       [SERVICE]
-          Flush         5
-          Log_Level     info
+          Flush         150
+          Log_Level     error
           Daemon        off
           Parsers_File  /opt/libra/data/fluent-bit/parsers.conf
 
@@ -55,7 +55,7 @@ spec:
           Name              tail
           Tag               validator
           Path              /opt/libra/data/${{libra_log_file}}
-          Mem_Buf_Limit     200MB
+          Mem_Buf_Limit     500MB
           Refresh_Interval  10
           Skip_Long_Lines   On
 
@@ -63,7 +63,7 @@ spec:
           Name              tail
           Tag               validator-events
           Path              /opt/libra/data/events.log
-          Mem_Buf_Limit     200MB
+          Mem_Buf_Limit     500MB
           Refresh_Interval  10
           Skip_Long_Lines   On
           Parser            events
@@ -82,6 +82,7 @@ spec:
           Replace_Dots    Off
           Retry_Limit     False
           Logstash_Prefix kubernetes_cluster
+          Generate_ID     On
       EOF
       touch /opt/libra/data/safety_rules_addr
       if [[ {enable_lsr} = true ]]; then
@@ -147,11 +148,11 @@ spec:
     - name: CFG_FULLNODE_SEED
       value: "{cfg_fullnode_seed}"
     - name: RUST_LOG
-      value: "warn"
+      value: "error"
     - name: STRUCT_LOG_FILE
       value: "/opt/libra/data/events.log"
     - name: STRUCT_LOG_LEVEL
-      value: "debug"
+      value: "error"
     - name: RUST_BACKTRACE
       value: "1"
     - name: CFG_OVERRIDES

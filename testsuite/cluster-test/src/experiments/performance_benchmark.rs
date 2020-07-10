@@ -219,20 +219,18 @@ impl Experiment for PerformanceBenchmark {
                     events.push(event);
                 }
                 events.sort_by_key(|k| k.timestamp);
-                let node = debug_interface::libra_trace::random_node(
-                    &events[..],
-                    "json-rpc::submit",
-                    "txn::",
-                )
-                .expect("No trace node found");
+                let node = random_node(&events[..], "json-rpc::submit", "txn::")
+                    .expect("No trace node found");
                 info!("Tracing {}", node);
-                debug_interface::libra_trace::trace_node(&events[..], &node);
+                trace_node(&events[..], &node);
             }
         }
         drop(backup);
 
         let end = unix_timestamp_now() - buffer;
         let start = end - window + 2 * buffer;
+        tokio::time::delay_for(Duration::from_secs(240)).await;
+        info!("Finish waiting for traces");
         let avg_txns_per_block = stats::avg_txns_per_block(&context.prometheus, start, end);
         let avg_txns_per_block = avg_txns_per_block
             .map_err(|e| warn!("Failed to query avg_txns_per_block: {}", e))
