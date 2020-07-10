@@ -6,7 +6,7 @@ use crate::{
     storage::{BackupHandleRef, BackupStorage, FileHandle, ShellSafeName},
     utils::{
         backup_service_client::BackupServiceClient, read_record_bytes::ReadRecordBytes,
-        GlobalBackupOpt,
+        should_cut_chunk, GlobalBackupOpt,
     },
 };
 use anyhow::{anyhow, Result};
@@ -17,7 +17,7 @@ use libra_types::{
     proof::TransactionInfoWithProof, transaction::Version,
 };
 use once_cell::sync::Lazy;
-use std::{convert::TryInto, mem::size_of, str::FromStr, sync::Arc};
+use std::{convert::TryInto, str::FromStr, sync::Arc};
 use structopt::StructOpt;
 use tokio::io::AsyncWriteExt;
 
@@ -69,9 +69,8 @@ impl StateSnapshotBackupController {
         let mut chunk_first_idx: usize = 0;
 
         while let Some(record_bytes) = state_snapshot_file.read_record_bytes().await? {
-            if chunk_bytes.len() + size_of::<u32>() + record_bytes.len() > self.max_chunk_size {
-                assert!(chunk_bytes.len() <= self.max_chunk_size);
-                println!("Reached max_chunk_size.");
+            if should_cut_chunk(&chunk_bytes, &record_bytes, self.max_chunk_size) {
+                println!("New Chunk.");
 
                 let chunk = self
                     .write_chunk(
@@ -96,7 +95,6 @@ impl StateSnapshotBackupController {
         }
 
         assert!(!chunk_bytes.is_empty());
-        assert!(chunk_bytes.len() <= self.max_chunk_size);
         println!("Last chunk.");
         let chunk = self
             .write_chunk(
