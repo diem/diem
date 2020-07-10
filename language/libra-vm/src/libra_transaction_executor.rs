@@ -296,6 +296,7 @@ impl LibraVM {
     ) -> Result<TransactionOutput, VMStatus> {
         let (write_set, events) = change_set.into_inner();
         self.read_writeset(remote_cache, &write_set)?;
+        SYSTEM_TRANSACTIONS_EXECUTED.inc();
         Ok(TransactionOutput::new(
             write_set,
             events,
@@ -337,6 +338,7 @@ impl LibraVM {
         } else {
             return Err(VMStatus::Error(StatusCode::MALFORMED));
         };
+        SYSTEM_TRANSACTIONS_EXECUTED.inc();
 
         get_transaction_output(
             &mut (),
@@ -447,6 +449,7 @@ impl LibraVM {
             .chain(epilogue_events.iter())
             .cloned()
             .collect();
+        SYSTEM_TRANSACTIONS_EXECUTED.inc();
 
         Ok(TransactionOutput::new(
             write_set,
@@ -519,7 +522,7 @@ impl LibraVM {
                 TransactionStatus::Retry => None,
             };
             if let Some(label) = counter_label {
-                TRANSACTIONS_EXECUTED.with_label_values(&[label]).inc();
+                USER_TRANSACTIONS_EXECUTED.with_label_values(&[label]).inc();
             }
 
             // `result` is initially empty, a single element is pushed per loop iteration and
