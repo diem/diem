@@ -264,6 +264,8 @@ where
     max_concurrent_network_notifs: usize,
     /// Size of channels between different actors.
     channel_size: usize,
+    /// Max network frame size
+    max_frame_size: usize,
 }
 
 impl<TTransport, TSocket> PeerManager<TTransport, TSocket>
@@ -288,6 +290,7 @@ where
         channel_size: usize,
         max_concurrent_network_reqs: usize,
         max_concurrent_network_notifs: usize,
+        max_frame_size: usize,
     ) -> Self {
         let (transport_notifs_tx, transport_notifs_rx) = channel::new(
             channel_size,
@@ -325,6 +328,7 @@ where
             max_concurrent_network_reqs,
             max_concurrent_network_notifs,
             channel_size,
+            max_frame_size,
         }
     }
 
@@ -629,6 +633,7 @@ where
             self.max_concurrent_network_reqs,
             self.max_concurrent_network_notifs,
             self.channel_size,
+            self.max_frame_size,
         );
         // Start background task to handle events (RPCs and DirectSend messages) received from
         // peer.

@@ -79,6 +79,9 @@ pub struct Peer<TSocket> {
     direct_send_notifs_tx: channel::Sender<PeerNotification>,
     /// Flag to indicate if the actor is being shut down.
     state: State,
+    /// The maximum size of an inbound or outbound request frame
+    /// Currently, requests are only a single frame
+    max_frame_size: usize,
 }
 
 impl<TSocket> Peer<TSocket>
@@ -92,6 +95,7 @@ where
         peer_notifs_tx: channel::Sender<PeerNotification>,
         rpc_notifs_tx: channel::Sender<PeerNotification>,
         direct_send_notifs_tx: channel::Sender<PeerNotification>,
+        max_frame_size: usize,
     ) -> Self {
         let Connection {
             metadata: connection_metadata,
@@ -106,6 +110,7 @@ where
             rpc_notifs_tx,
             direct_send_notifs_tx,
             state: State::Connected,
+            max_frame_size,
         }
     }
 
@@ -119,16 +124,24 @@ where
             "Starting Peer actor for peer: {:?}",
             self_peer_id.short_str()
         );
+
         // Split the connection into a ReadHalf and a WriteHalf.
         let (reader, writer) = tokio::io::split(IoCompat::new(self.connection.take().unwrap()));
+        let mut codec_builder = LengthDelimitedCodec::builder();
+        codec_builder
+            .max_frame_length(self.max_frame_size)
+            .length_field_length(4)
+            .big_endian();
         // Convert ReadHalf to Stream of length-delimited messages.
-        let reader = FramedRead::new(reader, LengthDelimitedCodec::new()).fuse();
+
+        let reader = FramedRead::new(reader, codec_builder.new_codec()).fuse();
         // Create a rate-limited stream of inbound messages.
         let mut reader = reader
             .ratelimit(MESSAGE_RATE_LIMIT_WINDOW, MESSAGE_RATE_LIMIT_COUNT)
             .fuse();
+
         // Convert WriteHalf to Sink of length-delimited messages.
-        let writer = FramedWrite::new(writer, LengthDelimitedCodec::new());
+        let writer = FramedWrite::new(writer, codec_builder.new_codec());
         // Start writer "process" as a separate task. We receive two handles to communicate with
         // the task:
         // `write_reqs_tx`: Instruction to send a NetworkMessage on the wire.
@@ -176,7 +189,7 @@ where
                     // task drops all pending outbound messages and closes the connection.
                     if let Err(e) = close_tx.send(()) {
                         info!(
-                            "Failed to send close intruction to writer task. It must already be terminating/terminated. Error: {:?}",
+                            "Failed to send close instruction to writer task. It must already be terminating/terminated. Error: {:?}",
                             e
                         );
                     }
@@ -236,7 +249,7 @@ where
                         if let Err(e) = writer
                             .send(
                                 lcs::to_bytes(&message)
-                                    .expect("Outboung message failed to serialize")
+                                    .expect("Outbound message failed to serialize")
                                     .into(),
                             )
                             .map_ok(|_| ack_ch.send(Ok(())))

@@ -23,3 +23,4 @@ pub const MAX_CONCURRENT_NETWORK_REQS: usize = 100;
 pub const MAX_CONCURRENT_NETWORK_NOTIFS: usize = 100;
 pub const MAX_CONNECTION_DELAY_MS: u64 = 60_000; /* 1 minute */
 pub const MAX_FULLNODE_CONNECTIONS: usize = 3;
+pub const MAX_FRAME_SIZE: usize = 8 * 1024 * 1024; /* 8 MiB */

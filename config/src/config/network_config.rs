@@ -55,6 +55,7 @@ pub struct NetworkConfig {
     // mutual_authentication network. This config field is intended as a fallback
     // in case some peers don't have well defined addresses.
     pub seed_pubkeys: SeedPublicKeys,
+    pub max_frame_size: usize,
 }
 
 impl Default for NetworkConfig {
@@ -74,6 +75,7 @@ impl NetworkConfig {
             network_id,
             seed_pubkeys: HashMap::default(),
             seed_addrs: HashMap::default(),
+            max_frame_size: 8 * 1024 * 1024, // TODO use constant
         };
         config.prepare_identity();
         config
@@ -93,6 +95,7 @@ impl NetworkConfig {
             network_id: self.network_id.clone(),
             seed_pubkeys: self.seed_pubkeys.clone(),
             seed_addrs: self.seed_addrs.clone(),
+            max_frame_size: self.max_frame_size,
         }
     }
 

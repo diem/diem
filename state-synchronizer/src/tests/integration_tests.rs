@@ -374,6 +374,7 @@ impl SynchronizerEnv {
                 self.peer_ids[new_peer_idx],
                 addr.clone(),
                 authentication_mode,
+                constants::MAX_FRAME_SIZE,
             );
             network_builder
                 .seed_addrs(seed_addrs)

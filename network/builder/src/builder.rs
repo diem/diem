@@ -87,6 +87,7 @@ impl NetworkBuilder {
         peer_id: PeerId,
         listen_address: NetworkAddress,
         authentication_mode: AuthenticationMode,
+        max_frame_size: usize,
     ) -> NetworkBuilder {
         // TODO: Pass network_context in as a constructed object.
         let network_context = Arc::new(NetworkContext::new(network_id, role, peer_id));
@@ -106,6 +107,7 @@ impl NetworkBuilder {
             constants::MAX_CONCURRENT_NETWORK_REQS,
             // TODO:  Move to a config
             constants::MAX_CONCURRENT_NETWORK_NOTIFS,
+            max_frame_size,
         );
 
         NetworkBuilder {
@@ -157,6 +159,7 @@ impl NetworkBuilder {
             peer_id,
             config.listen_address.clone(),
             authentication_mode,
+            config.max_frame_size,
         );
         network_builder
             .seed_addrs(config.seed_addrs.clone())

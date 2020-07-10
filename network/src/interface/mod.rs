@@ -69,6 +69,7 @@ where
         max_concurrent_reqs: usize,
         max_concurrent_notifs: usize,
         channel_size: usize,
+        max_frame_size: usize,
     ) -> (
         libra_channel::Sender<ProtocolId, NetworkRequest>,
         libra_channel::Receiver<ProtocolId, NetworkNotification>,
@@ -110,6 +111,7 @@ where
             peer_notifs_tx,
             peer_rpc_notifs_tx,
             peer_ds_notifs_tx,
+            max_frame_size,
         );
         executor.spawn(peer.start());
 

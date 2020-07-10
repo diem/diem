@@ -193,6 +193,7 @@ pub struct PeerManagerBuilder {
     // ListenAddress will be updated when the PeerManager is built
     listen_address: NetworkAddress,
     state: State,
+    max_frame_size: usize,
 }
 
 impl PeerManagerBuilder {
@@ -206,6 +207,7 @@ impl PeerManagerBuilder {
         channel_size: usize,
         max_concurrent_network_reqs: usize,
         max_concurrent_network_notifs: usize,
+        max_frame_size: usize,
     ) -> Self {
         // Setup channel to send requests to peer manager.
         let (pm_reqs_tx, pm_reqs_rx) = libra_channel::new(
@@ -244,6 +246,7 @@ impl PeerManagerBuilder {
             tcp_peer_manager: None,
             listen_address,
             state: State::CREATED,
+            max_frame_size,
         }
     }
 
@@ -369,6 +372,7 @@ impl PeerManagerBuilder {
             pm_context.max_concurrent_network_reqs,
             pm_context.max_concurrent_network_notifs,
             pm_context.channel_size,
+            self.max_frame_size,
         );
 
         // PeerManager constructor appends a public key to the listen_address.
