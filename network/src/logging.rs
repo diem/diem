@@ -34,6 +34,7 @@ pub mod network_events {
     };
     use libra_config::network_id::NetworkContext;
     use libra_logger::LoggingField;
+    use libra_network_address::NetworkAddress;
     use libra_types::PeerId;
 
     /// Labels
@@ -59,4 +60,6 @@ pub mod network_events {
         &LoggingField::new("connection_request");
     pub const PEER_MANAGER_REQUEST: &LoggingField<&PeerManagerRequest> =
         &LoggingField::new("peer_manager_request");
+    pub const NETWORK_ADDRESS: &LoggingField<&NetworkAddress> =
+        &LoggingField::new("network_address");
 }
