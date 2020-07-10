@@ -2100,6 +2100,19 @@ Asserts that
 ## Specification
 
 
+Returns true if a BurnCapability for CoinType exists at addr.
+
+
+<a name="0x1_Libra_spec_has_burn_cap"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_Libra_spec_has_burn_cap">spec_has_burn_cap</a>&lt;CoinType&gt;(addr: address): bool {
+    exists&lt;<a href="#0x1_Libra_BurnCapability">BurnCapability</a>&lt;CoinType&gt;&gt;(addr)
+}
+</code></pre>
+
+
+
 <a name="0x1_Libra_Specification_Libra"></a>
 
 ### Resource `Libra`
@@ -2463,6 +2476,19 @@ Account for updating
 
 <pre><code>pragma aborts_if_is_partial = <b>true</b>;
 <b>ensures</b> <a href="#0x1_Libra_spec_has_mint_capability">spec_has_mint_capability</a>&lt;CoinType&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(tc_account));
+</code></pre>
+
+
+
+Returns the market cap of CoinType.
+
+
+<a name="0x1_Libra_spec_market_cap"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_Libra_spec_market_cap">spec_market_cap</a>&lt;CoinType&gt;(): u128 {
+    <b>global</b>&lt;<a href="#0x1_Libra_CurrencyInfo">CurrencyInfo</a>&lt;CoinType&gt;&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>()).total_value
+}
 </code></pre>
 
 

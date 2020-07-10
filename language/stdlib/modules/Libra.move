@@ -230,6 +230,13 @@ module Libra {
         move_to(account, cap)
     }
 
+    spec module {
+        /// Returns true if a BurnCapability for CoinType exists at addr.
+        define spec_has_burn_cap<CoinType>(addr: address): bool {
+            exists<BurnCapability<CoinType>>(addr)
+        }
+    }
+
     /// Mints `amount` coins. The `account` must hold a
     /// `MintCapability<CoinType>` at the top-level in order for this call
     /// to be successful, and will fail with `MISSING_DATA` otherwise.
@@ -740,6 +747,13 @@ module Libra {
     public fun market_cap<CoinType>(): u128
     acquires CurrencyInfo {
         borrow_global<CurrencyInfo<CoinType>>(CoreAddresses::CURRENCY_INFO_ADDRESS()).total_value
+    }
+
+    spec module {
+        /// Returns the market cap of CoinType.
+        define spec_market_cap<CoinType>(): u128 {
+            global<CurrencyInfo<CoinType>>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS()).total_value
+        }
     }
 
     /// Returns the value of the coin in the `FromCoinType` currency in LBR.

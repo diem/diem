@@ -98,10 +98,30 @@ module LBR {
         move_to(lr_account, Reserve { mint_cap, burn_cap, preburn_cap, coin1, coin2 });
     }
 
+    spec module {
+        /// Returns true if the Reserve has been initialized.
+        define spec_is_initialized(): bool {
+            exists<Reserve>(CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS())
+        }
+    }
+
     /// Returns true if `CoinType` is `LBR::LBR`
     public fun is_lbr<CoinType>(): bool {
         Libra::is_currency<CoinType>() &&
             Libra::currency_code<CoinType>() == Libra::currency_code<LBR>()
+    }
+
+    spec fun is_lbr {
+        pragma verify = false, opaque = true;
+        /// The following is correct because currency codes are unique.
+        ensures result == spec_is_lbr<CoinType>();
+    }
+
+    spec module {
+        /// Returns true if CoinType is LBR.
+        define spec_is_lbr<CoinType>(): bool {
+            type<CoinType>() == type<LBR>()
+        }
     }
 
     /// We take the truncated multiplication + 1 (not ceiling!) to withdraw for each currency that makes up the `LBR`.
@@ -150,7 +170,7 @@ module LBR {
     /// would be `6` and `3` for `Coin1` and `Coin2` respectively.
     public fun unpack(coin: Libra<LBR>): (Libra<Coin1>, Libra<Coin2>)
     acquires Reserve {
-        let reserve = borrow_global_mut<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        let reserve = borrow_global_mut<Reserve>(reserve_address());
         let ratio_multiplier = Libra::value(&coin);
         let sender = reserve_address();
         Libra::preburn_with_resource(coin, &mut reserve.preburn_cap, sender);
@@ -160,6 +180,12 @@ module LBR {
         let coin1 = Libra::withdraw(&mut reserve.coin1.backing, coin1_amount);
         let coin2 = Libra::withdraw(&mut reserve.coin2.backing, coin2_amount);
         (coin1, coin2)
+    }
+
+    spec fun unpack {
+        /// > TODO(emmazzz): turn opaque off when we are able to fully specify unpack.
+        pragma opaque = true;
+        ensures Libra::spec_market_cap<LBR>() == old(Libra::spec_market_cap<LBR>()) - coin.value;
     }
 
     /// Return the account address where the globally unique LBR::Reserve resource is stored
