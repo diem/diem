@@ -14,6 +14,9 @@
 -  [Function `create`](#0x1_LBR_create)
 -  [Function `unpack`](#0x1_LBR_unpack)
 -  [Function `reserve_address`](#0x1_LBR_reserve_address)
+-  [Specification](#0x1_LBR_Specification)
+    -  [Function `is_lbr`](#0x1_LBR_Specification_is_lbr)
+    -  [Function `unpack`](#0x1_LBR_Specification_unpack)
 
 This module defines the
 <code><a href="#0x1_LBR">LBR</a></code> currency as an on-chain reserve. The
@@ -408,7 +411,7 @@ would be
 
 <pre><code><b>public</b> <b>fun</b> <b>unpack</b>(coin: <a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;): (<a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;, <a href="Libra.md#0x1_Libra">Libra</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;)
 <b>acquires</b> <a href="#0x1_LBR_Reserve">Reserve</a> {
-    <b>let</b> reserve = borrow_global_mut&lt;<a href="#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>());
+    <b>let</b> reserve = borrow_global_mut&lt;<a href="#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="#0x1_LBR_reserve_address">reserve_address</a>());
     <b>let</b> ratio_multiplier = <a href="Libra.md#0x1_Libra_value">Libra::value</a>(&coin);
     <b>let</b> sender = <a href="#0x1_LBR_reserve_address">reserve_address</a>();
     <a href="Libra.md#0x1_Libra_preburn_with_resource">Libra::preburn_with_resource</a>(coin, &<b>mut</b> reserve.preburn_cap, sender);
@@ -449,3 +452,74 @@ Return the account address where the globally unique LBR::Reserve resource is st
 
 
 </details>
+
+<a name="0x1_LBR_Specification"></a>
+
+## Specification
+
+
+Returns true if the Reserve has been initialized.
+
+
+<a name="0x1_LBR_spec_is_initialized"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LBR_spec_is_initialized">spec_is_initialized</a>(): bool {
+    exists&lt;<a href="#0x1_LBR_Reserve">Reserve</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_CURRENCY_INFO_ADDRESS">CoreAddresses::SPEC_CURRENCY_INFO_ADDRESS</a>())
+}
+</code></pre>
+
+
+
+<a name="0x1_LBR_Specification_is_lbr"></a>
+
+### Function `is_lbr`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_LBR_is_lbr">is_lbr</a>&lt;CoinType&gt;(): bool
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>false</b>, opaque = <b>true</b>;
+</code></pre>
+
+
+The following is correct because currency codes are unique.
+
+
+<pre><code><b>ensures</b> result == <a href="#0x1_LBR_spec_is_lbr">spec_is_lbr</a>&lt;CoinType&gt;();
+</code></pre>
+
+
+
+Returns true if CoinType is LBR.
+
+
+<a name="0x1_LBR_spec_is_lbr"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_LBR_spec_is_lbr">spec_is_lbr</a>&lt;CoinType&gt;(): bool {
+    type&lt;CoinType&gt;() == type&lt;<a href="#0x1_LBR">LBR</a>&gt;()
+}
+</code></pre>
+
+
+
+<a name="0x1_LBR_Specification_unpack"></a>
+
+### Function `unpack`
+
+
+<pre><code><b>public</b> <b>fun</b> <b>unpack</b>(coin: <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;<a href="#0x1_LBR_LBR">LBR::LBR</a>&gt;): (<a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;<a href="Coin1.md#0x1_Coin1_Coin1">Coin1::Coin1</a>&gt;, <a href="Libra.md#0x1_Libra_Libra">Libra::Libra</a>&lt;<a href="Coin2.md#0x1_Coin2_Coin2">Coin2::Coin2</a>&gt;)
+</code></pre>
+
+
+
+> TODO(emmazzz): turn opaque off when we are able to fully specify unpack.
+
+
+<pre><code>pragma opaque = <b>true</b>;
+<b>ensures</b> <a href="Libra.md#0x1_Libra_spec_market_cap">Libra::spec_market_cap</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;() == <b>old</b>(<a href="Libra.md#0x1_Libra_spec_market_cap">Libra::spec_market_cap</a>&lt;<a href="#0x1_LBR">LBR</a>&gt;()) - coin.value;
+</code></pre>
