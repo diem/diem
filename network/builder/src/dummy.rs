@@ -13,7 +13,7 @@ use libra_network_address::NetworkAddress;
 use libra_types::PeerId;
 use netcore::transport::ConnectionOrigin;
 use network::{
-    constants::NETWORK_CHANNEL_SIZE,
+    constants::{MAX_FRAME_SIZE, NETWORK_CHANNEL_SIZE},
     error::NetworkError,
     peer_manager::{
         builder::AuthenticationMode, ConnectionRequestSender, PeerManagerRequestSender,
@@ -145,6 +145,7 @@ pub fn setup_network() -> DummyNetwork {
         listener_peer_id,
         listener_addr,
         authentication_mode,
+        MAX_FRAME_SIZE,
     );
     network_builder
         .seed_pubkeys(seed_pubkeys.clone())
@@ -168,6 +169,7 @@ pub fn setup_network() -> DummyNetwork {
         dialer_peer_id,
         dialer_addr,
         authentication_mode,
+        MAX_FRAME_SIZE,
     );
     network_builder
         .seed_addrs(seed_addrs)

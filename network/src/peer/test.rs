@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
+    constants,
     peer::{DisconnectReason, Peer, PeerHandle, PeerNotification},
     protocols::wire::{
         handshake::v1::MessagingProtocolVersion,
@@ -60,6 +61,7 @@ fn build_test_peer(
         peer_notifs_tx,
         peer_rpc_notifs_tx,
         peer_direct_send_notifs_tx,
+        constants::MAX_FRAME_SIZE,
     );
     let peer_handle = PeerHandle::new(peer_id, peer_req_tx);
 
