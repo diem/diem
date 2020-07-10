@@ -819,7 +819,9 @@ fn load_signature_tokens(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Vec<S
 }
 
 /// Deserializes a `SignatureToken`.
-fn load_signature_token(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<SignatureToken> {
+pub(crate) fn load_signature_token(
+    cursor: &mut Cursor<&[u8]>,
+) -> BinaryLoaderResult<SignatureToken> {
     // The following algorithm works by storing partially constructed types on a stack.
     //
     // Example:
@@ -941,6 +943,10 @@ fn load_signature_token(cursor: &mut Cursor<&[u8]>) -> BinaryLoaderResult<Signat
     };
 
     loop {
+        if stack.len() > SIGNATURE_TOKEN_DEPTH_MAX {
+            return Err(PartialVMError::new(StatusCode::MALFORMED)
+                .with_message("Maximum recursion depth reached".to_string()));
+        }
         if stack.last().unwrap().is_saturated() {
             let tok = stack.pop().unwrap().unwrap_saturated();
             match stack.pop() {

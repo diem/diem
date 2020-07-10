@@ -596,6 +596,37 @@ impl<'a> Iterator for SignatureTokenPreorderTraversalIter<'a> {
     }
 }
 
+/// Alternative preorder traversal iterator for SignatureToken that also returns the depth at each node.
+pub struct SignatureTokenPreorderTraversalIterWithDepth<'a> {
+    stack: Vec<(&'a SignatureToken, usize)>,
+}
+
+impl<'a> Iterator for SignatureTokenPreorderTraversalIterWithDepth<'a> {
+    type Item = (&'a SignatureToken, usize);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        use SignatureToken::*;
+
+        match self.stack.pop() {
+            Some((tok, depth)) => {
+                match tok {
+                    Reference(inner_tok) | MutableReference(inner_tok) | Vector(inner_tok) => {
+                        self.stack.push((inner_tok, depth + 1))
+                    }
+
+                    StructInstantiation(_, inner_toks) => self
+                        .stack
+                        .extend(inner_toks.iter().map(|tok| (tok, depth + 1)).rev()),
+
+                    Signer | Bool | Address | U8 | U64 | U128 | Struct(_) | TypeParameter(_) => (),
+                }
+                Some((tok, depth))
+            }
+            None => None,
+        }
+    }
+}
+
 /// `Arbitrary` for `SignatureToken` cannot be derived automatically as it's a recursive type.
 #[cfg(any(test, feature = "fuzzing"))]
 impl Arbitrary for SignatureToken {
@@ -725,6 +756,14 @@ impl SignatureToken {
 
     pub fn preorder_traversal(&self) -> SignatureTokenPreorderTraversalIter<'_> {
         SignatureTokenPreorderTraversalIter { stack: vec![self] }
+    }
+
+    pub fn preorder_traversal_with_depth(
+        &self,
+    ) -> SignatureTokenPreorderTraversalIterWithDepth<'_> {
+        SignatureTokenPreorderTraversalIterWithDepth {
+            stack: vec![(self, 1)],
+        }
     }
 }
 
