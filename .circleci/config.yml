@@ -105,9 +105,10 @@ commands:
             if ! [ -e /usr/local/cargo/bin/sccache ]; then
               $CARGO $CARGOFLAGS install sccache --version=0.2.13
             else
+              sccache --version
               echo 'sccache binary is found. Skipping install.'
             fi
-            echo 'export SCCACHE_CACHE_SIZE=4G' >> $BASH_ENV
+            echo 'export SCCACHE_CACHE_SIZE=3G' >> $BASH_ENV
             echo 'export RUSTC_WRAPPER=sccache' >> $BASH_ENV
             echo 'export CC="sccache cc"' >> $BASH_ENV
             echo 'export CXX="sccache c++"' >> $BASH_ENV
