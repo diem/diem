@@ -3,15 +3,11 @@
 
 use cli::client_proxy::ClientProxy;
 use debug_interface::NodeDebugClient;
-use libra_config::config::{
-    Identity, KeyManagerConfig, NodeConfig, OnDiskStorageConfig, SecureBackend,
-};
+use libra_config::config::{Identity, KeyManagerConfig, NodeConfig};
 use libra_crypto::{
     ed25519::Ed25519PrivateKey, PrivateKey, SigningKey, Uniform, ValidCryptoMaterial,
 };
-use libra_global_constants::{
-    CONSENSUS_KEY, OPERATOR_ACCOUNT, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
-};
+use libra_global_constants::{CONSENSUS_KEY, OPERATOR_KEY, VALIDATOR_NETWORK_KEY};
 use libra_json_rpc::views::{ScriptView, TransactionDataView};
 use libra_key_manager::{
     self,
@@ -25,12 +21,13 @@ use libra_network_address::{
     },
     NetworkAddress, RawNetworkAddress,
 };
-use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
+use libra_secure_storage::{CryptoStorage, KVStorage, Storage};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
 use libra_trace::trace::trace_node;
 use libra_types::{
+    account_address,
     account_address::AccountAddress,
     account_config::{libra_root_address, testnet_dd_account_address, COIN1_NAME},
     chain_id::ChainId,
@@ -1254,7 +1251,6 @@ fn test_malformed_script() {
 
 #[test]
 #[ignore]
-// TODO(joshlind): FIX ME!
 fn test_key_manager_consensus_rotation() {
     // Create and launch a local validator swarm of 2 nodes.
     let mut env = TestEnvironment::new(2);
@@ -1270,40 +1266,25 @@ fn test_key_manager_consensus_rotation() {
     key_manager_config.json_rpc_endpoint = json_rpc_endpoint.clone();
     key_manager_config.rotation_period_secs = 10;
     key_manager_config.sleep_period_secs = 10;
-    let mut on_disk_storage_config = OnDiskStorageConfig::default();
-    on_disk_storage_config.path =
-        node_config_path.with_file_name(on_disk_storage_config.path.clone());
-    key_manager_config.secure_backend = SecureBackend::OnDiskStorage(on_disk_storage_config);
+
+    // Load validator's on disk storage and update key manager secure backend in config
+    let mut storage: Storage = if let Identity::FromStorage(storage_identity) =
+        &node_config.validator_network.as_ref().unwrap().identity
+    {
+        let storage_backend = storage_identity.backend.clone();
+        key_manager_config.secure_backend = storage_backend.clone();
+        (&storage_backend).try_into().unwrap()
+    } else {
+        panic!("Couldn't load identity from storage");
+    };
 
     // Save the key manager config to disk
     let key_manager_config_path = node_config_path.with_file_name("key_manager.yaml");
     key_manager_config.save(&key_manager_config_path).unwrap();
 
-    // Bootstrap secure storage by initializing the keys required by the key manager.
-    // TODO(joshlind): set these keys using config manager when initialization is supported.
-    let mut storage: Storage = (&key_manager_config.secure_backend).try_into().unwrap();
-    let operator_private = node_config
-        .test
-        .unwrap()
-        .operator_keypair
-        .unwrap()
-        .take_private()
-        .unwrap();
-    let operator_account =
-        libra_types::account_address::from_public_key(&operator_private.public_key());
-    storage
-        .set(
-            OPERATOR_ACCOUNT,
-            Value::String(operator_account.to_string()),
-        )
-        .unwrap();
-    storage
-        .set(OPERATOR_KEY, Value::Ed25519PrivateKey(operator_private))
-        .unwrap();
-
     // Create a json-rpc connection to the blockchain and verify storage matches the on-chain state.
     let libra_interface = JsonRpcLibraInterface::new(json_rpc_endpoint);
-    let account = node_config.validator_network.unwrap().peer_id();
+    let account = node_config.clone().validator_network.unwrap().peer_id();
     let current_consensus = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
     let validator_info = libra_interface.retrieve_validator_info(account).unwrap();
     assert_eq!(&current_consensus, validator_info.consensus_public_key());
@@ -1320,13 +1301,21 @@ fn test_key_manager_consensus_rotation() {
     let key_manager = command.spawn().unwrap();
     sleep(Duration::from_secs(20));
 
+    // Submit a reconfiguration so that the key rotation will be performed on-chain
+    let libra = get_libra_interface(&node_config);
+    let time_service = RealTimeService::new();
+    let association_key = env.faucet_key.0;
+    submit_new_reconfig(&libra, &time_service, &association_key).unwrap();
+
+    sleep(Duration::from_secs(2));
+
     // Verify the consensus key has been rotated in secure storage and on-chain.
     let rotated_consensus = storage.get_public_key(CONSENSUS_KEY).unwrap().public_key;
     let validator_info = libra_interface.retrieve_validator_info(account).unwrap();
     assert_eq!(&rotated_consensus, validator_info.consensus_public_key());
     assert_ne!(current_consensus, rotated_consensus);
 
-    // Cause a failure (e.g., wipe storage) and verify the key manager exits with an error status.
+    // Cause a failure (i.e., wipe storage) and verify the key manager exits with an error status.
     storage.reset_and_clear().unwrap();
     let output = key_manager.wait_with_output().unwrap();
     if output.status.success() {
@@ -1337,22 +1326,19 @@ fn test_key_manager_consensus_rotation() {
     }
 }
 
-struct AccountContext {
-    private_key: Ed25519PrivateKey,
-    address: AccountAddress,
-}
-
 /// Submits a transaction, and returns appropriate account and sequence number for verification
 fn submit_new_transaction(
     libra: &JsonRpcLibraInterface,
     time_service: &RealTimeService,
-    account_context: &AccountContext,
+    account_key: &Ed25519PrivateKey,
+    account_address: AccountAddress,
     script: Script,
 ) -> anyhow::Result<(AccountAddress, u64)> {
-    let sequence_number = libra.retrieve_sequence_number(account_context.address)?;
+    let account_pubkey = account_key.public_key();
+    let sequence_number = libra.retrieve_sequence_number(account_address)?;
     let expiration_time = time_service.now() + constants::TXN_EXPIRATION_SECS;
     let raw_txn = RawTransaction::new_script(
-        account_context.address,
+        account_address,
         sequence_number,
         script,
         constants::MAX_GAS_AMOUNT,
@@ -1363,17 +1349,17 @@ fn submit_new_transaction(
     );
 
     // Sign and submit the transaction
-    let signature = account_context.private_key.sign(&raw_txn);
-    let signed_txn =
-        SignedTransaction::new(raw_txn, account_context.private_key.public_key(), signature);
+    let signature = account_key.sign(&raw_txn);
+    let signed_txn = SignedTransaction::new(raw_txn, account_pubkey, signature);
     libra.submit_transaction(Transaction::UserTransaction(signed_txn))?;
-    Ok((account_context.address, sequence_number))
+    Ok((account_address, sequence_number))
 }
 
 fn submit_new_validator_config(
     libra: &JsonRpcLibraInterface,
     time_service: &RealTimeService,
-    account_context: &AccountContext,
+    validator_account: AccountAddress,
+    operator_key: &Ed25519PrivateKey,
     validator_config: ValidatorConfig,
 ) -> anyhow::Result<(AccountAddress, u64)> {
     // Convert validator_config into an update transaction
@@ -1383,27 +1369,34 @@ fn submit_new_validator_config(
     let full_node_network_key = validator_config.full_node_network_identity_public_key;
     let full_node_network_address = validator_config.full_node_network_address;
     let script = transaction_builder::encode_set_validator_config_script(
-        account_context.address,
+        validator_account,
         consensus_key.to_bytes().to_vec(),
         validator_network_key.to_bytes(),
         validator_network_address.into(),
         full_node_network_key.to_bytes(),
         full_node_network_address.into(),
     );
-    submit_new_transaction(libra, time_service, account_context, script)
+    let operator_address = account_address::from_public_key(&operator_key.public_key());
+    submit_new_transaction(libra, time_service, operator_key, operator_address, script)
 }
 
 fn submit_new_reconfig(
     libra: &JsonRpcLibraInterface,
     time_service: &RealTimeService,
-    account_context: &AccountContext,
+    association_key: &Ed25519PrivateKey,
 ) -> anyhow::Result<(AccountAddress, u64)> {
     let script = Script::new(
         libra_transaction_scripts::RECONFIGURE_TXN.clone(),
         vec![],
         vec![],
     );
-    submit_new_transaction(libra, time_service, account_context, script)
+    submit_new_transaction(
+        libra,
+        time_service,
+        association_key,
+        libra_root_address(),
+        script,
+    )
 }
 
 /// Helper function to build libra interfaces for smoke test
@@ -1433,13 +1426,6 @@ fn test_network_key_rotation() {
     let mut swarm = TestEnvironment::new(5);
     swarm.validator_swarm.launch();
 
-    // Get association info for reconfig
-    let key = swarm.faucet_key.0;
-    let association_info = AccountContext {
-        private_key: key,
-        address: libra_root_address(),
-    };
-
     // Load the node configs
     let node_configs: Vec<_> = swarm
         .validator_swarm
@@ -1461,13 +1447,6 @@ fn test_network_key_rotation() {
         (&storage_identity.backend).try_into().unwrap()
     } else {
         panic!("Couldn't load identity from storage");
-    };
-
-    // Get Operator info
-    let operator_key = storage.export_private_key(OPERATOR_KEY).unwrap();
-    let operator_info = AccountContext {
-        address: libra_types::account_address::from_public_key(&operator_key.public_key()),
-        private_key: operator_key,
     };
 
     // Setup an RPC endpoint so we can talk to the node
@@ -1515,7 +1494,15 @@ fn test_network_key_rotation() {
     validator_config.validator_network_address = raw_enc_addr;
     validator_config.validator_network_identity_public_key = new_public_key;
 
-    submit_new_validator_config(libra, &time_service, &operator_info, validator_config).unwrap();
+    let operator_key = storage.export_private_key(OPERATOR_KEY).unwrap();
+    submit_new_validator_config(
+        libra,
+        &time_service,
+        validator_account,
+        &operator_key,
+        validator_config,
+    )
+    .unwrap();
 
     // Ensure all nodes have the new key
     wait_for_all_nodes(&libra_interfaces, |libra| {
@@ -1528,7 +1515,8 @@ fn test_network_key_rotation() {
 
     // This is submitting a new reconfig on a different validator using the association key
     let last_reconfig = libra.last_reconfiguration().unwrap();
-    submit_new_reconfig(libra, &time_service, &association_info).unwrap();
+    let association_key = swarm.faucet_key.0;
+    submit_new_reconfig(libra, &time_service, &association_key).unwrap();
 
     // Ensure all nodes have been reconfigured
     wait_for_all_nodes(&libra_interfaces, |libra| {
