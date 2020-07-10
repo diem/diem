@@ -12,10 +12,10 @@ use crate::{
     transaction_metadata::TransactionMetadata,
     VMExecutor,
 };
-use debug_interface::prelude::*;
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_state_view::StateView;
+use libra_trace::prelude::*;
 use libra_types::{
     account_config,
     block_metadata::BlockMetadata,

@@ -12,9 +12,12 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use debug_interface::trace::LibraTraceClient;
 use futures::{future::try_join_all, join};
 use libra_logger::{info, warn};
+use libra_trace::{
+    trace::{random_node, trace_node},
+    LibraTraceClient,
+};
 use rand::{rngs::ThreadRng, seq::SliceRandom};
 use serde_json::Value;
 use std::{
@@ -191,10 +194,9 @@ impl Experiment for PerformanceBenchmark {
             }
             events.sort_by_key(|k| k.timestamp);
             let node =
-                debug_interface::libra_trace::random_node(&events[..], "json-rpc::submit", "txn::")
-                    .expect("No trace node found");
+                random_node(&events[..], "json-rpc::submit", "txn::").expect("No trace node found");
             info!("Tracing {}", node);
-            debug_interface::libra_trace::trace_node(&events[..], &node);
+            trace_node(&events[..], &node);
         }
         let end = unix_timestamp_now() - buffer;
         let start = end - window + 2 * buffer;

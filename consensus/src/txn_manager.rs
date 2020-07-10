@@ -4,7 +4,6 @@
 use crate::state_replication::TxnManager;
 use anyhow::{format_err, Result};
 use consensus_types::{block::Block, common::Payload};
-use debug_interface::prelude::*;
 use executor_types::StateComputeResult;
 use futures::channel::{mpsc, oneshot};
 use itertools::Itertools;
@@ -12,6 +11,7 @@ use libra_mempool::{
     CommittedTransaction, ConsensusRequest, ConsensusResponse, TransactionExclusion,
 };
 use libra_metrics::monitor;
+use libra_trace::prelude::*;
 use libra_types::transaction::TransactionStatus;
 use std::time::Duration;
 use tokio::time::timeout;

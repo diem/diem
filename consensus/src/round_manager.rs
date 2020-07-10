@@ -29,8 +29,8 @@ use consensus_types::{
     vote::Vote,
     vote_msg::VoteMsg,
 };
-use debug_interface::prelude::*;
 use libra_logger::prelude::*;
+use libra_trace::prelude::*;
 use libra_types::{epoch_state::EpochState, validator_verifier::ValidatorVerifier};
 #[cfg(test)]
 use safety_rules::ConsensusState;

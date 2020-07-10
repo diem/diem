@@ -117,11 +117,12 @@ pub use log;
 
 pub mod prelude {
     pub use crate::{
-        crit, debug, error, info,
+        crit, debug, error, event, info,
         security::{security_events, security_log},
         send_struct_log, trace, warn, StructuredLogEntry,
     };
 }
+pub mod json_log;
 
 mod security;
 mod struct_log;

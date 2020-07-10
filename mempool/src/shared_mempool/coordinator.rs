@@ -17,7 +17,6 @@ use ::network::protocols::network::Event;
 use anyhow::Result;
 use bounded_executor::BoundedExecutor;
 use channel::libra_channel;
-use debug_interface::prelude::*;
 use futures::{
     channel::{mpsc, oneshot},
     stream::{select_all, FuturesUnordered},
@@ -25,6 +24,7 @@ use futures::{
 };
 use libra_config::{config::PeerNetworkId, network_id::NetworkId};
 use libra_logger::prelude::*;
+use libra_trace::prelude::*;
 use libra_types::{on_chain_config::OnChainConfigPayload, transaction::SignedTransaction};
 use std::{
     ops::Deref,

@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use chrono::{DateTime, NaiveDateTime, Utc};
-use debug_interface::{
-    libra_trace::{random_node, trace_node},
-    trace::LibraTraceClient,
-};
 use libra_logger::{info, Logger};
+use libra_trace::{
+    trace::{random_node, trace_node},
+    LibraTraceClient,
+};
 use serde_json::Value;
 use std::env;
 use structopt::StructOpt;

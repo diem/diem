@@ -11,11 +11,11 @@ use crate::{
 };
 use anyhow::{ensure, format_err, Error, Result};
 use core::future::Future;
-use debug_interface::prelude::*;
 use futures::{channel::oneshot, SinkExt};
 use libra_config::config::RoleType;
 use libra_crypto::hash::CryptoHash;
 use libra_mempool::MempoolClientSender;
+use libra_trace::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     account_config::{from_currency_code_string, CurrencyInfoResource},

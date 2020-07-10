@@ -3,7 +3,7 @@
 
 use backup_service::start_backup_service;
 use consensus::{consensus_provider::start_consensus, gen_consensus_reconfig_subscription};
-use debug_interface::{libra_trace, node_debug_service::NodeDebugService};
+use debug_interface::node_debug_service::NodeDebugService;
 use executor::{db_bootstrapper::bootstrap_db_if_empty, Executor};
 use executor_types::ChunkExecutor;
 use futures::{channel::mpsc::channel, executor::block_on};

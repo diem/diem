@@ -21,7 +21,6 @@ warp = "0.2.3"
 reqwest = { version = "0.10.6", features = ["blocking", "json"], default_features = false, optional = true }
 proptest = { version = "0.10.0", optional = true }
 
-debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 lcs = { path = "../common/lcs", version = "0.1.0", package = "libra-canonical-serialization" }
 libradb = { path = "../storage/libradb", version = "0.1.0", optional = true }
 libra-config = { path = "../config", version = "0.1.0" }
@@ -31,6 +30,7 @@ libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../mempool", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true }
+libra-trace = { path = "../common/trace", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0", optional = true }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }
