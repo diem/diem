@@ -6,6 +6,8 @@ use anyhow::{ensure, Result};
 use libra_types::transaction::Version;
 use serde::{Deserialize, Serialize};
 
+/// A chunk of a transaction backup manifest to represent the
+/// [`first_version`, `last_version`] range (right side inclusive).
 #[derive(Deserialize, Serialize)]
 pub struct TransactionChunk {
     pub first_version: Version,
@@ -21,6 +23,8 @@ pub struct TransactionChunk {
     pub proof: FileHandle,
 }
 
+/// Transaction backup manifest, representing transactions in the
+/// [`first_version`, `last_version`] range (right side inclusive).
 #[derive(Deserialize, Serialize)]
 pub struct TransactionBackup {
     pub first_version: Version,

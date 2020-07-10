@@ -6,6 +6,8 @@ use anyhow::{ensure, Result};
 use libra_types::waypoint::Waypoint;
 use serde::{Deserialize, Serialize};
 
+/// A chunk of an epoch ending backup manifest, representing the
+/// [`first_epoch`, `last_epoch`] range (right side inclusive).
 #[derive(Deserialize, Serialize)]
 pub struct EpochEndingChunk {
     pub first_epoch: u64,
@@ -13,6 +15,8 @@ pub struct EpochEndingChunk {
     pub ledger_infos: FileHandle,
 }
 
+/// Epoch ending backup manifest, representing epoch ending information in the
+/// [`first_epoch`, `last_epoch`] range (right side inclusive).
 #[derive(Deserialize, Serialize)]
 pub struct EpochEndingBackup {
     pub first_epoch: u64,
