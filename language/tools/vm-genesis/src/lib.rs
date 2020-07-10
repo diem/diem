@@ -427,7 +427,7 @@ fn verify_genesis_write_set(events: &[ContractEvent]) {
         //1, // This is the proper number of events for mainnet. Once we have a good layering
         // strategy for mainnet/testnet genesis writesets uncomment this and remove the line
         // below.
-        12, // XXX/TODO(tzakian). For testnet only!
+        10, // XXX/TODO(tzakian). For testnet only!
         "Genesis transaction should emit one event, but found {} events: {:?}",
         events.len(),
         events,
