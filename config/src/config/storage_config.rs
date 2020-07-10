@@ -26,7 +26,9 @@ impl Default for StorageConfig {
             backup_service_port: 7777,
             dir: PathBuf::from("libradb/db"),
             grpc_max_receive_len: Some(100_000_000),
-            prune_window: None,
+            // At 100 tps on avg, we keep 4~5 days of history.
+            // n.b. Validators have more aggressive override in the config builder.
+            prune_window: Some(40_000_000),
             data_dir: PathBuf::from("/opt/libra/data/common"),
         }
     }
