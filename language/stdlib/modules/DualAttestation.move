@@ -163,7 +163,7 @@ module DualAttestation {
     }
     spec fun recertify {
         // TODO: use ONE_YEAR below once the spec language supports constants
-        aborts_if !LibraTimestamp::root_ctm_initialized();
+        aborts_if !LibraTimestamp::spec_root_ctm_initialized();
         aborts_if LibraTimestamp::spec_now_microseconds() + 31540000000000 > max_u64();
         ensures credential.expiration_date
              == LibraTimestamp::spec_now_microseconds() + 31540000000000;

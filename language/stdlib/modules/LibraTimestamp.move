@@ -107,11 +107,11 @@ module LibraTimestamp {
 
         /// Specification version of the `Self::is_not_initialized` function.
         define spec_is_not_initialized(): bool {
-            !root_ctm_initialized() || spec_now_microseconds() == 0
+            !spec_root_ctm_initialized() || spec_now_microseconds() == 0
         }
 
-        /// True if the libra root account has a CurrentTimeMicroseconds.
-        define root_ctm_initialized(): bool {
+        /// True if the association root account has a CurrentTimeMicroseconds.
+        define spec_root_ctm_initialized(): bool {
             exists<CurrentTimeMicroseconds>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS())
         }
 
@@ -130,7 +130,7 @@ module LibraTimestamp {
         ensures old(!spec_is_genesis()) ==> !spec_is_genesis();
 
         /// If the `CurrentTimeMicroseconds` resource is initialized, it stays initialized.
-        ensures old(root_ctm_initialized()) ==> root_ctm_initialized();
+        ensures old(spec_root_ctm_initialized()) ==> spec_root_ctm_initialized();
     }
 
     spec module {
@@ -141,7 +141,7 @@ module LibraTimestamp {
 
     spec schema GlobalWallClockIsMonotonic {
         /// The global wall clock time never decreases.
-        ensures old(root_ctm_initialized()) ==> (old(spec_now_microseconds()) <= spec_now_microseconds());
+        ensures old(spec_root_ctm_initialized()) ==> (old(spec_now_microseconds()) <= spec_now_microseconds());
     }
     spec module {
         apply GlobalWallClockIsMonotonic to *;
@@ -151,22 +151,23 @@ module LibraTimestamp {
 
     spec fun initialize {
         aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
-        aborts_if root_ctm_initialized();
-        ensures root_ctm_initialized();
+        aborts_if spec_root_ctm_initialized();
+        ensures spec_root_ctm_initialized();
         ensures spec_now_microseconds() == 0;
     }
 
     spec fun set_time_has_started {
         aborts_if Signer::spec_address_of(lr_account) != CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS();
         aborts_if !spec_is_genesis();
-        aborts_if !root_ctm_initialized();
+        aborts_if !spec_root_ctm_initialized();
         aborts_if spec_now_microseconds() != 0;
         ensures !spec_is_genesis();
     }
 
     spec fun update_global_time {
+        pragma assume_no_abort_from_here = true;
         aborts_if Signer::spec_address_of(account) != CoreAddresses::SPEC_VM_RESERVED_ADDRESS();
-        aborts_if !root_ctm_initialized();
+        aborts_if !spec_root_ctm_initialized();
         aborts_if (proposer == CoreAddresses::SPEC_VM_RESERVED_ADDRESS()) && (timestamp != spec_now_microseconds());
         aborts_if (proposer != CoreAddresses::SPEC_VM_RESERVED_ADDRESS()) && !(timestamp > spec_now_microseconds());
         ensures spec_now_microseconds() == timestamp;

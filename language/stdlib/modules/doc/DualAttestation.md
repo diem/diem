@@ -785,7 +785,7 @@ Spec version of
 
 
 
-<pre><code><b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_root_ctm_initialized">LibraTimestamp::root_ctm_initialized</a>();
+<pre><code><b>aborts_if</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_root_ctm_initialized">LibraTimestamp::spec_root_ctm_initialized</a>();
 <b>aborts_if</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() + 31540000000000 &gt; max_u64();
 <b>ensures</b> credential.expiration_date
      == <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() + 31540000000000;
