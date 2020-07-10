@@ -28,7 +28,8 @@ use spec_lang::{
     emit, emitln,
     env::{
         ConditionInfo, GlobalEnv, SpecVarId, ABORTS_IF_IS_PARTIAL_PRAGMA,
-        ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_EXPORT, CONDITION_INJECTED_PROP, REQUIRES_IF_ABORTS,
+        ABORTS_IF_IS_STRICT_PRAGMA, CONDITION_EXPORT, CONDITION_INJECTED_PROP,
+        EXPORT_ENSURES_PRAGMA, OPAQUE_PRAGMA, REQUIRES_IF_ABORTS,
     },
     symbol::Symbol,
     ty::TypeDisplayContext,
@@ -423,7 +424,7 @@ impl<'env> SpecTranslator<'env> {
     /// Note: since `free requires` seems to be broken with inlined functions in Boogie,
     /// we do not deal with them in this function but instead in
     /// `translate_free_requires_conditions`.
-    pub fn translate_conditions(&self, for_entry_point: FunctionEntryPoint, opaque: bool) {
+    pub fn translate_conditions(&self, for_entry_point: FunctionEntryPoint) {
         use FunctionEntryPoint::*;
         assert!(!matches!(
             for_entry_point,
@@ -431,11 +432,14 @@ impl<'env> SpecTranslator<'env> {
         ));
         let func_target = self.function_target();
         let spec = func_target.get_spec();
+        let opaque = func_target.is_pragma_true(OPAQUE_PRAGMA, || false);
+        let export_ensures = func_target.is_pragma_true(EXPORT_ENSURES_PRAGMA, || false);
 
         // Get all aborts_if conditions.
         let aborts_if = self.filter_conditions(
             for_entry_point,
             opaque,
+            export_ensures,
             &[ConditionKind::AbortsIf],
             &spec.conditions,
         );
@@ -444,6 +448,7 @@ impl<'env> SpecTranslator<'env> {
         let requires = self.filter_conditions(
             for_entry_point,
             opaque,
+            export_ensures,
             &[ConditionKind::Requires, ConditionKind::RequiresModule],
             &spec.conditions,
         );
@@ -519,6 +524,7 @@ impl<'env> SpecTranslator<'env> {
         let succeeds_if = self.filter_conditions(
             for_entry_point,
             opaque,
+            export_ensures,
             &[ConditionKind::SucceedsIf],
             &spec.conditions,
         );
@@ -534,6 +540,7 @@ impl<'env> SpecTranslator<'env> {
         let ensures = self.filter_conditions(
             for_entry_point,
             opaque,
+            export_ensures,
             &[ConditionKind::Ensures],
             &spec.conditions,
         );
@@ -601,6 +608,7 @@ impl<'env> SpecTranslator<'env> {
         &self,
         entry_point: FunctionEntryPoint,
         opaque: bool,
+        export_ensures: bool,
         kinds: &[ConditionKind],
         conditions: &'c [Condition],
     ) -> Vec<&'c Condition> {
@@ -618,7 +626,7 @@ impl<'env> SpecTranslator<'env> {
                         // Ensures are only visible if the function is opaque.
                         match &cond.kind {
                             Requires | RequiresModule => true,
-                            Ensures | AbortsIf | SucceedsIf => opaque,
+                            Ensures | AbortsIf | SucceedsIf => opaque || export_ensures,
                             _ => false,
                         }
                     }
@@ -627,14 +635,18 @@ impl<'env> SpecTranslator<'env> {
                         // only visible if the function is opaque and the condition is exported
                         match &cond.kind {
                             Requires => self.is_exported(cond),
-                            Ensures | AbortsIf | SucceedsIf => opaque && self.is_exported(cond),
+                            Ensures | AbortsIf | SucceedsIf => {
+                                (opaque || export_ensures) && self.is_exported(cond)
+                            }
                             _ => false,
                         }
                     }
                     Indirect => match &cond.kind {
                         // For indirect calls, only ensures is visible if the condition is
                         // opaque and exported.
-                        Ensures | AbortsIf | SucceedsIf => opaque && self.is_exported(cond),
+                        Ensures | AbortsIf | SucceedsIf => {
+                            (opaque || export_ensures) && self.is_exported(cond)
+                        }
                         _ => false,
                     },
                     Verification => true,

@@ -526,7 +526,7 @@ impl<'env> ModuleTranslator<'env> {
             if self.options.prover.native_stubs {
                 self.generate_function_sig(func_target, Indirect);
                 emit!(self.writer, ";");
-                self.generate_function_spec(func_target, Indirect, false);
+                self.generate_function_spec(func_target, Indirect);
                 emitln!(self.writer);
             }
             return;
@@ -549,7 +549,7 @@ impl<'env> ModuleTranslator<'env> {
             if opaque {
                 emit!(self.writer, ";");
             }
-            self.generate_function_spec(func_target, entry_point, opaque);
+            self.generate_function_spec(func_target, entry_point);
             if !opaque {
                 self.generate_function_stub(func_target, entry_point, Definition);
             }
@@ -592,7 +592,7 @@ impl<'env> ModuleTranslator<'env> {
         self.set_top_level_verify(false);
         emitln!(self.writer);
         self.generate_function_sig(func_target, FunctionEntryPoint::Verification);
-        self.generate_function_spec(func_target, FunctionEntryPoint::Verification, false);
+        self.generate_function_spec(func_target, FunctionEntryPoint::Verification);
         self.generate_function_stub(
             func_target,
             FunctionEntryPoint::Verification,
@@ -692,10 +692,9 @@ impl<'env> ModuleTranslator<'env> {
         &self,
         func_target: &FunctionTarget<'_>,
         entry_point: FunctionEntryPoint,
-        opaque: bool,
     ) {
         SpecTranslator::new(self.writer, func_target.clone(), self.options, true)
-            .translate_conditions(entry_point, opaque);
+            .translate_conditions(entry_point);
     }
 
     /// Emit code for spec inside function implementation.

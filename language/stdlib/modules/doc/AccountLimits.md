@@ -27,6 +27,9 @@
 -  [Function `current_time`](#0x1_AccountLimits_current_time)
 -  [Specification](#0x1_AccountLimits_Specification)
     -  [Function `update_deposit_limits`](#0x1_AccountLimits_Specification_update_deposit_limits)
+    -  [Function `reset_window`](#0x1_AccountLimits_Specification_reset_window)
+    -  [Function `can_receive`](#0x1_AccountLimits_Specification_can_receive)
+    -  [Function `is_unrestricted`](#0x1_AccountLimits_Specification_is_unrestricted)
 
 
 
@@ -764,6 +767,12 @@ Return whether the
 ## Specification
 
 
+
+<pre><code>pragma verify = <b>true</b>;
+</code></pre>
+
+
+
 <a name="0x1_AccountLimits_Specification_update_deposit_limits"></a>
 
 ### Function `update_deposit_limits`
@@ -790,4 +799,160 @@ pragma opaque = <b>true</b>;
 
 
 <pre><code><b>define</b> <a href="#0x1_AccountLimits_spec_update_deposit_limits">spec_update_deposit_limits</a>&lt;CoinType&gt;(amount: u64, addr: address): bool;
+</code></pre>
+
+
+
+<a name="0x1_AccountLimits_Specification_reset_window"></a>
+
+### Function `reset_window`
+
+
+<pre><code><b>fun</b> <a href="#0x1_AccountLimits_reset_window">reset_window</a>&lt;CoinType&gt;(window: &<b>mut</b> <a href="#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;, limits_definition: &<a href="#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;CoinType&gt;)
+</code></pre>
+
+
+
+
+<pre><code><b>include</b> <a href="#0x1_AccountLimits_ResetWindowAbortsIf">ResetWindowAbortsIf</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_ResetWindowAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_AccountLimits_ResetWindowAbortsIf">ResetWindowAbortsIf</a>&lt;CoinType&gt; {
+    window: <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
+    limits_definition: <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;;
+    <b>include</b> <a href="LibraTimestamp.md#0x1_LibraTimestamp_TimeAccessAbortsIf">LibraTimestamp::TimeAccessAbortsIf</a>;
+    <b>aborts_if</b> window.window_start + limits_definition.time_period &gt; max_u64();
+}
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_spec_window_expired"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_AccountLimits_spec_window_expired">spec_window_expired</a>&lt;CoinType&gt;(
+    window: <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;,
+    limits_definition: <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;
+): bool {
+    <a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_now_microseconds">LibraTimestamp::spec_now_microseconds</a>() &gt; window.window_start + limits_definition.time_period
+}
+</code></pre>
+
+
+
+<a name="0x1_AccountLimits_Specification_can_receive"></a>
+
+### Function `can_receive`
+
+
+<pre><code><b>fun</b> <a href="#0x1_AccountLimits_can_receive">can_receive</a>&lt;CoinType&gt;(amount: u64, receiving: &<b>mut</b> <a href="#0x1_AccountLimits_Window">AccountLimits::Window</a>&lt;CoinType&gt;): bool
+</code></pre>
+
+
+
+
+<pre><code>pragma verify = <b>true</b>;
+<b>include</b> <a href="#0x1_AccountLimits_CanReceiveAbortsIf">CanReceiveAbortsIf</a>&lt;CoinType&gt;;
+<b>include</b> <a href="#0x1_AccountLimits_CanReceiveEnsures">CanReceiveEnsures</a>&lt;CoinType&gt;;
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_CanReceiveAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_AccountLimits_CanReceiveAbortsIf">CanReceiveAbortsIf</a>&lt;CoinType&gt; {
+    amount: num;
+    receiving: <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(receiving.limit_address);
+    <b>include</b> !<a href="#0x1_AccountLimits_spec_receiving_is_unrestricted">spec_receiving_is_unrestricted</a>&lt;CoinType&gt;(receiving)
+                ==&gt; <a href="#0x1_AccountLimits_CanReceiveRestrictedAbortsIf">CanReceiveRestrictedAbortsIf</a>&lt;CoinType&gt;;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_CanReceiveRestrictedAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_AccountLimits_CanReceiveRestrictedAbortsIf">CanReceiveRestrictedAbortsIf</a>&lt;CoinType&gt; {
+    amount: num;
+    receiving: <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
+    <b>aborts_if</b> !<a href="#0x1_AccountLimits_spec_receiving_expired">spec_receiving_expired</a>(receiving) && receiving.window_inflow + amount &gt; max_u64();
+    <b>aborts_if</b> receiving.tracked_balance + amount &gt; max_u64();
+    <b>include</b> <a href="#0x1_AccountLimits_ResetWindowAbortsIf">ResetWindowAbortsIf</a>&lt;CoinType&gt;{
+        window: receiving,
+        limits_definition: <a href="#0x1_AccountLimits_spec_limits_definition">spec_limits_definition</a>&lt;CoinType&gt;(receiving.limit_address)
+    };
+}
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_CanReceiveEnsures"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_AccountLimits_CanReceiveEnsures">CanReceiveEnsures</a>&lt;CoinType&gt; {
+    amount: num;
+    receiving: <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;;
+}
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_spec_limits_definition"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_AccountLimits_spec_limits_definition">spec_limits_definition</a>&lt;CoinType&gt;(addr: address): <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt; {
+   <b>global</b>&lt;<a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;&gt;(addr)
+}
+<a name="0x1_AccountLimits_spec_receiving_is_unrestricted"></a>
+<b>define</b> <a href="#0x1_AccountLimits_spec_receiving_is_unrestricted">spec_receiving_is_unrestricted</a>&lt;CoinType&gt;(receiving: <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;): bool {
+    <a href="#0x1_AccountLimits_spec_is_unrestricted">spec_is_unrestricted</a>(<a href="#0x1_AccountLimits_spec_limits_definition">spec_limits_definition</a>&lt;CoinType&gt;(receiving.limit_address))
+}
+<a name="0x1_AccountLimits_spec_receiving_expired"></a>
+<b>define</b> <a href="#0x1_AccountLimits_spec_receiving_expired">spec_receiving_expired</a>&lt;CoinType&gt;(receiving: <a href="#0x1_AccountLimits_Window">Window</a>&lt;CoinType&gt;): bool {
+    <a href="#0x1_AccountLimits_spec_window_expired">spec_window_expired</a>(receiving, <a href="#0x1_AccountLimits_spec_limits_definition">spec_limits_definition</a>&lt;CoinType&gt;(receiving.limit_address))
+}
+</code></pre>
+
+
+
+<a name="0x1_AccountLimits_Specification_is_unrestricted"></a>
+
+### Function `is_unrestricted`
+
+
+<pre><code><b>fun</b> <a href="#0x1_AccountLimits_is_unrestricted">is_unrestricted</a>&lt;CoinType&gt;(limits_def: &<a href="#0x1_AccountLimits_LimitsDefinition">AccountLimits::LimitsDefinition</a>&lt;CoinType&gt;): bool
+</code></pre>
+
+
+
+
+<pre><code><b>ensures</b> result == <a href="#0x1_AccountLimits_spec_is_unrestricted">spec_is_unrestricted</a>(limits_def);
+</code></pre>
+
+
+
+
+<a name="0x1_AccountLimits_spec_is_unrestricted"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_AccountLimits_spec_is_unrestricted">spec_is_unrestricted</a>&lt;CoinType&gt;(limits_def: <a href="#0x1_AccountLimits_LimitsDefinition">LimitsDefinition</a>&lt;CoinType&gt;): bool {
+    limits_def.max_inflow == max_u64() &&
+    limits_def.max_outflow == max_u64() &&
+    limits_def.max_holding == max_u64() &&
+    limits_def.time_period == 86400000000
+}
 </code></pre>

@@ -499,8 +499,7 @@ The global wall clock time never decreases.
 
 
 
-<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
-<b>ensures</b> result == <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>();
+<pre><code><b>include</b> <a href="#0x1_LibraTimestamp_TimeAccessAbortsIf">TimeAccessAbortsIf</a>;
 </code></pre>
 
 
@@ -535,4 +534,15 @@ The global wall clock time never decreases.
 
 <pre><code><b>aborts_if</b> <b>false</b>;
 <b>ensures</b> result == <a href="#0x1_LibraTimestamp_spec_is_not_initialized">spec_is_not_initialized</a>();
+</code></pre>
+
+
+
+
+<a name="0x1_LibraTimestamp_TimeAccessAbortsIf"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_LibraTimestamp_TimeAccessAbortsIf">TimeAccessAbortsIf</a> {
+    <b>aborts_if</b> !exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
+}
 </code></pre>

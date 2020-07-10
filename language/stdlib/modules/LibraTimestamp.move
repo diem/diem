@@ -173,8 +173,7 @@ module LibraTimestamp {
     }
 
     spec fun now_microseconds {
-        aborts_if !exists<CurrentTimeMicroseconds>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
-        ensures result == spec_now_microseconds();
+        include TimeAccessAbortsIf;
     }
 
     spec fun is_genesis {
@@ -185,6 +184,10 @@ module LibraTimestamp {
     spec fun is_not_initialized {
         aborts_if false;
         ensures result == spec_is_not_initialized();
+    }
+
+    spec schema TimeAccessAbortsIf {
+        aborts_if !exists<CurrentTimeMicroseconds>(CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS());
     }
 }
 
