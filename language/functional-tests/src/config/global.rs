@@ -181,8 +181,7 @@ impl Config {
                 .nodes
                 .iter_mut()
                 .map(|c| {
-                    let account_keypair =
-                        c.test.as_mut().unwrap().operator_keypair.as_mut().unwrap();
+                    let account_keypair = c.test.as_mut().unwrap().owner_keypair.as_mut().unwrap();
                     account_keypair.take_private().unwrap()
                 })
                 .collect::<Vec<_>>()
