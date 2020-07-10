@@ -29,6 +29,7 @@ libra-github-client = { path = "github", version = "0.1.0" }
 libra-workspace-hack = { path = "../../common/workspace-hack", version = "0.1.0" }
 
 [dev-dependencies]
+libra-crypto = { path = "../../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
 libra-crypto-derive = { path = "../../crypto/crypto-derive", version = "0.1.0" }
 rand = "0.7.3"
 

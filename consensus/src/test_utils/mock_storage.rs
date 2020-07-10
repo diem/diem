@@ -56,21 +56,6 @@ pub struct MockStorage {
 }
 
 impl MockStorage {
-    pub fn new(shared_storage: Arc<MockSharedStorage>) -> Self {
-        let validator_set = Some(shared_storage.validator_set.clone());
-        let li = LedgerInfo::mock_genesis(validator_set);
-        let lis = LedgerInfoWithSignatures::new(li.clone(), BTreeMap::new());
-        shared_storage
-            .lis
-            .lock()
-            .unwrap()
-            .insert(lis.ledger_info().version(), lis);
-        MockStorage {
-            shared_storage,
-            storage_ledger: Mutex::new(li),
-        }
-    }
-
     pub fn new_with_ledger_info(
         shared_storage: Arc<MockSharedStorage>,
         ledger_info: LedgerInfo,
@@ -153,14 +138,7 @@ impl MockStorage {
     }
 
     pub fn start_for_testing(validator_set: ValidatorSet) -> (RecoveryData, Arc<Self>) {
-        let shared_storage = Arc::new(MockSharedStorage {
-            block: Mutex::new(HashMap::new()),
-            qc: Mutex::new(HashMap::new()),
-            lis: Mutex::new(HashMap::new()),
-            last_vote: Mutex::new(None),
-            highest_timeout_certificate: Mutex::new(None),
-            validator_set: validator_set.clone(),
-        });
+        let shared_storage = Arc::new(MockSharedStorage::new(validator_set.clone()));
         let genesis_li = LedgerInfo::mock_genesis(Some(validator_set));
         let storage = Self::new_with_ledger_info(shared_storage, genesis_li);
         let recovery_data = storage

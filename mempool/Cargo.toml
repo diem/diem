@@ -41,7 +41,9 @@ libra-proptest-helpers = { path = "../common/proptest-helpers", optional = true 
 storage-service = { path = "../storage/storage-service", version = "0.1.0", optional = true }
 
 [dev-dependencies]
+libra-config = { path = "../config", version = "0.1.0", features = ["fuzzing"] }
 libra-network-address = { path = "../network/network-address", version = "0.1.0" }
+storage-interface = { path = "../storage/storage-interface", version = "0.1.0", features = ["fuzzing"] }
 
 [features]
 default = []

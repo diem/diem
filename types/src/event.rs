@@ -3,9 +3,9 @@
 
 use crate::account_address::AccountAddress;
 use anyhow::{ensure, Error, Result};
-#[cfg(feature = "fuzzing")]
+#[cfg(any(test, feature = "fuzzing"))]
 use proptest_derive::Arbitrary;
-#[cfg(feature = "fuzzing")]
+#[cfg(any(test, feature = "fuzzing"))]
 use rand::{rngs::OsRng, RngCore};
 use serde::{de, ser, Deserialize, Serialize};
 use std::{convert::TryFrom, fmt};
@@ -13,7 +13,7 @@ use std::{convert::TryFrom, fmt};
 /// A struct that represents a globally unique id for an Event stream that a user can listen to.
 /// By design, the lower part of EventKey is the same as account address.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-#[cfg_attr(feature = "fuzzing", derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 pub struct EventKey([u8; EventKey::LENGTH]);
 
 impl EventKey {
@@ -43,7 +43,7 @@ impl EventKey {
         AccountAddress::new(arr_bytes)
     }
 
-    #[cfg(feature = "fuzzing")]
+    #[cfg(any(test, feature = "fuzzing"))]
     /// Create a random event key for testing
     pub fn random() -> Self {
         let mut rng = OsRng;
@@ -155,12 +155,12 @@ impl EventHandle {
         self.count
     }
 
-    #[cfg(feature = "fuzzing")]
+    #[cfg(any(test, feature = "fuzzing"))]
     pub fn count_mut(&mut self) -> &mut u64 {
         &mut self.count
     }
 
-    #[cfg(feature = "fuzzing")]
+    #[cfg(any(test, feature = "fuzzing"))]
     /// Create a random event handle for testing
     pub fn random_handle(count: u64) -> Self {
         Self {
@@ -169,7 +169,7 @@ impl EventHandle {
         }
     }
 
-    #[cfg(feature = "fuzzing")]
+    #[cfg(any(test, feature = "fuzzing"))]
     /// Derive a unique handle by using an AccountAddress and a counter.
     pub fn new_from_address(addr: &AccountAddress, salt: u64) -> Self {
         Self {

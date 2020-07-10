@@ -24,7 +24,7 @@ serde = { version = "1.0.114", features = ["derive"] }
 serde_json = "1.0.56"
 structopt = "0.3.15"
 toml = "0.5.6"
-tokio = "0.2.21"
+tokio = { version = "0.2.21", features = ["full"] }
 tokio-util = { version = "0.3.1", features = ["compat"] }
 
 executor = { path = "../../../execution/executor", version = "0.1.0" }
@@ -43,6 +43,8 @@ storage-interface = { path = "../../storage-interface", version = "0.1.0" }
 proptest = "0.10.0"
 
 backup-service = { path = "../backup-service", version = "0.1.0" }
+executor-test-helpers = { path = "../../../execution/executor-test-helpers", version = "0.1.0" }
+libradb = { path = "../../libradb", version = "0.1.0", features = ["fuzzing"] }
 libra-config = { path = "../../../config", version = "0.1.0" }
 libra-proptest-helpers = { path = "../../../common/proptest-helpers" }
 libra-temppath = { path = "../../../common/temppath", version = "0.1.0" }

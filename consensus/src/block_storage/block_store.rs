@@ -19,8 +19,6 @@ use executor_types::{Error, StateComputeResult};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
 use libra_trace::prelude::*;
-#[cfg(any(test, feature = "fuzzing"))]
-use libra_types::epoch_state::EpochState;
 use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus};
 use std::{
     collections::vec_deque::VecDeque,
@@ -477,27 +475,5 @@ impl BlockStore {
     pub fn insert_block_with_qc(&self, block: Block) -> anyhow::Result<Arc<ExecutedBlock>> {
         self.insert_single_quorum_cert(block.quorum_cert().clone())?;
         Ok(self.execute_and_insert_block(block)?)
-    }
-
-    /// Helper function to insert a reconfiguration block
-    pub fn insert_reconfiguration_block(&self, block: Block) -> anyhow::Result<Arc<ExecutedBlock>> {
-        self.insert_single_quorum_cert(block.quorum_cert().clone())?;
-        let executed_block = self.execute_block(block)?;
-        let compute_result = executed_block.compute_result();
-        let result = StateComputeResult::new(
-            compute_result.root_hash(),
-            compute_result.frozen_subtree_roots().clone(),
-            compute_result.num_leaves(),
-            compute_result.parent_frozen_subtree_roots().clone(),
-            compute_result.parent_num_leaves(),
-            Some(EpochState::empty()),
-            compute_result.compute_status().clone(),
-            compute_result.transaction_info_hashes().clone(),
-        );
-        Ok(self
-            .inner
-            .write()
-            .unwrap()
-            .insert_block(ExecutedBlock::new(executed_block.block().clone(), result))?)
     }
 }

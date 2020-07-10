@@ -47,7 +47,7 @@ use libra_types::{
     epoch_state::EpochState,
     ledger_info::{LedgerInfo, LedgerInfoWithSignatures},
     validator_signer::ValidatorSigner,
-    validator_verifier::{random_validator_verifier, ValidatorVerifier},
+    validator_verifier::random_validator_verifier,
     waypoint::Waypoint,
 };
 use network::{
@@ -65,11 +65,10 @@ pub struct NodeSetup {
     storage: Arc<MockStorage>,
     signer: ValidatorSigner,
     proposer_author: Author,
-    validators: ValidatorVerifier,
     safety_rules_manager: SafetyRulesManager,
     all_events: Box<dyn Stream<Item = anyhow::Result<Event<ConsensusMsg>>> + Send + Unpin>,
     commit_cb_receiver: mpsc::UnboundedReceiver<LedgerInfoWithSignatures>,
-    state_sync_receiver: mpsc::UnboundedReceiver<Payload>,
+    _state_sync_receiver: mpsc::UnboundedReceiver<Payload>,
     id: usize,
 }
 
@@ -159,13 +158,13 @@ impl NodeSetup {
         playground.add_node(twin_id, consensus_tx, network_reqs_rx, conn_mgr_reqs_rx);
 
         let (self_sender, self_receiver) = channel::new_test(1000);
-        let network = NetworkSender::new(author, network_sender, self_sender, validators.clone());
+        let network = NetworkSender::new(author, network_sender, self_sender, validators);
 
         let all_events = Box::new(select(network_events, self_receiver));
 
         let last_vote_sent = initial_data.last_vote();
         let (commit_cb_sender, commit_cb_receiver) = mpsc::unbounded::<LedgerInfoWithSignatures>();
-        let (state_sync_client, state_sync_receiver) = mpsc::unbounded();
+        let (state_sync_client, _state_sync_receiver) = mpsc::unbounded();
         let state_computer = Arc::new(MockStateComputer::new(
             state_sync_client,
             commit_cb_sender,
@@ -213,11 +212,10 @@ impl NodeSetup {
             storage,
             signer,
             proposer_author,
-            validators,
             safety_rules_manager,
             all_events,
             commit_cb_receiver,
-            state_sync_receiver,
+            _state_sync_receiver,
             id,
         }
     }

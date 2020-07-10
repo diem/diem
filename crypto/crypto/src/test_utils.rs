@@ -77,10 +77,6 @@ where
 }
 
 #[cfg(any(test, feature = "fuzzing"))]
-use crate as libra_crypto;
-#[cfg(any(test, feature = "fuzzing"))]
-use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
-#[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use rand::{rngs::StdRng, SeedableRng};
@@ -105,8 +101,85 @@ where
 /// This struct provides a means of testing signing and verification through
 /// LCS serialization and domain separation
 #[cfg(any(test, feature = "fuzzing"))]
-#[derive(Debug, CryptoHasher, LCSCryptoHash, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct TestLibraCrypto(pub String);
+
+// the following block is macro expanded from derive(CryptoHasher, LCSCryptoHash)
+
+/// Cryptographic hasher for an LCS-serializable #item
+#[cfg(any(test, feature = "fuzzing"))]
+pub struct TestLibraCryptoHasher(crate::hash::DefaultHasher);
+#[cfg(any(test, feature = "fuzzing"))]
+#[automatically_derived]
+#[allow(unused_qualifications)]
+impl ::core::clone::Clone for TestLibraCryptoHasher {
+    #[inline]
+    fn clone(&self) -> TestLibraCryptoHasher {
+        match *self {
+            TestLibraCryptoHasher(ref __self_0_0) => {
+                TestLibraCryptoHasher(::core::clone::Clone::clone(&(*__self_0_0)))
+            }
+        }
+    }
+}
+#[cfg(any(test, feature = "fuzzing"))]
+static TEST_LIBRA_CRYPTO_SEED: crate::_once_cell::sync::OnceCell<[u8; 32]> =
+    crate::_once_cell::sync::OnceCell::new();
+#[cfg(any(test, feature = "fuzzing"))]
+impl TestLibraCryptoHasher {
+    fn new() -> Self {
+        let name = crate::_serde_name::trace_name::<TestLibraCrypto>()
+            .expect("The `CryptoHasher` macro only applies to structs and enums");
+        TestLibraCryptoHasher(crate::hash::DefaultHasher::new(&name.as_bytes()))
+    }
+}
+#[cfg(any(test, feature = "fuzzing"))]
+static TEST_LIBRA_CRYPTO_HASHER: crate::_once_cell::sync::Lazy<TestLibraCryptoHasher> =
+    crate::_once_cell::sync::Lazy::new(TestLibraCryptoHasher::new);
+#[cfg(any(test, feature = "fuzzing"))]
+impl std::default::Default for TestLibraCryptoHasher {
+    fn default() -> Self {
+        TEST_LIBRA_CRYPTO_HASHER.clone()
+    }
+}
+#[cfg(any(test, feature = "fuzzing"))]
+impl crate::hash::CryptoHasher for TestLibraCryptoHasher {
+    fn seed() -> &'static [u8; 32] {
+        TEST_LIBRA_CRYPTO_SEED.get_or_init(|| {
+            let name = crate::_serde_name::trace_name::<TestLibraCrypto>()
+                .expect("The `CryptoHasher` macro only applies to structs and enums.")
+                .as_bytes();
+            crate::hash::DefaultHasher::prefixed_hash(&name)
+        })
+    }
+    fn update(&mut self, bytes: &[u8]) {
+        self.0.update(bytes);
+    }
+    fn finish(self) -> crate::hash::HashValue {
+        self.0.finish()
+    }
+}
+#[cfg(any(test, feature = "fuzzing"))]
+impl std::io::Write for TestLibraCryptoHasher {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0.update(bytes);
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+#[cfg(any(test, feature = "fuzzing"))]
+impl crate::hash::CryptoHash for TestLibraCrypto {
+    type Hasher = TestLibraCryptoHasher;
+    fn hash(&self) -> crate::hash::HashValue {
+        use crate::hash::CryptoHasher;
+        let mut state = Self::Hasher::default();
+        lcs::serialize_into(&mut state, &self)
+            .expect("LCS serialization of TestLibraCrypto should not fail");
+        state.finish()
+    }
+}
 
 /// Produces a random TestLibraCrypto signable / verifiable struct.
 #[cfg(any(test, feature = "fuzzing"))]

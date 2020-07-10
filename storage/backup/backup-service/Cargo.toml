@@ -28,6 +28,7 @@ libradb = { path = "../../libradb", version = "0.1.0" }
 storage-interface = { path = "../../storage-interface", version = "0.1.0" }
 
 [dev-dependencies]
+libradb = { path = "../../libradb", version = "0.1.0", features = ["fuzzing"] }
 libra-config = { path = "../../../config", version = "0.1.0" }
 libra-temppath = { path = "../../../common/temppath", version = "0.1.0" }
 

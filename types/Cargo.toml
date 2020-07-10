@@ -40,6 +40,11 @@ proptest = "0.10.0"
 proptest-derive = "0.2.0"
 serde_json = "1.0.56"
 
+libra-crypto = { path = "../crypto/crypto", version = "0.1.0", features = ["fuzzing"] }
+libra-network-address = { path = "../network/network-address", version = "0.1.0", features = ["fuzzing"] }
+libra-proptest-helpers = { path = "../common/proptest-helpers", version = "0.1.0" }
+move-core-types = { path = "../language/move-core/types", version = "0.1.0", features = ["fuzzing"]  }
+
 [features]
 default = []
 fuzzing = ["proptest", "proptest-derive", "libra-proptest-helpers", "libra-crypto/fuzzing", "libra-network-address/fuzzing", "move-core-types/fuzzing"]
