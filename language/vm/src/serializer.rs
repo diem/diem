@@ -588,46 +588,69 @@ fn serialize_signature_tokens(binary: &mut BinaryData, tokens: &[SignatureToken]
     Ok(())
 }
 
+fn serialize_signature_token_single_node_impl(
+    binary: &mut BinaryData,
+    token: &SignatureToken,
+) -> Result<()> {
+    match token {
+        SignatureToken::Bool => binary.push(SerializedType::BOOL as u8)?,
+        SignatureToken::U8 => binary.push(SerializedType::U8 as u8)?,
+        SignatureToken::U64 => binary.push(SerializedType::U64 as u8)?,
+        SignatureToken::U128 => binary.push(SerializedType::U128 as u8)?,
+        SignatureToken::Address => binary.push(SerializedType::ADDRESS as u8)?,
+        SignatureToken::Signer => binary.push(SerializedType::SIGNER as u8)?,
+        SignatureToken::Vector(_) => {
+            binary.push(SerializedType::VECTOR as u8)?;
+        }
+        SignatureToken::Struct(idx) => {
+            binary.push(SerializedType::STRUCT as u8)?;
+            serialize_struct_handle_index(binary, idx)?;
+        }
+        SignatureToken::StructInstantiation(idx, type_params) => {
+            binary.push(SerializedType::STRUCT_INST as u8)?;
+            serialize_struct_handle_index(binary, idx)?;
+            serialize_signature_size(binary, type_params.len())?;
+        }
+        SignatureToken::Reference(_) => {
+            binary.push(SerializedType::REFERENCE as u8)?;
+        }
+        SignatureToken::MutableReference(_) => {
+            binary.push(SerializedType::MUTABLE_REFERENCE as u8)?;
+        }
+        SignatureToken::TypeParameter(idx) => {
+            binary.push(SerializedType::TYPE_PARAMETER as u8)?;
+            serialize_type_parameter_index(binary, *idx)?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+pub(crate) fn serialize_signature_token_unchecked(
+    binary: &mut BinaryData,
+    token: &SignatureToken,
+) -> Result<()> {
+    for token in token.preorder_traversal() {
+        serialize_signature_token_single_node_impl(binary, token)?;
+    }
+    Ok(())
+}
+
 /// Serializes a `SignatureToken`.
 ///
 /// A `SignatureToken` gets serialized as a variable size blob depending on composition.
 /// Values for types are defined in `SerializedType`.
-fn serialize_signature_token(binary: &mut BinaryData, token: &SignatureToken) -> Result<()> {
+pub(crate) fn serialize_signature_token(
+    binary: &mut BinaryData,
+    token: &SignatureToken,
+) -> Result<()> {
     // Non-recursive implementation to avoid overflowing the stack.
-
-    for token in token.preorder_traversal() {
-        match token {
-            SignatureToken::Bool => binary.push(SerializedType::BOOL as u8)?,
-            SignatureToken::U8 => binary.push(SerializedType::U8 as u8)?,
-            SignatureToken::U64 => binary.push(SerializedType::U64 as u8)?,
-            SignatureToken::U128 => binary.push(SerializedType::U128 as u8)?,
-            SignatureToken::Address => binary.push(SerializedType::ADDRESS as u8)?,
-            SignatureToken::Signer => binary.push(SerializedType::SIGNER as u8)?,
-            SignatureToken::Vector(_) => {
-                binary.push(SerializedType::VECTOR as u8)?;
-            }
-            SignatureToken::Struct(idx) => {
-                binary.push(SerializedType::STRUCT as u8)?;
-                serialize_struct_handle_index(binary, idx)?;
-            }
-            SignatureToken::StructInstantiation(idx, type_params) => {
-                binary.push(SerializedType::STRUCT_INST as u8)?;
-                serialize_struct_handle_index(binary, idx)?;
-                serialize_signature_size(binary, type_params.len())?;
-            }
-            SignatureToken::Reference(_) => {
-                binary.push(SerializedType::REFERENCE as u8)?;
-            }
-            SignatureToken::MutableReference(_) => {
-                binary.push(SerializedType::MUTABLE_REFERENCE as u8)?;
-            }
-            SignatureToken::TypeParameter(idx) => {
-                binary.push(SerializedType::TYPE_PARAMETER as u8)?;
-                serialize_type_parameter_index(binary, *idx)?;
-            }
+    for (token, depth) in token.preorder_traversal_with_depth() {
+        if depth > SIGNATURE_TOKEN_DEPTH_MAX {
+            bail!("max recursion depth reached")
         }
+        serialize_signature_token_single_node_impl(binary, token)?;
     }
-
     Ok(())
 }
 
