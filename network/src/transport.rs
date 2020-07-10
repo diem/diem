@@ -219,7 +219,13 @@ async fn upgrade_inbound<T: TSocket>(
     let socket = fut_socket.await?;
 
     // try authenticating via noise handshake
-    let (socket, peer_id) = ctxt.noise.upgrade_inbound(socket).await?;
+    let (socket, peer_id) = ctxt.noise.upgrade_inbound(socket).await.map_err(|err| {
+        // security logging
+        send_struct_log!(
+            security_log(security_events::INVALID_NETWORK_PEER).data("error", format!("{}", err))
+        );
+        err
+    })?;
     let remote_pubkey = socket.get_remote_static();
     let addr = addr.append_prod_protos(remote_pubkey, HANDSHAKE_VERSION);
 
