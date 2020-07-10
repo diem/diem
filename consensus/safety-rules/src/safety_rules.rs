@@ -103,20 +103,33 @@ impl SafetyRules {
     /// 1) B0 <- B1 <- B2 <--
     /// 2) round(B0) + 1 = round(B1), and
     /// 3) round(B1) + 1 = round(B2).
-    pub fn construct_ledger_info(&self, proposed_block: &Block) -> LedgerInfo {
+    pub fn construct_ledger_info(&self, proposed_block: &Block) -> Result<LedgerInfo, Error> {
+        // get rounds of the three blocks
         let block2 = proposed_block.round();
         let block1 = proposed_block.quorum_cert().certified_block().round();
         let block0 = proposed_block.quorum_cert().parent_block().round();
 
-        let commit = block0 + 1 == block1 && block1 + 1 == block2;
-        if commit {
+        // checked additions
+        let block0plus1 =
+            u64::checked_add(block0, 1).ok_or(Error::IncorrectRounds(block0, block1, block2))?;
+        let block1plus1 =
+            u64::checked_add(block1, 1).ok_or(Error::IncorrectRounds(block0, block1, block2))?;
+
+        // verify 3-chain rule
+        let commit = block0plus1 == block1 && block1plus1 == block2;
+
+        // create a ledger info
+        let ledger_info = if commit {
             LedgerInfo::new(
                 proposed_block.quorum_cert().parent_block().clone(),
                 HashValue::zero(),
             )
         } else {
             LedgerInfo::new(BlockInfo::empty(), HashValue::zero())
-        }
+        };
+
+        // return
+        Ok(ledger_info)
     }
 
     /// Second voting rule
@@ -313,7 +326,7 @@ impl SafetyRules {
         let vote = Vote::new(
             vote_data,
             validator_signer.author(),
-            self.construct_ledger_info(proposed_block),
+            self.construct_ledger_info(proposed_block)?,
             validator_signer,
         );
         self.persistent_storage.set_last_vote(Some(vote.clone()))?;
