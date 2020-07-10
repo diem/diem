@@ -19,7 +19,9 @@ use libra_config::{
 use libra_crypto::{hash::ACCUMULATOR_PLACEHOLDER_HASH, test_utils::TEST_SEED, x25519, Uniform};
 use libra_mempool::mocks::MockSharedMempool;
 use libra_network_address::{
-    encrypted::{RawEncNetworkAddress, TEST_ROOT_KEY, TEST_ROOT_KEY_VERSION},
+    encrypted::{
+        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+    },
     NetworkAddress, RawNetworkAddress,
 };
 use libra_types::{
@@ -174,11 +176,13 @@ impl SynchronizerEnv {
             let voting_power = if idx == 0 { 1000 } else { 1 };
             let addr = NetworkAddress::from_str("/memory/0").unwrap();
             let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
-            let root_key = TEST_ROOT_KEY;
-            let key_version = TEST_ROOT_KEY_VERSION;
-            let enc_addr = raw_addr
-                .clone()
-                .encrypt(&root_key, key_version, &signer.author(), 0, 0);
+            let enc_addr = raw_addr.clone().encrypt(
+                &TEST_SHARED_VAL_NETADDR_KEY,
+                TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+                &signer.author(),
+                0,
+                0,
+            );
             let raw_enc_addr = RawEncNetworkAddress::try_from(&enc_addr).unwrap();
 
             let validator_config = ValidatorConfig::new(

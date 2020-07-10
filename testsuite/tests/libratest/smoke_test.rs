@@ -19,7 +19,10 @@ use libra_key_manager::{
 };
 use libra_management::{config_builder::FullnodeType, constants};
 use libra_network_address::{
-    encrypted::{EncNetworkAddress, RawEncNetworkAddress, TEST_ROOT_KEY, TEST_ROOT_KEY_VERSION},
+    encrypted::{
+        EncNetworkAddress, RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY,
+        TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+    },
     NetworkAddress, RawNetworkAddress,
 };
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
@@ -1476,16 +1479,13 @@ fn test_network_key_rotation() {
     let time_service = RealTimeService::new();
     let mut validator_config = libra.retrieve_validator_config(validator_account).unwrap();
 
-    // TODO(philiphayes): fetch real keys from secure storage
-    let root_key = TEST_ROOT_KEY;
-    let key_version = TEST_ROOT_KEY_VERSION;
-
     // Pull out current validator network address
+    let addr_idx = 0;
     let enc_addr =
         EncNetworkAddress::try_from(&validator_config.validator_network_address).unwrap();
     let prev_seq_num = enc_addr.seq_num();
     let raw_addr = enc_addr
-        .decrypt(&root_key, &validator_account, key_version)
+        .decrypt(&TEST_SHARED_VAL_NETADDR_KEY, &validator_account, addr_idx)
         .unwrap();
     let mut addr = NetworkAddress::try_from(&raw_addr).unwrap();
 
@@ -1498,10 +1498,9 @@ fn test_network_key_rotation() {
     // Serialize and encrypt new network address
     let raw_addr = RawNetworkAddress::try_from(&addr).unwrap();
     let seq_num = prev_seq_num + 1;
-    let addr_idx = 0;
     let enc_addr = raw_addr.encrypt(
-        &root_key,
-        key_version,
+        &TEST_SHARED_VAL_NETADDR_KEY,
+        TEST_SHARED_VAL_NETADDR_KEY_VERSION,
         &validator_account,
         seq_num,
         addr_idx,

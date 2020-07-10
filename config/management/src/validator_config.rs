@@ -13,7 +13,9 @@ use libra_global_constants::{
     CONSENSUS_KEY, FULLNODE_NETWORK_KEY, OPERATOR_KEY, VALIDATOR_NETWORK_KEY,
 };
 use libra_network_address::{
-    encrypted::{RawEncNetworkAddress, TEST_ROOT_KEY, TEST_ROOT_KEY_VERSION},
+    encrypted::{
+        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+    },
     NetworkAddress, RawNetworkAddress,
 };
 use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
@@ -56,9 +58,6 @@ impl ValidatorConfig {
         // let sender = self.owner_address;
         let sender = account_address::from_public_key(&operator_key);
 
-        // TODO(philiphayes): actually get the real keys from storage
-        let root_key = TEST_ROOT_KEY;
-        let key_version = TEST_ROOT_KEY_VERSION;
         // only supports one address for now
         let addr_idx = 0;
 
@@ -77,8 +76,8 @@ impl ValidatorConfig {
                 ))
             })?;
         let enc_validator_address = raw_validator_address.encrypt(
-            &root_key,
-            key_version,
+            &TEST_SHARED_VAL_NETADDR_KEY,
+            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
             &sender,
             sequence_number,
             addr_idx,

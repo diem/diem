@@ -19,7 +19,7 @@ use libra_crypto::x25519;
 use libra_logger::prelude::*;
 use libra_metrics::IntCounterVec;
 use libra_network_address::{
-    encrypted::{TEST_ROOT_KEY, TEST_ROOT_KEY_VERSION},
+    encrypted::{TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION},
     NetworkAddress,
 };
 use libra_types::PeerId;
@@ -347,13 +347,16 @@ impl NetworkBuilder {
             .push(simple_discovery_reconfig_subscription);
 
         // TODO(philiphayes): remove once we get real keys from key manager
-        let root_key_map: HashMap<_, _> =
-            iter::once((TEST_ROOT_KEY_VERSION, TEST_ROOT_KEY)).collect();
+        let shared_val_netaddr_key_map: HashMap<_, _> = iter::once((
+            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+            TEST_SHARED_VAL_NETADDR_KEY,
+        ))
+        .collect();
 
         self.configuration_change_listener_builder =
             Some(ConfigurationChangeListenerBuilder::create(
                 role,
-                root_key_map,
+                shared_val_netaddr_key_map,
                 conn_mgr_reqs_tx,
                 simple_discovery_reconfig_rx,
             ));

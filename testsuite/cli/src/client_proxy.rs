@@ -17,7 +17,9 @@ use libra_crypto::{
 use libra_json_rpc_client::views::{AccountView, BlockMetadata, EventView, TransactionView};
 use libra_logger::prelude::*;
 use libra_network_address::{
-    encrypted::{RawEncNetworkAddress, TEST_ROOT_KEY, TEST_ROOT_KEY_VERSION},
+    encrypted::{
+        RawEncNetworkAddress, TEST_SHARED_VAL_NETADDR_KEY, TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+    },
     NetworkAddress, RawNetworkAddress,
 };
 use libra_temppath::TempPath;
@@ -678,14 +680,16 @@ impl ClientProxy {
             None,
         )?;
 
-        // TODO(philiphayes): get these from args?
-        let root_key = TEST_ROOT_KEY;
-        let key_version = TEST_ROOT_KEY_VERSION;
         let seq_num = sender.sequence_number;
         let addr_idx = 0;
 
-        let enc_network_address =
-            raw_network_address.encrypt(&root_key, key_version, &address, seq_num, addr_idx);
+        let enc_network_address = raw_network_address.encrypt(
+            &TEST_SHARED_VAL_NETADDR_KEY,
+            TEST_SHARED_VAL_NETADDR_KEY_VERSION,
+            &address,
+            seq_num,
+            addr_idx,
+        );
         let raw_enc_network_address = RawEncNetworkAddress::try_from(&enc_network_address)?;
 
         let program = encode_set_validator_config_script(

@@ -4,7 +4,7 @@
 use crate::ConfigurationChangeListener;
 use channel::libra_channel;
 use libra_config::config::RoleType;
-use libra_network_address::encrypted::{RootKey, RootKeyVersion};
+use libra_network_address::encrypted::{Key, KeyVersion};
 use libra_types::on_chain_config::OnChainConfigPayload;
 use network::connectivity_manager::ConnectivityRequest;
 use std::collections::HashMap;
@@ -12,7 +12,7 @@ use tokio::runtime::Handle;
 
 struct ConfigurationChangeListenerConfig {
     role: RoleType,
-    root_key_map: HashMap<RootKeyVersion, RootKey>,
+    shared_val_netaddr_key_map: HashMap<KeyVersion, Key>,
     conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
     reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
 }
@@ -20,13 +20,13 @@ struct ConfigurationChangeListenerConfig {
 impl ConfigurationChangeListenerConfig {
     fn new(
         role: RoleType,
-        root_key_map: HashMap<RootKeyVersion, RootKey>,
+        shared_val_netaddr_key_map: HashMap<KeyVersion, Key>,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     ) -> Self {
         Self {
             role,
-            root_key_map,
+            shared_val_netaddr_key_map,
             conn_mgr_reqs_tx,
             reconfig_events,
         }
@@ -49,14 +49,14 @@ pub struct ConfigurationChangeListenerBuilder {
 impl ConfigurationChangeListenerBuilder {
     pub fn create(
         role: RoleType,
-        root_key_map: HashMap<RootKeyVersion, RootKey>,
+        shared_val_netaddr_key_map: HashMap<KeyVersion, Key>,
         conn_mgr_reqs_tx: channel::Sender<ConnectivityRequest>,
         reconfig_events: libra_channel::Receiver<(), OnChainConfigPayload>,
     ) -> ConfigurationChangeListenerBuilder {
         Self {
             config: Some(ConfigurationChangeListenerConfig::new(
                 role,
-                root_key_map,
+                shared_val_netaddr_key_map,
                 conn_mgr_reqs_tx,
                 reconfig_events,
             )),
@@ -71,7 +71,7 @@ impl ConfigurationChangeListenerBuilder {
         let config = self.config.take().expect("Listener must be configured");
         self.listener = Some(ConfigurationChangeListener::new(
             config.role,
-            config.root_key_map,
+            config.shared_val_netaddr_key_map,
             config.conn_mgr_reqs_tx,
             config.reconfig_events,
         ));
