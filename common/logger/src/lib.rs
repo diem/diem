@@ -134,6 +134,7 @@ pub use struct_log::{
 mod text_log;
 pub use log::Level;
 pub use text_log::{Logger, CHANNEL_SIZE, DEFAULT_TARGET};
+pub mod counters;
 
 /// Define crit macro that specify libra as the target
 // TODO Remove historical crit from code base since it isn't supported in Rust Log.
@@ -228,6 +229,7 @@ macro_rules! send_struct_log {
             entry.location($crate::location!());
             entry.git_rev($crate::git_rev!());
             entry.send();
+            $crate::counters::STRUCT_LOG_COUNT.inc();
         }
     };
 }

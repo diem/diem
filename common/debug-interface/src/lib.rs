@@ -6,6 +6,7 @@ use anyhow::Result;
 use reqwest::blocking;
 use std::collections::HashMap;
 
+pub mod counters;
 pub mod json_log;
 pub mod libra_trace;
 pub mod node_debug_service;

@@ -75,6 +75,7 @@ macro_rules! send_logs {
             $crate::libra_trace::LIBRA_TRACE
         )
         .data($name, log_entry));
+        $crate::counters::TRACE_EVENT_COUNT.inc();
     };
 }
 
