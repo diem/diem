@@ -60,7 +60,7 @@ fn burn_txn_fees() {
             ),
         );
         assert_eq!(
-            status.status().vm_status().major_status,
+            status.status().vm_status().status_code(),
             StatusCode::EXECUTED
         );
         status.gas_used()

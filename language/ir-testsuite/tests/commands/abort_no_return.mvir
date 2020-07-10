@@ -5,6 +5,5 @@ main() {
 
 // not: VerificationFailure
 
-// check: ABORTED
-// check: 0
-// check: "Script::main at offset 2"
+// check: ABORTED 0
+// check: location: Script

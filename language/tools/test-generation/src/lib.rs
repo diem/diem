@@ -286,7 +286,7 @@ pub fn bytecode_generation(
                         Ok(_) => {
                             status = Status::Valid;
                         }
-                        Err(e) => match e.major_status {
+                        Err(e) => match e.status_code() {
                             StatusCode::ARITHMETIC_ERROR | StatusCode::OUT_OF_GAS => {
                                 status = Status::Valid;
                             }

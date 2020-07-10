@@ -11,7 +11,7 @@ fun main() {
     false || X::error();
 }
 }
-// check:"major_status: ABORTED, sub_status: Some(42)"
+// check:"ABORTED { code: 42,"
 
 //! new-transaction
 script {
@@ -20,7 +20,7 @@ fun main() {
     true && X::error();
 }
 }
-// check:"major_status: ABORTED, sub_status: Some(42)"
+// check:"ABORTED { code: 42,"
 
 //! new-transaction
 script {
@@ -29,7 +29,7 @@ fun main() {
     X::error() && false;
 }
 }
-// check:"major_status: ABORTED, sub_status: Some(42)"
+// check:"ABORTED { code: 42,"
 
 //! new-transaction
 script {
@@ -38,4 +38,4 @@ fun main() {
     X::error() || true;
 }
 }
-// check:"major_status: ABORTED, sub_status: Some(42)"
+// check:"ABORTED { code: 42,"

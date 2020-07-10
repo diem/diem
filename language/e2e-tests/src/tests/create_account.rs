@@ -29,7 +29,7 @@ fn create_account() {
     let output = executor.execute_transaction(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
     executor.apply_write_set(output.write_set());
 

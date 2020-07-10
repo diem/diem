@@ -68,7 +68,7 @@ fn updated_limit_allows_txn() {
     ));
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
 
     // higher transaction works with higher limit
@@ -77,7 +77,7 @@ fn updated_limit_allows_txn() {
     let output = executor.execute_and_apply(txn);
     assert!(transaction_status_eq(
         &output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     ));
     let sender_balance = executor
         .read_balance_resource(sender.account(), account::lbr_currency_code())

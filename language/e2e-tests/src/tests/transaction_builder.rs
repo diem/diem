@@ -69,11 +69,7 @@ fn freeze_unfreeze_account() {
     let output = &executor.execute_transaction(txn.clone());
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::new(
-            StatusCode::SENDING_ACCOUNT_FROZEN,
-            None,
-            None
-        )),
+        &TransactionStatus::Discard(VMStatus::Error(StatusCode::SENDING_ACCOUNT_FROZEN,)),
     );
 
     // Execute unfreeze on account
@@ -84,7 +80,7 @@ fn freeze_unfreeze_account() {
     let output = &executor.execute_transaction(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed()),
+        &TransactionStatus::Keep(VMStatus::Executed),
     );
 }
 
@@ -377,7 +373,7 @@ fn dual_attestation_payment() {
             1,
         ));
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::EXECUTED
         );
     }
@@ -396,11 +392,11 @@ fn dual_attestation_payment() {
             2,
         ));
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
         assert_eq!(
-            output.status().vm_status().sub_status,
+            output.status().vm_status().move_abort_code(),
             Some(BAD_METADATA_SIGNATURE_ERROR_CODE)
         );
     }
@@ -436,11 +432,11 @@ fn dual_attestation_payment() {
             2,
         ));
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
         assert_eq!(
-            output.status().vm_status().sub_status,
+            output.status().vm_status().move_abort_code(),
             Some(MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
         )
     }
@@ -476,11 +472,11 @@ fn dual_attestation_payment() {
             2,
         ));
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
         assert_eq!(
-            output.status().vm_status().sub_status,
+            output.status().vm_status().move_abort_code(),
             Some(MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
         );
     }
@@ -656,11 +652,11 @@ fn dual_attestation_payment() {
             4,
         ));
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
         assert_eq!(
-            output.status().vm_status().sub_status,
+            output.status().vm_status().move_abort_code(),
             Some(MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
         );
     }
@@ -668,10 +664,13 @@ fn dual_attestation_payment() {
 
 fn assert_aborted_with(output: TransactionOutput, error_code: u64) {
     assert_eq!(
-        output.status().vm_status().major_status,
+        output.status().vm_status().status_code(),
         StatusCode::ABORTED
     );
-    assert_eq!(output.status().vm_status().sub_status, Some(error_code));
+    assert_eq!(
+        output.status().vm_status().move_abort_code(),
+        Some(error_code)
+    );
 }
 
 // Check that DD <-> DD and DD <-> VASP payments over the threshold fail without dual attesation.
@@ -938,10 +937,10 @@ fn recovery_address() {
         0,
     ));
     assert_eq!(
-        output.status().vm_status().major_status,
+        output.status().vm_status().status_code(),
         StatusCode::ABORTED
     );
-    assert_eq!(output.status().vm_status().sub_status, Some(3));
+    assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
 
     // try to rotate child's key from other_vasp--should abort
     let (_, pubkey3) = keygen.generate_keypair();
@@ -955,10 +954,10 @@ fn recovery_address() {
         0,
     ));
     assert_eq!(
-        output.status().vm_status().major_status,
+        output.status().vm_status().status_code(),
         StatusCode::ABORTED
     );
-    assert_eq!(output.status().vm_status().sub_status, Some(2));
+    assert_eq!(output.status().vm_status().move_abort_code(), Some(2));
 }
 
 #[test]
@@ -1131,10 +1130,10 @@ fn account_limits() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(3));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
     }
 
     {
@@ -1154,10 +1153,10 @@ fn account_limits() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(3));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
     }
 
     // Intra-vasp transfer isn't limited
@@ -1222,10 +1221,10 @@ fn account_limits() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(3));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
 
         // Reset the window
         let prev_block_time = executor.get_block_time();
@@ -1245,7 +1244,7 @@ fn account_limits() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::EXECUTED
         );
     }
@@ -1320,10 +1319,10 @@ fn account_limits() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(6));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(6));
     }
 
     {
@@ -1343,10 +1342,10 @@ fn account_limits() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(6));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(6));
     }
 
     {
@@ -1366,10 +1365,10 @@ fn account_limits() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(6));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(6));
 
         // update block time
         let prev_block_time = executor.get_block_time();
@@ -1392,7 +1391,7 @@ fn account_limits() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::EXECUTED
         );
     }
@@ -1459,10 +1458,10 @@ fn account_limits() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(3));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
     }
 
     // Fine since A can still send
@@ -1514,10 +1513,10 @@ fn account_limits() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(3));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
     }
 
     // intra-vasp: OK since it isn't checked/contributes to the total balance
@@ -1550,10 +1549,10 @@ fn account_limits() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(3));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
 
         // Reset window
         let prev_block_time = executor.get_block_time();
@@ -1574,10 +1573,10 @@ fn account_limits() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(3));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(3));
     }
 }
 
@@ -1644,10 +1643,10 @@ fn add_child_currencies() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(13));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(13));
     }
 
     {
@@ -1666,10 +1665,10 @@ fn add_child_currencies() {
                 .sign(),
         );
         assert_eq!(
-            output.status().vm_status().major_status,
+            output.status().vm_status().status_code(),
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(13));
+        assert_eq!(output.status().vm_status().move_abort_code(), Some(13));
     }
 
     executor.execute_and_apply(

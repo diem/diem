@@ -7,7 +7,7 @@ use crate::{
 };
 use move_core_types::{
     language_storage::ModuleId,
-    vm_status::{StatusCode, StatusType, VMStatus},
+    vm_status::{self, StatusCode, StatusType, VMStatus},
 };
 use std::fmt;
 
@@ -37,13 +37,31 @@ impl VMError {
         let VMError {
             major_status,
             sub_status,
-            message,
+            location,
             ..
         } = self;
-        VMStatus {
-            major_status,
-            sub_status,
-            message,
+        match (major_status, sub_status, location) {
+            (StatusCode::EXECUTED, sub_status, _) => {
+                debug_assert!(sub_status.is_none());
+                VMStatus::Executed
+            }
+            (StatusCode::ABORTED, Some(code), Location::Script) => {
+                VMStatus::MoveAbort(vm_status::AbortLocation::Script, code)
+            }
+            (StatusCode::ABORTED, Some(code), Location::Module(id)) => {
+                VMStatus::MoveAbort(vm_status::AbortLocation::Module(id), code)
+            }
+
+            (StatusCode::ABORTED, sub_status, location) => {
+                debug_assert!(
+                    false,
+                    "Expected a code and module/script location with ABORTED, but got {:?} and {}",
+                    sub_status, location
+                );
+                VMStatus::Error(StatusCode::ABORTED)
+            }
+
+            (major_status, _, _) => VMStatus::Error(major_status),
         }
     }
 
@@ -245,7 +263,7 @@ impl Into<VMStatus> for VMError {
 
 pub fn vm_status_of_result<T>(result: VMResult<T>) -> VMStatus {
     match result {
-        Ok(_) => VMStatus::executed(),
+        Ok(_) => VMStatus::Executed,
         Err(err) => err.into_vm_status(),
     }
 }

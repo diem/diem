@@ -47,10 +47,10 @@ fn invalid_write_set_sender() {
 
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
-        output.status().vm_status().major_status,
+        output.status().vm_status().status_code(),
         StatusCode::ABORTED
     );
-    assert_eq!(output.status().vm_status().sub_status, Some(33));
+    assert_eq!(output.status().vm_status().move_abort_code(), Some(33));
 }
 
 #[test]
@@ -76,7 +76,7 @@ fn verify_and_execute_writeset() {
     let output = executor.execute_transaction(writeset_txn.clone());
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
     assert!(executor
         .verify_transaction(writeset_txn.clone())
@@ -103,15 +103,11 @@ fn verify_and_execute_writeset() {
     let output = executor.execute_transaction(writeset_txn.clone());
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::new(
-            StatusCode::SEQUENCE_NUMBER_TOO_OLD,
-            None,
-            None
-        ))
+        &TransactionStatus::Discard(VMStatus::Error(StatusCode::SEQUENCE_NUMBER_TOO_OLD,))
     );
     assert_eq!(
         executor.verify_transaction(writeset_txn).status().unwrap(),
-        VMStatus::new(StatusCode::SEQUENCE_NUMBER_TOO_OLD, None, None)
+        VMStatus::Error(StatusCode::SEQUENCE_NUMBER_TOO_OLD,)
     );
 
     // (3) Cannot apply the writeset with future sequence number.
@@ -126,11 +122,11 @@ fn verify_and_execute_writeset() {
     let output = executor.execute_transaction(writeset_txn.clone());
     let status = output.status();
     assert!(status.is_discarded());
-    assert_eq!(status.vm_status().major_status, StatusCode::ABORTED);
-    assert_eq!(status.vm_status().sub_status, Some(11));
+    assert_eq!(status.vm_status().status_code(), StatusCode::ABORTED);
+    assert_eq!(status.vm_status().move_abort_code(), Some(11));
     let err = executor.verify_transaction(writeset_txn).status().unwrap();
-    assert_eq!(err.major_status, StatusCode::ABORTED);
-    assert_eq!(err.sub_status, Some(11));
+    assert_eq!(err.status_code(), StatusCode::ABORTED);
+    assert_eq!(err.move_abort_code(), Some(11));
 }
 
 #[test]
@@ -158,7 +154,7 @@ fn bad_writesets() {
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_AUTH_KEY, None, None))
+        &TransactionStatus::Discard(VMStatus::Error(StatusCode::INVALID_AUTH_KEY))
     );
 
     // (2) The WriteSet contains a reconfiguration event, will be dropped.
@@ -175,7 +171,7 @@ fn bad_writesets() {
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_WRITE_SET, None, None))
+        &TransactionStatus::Discard(VMStatus::Error(StatusCode::INVALID_WRITE_SET))
     );
 
     // (3) The WriteSet attempts to change LibraWriteSetManager, will be dropped.
@@ -205,7 +201,7 @@ fn bad_writesets() {
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_WRITE_SET, None, None))
+        &TransactionStatus::Discard(VMStatus::Error(StatusCode::INVALID_WRITE_SET))
     );
 
     // (4) The WriteSet attempts to change libra root AccountResource, will be dropped.
@@ -235,7 +231,7 @@ fn bad_writesets() {
     let output = executor.execute_transaction(writeset_txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_WRITE_SET, None, None))
+        &TransactionStatus::Discard(VMStatus::Error(StatusCode::INVALID_WRITE_SET))
     );
 }
 
@@ -273,7 +269,7 @@ fn transfer_and_execute_writeset() {
     let output = executor.execute_transaction(writeset_txn.clone());
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
     assert!(executor.verify_transaction(writeset_txn).status().is_none());
 
@@ -303,7 +299,7 @@ fn transfer_and_execute_writeset() {
     let output = executor.execute_transaction(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
 
     executor.apply_write_set(output.write_set());

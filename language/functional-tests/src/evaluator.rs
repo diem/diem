@@ -381,7 +381,7 @@ fn run_transaction(
         match output.status() {
             TransactionStatus::Keep(status) => {
                 exec.apply_write_set(output.write_set());
-                if status.major_status == StatusCode::EXECUTED {
+                if status.status_code() == StatusCode::EXECUTED {
                     Ok(output)
                 } else {
                     Err(ErrorKind::VMExecutionFailure(output).into())

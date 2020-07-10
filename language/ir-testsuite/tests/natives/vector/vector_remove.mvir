@@ -53,8 +53,7 @@ main() {
   return;
 }
 
-// check: ABORTED
-// check: Some(0)
+// check: ABORTED 0
 
 //! new-transaction
 import 0x1.Vector;
@@ -69,5 +68,4 @@ main() {
   return;
 }
 
-// check: ABORTED
-// check: Some(0)
+// check: ABORTED 0

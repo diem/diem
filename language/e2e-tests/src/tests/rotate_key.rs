@@ -34,7 +34,7 @@ fn rotate_ed25519_key() {
     let output = &executor.execute_transaction(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed()),
+        &TransactionStatus::Keep(VMStatus::Executed),
     );
     executor.apply_write_set(output.write_set());
 
@@ -54,7 +54,7 @@ fn rotate_ed25519_key() {
     let old_key_output = &executor.execute_transaction(old_key_txn);
     assert_eq!(
         old_key_output.status(),
-        &TransactionStatus::Discard(VMStatus::new(StatusCode::INVALID_AUTH_KEY, None, None)),
+        &TransactionStatus::Discard(VMStatus::Error(StatusCode::INVALID_AUTH_KEY)),
     );
 
     // Check that transactions can be sent with the new key.
@@ -63,7 +63,7 @@ fn rotate_ed25519_key() {
     let new_key_output = &executor.execute_transaction(new_key_txn);
     assert_eq!(
         new_key_output.status(),
-        &TransactionStatus::Keep(VMStatus::executed()),
+        &TransactionStatus::Keep(VMStatus::Executed),
     );
 }
 
@@ -94,7 +94,7 @@ fn rotate_ed25519_multisig_key() {
     ));
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed()),
+        &TransactionStatus::Keep(VMStatus::Executed),
     );
     executor.apply_write_set(output.write_set());
     seq_number += 1;
@@ -107,7 +107,7 @@ fn rotate_ed25519_multisig_key() {
     let output = &executor.execute_transaction(signed_txn1);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed()),
+        &TransactionStatus::Keep(VMStatus::Executed),
     );
     executor.apply_write_set(output.write_set());
     seq_number += 1;
@@ -122,7 +122,7 @@ fn rotate_ed25519_multisig_key() {
     let output = &executor.execute_transaction(signed_txn2);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed()),
+        &TransactionStatus::Keep(VMStatus::Executed),
     );
 }
 

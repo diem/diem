@@ -15,4 +15,3 @@ fun main() {
 
 // check: ABORTED
 // check: 22
-// check: "::M::foo at offset 2"

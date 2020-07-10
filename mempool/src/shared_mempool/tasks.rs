@@ -329,18 +329,14 @@ where
                 } else {
                     statuses.push((
                         MempoolStatus::new(MempoolStatusCode::VmError),
-                        Some(VMStatus::new(SEQUENCE_NUMBER_TOO_OLD, None, None)),
+                        Some(VMStatus::Error(SEQUENCE_NUMBER_TOO_OLD)),
                     ));
                 }
             } else {
                 // failed to get transaction
                 statuses.push((
                     MempoolStatus::new(MempoolStatusCode::VmError),
-                    Some(VMStatus::new(
-                        RESOURCE_DOES_NOT_EXIST,
-                        None,
-                        Some("[shared mempool] failed to get account state".to_string()),
-                    )),
+                    Some(VMStatus::Error(RESOURCE_DOES_NOT_EXIST)),
                 ));
             }
             None

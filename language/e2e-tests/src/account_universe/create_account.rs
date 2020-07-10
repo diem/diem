@@ -13,7 +13,7 @@ use libra_proptest_helpers::Index;
 use libra_types::{
     account_config,
     transaction::{SignedTransaction, TransactionStatus},
-    vm_status::{StatusCode, VMStatus},
+    vm_status::{AbortLocation, StatusCode, VMStatus},
 };
 use proptest::prelude::*;
 use proptest_derive::Arbitrary;
@@ -114,13 +114,12 @@ impl AUTransactionGen for CreateExistingAccountGen {
             sender.sequence_number += 1;
             gas_used = sender.create_existing_account_gas_cost();
             sender.balance -= gas_used * gas_price;
-            TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED, Some(777_777), None))
+            // TODO(tmn) provide a real abort location
+            TransactionStatus::Keep(VMStatus::MoveAbort(AbortLocation::Script, 777_777))
         } else {
             // Not enough gas to get past the prologue.
-            TransactionStatus::Discard(VMStatus::new(
+            TransactionStatus::Discard(VMStatus::Error(
                 StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
-                None,
-                None,
             ))
         };
 
