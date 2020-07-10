@@ -42,6 +42,9 @@ pub mod security_events {
     /// Consensus received a transaction with an invalid signature
     pub const INVALID_TRANSACTION_CONSENSUS: &str = "InvalidTransactionConsensus";
 
+    /// Consensus received non-NIL votes with different vote data hash for the same round
+    pub const CONSENSUS_CONTRADICTING_VOTE: &str = "ConsensusContradictingVote";
+
     /// Consensus received an equivocating vote
     pub const CONSENSUS_EQUIVOCATING_VOTE: &str = "ConsensusEquivocatingVote";
 
