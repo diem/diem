@@ -338,18 +338,18 @@ Specification version of the
 
 
 <pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_is_not_initialized">spec_is_not_initialized</a>(): bool {
-    !<a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>() || <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() == 0
+    !<a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>() || <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() == 0
 }
 </code></pre>
 
 
-True if the libra root account has a CurrentTimeMicroseconds.
+True if the association root account has a CurrentTimeMicroseconds.
 
 
-<a name="0x1_LibraTimestamp_root_ctm_initialized"></a>
+<a name="0x1_LibraTimestamp_spec_root_ctm_initialized"></a>
 
 
-<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>(): bool {
+<pre><code><b>define</b> <a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>(): bool {
     exists&lt;<a href="#0x1_LibraTimestamp_CurrentTimeMicroseconds">CurrentTimeMicroseconds</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
 }
 </code></pre>
@@ -393,7 +393,7 @@ If the
 
 
 <pre><code><b>schema</b> <a href="#0x1_LibraTimestamp_InitializationPersists">InitializationPersists</a> {
-    <b>ensures</b> <b>old</b>(<a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>()) ==&gt; <a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>();
+    <b>ensures</b> <b>old</b>(<a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>()) ==&gt; <a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>();
 }
 </code></pre>
 
@@ -417,7 +417,7 @@ The global wall clock time never decreases.
 
 
 <pre><code><b>schema</b> <a href="#0x1_LibraTimestamp_GlobalWallClockIsMonotonic">GlobalWallClockIsMonotonic</a> {
-    <b>ensures</b> <b>old</b>(<a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>()) ==&gt; (<b>old</b>(<a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>()) &lt;= <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>());
+    <b>ensures</b> <b>old</b>(<a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>()) ==&gt; (<b>old</b>(<a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>()) &lt;= <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>());
 }
 </code></pre>
 
@@ -441,8 +441,8 @@ The global wall clock time never decreases.
 
 
 <pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
-<b>aborts_if</b> <a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>();
-<b>ensures</b> <a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>();
+<b>aborts_if</b> <a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>();
+<b>ensures</b> <a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>();
 <b>ensures</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() == 0;
 </code></pre>
 
@@ -461,7 +461,7 @@ The global wall clock time never decreases.
 
 <pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(lr_account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>();
 <b>aborts_if</b> !<a href="#0x1_LibraTimestamp_spec_is_genesis">spec_is_genesis</a>();
-<b>aborts_if</b> !<a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>();
+<b>aborts_if</b> !<a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>();
 <b>aborts_if</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() != 0;
 <b>ensures</b> !<a href="#0x1_LibraTimestamp_spec_is_genesis">spec_is_genesis</a>();
 </code></pre>
@@ -479,8 +479,9 @@ The global wall clock time never decreases.
 
 
 
-<pre><code><b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>();
-<b>aborts_if</b> !<a href="#0x1_LibraTimestamp_root_ctm_initialized">root_ctm_initialized</a>();
+<pre><code>pragma assume_no_abort_from_here = <b>true</b>;
+<b>aborts_if</b> <a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account) != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>();
+<b>aborts_if</b> !<a href="#0x1_LibraTimestamp_spec_root_ctm_initialized">spec_root_ctm_initialized</a>();
 <b>aborts_if</b> (proposer == <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>()) && (timestamp != <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>());
 <b>aborts_if</b> (proposer != <a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_VM_RESERVED_ADDRESS">CoreAddresses::SPEC_VM_RESERVED_ADDRESS</a>()) && !(timestamp &gt; <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>());
 <b>ensures</b> <a href="#0x1_LibraTimestamp_spec_now_microseconds">spec_now_microseconds</a>() == timestamp;
