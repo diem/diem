@@ -1,7 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use consensus_types::common::Round;
+use consensus_types::common::{Epoch, Round};
 use libra_types::waypoint::Waypoint;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
@@ -11,7 +11,7 @@ use std::fmt::{Display, Formatter};
 /// @TODO add hash of ledger info (waypoint)
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ConsensusState {
-    epoch: u64,
+    epoch: Epoch,
     last_voted_round: Round,
     preferred_round: Round,
     waypoint: Waypoint,
@@ -40,7 +40,7 @@ impl Display for ConsensusState {
 
 impl ConsensusState {
     pub fn new(
-        epoch: u64,
+        epoch: Epoch,
         last_voted_round: Round,
         preferred_round: Round,
         waypoint: Waypoint,
@@ -56,7 +56,7 @@ impl ConsensusState {
     }
 
     /// Returns the current epoch
-    pub fn epoch(&self) -> u64 {
+    pub fn epoch(&self) -> Epoch {
         self.epoch
     }
 

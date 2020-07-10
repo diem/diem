@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use consensus_types::{
-    common::{Author, Round},
+    common::{Author, Epoch, Round},
     vote::Vote,
 };
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
@@ -112,7 +112,7 @@ impl PersistentSafetyStorage {
         Ok(self.internal_store.get(EPOCH).and_then(|r| r.value.u64())?)
     }
 
-    pub fn set_epoch(&mut self, epoch: u64) -> Result<()> {
+    pub fn set_epoch(&mut self, epoch: Epoch) -> Result<()> {
         self.internal_store.set(EPOCH, Value::U64(epoch))?;
         Ok(())
     }

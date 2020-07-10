@@ -3,12 +3,14 @@
 
 use libra_types::{account_address::AccountAddress, transaction::SignedTransaction};
 
-/// The round of a block is a consensus-internal counter, which starts with 0 and increases
-/// monotonically. It is used for the protocol safety and liveness (please see the detailed
-/// protocol description).
+/// Consensus starts at epoch 0 and increments it periodically.
+pub type Epoch = u64;
+
+/// LibraBFT works in a series of "rounds". Rounds are reset to 0 when entering a new epoch.
 pub type Round = u64;
-/// Author refers to the author's account address
+
+/// Author refers to a validator's account address
 pub type Author = AccountAddress;
 
-/// The payload in block.
+/// The payload in a block is a list of signed transactions.
 pub type Payload = Vec<SignedTransaction>;

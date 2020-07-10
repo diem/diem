@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::common::Epoch;
 use crate::common::Round;
 use libra_crypto::ed25519::Ed25519Signature;
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
@@ -13,17 +14,17 @@ use std::fmt::{Display, Formatter};
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, CryptoHasher, LCSCryptoHash)]
 pub struct Timeout {
     /// Epoch number corresponds to the set of validators that are active for this round.
-    epoch: u64,
+    epoch: Epoch,
     /// The consensus protocol executes proposals (blocks) in rounds, which monotically increase per epoch.
     round: Round,
 }
 
 impl Timeout {
-    pub fn new(epoch: u64, round: Round) -> Self {
+    pub fn new(epoch: Epoch, round: Round) -> Self {
         Self { epoch, round }
     }
 
-    pub fn epoch(&self) -> u64 {
+    pub fn epoch(&self) -> Epoch {
         self.epoch
     }
 

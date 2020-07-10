@@ -8,7 +8,7 @@ use crate::{
 use consensus_types::{
     block::Block,
     block_data::BlockData,
-    common::Author,
+    common::{Author, Epoch},
     quorum_cert::QuorumCert,
     timeout::Timeout,
     vote::Vote,
@@ -159,7 +159,7 @@ impl SafetyRules {
     }
 
     /// This verifies the epoch given against storage for consistent verification
-    fn verify_epoch(&self, epoch: u64) -> Result<(), Error> {
+    fn verify_epoch(&self, epoch: Epoch) -> Result<(), Error> {
         let expected_epoch = self.persistent_storage.epoch()?;
         if epoch != expected_epoch {
             Err(Error::IncorrectEpoch(epoch, expected_epoch))

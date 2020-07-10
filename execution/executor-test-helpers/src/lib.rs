@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use consensus_types::common::Epoch;
 use executor::db_bootstrapper::bootstrap_db_if_empty;
 use executor_types::StateComputeResult;
 use libra_config::{config::NodeConfig, utils};
@@ -45,7 +46,7 @@ pub fn gen_block_id(index: u8) -> HashValue {
 }
 
 pub fn gen_ledger_info_with_sigs(
-    epoch: u64,
+    epoch: Epoch,
     output: StateComputeResult,
     commit_block_id: HashValue,
     signer: Vec<&ValidatorSigner>,

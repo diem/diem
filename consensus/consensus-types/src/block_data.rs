@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use crate::{
-    common::{Author, Payload, Round},
+    common::{Author, Epoch, Payload, Round},
     quorum_cert::QuorumCert,
     vote_data::VoteData,
 };
@@ -39,7 +39,7 @@ pub enum BlockType {
 /// Each block must know the id of its parent and keep the QuorurmCertificate to that parent.
 pub struct BlockData {
     /// Epoch number corresponds to the set of validators that are active for this block.
-    epoch: u64,
+    epoch: Epoch,
     /// The round of a block is an internal monotonically increasing counter used by Consensus
     /// protocol.
     round: Round,

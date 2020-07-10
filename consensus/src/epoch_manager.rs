@@ -22,7 +22,7 @@ use crate::{
 use anyhow::{anyhow, bail, ensure, Context};
 use channel::libra_channel;
 use consensus_types::{
-    common::{Author, Round},
+    common::{Author, Epoch, Round},
     epoch_retrieval::EpochRetrievalRequest,
 };
 use futures::{select, StreamExt};
@@ -194,7 +194,7 @@ impl EpochManager {
 
     async fn process_different_epoch(
         &mut self,
-        different_epoch: u64,
+        different_epoch: Epoch,
         peer_id: AccountAddress,
     ) -> anyhow::Result<()> {
         match different_epoch.cmp(&self.epoch()) {
