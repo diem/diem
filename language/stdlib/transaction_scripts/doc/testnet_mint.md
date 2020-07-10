@@ -35,7 +35,7 @@ Send
   // is a <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer">DesignatedDealer</a> account, and the recipient (at least in the current testnet) will always
   // be a <a href="../../modules/doc/DesignatedDealer.md#0x1_DesignatedDealer">DesignatedDealer</a> or <a href="../../modules/doc/VASP.md#0x1_VASP">VASP</a>.
   <b>assert</b>(
-      <a href="../../modules/doc/Libra.md#0x1_Libra_approx_lbr_for_value">Libra::approx_lbr_for_value</a>&lt;Token&gt;(amount) &lt; <a href="../../modules/doc/DualAttestationLimit.md#0x1_DualAttestationLimit_get_cur_microlibra_limit">DualAttestationLimit::get_cur_microlibra_limit</a>(),
+      <a href="../../modules/doc/Libra.md#0x1_Libra_approx_lbr_for_value">Libra::approx_lbr_for_value</a>&lt;Token&gt;(amount) &lt; <a href="../../modules/doc/DualAttestation.md#0x1_DualAttestation_get_cur_microlibra_limit">DualAttestation::get_cur_microlibra_limit</a>(),
       8000973
   );
   <b>let</b> payer_withdrawal_cap = <a href="../../modules/doc/LibraAccount.md#0x1_LibraAccount_extract_withdraw_capability">LibraAccount::extract_withdraw_capability</a>(payer);

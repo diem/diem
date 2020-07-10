@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use crate::on_chain_config::OnChainConfig;
 use move_core_types::move_resource::MoveResource;
 use serde::{Deserialize, Serialize};
 
@@ -33,4 +34,19 @@ impl Credential {
 impl MoveResource for Credential {
     const MODULE_NAME: &'static str = "DualAttestation";
     const STRUCT_NAME: &'static str = "Credential";
+}
+
+/// Defines the dual attest limit in microLibra LBR
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+pub struct Limit {
+    pub micro_lbr_limit: u64,
+}
+
+impl OnChainConfig for Limit {
+    const IDENTIFIER: &'static str = "Limit";
+}
+
+impl MoveResource for Limit {
+    const MODULE_NAME: &'static str = "DualAttestation";
+    const STRUCT_NAME: &'static str = "Limit";
 }

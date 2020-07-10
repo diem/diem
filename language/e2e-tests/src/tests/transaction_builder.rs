@@ -23,7 +23,8 @@ use libra_types::{
 use transaction_builder::*;
 
 const COIN1_THRESHOLD: u64 = 10_000_000_000 / 5;
-const BAD_METADATA_SIGNATURE_ERROR_CODE: u64 = 4;
+const BAD_METADATA_SIGNATURE_ERROR_CODE: u64 = 6;
+const MISMATCHED_METADATA_SIGNATURE_ERROR_CODE: u64 = 7;
 
 #[test]
 fn freeze_unfreeze_account() {
@@ -398,7 +399,10 @@ fn dual_attestation_payment() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(4));
+        assert_eq!(
+            output.status().vm_status().sub_status,
+            Some(BAD_METADATA_SIGNATURE_ERROR_CODE)
+        );
     }
 
     {
@@ -435,7 +439,10 @@ fn dual_attestation_payment() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(5));
+        assert_eq!(
+            output.status().vm_status().sub_status,
+            Some(MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
+        )
     }
 
     {
@@ -472,7 +479,10 @@ fn dual_attestation_payment() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(5));
+        assert_eq!(
+            output.status().vm_status().sub_status,
+            Some(MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
+        );
     }
     {
         // Intra-VASP transaction >= 1000 threshold, should go through with any signature since
@@ -649,7 +659,10 @@ fn dual_attestation_payment() {
             output.status().vm_status().major_status,
             StatusCode::ABORTED
         );
-        assert_eq!(output.status().vm_status().sub_status, Some(5));
+        assert_eq!(
+            output.status().vm_status().sub_status,
+            Some(MISMATCHED_METADATA_SIGNATURE_ERROR_CODE)
+        );
     }
 }
 

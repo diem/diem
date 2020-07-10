@@ -1,5 +1,5 @@
 script {
-use 0x1::DualAttestationLimit;
+use 0x1::DualAttestation;
 use 0x1::Libra;
 use 0x1::LibraAccount;
 use 0x1::Signer;
@@ -12,7 +12,7 @@ fun testnet_mint<Token>(payer: &signer, payee: address, amount: u64) {
   // is a DesignatedDealer account, and the recipient (at least in the current testnet) will always
   // be a DesignatedDealer or VASP.
   assert(
-      Libra::approx_lbr_for_value<Token>(amount) < DualAttestationLimit::get_cur_microlibra_limit(),
+      Libra::approx_lbr_for_value<Token>(amount) < DualAttestation::get_cur_microlibra_limit(),
       8000973
   );
   let payer_withdrawal_cap = LibraAccount::extract_withdraw_capability(payer);

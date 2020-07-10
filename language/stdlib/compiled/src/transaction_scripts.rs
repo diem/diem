@@ -61,7 +61,7 @@ pub enum StdlibScript {
     UpdateExchangeRate,
     UpdateLibraVersion,
     UpdateMintingAbility,
-    UpdateTravelRuleLimit,
+    UpdateDualAttestationLimit,
     // ...add new scripts here
 }
 
@@ -111,7 +111,7 @@ impl StdlibScript {
             UpdateExchangeRate,
             UpdateLibraVersion,
             UpdateMintingAbility,
-            UpdateTravelRuleLimit,
+            UpdateDualAttestationLimit,
             // ...add new scripts here
         ]
     }
@@ -236,7 +236,7 @@ impl fmt::Display for StdlibScript {
                 SetValidatorConfig => "set_validator_config",
                 SetValidatorOperator => "set_validator_operator",
                 TieredMint => "tiered_mint",
-                UpdateTravelRuleLimit => "update_travel_rule_limit",
+                UpdateDualAttestationLimit => "update_dual_attestation_limit",
                 UnfreezeAccount => "unfreeze_account",
                 UnmintLbr => "unmint_lbr",
                 UpdateAccountLimitDefinition => "update_account_limit_definition",

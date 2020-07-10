@@ -16,7 +16,7 @@ use libra_types::{
     vm_status::VMStatus,
 };
 use libra_vm::LibraVM;
-use transaction_builder::encode_update_travel_rule_limit_script;
+use transaction_builder::encode_update_dual_attestation_limit_script;
 
 #[test]
 fn initial_libra_version() {
@@ -49,7 +49,6 @@ fn initial_libra_version() {
     );
 }
 
-// Testsupdate_travel_rule_limit.move DualAttestionLimit
 #[test]
 fn updated_limit_allows_txn() {
     // create a FakeExecutor with a genesis from file
@@ -64,7 +63,7 @@ fn updated_limit_allows_txn() {
     // Execute updated dual attestation limit
     let new_micro_lbr_limit = 1_000_011;
     let output = executor.execute_and_apply(blessed.signed_script_txn(
-        encode_update_travel_rule_limit_script(3, new_micro_lbr_limit),
+        encode_update_dual_attestation_limit_script(3, new_micro_lbr_limit),
         0,
     ));
     assert_eq!(

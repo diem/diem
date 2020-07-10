@@ -6,6 +6,7 @@
 ### Table of Contents
 
 -  [Resource `Credential`](#0x1_DualAttestation_Credential)
+-  [Resource `Limit`](#0x1_DualAttestation_Limit)
 -  [Function `publish_credential`](#0x1_DualAttestation_publish_credential)
 -  [Function `rotate_base_url`](#0x1_DualAttestation_rotate_base_url)
 -  [Function `rotate_compliance_public_key`](#0x1_DualAttestation_rotate_compliance_public_key)
@@ -20,15 +21,20 @@
 -  [Function `dual_attestation_message`](#0x1_DualAttestation_dual_attestation_message)
 -  [Function `assert_signature_is_valid`](#0x1_DualAttestation_assert_signature_is_valid)
 -  [Function `assert_payment_ok`](#0x1_DualAttestation_assert_payment_ok)
+-  [Function `initialize`](#0x1_DualAttestation_initialize)
+-  [Function `get_cur_microlibra_limit`](#0x1_DualAttestation_get_cur_microlibra_limit)
+-  [Function `set_microlibra_limit`](#0x1_DualAttestation_set_microlibra_limit)
 -  [Specification](#0x1_DualAttestation_Specification)
     -  [Function `rotate_base_url`](#0x1_DualAttestation_Specification_rotate_base_url)
     -  [Function `rotate_compliance_public_key`](#0x1_DualAttestation_Specification_rotate_compliance_public_key)
+    -  [Function `compliance_public_key`](#0x1_DualAttestation_Specification_compliance_public_key)
     -  [Function `recertify`](#0x1_DualAttestation_Specification_recertify)
     -  [Function `decertify`](#0x1_DualAttestation_Specification_decertify)
     -  [Function `credential_address`](#0x1_DualAttestation_Specification_credential_address)
     -  [Function `dual_attestation_required`](#0x1_DualAttestation_Specification_dual_attestation_required)
     -  [Function `dual_attestation_message`](#0x1_DualAttestation_Specification_dual_attestation_message)
     -  [Function `assert_signature_is_valid`](#0x1_DualAttestation_Specification_assert_signature_is_valid)
+    -  [Function `get_cur_microlibra_limit`](#0x1_DualAttestation_Specification_get_cur_microlibra_limit)
 
 
 
@@ -86,6 +92,35 @@ participate in off-chain protocols.
 <dd>
  Expiration date in microseconds from unix epoch. For V1, it is always set to
  U64_MAX. Mutable, but only by LibraRoot.
+</dd>
+</dl>
+
+
+</details>
+
+<a name="0x1_DualAttestation_Limit"></a>
+
+## Resource `Limit`
+
+Struct to store the limit on-chain
+
+
+<pre><code><b>resource</b> <b>struct</b> <a href="#0x1_DualAttestation_Limit">Limit</a>
+</code></pre>
+
+
+
+<details>
+<summary>Fields</summary>
+
+
+<dl>
+<dt>
+
+<code>micro_lbr_limit: u64</code>
+</dt>
+<dd>
+
 </dd>
 </dl>
 
@@ -408,19 +443,19 @@ Helper which returns true if dual attestion is required for a deposit.
 
 <pre><code><b>fun</b> <a href="#0x1_DualAttestation_dual_attestation_required">dual_attestation_required</a>&lt;Token&gt;(
     payer: address, payee: address, deposit_value: u64
-): bool {
-    // travel rule applies for payments over a threshold
-    <b>let</b> travel_rule_limit_microlibra = <a href="DualAttestationLimit.md#0x1_DualAttestationLimit_get_cur_microlibra_limit">DualAttestationLimit::get_cur_microlibra_limit</a>();
+): bool <b>acquires</b> <a href="#0x1_DualAttestation_Limit">Limit</a> {
+    // travel rule applies for payments over a limit
+    <b>let</b> travel_rule_limit_microlibra = <a href="#0x1_DualAttestation_get_cur_microlibra_limit">get_cur_microlibra_limit</a>();
     <b>let</b> approx_lbr_microlibra_value = <a href="Libra.md#0x1_Libra_approx_lbr_for_value">Libra::approx_lbr_for_value</a>&lt;Token&gt;(deposit_value);
-    <b>let</b> above_threshold = approx_lbr_microlibra_value &gt;= travel_rule_limit_microlibra;
-    <b>if</b> (!above_threshold) {
+    <b>let</b> above_limit = approx_lbr_microlibra_value &gt;= travel_rule_limit_microlibra;
+    <b>if</b> (!above_limit) {
         <b>return</b> <b>false</b>
     };
     // self-deposits never require dual attestation
     <b>if</b> (payer == payee) {
         <b>return</b> <b>false</b>
     };
-    // dual attestation is required <b>if</b> the amount is above the threshold AND between distinct
+    // dual attestation is required <b>if</b> the amount is above the limit AND between distinct
     // entities. E.g.:
     // (1) inter-<a href="VASP.md#0x1_VASP">VASP</a>
     // (2) inter-DD
@@ -563,10 +598,102 @@ the conditions in (2) is not met.
     value: u64,
     metadata: vector&lt;u8&gt;,
     metadata_signature: vector&lt;u8&gt;
-) <b>acquires</b> <a href="#0x1_DualAttestation_Credential">Credential</a> {
+) <b>acquires</b> <a href="#0x1_DualAttestation_Credential">Credential</a>, <a href="#0x1_DualAttestation_Limit">Limit</a> {
     <b>if</b> (<a href="#0x1_DualAttestation_dual_attestation_required">dual_attestation_required</a>&lt;Currency&gt;(payer, payee, value)) {
       <a href="#0x1_DualAttestation_assert_signature_is_valid">assert_signature_is_valid</a>(payer, payee, metadata_signature, metadata, value)
     }
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DualAttestation_initialize"></a>
+
+## Function `initialize`
+
+Travel rule limit set during genesis
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_initialize">initialize</a>(lr_account: &signer)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_initialize">initialize</a>(lr_account: &signer) {
+    <b>assert</b>(<a href="LibraTimestamp.md#0x1_LibraTimestamp_is_genesis">LibraTimestamp::is_genesis</a>(), ENOT_GENESIS);
+    <b>assert</b>(
+        <a href="Signer.md#0x1_Signer_address_of">Signer::address_of</a>(lr_account) == <a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>(),
+        EACCOUNT_NOT_LIBRA_ROOT
+    );
+    move_to(
+        lr_account,
+        <a href="#0x1_DualAttestation_Limit">Limit</a> {
+            micro_lbr_limit: INITIAL_DUAL_ATTESTATION_LIMIT * <a href="Libra.md#0x1_Libra_scaling_factor">Libra::scaling_factor</a>&lt;<a href="LBR.md#0x1_LBR">LBR</a>&gt;()
+        }
+    )
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DualAttestation_get_cur_microlibra_limit"></a>
+
+## Function `get_cur_microlibra_limit`
+
+Return the current dual attestation limit in microlibra
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_get_cur_microlibra_limit">get_cur_microlibra_limit</a>(): u64
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_get_cur_microlibra_limit">get_cur_microlibra_limit</a>(): u64 <b>acquires</b> <a href="#0x1_DualAttestation_Limit">Limit</a> {
+    borrow_global&lt;<a href="#0x1_DualAttestation_Limit">Limit</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).micro_lbr_limit
+}
+</code></pre>
+
+
+
+</details>
+
+<a name="0x1_DualAttestation_set_microlibra_limit"></a>
+
+## Function `set_microlibra_limit`
+
+Set the dual attestation limit to
+<code>micro_libra_limit</code>.
+Aborts if
+<code>tc_account</code> does not have the TreasuryCompliance role
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_set_microlibra_limit">set_microlibra_limit</a>(tc_account: &signer, micro_lbr_limit: u64)
+</code></pre>
+
+
+
+<details>
+<summary>Implementation</summary>
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_set_microlibra_limit">set_microlibra_limit</a>(tc_account: &signer, micro_lbr_limit: u64) <b>acquires</b> <a href="#0x1_DualAttestation_Limit">Limit</a> {
+    <b>assert</b>(
+        <a href="Roles.md#0x1_Roles_has_update_dual_attestation_limit_privilege">Roles::has_update_dual_attestation_limit_privilege</a>(tc_account),
+        ECANNOT_UPDATE_LIMIT
+    );
+    borrow_global_mut&lt;<a href="#0x1_DualAttestation_Limit">Limit</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_LIBRA_ROOT_ADDRESS">CoreAddresses::LIBRA_ROOT_ADDRESS</a>()).micro_lbr_limit = micro_lbr_limit;
 }
 </code></pre>
 
@@ -612,6 +739,23 @@ the conditions in (2) is not met.
 <b>aborts_if</b> !<a href="Signature.md#0x1_Signature_spec_ed25519_validate_pubkey">Signature::spec_ed25519_validate_pubkey</a>(new_key);
 <b>ensures</b> <b>global</b>&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(<a href="Signer.md#0x1_Signer_spec_address_of">Signer::spec_address_of</a>(account)).compliance_public_key
      == new_key;
+</code></pre>
+
+
+
+<a name="0x1_DualAttestation_Specification_compliance_public_key"></a>
+
+### Function `compliance_public_key`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_compliance_public_key">compliance_public_key</a>(addr: address): vector&lt;u8&gt;
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_DualAttestation_Credential">Credential</a>&gt;(addr);
+<b>ensures</b> result == <a href="#0x1_DualAttestation_spec_compliance_public_key">spec_compliance_public_key</a>(addr);
 </code></pre>
 
 
@@ -722,7 +866,7 @@ Spec version of
 
 <pre><code><b>schema</b> <a href="#0x1_DualAttestation_TravelRuleAppliesAbortsIf">TravelRuleAppliesAbortsIf</a>&lt;Token&gt; {
     <b>aborts_if</b> !<a href="Libra.md#0x1_Libra_spec_is_currency">Libra::spec_is_currency</a>&lt;Token&gt;();
-    <b>aborts_if</b> !<a href="DualAttestationLimit.md#0x1_DualAttestationLimit_spec_is_published">DualAttestationLimit::spec_is_published</a>();
+    <b>aborts_if</b> !<a href="#0x1_DualAttestation_spec_is_published">spec_is_published</a>();
 }
 </code></pre>
 
@@ -762,7 +906,7 @@ Helper functions which simulates
     payer: address, payee: address, deposit_value: u64
 ): bool {
     <a href="Libra.md#0x1_Libra_spec_approx_lbr_for_value">Libra::spec_approx_lbr_for_value</a>&lt;Token&gt;(deposit_value)
-            &gt;= <a href="DualAttestationLimit.md#0x1_DualAttestationLimit_spec_get_cur_microlibra_limit">DualAttestationLimit::spec_get_cur_microlibra_limit</a>() &&
+            &gt;= <a href="#0x1_DualAttestation_spec_get_cur_microlibra_limit">spec_get_cur_microlibra_limit</a>() &&
     payer != payee &&
     (<a href="#0x1_DualAttestation_spec_is_inter_vasp">spec_is_inter_vasp</a>(payer, payee) ||
      <a href="#0x1_DualAttestation_spec_is_inter_dd">spec_is_inter_dd</a>(payer, payee) ||
@@ -850,6 +994,61 @@ Returns true if signature is valid.
 
 
 
+<a name="0x1_DualAttestation_Specification_get_cur_microlibra_limit"></a>
+
+### Function `get_cur_microlibra_limit`
+
+
+<pre><code><b>public</b> <b>fun</b> <a href="#0x1_DualAttestation_get_cur_microlibra_limit">get_cur_microlibra_limit</a>(): u64
+</code></pre>
+
+
+
+
+<pre><code><b>aborts_if</b> !exists&lt;<a href="#0x1_DualAttestation_Limit">Limit</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>());
+<b>ensures</b> result == <a href="#0x1_DualAttestation_spec_get_cur_microlibra_limit">spec_get_cur_microlibra_limit</a>();
+</code></pre>
+
+
+The Limit resource should be published after genesis
+
+
+<a name="0x1_DualAttestation_LimitExists"></a>
+
+
+<pre><code><b>schema</b> <a href="#0x1_DualAttestation_LimitExists">LimitExists</a> {
+    <b>invariant</b> !<a href="LibraTimestamp.md#0x1_LibraTimestamp_spec_is_genesis">LibraTimestamp::spec_is_genesis</a>() ==&gt; <a href="#0x1_DualAttestation_spec_is_published">spec_is_published</a>();
+}
+</code></pre>
+
+
+
 
 <pre><code>pragma verify = <b>true</b>;
+</code></pre>
+
+
+Helper function to determine whether the Limit is published.
+
+
+<a name="0x1_DualAttestation_spec_is_published"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_DualAttestation_spec_is_published">spec_is_published</a>(): bool {
+    exists&lt;<a href="#0x1_DualAttestation_Limit">Limit</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>())
+}
+</code></pre>
+
+
+Mirrors
+<code><a href="#0x1_DualAttestation_get_cur_microlibra_limit">Self::get_cur_microlibra_limit</a></code>.
+
+
+<a name="0x1_DualAttestation_spec_get_cur_microlibra_limit"></a>
+
+
+<pre><code><b>define</b> <a href="#0x1_DualAttestation_spec_get_cur_microlibra_limit">spec_get_cur_microlibra_limit</a>(): u64 {
+    <b>global</b>&lt;<a href="#0x1_DualAttestation_Limit">Limit</a>&gt;(<a href="CoreAddresses.md#0x1_CoreAddresses_SPEC_LIBRA_ROOT_ADDRESS">CoreAddresses::SPEC_LIBRA_ROOT_ADDRESS</a>()).micro_lbr_limit
+}
+<b>apply</b> <a href="#0x1_DualAttestation_LimitExists">LimitExists</a> <b>to</b> * <b>except</b> get_cur_microlibra_limit, compliance_public_key;
 </code></pre>
