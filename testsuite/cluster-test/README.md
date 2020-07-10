@@ -21,7 +21,7 @@ This lifecycle is managed by test runner:
 
 ###### Run and build
 
-Normally we run cluster_test on linux machine in AWS. In order to build linux binary on mac laptopt we have cross compilation script:
+Normally we run cluster_test on linux machine in AWS. In order to build linux binary on mac laptop we have cross compilation script:
 
 `docker/cluster_test/build.sh`
 
