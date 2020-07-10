@@ -196,7 +196,7 @@ async fn get_transactions(
 
         result.push(TransactionView {
             version: start_version + v as u64,
-            hash: tx.hash().to_string(),
+            hash: tx.hash().to_hex(),
             transaction: tx.into(),
             events,
             vm_status: info.major_status(),
@@ -239,7 +239,7 @@ async fn get_account_transaction(
 
         Ok(Some(TransactionView {
             version: tx_version,
-            hash: tx.transaction.hash().to_string(),
+            hash: tx.transaction.hash().to_hex(),
             transaction: tx.transaction.into(),
             events,
             vm_status: tx.proof.transaction_info().major_status(),
