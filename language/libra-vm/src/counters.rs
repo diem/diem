@@ -2,29 +2,38 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use libra_metrics::{
-    register_histogram, register_int_counter_vec, register_int_gauge, Histogram, IntCounterVec,
-    IntGauge,
+    register_histogram, register_int_counter, register_int_counter_vec, register_int_gauge,
+    Histogram, IntCounter, IntCounterVec, IntGauge,
 };
 use once_cell::sync::Lazy;
 
-/// Count the number of transactions verified, with a "status" label to
+/// Count the number of transactions validated, with a "status" label to
 /// distinguish success or failure results.
-pub static TRANSACTIONS_VERIFIED: Lazy<IntCounterVec> = Lazy::new(|| {
+pub static TRANSACTIONS_VALIDATED: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "libra_vm_transactions_verified",
-        "Number of transactions verified",
+        "libra_vm_transactions_validated",
+        "Number of transactions validated",
         &["status"]
     )
     .unwrap()
 });
 
-/// Count the number of transactions executed, with a "status" label to
+/// Count the number of user transactions executed, with a "status" label to
 /// distinguish completed vs. discarded transactions.
-pub static TRANSACTIONS_EXECUTED: Lazy<IntCounterVec> = Lazy::new(|| {
+pub static USER_TRANSACTIONS_EXECUTED: Lazy<IntCounterVec> = Lazy::new(|| {
     register_int_counter_vec!(
-        "libra_vm_transactions_executed",
-        "Number of transactions executed",
+        "libra_vm_user_transactions_executed",
+        "Number of user transactions executed",
         &["status"]
+    )
+    .unwrap()
+});
+
+/// Count the number of system transactions executed.
+pub static SYSTEM_TRANSACTIONS_EXECUTED: Lazy<IntCounter> = Lazy::new(|| {
+    register_int_counter!(
+        "libra_vm_system_transactions_executed",
+        "Number of system transactions executed"
     )
     .unwrap()
 });

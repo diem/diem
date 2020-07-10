@@ -147,7 +147,7 @@ impl VMValidator for LibraVMValidator {
             None => "success",
             Some(_) => "failure",
         };
-        TRANSACTIONS_VERIFIED
+        TRANSACTIONS_VALIDATED
             .with_label_values(&[counter_label])
             .inc();
 

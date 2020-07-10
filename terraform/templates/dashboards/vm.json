@@ -68,7 +68,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(libra_vm_transactions_executed{status=\"success\"}[1m])",
+          "expr": "irate(libra_vm_user_transactions_executed{status=\"success\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -79,7 +79,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Successful Transactions",
+      "title": "User Transactions (Successful)",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -154,7 +154,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(libra_vm_transactions_executed{status=\"discarded\"}[1m])",
+          "expr": "irate(libra_vm_system_transactions_executed[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -165,7 +165,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Discarded Transactions",
+      "title": "System Transactions",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -240,7 +240,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "irate(libra_vm_transactions_verified[1m])",
+          "expr": "irate(libra_vm_transactions_validated{status=\"success\"}[1m])",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{peer_id}}",
@@ -251,7 +251,7 @@
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Verified Transactions",
+      "title": "Validated Transactions (Successful)",
       "tooltip": {
         "shared": true,
         "sort": 0,
