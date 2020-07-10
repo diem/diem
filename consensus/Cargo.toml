@@ -31,7 +31,6 @@ tokio = { version = "0.2.21", features = ["full"] }
 channel = { path = "../common/channel", version = "0.1.0" }
 consensus-types = { path = "consensus-types", version = "0.1.0", default-features = false }
 crash-handler = { path = "../common/crash-handler", version = "0.1.0" }
-debug-interface = { path = "../common/debug-interface", version = "0.1.0" }
 execution-correctness = { path = "../execution/execution-correctness", version = "0.1.0" }
 executor = { path = "../execution/executor", version = "0.1.0" }
 executor-types = { path = "../execution/executor-types", version = "0.1.0" }
@@ -43,6 +42,7 @@ libra-mempool = { path = "../mempool", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-secure-storage = { path = "../secure/storage", version = "0.1.0" }
 libra-temppath = { path = "../common/temppath", version = "0.1.0" }
+libra-trace = { path = "../common/trace", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }

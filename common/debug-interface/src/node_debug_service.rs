@@ -3,7 +3,7 @@
 
 //! Debug interface to access information in a specific node.
 
-use crate::json_log;
+use libra_logger::json_log;
 use std::net::SocketAddr;
 use tokio::runtime::{Builder, Runtime};
 use warp::Filter;

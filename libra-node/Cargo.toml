@@ -29,6 +29,7 @@ libra-logger = { path = "../common/logger", version = "0.1.0" }
 libra-mempool = { path = "../mempool", version = "0.1.0" }
 libra-metrics = { path = "../common/metrics", version = "0.1.0" }
 libra-secure-storage = { path = "../secure/storage", version = "0.1.0" }
+libra-trace = { path = "../common/trace", version = "0.1.0" }
 libra-types = { path = "../types", version = "0.1.0" }
 libra-vm = { path = "../language/libra-vm", version = "0.1.0" }
 libra-workspace-hack = { path = "../common/workspace-hack", version = "0.1.0" }

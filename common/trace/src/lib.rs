@@ -1,14 +1,23 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-#![forbid(unsafe_code)]
-
-use crate::json_log::JsonLogEntry;
 use anyhow::Result;
 use chrono::{DateTime, Duration, Utc};
+use libra_logger::json_log::JsonLogEntry;
 use reqwest::Client;
 use serde::Deserialize;
 use serde_json::json;
+
+pub mod counters;
+pub mod trace;
+
+pub mod prelude {
+    pub use crate::{
+        end_trace, node_sampling_data, send_logs, trace_code_block, trace_edge, trace_event,
+    };
+}
+
+pub use trace::{is_selected, libra_trace_set, set_libra_trace};
 
 const TRACE_EVENT: &str = "trace_event";
 const TRACE_EDGE: &str = "trace_edge";

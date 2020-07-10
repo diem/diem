@@ -15,10 +15,10 @@ use consensus_types::{
     block::Block, executed_block::ExecutedBlock, quorum_cert::QuorumCert, sync_info::SyncInfo,
     timeout_certificate::TimeoutCertificate,
 };
-use debug_interface::prelude::*;
 use executor_types::{Error, StateComputeResult};
 use libra_crypto::HashValue;
 use libra_logger::prelude::*;
+use libra_trace::prelude::*;
 #[cfg(any(test, feature = "fuzzing"))]
 use libra_types::epoch_state::EpochState;
 use libra_types::{ledger_info::LedgerInfoWithSignatures, transaction::TransactionStatus};

@@ -9,8 +9,8 @@ use crate::{
     instance::Instance,
     util::unix_timestamp_now,
 };
-use debug_interface::{json_log::JsonLogEntry as DebugInterfaceEvent, AsyncNodeDebugClient};
-use libra_logger::*;
+use debug_interface::AsyncNodeDebugClient;
+use libra_logger::{json_log::JsonLogEntry as DebugInterfaceEvent, *};
 use serde_json::{self, value as json};
 use std::{
     env,

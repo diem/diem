@@ -17,7 +17,6 @@ use crate::{
     types::{ProcessedVMOutput, TransactionData},
 };
 use anyhow::{bail, ensure, format_err, Result};
-use debug_interface::prelude::*;
 use executor_types::{
     BlockExecutor, ChunkExecutor, Error, ExecutedTrees, ProofReader, StateComputeResult,
 };
@@ -27,6 +26,7 @@ use libra_crypto::{
 };
 use libra_logger::prelude::*;
 use libra_state_view::StateViewId;
+use libra_trace::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     account_state::AccountState,

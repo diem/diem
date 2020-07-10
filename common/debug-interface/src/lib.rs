@@ -1,24 +1,12 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::json_log::JsonLogEntry;
 use anyhow::Result;
+use libra_logger::json_log::JsonLogEntry;
 use reqwest::blocking;
 use std::collections::HashMap;
 
-pub mod counters;
-pub mod json_log;
-pub mod libra_trace;
 pub mod node_debug_service;
-pub mod trace;
-
-pub mod prelude {
-    pub use crate::{
-        end_trace, event, node_sampling_data, send_logs, trace_code_block, trace_edge, trace_event,
-    };
-}
-
-pub use libra_trace::{is_selected, libra_trace_set, set_libra_trace};
 
 /// Implement default utility client for NodeDebugInterface
 pub struct NodeDebugClient {

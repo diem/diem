@@ -1,8 +1,8 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
-use crate::json_log::JsonLogEntry;
 use anyhow::{bail, ensure, Result};
+use libra_logger::json_log::JsonLogEntry;
 use std::time::Instant;
 
 pub const TRACE_EVENT: &str = "trace_event";
@@ -44,7 +44,7 @@ macro_rules! trace_event {
                "stage": $stage,
                "duration": $duration,
             });
-        $crate::send_logs!($crate::libra_trace::TRACE_EVENT, json);
+        $crate::send_logs!($crate::trace::TRACE_EVENT, json);
     }
 }
 
@@ -68,11 +68,11 @@ macro_rules! node_sampling_data {
 #[macro_export]
 macro_rules! send_logs {
     ($name:expr, $json:expr) => {
-        let log_entry = $crate::json_log::JsonLogEntry::new($name, $json);
-        $crate::json_log::send_json_log(log_entry.clone());
+        let log_entry = libra_logger::json_log::JsonLogEntry::new($name, $json);
+        libra_logger::json_log::send_json_log(log_entry.clone());
         libra_logger::send_struct_log!(libra_logger::StructuredLogEntry::new_named(
-            $crate::libra_trace::LIBRA_TRACE,
-            $crate::libra_trace::LIBRA_TRACE
+            $crate::trace::LIBRA_TRACE,
+            $crate::trace::LIBRA_TRACE
         )
         .data($name, log_entry));
         $crate::counters::TRACE_EVENT_COUNT.inc();
@@ -85,7 +85,7 @@ macro_rules! trace_code_block {
         let trace_guard = if $crate::is_selected($crate::node_sampling_data!($node)) {
             let node = $crate::format_node!($node);
             trace_event!($stage; {node.clone(), module_path!(), Option::<u64>::None});
-            Some($crate::libra_trace::TraceBlockGuard::new_entered(
+            Some($crate::trace::TraceBlockGuard::new_entered(
                 concat!($stage, "::done"),
                 node,
                 module_path!(),
@@ -97,7 +97,7 @@ macro_rules! trace_code_block {
     ($stage:expr, $node:tt, $guard_vec:tt) => {
         if $crate::is_selected($crate::node_sampling_data!($node)) {
             let node = $crate::format_node!($node);
-            let trace_guard = $crate::libra_trace::TraceBlockGuard::new_entered(
+            let trace_guard = $crate::trace::TraceBlockGuard::new_entered(
                 concat!($stage, "::done"),
                 node.clone(),
                 module_path!(),
@@ -148,7 +148,7 @@ macro_rules! end_trace {
                     "stage": $stage,
                     "end": true,
                 });
-            $crate::send_logs!($crate::libra_trace::TRACE_EVENT, json);
+            $crate::send_logs!($crate::trace::TRACE_EVENT, json);
         }
     };
 }
@@ -163,7 +163,7 @@ macro_rules! trace_edge {
                     "node_to": $crate::format_node!($node_to),
                     "stage": $stage,
                 });
-            $crate::send_logs!($crate::libra_trace::TRACE_EDGE, json);
+            $crate::send_logs!($crate::trace::TRACE_EDGE, json);
         }
     };
 }

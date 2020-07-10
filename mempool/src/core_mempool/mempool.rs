@@ -12,9 +12,9 @@ use crate::{
     },
     OP_COUNTERS,
 };
-use debug_interface::prelude::*;
 use libra_config::config::NodeConfig;
 use libra_logger::prelude::*;
+use libra_trace::prelude::*;
 use libra_types::{
     account_address::AccountAddress,
     mempool_status::{MempoolStatus, MempoolStatusCode},

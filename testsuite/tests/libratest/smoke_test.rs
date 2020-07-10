@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 use cli::client_proxy::ClientProxy;
-use debug_interface::{libra_trace, NodeDebugClient};
+use debug_interface::NodeDebugClient;
 use libra_config::config::{
     Identity, KeyManagerConfig, NodeConfig, OnDiskStorageConfig, SecureBackend,
 };
@@ -29,6 +29,7 @@ use libra_secure_storage::{CryptoStorage, KVStorage, Storage, Value};
 use libra_secure_time::{RealTimeService, TimeService};
 use libra_swarm::swarm::{LibraNode, LibraSwarm};
 use libra_temppath::TempPath;
+use libra_trace::trace::trace_node;
 use libra_types::{
     account_address::AccountAddress,
     account_config::{libra_root_address, testnet_dd_account_address, COIN1_NAME},
@@ -444,7 +445,7 @@ fn test_trace() {
     let events = debug_client.get_events().expect("Failed to get events");
     let txn_node = format!("txn::{}::{}", testnet_dd_account_address(), 1);
     println!("Tracing {}", txn_node);
-    libra_trace::trace_node(&events[..], &txn_node);
+    trace_node(&events[..], &txn_node);
 }
 
 #[test]
