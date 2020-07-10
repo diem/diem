@@ -1,6 +1,7 @@
 // Copyright (c) The Libra Core Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+use anyhow::{ensure, Result};
 use libra_crypto_derive::{CryptoHasher, LCSCryptoHash};
 use libra_types::block_info::BlockInfo;
 use serde::{Deserialize, Serialize};
@@ -40,23 +41,40 @@ impl VoteData {
         &self.proposed
     }
 
-    pub fn verify(&self) -> anyhow::Result<()> {
-        anyhow::ensure!(
+    /// Returns true if the vote is on a NIL block
+    pub fn is_nil(&self) -> bool {
+        self.proposed.timestamp_usecs() == self.parent.timestamp_usecs()
+    }
+
+    pub fn verify(&self) -> Result<()> {
+        ensure!(
             self.parent.epoch() == self.proposed.epoch(),
             "Parent and proposed epochs do not match",
         );
-        anyhow::ensure!(
+        ensure!(
             self.parent.round() < self.proposed.round(),
             "Proposed round is less than parent round",
         );
-        anyhow::ensure!(
-            self.parent.timestamp_usecs() <= self.proposed.timestamp_usecs(),
-            "Proposed happened before parent",
-        );
-        anyhow::ensure!(
-            self.parent.version() <= self.proposed.version(),
-            "Proposed version is less than parent version",
-        );
+        if self.is_nil() {
+            ensure!(
+                self.parent.executed_state_id() == self.proposed.executed_state_id(),
+                "NIL vote with non-matching executed_state_id",
+            );
+            ensure!(
+                self.parent.version() == self.proposed.version(),
+                "NIL vote with non-matching version",
+            );
+        } else {
+            ensure!(
+                self.parent.timestamp_usecs() < self.proposed.timestamp_usecs(),
+                "Proposed happened before parent",
+            );
+            ensure!(
+                self.parent.version() < self.proposed.version(),
+                "Proposed version is less than parent version",
+            );
+        }
+
         Ok(())
     }
 }
