@@ -91,6 +91,11 @@ impl PendingVotes {
                 }
             } else {
                 // we have seen a different vote for the same round
+                send_struct_log!(security_log(security_events::CONSENSUS_EQUIVOCATING_VOTE)
+                    .data("from_peer", vote.author())
+                    .data("vote", &vote)
+                    .data("previous_vote", &previously_seen_vote));
+
                 return VoteReceptionResult::EquivocateVote;
             }
         }
