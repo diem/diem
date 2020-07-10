@@ -55,7 +55,7 @@ spec:
           Name              tail
           Tag               validator
           Path              /opt/libra/data/${{libra_log_file}}
-          Mem_Buf_Limit     5MB
+          Mem_Buf_Limit     200MB
           Refresh_Interval  10
           Skip_Long_Lines   On
 
@@ -63,7 +63,7 @@ spec:
           Name              tail
           Tag               validator-events
           Path              /opt/libra/data/events.log
-          Mem_Buf_Limit     5MB
+          Mem_Buf_Limit     200MB
           Refresh_Interval  10
           Skip_Long_Lines   On
           Parser            events
