@@ -28,5 +28,5 @@ impl NewEpochEvent {
 
 impl MoveResource for NewEpochEvent {
     const MODULE_NAME: &'static str = "LibraConfig";
-    const STRUCT_NAME: &'static str = "NewBlockEvent";
+    const STRUCT_NAME: &'static str = "NewEpochEvent";
 }
