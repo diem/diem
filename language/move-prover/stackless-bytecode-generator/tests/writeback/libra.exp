@@ -39,7 +39,7 @@ pub fun Vector::borrow<$tv0>(v: &vector<#0>, i: u64): &#0 {
 }
 
 
-pub fun Vector::borrow_mut<$tv0>(v: &mut vector<#0>, idx: u64): &mut #0 {
+pub fun Vector::borrow_mut<$tv0>(v: &mut vector<#0>, i: u64): &mut #0 {
 }
 
 
@@ -1043,7 +1043,7 @@ pub fun Vector::borrow<$tv0>(v: vector<#0>, i: u64): #0 {
 }
 
 
-pub fun Vector::borrow_mut<$tv0>(v: &mut vector<#0>, idx: u64): &mut #0 {
+pub fun Vector::borrow_mut<$tv0>(v: &mut vector<#0>, i: u64): &mut #0 {
 }
 
 

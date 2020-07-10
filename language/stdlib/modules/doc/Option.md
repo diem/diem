@@ -47,6 +47,8 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Struct `Option`
 
+Abstraction of a value that may or may not be present. Implemented with a vector of size
+zero or one because Move bytecode does not have ADTs.
 
 
 <pre><code><b>struct</b> <a href="#0x1_Option">Option</a>&lt;Element&gt;
@@ -75,6 +77,8 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `none`
 
+Return an empty
+<code><a href="#0x1_Option">Option</a></code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_none">none</a>&lt;Element&gt;(): <a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;
@@ -99,6 +103,9 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `some`
 
+Return an
+<code><a href="#0x1_Option">Option</a></code> containing
+<code>e</code>
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_some">some</a>&lt;Element&gt;(e: Element): <a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;
@@ -123,6 +130,8 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `is_none`
 
+Return true if
+<code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_is_none">is_none</a>&lt;Element&gt;(t: &<a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;): bool
@@ -147,6 +156,8 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `is_some`
 
+Return true if
+<code>t</code> holds a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_is_some">is_some</a>&lt;Element&gt;(t: &<a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;): bool
@@ -171,6 +182,12 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `contains`
 
+Return true if the value in
+<code>t</code> is equal to
+<code>e_ref</code>
+Always returns
+<code><b>false</b></code> if
+<code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_contains">contains</a>&lt;Element&gt;(t: &<a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;, e_ref: &Element): bool
@@ -195,6 +212,10 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `borrow`
 
+Return an immutable reference to the value inside
+<code>t</code>
+Aborts if
+<code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_borrow">borrow</a>&lt;Element&gt;(t: &<a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;): &Element
@@ -219,6 +240,11 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `borrow_with_default`
 
+Return a reference to the value inside
+<code>t</code> if it holds one
+Return
+<code>default_ref</code> if
+<code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_borrow_with_default">borrow_with_default</a>&lt;Element&gt;(t: &<a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;, default_ref: &Element): &Element
@@ -245,6 +271,11 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `get_with_default`
 
+Return the value inside
+<code>t</code> if it holds one
+Return
+<code>default</code> if
+<code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_get_with_default">get_with_default</a>&lt;Element: <b>copyable</b>&gt;(t: &<a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;, default: Element): Element
@@ -271,6 +302,11 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `fill`
 
+Convert the none option
+<code>t</code> to a some option by adding
+<code>e</code>.
+Aborts if
+<code>t</code> already holds a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_fill">fill</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;, e: Element)
@@ -297,6 +333,12 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `extract`
 
+Convert a
+<code>some</code> option to a
+<code>none</code> by removing and returning the value stored inside
+<code>t</code>
+Aborts if
+<code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_extract">extract</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;): Element
@@ -321,6 +363,10 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `borrow_mut`
 
+Return a mutable reference to the value inside
+<code>t</code>
+Aborts if
+<code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_borrow_mut">borrow_mut</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;): &<b>mut</b> Element
@@ -345,6 +391,11 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `swap`
 
+Swap the old value inside
+<code>t</code> with
+<code>e</code> and return the old value
+Aborts if
+<code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_swap">swap</a>&lt;Element&gt;(t: &<b>mut</b> <a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;, e: Element): Element
@@ -372,6 +423,10 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `destroy_with_default`
 
+Destroys
+<code>t.</code> If
+<code>t</code> holds a value, return it. Returns
+<code>default</code> otherwise
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_destroy_with_default">destroy_with_default</a>&lt;Element: <b>copyable</b>&gt;(t: <a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;, default: Element): Element
@@ -398,6 +453,10 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `destroy_some`
 
+Unpack
+<code>t</code> and return its contents
+Aborts if
+<code>t</code> does not hold a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_destroy_some">destroy_some</a>&lt;Element&gt;(t: <a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;): Element
@@ -425,6 +484,10 @@ This module defines the Option type and its methods to represent and handle an o
 
 ## Function `destroy_none`
 
+Unpack
+<code>t</code>
+Aborts if
+<code>t</code> holds a value
 
 
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_Option_destroy_none">destroy_none</a>&lt;Element&gt;(t: <a href="#0x1_Option_Option">Option::Option</a>&lt;Element&gt;)

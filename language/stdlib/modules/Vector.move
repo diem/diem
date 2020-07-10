@@ -1,41 +1,47 @@
 address 0x1 {
 
-// A variable-sized container that can hold both unrestricted types and resources.
+/// A variable-sized container that can hold both unrestricted types and resources.
 module Vector {
 
     const EINDEX_OUT_OF_BOUNDS: u64 = 0;
 
+    /// Create an empty vector.
     native public fun empty<Element>(): vector<Element>;
 
-    // Return the length of the vector.
+    /// Return the length of the vector.
     native public fun length<Element>(v: &vector<Element>): u64;
 
-    // Acquire an immutable reference to the ith element of the vector.
+    /// Acquire an immutable reference to the `i`th element of the vector `v`.
+    /// Aborts if `i` is out of bounds.
     native public fun borrow<Element>(v: &vector<Element>, i: u64): &Element;
 
-    // Add an element to the end of the vector.
+    /// Add element `e` to the end of the vector `v`.
     native public fun push_back<Element>(v: &mut vector<Element>, e: Element);
 
-    // Get mutable reference to the ith element in the vector, abort if out of bound.
-    native public fun borrow_mut<Element>(v: &mut vector<Element>, idx: u64): &mut Element;
+    /// Return a mutable reference to the `i`th element in the vector `v`.
+    /// Aborts if `i` is out of bounds.
+    native public fun borrow_mut<Element>(v: &mut vector<Element>, i: u64): &mut Element;
 
-    // Pop an element from the end of vector, abort if the vector is empty.
+    /// Pop an element from the end of vector `v`.
+    /// Aborts if `v` is empty.
     native public fun pop_back<Element>(v: &mut vector<Element>): Element;
 
-    // Destroy the vector, abort if not empty.
+    /// Destroy the vector `v`.
+    /// Aborts if `v` is not empty.
     native public fun destroy_empty<Element>(v: vector<Element>);
 
-    // Swaps the elements at the i'th and j'th indices in the vector.
+    /// Swaps the elements at the `i`th and `j`th indices in the vector `v`.
+    /// Aborts if `i`or `j` is out of bounds.
     native public fun swap<Element>(v: &mut vector<Element>, i: u64, j: u64);
 
-    // Return an vector of size one containing `e`
+    /// Return an vector of size one containing element `e`.
     public fun singleton<Element>(e: Element): vector<Element> {
         let v = empty();
         push_back(&mut v, e);
         v
     }
 
-    // Reverses the order of the elements in the vector in place.
+    /// Reverses the order of the elements in the vector `v` in place.
     public fun reverse<Element>(v: &mut vector<Element>) {
         let len = length(v);
         if (len == 0) return ();
@@ -49,19 +55,19 @@ module Vector {
         }
     }
 
-    // Moves all of the elements of the `other` vector into the `lhs` vector.
+    /// Moves all of the elements of the `other` vector into the `lhs` vector.
     public fun append<Element>(lhs: &mut vector<Element>, other: vector<Element>) {
         reverse(&mut other);
         while (!is_empty(&other)) push_back(lhs, pop_back(&mut other));
         destroy_empty(other);
     }
 
-    // Return true if the vector has no elements
+    /// Return `true` if the vector `v` has no elements and `false` otherwise.
     public fun is_empty<Element>(v: &vector<Element>): bool {
         length(v) == 0
     }
 
-    // Return true if `e` is in the vector `v`
+    /// Return true if `e` is in the vector `v`.
     public fun contains<Element>(v: &vector<Element>, e: &Element): bool {
         let i = 0;
         let len = length(v);
@@ -72,8 +78,8 @@ module Vector {
         false
     }
 
-    // Return (true, i) if `e` is in the vector `v` at index `i`.
-    // Otherwise returns (false, 0).
+    /// Return `(true, i)` if `e` is in the vector `v` at index `i`.
+    /// Otherwise, returns `(false, 0)`.
     public fun index_of<Element>(v: &vector<Element>, e: &Element): (bool, u64) {
         let i = 0;
         let len = length(v);
@@ -85,8 +91,9 @@ module Vector {
     }
 
 
-    // Remove the `i`th element E of the vector, shifting all subsequent elements
-    // It is O(n) and preserves ordering
+    /// Remove the `i`th element of the vector `v`, shifting all subsequent elements.
+    /// This is O(n) and preserves ordering of elements in the vector.
+    /// Aborts if `i` is out of bounds.
     public fun remove<Element>(v: &mut vector<Element>, i: u64): Element {
         let len = length(v);
         // i out of bounds; abort
@@ -97,8 +104,9 @@ module Vector {
         pop_back(v)
     }
 
-    // and then popping it off
-    // It is O(1), but does not preserve ordering
+    /// Swap the `i`th element of the vector `v` with the last element and then pop the vector.
+    /// This is O(1), but does not preserve ordering of elements in the vector.
+    /// Aborts if `i` is out of bounds.
     public fun swap_remove<Element>(v: &mut vector<Element>, i: u64): Element {
         let last_idx = length(v) - 1;
         swap(v, i, last_idx);
