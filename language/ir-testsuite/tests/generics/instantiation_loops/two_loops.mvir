@@ -15,4 +15,5 @@ module M {
     }
 }
 
-// check: Error(VMStatus { major_status: LOOP_IN_INSTANTIATION_GRAPH,
+// check: Error
+// check: status_code: LOOP_IN_INSTANTIATION_GRAPH

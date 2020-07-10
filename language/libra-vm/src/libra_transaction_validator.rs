@@ -107,7 +107,7 @@ impl VMValidator for LibraVMValidator {
                 Ok(code) => code,
                 Err(_) => {
                     return VMValidatorResult::new(
-                        Some(VMStatus::new(StatusCode::INVALID_GAS_SPECIFIER, None, None)),
+                        Some(VMStatus::Error(StatusCode::INVALID_GAS_SPECIFIER)),
                         gas_price,
                         false,
                     )
@@ -119,7 +119,7 @@ impl VMValidator for LibraVMValidator {
             t
         } else {
             return VMValidatorResult::new(
-                Some(VMStatus::new(StatusCode::INVALID_SIGNATURE, None, None)),
+                Some(VMStatus::Error(StatusCode::INVALID_SIGNATURE)),
                 gas_price,
                 false,
             );
@@ -139,13 +139,10 @@ impl VMValidator for LibraVMValidator {
         ) {
             Ok(_) => None,
             Err(err) => {
-                if err.major_status == StatusCode::SEQUENCE_NUMBER_TOO_NEW {
+                if err.status_code() == StatusCode::SEQUENCE_NUMBER_TOO_NEW {
                     None
                 } else {
-                    Some(convert_prologue_runtime_error(
-                        err,
-                        &signature_verified_txn.sender(),
-                    ))
+                    Some(convert_prologue_runtime_error(err))
                 }
             }
         };
@@ -182,13 +179,9 @@ fn normalize_gas_price(
         account_config::CurrencyInfoResource::resource_path_for(currency_code.to_owned());
     if let Ok(Some(blob)) = remote_cache.get(&currency_info_path) {
         let x = lcs::from_bytes::<account_config::CurrencyInfoResource>(&blob)
-            .map_err(|_| VMStatus::new(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST, None, None))?;
+            .map_err(|_| VMStatus::Error(StatusCode::CURRENCY_INFO_DOES_NOT_EXIST))?;
         Ok(x.convert_to_lbr(gas_price))
     } else {
-        Err(VMStatus::new(
-            StatusCode::MISSING_DATA,
-            None,
-            Some("Cannot find curency info in gas price normalization".to_owned()),
-        ))
+        Err(VMStatus::Error(StatusCode::MISSING_DATA))
     }
 }

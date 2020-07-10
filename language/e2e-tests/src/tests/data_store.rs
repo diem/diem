@@ -25,7 +25,7 @@ fn move_from_across_blocks() {
     let rem_txn = remove_resource_txn(&sender, 11, vec![module.clone()]);
     let output = executor.execute_transaction(rem_txn);
     assert_eq!(
-        output.status().vm_status().major_status,
+        output.status().vm_status().status_code(),
         StatusCode::MISSING_DATA,
     );
     executor.apply_write_set(output.write_set());
@@ -46,7 +46,7 @@ fn move_from_across_blocks() {
     let rem_txn = remove_resource_txn(&sender, 15, vec![module.clone()]);
     let output = executor.execute_transaction(rem_txn);
     assert_eq!(
-        output.status().vm_status().major_status,
+        output.status().vm_status().status_code(),
         StatusCode::MISSING_DATA,
     );
     executor.apply_write_set(output.write_set());
@@ -55,7 +55,7 @@ fn move_from_across_blocks() {
     let borrow_txn = borrow_resource_txn(&sender, 16, vec![module.clone()]);
     let output = executor.execute_transaction(borrow_txn);
     assert_eq!(
-        output.status().vm_status().major_status,
+        output.status().vm_status().status_code(),
         StatusCode::MISSING_DATA,
     );
     executor.apply_write_set(output.write_set());
@@ -74,10 +74,10 @@ fn move_from_across_blocks() {
         .expect("Must execute transactions");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
     assert_eq!(
-        output[1].status().vm_status().major_status,
+        output[1].status().vm_status().status_code(),
         StatusCode::MISSING_DATA,
     );
     for out in output {
@@ -99,7 +99,7 @@ fn borrow_after_move() {
     let rem_txn = remove_resource_txn(&sender, 11, vec![module.clone()]);
     let output = executor.execute_transaction(rem_txn);
     assert_eq!(
-        output.status().vm_status().major_status,
+        output.status().vm_status().status_code(),
         StatusCode::MISSING_DATA,
     );
     executor.apply_write_set(output.write_set());
@@ -122,10 +122,10 @@ fn borrow_after_move() {
         .expect("Must execute transactions");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
     assert_eq!(
-        output[1].status().vm_status().major_status,
+        output[1].status().vm_status().status_code(),
         StatusCode::MISSING_DATA,
     );
     for out in output {
@@ -147,7 +147,7 @@ fn change_after_move() {
     let rem_txn = remove_resource_txn(&sender, 11, vec![module.clone()]);
     let output = executor.execute_transaction(rem_txn);
     assert_eq!(
-        output.status().vm_status().major_status,
+        output.status().vm_status().status_code(),
         StatusCode::MISSING_DATA,
     );
     executor.apply_write_set(output.write_set());
@@ -170,10 +170,10 @@ fn change_after_move() {
         .expect("Must execute transactions");
     assert_eq!(
         output[0].status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
     assert_eq!(
-        output[1].status().vm_status().major_status,
+        output[1].status().vm_status().status_code(),
         StatusCode::MISSING_DATA,
     );
     for out in output {
@@ -184,7 +184,7 @@ fn change_after_move() {
     let borrow_txn = borrow_resource_txn(&sender, 16, vec![module]);
     let output = executor.execute_transaction(borrow_txn);
     assert_eq!(
-        output.status().vm_status().major_status,
+        output.status().vm_status().status_code(),
         StatusCode::MISSING_DATA,
     );
     executor.apply_write_set(output.write_set());

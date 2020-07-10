@@ -24,8 +24,9 @@ pub mod keygen;
 mod proptest_types;
 
 pub fn assert_status_eq(s1: &VMStatus, s2: &VMStatus) -> bool {
-    assert_eq!(s1.major_status, s2.major_status);
-    assert_eq!(s1.sub_status, s2.sub_status);
+    // TODO(tmn) After providing real abort locations, use normal equality
+    assert_eq!(s1.status_code(), s2.status_code());
+    assert_eq!(s1.move_abort_code(), s2.move_abort_code());
     true
 }
 

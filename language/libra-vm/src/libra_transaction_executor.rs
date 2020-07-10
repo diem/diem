@@ -110,7 +110,7 @@ impl LibraVM {
             session,
             &cost_strategy,
             txn_data,
-            VMStatus::executed(),
+            VMStatus::Executed,
         )?)
     }
 
@@ -233,7 +233,7 @@ impl LibraVM {
         let mut cost_strategy = CostStrategy::system(gas_schedule, txn_data.max_gas_amount());
         let account_currency_symbol = unwrap_or_discard!(
             account_config::from_currency_code_string(txn.gas_currency_code())
-                .map_err(|_| VMStatus::new(StatusCode::INVALID_GAS_SPECIFIER, None, None))
+                .map_err(|_| VMStatus::Error(StatusCode::INVALID_GAS_SPECIFIER))
         );
         let result = match txn.payload() {
             TransactionPayload::Script(s) => self.execute_script(
@@ -251,7 +251,7 @@ impl LibraVM {
                 account_currency_symbol.as_ident_str(),
             ),
             TransactionPayload::WriteSet(_) => {
-                return discard_error_output(VMStatus::new(StatusCode::UNREACHABLE, None, None))
+                return discard_error_output(VMStatus::Error(StatusCode::UNREACHABLE))
             }
         };
 
@@ -291,7 +291,7 @@ impl LibraVM {
         for (ap, _) in write_set.iter() {
             remote_cache
                 .get(ap)
-                .map_err(|_| VMStatus::new(StatusCode::STORAGE_ERROR, None, None))?;
+                .map_err(|_| VMStatus::Error(StatusCode::STORAGE_ERROR))?;
         }
         Ok(())
     }
@@ -309,7 +309,7 @@ impl LibraVM {
             write_set,
             events,
             0,
-            VMStatus::new(StatusCode::EXECUTED, None, None).into(),
+            VMStatus::Executed.into(),
         ))
     }
 
@@ -344,7 +344,7 @@ impl LibraVM {
                 )
                 .map_err(|e| e.into_vm_status())?
         } else {
-            return Err(VMStatus::new(StatusCode::MALFORMED, None, None));
+            return Err(VMStatus::Error(StatusCode::MALFORMED));
         };
 
         get_transaction_output(
@@ -352,7 +352,7 @@ impl LibraVM {
             session,
             &cost_strategy,
             &txn_data,
-            VMStatus::executed(),
+            VMStatus::Executed,
         )
         .map(|output| {
             remote_cache.push_write_set(output.write_set());
@@ -368,10 +368,8 @@ impl LibraVM {
         let txn = match txn.check_signature() {
             Ok(t) => t,
             _ => {
-                return Ok(discard_error_output(VMStatus::new(
+                return Ok(discard_error_output(VMStatus::Error(
                     StatusCode::INVALID_SIGNATURE,
-                    None,
-                    None,
                 )))
             }
         };
@@ -380,10 +378,8 @@ impl LibraVM {
             change_set
         } else {
             error!("[libra_vm] UNREACHABLE");
-            return Ok(discard_error_output(VMStatus::new(
+            return Ok(discard_error_output(VMStatus::Error(
                 StatusCode::UNREACHABLE,
-                None,
-                None,
             )));
         };
 
@@ -437,10 +433,8 @@ impl LibraVM {
                     .collect::<HashSet<_>>(),
             )
         {
-            return Ok(discard_error_output(VMStatus::new(
+            return Ok(discard_error_output(VMStatus::Error(
                 StatusCode::INVALID_WRITE_SET,
-                None,
-                None,
             )));
         }
         if !epilogue_events
@@ -455,10 +449,8 @@ impl LibraVM {
                     .collect::<HashSet<_>>(),
             )
         {
-            return Ok(discard_error_output(VMStatus::new(
+            return Ok(discard_error_output(VMStatus::Error(
                 StatusCode::INVALID_WRITE_SET,
-                None,
-                None,
             )));
         }
 
@@ -470,7 +462,7 @@ impl LibraVM {
                 .collect(),
         )
         .freeze()
-        .map_err(|_| VMStatus::new(StatusCode::INVALID_WRITE_SET, None, None))?;
+        .map_err(|_| VMStatus::Error(StatusCode::INVALID_WRITE_SET))?;
         let events = change_set
             .events()
             .iter()
@@ -482,7 +474,7 @@ impl LibraVM {
             write_set,
             events,
             0,
-            TransactionStatus::Keep(VMStatus::executed()),
+            TransactionStatus::Keep(VMStatus::Executed),
         ))
     }
 
@@ -548,7 +540,7 @@ impl LibraVM {
                 .into_par_iter()
                 .map(|txn| {
                     txn.check_signature()
-                        .map_err(|_| VMStatus::new(StatusCode::INVALID_SIGNATURE, None, None))
+                        .map_err(|_| VMStatus::Error(StatusCode::INVALID_SIGNATURE))
                 })
                 .collect();
         }

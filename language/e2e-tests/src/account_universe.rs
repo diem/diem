@@ -30,7 +30,7 @@ use crate::{
 use libra_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use libra_types::{
     transaction::{SignedTransaction, TransactionStatus},
-    vm_status::{StatusCode, VMStatus},
+    vm_status::{AbortLocation, StatusCode, VMStatus},
 };
 use once_cell::sync::Lazy;
 use proptest::{prelude::*, strategy::Union};
@@ -259,7 +259,7 @@ pub fn txn_one_account_result(
             sender.sequence_number += 1;
             sender.sent_events_count += 1;
             sender.balance -= to_deduct;
-            (TransactionStatus::Keep(VMStatus::executed()), true)
+            (TransactionStatus::Keep(VMStatus::Executed), true)
         }
         (true, true, false) => {
             // Enough gas to pass validation and to do the transfer, but not enough to succeed
@@ -268,7 +268,8 @@ pub fn txn_one_account_result(
             sender.sequence_number += 1;
             sender.balance -= gas_used * gas_price;
             (
-                TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED, Some(6), None)),
+                // TODO(tmn) provide a real abort location
+                TransactionStatus::Keep(VMStatus::MoveAbort(AbortLocation::Script, 6)),
                 false,
             )
         }
@@ -279,17 +280,16 @@ pub fn txn_one_account_result(
             sender.sequence_number += 1;
             sender.balance -= low_gas_used * gas_price;
             (
-                TransactionStatus::Keep(VMStatus::new(StatusCode::ABORTED, Some(10), None)),
+                // TODO(tmn) provide a real abort location
+                TransactionStatus::Keep(VMStatus::MoveAbort(AbortLocation::Script, 10)),
                 false,
             )
         }
         (false, _, _) => {
             // Not enough gas to pass validation. Nothing will happen.
             (
-                TransactionStatus::Discard(VMStatus::new(
+                TransactionStatus::Discard(VMStatus::Error(
                     StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
-                    None,
-                    None,
                 )),
                 false,
             )

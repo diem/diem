@@ -202,7 +202,7 @@ impl FakeExecutor {
             TransactionStatus::Keep(status) => {
                 self.apply_write_set(output.write_set());
                 assert!(
-                    status.major_status == StatusCode::EXECUTED,
+                    status.status_code() == StatusCode::EXECUTED,
                     "transaction failed with {:?}",
                     status
                 );

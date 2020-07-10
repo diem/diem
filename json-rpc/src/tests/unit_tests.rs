@@ -227,7 +227,7 @@ fn test_transaction_submission() {
             let vm_status: VMStatus =
                 serde_json::from_value(error.data.as_ref().unwrap().clone()).unwrap();
             assert_eq!(
-                vm_status.major_status,
+                vm_status.status_code(),
                 StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
             );
         } else {

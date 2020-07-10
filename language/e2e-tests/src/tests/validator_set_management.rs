@@ -45,7 +45,7 @@ fn validator_add() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
     assert!(output
         .events()
@@ -81,7 +81,7 @@ fn validator_rotate_key_and_reconfigure() {
     let output = executor.execute_and_apply(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
 
     let txn = add_validator_txn(&libra_root_account, &validator_account, 2);
@@ -89,7 +89,7 @@ fn validator_rotate_key_and_reconfigure() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
     assert!(output
         .events()
@@ -119,7 +119,7 @@ fn validator_rotate_key_and_reconfigure() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
 
     let txn = reconfigure_txn(&libra_root_account, 3);
@@ -127,7 +127,7 @@ fn validator_rotate_key_and_reconfigure() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
     assert!(output
         .events()
@@ -146,14 +146,14 @@ fn validator_set_operator_set_key_reconfigure() {
     let output = executor.execute_and_apply(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
 
     let txn = create_validator_account_txn(&libra_root_account, &validator_account, 2);
     let output = executor.execute_and_apply(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
     executor.new_block();
 
@@ -161,7 +161,7 @@ fn validator_set_operator_set_key_reconfigure() {
     let output = executor.execute_and_apply(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
 
     let txn = set_validator_config_txn(
@@ -182,7 +182,7 @@ fn validator_set_operator_set_key_reconfigure() {
     let output = executor.execute_and_apply(txn);
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
 
     let txn = add_validator_txn(&libra_root_account, &validator_account, 3);
@@ -190,7 +190,7 @@ fn validator_set_operator_set_key_reconfigure() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
     assert!(output
         .events()
@@ -220,7 +220,7 @@ fn validator_set_operator_set_key_reconfigure() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
 
     let txn = reconfigure_txn(&libra_root_account, 4);
@@ -228,7 +228,7 @@ fn validator_set_operator_set_key_reconfigure() {
 
     assert_eq!(
         output.status(),
-        &TransactionStatus::Keep(VMStatus::executed())
+        &TransactionStatus::Keep(VMStatus::Executed)
     );
     assert!(output
         .events()

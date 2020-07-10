@@ -3,7 +3,7 @@
 
 #![allow(clippy::unit_arg)]
 
-use crate::account_address::AccountAddress;
+use crate::language_storage::ModuleId;
 use anyhow::Result;
 #[cfg(any(test, feature = "fuzzing"))]
 use proptest::prelude::*;
@@ -42,22 +42,36 @@ pub static EXECUTION_STATUS_MIN_CODE: u64 = 4000;
 /// The maximum status code for runtim statuses
 pub static EXECUTION_STATUS_MAX_CODE: u64 = 4999;
 
-/// A `VMStatus` is represented as a required major status that is semantic coupled with with
-/// an optional sub status and message.
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Serialize, Deserialize)]
+/// A `VMStatus` is represented as either
+/// - `Executed` indicating successful execution
+/// - `Error` indicating an error from the VM itself
+/// - `MoveAbort` indicating an `abort` ocurred inside of a Move program
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
 #[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
-pub struct VMStatus {
-    /// The major status, e.g. ABORTED, OUT_OF_GAS, etc.
-    pub major_status: StatusCode,
+pub enum VMStatus {
+    /// The VM status corresponding to an EXECUTED status code
+    Executed,
 
-    /// The optional sub status. Used e.g. for things such as the abort code, or the arithmetic
-    /// error type for an ARITHMETIC_ERROR major status.
-    pub sub_status: Option<u64>,
+    /// Indicates an error from the VM, e.g. OUT_OF_GAS, INVALID_AUTH_KEY, RET_TYPE_MISMATCH_ERROR
+    /// etc.
+    /// The code will neither EXECUTED nor ABORTED
+    Error(StatusCode),
 
-    /// The optional message. Useful for verification errors, and for returning information in
-    /// validation.
-    pub message: Option<String>,
+    /// Indicates an `abort` from inside Move code. Contains the location of the abort and the code
+    MoveAbort(AbortLocation, /* code */ u64),
+}
+
+/// An `AbortLocation` specifies where a Move program `abort` occurred, either in a function in
+/// a module, or in a script
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(any(test, feature = "fuzzing"), derive(Arbitrary))]
+#[cfg_attr(any(test, feature = "fuzzing"), proptest(no_params))]
+pub enum AbortLocation {
+    /// Indicates `abort` occurred in the specified module
+    Module(ModuleId),
+    /// Indicates the `abort` occurred in a script
+    Script,
 }
 
 /// A status type is one of 5 different variants, along with a fallback variant in the case that we
@@ -89,45 +103,67 @@ impl fmt::Display for StatusType {
 impl fmt::Display for VMStatus {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let status_type = self.status_type();
-        let mut status = format!("status {:#?} of type {}", self.major_status, status_type);
+        let mut status = format!("status {:#?} of type {}", self.status_code(), status_type);
 
-        if let Some(sub_status) = self.sub_status {
-            status = format!("{} with sub status {}", status, sub_status);
-        }
-
-        if let Some(ref msg) = self.message {
-            status = format!("{} and message {}", status, msg);
+        if let VMStatus::MoveAbort(_, code) = self {
+            status = format!("{} with sub status {}", status, code);
         }
 
         write!(f, "{}", status)
     }
 }
 
+impl fmt::Debug for VMStatus {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            VMStatus::Executed => write!(f, "EXECUTED"),
+            VMStatus::Error(code) => f.debug_struct("ERROR").field("status_code", code).finish(),
+            VMStatus::MoveAbort(location, code) => f
+                .debug_struct("ABORTED")
+                .field("code", code)
+                .field("location", location)
+                .finish(),
+        }
+    }
+}
+
+impl fmt::Debug for AbortLocation {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AbortLocation::Script => write!(f, "Script"),
+            AbortLocation::Module(id) => write!(f, "{}", id),
+        }
+    }
+}
+
 impl std::error::Error for VMStatus {}
 
 impl VMStatus {
-    /// Create a new VM status with major status `major_status`.
-    pub fn new(major_status: StatusCode, sub_status: Option<u64>, message: Option<String>) -> Self {
-        Self {
-            major_status,
-            sub_status,
-            message,
+    /// Return the status code for the `VMStatus`
+    pub fn status_code(&self) -> StatusCode {
+        match self {
+            Self::Executed => StatusCode::EXECUTED,
+            Self::MoveAbort(_, _) => StatusCode::ABORTED,
+            Self::Error(code) => {
+                let code = *code;
+                debug_assert!(code != StatusCode::EXECUTED);
+                debug_assert!(code != StatusCode::ABORTED);
+                code
+            }
         }
     }
 
-    pub fn executed() -> Self {
-        Self::new(StatusCode::EXECUTED, None, None)
+    /// Returns the move abort code if the status is `MoveAbort`, and `None` otherwise
+    pub fn move_abort_code(&self) -> Option<u64> {
+        match self {
+            Self::MoveAbort(_, code) => Some(*code),
+            Self::Error(_) | Self::Executed => None,
+        }
     }
 
-    /// Return the status type for this VMStatus. This is solely determined by the `major_status`
-    /// field.
+    /// Return the status type for this `VMStatus`. This is solely determined by the `status_code`
     pub fn status_type(&self) -> StatusType {
-        self.major_status.status_type()
-    }
-
-    /// Determine if the VMStatus has status type `status_type`.
-    pub fn is(&self, status_type: StatusType) -> bool {
-        self.status_type() == status_type
+        self.status_code().status_type()
     }
 }
 
@@ -152,33 +188,28 @@ pub const EASSERT_ERROR: u64 = 42; // catch-all error code for assert failures
 // FUTURE: At the moment we can't pass transaction metadata or the signed transaction due to
 // restrictions in the two places that this function is called. We therefore just pass through what
 // we need at the moment---the sender address---but we may want/need to pass more data later on.
-pub fn convert_prologue_runtime_error(err: VMStatus, txn_sender: &AccountAddress) -> VMStatus {
-    if err.major_status == StatusCode::ABORTED {
-        let mut message = None;
-        let new_major_status = match err.sub_status {
-            Some(EACCOUNT_FROZEN) => StatusCode::SENDING_ACCOUNT_FROZEN,
-            // Invalid authentication key
-            Some(EBAD_ACCOUNT_AUTHENTICATION_KEY) => StatusCode::INVALID_AUTH_KEY,
-            // Sequence number too old
-            Some(ESEQUENCE_NUMBER_TOO_OLD) => StatusCode::SEQUENCE_NUMBER_TOO_OLD,
-            // Sequence number too new
-            Some(ESEQUENCE_NUMBER_TOO_NEW) => StatusCode::SEQUENCE_NUMBER_TOO_NEW,
-            // Sequence number too new
-            Some(EACCOUNT_DOES_NOT_EXIST) => {
-                message = Some(format!("sender address: {}", txn_sender));
-                StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST
-            }
-            // Can't pay for transaction gas deposit/fee
-            Some(ECANT_PAY_GAS_DEPOSIT) => StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
-            Some(ETRANSACTION_EXPIRED) => StatusCode::TRANSACTION_EXPIRED,
-
-            sub_status => {
-                return VMStatus::new(err.major_status, sub_status, err.message);
-            }
-        };
-        VMStatus::new(new_major_status, None, message)
-    } else {
-        err
+pub fn convert_prologue_runtime_error(status: VMStatus) -> VMStatus {
+    match status {
+        // TODO look at location? or remove this function entirely
+        VMStatus::MoveAbort(location, code) => {
+            let new_major_status = match code {
+                EACCOUNT_FROZEN => StatusCode::SENDING_ACCOUNT_FROZEN,
+                // Invalid authentication key
+                EBAD_ACCOUNT_AUTHENTICATION_KEY => StatusCode::INVALID_AUTH_KEY,
+                // Sequence number too old
+                ESEQUENCE_NUMBER_TOO_OLD => StatusCode::SEQUENCE_NUMBER_TOO_OLD,
+                // Sequence number too new
+                ESEQUENCE_NUMBER_TOO_NEW => StatusCode::SEQUENCE_NUMBER_TOO_NEW,
+                // Sequence number too new
+                EACCOUNT_DOES_NOT_EXIST => StatusCode::SENDING_ACCOUNT_DOES_NOT_EXIST,
+                // Can't pay for transaction gas deposit/fee
+                ECANT_PAY_GAS_DEPOSIT => StatusCode::INSUFFICIENT_BALANCE_FOR_TRANSACTION_FEE,
+                ETRANSACTION_EXPIRED => StatusCode::TRANSACTION_EXPIRED,
+                code => return VMStatus::MoveAbort(location, code),
+            };
+            VMStatus::Error(new_major_status)
+        }
+        status @ VMStatus::Error(_) | status @ VMStatus::Executed => status,
     }
 }
 

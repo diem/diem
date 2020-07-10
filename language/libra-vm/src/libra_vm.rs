@@ -19,7 +19,7 @@ use libra_types::{
     event::EventKey,
     on_chain_config::{ConfigStorage, LibraVersion, OnChainConfig, VMConfig},
     transaction::{ChangeSet, Script, TransactionOutput, TransactionStatus},
-    vm_status::{convert_prologue_runtime_error, sub_status, StatusCode, VMStatus},
+    vm_status::{convert_prologue_runtime_error, StatusCode, VMStatus},
     write_set::{WriteOp, WriteSet, WriteSetMut},
 };
 use move_core_types::{
@@ -53,11 +53,8 @@ macro_rules! gas_schedule {
             .as_ref()
             .map(|config| &config.gas_schedule)
             .ok_or_else(|| {
-                VMStatus::new(
-                    StatusCode::VM_STARTUP_FAILURE,
-                    Some(sub_status::VSF_GAS_SCHEDULE_NOT_FOUND),
-                    None,
-                )
+                error!("VM Startup Failed. Gas Schedule Not Found");
+                VMStatus::Error(StatusCode::VM_STARTUP_FAILURE)
             })
     };
 }
@@ -92,9 +89,10 @@ impl LibraVMImpl {
     }
 
     pub(crate) fn on_chain_config(&self) -> Result<&VMConfig, VMStatus> {
-        self.on_chain_config
-            .as_ref()
-            .ok_or_else(|| VMStatus::new(StatusCode::VM_STARTUP_FAILURE, None, None))
+        self.on_chain_config.as_ref().ok_or_else(|| {
+            error!("VM Startup Failed. On Chain Config Not Found");
+            VMStatus::Error(StatusCode::VM_STARTUP_FAILURE)
+        })
     }
 
     pub(crate) fn load_configs_impl<S: ConfigStorage>(&mut self, data_cache: &S) {
@@ -108,11 +106,8 @@ impl LibraVMImpl {
 
     pub fn get_libra_version(&self) -> Result<LibraVersion, VMStatus> {
         self.version.clone().ok_or_else(|| {
-            VMStatus::new(
-                StatusCode::VM_STARTUP_FAILURE,
-                Some(sub_status::VSF_LIBRA_VERSION_NOT_FOUND),
-                None,
-            )
+            error!("VM Startup Failed. Libra Version Not Found");
+            VMStatus::Error(StatusCode::VM_STARTUP_FAILURE)
         })
     }
 
@@ -121,21 +116,12 @@ impl LibraVMImpl {
         let raw_bytes_len = txn_data.transaction_size;
         // The transaction is too large.
         if txn_data.transaction_size.get() > gas_constants.max_transaction_size_in_bytes {
-            let error_str = format!(
-                "max size: {}, txn size: {}",
-                gas_constants.max_transaction_size_in_bytes,
-                raw_bytes_len.get()
-            );
             warn!(
                 "[VM] Transaction size too big {} (max {})",
                 raw_bytes_len.get(),
                 gas_constants.max_transaction_size_in_bytes
             );
-            return Err(VMStatus::new(
-                StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE,
-                None,
-                Some(error_str),
-            ));
+            return Err(VMStatus::Error(StatusCode::EXCEEDED_MAX_TRANSACTION_SIZE));
         }
 
         // Check is performed on `txn.raw_txn_bytes_len()` which is the same as
@@ -146,20 +132,13 @@ impl LibraVMImpl {
         // maximum number of gas units bound that we have set for any
         // transaction.
         if txn_data.max_gas_amount().get() > gas_constants.maximum_number_of_gas_units.get() {
-            let error_str = format!(
-                "max gas units: {}, gas units submitted: {}",
-                gas_constants.maximum_number_of_gas_units.get(),
-                txn_data.max_gas_amount().get()
-            );
             warn!(
                 "[VM] Gas unit error; max {}, submitted {}",
                 gas_constants.maximum_number_of_gas_units.get(),
                 txn_data.max_gas_amount().get()
             );
-            return Err(VMStatus::new(
+            return Err(VMStatus::Error(
                 StatusCode::MAX_GAS_UNITS_EXCEEDS_MAX_GAS_UNITS_BOUND,
-                None,
-                Some(error_str),
             ));
         }
 
@@ -168,20 +147,13 @@ impl LibraVMImpl {
         // underlying `RawTransaction`
         let min_txn_fee = calculate_intrinsic_gas(raw_bytes_len, gas_constants);
         if txn_data.max_gas_amount().get() < min_txn_fee.get() {
-            let error_str = format!(
-                "min gas required for txn: {}, gas submitted: {}",
-                min_txn_fee.get(),
-                txn_data.max_gas_amount().get()
-            );
             warn!(
                 "[VM] Gas unit error; min {}, submitted {}",
                 min_txn_fee.get(),
                 txn_data.max_gas_amount().get()
             );
-            return Err(VMStatus::new(
+            return Err(VMStatus::Error(
                 StatusCode::MAX_GAS_UNITS_BELOW_MIN_TRANSACTION_GAS_UNITS,
-                None,
-                Some(error_str),
             ));
         }
 
@@ -192,40 +164,22 @@ impl LibraVMImpl {
         let below_min_bound =
             txn_data.gas_unit_price().get() < gas_constants.min_price_per_gas_unit.get();
         if below_min_bound {
-            let error_str = format!(
-                "gas unit min price: {}, submitted price: {}",
-                gas_constants.min_price_per_gas_unit.get(),
-                txn_data.gas_unit_price().get()
-            );
             warn!(
                 "[VM] Gas unit error; min {}, submitted {}",
                 gas_constants.min_price_per_gas_unit.get(),
                 txn_data.gas_unit_price().get()
             );
-            return Err(VMStatus::new(
-                StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND,
-                None,
-                Some(error_str),
-            ));
+            return Err(VMStatus::Error(StatusCode::GAS_UNIT_PRICE_BELOW_MIN_BOUND));
         }
 
         // The submitted gas price is greater than the maximum gas unit price set by the VM.
         if txn_data.gas_unit_price().get() > gas_constants.max_price_per_gas_unit.get() {
-            let error_str = format!(
-                "gas unit max price: {}, submitted price: {}",
-                gas_constants.max_price_per_gas_unit.get(),
-                txn_data.gas_unit_price().get()
-            );
             warn!(
                 "[VM] Gas unit error; min {}, submitted {}",
                 gas_constants.max_price_per_gas_unit.get(),
                 txn_data.gas_unit_price().get()
             );
-            return Err(VMStatus::new(
-                StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND,
-                None,
-                Some(error_str),
-            ));
+            return Err(VMStatus::Error(StatusCode::GAS_UNIT_PRICE_ABOVE_MAX_BOUND));
         }
         Ok(())
     }
@@ -237,7 +191,7 @@ impl LibraVMImpl {
             .is_allowed_script(&script.code())
         {
             warn!("[VM] Custom scripts not allowed: {:?}", &script.code());
-            Err(VMStatus::new(StatusCode::UNKNOWN_SCRIPT, None, None))
+            Err(VMStatus::Error(StatusCode::UNKNOWN_SCRIPT))
         } else {
             Ok(())
         }
@@ -252,11 +206,7 @@ impl LibraVMImpl {
             && !can_publish_modules(txn_data.sender(), remote_cache)
         {
             warn!("[VM] Custom modules not allowed");
-            Err(VMStatus::new(
-                StatusCode::INVALID_MODULE_PUBLISHER,
-                None,
-                None,
-            ))
+            Err(VMStatus::Error(StatusCode::INVALID_MODULE_PUBLISHER))
         } else {
             Ok(())
         }
@@ -295,7 +245,7 @@ impl LibraVMImpl {
                 txn_data.sender,
                 cost_strategy,
             )
-            .map_err(|e| convert_prologue_runtime_error(e.into_vm_status(), &txn_data.sender))
+            .map_err(|e| convert_prologue_runtime_error(e.into_vm_status()))
     }
 
     /// Run the epilogue of a transaction by calling into `EPILOGUE_NAME` function stored
@@ -391,7 +341,7 @@ impl LibraVMImpl {
                 txn_data.sender,
                 &mut cost_strategy,
             )
-            .map_err(|e| convert_prologue_runtime_error(e.into_vm_status(), &txn_data.sender))
+            .map_err(|e| convert_prologue_runtime_error(e.into_vm_status()))
     }
 
     /// Run the epilogue of a transaction by calling into `WRITESET_EPILOGUE_NAME` function stored
@@ -402,8 +352,8 @@ impl LibraVMImpl {
         change_set: &ChangeSet,
         txn_data: &TransactionMetadata,
     ) -> Result<(), VMStatus> {
-        let change_set_bytes = lcs::to_bytes(change_set)
-            .map_err(|_| VMStatus::new(StatusCode::INVALID_DATA, None, None))?;
+        let change_set_bytes =
+            lcs::to_bytes(change_set).map_err(|_| VMStatus::Error(StatusCode::INVALID_DATA))?;
         let gas_schedule = zero_cost_schedule();
         let mut cost_strategy = CostStrategy::system(&gas_schedule, GasUnits::new(0));
 
@@ -488,21 +438,15 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
         for (ty_tag, val_opt) in vals {
             let struct_tag = match ty_tag {
                 TypeTag::Struct(struct_tag) => struct_tag,
-                _ => {
-                    return Err(VMStatus::new(
-                        StatusCode::VALUE_SERIALIZATION_ERROR,
-                        None,
-                        None,
-                    ))
-                }
+                _ => return Err(VMStatus::Error(StatusCode::VALUE_SERIALIZATION_ERROR)),
             };
             let ap = ap_cache.get_resource_path(addr, struct_tag);
             let op = match val_opt {
                 None => WriteOp::Deletion,
                 Some((ty_layout, val)) => {
-                    let blob = val.simple_serialize(&ty_layout).ok_or_else(|| {
-                        VMStatus::new(StatusCode::VALUE_SERIALIZATION_ERROR, None, None)
-                    })?;
+                    let blob = val
+                        .simple_serialize(&ty_layout)
+                        .ok_or_else(|| VMStatus::Error(StatusCode::VALUE_SERIALIZATION_ERROR))?;
 
                     WriteOp::Value(blob)
                 }
@@ -517,7 +461,7 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
 
     let ws = WriteSetMut::new(ops)
         .freeze()
-        .map_err(|_| VMStatus::new(StatusCode::DATA_FORMAT_ERROR, None, None))?;
+        .map_err(|_| VMStatus::Error(StatusCode::DATA_FORMAT_ERROR))?;
 
     let events = effects
         .events
@@ -525,9 +469,9 @@ pub fn txn_effects_to_writeset_and_events_cached<C: AccessPathCache>(
         .map(|(guid, seq_num, ty_tag, ty_layout, val)| {
             let msg = val
                 .simple_serialize(&ty_layout)
-                .ok_or_else(|| VMStatus::new(StatusCode::DATA_FORMAT_ERROR, None, None))?;
+                .ok_or_else(|| VMStatus::Error(StatusCode::DATA_FORMAT_ERROR))?;
             let key = EventKey::try_from(guid.as_slice())
-                .map_err(|_| VMStatus::new(StatusCode::EVENT_KEY_MISMATCH, None, None))?;
+                .map_err(|_| VMStatus::Error(StatusCode::EVENT_KEY_MISMATCH))?;
             Ok(ContractEvent::new(key, seq_num, ty_tag, msg))
         })
         .collect::<Result<Vec<_>, VMStatus>>()?;

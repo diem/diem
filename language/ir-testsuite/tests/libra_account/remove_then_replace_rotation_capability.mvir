@@ -46,4 +46,5 @@ main(account: &signer) {
 }
 
 // check: ABORTED
-// check: 11
+// check: code: 9
+// check: location: ::LibraAccount

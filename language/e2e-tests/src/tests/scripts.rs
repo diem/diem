@@ -42,7 +42,7 @@ fn script_code_unverifiable() {
         _ => panic!("TransactionStatus must be Keep"),
     }
     assert_eq!(
-        status.vm_status().major_status,
+        status.vm_status().status_code(),
         StatusCode::NEGATIVE_STACK_SIZE_WITHIN_BLOCK,
     );
     executor.apply_write_set(output.write_set());
@@ -116,7 +116,7 @@ fn script_none_existing_module_dep() {
         TransactionStatus::Keep(_) => (),
         _ => panic!("TransactionStatus must be Keep"),
     }
-    assert_eq!(status.vm_status().major_status, StatusCode::LINKER_ERROR,);
+    assert_eq!(status.vm_status().status_code(), StatusCode::LINKER_ERROR);
     executor.apply_write_set(output.write_set());
 
     // Check that numbers in store are correct.
@@ -188,7 +188,7 @@ fn script_non_existing_function_dep() {
         TransactionStatus::Keep(_) => (),
         _ => panic!("TransactionStatus must be Keep"),
     }
-    assert_eq!(status.vm_status().major_status, StatusCode::LOOKUP_FAILED,);
+    assert_eq!(status.vm_status().status_code(), StatusCode::LOOKUP_FAILED);
     executor.apply_write_set(output.write_set());
 
     // Check that numbers in store are correct.
@@ -262,7 +262,7 @@ fn script_bad_sig_function_dep() {
         TransactionStatus::Keep(_) => (),
         _ => panic!("TransactionStatus must be Keep"),
     }
-    assert_eq!(status.vm_status().major_status, StatusCode::TYPE_MISMATCH,);
+    assert_eq!(status.vm_status().status_code(), StatusCode::TYPE_MISMATCH);
     executor.apply_write_set(output.write_set());
 
     // Check that numbers in store are correct.
