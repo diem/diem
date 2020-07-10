@@ -29,6 +29,10 @@ module VASP {
     const ENOT_A_PARENT_VASP: u64 = 4;
     const ENOT_A_VASP: u64 = 5;
     const EALREADY_A_VASP: u64 = 7;
+    const ETOO_MANY_CHILDREN: u64 = 8;
+
+    /// Maximum number of child accounts that can be created by a single ParentVASP
+    const MAX_CHILD_ACCOUNTS: u64 = 256;
 
     public fun initialize(lr_account: &signer) {
         assert(LibraTimestamp::is_genesis(), ENOT_GENESIS);
@@ -76,6 +80,8 @@ module VASP {
         let parent_vasp_addr = Signer::address_of(parent);
         assert(is_parent(parent_vasp_addr), ENOT_A_PARENT_VASP);
         let num_children = &mut borrow_global_mut<ParentVASP>(parent_vasp_addr).num_children;
+        // Abort if creating this child account would put the parent VASP over the limit
+        assert(*num_children < MAX_CHILD_ACCOUNTS, ETOO_MANY_CHILDREN);
         *num_children = *num_children + 1;
         move_to(child, ChildVASP { parent_vasp_addr });
     }
@@ -83,8 +89,7 @@ module VASP {
         aborts_if !Roles::spec_has_parent_VASP_role(parent);
         aborts_if spec_is_vasp(Signer::spec_address_of(child));
         aborts_if !spec_is_parent_vasp(Signer::spec_address_of(parent));
-        aborts_if spec_get_num_children(Signer::spec_address_of(parent)) + 1
-                                            > max_u64();
+        aborts_if spec_get_num_children(Signer::spec_address_of(parent)) + 1 > 256; // MAX_CHILD_ACCOUNTS
         ensures spec_get_num_children(Signer::spec_address_of(parent))
              == old(spec_get_num_children(Signer::spec_address_of(parent))) + 1;
         ensures spec_is_child_vasp(Signer::spec_address_of(child));
