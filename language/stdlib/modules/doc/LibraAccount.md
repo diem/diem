@@ -528,22 +528,16 @@ credits the LBR reserve.
 <pre><code><b>public</b> <b>fun</b> <a href="#0x1_LibraAccount_staple_lbr">staple_lbr</a>(cap: &<a href="#0x1_LibraAccount_WithdrawCapability">WithdrawCapability</a>, amount_lbr: u64)
 <b>acquires</b> <a href="#0x1_LibraAccount">LibraAccount</a>, <a href="#0x1_LibraAccount_Balance">Balance</a>, <a href="#0x1_LibraAccount_AccountOperationsCapability">AccountOperationsCapability</a> {
     <b>let</b> cap_address = cap.account_address;
-    // withdraw all <a href="Coin1.md#0x1_Coin1">Coin1</a> and <a href="Coin2.md#0x1_Coin2">Coin2</a>
-    <b>let</b> coin1_balance = <a href="#0x1_LibraAccount_balance">balance</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(cap_address);
-    <b>let</b> coin2_balance = <a href="#0x1_LibraAccount_balance">balance</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(cap_address);
     // <b>use</b> the <a href="LBR.md#0x1_LBR">LBR</a> reserve address <b>as</b> `payee_address`
     <b>let</b> payee_address = <a href="LBR.md#0x1_LBR_reserve_address">LBR::reserve_address</a>();
-    <b>let</b> coin1 = <a href="#0x1_LibraAccount_withdraw_from">withdraw_from</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(cap, payee_address, coin1_balance, x"");
-    <b>let</b> coin2 = <a href="#0x1_LibraAccount_withdraw_from">withdraw_from</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(cap, payee_address, coin2_balance, x"");
+    <b>let</b> (amount_coin1, amount_coin2) = <a href="LBR.md#0x1_LBR_calculate_component_amounts_for_lbr">LBR::calculate_component_amounts_for_lbr</a>(amount_lbr);
+    <b>let</b> coin1 = <a href="#0x1_LibraAccount_withdraw_from">withdraw_from</a>&lt;<a href="Coin1.md#0x1_Coin1">Coin1</a>&gt;(cap, payee_address, amount_coin1, x"");
+    <b>let</b> coin2 = <a href="#0x1_LibraAccount_withdraw_from">withdraw_from</a>&lt;<a href="Coin2.md#0x1_Coin2">Coin2</a>&gt;(cap, payee_address, amount_coin2, x"");
     // Create `amount_lbr` <a href="LBR.md#0x1_LBR">LBR</a>
-    <b>let</b> (lbr, coin1, coin2) = <a href="LBR.md#0x1_LBR_create">LBR::create</a>(amount_lbr, coin1, coin2);
+    <b>let</b> lbr = <a href="LBR.md#0x1_LBR_create">LBR::create</a>(amount_lbr, coin1, coin2);
     // <b>use</b> the reserved address <b>as</b> the payer for the <a href="LBR.md#0x1_LBR">LBR</a> payment because the funds did not come
     // from an existing balance
     <a href="#0x1_LibraAccount_deposit">deposit</a>(<a href="CoreAddresses.md#0x1_CoreAddresses_VM_RESERVED_ADDRESS">CoreAddresses::VM_RESERVED_ADDRESS</a>(), cap_address, lbr, x"", x"");
-    // TODO: eliminate these self-deposits by withdrawing appropriate amounts up-front
-    // Deposit the <a href="Coin1.md#0x1_Coin1">Coin1</a>/<a href="Coin2.md#0x1_Coin2">Coin2</a> remainders
-    <a href="#0x1_LibraAccount_deposit">deposit</a>(cap_address, cap_address, coin1, x"", x"");
-    <a href="#0x1_LibraAccount_deposit">deposit</a>(cap_address, cap_address, coin2, x"", x"")
 }
 </code></pre>
 

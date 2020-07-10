@@ -60,6 +60,9 @@ module LBR {
     }
 
     const EINVALID_SINGLETON_ADDRESS: u64 = 0;
+    const EZERO_LBR_MINT_NOT_ALLOWED: u64 = 1;
+    const ECOIN1_INVALID_AMOUNT: u64 = 2;
+    const ECOIN2_INVALID_AMOUNT: u64 = 3;
 
     /// Initializes the `LBR` module. This sets up the initial `LBR` ratios and
     /// reserve components, and creates the mint, preburn, and burn
@@ -101,70 +104,40 @@ module LBR {
             Libra::currency_code<CoinType>() == Libra::currency_code<LBR>()
     }
 
-    /// Given the constituent coins `coin1` and `coin2` of the `LBR`, this
-    /// function calculates the maximum amount of `LBR` that can be returned
-    /// for the values of the passed-in coins with respect to the coin ratios
-    /// that are specified in the respective currency's  `ReserveComponent`.
-    /// Any remaining amounts in the passed-in coins are returned back out
-    /// along with any newly-created `LBR` coins.
-    /// If either of the coin's values are less than or equal to 1, then the
-    /// function returns the passed-in coins along with zero `LBR`.
-    /// In order to ensure that the on-chain reserve remains liquid while
-    /// minimizing complexity, the values needed to create an `LBR` are the
-    /// truncated division of the passed-in coin with `1` base currency unit added.
-    /// This is different from rounding, or ceiling; e.g., `ceil(10 /
-    /// 2) = 5` whereas we would calculate this as `trunc(10/5) + 1 = 2 + 1 = 3`.
-    public fun swap_into(
-        coin1: Libra<Coin1>,
-        coin2: Libra<Coin2>
-    ): (Libra<LBR>, Libra<Coin1>, Libra<Coin2>)
+    /// We take the truncated multiplication + 1 (not ceiling!) to withdraw for each currency that makes up the `LBR`.
+    /// We do this to ensure that the reserve is always positive. We could do this with other more complex methods such as
+    /// banker's rounding, but this adds considerable arithmetic complexity.
+    public fun calculate_component_amounts_for_lbr(amount_lbr: u64): (u64, u64)
     acquires Reserve {
-        // Grab the reserve
-        let reserve = borrow_global_mut<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        let coin1_value = Libra::value(&coin1);
-        let coin2_value = Libra::value(&coin2);
-        // If either of the coin's values is <= 1, then we don't create any LBR
-        if (coin1_value <= 1 || coin2_value <= 1) return (Libra::zero<LBR>(), coin1, coin2);
-        let lbr_num_coin1 = FixedPoint32::divide_u64(coin1_value - 1, *&reserve.coin1.ratio);
-        let lbr_num_coin2 = FixedPoint32::divide_u64(coin2_value - 1, *&reserve.coin2.ratio);
-        // The number of `LBR` that can be minted is the minimum of the amount
-        // that could be possibly minted according to the value of the coin
-        // passed in and that coin's ratio in the reserve.
-        let num_lbr = if (lbr_num_coin2 < lbr_num_coin1) {
-            lbr_num_coin2
-        } else {
-            lbr_num_coin1
-        };
-        create(num_lbr, coin1, coin2)
+        let reserve = borrow_global<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
+        let num_coin1 = 1 + FixedPoint32::multiply_u64(amount_lbr, *&reserve.coin1.ratio);
+        let num_coin2 = 1 + FixedPoint32::multiply_u64(amount_lbr, *&reserve.coin2.ratio);
+        (num_coin1, num_coin2)
     }
 
     /// Create `amount_lbr` number of `LBR` from the passed in coins. If
-    /// enough of each coin is passed in, this will return the `LBR` along with any
-    /// remaining balances in the passed in coins. If any of the
-    /// coins passed-in do not hold a large enough balance--which is calculated as
-    /// `truncate(amount_lbr * reserve_component_c_i.ratio) + 1` for each coin
-    /// `c_i` passed in--the function will abort.
+    /// enough of each coin is passed in, this will return the `LBR`.
+    /// * If the passed in coins are not the exact amount needed to mint `amount_lbr` LBR, the function will abort.
+    /// * If any of the coins passed-in do not hold a large enough balance--which is calculated as
+    ///   `truncate(amount_lbr * reserve_component_c_i.ratio) + 1` for each coin
+    ///   `c_i` passed in--the function will abort.
+    /// * If `amount_lbr` is zero the function will abort.
     public fun create(
         amount_lbr: u64,
         coin1: Libra<Coin1>,
         coin2: Libra<Coin2>
-    ): (Libra<LBR>, Libra<Coin1>, Libra<Coin2>)
+    ): Libra<LBR>
     acquires Reserve {
-        if (amount_lbr == 0) return (Libra::zero<LBR>(), coin1, coin2);
+        assert(amount_lbr > 0, EZERO_LBR_MINT_NOT_ALLOWED);
+        let (num_coin1, num_coin2) = calculate_component_amounts_for_lbr(amount_lbr);
         let reserve = borrow_global_mut<Reserve>(CoreAddresses::LIBRA_ROOT_ADDRESS());
-        // We take the truncated multiplication + 1 (not ceiling!) to withdraw for each currency.
-        // This is because we want to ensure that the reserve is always
-        // positive. We could do this with other more complex methods such as
-        // bankers rounding, but this adds considerable arithmetic complexity.
-        let num_coin1 = 1 + FixedPoint32::multiply_u64(amount_lbr, *&reserve.coin1.ratio);
-        let num_coin2 = 1 + FixedPoint32::multiply_u64(amount_lbr, *&reserve.coin2.ratio);
-        let coin1_exact = Libra::withdraw(&mut coin1, num_coin1);
-        let coin2_exact = Libra::withdraw(&mut coin2, num_coin2);
+        assert(num_coin1 == Libra::value(&coin1), ECOIN1_INVALID_AMOUNT);
+        assert(num_coin2 == Libra::value(&coin2), ECOIN2_INVALID_AMOUNT);
         // Deposit the coins in to the reserve
-        Libra::deposit(&mut reserve.coin1.backing, coin1_exact);
-        Libra::deposit(&mut reserve.coin2.backing, coin2_exact);
+        Libra::deposit(&mut reserve.coin1.backing, coin1);
+        Libra::deposit(&mut reserve.coin2.backing, coin2);
         // Once the coins have been deposited in the reserve, we can mint the LBR
-        (Libra::mint_with_capability<LBR>(amount_lbr, &reserve.mint_cap), coin1, coin2)
+        Libra::mint_with_capability<LBR>(amount_lbr, &reserve.mint_cap)
     }
 
     /// Unpacks an `LBR` coin, and returns the backing coins that make up the

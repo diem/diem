@@ -190,22 +190,16 @@ module LibraAccount {
     public fun staple_lbr(cap: &WithdrawCapability, amount_lbr: u64)
     acquires LibraAccount, Balance, AccountOperationsCapability {
         let cap_address = cap.account_address;
-        // withdraw all Coin1 and Coin2
-        let coin1_balance = balance<Coin1>(cap_address);
-        let coin2_balance = balance<Coin2>(cap_address);
         // use the LBR reserve address as `payee_address`
         let payee_address = LBR::reserve_address();
-        let coin1 = withdraw_from<Coin1>(cap, payee_address, coin1_balance, x"");
-        let coin2 = withdraw_from<Coin2>(cap, payee_address, coin2_balance, x"");
+        let (amount_coin1, amount_coin2) = LBR::calculate_component_amounts_for_lbr(amount_lbr);
+        let coin1 = withdraw_from<Coin1>(cap, payee_address, amount_coin1, x"");
+        let coin2 = withdraw_from<Coin2>(cap, payee_address, amount_coin2, x"");
         // Create `amount_lbr` LBR
-        let (lbr, coin1, coin2) = LBR::create(amount_lbr, coin1, coin2);
+        let lbr = LBR::create(amount_lbr, coin1, coin2);
         // use the reserved address as the payer for the LBR payment because the funds did not come
         // from an existing balance
         deposit(CoreAddresses::VM_RESERVED_ADDRESS(), cap_address, lbr, x"", x"");
-        // TODO: eliminate these self-deposits by withdrawing appropriate amounts up-front
-        // Deposit the Coin1/Coin2 remainders
-        deposit(cap_address, cap_address, coin1, x"", x"");
-        deposit(cap_address, cap_address, coin2, x"", x"")
     }
 
     /// Use `cap` to withdraw `amount_lbr`, burn the LBR, withdraw the corresponding assets from the
