@@ -3,11 +3,13 @@
 
 use libra_crypto::{
     ed25519::{Ed25519PrivateKey, Ed25519PublicKey, Ed25519Signature},
+    hash::CryptoHash,
     test_utils::KeyPair,
     Signature, SigningKey, Uniform, ValidCryptoMaterialStringExt,
 };
 use libra_types::transaction::{
-    authenticator::AuthenticationKey, RawTransaction, SignedTransaction, TransactionPayload,
+    authenticator::AuthenticationKey, RawTransaction, SignedTransaction, Transaction,
+    TransactionPayload,
 };
 use rand::{prelude::StdRng, SeedableRng};
 use serde::{Deserialize, Serialize};
@@ -21,6 +23,7 @@ enum Command {
     /// Refer to README.md for examples.
     GenerateRawTxn,
     /// Generates a SignedTransaction given the serialized RawTransaction, the public key and signature.
+    /// It also includes the txn_hash which gets included in the chain
     /// Takes the input json payload from stdin. Writes the output json payload to stdout.
     /// Refer to README.md for examples.
     GenerateSignedTxn,
@@ -217,6 +220,7 @@ struct GenerateSignedTxnRequest {
 #[serde(rename_all = "snake_case")]
 struct GenerateSignedTxnResponse {
     pub signed_txn: String,
+    pub txn_hash: String,
 }
 
 fn generate_signed_txn(request: GenerateSignedTxnRequest) -> GenerateSignedTxnResponse {
@@ -248,6 +252,7 @@ fn generate_signed_txn(request: GenerateSignedTxnRequest) -> GenerateSignedTxnRe
         })
         .unwrap();
     let signed_txn = SignedTransaction::new(raw_txn, public_key, signature);
+    let txn_hash = CryptoHash::hash(&Transaction::UserTransaction(signed_txn.clone())).to_hex();
     let signed_txn = hex::encode(
         lcs::to_bytes(&signed_txn)
             .map_err(|err| {
@@ -258,7 +263,10 @@ fn generate_signed_txn(request: GenerateSignedTxnRequest) -> GenerateSignedTxnRe
             })
             .unwrap(),
     );
-    GenerateSignedTxnResponse { signed_txn }
+    GenerateSignedTxnResponse {
+        signed_txn,
+        txn_hash,
+    }
 }
 
 #[derive(Deserialize, Serialize)]
