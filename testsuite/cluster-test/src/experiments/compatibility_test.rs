@@ -62,7 +62,7 @@ pub async fn update_batch_instance(
 }
 
 #[derive(StructOpt, Debug)]
-pub struct ComaptiblityTestParams {
+pub struct CompatiblityTestParams {
     #[structopt(
         long,
         default_value = "15",
@@ -81,7 +81,7 @@ pub struct CompatibilityTest {
     updated_image_tag: String,
 }
 
-impl ExperimentParam for ComaptiblityTestParams {
+impl ExperimentParam for CompatiblityTestParams {
     type E = CompatibilityTest;
     fn build(self, cluster: &Cluster) -> Self::E {
         if self.count > cluster.validator_instances().len() || self.count == 0 {
