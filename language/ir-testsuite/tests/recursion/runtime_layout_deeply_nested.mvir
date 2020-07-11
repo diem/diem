@@ -1,0 +1,88 @@
+module M {
+    import 0x1.Signer;
+
+    resource Box<T> { x: T }
+    resource Box3<T> { x: Self.Box<Self.Box<T>> }
+    resource Box7<T> { x: Self.Box3<Self.Box3<T>> }
+    resource Box15<T> { x: Self.Box7<Self.Box7<T>> }
+    resource Box31<T> { x: Self.Box15<Self.Box15<T>> }
+    resource Box63<T> { x: Self.Box31<Self.Box31<T>> }
+    resource Box127<T> { x: Self.Box63<Self.Box63<T>> }
+    resource Box255<T> { x: Self.Box127<Self.Box127<T>> }
+
+    public box3<T>(x: T): Self.Box3<T> {
+        return Box3<T> { x: Box<Self.Box<T>> { x: Box<T> { x: move(x) } } };
+    }
+
+    public box7<T>(x: T): Self.Box7<T> {
+        return Box7<T> { x: Self.box3<Self.Box3<T>>(Self.box3<T>(move(x))) };
+    }
+
+    public box15<T>(x: T): Self.Box15<T> {
+        return Box15<T> { x: Self.box7<Self.Box7<T>>(Self.box7<T>(move(x))) };
+    }
+
+    public box31<T>(x: T): Self.Box31<T> {
+        return Box31<T> { x: Self.box15<Self.Box15<T>>(Self.box15<T>(move(x))) };
+    }
+
+    public box63<T>(x: T): Self.Box63<T> {
+        return Box63<T> { x: Self.box31<Self.Box31<T>>(Self.box31<T>(move(x))) };
+    }
+
+    public box127<T>(x: T): Self.Box127<T> {
+        return Box127<T> { x: Self.box63<Self.Box63<T>>(Self.box63<T>(move(x))) };
+    }
+
+    public box255<T>(x: T): Self.Box255<T> {
+        return Box255<T> { x: Self.box127<Self.Box127<T>>(Self.box127<T>(move(x))) };
+    }
+
+    public publish_128(account: &signer) {
+        move_to<Box127<bool>>(move(account), Self.box127<bool>(true));
+        return;
+    }
+
+    public publish_256(account: &signer) {
+        move_to<Box255<bool>>(move(account), Self.box255<bool>(true));
+        return;
+    }
+
+    public publish_257(account: &signer) {
+        move_to<Box<Self.Box255<bool>>>(move(account), Box<Self.Box255<bool>> { x: Self.box255<bool>(true) });
+        return;
+    }
+}
+// check: EXECUTED
+
+
+//! new-transaction
+import {{default}}.M;
+
+main(account: &signer) {
+    M.publish_128(move(account));
+    return;
+}
+// check: EXECUTED
+
+
+//! new-transaction
+import {{default}}.M;
+
+main(account: &signer) {
+    M.publish_256(move(account));
+    return;
+}
+// check: OUT_OF_GAS
+// TODO: should be EXECUTED
+
+
+//! new-transaction
+import {{default}}.M;
+
+main(account: &signer) {
+    M.publish_257(move(account));
+    return;
+}
+// check: OUT_OF_GAS
+// TODO: should be VM_MAX_VALUE_DEPTH_REACHED
