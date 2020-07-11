@@ -54,13 +54,21 @@ impl RemoteClient {
     pub fn new(network_client: NetworkClient) -> Self {
         Self { network_client }
     }
+
+    fn process_one_message(&mut self, input: &[u8]) -> Result<Vec<u8>, Error> {
+        self.network_client.write(&input)?;
+        self.network_client.read().map_err(|e| e.into())
+    }
 }
 
 impl TSerializerClient for RemoteClient {
     fn request(&mut self, input: SafetyRulesInput) -> Result<Vec<u8>, Error> {
         let input_message = lcs::to_bytes(&input)?;
-        self.network_client.write(&input_message)?;
-        let result = self.network_client.read()?;
-        Ok(result)
+        loop {
+            match self.process_one_message(&input_message) {
+                Err(err) => warn!("Failed to communicate with SafetyRules service: {}", err),
+                Ok(value) => return Ok(value),
+            }
+        }
     }
 }

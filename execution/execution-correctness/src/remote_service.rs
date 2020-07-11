@@ -8,7 +8,7 @@ use executor::Executor;
 use executor_types::Error;
 use libra_crypto::ed25519::Ed25519PrivateKey;
 use libra_logger::warn;
-use libra_secure_net::{Error as NetError, NetworkClient, NetworkServer};
+use libra_secure_net::{NetworkClient, NetworkServer};
 use libra_vm::LibraVM;
 use std::net::SocketAddr;
 use storage_client::StorageClient;
@@ -59,20 +59,21 @@ impl RemoteClient {
     pub fn new(network_client: NetworkClient) -> Self {
         Self { network_client }
     }
+
+    fn process_one_message(&mut self, input: &[u8]) -> Result<Vec<u8>, Error> {
+        self.network_client.write(&input)?;
+        self.network_client.read().map_err(|e| e.into())
+    }
 }
 
 impl TSerializerClient for RemoteClient {
     fn request(&mut self, input: ExecutionCorrectnessInput) -> Result<Vec<u8>, Error> {
         let input_message = lcs::to_bytes(&input)?;
-        let result = loop {
-            while self.network_client.write(&input_message).is_err() {}
-            let res = self.network_client.read();
-            match res {
-                Ok(res) => break res,
-                Err(NetError::RemoteStreamClosed) => (),
-                Err(err) => return Err(err.into()),
+        loop {
+            match self.process_one_message(&input_message) {
+                Err(err) => warn!("Failed to communicate with LEC service: {}", err),
+                Ok(value) => return Ok(value),
             }
-        };
-        Ok(result)
+        }
     }
 }
