@@ -19,12 +19,16 @@ impl BaseMetric {
         }
     }
 
+    pub fn inc(&self) {
+        self.inc_by(1);
+    }
+
     pub fn inc_by(&self, i: i64) {
         self.counter.fetch_add(i, Ordering::Relaxed);
     }
 
-    pub fn inc(&self) {
-        self.inc_by(1);
+    pub fn set(&self, i: i64) {
+        self.counter.store(i, Ordering::Relaxed);
     }
 }
 
@@ -48,12 +52,12 @@ impl Counter {
         }
     }
 
-    pub fn inc_by(&self, i: i64) {
-        self.base_counter.inc_by(i);
-    }
-
     pub fn inc(&self) {
         self.base_counter.inc();
+    }
+
+    pub fn inc_by(&self, i: i64) {
+        self.base_counter.inc_by(i);
     }
 }
 
@@ -84,6 +88,10 @@ impl Gauge {
             base_counter: BaseMetric::new(counter_name, counter_help),
             has_been_set: AtomicBool::new(false),
         }
+    }
+
+    pub fn set(&self, i: i64) {
+        self.base_counter.set(i)
     }
 }
 
